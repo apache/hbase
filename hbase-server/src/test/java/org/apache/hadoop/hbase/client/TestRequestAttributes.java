@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
+
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -24,8 +27,12 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -72,8 +79,23 @@ public class TestRequestAttributes {
   private static final byte[] ROW_KEY6 = Bytes.toBytes("6");
   private static final byte[] ROW_KEY7 = Bytes.toBytes("7");
   private static final byte[] ROW_KEY8 = Bytes.toBytes("8");
+  private static final byte[] ROW_KEY_FACTORY_GET = Bytes.toBytes("F1");
+  private static final byte[] ROW_KEY_FACTORY_SCAN = Bytes.toBytes("F2");
+  private static final byte[] ROW_KEY_FACTORY_PUT = Bytes.toBytes("F3");
+  private static final byte[] ROW_KEY_FACTORY_PER_REQUEST = Bytes.toBytes("F5");
+  private static final byte[] ROW_KEY_TABLE_FACTORY_GET = Bytes.toBytes("TF1");
+  private static final byte[] ROW_KEY_TABLE_FACTORY_SCAN = Bytes.toBytes("TF2");
+  private static final byte[] ROW_KEY_TABLE_FACTORY_PUT = Bytes.toBytes("TF3");
+  private static final byte[] ROW_KEY_BM_FACTORY = Bytes.toBytes("BM1");
+  private static final byte[] ROW_KEY_ASYNC_BM_FACTORY = Bytes.toBytes("ABM1");
+  private static final String FACTORY_KEY = "factoryKey";
+  private static final byte[] FACTORY_VALUE = Bytes.toBytes("factoryValue");
+  private static final String IGNORED_KEY = "ignoredKey";
+  private static final byte[] IGNORED_VALUE = Bytes.toBytes("ignoredValue");
   private static final Map<String, byte[]> CONNECTION_ATTRIBUTES = new HashMap<>();
   private static final Map<String, byte[]> REQUEST_ATTRIBUTES_SCAN = addRandomRequestAttributes();
+  private static final Map<String, byte[]> REQUEST_ATTRIBUTES_FACTORY_SCAN = new HashMap<>();
+  private static final Map<String, byte[]> REQUEST_ATTRIBUTES_TABLE_FACTORY_SCAN = new HashMap<>();
   private static final Map<byte[], Map<String, byte[]>> ROW_KEY_TO_REQUEST_ATTRIBUTES =
     new HashMap<>();
   static {
@@ -88,6 +110,38 @@ public class TestRequestAttributes {
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY6, addRandomRequestAttributes());
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY7, addRandomRequestAttributes());
     ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY8, new HashMap<String, byte[]>());
+
+    Map<String, byte[]> factoryGetAttrs = new HashMap<>();
+    factoryGetAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_FACTORY_GET, factoryGetAttrs);
+
+    REQUEST_ATTRIBUTES_FACTORY_SCAN.put(FACTORY_KEY, FACTORY_VALUE);
+
+    Map<String, byte[]> factoryPutAttrs = new HashMap<>();
+    factoryPutAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_FACTORY_PUT, factoryPutAttrs);
+
+    Map<String, byte[]> factoryPerRequestAttrs = new HashMap<>();
+    factoryPerRequestAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_FACTORY_PER_REQUEST, factoryPerRequestAttrs);
+
+    Map<String, byte[]> tableFactoryGetAttrs = new HashMap<>();
+    tableFactoryGetAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_TABLE_FACTORY_GET, tableFactoryGetAttrs);
+
+    REQUEST_ATTRIBUTES_TABLE_FACTORY_SCAN.put(FACTORY_KEY, FACTORY_VALUE);
+
+    Map<String, byte[]> tableFactoryPutAttrs = new HashMap<>();
+    tableFactoryPutAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_TABLE_FACTORY_PUT, tableFactoryPutAttrs);
+
+    Map<String, byte[]> bmFactoryAttrs = new HashMap<>();
+    bmFactoryAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_BM_FACTORY, bmFactoryAttrs);
+
+    Map<String, byte[]> asyncBmFactoryAttrs = new HashMap<>();
+    asyncBmFactoryAttrs.put(FACTORY_KEY, FACTORY_VALUE);
+    ROW_KEY_TO_REQUEST_ATTRIBUTES.put(ROW_KEY_ASYNC_BM_FACTORY, asyncBmFactoryAttrs);
   }
   private static final ExecutorService EXECUTOR_SERVICE = Executors.newFixedThreadPool(100);
   private static final byte[] FAMILY = Bytes.toBytes("0");
@@ -237,6 +291,227 @@ public class TestRequestAttributes {
     }
   }
 
+  @Test
+  public void testAsyncRequestAttributesFactoryGet()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setRequestAttributesFactory(() -> {
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      table.get(new Get(ROW_KEY_FACTORY_GET)).get();
+    }
+  }
+
+  @Test
+  public void testAsyncRequestAttributesFactoryScan()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setRequestAttributesFactory(() -> {
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      table
+        .scanAll(
+          new Scan().withStartRow(ROW_KEY_FACTORY_SCAN).withStopRow(ROW_KEY_FACTORY_SCAN, true))
+        .get();
+    }
+  }
+
+  @Test
+  public void testAsyncRequestAttributesFactoryPut()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setRequestAttributesFactory(() -> {
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      Put put = new Put(ROW_KEY_FACTORY_PUT);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      table.put(put).get();
+    }
+  }
+
+  @Test
+  public void testAsyncRequestAttributesFactoryCalledPerRequest()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    AtomicInteger callCount = new AtomicInteger(0);
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setRequestAttributesFactory(() -> {
+        callCount.incrementAndGet();
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      table.get(new Get(ROW_KEY_FACTORY_PER_REQUEST)).get();
+      table.get(new Get(ROW_KEY_FACTORY_PER_REQUEST)).get();
+      table.get(new Get(ROW_KEY_FACTORY_PER_REQUEST)).get();
+    }
+    assertTrue("Factory should be called at least 3 times", callCount.get() >= 3);
+  }
+
+  @Test
+  public void testAsyncRequestAttributesFactoryCalledOnInitiatingThread()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    Thread testThread = Thread.currentThread();
+    AtomicReference<Thread> factoryThread = new AtomicReference<>();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setRequestAttributesFactory(() -> {
+        factoryThread.set(Thread.currentThread());
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      table.get(new Get(ROW_KEY_FACTORY_GET)).get();
+    }
+    assertEquals("Factory should be called on the initiating thread", testThread,
+      factoryThread.get());
+  }
+
+  @Test
+  public void testAsyncFixedRequestAttributesFactory()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncTable<?> table = conn.getTableBuilder(TABLE_NAME).setRequestAttributesFactory(
+        FixedRequestAttributesFactory.newBuilder().setAttribute(FACTORY_KEY, FACTORY_VALUE).build())
+        .build();
+      table.get(new Get(ROW_KEY_FACTORY_GET)).get();
+    }
+  }
+
+  @Test
+  public void testTableRequestAttributesFactoryGet() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      Table table = conn.getTableBuilder(TABLE_NAME, null).setRequestAttributesFactory(() -> {
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      table.get(new Get(ROW_KEY_TABLE_FACTORY_GET));
+    }
+  }
+
+  @Test
+  public void testTableRequestAttributesFactoryScan() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      Table table = conn.getTableBuilder(TABLE_NAME, null).setRequestAttributesFactory(() -> {
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      ResultScanner scanner = table.getScanner(new Scan().withStartRow(ROW_KEY_TABLE_FACTORY_SCAN)
+        .withStopRow(ROW_KEY_TABLE_FACTORY_SCAN, true));
+      scanner.next();
+    }
+  }
+
+  @Test
+  public void testTableRequestAttributesFactoryPut() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      Table table = conn.getTableBuilder(TABLE_NAME, null).setRequestAttributesFactory(() -> {
+        Map<String, byte[]> attrs = new HashMap<>();
+        attrs.put(FACTORY_KEY, FACTORY_VALUE);
+        return attrs;
+      }).build();
+      Put put = new Put(ROW_KEY_TABLE_FACTORY_PUT);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      table.put(put);
+    }
+  }
+
+  @Test
+  public void testTableRequestAttributesFactoryOverridesStaticAttributes() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      Table table = conn.getTableBuilder(TABLE_NAME, null)
+        .setRequestAttribute(IGNORED_KEY, IGNORED_VALUE).setRequestAttributesFactory(() -> {
+          Map<String, byte[]> attrs = new HashMap<>();
+          attrs.put(FACTORY_KEY, FACTORY_VALUE);
+          return attrs;
+        }).build();
+      table.get(new Get(ROW_KEY_TABLE_FACTORY_GET));
+    }
+  }
+
+  @Test
+  public void testTableFixedRequestAttributesFactory() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      Table table = conn.getTableBuilder(TABLE_NAME, null).setRequestAttributesFactory(
+        FixedRequestAttributesFactory.newBuilder().setAttribute(FACTORY_KEY, FACTORY_VALUE).build())
+        .build();
+      table.get(new Get(ROW_KEY_TABLE_FACTORY_GET));
+    }
+  }
+
+  @Test
+  public void testBufferedMutatorRequestAttributesFactory() throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      BufferedMutatorParams params =
+        new BufferedMutatorParams(TABLE_NAME).setRequestAttributesFactory(() -> {
+          Map<String, byte[]> attrs = new HashMap<>();
+          attrs.put(FACTORY_KEY, FACTORY_VALUE);
+          return attrs;
+        });
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(params);
+      Put put = new Put(ROW_KEY_BM_FACTORY);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      bufferedMutator.mutate(put);
+      bufferedMutator.flush();
+    }
+  }
+
+  @Test
+  public void testBufferedMutatorRequestAttributesFactoryOverridesStaticAttributes()
+    throws IOException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      BufferedMutatorParams params = new BufferedMutatorParams(TABLE_NAME)
+        .setRequestAttribute(IGNORED_KEY, IGNORED_VALUE).setRequestAttributesFactory(() -> {
+          Map<String, byte[]> attrs = new HashMap<>();
+          attrs.put(FACTORY_KEY, FACTORY_VALUE);
+          return attrs;
+        });
+      BufferedMutator bufferedMutator = conn.getBufferedMutator(params);
+      Put put = new Put(ROW_KEY_BM_FACTORY);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      bufferedMutator.mutate(put);
+      bufferedMutator.flush();
+    }
+  }
+
+  @Test
+  public void testAsyncBufferedMutatorRequestAttributesFactory()
+    throws IOException, ExecutionException, InterruptedException {
+    Configuration conf = TEST_UTIL.getConfiguration();
+    try (AsyncConnection conn = ConnectionFactory.createAsyncConnection(conf).get()) {
+      AsyncBufferedMutator bufferedMutator =
+        conn.getBufferedMutatorBuilder(TABLE_NAME).setRequestAttributesFactory(() -> {
+          Map<String, byte[]> attrs = new HashMap<>();
+          attrs.put(FACTORY_KEY, FACTORY_VALUE);
+          return attrs;
+        }).build();
+      Put put = new Put(ROW_KEY_ASYNC_BM_FACTORY);
+      put.addColumn(FAMILY, Bytes.toBytes("c"), Bytes.toBytes("v"));
+      CompletableFuture<Void> future = bufferedMutator.mutate(put);
+      bufferedMutator.flush();
+      future.get();
+    }
+  }
+
   private static Map<String, byte[]> addRandomRequestAttributes() {
     Map<String, byte[]> requestAttributes = new HashMap<>();
     int j = Math.max(2, (int) (10 * Math.random()));
@@ -324,7 +599,11 @@ public class TestRequestAttributes {
     @Override
     public boolean preScannerNext(ObserverContext<? extends RegionCoprocessorEnvironment> c,
       InternalScanner s, List<Result> result, int limit, boolean hasNext) throws IOException {
-      if (!isValidRequestAttributes(REQUEST_ATTRIBUTES_SCAN)) {
+      if (
+        !isValidRequestAttributes(REQUEST_ATTRIBUTES_SCAN)
+          && !isValidRequestAttributes(REQUEST_ATTRIBUTES_FACTORY_SCAN)
+          && !isValidRequestAttributes(REQUEST_ATTRIBUTES_TABLE_FACTORY_SCAN)
+      ) {
         throw new IOException("Incorrect request attributes");
       }
       return hasNext;

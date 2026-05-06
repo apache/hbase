@@ -110,10 +110,7 @@ class ConnectionOverAsyncConnection implements Connection {
     if (params.getMaxMutations() != BufferedMutatorParams.UNSET) {
       builder.setMaxMutations(params.getMaxMutations());
     }
-    if (!params.getRequestAttributes().isEmpty()) {
-
-      builder.setRequestAttributes(params.getRequestAttributes());
-    }
+    builder.setRequestAttributesFactory(params.getRequestAttributesFactory());
     return new BufferedMutatorOverAsyncBufferedMutator(builder.build(), params.getListener());
   }
 
@@ -200,8 +197,8 @@ class ConnectionOverAsyncConnection implements Connection {
           conn.getTableBuilder(tableName).setRpcTimeout(rpcTimeout, TimeUnit.MILLISECONDS)
             .setReadRpcTimeout(readRpcTimeout, TimeUnit.MILLISECONDS)
             .setWriteRpcTimeout(writeRpcTimeout, TimeUnit.MILLISECONDS)
-            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS);
-        requestAttributes.forEach(tableBuilder::setRequestAttribute);
+            .setOperationTimeout(operationTimeout, TimeUnit.MILLISECONDS)
+            .setRequestAttributesFactory(getRequestAttributesFactory());
         return new TableOverAsyncTable(conn, tableBuilder.build(), poolSupplier);
       }
     };
