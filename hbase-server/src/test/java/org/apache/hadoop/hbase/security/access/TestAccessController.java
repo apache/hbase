@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
@@ -42,7 +42,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -121,13 +120,11 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.GroupMappingServiceProvider;
 import org.apache.hadoop.security.ShellBasedUnixGroupsMapping;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -159,12 +156,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * Performs authorization checks for common operations, according to different levels of authorized
  * users.
  */
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAccessController extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAccessController.class);
 
   private static final FsPermission FS_PERMISSION_ALL = FsPermission.valueOf("-rwxrwxrwx");
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessController.class);
@@ -220,10 +214,7 @@ public class TestAccessController extends SecureTestUtil {
   private static RegionServerCoprocessorEnvironment RSCP_ENV;
   private static RegionCoprocessorEnvironment RCP_ENV;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -285,7 +276,7 @@ public class TestAccessController extends SecureTestUtil {
     setUpTableAndUserPermissions();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();
@@ -432,20 +423,20 @@ public class TestAccessController extends SecureTestUtil {
   public void testSecurityCapabilities() throws Exception {
     List<SecurityCapability> capabilities =
       TEST_UTIL.getConnection().getAdmin().getSecurityCapabilities();
-    assertTrue("AUTHORIZATION capability is missing",
-      capabilities.contains(SecurityCapability.AUTHORIZATION));
-    assertTrue("CELL_AUTHORIZATION capability is missing",
-      capabilities.contains(SecurityCapability.CELL_AUTHORIZATION));
+    assertTrue(capabilities.contains(SecurityCapability.AUTHORIZATION),
+      "AUTHORIZATION capability is missing");
+    assertTrue(capabilities.contains(SecurityCapability.CELL_AUTHORIZATION),
+      "CELL_AUTHORIZATION capability is missing");
   }
 
   @Test
-  public void testTableCreate() throws Exception {
+  public void testTableCreate(TestInfo testInfo) throws Exception {
     AccessTestAction createTable = new AccessTestAction() {
       @Override
       public Object run() throws Exception {
-        TableDescriptor tableDescriptor =
-          TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-            .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
+        TableDescriptor tableDescriptor = TableDescriptorBuilder
+          .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY)).build();
         ACCESS_CONTROLLER.preCreateTable(ObserverContextImpl.createAndPrepare(CP_ENV),
           tableDescriptor, null);
         return null;
@@ -631,8 +622,8 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testGetProcedures() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testGetProcedures(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final ProcedureExecutor<MasterProcedureEnv> procExec =
       TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     Procedure proc = new TestTableDDLProcedure(procExec.getEnvironment(), tableName);
@@ -839,8 +830,8 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testSplitWithSplitRow() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testSplitWithSplitRow(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     createTestTable(tableName);
     AccessTestAction action = new AccessTestAction() {
       @Override
@@ -1597,8 +1588,8 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testPostGrantRevokeAtQualifierLevel() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testPostGrantRevokeAtQualifierLevel(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -1700,8 +1691,8 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testPermissionList() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testPermissionList(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final byte[] family1 = Bytes.toBytes("f1");
     final byte[] family2 = Bytes.toBytes("f2");
     final byte[] qualifier = Bytes.toBytes("q");
@@ -1720,16 +1711,16 @@ public class TestAccessController extends SecureTestUtil {
         admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission ownerperm = new UserPermission(USER_OWNER.getName(),
         Permission.newBuilder(tableName).withActions(Action.values()).build());
-      assertTrue("Owner should have all permissions on table",
-        hasFoundUserPermission(ownerperm, perms));
+      assertTrue(hasFoundUserPermission(ownerperm, perms),
+        "Owner should have all permissions on table");
 
       User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "user", new String[0]);
       String userName = user.getShortName();
 
       UserPermission up = new UserPermission(userName, Permission.newBuilder(tableName)
         .withFamily(family1).withQualifier(qualifier).withActions(Permission.Action.READ).build());
-      assertFalse("User should not be granted permission: " + up.toString(),
-        hasFoundUserPermission(up, perms));
+      assertFalse(hasFoundUserPermission(up, perms),
+        "User should not be granted permission: " + up.toString());
 
       // grant read permission
       grantOnTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
@@ -1738,13 +1729,13 @@ public class TestAccessController extends SecureTestUtil {
       perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission upToVerify = new UserPermission(userName, Permission.newBuilder(tableName)
         .withFamily(family1).withQualifier(qualifier).withActions(Permission.Action.READ).build());
-      assertTrue("User should be granted permission: " + upToVerify.toString(),
-        hasFoundUserPermission(upToVerify, perms));
+      assertTrue(hasFoundUserPermission(upToVerify, perms),
+        "User should be granted permission: " + upToVerify.toString());
 
       upToVerify = new UserPermission(userName, Permission.newBuilder(tableName).withFamily(family1)
         .withQualifier(qualifier).withActions(Permission.Action.WRITE).build());
-      assertFalse("User should not be granted permission: " + upToVerify.toString(),
-        hasFoundUserPermission(upToVerify, perms));
+      assertFalse(hasFoundUserPermission(upToVerify, perms),
+        "User should not be granted permission: " + upToVerify.toString());
 
       // grant read+write
       grantOnTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
@@ -1754,16 +1745,16 @@ public class TestAccessController extends SecureTestUtil {
       upToVerify = new UserPermission(userName,
         Permission.newBuilder(tableName).withFamily(family1).withQualifier(qualifier)
           .withActions(Permission.Action.WRITE, Permission.Action.READ).build());
-      assertTrue("User should be granted permission: " + upToVerify.toString(),
-        hasFoundUserPermission(upToVerify, perms));
+      assertTrue(hasFoundUserPermission(upToVerify, perms),
+        "User should be granted permission: " + upToVerify.toString());
 
       // revoke
       revokeFromTable(TEST_UTIL, user.getShortName(), tableName, family1, qualifier,
         Permission.Action.WRITE, Permission.Action.READ);
 
       perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
-      assertFalse("User should not be granted permission: " + upToVerify.toString(),
-        hasFoundUserPermission(upToVerify, perms));
+      assertFalse(hasFoundUserPermission(upToVerify, perms),
+        "User should not be granted permission: " + upToVerify.toString());
 
       User newOwner = User.createUserForTesting(conf, "new_owner", new String[] {});
       grantOnTable(TEST_UTIL, newOwner.getShortName(), tableName, null, null,
@@ -1772,8 +1763,8 @@ public class TestAccessController extends SecureTestUtil {
       perms = admin.getUserPermissions(GetUserPermissionsRequest.newBuilder(tableName).build());
       UserPermission newOwnerperm = new UserPermission(newOwner.getName(),
         Permission.newBuilder(tableName).withActions(Action.values()).build());
-      assertTrue("New owner should have all permissions on table",
-        hasFoundUserPermission(newOwnerperm, perms));
+      assertTrue(hasFoundUserPermission(newOwnerperm, perms),
+        "New owner should have all permissions on table");
     } finally {
       // delete table
       deleteTable(TEST_UTIL, tableName);
@@ -1794,10 +1785,9 @@ public class TestAccessController extends SecureTestUtil {
       adminPerms.add(
         new UserPermission(user, Permission.newBuilder().withActions(Action.values()).build()));
     }
-    assertTrue(
+    assertTrue(perms.size() == 6 + superUsers.size() && hasFoundUserPermission(adminPerms, perms),
       "Only super users, global users and user admin has permission on table hbase:acl "
-        + "per setup",
-      perms.size() == 6 + superUsers.size() && hasFoundUserPermission(adminPerms, perms));
+        + "per setup");
   }
 
   /** global operations */
@@ -2314,9 +2304,9 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testTableDeletion() throws Exception {
+  public void testTableDeletion(TestInfo testInfo) throws Exception {
     User TABLE_ADMIN = User.createUserForTesting(conf, "TestUser", new String[0]);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     createTestTable(tableName);
 
     // Grant TABLE ADMIN privs
@@ -2884,8 +2874,8 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testAccessControlClientUserPerms() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testAccessControlClientUserPerms(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     createTestTable(tableName);
     try {
       final String regex = tableName.getNameWithNamespaceInclAsString();
@@ -2903,11 +2893,11 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testAccessControllerUserPermsRegexHandling() throws Exception {
+  public void testAccessControllerUserPermsRegexHandling(TestInfo testInfo) throws Exception {
     User testRegexHandler = User.createUserForTesting(conf, "testRegexHandling", new String[0]);
 
     final String REGEX_ALL_TABLES = ".*";
-    final String tableName = name.getMethodName();
+    final String tableName = testInfo.getTestMethod().get().getName();
     final TableName table1 = TableName.valueOf(tableName);
     final byte[] family = Bytes.toBytes("f1");
 
@@ -3152,9 +3142,10 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
-  public void testRemoteLocks() throws Exception {
+  public void testRemoteLocks(TestInfo testInfo) throws Exception {
     String namespace = "preQueueNs";
-    final TableName tableName = TableName.valueOf(namespace, name.getMethodName());
+    final TableName tableName =
+      TableName.valueOf(namespace, testInfo.getTestMethod().get().getName());
     RegionInfo[] regionInfos = new RegionInfo[] { RegionInfoBuilder.newBuilder(tableName).build() };
 
     // Setup Users

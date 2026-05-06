@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.security;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
@@ -32,31 +31,27 @@ import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.security.authorize.Service;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Make sure that all rpc services for master and region server are properly configured in
  * {@link SecurityInfo} and {@link HBasePolicyProvider}.
  */
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSecurityInfoAndHBasePolicyProviderMatch {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecurityInfoAndHBasePolicyProviderMatch.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -67,8 +62,8 @@ public class TestSecurityInfoAndHBasePolicyProviderMatch {
       Stream.of(provider.getServices()).map(Service::getProtocol).collect(Collectors.toSet());
     for (BlockingServiceAndInterface bsai : ((RpcServer) rpcServer).getServices()) {
       assertNotNull(
-        "no security info for " + bsai.getBlockingService().getDescriptorForType().getName(),
-        SecurityInfo.getInfo(bsai.getBlockingService().getDescriptorForType().getName()));
+        SecurityInfo.getInfo(bsai.getBlockingService().getDescriptorForType().getName()),
+        "no security info for " + bsai.getBlockingService().getDescriptorForType().getName());
       assertThat(serviceClasses, hasItem(bsai.getServiceInterface()));
     }
   }

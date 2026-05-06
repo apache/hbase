@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.jupiter.api.BeforeAll;
@@ -24,10 +26,15 @@ import org.junit.jupiter.api.Tag;
 
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
-public class TestFromClientSide3 extends FromClientSide3TestBase {
+@HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
+public class TestFromClientSide3 extends FromClientSideTest3 {
+
+  public TestFromClientSide3(Class<? extends ConnectionRegistry> registryImpl, int numHedgedReqs) {
+    super(registryImpl, numHedgedReqs);
+  }
 
   @BeforeAll
   public static void setUpBeforeAll() throws Exception {
-    startCluster();
+    startCluster(MultiRowMutationEndpoint.class);
   }
 }

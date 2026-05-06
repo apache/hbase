@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -27,7 +27,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -45,20 +44,16 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, LargeTests.class })
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestPrefetchRSClose {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPrefetchRSClose.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPrefetchRSClose.class);
 
@@ -71,7 +66,7 @@ public class TestPrefetchRSClose {
   StartTestingClusterOption option =
     StartTestingClusterOption.builder().numRegionServers(1).build();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     testDir = TEST_UTIL.getDataTestDir();
@@ -140,7 +135,7 @@ public class TestPrefetchRSClose {
     assertTrue(new File(testDir + "/bucket.persistence").exists());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.cleanupDataTestDirOnTestFS(String.valueOf(testDir));

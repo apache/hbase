@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -31,10 +31,14 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class RestoreSnapshotFromClientSchemaChangeTestBase
   extends RestoreSnapshotFromClientTestBase {
+
+  protected RestoreSnapshotFromClientSchemaChangeTestBase(int numReplicas) {
+    super(numReplicas);
+  }
 
   private Set<String> getFamiliesFromFS(final TableName tableName) throws IOException {
     MasterFileSystem mfs = TEST_UTIL.getMiniHBaseCluster().getMaster().getMasterFileSystem();
@@ -52,7 +56,7 @@ public class RestoreSnapshotFromClientSchemaChangeTestBase
     return ColumnFamilyDescriptorBuilder.of(TEST_FAMILY2);
   }
 
-  @Test
+  @TestTemplate
   public void testRestoreSchemaChange() throws Exception {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
 

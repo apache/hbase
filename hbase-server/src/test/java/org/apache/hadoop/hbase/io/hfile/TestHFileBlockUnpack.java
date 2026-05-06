@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -43,19 +42,14 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHFileBlockUnpack {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileBlockUnpack.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -66,11 +60,9 @@ public class TestHFileBlockUnpack {
 
   ByteBuffAllocator allocator;
 
-  @Rule
-  public TestName name = new TestName();
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs = HFileSystem.get(TEST_UTIL.getConfiguration());
     Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
@@ -85,8 +77,8 @@ public class TestHFileBlockUnpack {
    * https://issues.apache.org/jira/browse/HBASE-27053
    */
   @Test
-  public void itUnpacksIdenticallyEachTime() throws IOException {
-    Path path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
+  public void itUnpacksIdenticallyEachTime(TestInfo testInfo) throws IOException {
+    Path path = new Path(TEST_UTIL.getDataTestDir(), testInfo.getTestMethod().get().getName());
     int totalSize = createTestBlock(path);
 
     // Allocate a bunch of random buffers, so we can be sure that unpack will only have "dirty"
@@ -142,28 +134,27 @@ public class TestHFileBlockUnpack {
    * {@link HFileBlock#isSharedMem()} == true See https://issues.apache.org/jira/browse/HBASE-27170
    */
   @Test
-  public void itUsesSharedMemoryIfUnpackedBlockExceedsMinAllocationSize() throws IOException {
-    Path path = new Path(TEST_UTIL.getDataTestDir(), name.getMethodName());
+  public void itUsesSharedMemoryIfUnpackedBlockExceedsMinAllocationSize(TestInfo testInfo)
+    throws IOException {
+    Path path = new Path(TEST_UTIL.getDataTestDir(), testInfo.getTestMethod().get().getName());
     int totalSize = createTestBlock(path);
     HFileBlockWrapper blockFromHFile = readBlock(path, totalSize);
 
-    assertFalse("expected hfile block to NOT be unpacked", blockFromHFile.original.isUnpacked());
-    assertFalse("expected hfile block to NOT use shared memory",
-      blockFromHFile.original.isSharedMem());
+    assertFalse(blockFromHFile.original.isUnpacked(), "expected hfile block to NOT be unpacked");
+    assertFalse(blockFromHFile.original.isSharedMem(),
+      "expected hfile block to NOT use shared memory");
 
-    assertTrue(
+    assertTrue(blockFromHFile.original.getOnDiskSizeWithHeader() < MIN_ALLOCATION_SIZE,
       "expected generated block size " + blockFromHFile.original.getOnDiskSizeWithHeader()
-        + " to be less than " + MIN_ALLOCATION_SIZE,
-      blockFromHFile.original.getOnDiskSizeWithHeader() < MIN_ALLOCATION_SIZE);
-    assertTrue(
+        + " to be less than " + MIN_ALLOCATION_SIZE);
+    assertTrue(blockFromHFile.original.getUncompressedSizeWithoutHeader() > MIN_ALLOCATION_SIZE,
       "expected generated block uncompressed size "
         + blockFromHFile.original.getUncompressedSizeWithoutHeader() + " to be more than "
-        + MIN_ALLOCATION_SIZE,
-      blockFromHFile.original.getUncompressedSizeWithoutHeader() > MIN_ALLOCATION_SIZE);
+        + MIN_ALLOCATION_SIZE);
 
-    assertTrue("expected unpacked block to be unpacked", blockFromHFile.unpacked.isUnpacked());
-    assertTrue("expected unpacked block to use shared memory",
-      blockFromHFile.unpacked.isSharedMem());
+    assertTrue(blockFromHFile.unpacked.isUnpacked(), "expected unpacked block to be unpacked");
+    assertTrue(blockFromHFile.unpacked.isSharedMem(),
+      "expected unpacked block to use shared memory");
   }
 
   private final static class HFileBlockWrapper {
@@ -207,9 +198,8 @@ public class TestHFileBlockUnpack {
       writeTestKeyValues(hbw, MIN_ALLOCATION_SIZE - 1);
       hbw.writeHeaderAndData(os);
       totalSize = hbw.getOnDiskSizeWithHeader();
-      assertTrue(
-        "expected generated block size " + totalSize + " to be less than " + MIN_ALLOCATION_SIZE,
-        totalSize < MIN_ALLOCATION_SIZE);
+      assertTrue(totalSize < MIN_ALLOCATION_SIZE,
+        "expected generated block size " + totalSize + " to be less than " + MIN_ALLOCATION_SIZE);
     }
     return totalSize;
   }

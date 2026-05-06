@@ -17,17 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.apache.hadoop.hbase.io.hfile.HFileInfo.FILE_PATH;
+import static org.apache.hadoop.hbase.io.hfile.HFileInfo.FILE_SIZE;
+
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -55,6 +63,11 @@ public class DataTieringManager {
   public static final long DEFAULT_DATATIERING_HOT_DATA_AGE = 7 * 24 * 60 * 60 * 1000; // 7 Days
   private static DataTieringManager instance;
   private final Map<String, HRegion> onlineRegions;
+
+  // Accounts for the total size of cold data in each region, together with a list of cold files in
+  // that region.
+  private final Map<String, Pair<List<String>, Long>> regionColdDataSize =
+    new ConcurrentHashMap<>();
 
   private DataTieringManager(Map<String, HRegion> onlineRegions) {
     this.onlineRegions = onlineRegions;
@@ -203,7 +216,34 @@ public class DataTieringManager {
       if (isWithinGracePeriod(maxTimestamp, configuration)) {
         return true;
       }
-      return hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
+      LOG.debug("Max TS: {} for file {}. Cutoff Age TS: {}", maxTimestamp,
+        hFileInfo.getHFileContext().getHFileName(), getDataTieringHotDataAge(configuration));
+      boolean isHot = hotDataValidator(maxTimestamp, getDataTieringHotDataAge(configuration));
+      if (!isHot) {
+        Path path = new Path(Bytes.toString(hFileInfo.get(FILE_PATH)));
+        String regionName = path.getParent().getParent().getName();
+        regionColdDataSize.compute(regionName, (k, v) -> {
+          if (v == null) {
+            List<String> files = new ArrayList<>();
+            files.add(hFileInfo.getHFileContext().getHFileName());
+            LOG.debug("computing file {} with size {} as cold data for region {}",
+              hFileInfo.getHFileContext().getHFileName(), Bytes.toLong(hFileInfo.get(FILE_SIZE)),
+              regionName);
+            return new Pair<>(files, Bytes.toLong(hFileInfo.get(FILE_SIZE)));
+          } else {
+            if (!v.getFirst().contains(hFileInfo.getHFileContext().getHFileName())) {
+              v.getFirst().add(hFileInfo.getHFileContext().getHFileName());
+              v.setSecond(v.getSecond() + Bytes.toLong(hFileInfo.get(FILE_SIZE)));
+              LOG.debug(
+                "adding file {} with size {} as cold data for region {}. Total cold data size for the region is {}",
+                hFileInfo.getHFileContext().getHFileName(), Bytes.toLong(hFileInfo.get(FILE_SIZE)),
+                regionName, v.getSecond());
+            }
+            return v;
+          }
+        });
+      }
+      return isHot;
     }
     // DataTieringType.NONE or other types are considered hot by default
     return true;
@@ -346,5 +386,30 @@ public class DataTieringManager {
   // Resets the instance to null. To be used only for testing.
   public static void resetForTestingOnly() {
     instance = null;
+  }
+
+  public Map<String, Pair<List<String>, Long>> getRegionColdDataSize() {
+    return regionColdDataSize;
+  }
+
+  /**
+   * Updates regionColdData size for the region containing the passed compactedFiles.
+   */
+  public void updateRegionColdDataSize(String encodedRegionName,
+    Collection<HStoreFile> compactedFiles, Collection<HStoreFile> newFiles) {
+    regionColdDataSize.computeIfPresent(encodedRegionName, (k, v) -> {
+      for (HStoreFile file : compactedFiles) {
+        if (v.getFirst().contains(file.getPath().getName())) {
+          v.getFirst().remove(file.getPath().getName());
+          v.setSecond(v.getSecond() - Bytes.toLong(file.getMetadataValue(FILE_SIZE)));
+        }
+      }
+      for (HStoreFile file : newFiles) {
+        // call isHotData to account for the new file size in regionColdDataSize, if the new file is
+        // considered cold data as per data-tiering logic.
+        isHotData(file.getFileInfo().getHFileInfo(), file.getFileInfo().getConf());
+      }
+      return v;
+    });
   }
 }

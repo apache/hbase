@@ -25,11 +25,11 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.security.GeneralSecurityException;
 import java.security.Security;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.crypto.tls.KeyStoreFileType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509TestContext;
@@ -43,19 +43,17 @@ import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -73,36 +71,35 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
  * non-localhost interface and client connects via remote IP address. Parameter is set to verify
  * both TLS/plaintext and TLS-only cases.
  */
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: supportPlaintext={0}")
 public class TestMutualTlsClientSideNonLocalhost {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMutualTlsClientSideNonLocalhost.class);
+  private static HBaseCommonTestingUtil UTIL;
 
-  protected static HBaseCommonTestingUtil UTIL;
+  private static File DIR;
 
-  protected static File DIR;
-
-  protected static X509TestContextProvider PROVIDER;
+  private static X509TestContextProvider PROVIDER;
 
   private X509TestContext x509TestContext;
 
-  protected RpcServer rpcServer;
+  private RpcServer rpcServer;
 
-  protected RpcClient rpcClient;
+  private RpcClient rpcClient;
   private TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub;
 
-  @Parameterized.Parameter(0)
-  public boolean supportPlaintext;
+  private boolean supportPlaintext;
 
-  @Parameterized.Parameters(name = "{index}: supportPlaintext={0}")
-  public static List<Boolean> data() {
-    return List.of(true, false);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
-  @BeforeClass
+  public TestMutualTlsClientSideNonLocalhost(boolean supportPlaintext) {
+    this.supportPlaintext = supportPlaintext;
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     UTIL = new HBaseCommonTestingUtil();
     Security.addProvider(new BouncyCastleProvider());
@@ -120,13 +117,13 @@ public class TestMutualTlsClientSideNonLocalhost {
     PROVIDER = new X509TestContextProvider(conf, DIR);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanUp() {
     Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
     UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(X509KeyType.RSA, X509KeyType.RSA, "keyPassword".toCharArray());
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
@@ -155,7 +152,7 @@ public class TestMutualTlsClientSideNonLocalhost {
       KeyStoreFileType.JKS, InetAddress.getLocalHost().getHostName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (rpcServer != null) {
       rpcServer.stop();
@@ -171,7 +168,7 @@ public class TestMutualTlsClientSideNonLocalhost {
     Security.setProperty("com.sun.security.enableCRLDP", Boolean.FALSE.toString());
   }
 
-  @Test
+  @TestTemplate
   public void testClientAuth() throws Exception {
     stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage("hello world").build());
   }

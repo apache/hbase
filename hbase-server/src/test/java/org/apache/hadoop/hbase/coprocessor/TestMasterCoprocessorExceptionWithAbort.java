@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -44,23 +43,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on master. Expected result is that the
  * master will abort with an informative error message describing the set of its loaded coprocessors
  * for crash diagnosis. (HBASE-4014).
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterCoprocessorExceptionWithAbort {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithAbort.class);
 
   public static class MasterTracker extends ZKNodeTracker {
     public boolean masterZKNodeWasDeleted = false;
@@ -96,8 +91,8 @@ public class TestMasterCoprocessorExceptionWithAbort {
         admin.createTable(tableDescriptor);
         fail("BuggyMasterObserver failed to throw an exception.");
       } catch (IOException e) {
-        assertEquals("HBaseAdmin threw an interrupted IOException as expected.",
-          "java.io.InterruptedIOException", e.getClass().getName());
+        assertEquals("java.io.InterruptedIOException", e.getClass().getName(),
+          "HBaseAdmin threw an interrupted IOException as expected.");
       }
     }
   }
@@ -151,7 +146,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
   private static byte[] TEST_TABLE = Bytes.toBytes("observed_table");
   private static byte[] TEST_FAMILY = Bytes.toBytes("fam1");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, BuggyMasterObserver.class.getName());
@@ -160,7 +155,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -172,7 +167,7 @@ public class TestMasterCoprocessorExceptionWithAbort {
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     BuggyMasterObserver cp = host.findCoprocessor(BuggyMasterObserver.class);
-    assertFalse("No table created yet", cp.wasCreateTableCalled());
+    assertFalse(cp.wasCreateTableCalled(), "No table created yet");
 
     // set a watch on the zookeeper /hbase/master node. If the master dies,
     // the node will be deleted.
@@ -228,15 +223,15 @@ public class TestMasterCoprocessorExceptionWithAbort {
       }
     }
 
-    assertTrue("Master aborted on coprocessor exception, as expected.",
-      masterTracker.masterZKNodeWasDeleted);
+    assertTrue(masterTracker.masterZKNodeWasDeleted,
+      "Master aborted on coprocessor exception, as expected.");
 
     createTableThread.interrupt();
     try {
       createTableThread.join(1000);
     } catch (InterruptedException e) {
-      assertTrue("Ignoring InterruptedException while waiting for " + " createTableThread.join().",
-        true);
+      assertTrue(true,
+        "Ignoring InterruptedException while waiting for " + " createTableThread.join().");
     }
   }
 

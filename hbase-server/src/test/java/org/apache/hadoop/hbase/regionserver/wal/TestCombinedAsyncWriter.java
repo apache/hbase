@@ -21,7 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -31,25 +30,21 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider.AsyncWriter;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCombinedAsyncWriter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCombinedAsyncWriter.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -59,10 +54,14 @@ public class TestCombinedAsyncWriter {
 
   private static WALFactory WALS;
 
-  @Rule
-  public final TestName name = new TestName();
+  private String name;
 
-  @BeforeClass
+  @BeforeEach
+  public void initTestName(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     CHANNEL_CLASS = NioSocketChannel.class;
@@ -71,7 +70,7 @@ public class TestCombinedAsyncWriter {
     WALS = new WALFactory(UTIL.getConfiguration(), TestCombinedAsyncWriter.class.getSimpleName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (WALS != null) {
       WALS.close();
@@ -91,7 +90,7 @@ public class TestCombinedAsyncWriter {
   }
 
   private Path getPath(int index) throws IOException {
-    String methodName = name.getMethodName().replaceAll("[^A-Za-z0-9_-]", "_");
+    String methodName = name.replaceAll("[^A-Za-z0-9_-]", "_");
     return new Path(UTIL.getDataTestDirOnTestFS(), methodName + "-" + index);
   }
 

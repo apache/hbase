@@ -74,7 +74,7 @@ class StoreFileListFile {
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileListFile.class);
 
   // the current version for StoreFileList
-  static final long VERSION = 1;
+  static final long VERSION = 2;
 
   static final String TRACK_FILE_DIR = ".filelist";
 

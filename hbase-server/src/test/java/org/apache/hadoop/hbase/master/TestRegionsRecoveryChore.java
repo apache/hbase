@@ -399,6 +399,7 @@ public class TestRegionsRecoveryChore {
       public Map<String, Integer> getRegionCachedInfo() {
         return new HashMap<>();
       }
+
     };
     return serverMetrics;
   }
@@ -548,6 +549,11 @@ public class TestRegionsRecoveryChore {
 
       @Override
       public float getCurrentRegionCachedRatio() {
+        return 0.0f;
+      }
+
+      @Override
+      public float getCurrentRegionColdDataRatio() {
         return 0.0f;
       }
     };

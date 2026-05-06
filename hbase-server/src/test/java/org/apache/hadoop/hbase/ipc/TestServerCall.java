@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -29,16 +29,14 @@ import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.codec.Codec;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,12 +50,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 /**
  * Test for ServerCall IOException handling in setResponse method.
  */
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestServerCall {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerCall.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestServerCall.class);
 
@@ -71,7 +66,7 @@ public class TestServerCall {
   private BlockingService mockService;
   private MethodDescriptor mockMethodDescriptor;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = HBaseConfiguration.create();
     mockConnection = mock(NettyServerRpcConnection.class);
@@ -117,13 +112,13 @@ public class TestServerCall {
 
     // Verify that response is not null and contains error information
     BufferChain response = call.getResponse();
-    assertNotNull("Response should not be null even when IOException occurs", response);
-    assertTrue("Call should be marked as error", call.isError);
+    assertNotNull(response, "Response should not be null even when IOException occurs");
+    assertTrue(call.isError, "Call should be marked as error");
 
     // Verify the response buffer is valid
     ByteBuffer[] bufs = response.getBuffers();
-    assertNotNull("Response buffers should not be null", bufs);
-    assertTrue("Response should have at least one buffer", bufs.length > 0);
+    assertNotNull(bufs, "Response buffers should not be null");
+    assertTrue(bufs.length > 0, "Response should have at least one buffer");
   }
 
   /**
@@ -146,7 +141,7 @@ public class TestServerCall {
 
     // Even if error response creation might fail, the call should still be marked as error
     call.setResponse(mockResponse, mockCellScanner, null, null);
-    assertTrue("Call should be marked as error", call.isError);
+    assertTrue(call.isError, "Call should be marked as error");
   }
 
   /**
@@ -168,7 +163,7 @@ public class TestServerCall {
     call.setResponse(mockResponse, null, null, null);
 
     BufferChain response = call.getResponse();
-    assertNotNull("Response should not be null in normal flow", response);
-    assertTrue("Call should not be marked as error in normal flow", !call.isError);
+    assertNotNull(response, "Response should not be null in normal flow");
+    assertTrue(!call.isError, "Call should not be marked as error in normal flow");
   }
 }

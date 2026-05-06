@@ -20,16 +20,18 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
 
 public class CloneSnapshotFromClientCloneLinksAfterDeleteTestBase
   extends CloneSnapshotFromClientTestBase {
 
+  protected CloneSnapshotFromClientCloneLinksAfterDeleteTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
   /**
    * Verify that tables created from the snapshot are still alive after source table deletion.
    */
-  @Test
-  public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
+  protected void testCloneLinksAfterDelete0() throws IOException, InterruptedException {
     // Clone a table from the first snapshot
     final TableName clonedTableName =
       TableName.valueOf(getValidMethodName() + "1-" + EnvironmentEdgeManager.currentTime());

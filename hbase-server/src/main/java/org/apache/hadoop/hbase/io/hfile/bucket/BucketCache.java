@@ -784,10 +784,9 @@ public class BucketCache implements BlockCache, HeapSize {
         String regionName = key.getRegionName();
         regionCachedSize.merge(regionName, cachedSize,
           (previousSize, newBlockSize) -> previousSize + newBlockSize);
-        LOG.trace("Updating region cached size for region: {}", regionName);
         // If all the blocks for a region are evicted from the cache,
         // remove the entry for that region from regionCachedSize map.
-        if (regionCachedSize.get(regionName) <= 0) {
+        if (regionCachedSize.getOrDefault(regionName, 0L) <= 0) {
           regionCachedSize.remove(regionName);
         }
       }
@@ -1645,13 +1644,7 @@ public class BucketCache implements BlockCache, HeapSize {
       dumpPrefetchList();
     }
     regionCachedSize.clear();
-    fullyCachedFiles.forEach((hFileName, hFileSize) -> {
-      // Get the region name for each file
-      String regionEncodedName = hFileSize.getFirst();
-      long cachedFileSize = hFileSize.getSecond();
-      regionCachedSize.merge(regionEncodedName, cachedFileSize,
-        (oldpf, fileSize) -> oldpf + fileSize);
-    });
+    backingMap.forEach((k, v) -> updateRegionCachedSize(k, v.getLength()));
   }
 
   private void dumpPrefetchList() {
@@ -1723,7 +1716,10 @@ public class BucketCache implements BlockCache, HeapSize {
     java.util.Map<java.lang.Integer, java.lang.String> deserializer) throws IOException {
     Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair2 =
       BucketProtoUtils.fromPB(deserializer, chunk, this::createRecycler);
-    backingMap.putAll(pair2.getFirst());
+    pair2.getFirst().forEach((k, v) -> {
+      backingMap.put(k, v);
+      updateRegionCachedSize(k, v.getLength());
+    });
     blocksByHFile.addAll(pair2.getSecond());
   }
 
@@ -1774,6 +1770,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
     backingMap.clear();
     blocksByHFile.clear();
+    regionCachedSize.clear();
 
     // Read the backing map entries in batches.
     int numChunks = 0;
@@ -1787,7 +1784,6 @@ public class BucketCache implements BlockCache, HeapSize {
     verifyFileIntegrity(cacheEntry);
     verifyCapacityAndClasses(cacheEntry.getCacheCapacity(), cacheEntry.getIoClass(),
       cacheEntry.getMapClass());
-    updateRegionSizeMapWhileRetrievingFromFile();
   }
 
   /**
@@ -1949,6 +1945,10 @@ public class BucketCache implements BlockCache, HeapSize {
     // split references, we might be evicting just half of the blocks
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
+    return evictBlockSet(keySet);
+  }
+
+  private int evictBlockSet(Set<BlockCacheKey> keySet) {
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
@@ -2490,7 +2490,17 @@ public class BucketCache implements BlockCache, HeapSize {
     String fileName = hFileInfo.getHFileContext().getHFileName();
     DataTieringManager dataTieringManager = DataTieringManager.getInstance();
     if (dataTieringManager != null && !dataTieringManager.isHotData(hFileInfo, conf)) {
-      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
+      LOG.debug("Custom tiering is enabled for file: '{}' and it is not hot data", fileName);
+      // If custom tiering has been just enabled for a file that was cached, we now need
+      // to evict it.
+      Set<BlockCacheKey> keySet =
+        getAllCacheKeysForFile(hFileInfo.getHFileContext().getHFileName(), 0, Long.MAX_VALUE);
+      int evictedBlocks = evictBlockSet(keySet);
+      if (evictedBlocks > 0) {
+        LOG.debug(
+          "Evicted {} blocks for file {} as it is now considered cold by DataTieringManager",
+          evictedBlocks, fileName);
+      }
       return Optional.of(false);
     }
     // if we don't have the file in fullyCachedFiles, we should cache it

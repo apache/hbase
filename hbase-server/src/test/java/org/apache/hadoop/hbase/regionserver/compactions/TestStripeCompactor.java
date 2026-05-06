@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver.compactions;
 
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.TestCompactor.createDummyRequest;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,13 +28,14 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -53,21 +54,14 @@ import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: usePrivateReaders={0}")
 public class TestStripeCompactor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStripeCompactor.class);
 
   private static final byte[] NAME_OF_THINGS = Bytes.toBytes("foo");
   private static final TableName TABLE_NAME = TableName.valueOf(NAME_OF_THINGS, NAME_OF_THINGS);
@@ -81,13 +75,15 @@ public class TestStripeCompactor {
   private static final KeyValue KV_C = kvAfter(KEY_C);
   private static final KeyValue KV_D = kvAfter(KEY_D);
 
-  @Parameters(name = "{index}: usePrivateReaders={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { true }, new Object[] { false });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
-  @Parameter
-  public boolean usePrivateReaders;
+  private final boolean usePrivateReaders;
+
+  public TestStripeCompactor(boolean usePrivateReaders) {
+    this.usePrivateReaders = usePrivateReaders;
+  }
 
   private static KeyValue kvAfter(byte[] key) {
     return new KeyValue(Arrays.copyOf(key, key.length + 1), 0L);
@@ -102,7 +98,7 @@ public class TestStripeCompactor {
     return TestStripeCompactor.<KeyValue> a();
   }
 
-  @Test
+  @TestTemplate
   public void testBoundaryCompactions() throws Exception {
     // General verification
     verifyBoundaryCompaction(a(KV_A, KV_A, KV_B, KV_B, KV_C, KV_D),
@@ -111,7 +107,7 @@ public class TestStripeCompactor {
     verifyBoundaryCompaction(a(KV_B, KV_C), a(KEY_B, KEY_D), new KeyValue[][] { a(KV_B, KV_C) });
   }
 
-  @Test
+  @TestTemplate
   public void testBoundaryCompactionEmptyFiles() throws Exception {
     // No empty file if there're already files.
     verifyBoundaryCompaction(a(KV_B), a(KEY_B, KEY_C, KEY_D, OPEN_KEY), a(a(KV_B), null, null),
@@ -152,7 +148,7 @@ public class TestStripeCompactor {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSizeCompactions() throws Exception {
     // General verification with different sizes.
     verifySizeCompaction(a(KV_A, KV_A, KV_B, KV_C, KV_D), 3, 2, OPEN_KEY, OPEN_KEY,

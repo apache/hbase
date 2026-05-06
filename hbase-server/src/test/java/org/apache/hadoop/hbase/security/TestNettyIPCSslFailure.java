@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.security;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
@@ -32,13 +32,12 @@ import org.apache.hadoop.hbase.ipc.NettyRpcClientConfigHelper;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
@@ -49,12 +48,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestNettyIPCSslFailure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyIPCSslFailure.class);
 
   private static final Configuration CONF = HBaseConfiguration.create();
 
@@ -66,7 +62,7 @@ public class TestNettyIPCSslFailure {
 
   private TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface stub;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, SSLContextException {
     CONF.set(X509Util.HBASE_SERVER_NETTY_TLS_ENABLED, "true");
     CONF.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
@@ -80,17 +76,18 @@ public class TestNettyIPCSslFailure {
     stub = TestProtobufRpcServiceImpl.newBlockingStub(client, server.getListenerAddress());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(client, true);
     server.stop();
     group.shutdownGracefully().sync();
   }
 
-  @Test(expected = ServiceException.class)
+  @Test
   public void testInitSslThrowsException() throws ServiceException {
-    stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage("test").build())
-      .getMessage();
+    assertThrows(ServiceException.class,
+      () -> stub.echo(null, TestProtos.EchoRequestProto.newBuilder().setMessage("test").build())
+        .getMessage());
   }
 
 }

@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.Predicate;
@@ -33,11 +32,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,12 +45,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 /**
  * Test the reading and writing of access permissions to and from zookeeper.
  */
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZKPermissionWatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKPermissionWatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKPermissionWatcher.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -77,7 +72,7 @@ public class TestZKPermissionWatcher {
 
   private static TableName TEST_TABLE = TableName.valueOf("perms_test");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // setup configuration
     Configuration conf = UTIL.getConfiguration();
@@ -95,7 +90,7 @@ public class TestZKPermissionWatcher {
     WATCHER_B.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     WATCHER_A.close();
     WATCHER_B.close();

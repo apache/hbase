@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -30,36 +29,42 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.DeleteTableState;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDeleteTableProcedureWithRecovery extends TestTableDDLProcedureBase {
+  private String testMethodName;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeleteTableProcedureWithRecovery.class);
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     // Enable recovery snapshots
+    TestTableDDLProcedureBase.setupConf(UTIL.getConfiguration());
     UTIL.getConfiguration().setBoolean(HConstants.SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_ENABLED_KEY,
       true);
-    TestTableDDLProcedureBase.setupCluster();
+    UTIL.startMiniCluster(1);
+  }
+
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
   }
 
   @Test
   public void testRecoverySnapshotRollback() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String[] families = new String[] { "f1", "f2" };
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -76,7 +81,7 @@ public class TestDeleteTableProcedureWithRecovery extends TestTableDDLProcedureB
     // Wait for procedure to complete (should fail)
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     Procedure<MasterProcedureEnv> result = procExec.getResult(procId);
-    assertTrue("Procedure should have failed", result.isFailed());
+    assertTrue(result.isFailed(), "Procedure should have failed");
 
     // Verify no recovery snapshots remain after rollback
     boolean snapshotFound = false;
@@ -86,13 +91,13 @@ public class TestDeleteTableProcedureWithRecovery extends TestTableDDLProcedureB
         break;
       }
     }
-    assertTrue("Recovery snapshot should have been cleaned up during rollback", !snapshotFound);
+    assertTrue(!snapshotFound, "Recovery snapshot should have been cleaned up during rollback");
   }
 
   @Test
   public void testRecoverySnapshotAndRestore() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    final TableName restoredTableName = TableName.valueOf(name.getMethodName() + "_restored");
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final TableName restoredTableName = TableName.valueOf(testMethodName + "_restored");
     final String[] families = new String[] { "f1", "f2" };
 
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -119,7 +124,7 @@ public class TestDeleteTableProcedureWithRecovery extends TestTableDDLProcedureB
         break;
       }
     }
-    assertTrue("Recovery snapshot should exist", recoverySnapshotName != null);
+    assertTrue(recoverySnapshotName != null, "Recovery snapshot should exist");
 
     // Restore from snapshot by cloning to a new table
     UTIL.getAdmin().cloneSnapshot(recoverySnapshotName, restoredTableName);

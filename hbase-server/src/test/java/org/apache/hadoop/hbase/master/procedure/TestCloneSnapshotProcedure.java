@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableExistsException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,22 +38,20 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCloneSnapshotProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCloneSnapshotProcedure.class);
 
@@ -62,7 +59,17 @@ public class TestCloneSnapshotProcedure extends TestTableDDLProcedureBase {
 
   private static SnapshotProtos.SnapshotDescription snapshot = null;
 
-  @After
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    TestTableDDLProcedureBase.setupCluster();
+  }
+
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
+  }
+
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     super.tearDown();

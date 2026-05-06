@@ -19,16 +19,17 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 import static org.apache.hadoop.hbase.security.visibility.VisibilityUtils.SYSTEM_LABEL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -41,11 +42,11 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,17 +58,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPa
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.ListLabelsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({ SecurityTests.class, MediumTests.class })
-public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibilityLabels {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsWithDefaultVisLabelService.class);
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
+public class TestVisibilityLabelsWithDefaultVisLabelService extends VisibilityLabelsTestBase {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestVisibilityLabelsWithDefaultVisLabelService.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -82,6 +80,14 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
     // Wait for the labels table to become available
     TEST_UTIL.waitTableEnabled(LABELS_TABLE_NAME.getName(), 50000);
     addLabels();
+  }
+
+  @Test
+  public void testVisibilityLabelsInPutsThatDoesNotMatchAnyDefinedLabels() throws Exception {
+    TableName tableName = name.getTableName();
+    assertThrows(Exception.class,
+      () -> createTableAndWriteDataWithLabels(tableName, "SAMPLE_LABEL", "TEST"),
+      "Should have failed with failed sanity check exception");
   }
 
   @Test
@@ -170,7 +176,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
       }
     }
     // One label is the "system" label.
-    Assert.assertEquals("The count should be 13", 13, i);
+    Assertions.assertEquals(13, i, "The count should be 13");
   }
 
   @Test
@@ -228,8 +234,9 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends TestVisibili
   }
 
   @Test
-  public void testVisibilityLabelsOnWALReplay() throws Exception {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+  public void testVisibilityLabelsOnWALReplay(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = createTableAndWriteDataWithLabels(tableName,
       "(" + SECRET + "|" + CONFIDENTIAL + ")", PRIVATE)) {
       List<RegionServerThread> regionServerThreads =

@@ -654,6 +654,11 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String CURRENT_REGION_CACHE_RATIO = "currentRegionCacheRatio";
   String CURRENT_REGION_CACHE_RATIO_DESC = "The percentage of caching completed for this region.";
 
+  String CURRENT_REGION_COLD_DATA_RATIO = "currentRegionColdDataRatio";
+
+  String CURRENT_REGION_COLD_DATA_RATIO_DESC = "The percentage of data in this region that "
+    + "is marked as cold by the configured time based priority logic.";
+
   String EXCLUDE_DATA_NODES_COUNT = "excludedDataNodesCount";
   String EXCLUDE_DATA_NODES_COUNT_DESC =
     "Count of slow/connect error DataNodes excluded during WAL write operation";
