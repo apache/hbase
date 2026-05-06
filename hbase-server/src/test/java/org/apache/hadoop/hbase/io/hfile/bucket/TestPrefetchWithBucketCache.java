@@ -319,7 +319,7 @@ public class TestPrefetchWithBucketCache {
     conf.setDouble("hbase.bucketcache.minfactor", 1.0);
     conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
     conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
-    //Ensures no prefetch interruption due to heap usage in the event of freeMemory() returning 0.
+    // Ensures no prefetch interruption due to heap usage in the event of freeMemory() returning 0.
     conf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, Double.MAX_VALUE);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
