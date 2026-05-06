@@ -71,6 +71,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
    */
   private ExtendedCell pendingSkipHint = null;
 
+  private final boolean reversed;
+
   private static ExtendedCell createStartKey(Scan scan, ScanInfo scanInfo) {
     if (scan.includeStartRow()) {
       return createStartKeyFromRow(scan.getStartRow(), scanInfo);
@@ -92,6 +94,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       this.versionsAfterFilter = 0;
     }
     this.stopRow = scan.getStopRow();
+    this.reversed = scan.isReversed();
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(scanInfo.getFamily());
     if (timeRange == null) {
       this.tr = scan.getTimeRange();
@@ -232,11 +235,9 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
           + "is not an ExtendedCell. Filter class: " + filter.getClass().getName());
     }
     ExtendedCell hint = (ExtendedCell) raw;
-    // Only accept the hint if it advances past the current cell. A backward or
-    // no-op hint would cause the scanner to re-visit the same cell, degrading
-    // to a tight re-match loop. This mirrors the guard in StoreScanner's
-    // SEEK_NEXT_USING_HINT handler (see StoreScanner line ~790).
-    if (rowComparator.compare(hint, cell) <= 0) {
+    // Only accept the hint if it advances past the current cell in scan direction.
+    int cmp = rowComparator.compare(hint, cell);
+    if ((!reversed && cmp <= 0) || (reversed && cmp >= 0)) {
       return false;
     }
     pendingSkipHint = hint;

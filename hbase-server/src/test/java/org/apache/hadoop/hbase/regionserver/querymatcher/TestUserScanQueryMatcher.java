@@ -560,6 +560,34 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     assertEquals(filterHintCell, qm.getNextKeyHint(cell));
   }
 
+  /** Verify that getSkipHint works correctly for reversed scans (hint must be smaller). */
+  @Test
+  public void testSkipHintConsultedForReversedScan() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long minTs = now - 2000;
+    long maxTs = now - 1000;
+
+    // For reversed scan, the hint must point backward (smaller key).
+    KeyValue hintCell = new KeyValue(row1, fam2, col1, now - 1500, data);
+    Scan reversedScan = new Scan().addFamily(fam2).setTimeRange(minTs, maxTs).setReversed(true)
+      .setFilter(new FixedSkipHintFilter(hintCell));
+
+    long now2 = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(reversedScan,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, 0, now2, null);
+
+    // ts=now2 >= maxTs so tsCmp > 0: time-range gate fires.
+    // row2 > row1 in natural order, so for reversed scan hint (row1) is "forward" (smaller).
+    KeyValue tooNew = new KeyValue(row2, fam2, col1, now2, data);
+    qm.setToNewRow(tooNew);
+
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooNew));
+    assertEquals(hintCell, qm.getNextKeyHint(tooNew));
+    assertNull(qm.getNextKeyHint(tooNew));
+  }
+
   /**
    * After enough consecutive range delete markers, the matcher should switch from SKIP to
    * SEEK_NEXT_COL. Point deletes and KEEP_DELETED_CELLS always SKIP.

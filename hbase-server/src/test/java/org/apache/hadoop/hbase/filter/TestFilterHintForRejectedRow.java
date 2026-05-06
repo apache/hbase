@@ -525,4 +525,132 @@ public class TestFilterHintForRejectedRow {
         CellUtil.equals(filteredResults.get(i), unfilteredResults.get(i)));
     }
   }
+
+  @Test
+  public void testHintOvershootingStopRowTerminatesGracefully() throws IOException {
+    final String prefix = "row";
+    final int totalRows = 10;
+    writeRows(prefix, totalRows);
+
+    // Scan rows 00-06 (stopRow=row-07, exclusive). Reject rows 00-02, hint to row-09.
+    // The hint overshoots the stop row, so the scan should terminate with no results
+    // from the rejected range and only include rows 03-06 from the non-rejected range.
+    final byte[] stopRow = Bytes.toBytes(String.format("%s-%02d", prefix, 7));
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, 3));
+    final byte[] hintTarget = Bytes.toBytes(String.format("%s-%02d", prefix, 9));
+
+    FilterBase hintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        // Hint past the stop row — scanner should terminate gracefully.
+        return PrivateCellUtil.createFirstOnRow(hintTarget);
+      }
+    };
+
+    Scan scan = new Scan().addFamily(FAMILY).withStopRow(stopRow).setFilter(hintFilter);
+    List<Cell> results = scanAll(scan);
+
+    // The hint jumps past stopRow, so no cells should be returned.
+    assertTrue("Hint past stop row must terminate scan with no results", results.isEmpty());
+  }
+
+  @Test
+  public void testHintWithinStopRowReturnsCorrectResults() throws IOException {
+    final String prefix = "row";
+    final int totalRows = 10;
+    writeRows(prefix, totalRows);
+
+    // Scan rows 00-06 (stopRow=row-07, exclusive). Reject rows 00-02, hint to row-03.
+    final byte[] stopRow = Bytes.toBytes(String.format("%s-%02d", prefix, 7));
+    final byte[] acceptedStartRow = Bytes.toBytes(String.format("%s-%02d", prefix, 3));
+
+    FilterBase hintFilter = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          acceptedStartRow, 0, acceptedStartRow.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        return PrivateCellUtil.createFirstOnRow(acceptedStartRow);
+      }
+    };
+
+    Scan hintScan = new Scan().addFamily(FAMILY).withStopRow(stopRow).setFilter(hintFilter);
+    List<Cell> hintResults = scanAll(hintScan);
+
+    // Should get rows 03-06 (4 rows).
+    Scan baselineScan =
+      new Scan().addFamily(FAMILY).withStartRow(acceptedStartRow).withStopRow(stopRow);
+    List<Cell> baselineResults = scanAll(baselineScan);
+
+    assertEquals("Hint within stop row must return same results as baseline",
+      baselineResults.size(), hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), baselineResults.get(i)));
+    }
+    assertEquals(4 * CELLS_PER_ROW, hintResults.size());
+  }
+
+  @Test
+  public void testGetSkipHintCalledForReversedScan() throws IOException {
+    final long insideTs = 1500;
+    final long tooNewTs = 5000;
+    final int rowCount = 5;
+    final byte[] qInside = Bytes.toBytes("q-inside");
+    final byte[] qNew = Bytes.toBytes("q-new");
+
+    // Write two qualifiers per row: "q-inside" at ts=1500 (within range) and "q-new" at
+    // ts=5000 (above the range upper bound). The time-range gate fires for the too-new cell
+    // before version tracking can absorb it, ensuring getSkipHint is consulted.
+    for (int i = 0; i < rowCount; i++) {
+      byte[] row = Bytes.toBytes(String.format("skiprev-%02d", i));
+      Put p = new Put(row);
+      p.setDurability(Durability.SKIP_WAL);
+      p.addColumn(FAMILY, qInside, insideTs, VALUE);
+      p.addColumn(FAMILY, qNew, tooNewTs, VALUE);
+      region.put(p);
+    }
+    region.flush(true);
+
+    final AtomicInteger skipHintCalls = new AtomicInteger(0);
+
+    // Return null to verify the code path is reached without altering scan semantics.
+    // The unit test TestUserScanQueryMatcher#testSkipHintConsultedForReversedScan validates
+    // that a non-null hint is correctly accepted by the reversed-scan guard.
+    FilterBase skipHintFilter = new FilterBase() {
+      @Override
+      public Cell getSkipHint(Cell skippedCell) {
+        skipHintCalls.incrementAndGet();
+        return null;
+      }
+    };
+
+    // Reversed scan with time range [1000, 3000): insideTs cells pass, tooNewTs cells are
+    // structurally skipped (tsCmp > 0). The skip hint should be consulted.
+    Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setReversed(true)
+      .setFilter(skipHintFilter);
+    Scan noHintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setReversed(true);
+
+    List<Cell> hintResults = scanAll(hintScan);
+    List<Cell> noHintResults = scanAll(noHintScan);
+
+    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
+      hintResults.size());
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue("Cell mismatch at index " + i,
+        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+    }
+    assertEquals(rowCount, hintResults.size());
+    assertTrue("getSkipHint must be called at least once for reversed scan",
+      skipHintCalls.get() > 0);
+  }
 }
