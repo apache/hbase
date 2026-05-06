@@ -89,4 +89,12 @@ public class TestHexStringRowKeyProgress {
     float at10 = p.getProgress(Bytes.toBytes("10:aaa"));
     assertTrue(at10 > at0f);
   }
+
+  @Test
+  public void testUppercaseHexEquivalentToLowercase() {
+    RowKeyProgress lower = create(Bytes.toBytes("0000"), Bytes.toBytes("ffff"));
+    RowKeyProgress upper = create(Bytes.toBytes("0000"), Bytes.toBytes("FFFF"));
+    assertEquals(lower.getProgress(Bytes.toBytes("deadbeef")),
+      upper.getProgress(Bytes.toBytes("DEADBEEF")), 0.0001f);
+  }
 }

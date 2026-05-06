@@ -33,8 +33,8 @@ public class HexStringRowKeyProgress implements RowKeyProgress {
   private static final int MAX_PREFIX_LENGTH = 13;
 
   /**
-   * Hex characters past the start/stop divergence point to include for resolution. 4 hex chars = 65
-   * 536 buckets, finer than any progress bar can display.
+   * Hex characters past the start/stop divergence point to include for resolution. 4 hex chars =
+   * 65,536 buckets, finer than any progress bar can display.
    */
   private static final int RESOLUTION_PADDING = 4;
 
@@ -88,6 +88,9 @@ public class HexStringRowKeyProgress implements RowKeyProgress {
     }
     if (b >= 'a' && b <= 'f') {
       return 10 + (b - 'a');
+    }
+    if (b >= 'A' && b <= 'F') {
+      return 10 + (b - 'A');
     }
     return 0;
   }
