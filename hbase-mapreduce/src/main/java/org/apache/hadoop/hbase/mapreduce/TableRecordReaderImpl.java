@@ -154,6 +154,9 @@ public class TableRecordReaderImpl {
    * discover the actual first or last row key as an approximation.
    */
   private void initProgressBounds() {
+    if (context == null) {
+      return;
+    }
     byte[] startRow = scan.getStartRow();
     byte[] stopRow = scan.getStopRow();
     if (startRow == null || startRow.length == 0) {
