@@ -212,10 +212,7 @@ public class TestIllegalTableDescriptor {
       "org.apache.hadoop.hbase.regionserver.DefaultStoreEngine");
     checkTableIsIllegal(builder.build());
 
-    // column family level configuration changes — exercised via both
-    // ColumnFamilyDescriptorBuilder#setConfiguration (configuration map) and
-    // ColumnFamilyDescriptorBuilder#setValue (values map) so that
-    // TableDescriptorChecker is exercised against both underlying storage maps.
+    // column family level configuration changes
     for (boolean viaSetValue : new boolean[] { false, true }) {
       builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
       cfBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
