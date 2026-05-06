@@ -22,6 +22,7 @@ import java.lang.reflect.Method;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ConnectionConfiguration;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -189,6 +190,9 @@ public class TableRecordReaderImpl {
   private byte[] probeLastRow() {
     try {
       Scan probeScan = new Scan(scan);
+      // Only called for the last region, so swap row bounds for the reversed scan.
+      probeScan.withStartRow(HConstants.EMPTY_START_ROW);
+      probeScan.withStopRow(scan.getStartRow(), scan.includeStartRow());
       probeScan.setReversed(true);
       probeScan.setOneRowLimit();
       try (ResultScanner probeScanner = htable.getScanner(probeScan)) {
