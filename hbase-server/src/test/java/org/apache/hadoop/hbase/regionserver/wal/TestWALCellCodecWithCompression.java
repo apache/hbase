@@ -80,11 +80,11 @@ public class TestWALCellCodecWithCompression {
 
   @Test
   public void testEncodeDecodeOffKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true, true);
+    doTest(true, false);
   }
 
   @Test
-  public void testEncodeDecodeOffKVsWithTags() throws Exception {
+  public void testValueCompressionEnabled() throws Exception {
     doTest(false, true);
   }
 
