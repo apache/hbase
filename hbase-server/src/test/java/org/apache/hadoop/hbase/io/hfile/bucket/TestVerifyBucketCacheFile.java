@@ -110,7 +110,8 @@ public class TestVerifyBucketCacheFile {
     try {
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName());
+        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
+        conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
@@ -128,7 +129,8 @@ public class TestVerifyBucketCacheFile {
       // restore cache from file
       bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName());
+        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
+        conf);
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       // persist cache to file
@@ -141,7 +143,8 @@ public class TestVerifyBucketCacheFile {
       // can't restore cache from file
       recoveredBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence" + name.getMethodName());
+        testDir + "/bucket.persistence" + name.getMethodName(), DEFAULT_ERROR_TOLERATION_DURATION,
+        conf);
       assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, recoveredBucketCache);
       assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());

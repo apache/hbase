@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.security.visibility;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.security.User;
 
 /**
@@ -28,7 +29,7 @@ import org.apache.hadoop.hbase.security.User;
 public class VisibilityTestUtil {
 
   public static void enableVisiblityLabels(Configuration conf) throws IOException {
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.setBoolean(User.HBASE_SECURITY_AUTHORIZATION_CONF_KEY, true);
     appendCoprocessor(conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       VisibilityController.class.getName());

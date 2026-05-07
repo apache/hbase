@@ -133,8 +133,10 @@ public class TestHFileBlockIndex {
     conf = TEST_UTIL.getConfiguration();
     RNG.setSeed(2389757);
 
-    // This test requires at least HFile format version 2.
-    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
+    // This test validates the v3 data block index behavior (HFileBlockIndex + FixedFileTrailer
+    // numDataIndexLevels). HFile v4 has a different layout and repurposes trailer fields for the
+    // section index, so keep this pinned to v3.
+    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
 
     fs = HFileSystem.get(conf);
   }

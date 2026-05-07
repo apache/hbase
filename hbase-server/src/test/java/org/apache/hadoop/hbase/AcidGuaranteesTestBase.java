@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
@@ -66,7 +67,19 @@ public abstract class AcidGuaranteesTestBase {
     // prevent aggressive region split
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
       ConstantSizeRegionSplitPolicy.class.getName());
-    conf.setInt("hfile.format.version", 3); // for mob tests
+    // Ensure the mini cluster uses the current HFile writer version. HBase 4.x defaults to v4.
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
+    // HFile v4 flushes have slightly more overhead (section index, per-section bloom filters,
+    // extra stream flushes during section close). With the tiny 128KB flush size and crazyFlush
+    // mode, the memstore can exceed the blocking threshold, causing RegionTooBusyException.
+    // The default client timeouts make flush and teardown retries outlive the test timeout.
+    // Cap both operation and per-RPC timeouts so this suite fails fast under CI back-pressure.
+    conf.setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 60000);
+    conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 10);
+    conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 30000);
+    // Raise the blocking multiplier to tolerate transient memstore back-pressure.
+    // Default is 4 (blocking at 512KB for 128KB flush), which is too tight under v4.
+    conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 8);
     UTIL.startMiniCluster(1);
   }
 

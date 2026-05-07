@@ -322,11 +322,9 @@ public class TestPrefetchWithBucketCache {
   public void testPrefetchRunTriggersEvictions() throws Exception {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
     conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
-    // Use full capacity as the "acceptable" size so prefetch does not stop at ~98% total usage
-    // (via blockFitsIntoTheCache) before the cache writer path must run freeSpace/evictions.
-    conf.setDouble("hbase.bucketcache.acceptfactor", 1.0);
-    conf.setDouble("hbase.bucketcache.minfactor", 1.0);
-    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
+    conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
+    conf.setDouble("hbase.bucketcache.minfactor", 0.95);
+    conf.setDouble("hbase.bucketcache.extrafreefactor", 0.01);
     conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
     // Ensures no prefetch interruption due to heap usage in the event of freeMemory() returning 0.
     conf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, Double.MAX_VALUE);

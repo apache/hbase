@@ -133,6 +133,34 @@ public class FixedFileTrailer {
   private byte[] encryptionKey;
 
   /**
+   * Flag indicating if this file is a multi-tenant HFile
+   */
+  private boolean isMultiTenant = false;
+
+  /**
+   * The tenant prefix length for multi-tenant HFiles
+   */
+  private int tenantPrefixLength = 0;
+
+  /** Offset of the multi-tenant section index root block */
+  private long sectionIndexOffset = -1L;
+
+  /**
+   * The key namespace
+   */
+  private String keyNamespace;
+
+  /**
+   * The KEK checksum
+   */
+  private long kekChecksum;
+
+  /**
+   * The KEK metadata
+   */
+  private String kekMetadata;
+
+  /**
    * The {@link HFile} format major version.
    */
   private final int majorVersion;
@@ -213,6 +241,23 @@ public class FixedFileTrailer {
       .setCompressionCodec(compressionCodec.ordinal());
     if (encryptionKey != null) {
       builder.setEncryptionKey(UnsafeByteOperations.unsafeWrap(encryptionKey));
+    }
+    // Set multi-tenant fields for v4 files
+    if (isMultiTenant) {
+      builder.setMultiTenant(isMultiTenant);
+      builder.setTenantPrefixLength(tenantPrefixLength);
+      if (sectionIndexOffset >= 0) {
+        builder.setSectionIndexOffset(sectionIndexOffset);
+      }
+    }
+    if (keyNamespace != null) {
+      builder.setKeyNamespace(keyNamespace);
+    }
+    if (kekMetadata != null) {
+      builder.setKekMetadata(kekMetadata);
+    }
+    if (kekChecksum != 0) {
+      builder.setKekChecksum(kekChecksum);
     }
     return builder.build();
   }
@@ -317,6 +362,25 @@ public class FixedFileTrailer {
     if (trailerProto.hasEncryptionKey()) {
       encryptionKey = trailerProto.getEncryptionKey().toByteArray();
     }
+
+    if (trailerProto.hasMultiTenant()) {
+      isMultiTenant = trailerProto.getMultiTenant();
+    }
+    if (trailerProto.hasTenantPrefixLength()) {
+      tenantPrefixLength = trailerProto.getTenantPrefixLength();
+    }
+    if (trailerProto.hasSectionIndexOffset()) {
+      sectionIndexOffset = trailerProto.getSectionIndexOffset();
+    }
+    if (trailerProto.hasKeyNamespace()) {
+      keyNamespace = trailerProto.getKeyNamespace();
+    }
+    if (trailerProto.hasKekMetadata()) {
+      kekMetadata = trailerProto.getKekMetadata();
+    }
+    if (trailerProto.hasKekChecksum()) {
+      kekChecksum = trailerProto.getKekChecksum();
+    }
   }
 
   /**
@@ -365,6 +429,18 @@ public class FixedFileTrailer {
     append(sb, "comparatorClassName=" + comparatorClassName);
     if (majorVersion >= 3) {
       append(sb, "encryptionKey=" + (encryptionKey != null ? "PRESENT" : "NONE"));
+    }
+
+    if (majorVersion >= 4) {
+      append(sb, "isMultiTenant=" + isMultiTenant);
+      if (isMultiTenant) {
+        append(sb, "tenantPrefixLength=" + tenantPrefixLength);
+        append(sb, "sectionIndexOffset=" + sectionIndexOffset);
+      }
+    }
+
+    if (keyNamespace != null) {
+      append(sb, "keyNamespace=" + keyNamespace);
     }
     append(sb, "majorVersion=" + majorVersion);
     append(sb, "minorVersion=" + minorVersion);
@@ -455,6 +531,16 @@ public class FixedFileTrailer {
 
   public void setLoadOnOpenOffset(long loadOnOpenDataOffset) {
     this.loadOnOpenDataOffset = loadOnOpenDataOffset;
+  }
+
+  public long getSectionIndexOffset() {
+    expectAtLeastMajorVersion(4);
+    return sectionIndexOffset;
+  }
+
+  public void setSectionIndexOffset(long sectionIndexOffset) {
+    expectAtLeastMajorVersion(4);
+    this.sectionIndexOffset = sectionIndexOffset;
   }
 
   public int getDataIndexCount() {
@@ -702,5 +788,25 @@ public class FixedFileTrailer {
    */
   static int materializeVersion(int majorVersion, int minorVersion) {
     return ((majorVersion & 0x00ffffff) | (minorVersion << 24));
+  }
+
+  public boolean isMultiTenant() {
+    expectAtLeastMajorVersion(4);
+    return isMultiTenant;
+  }
+
+  public void setMultiTenant(boolean multiTenant) {
+    expectAtLeastMajorVersion(4);
+    isMultiTenant = multiTenant;
+  }
+
+  public int getTenantPrefixLength() {
+    expectAtLeastMajorVersion(4);
+    return tenantPrefixLength;
+  }
+
+  public void setTenantPrefixLength(int tenantPrefixLength) {
+    expectAtLeastMajorVersion(4);
+    this.tenantPrefixLength = tenantPrefixLength;
   }
 }
