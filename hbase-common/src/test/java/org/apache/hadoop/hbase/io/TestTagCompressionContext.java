@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
-import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -56,7 +55,7 @@ public class TestTagCompressionContext {
   @Test
   public void testCompressUncompressTags1() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+    TagCompressionContext context = new TagCompressionContext(Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(2);
     int tagsLength1 = kv1.getTagsLength();
     ByteBuffer ib = ByteBuffer.wrap(kv1.getTagsArray());
@@ -83,7 +82,7 @@ public class TestTagCompressionContext {
   public void testCompressUncompressTagsWithOffheapKeyValue1() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream daos = new ByteBufferWriterDataOutputStream(baos);
-    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+    TagCompressionContext context = new TagCompressionContext(Byte.MAX_VALUE);
     ByteBufferExtendedCell kv1 = (ByteBufferExtendedCell) createOffheapKVWithTags(2);
     int tagsLength1 = kv1.getTagsLength();
     context.compressTags(daos, kv1.getTagsByteBuffer(), kv1.getTagsPosition(), tagsLength1);
@@ -107,7 +106,7 @@ public class TestTagCompressionContext {
   @Test
   public void testCompressUncompressTags2() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
-    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+    TagCompressionContext context = new TagCompressionContext(Byte.MAX_VALUE);
     KeyValue kv1 = createKVWithTags(1);
     int tagsLength1 = kv1.getTagsLength();
     context.compressTags(baos, kv1.getTagsArray(), kv1.getTagsOffset(), tagsLength1);
@@ -132,7 +131,7 @@ public class TestTagCompressionContext {
   public void testCompressUncompressTagsWithOffheapKeyValue2() throws Exception {
     ByteArrayOutputStream baos = new ByteArrayOutputStream();
     DataOutputStream daos = new ByteBufferWriterDataOutputStream(baos);
-    TagCompressionContext context = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+    TagCompressionContext context = new TagCompressionContext(Byte.MAX_VALUE);
     ByteBufferExtendedCell kv1 = (ByteBufferExtendedCell) createOffheapKVWithTags(1);
     int tagsLength1 = kv1.getTagsLength();
     context.compressTags(daos, kv1.getTagsByteBuffer(), kv1.getTagsPosition(), tagsLength1);
