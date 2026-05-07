@@ -17,26 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Reader;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ RegionServerTests.class, LargeTests.class })
-public class TestSecureWALReplay extends TestWALReplay {
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestSecureWALReplay extends AbstractTestWALReplay {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureWALReplay.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = AbstractTestWALReplay.TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
@@ -46,6 +44,11 @@ public class TestSecureWALReplay extends TestWALReplay {
     conf.setClass("hbase.regionserver.hlog.writer.impl", SecureProtobufLogWriter.class,
       Writer.class);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
-    AbstractTestWALReplay.setUpBeforeClass();
+    TestWALReplay.setUpBeforeClass();
+  }
+
+  @Override
+  protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
+    return TestWALReplay.createFSHLog(c, hbaseRootDir, logName);
   }
 }
