@@ -313,13 +313,17 @@ public class TestPrefetchWithBucketCache {
   public void testPrefetchRunTriggersEvictions() throws Exception {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
     conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
-    conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
-    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
+    // Use full capacity as the "acceptable" size so prefetch does not stop at ~98% total usage
+    // (via blockFitsIntoTheCache) before the cache writer path must run freeSpace/evictions.
+    conf.setDouble("hbase.bucketcache.acceptfactor", 1.0);
+    conf.setDouble("hbase.bucketcache.minfactor", 1.0);
     conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
     conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
+    // Ensures no prefetch interruption due to heap usage in the event of freeMemory() returning 0.
+    conf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, Double.MAX_VALUE);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
-    Path storeFile = writeStoreFile("testPrefetchInterruptOnCapacity", 10000);
+    Path storeFile = writeStoreFile("testPrefetchRunTriggersEvictions", 10000);
     // Prefetches the file blocks
     createReaderAndWaitForPrefetchInterruption(storeFile);
     Waiter.waitFor(conf, (PrefetchExecutor.getPrefetchDelay() + 1000),
@@ -336,7 +340,8 @@ public class TestPrefetchWithBucketCache {
     });
     if (bc.getStats().getFailedInserts() == 0) {
       // With no wait time configuration, prefetch should trigger evictions once it reaches
-      // cache capacity
+      // cache capacity. Writer threads can finish draining slightly after queue.offer returns.
+      Waiter.waitFor(conf, 15000, () -> bc.getStats().getEvictedCount() > 0);
       assertNotEquals(0, bc.getStats().getEvictedCount());
     } else {
       LOG.info("We had {} cache insert failures, which may cause cache usage "
