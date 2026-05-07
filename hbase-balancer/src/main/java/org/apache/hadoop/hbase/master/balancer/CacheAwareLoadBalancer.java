@@ -601,9 +601,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
      */
     private double potentialBestWeightedFromFreeCache(BalancerClusterState cluster, int region,
       double currentHighestCache) {
-      if (cluster.serverBlockCacheFreeSize == null) {
-        return 0.0;
-      }
       float observedRatio = cluster.getObservedRegionCacheRatio(region);
       if (observedRatio >= lowCacheRatioThreshold) {
         return 0.0;

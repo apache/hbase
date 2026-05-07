@@ -150,7 +150,7 @@ public final class ServerMetricsBuilder {
   private final List<ServerTask> tasks = new ArrayList<>();
   private Map<String, Integer> regionCachedInfo = new HashMap<>();
   private long cacheFreeSize;
-  private Map<String, Integer> regionColdDataInfo;
+  private Map<String, Integer> regionColdDataInfo = Collections.emptyMap();
 
   private ServerMetricsBuilder(ServerName serverName) {
     this.serverName = serverName;
@@ -430,7 +430,8 @@ public final class ServerMetricsBuilder {
 
     @Override
     public Map<String, Integer> getRegionColdDataSize() {
-      return Collections.unmodifiableMap(regionColdDataInfo);
+      return Collections
+        .unmodifiableMap(regionColdDataInfo != null ? regionColdDataInfo : Collections.emptyMap());
     }
 
     @Override

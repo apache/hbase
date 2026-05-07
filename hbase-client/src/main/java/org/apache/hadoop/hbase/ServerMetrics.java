@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -126,5 +127,7 @@ public interface ServerMetrics {
    * the configured priority logic. These data should be kept out of block cache.
    * @return map of region encoded name and its total cold data size, rounded to MB
    */
-  Map<String, Integer> getRegionColdDataSize();
+  default Map<String, Integer> getRegionColdDataSize() {
+    return Collections.emptyMap();
+  }
 }
