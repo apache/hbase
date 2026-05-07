@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.regionreplication;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
 import static org.mockito.Mockito.mock;
@@ -31,7 +31,6 @@ import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -41,18 +40,14 @@ import org.apache.hadoop.hbase.regionserver.HRegion.FlushResultImpl;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicationBufferManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicationBufferManager.class);
 
   private Configuration conf;
 
@@ -60,14 +55,14 @@ public class TestRegionReplicationBufferManager {
 
   private RegionReplicationBufferManager manager;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = HBaseConfiguration.create();
     rsServices = mock(RegionServerServices.class);
     when(rsServices.getConfiguration()).thenReturn(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (manager != null) {
       manager.stop();
