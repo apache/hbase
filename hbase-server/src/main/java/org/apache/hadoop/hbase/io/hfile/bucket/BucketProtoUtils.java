@@ -100,9 +100,16 @@ final class BucketProtoUtils {
   }
 
   private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
-    return BucketCacheProtos.BlockCacheKey.newBuilder().setHfilename(key.getHfileName())
-      .setOffset(key.getOffset()).setPrimaryReplicaBlock(key.isPrimary())
-      .setBlockType(toPB(key.getBlockType())).build();
+    BucketCacheProtos.BlockCacheKey.Builder builder = BucketCacheProtos.BlockCacheKey.newBuilder()
+      .setHfilename(key.getHfileName()).setOffset(key.getOffset())
+      .setPrimaryReplicaBlock(key.isPrimary()).setBlockType(toPB(key.getBlockType()));
+    if (key.getCfName() != null) {
+      builder.setFamilyName(key.getCfName());
+    }
+    if (key.getRegionName() != null) {
+      builder.setRegionName(key.getRegionName());
+    }
+    return builder.build();
   }
 
   private static BucketCacheProtos.BlockType toPB(BlockType blockType) {

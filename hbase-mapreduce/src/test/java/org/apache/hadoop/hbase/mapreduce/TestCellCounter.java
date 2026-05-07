@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -30,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -42,19 +41,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LauncherSecurityManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCellCounter {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellCounter.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final byte[] ROW1 = Bytes.toBytesBinary("\\x01row1");
@@ -70,17 +65,14 @@ public class TestCellCounter {
     "target" + File.separator + "test-data" + File.separator + "output";
   private static long now = EnvironmentEdgeManager.currentTime();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
     FQ_OUTPUT_DIR = new Path(OUTPUT_DIR).makeQualified(new LocalFileSystem());
     FileUtil.fullyDelete(new File(OUTPUT_DIR));
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -89,8 +81,8 @@ public class TestCellCounter {
    * Test CellCounter all data should print to output
    */
   @Test
-  public void testCellCounter() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName());
+  public void testCellCounter(TestInfo testInfo) throws Exception {
+    final TableName sourceTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     try (Table t = UTIL.createTable(sourceTable, families)) {
       Put p = new Put(ROW1);
@@ -125,8 +117,8 @@ public class TestCellCounter {
    * Test CellCounter all data should print to output
    */
   @Test
-  public void testCellCounterPrefix() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName());
+  public void testCellCounterPrefix(TestInfo testInfo) throws Exception {
+    final TableName sourceTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     try (Table t = UTIL.createTable(sourceTable, families)) {
       Put p = new Put(ROW1);
@@ -161,8 +153,8 @@ public class TestCellCounter {
    * Test CellCounter with time range all data should print to output
    */
   @Test
-  public void testCellCounterStartTimeRange() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName());
+  public void testCellCounterStartTimeRange(TestInfo testInfo) throws Exception {
+    final TableName sourceTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     try (Table t = UTIL.createTable(sourceTable, families)) {
       Put p = new Put(ROW1);
@@ -198,8 +190,8 @@ public class TestCellCounter {
    * Test CellCounter with time range all data should print to output
    */
   @Test
-  public void testCellCounteEndTimeRange() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName());
+  public void testCellCounteEndTimeRange(TestInfo testInfo) throws Exception {
+    final TableName sourceTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     try (Table t = UTIL.createTable(sourceTable, families)) {
       Put p = new Put(ROW1);
@@ -235,8 +227,8 @@ public class TestCellCounter {
    * Test CellCounter with time range all data should print to output
    */
   @Test
-  public void testCellCounteOutOfTimeRange() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName());
+  public void testCellCounteOutOfTimeRange(TestInfo testInfo) throws Exception {
+    final TableName sourceTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] families = { FAMILY_A, FAMILY_B };
     try (Table t = UTIL.createTable(sourceTable, families)) {
       Put p = new Put(ROW1);
@@ -307,8 +299,8 @@ public class TestCellCounter {
    * Test CellCounter for complete table all data should print to output
    */
   @Test
-  public void testCellCounterForCompleteTable() throws Exception {
-    final TableName sourceTable = TableName.valueOf(name.getMethodName());
+  public void testCellCounterForCompleteTable(TestInfo testInfo) throws Exception {
+    final TableName sourceTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
     String outputPath = OUTPUT_DIR + sourceTable;
     LocalFileSystem localFileSystem = new LocalFileSystem();
     Path outputDir = new Path(outputPath).makeQualified(localFileSystem.getUri(),
@@ -360,7 +352,7 @@ public class TestCellCounter {
   @Test
   public void TestCellCounterWithoutOutputDir() throws Exception {
     String[] args = new String[] { "tableName" };
-    assertEquals("CellCounter should exit with -1 as output directory is not specified.", -1,
-      ToolRunner.run(HBaseConfiguration.create(), new CellCounter(), args));
+    assertEquals(-1, ToolRunner.run(HBaseConfiguration.create(), new CellCounter(), args),
+      "CellCounter should exit with -1 as output directory is not specified.");
   }
 }

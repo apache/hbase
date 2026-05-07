@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
@@ -46,29 +45,21 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMultipleColumnPrefixFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultipleColumnPrefixFilter.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
   @Test
-  public void testMultipleColumnPrefixFilter() throws IOException {
+  public void testMultipleColumnPrefixFilter(TestInfo testInfo) throws IOException {
     String family = "Family";
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
@@ -129,11 +120,11 @@ public class TestMultipleColumnPrefixFilter {
   }
 
   @Test
-  public void testMultipleColumnPrefixFilterWithManyFamilies() throws IOException {
+  public void testMultipleColumnPrefixFilterWithManyFamilies(TestInfo testInfo) throws IOException {
     String family1 = "Family1";
     String family2 = "Family2";
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family1)).setMaxVersions(3).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
@@ -202,10 +193,11 @@ public class TestMultipleColumnPrefixFilter {
   }
 
   @Test
-  public void testMultipleColumnPrefixFilterWithColumnPrefixFilter() throws IOException {
+  public void testMultipleColumnPrefixFilterWithColumnPrefixFilter(TestInfo testInfo)
+    throws IOException {
     String family = "Family";
-    TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(family)).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);

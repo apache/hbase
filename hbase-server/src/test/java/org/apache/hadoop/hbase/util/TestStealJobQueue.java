@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStealJobQueue {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStealJobQueue.class);
 
   StealJobQueue<Integer> stealJobQueue;
   BlockingQueue<Integer> stealFromQueue;
 
-  @Before
+  @BeforeEach
   public void setup() {
     stealJobQueue = new StealJobQueue<>(Integer::compare);
     stealFromQueue = stealJobQueue.getStealFromQueue();
@@ -59,8 +54,8 @@ public class TestStealJobQueue {
     stealJobQueue.offer(4);
     assertEquals(3, stealJobQueue.take().intValue());
     assertEquals(4, stealJobQueue.take().intValue());
-    assertEquals("always take from the main queue before trying to steal", 15,
-      stealJobQueue.take().intValue());
+    assertEquals(15, stealJobQueue.take().intValue(),
+      "always take from the main queue before trying to steal");
     assertEquals(10, stealJobQueue.take().intValue());
     assertTrue(stealFromQueue.isEmpty());
     assertTrue(stealJobQueue.isEmpty());
@@ -116,8 +111,8 @@ public class TestStealJobQueue {
     stealJobQueue.offer(4);
     assertEquals(3, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
     assertEquals(4, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
-    assertEquals("always take from the main queue before trying to steal", 15,
-      stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
+    assertEquals(15, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue(),
+      "always take from the main queue before trying to steal");
     assertEquals(10, stealJobQueue.poll(1, TimeUnit.SECONDS).intValue());
     assertTrue(stealFromQueue.isEmpty());
     assertTrue(stealJobQueue.isEmpty());

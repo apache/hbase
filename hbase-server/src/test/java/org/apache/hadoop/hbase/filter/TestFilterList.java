@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -41,22 +40,17 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFilterList {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterList.class);
 
   static final int MAX_PAGES = 2;
 
@@ -865,8 +859,8 @@ public class TestFilterList {
     filterList.addFilter(filter2);
     filterList.addFilter(filter3);
 
-    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
-    Assert.assertEquals(kv3, filterList.getNextCellHint(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+    assertEquals(kv3, filterList.getNextCellHint(kv1));
 
     filterList = new FilterList(Operator.MUST_PASS_ALL);
     filterList.setReversed(true);
@@ -874,8 +868,8 @@ public class TestFilterList {
     filterList.addFilter(filter2);
     filterList.addFilter(filter3);
 
-    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
-    Assert.assertEquals(kv1, filterList.getNextCellHint(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+    assertEquals(kv1, filterList.getNextCellHint(kv1));
   }
 
   @Test
@@ -1040,11 +1034,11 @@ public class TestFilterList {
     TransformFilter filter2 = new TransformFilter(ReturnCode.NEXT_ROW);
     TransformFilter filter3 = new TransformFilter(ReturnCode.SEEK_NEXT_USING_HINT);
     FilterList filterList = new FilterList(Operator.MUST_PASS_ONE, filter1, filter2, filter3);
-    Assert.assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv));
-    Assert.assertEquals(kv, filterList.transformCell(kv));
-    Assert.assertEquals(true, filter1.getTransformed());
-    Assert.assertEquals(false, filter2.getTransformed());
-    Assert.assertEquals(false, filter3.getTransformed());
+    assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv));
+    assertEquals(kv, filterList.transformCell(kv));
+    assertEquals(true, filter1.getTransformed());
+    assertEquals(false, filter2.getTransformed());
+    assertEquals(false, filter3.getTransformed());
 
     // case MUST_PASS_ALL
     filter1 = new TransformFilter(ReturnCode.INCLUDE);
@@ -1052,11 +1046,11 @@ public class TestFilterList {
     filter3 = new TransformFilter(ReturnCode.INCLUDE_AND_NEXT_COL);
     filterList = new FilterList(Operator.MUST_PASS_ALL, filter1, filter2, filter3);
 
-    Assert.assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv));
-    Assert.assertEquals(kv, filterList.transformCell(kv));
-    Assert.assertEquals(true, filter1.getTransformed());
-    Assert.assertEquals(true, filter2.getTransformed());
-    Assert.assertEquals(true, filter3.getTransformed());
+    assertEquals(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW, filterList.filterCell(kv));
+    assertEquals(kv, filterList.transformCell(kv));
+    assertEquals(true, filter1.getTransformed());
+    assertEquals(true, filter2.getTransformed());
+    assertEquals(true, filter3.getTransformed());
   }
 
   @Test
@@ -1083,10 +1077,10 @@ public class TestFilterList {
     Mockito.when(subFilter2.filterCell(kv4)).thenReturn(ReturnCode.INCLUDE_AND_SEEK_NEXT_ROW);
 
     Filter filterList = new FilterList(Operator.MUST_PASS_ONE, subFilter1, subFilter2);
-    Assert.assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv1));
-    Assert.assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv2));
-    Assert.assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv3));
-    Assert.assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv4));
+    assertEquals(ReturnCode.INCLUDE, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.NEXT_COL, filterList.filterCell(kv2));
+    assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv3));
+    assertEquals(ReturnCode.INCLUDE_AND_NEXT_COL, filterList.filterCell(kv4));
 
     // One sub-filter will filterAllRemaining but other sub-filter will return SEEK_HINT
     subFilter1 = Mockito.mock(FilterBase.class);
@@ -1096,7 +1090,7 @@ public class TestFilterList {
     subFilter2 = Mockito.mock(FilterBase.class);
     Mockito.when(subFilter2.filterCell(kv1)).thenReturn(ReturnCode.SEEK_NEXT_USING_HINT);
     filterList = new FilterList(Operator.MUST_PASS_ONE, subFilter1, subFilter2);
-    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
 
     // Two sub-filter returns SEEK_NEXT_USING_HINT, then we should return SEEK_NEXT_USING_HINT.
     subFilter1 = Mockito.mock(FilterBase.class);
@@ -1105,6 +1099,6 @@ public class TestFilterList {
     subFilter2 = Mockito.mock(FilterBase.class);
     Mockito.when(subFilter2.filterCell(kv1)).thenReturn(ReturnCode.SEEK_NEXT_USING_HINT);
     filterList = new FilterList(Operator.MUST_PASS_ONE, subFilter1, subFilter2);
-    Assert.assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
+    assertEquals(ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(kv1));
   }
 }

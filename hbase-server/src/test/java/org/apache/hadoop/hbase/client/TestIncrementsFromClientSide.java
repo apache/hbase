@@ -531,7 +531,7 @@ public class TestIncrementsFromClientSide {
    */
   static void assertIncrementKey(Cell key, byte[] row, byte[] family, byte[] qualifier, long value)
     throws Exception {
-    TestFromClientSide.assertIncrementKey(key, row, family, qualifier, value);
+    FromClientSideTestBase.assertIncrementKey(key, row, family, qualifier, value);
   }
 
   public static String filterStringSoTableNameSafe(final String str) {

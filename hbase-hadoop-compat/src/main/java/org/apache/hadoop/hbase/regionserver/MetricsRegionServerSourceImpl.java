@@ -63,8 +63,6 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
 
   // split related metrics
   private final MutableFastCounter splitRequest;
-  private final MutableFastCounter splitSuccess;
-  private final MetricHistogram splitTimeHisto;
 
   // flush related metrics
   private final MetricHistogram flushTimeHisto;
@@ -182,9 +180,7 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
     majorCompactedOutputBytes = getMetricsRegistry().newCounter(MAJOR_COMPACTED_OUTPUT_BYTES,
       MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
 
-    splitTimeHisto = getMetricsRegistry().newTimeHistogram(SPLIT_KEY);
     splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
 
     // pause monitor metrics
     infoPauseThresholdExceeded =
@@ -278,16 +274,6 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   @Override
   public void incrSplitRequest() {
     splitRequest.incr();
-  }
-
-  @Override
-  public void incrSplitSuccess() {
-    splitSuccess.incr();
-  }
-
-  @Override
-  public void updateSplitTime(long t) {
-    splitTimeHisto.add(t);
   }
 
   @Override

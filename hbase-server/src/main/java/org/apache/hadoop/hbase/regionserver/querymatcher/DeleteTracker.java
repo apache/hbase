@@ -84,6 +84,20 @@ public interface DeleteTracker extends ShipperListener {
   }
 
   /**
+   * Check if the given delete marker is redundant, i.e., it is already covered by a previously
+   * tracked delete of equal or broader scope. A DeleteFamily is redundant if a DeleteFamily with a
+   * higher timestamp was already seen. A DeleteColumn is redundant if a DeleteColumn for the same
+   * qualifier with a higher timestamp, or a DeleteFamily with a higher timestamp, was already seen.
+   * <p>
+   * This is a read-only check with no side effects on tracker state.
+   * @param cell the delete marker cell to check
+   * @return true if the delete marker is redundant and can be skipped
+   */
+  default boolean isRedundantDelete(ExtendedCell cell) {
+    return false;
+  }
+
+  /**
    * Return the comparator passed to this delete tracker
    * @return the cell comparator
    */

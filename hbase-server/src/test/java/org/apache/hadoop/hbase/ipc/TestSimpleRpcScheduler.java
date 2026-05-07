@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -43,7 +43,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.LinkedBlockingQueue;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Put;
@@ -55,12 +54,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -77,15 +74,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSimpleRpcScheduler {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleRpcScheduler.class);
-
-  @Rule
-  public TestName testName = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSimpleRpcScheduler.class);
 
@@ -96,9 +87,11 @@ public class TestSimpleRpcScheduler {
     }
   };
   private Configuration conf;
+  private String testMethodName;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
     conf = HBaseConfiguration.create();
   }
 
@@ -651,8 +644,8 @@ public class TestSimpleRpcScheduler {
       // make sure fast calls are handled
       waitUntilQueueEmpty(scheduler);
       Thread.sleep(100);
-      assertEquals("None of these calls should have been discarded", 0,
-        scheduler.getNumGeneralCallsDropped());
+      assertEquals(0, scheduler.getNumGeneralCallsDropped(),
+        "None of these calls should have been discarded");
 
       envEdge.offset = 151;
       // calls slower than min delay, but not individually slow enough to be dropped
@@ -666,8 +659,8 @@ public class TestSimpleRpcScheduler {
       // make sure somewhat slow calls are handled
       waitUntilQueueEmpty(scheduler);
       Thread.sleep(100);
-      assertEquals("None of these calls should have been discarded", 0,
-        scheduler.getNumGeneralCallsDropped());
+      assertEquals(0, scheduler.getNumGeneralCallsDropped(),
+        "None of these calls should have been discarded");
 
       envEdge.offset = 2000;
       // now slow calls and the ones to be dropped
@@ -681,8 +674,9 @@ public class TestSimpleRpcScheduler {
       // make sure somewhat slow calls are handled
       waitUntilQueueEmpty(scheduler);
       Thread.sleep(100);
-      assertTrue("There should have been at least 12 calls dropped however there were "
-        + scheduler.getNumGeneralCallsDropped(), scheduler.getNumGeneralCallsDropped() > 12);
+      assertTrue(scheduler.getNumGeneralCallsDropped() > 12,
+        "There should have been at least 12 calls dropped however there were "
+          + scheduler.getNumGeneralCallsDropped());
     } finally {
       scheduler.stop();
     }
@@ -690,7 +684,7 @@ public class TestSimpleRpcScheduler {
 
   @Test
   public void testFastPathBalancedQueueRpcExecutorWithQueueLength0() throws Exception {
-    String name = testName.getMethodName();
+    String name = testMethodName;
     int handlerCount = 1;
     String callQueueType = RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE;
     int maxQueueLength = 0;

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,7 +35,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -45,11 +44,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.internal.matchers.ArrayEquals;
 import org.mockito.invocation.InvocationOnMock;
@@ -63,12 +61,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Cluster-wide testing of a distributed three-phase commit using a 'real' zookeeper cluster
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZKProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedure.class);
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -81,12 +76,12 @@ public class TestZKProcedure {
   private static final byte[] data = new byte[] { 1, 2 }; // TODO what is this used for?
   private static final VerificationMode once = Mockito.times(1);
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() throws Exception {
     UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     UTIL.shutdownMiniZKCluster();
   }
@@ -311,7 +306,7 @@ public class TestZKProcedure {
 
     Procedure task =
       coordinator.startProcedure(coordinatorTaskErrorMonitor, opName, data, expected);
-    assertEquals("Didn't mock coordinator task", coordinatorTask, task);
+    assertEquals(coordinatorTask, task, "Didn't mock coordinator task");
 
     // wait for the task to complete
     try {
@@ -355,9 +350,9 @@ public class TestZKProcedure {
     Mockito.verify(proc, prepare).sendGlobalBarrierStart();
     Mockito.verify(proc, commit).sendGlobalBarrierReached();
     Mockito.verify(proc, finish).sendGlobalBarrierComplete();
-    assertEquals("Operation error state was unexpected", opHasError,
-      proc.getErrorMonitor().hasException());
-    assertEquals("Operation error state was unexpected", opHasError, caughtError);
+    assertEquals(opHasError, proc.getErrorMonitor().hasException(),
+      "Operation error state was unexpected");
+    assertEquals(opHasError, caughtError, "Operation error state was unexpected");
 
   }
 
@@ -385,9 +380,9 @@ public class TestZKProcedure {
     Mockito.verify(op, commit).insideBarrier();
     // We cannot guarantee that cleanup has run so we don't check it.
 
-    assertEquals("Operation error state was unexpected", opHasError,
-      op.getErrorCheckable().hasException());
-    assertEquals("Operation error state was unexpected", opHasError, caughtError);
+    assertEquals(opHasError, op.getErrorCheckable().hasException(),
+      "Operation error state was unexpected");
+    assertEquals(opHasError, caughtError, "Operation error state was unexpected");
 
   }
 

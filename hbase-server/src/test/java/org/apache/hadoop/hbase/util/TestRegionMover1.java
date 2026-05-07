@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,16 +41,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,34 +56,31 @@ import org.slf4j.LoggerFactory;
  * Tests for Region Mover Load/Unload functionality with and without ack mode and also to test
  * exclude functionality useful for rack decommissioning
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionMover1 {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover1.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover1.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName();
+    final TableName tableName = TableName.valueOf(testMethodName);
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     String startKey = "a";
@@ -94,9 +88,9 @@ public class TestRegionMover1 {
     TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     TEST_UTIL.getAdmin().disableTable(tableName);
     TEST_UTIL.getAdmin().deleteTable(tableName);
   }
@@ -351,7 +345,7 @@ public class TestRegionMover1 {
     int sourceServerRegions = regionServer.getRegions().size();
 
     try (RegionMover regionMover = rmBuilder.build()) {
-      Assert.assertTrue(regionMover.unload());
+      Assertions.assertTrue(regionMover.unload());
       LOG.info("Unloading {}", hostname);
       assertEquals(0, regionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
@@ -360,11 +354,11 @@ public class TestRegionMover1 {
       List<HRegion> regionList = cluster.getRegionServer(1).getRegions();
       int index = 0;
       for (HRegion hRegion : regionList) {
-        Assert.assertEquals(hRegion, regions.get(index++));
+        Assertions.assertEquals(hRegion, regions.get(index++));
       }
-      Assert.assertEquals(targetServerRegions + sourceServerRegions,
+      Assertions.assertEquals(targetServerRegions + sourceServerRegions,
         cluster.getRegionServer(2).getNumberOfOnlineRegions());
-      Assert.assertTrue(regionMover.load());
+      Assertions.assertTrue(regionMover.load());
     }
 
     TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
@@ -406,7 +400,7 @@ public class TestRegionMover1 {
     int sourceServerRegions = sourceRegionServer.getRegions().size();
 
     try (RegionMover regionMover = rmBuilder.build()) {
-      Assert.assertTrue(regionMover.unload());
+      Assertions.assertTrue(regionMover.unload());
       LOG.info("Unloading {}", hostname);
       assertEquals(0, sourceRegionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(0).getNumberOfOnlineRegions());
@@ -415,11 +409,11 @@ public class TestRegionMover1 {
       List<HRegion> regionList = cluster.getRegionServer(0).getRegions();
       int index = 0;
       for (HRegion hRegion : regionList) {
-        Assert.assertEquals(hRegion, regions.get(index++));
+        Assertions.assertEquals(hRegion, regions.get(index++));
       }
-      Assert.assertEquals(targetServerRegions + sourceServerRegions,
+      Assertions.assertEquals(targetServerRegions + sourceServerRegions,
         cluster.getRegionServer(2).getNumberOfOnlineRegions());
-      Assert.assertTrue(regionMover.load());
+      Assertions.assertTrue(regionMover.load());
     }
 
     TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
@@ -452,7 +446,7 @@ public class TestRegionMover1 {
       new RegionMoverBuilder(sourceServer, TEST_UTIL.getConfiguration()).ack(true)
         .excludeFile(excludeFile.getCanonicalPath());
     try (RegionMover regionMover = rmBuilder.build()) {
-      Assert.assertFalse(regionMover.unload());
+      Assertions.assertFalse(regionMover.unload());
     }
 
     TEST_UTIL.getAdmin().recommissionRegionServer(decomServer.getServerName(),

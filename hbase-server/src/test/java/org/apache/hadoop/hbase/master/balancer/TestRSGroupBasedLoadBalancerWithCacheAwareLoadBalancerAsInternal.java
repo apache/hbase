@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +36,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerMetrics;
@@ -49,26 +48,23 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
   extends RSGroupableBalancerTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-    .forClass(TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal.class);
 
   private static RSGroupBasedLoadBalancer loadBalancer;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     groups = new String[] { RSGroupInfo.DEFAULT_GROUP };
     servers = generateServers(3);
@@ -531,7 +527,8 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     assertTrue(targetServers.get(server1).containsAll(oldCachedRegions));
   }
 
-  @Test(timeout = 60000)
+  @Timeout(60)
+  @Test
   public void testConfigUpdateDuringBalance() throws Exception {
     float expectedOldRatioThreshold = 0.8f;
     float expectedNewRatioThreshold = 0.95f;

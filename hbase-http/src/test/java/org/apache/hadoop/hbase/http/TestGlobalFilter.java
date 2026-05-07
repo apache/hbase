@@ -42,7 +42,7 @@ import org.slf4j.LoggerFactory;
 @Tag(SmallTests.TAG)
 public class TestGlobalFilter extends HttpServerFunctionalTest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestGlobalFilter.class);
   private static final Set<String> RECORDS = new TreeSet<>();
 
   /** A very simple filter that records accessed uri's */

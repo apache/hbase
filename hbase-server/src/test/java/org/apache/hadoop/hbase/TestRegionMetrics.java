@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
@@ -36,22 +36,18 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMetrics.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -63,7 +59,7 @@ public class TestRegionMetrics {
   private static final TableName[] tables = new TableName[] { TABLE_1, TABLE_2, TABLE_3 };
   private static final int MSG_INTERVAL = 500; // ms
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // Make servers report eagerly. This test is about looking at the cluster status reported.
     // Make it so we don't have to wait around too long to see change.
@@ -79,7 +75,7 @@ public class TestRegionMetrics {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     for (TableName table : tables) {
       UTIL.deleteTableIfAny(table);
@@ -146,8 +142,8 @@ public class TestRegionMetrics {
         ) {
           Object valueRm = method.invoke(fromRM);
           Object valueSM = method.invoke(fromSM);
-          assertEquals("Return values of method " + method.getName() + " are different",
-            valueRm.toString(), valueSM.toString());
+          assertEquals(valueRm.toString(), valueSM.toString(),
+            "Return values of method " + method.getName() + " are different");
         }
       }
     }
@@ -156,16 +152,17 @@ public class TestRegionMetrics {
   private void checkRegionsAndRegionMetrics(Collection<RegionInfo> regions,
     Collection<RegionMetrics> regionMetrics) {
 
-    assertEquals("No of regions and regionMetrics doesn't match", regions.size(),
-      regionMetrics.size());
+    assertEquals(regions.size(), regionMetrics.size(),
+      "No of regions and regionMetrics doesn't match");
 
     Map<byte[], RegionMetrics> regionMetricsMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (RegionMetrics r : regionMetrics) {
       regionMetricsMap.put(r.getRegionName(), r);
     }
     for (RegionInfo info : regions) {
-      assertTrue("Region not in RegionMetricsMap region:" + info.getRegionNameAsString()
-        + " regionMap: " + regionMetricsMap, regionMetricsMap.containsKey(info.getRegionName()));
+      assertTrue(regionMetricsMap.containsKey(info.getRegionName()),
+        "Region not in RegionMetricsMap region:" + info.getRegionNameAsString() + " regionMap: "
+          + regionMetricsMap);
     }
   }
 }

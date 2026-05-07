@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -34,20 +33,16 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, RegionServerTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestCompactionToolNpeFix {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionToolNpeFix.class);
 
   private static final HBaseTestingUtil TESTUTIL = new HBaseTestingUtil();
 
@@ -56,7 +51,7 @@ public class TestCompactionToolNpeFix {
   private static Path rootDir;
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpAfterClass() throws Exception {
     TESTUTIL.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
     TESTUTIL.startMiniCluster();
@@ -65,7 +60,7 @@ public class TestCompactionToolNpeFix {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TESTUTIL.shutdownMiniMapReduceCluster();
     TESTUTIL.shutdownMiniCluster();
@@ -73,13 +68,13 @@ public class TestCompactionToolNpeFix {
 
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     TESTUTIL.createTable(tableName, HBaseTestingUtil.fam1);
     this.region = TESTUTIL.getMiniHBaseCluster().getRegions(tableName).get(0);
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     TESTUTIL.deleteTable(tableName);
   }

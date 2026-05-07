@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -34,28 +34,22 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
  * Test class for {@link FileSystemUtilizationChore}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestFileSystemUtilizationChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFileSystemUtilizationChore.class);
 
   @Test
   public void testNoOnlineRegions() {
@@ -331,8 +325,8 @@ public class TestFileSystemUtilizationChore {
     when(r.getRegionInfo()).thenReturn(info);
     List<Store> stores = new ArrayList<>();
     when(r.getStores()).thenReturn((List) stores);
-    assertEquals("Logic error, storeSizes and linkSizes must be equal in size", storeSizes.size(),
-      hfileSizes.size());
+    assertEquals(storeSizes.size(), hfileSizes.size(),
+      "Logic error, storeSizes and linkSizes must be equal in size");
     Iterator<Long> storeSizeIter = storeSizes.iterator();
     Iterator<Long> hfileSizeIter = hfileSizes.iterator();
     while (storeSizeIter.hasNext() && hfileSizeIter.hasNext()) {

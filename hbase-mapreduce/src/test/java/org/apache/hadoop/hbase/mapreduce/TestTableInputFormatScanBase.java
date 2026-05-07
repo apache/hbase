@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,9 +44,8 @@ import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.TaskCounter;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,7 +65,7 @@ public abstract class TestTableInputFormatScanBase {
 
   private static Table table = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // start mini hbase cluster
     TEST_UTIL.startMiniCluster(3);
@@ -75,7 +74,7 @@ public abstract class TestTableInputFormatScanBase {
     TEST_UTIL.loadTable(table, INPUT_FAMILYS, null, false);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -238,15 +237,15 @@ public abstract class TestTableInputFormatScanBase {
       ImmutableBytesWritable.class, ImmutableBytesWritable.class, job);
     TableInputFormat tif = new TableInputFormat();
     tif.setConf(job.getConfiguration());
-    Assert.assertEquals(TABLE_NAME, table.getName());
+    assertEquals(TABLE_NAME, table.getName());
     List<InputSplit> splits = tif.getSplits(job);
     for (InputSplit split : splits) {
       TableSplit tableSplit = (TableSplit) split;
       // In table input format, we do no store the scanner at the split level
       // because we use the scan object from the map-reduce job conf itself.
-      Assert.assertTrue(tableSplit.getScanAsString().isEmpty());
+      assertTrue(tableSplit.getScanAsString().isEmpty());
     }
-    Assert.assertEquals(expectedNumOfSplits, splits.size());
+    assertEquals(expectedNumOfSplits, splits.size());
   }
 
   /**
@@ -269,11 +268,12 @@ public abstract class TestTableInputFormatScanBase {
     job.setReducerClass(ScanReducer.class);
     job.setNumReduceTasks(1);
     job.setOutputFormatClass(NullOutputFormat.class);
-    assertTrue("job failed!", job.waitForCompletion(true));
+    assertTrue(job.waitForCompletion(true), "job failed!");
     // for some reason, hbase does not expose JobCounter.TOTAL_LAUNCHED_MAPS,
     // we use TaskCounter.SHUFFLED_MAPS to get total launched maps
-    assertEquals("Saw the wrong count of mappers per region", expectedNumOfSplits,
-      job.getCounters().findCounter(TaskCounter.SHUFFLED_MAPS).getValue());
+    assertEquals(expectedNumOfSplits,
+      job.getCounters().findCounter(TaskCounter.SHUFFLED_MAPS).getValue(),
+      "Saw the wrong count of mappers per region");
   }
 
   /**
@@ -292,14 +292,14 @@ public abstract class TestTableInputFormatScanBase {
     TableInputFormat tif = new TableInputFormat();
     List<InputSplit> res = tif.calculateAutoBalancedSplits(splits, 1073741824);
 
-    assertEquals("Saw the wrong number of splits", 5, res.size());
+    assertEquals(5, res.size(), "Saw the wrong number of splits");
     TableSplit ts1 = (TableSplit) res.get(0);
-    assertEquals("The first split end key should be", 2, Bytes.toInt(ts1.getEndRow()));
+    assertEquals(2, Bytes.toInt(ts1.getEndRow()), "The first split end key should be");
     TableSplit ts2 = (TableSplit) res.get(1);
-    assertEquals("The second split regionsize should be", 20 * 1048576, ts2.getLength());
+    assertEquals(20 * 1048576, ts2.getLength(), "The second split regionsize should be");
     TableSplit ts3 = (TableSplit) res.get(2);
-    assertEquals("The third split start key should be", 3, Bytes.toInt(ts3.getStartRow()));
+    assertEquals(3, Bytes.toInt(ts3.getStartRow()), "The third split start key should be");
     TableSplit ts4 = (TableSplit) res.get(4);
-    assertNotEquals("The seventh split start key should not be", 4, Bytes.toInt(ts4.getStartRow()));
+    assertNotEquals(4, Bytes.toInt(ts4.getStartRow()), "The seventh split start key should not be");
   }
 }

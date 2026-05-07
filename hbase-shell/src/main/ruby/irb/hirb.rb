@@ -23,6 +23,10 @@ module IRB
 
   # Subclass of IRB so can intercept methods
   class HIRB < Irb
+    def self.command_names
+      @command_names ||= ::Shell.commands.keys.map(&:to_sym).freeze
+    end
+
     def initialize(workspace = nil, interactive = true, input_method = nil)
       # This is ugly.  Our 'help' method above provokes the following message
       # on irb construction: 'irb: warn: can't alias help from irb_help.'
@@ -53,6 +57,14 @@ module IRB
       $stdout = STDOUT
     end
 
+    def set_context_workspace(workspace)
+      if @context.respond_to?(:workspace=)
+        @context.workspace = workspace
+      else
+        @context.instance_variable_set(:@workspace, workspace)
+      end
+    end
+
     def output_value(omit = false)
       # Suppress output if last_value is 'nil'
       # Otherwise, when user types help, get ugly 'nil'
@@ -60,7 +72,7 @@ module IRB
       super(omit) unless @context.last_value.nil?
     end
 
-    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb 
+    # Copied from https://github.com/ruby/irb/blob/v1.4.2/lib/irb.rb
     # We override the rescue Exception block so the
     # Shell::exception_handler can deal with the exceptions.
     def eval_input
@@ -163,6 +175,23 @@ module IRB
           else
             exc = nil
             next
+          ensure
+            # HBASE-28660: Prevent command shadowing by incorrectly parsed local variables
+            cmd_names = self.class.command_names
+            workspace_binding = @context.workspace.binding
+            shadowing_vars = workspace_binding.local_variables & cmd_names
+
+            if shadowing_vars.any?
+              shadowing_vars.each do |var|
+                warn "WARN: '#{var}' is a reserved HBase command. Local variable assignment ignored."
+              end
+
+              new_binding = @context.workspace.main.to_binding
+              (workspace_binding.local_variables - shadowing_vars).each do |var|
+                new_binding.local_variable_set(var, workspace_binding.local_variable_get(var))
+              end
+              set_context_workspace(::IRB::WorkSpace.new(new_binding))
+            end
           end
           handle_exception(exc)
           @context.workspace.local_variable_set(:_, exc)
@@ -180,22 +209,19 @@ module IRB
     ##
     # Determine the loadable path for a given filename by searching through $LOAD_PATH
     #
-    # This serves a similar purpose to IRB::IrbLoader#search_file_from_ruby_path, but uses JRuby's
-    # loader, which allows us to find special paths like "uri:classloader" inside of a Jar.
+    # Uses $LOAD_PATH.resolve_feature_path, which resolves files on disk as well as
+    # entries inside jars on the classpath. Returns nil on miss.
     #
     # @param [String] filename
     # @return [String] path
     def self.path_for_load(filename)
       return File.absolute_path(filename) if File.exist? filename
 
-      # Get JRuby's LoadService from the global (singleton) instance of the runtime
-      # (org.jruby.Ruby), which allows us to use JRuby's tools for searching the load path.
-      runtime = org.jruby.Ruby.getGlobalRuntime
-      loader = runtime.getLoadService
-      search_state = loader.findFileForLoad filename
-      raise LoadError, "no such file to load -- #{filename}" if search_state.library.nil?
+      resolved = $LOAD_PATH.resolve_feature_path(filename)
+      raise LoadError, "no such file to load -- #{filename}" if resolved.nil?
 
-      search_state.loadName
+      _type, path = resolved
+      path
     end
 
     ##

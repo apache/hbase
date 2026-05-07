@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -42,21 +41,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicaSplit {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaSplit.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaSplit.class);
 
   private static final int NB_SERVERS = 4;
@@ -64,14 +60,18 @@ public class TestRegionReplicaSplit {
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
     HTU.startMiniCluster(NB_SERVERS);
   }
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
+
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   private static Table createTableAndLoadData(final TableName tableName) throws IOException {
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
@@ -91,7 +91,7 @@ public class TestRegionReplicaSplit {
     return split.split(numRegions);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     HTU.shutdownMiniCluster();
@@ -99,7 +99,7 @@ public class TestRegionReplicaSplit {
 
   @Test
   public void testRegionReplicaSplitRegionAssignment() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+    TableName tn = TableName.valueOf(testMethodName);
     Table table = null;
     try {
       table = createTableAndLoadData(tn);
@@ -139,7 +139,7 @@ public class TestRegionReplicaSplit {
 
   @Test
   public void testAssignFakeReplicaRegion() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+    TableName tn = TableName.valueOf(testMethodName);
     Table table = null;
     try {
       table = createTableAndLoadData(tn);

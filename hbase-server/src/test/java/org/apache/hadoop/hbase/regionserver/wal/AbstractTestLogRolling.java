@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
@@ -55,14 +56,12 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,8 +80,7 @@ public abstract class AbstractTestLogRolling {
   protected Admin admin;
   protected SingleProcessHBaseCluster cluster;
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  @Rule
-  public final TestName name = new TestName();
+  private String name;
   protected static int syncLatencyMillis;
   private static int rowNum = 1;
   private static final AtomicBoolean slowSyncHookCalled = new AtomicBoolean();
@@ -102,7 +100,7 @@ public abstract class AbstractTestLogRolling {
 
   // Need to override this setup so we can edit the config before it gets sent
   // to the HDFS & HBase cluster startup.
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     /**** configuration for testLogRolling ****/
     // Force a region split after every 768KB
@@ -144,7 +142,12 @@ public abstract class AbstractTestLogRolling {
         .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
   }
 
-  @Before
+  @BeforeEach
+  public void initTestName(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     // Use 2 DataNodes and default values for other StartMiniCluster options.
     TEST_UTIL.startMiniCluster(StartTestingClusterOption.builder().numDataNodes(2).build());
@@ -158,12 +161,12 @@ public abstract class AbstractTestLogRolling {
     cluster.getMaster().balanceSwitch(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     EXECUTOR.shutdownNow();
   }
@@ -245,9 +248,9 @@ public abstract class AbstractTestLogRolling {
         }
       });
 
-      assertTrue("Should have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
+      assertTrue(slowSyncHookCalled.get(), "Should have triggered log roll due to SLOW_SYNC");
     } else {
-      assertFalse("Should not have triggered log roll due to SLOW_SYNC", slowSyncHookCalled.get());
+      assertFalse(slowSyncHookCalled.get(), "Should not have triggered log roll due to SLOW_SYNC");
     }
   }
 
@@ -306,7 +309,7 @@ public abstract class AbstractTestLogRolling {
   }
 
   protected String getName() {
-    return "TestLogRolling-" + name.getMethodName();
+    return "TestLogRolling-" + name;
   }
 
   void writeData(Table table, int rownum) throws IOException {
@@ -352,35 +355,35 @@ public abstract class AbstractTestLogRolling {
         admin.flush(table.getName());
       }
       doPut(table, 3); // don't flush yet, or compaction might trigger before we roll WAL
-      assertEquals("Should have no WAL after initial writes", 0,
-        AbstractFSWALProvider.getNumRolledLogFiles(log));
+      assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(log),
+        "Should have no WAL after initial writes");
       assertEquals(2, s.getStorefilesCount());
 
       // Roll the log and compact table, to have compaction record in the 2nd WAL.
       log.rollWriter();
-      assertEquals("Should have WAL; one table is not flushed", 1,
-        AbstractFSWALProvider.getNumRolledLogFiles(log));
+      assertEquals(1, AbstractFSWALProvider.getNumRolledLogFiles(log),
+        "Should have WAL; one table is not flushed");
       admin.flush(table.getName());
       region.compact(false);
       // Wait for compaction in case if flush triggered it before us.
-      Assert.assertNotNull(s);
+      assertNotNull(s);
       for (int waitTime = 3000; s.getStorefilesCount() > 1 && waitTime > 0; waitTime -= 200) {
         Threads.sleepWithoutInterrupt(200);
       }
-      assertEquals("Compaction didn't happen", 1, s.getStorefilesCount());
+      assertEquals(1, s.getStorefilesCount(), "Compaction didn't happen");
 
       // Write some value to the table so the WAL cannot be deleted until table is flushed.
       doPut(table, 0); // Now 2nd WAL will have both compaction and put record for table.
       log.rollWriter(); // 1st WAL deleted, 2nd not deleted yet.
-      assertEquals("Should have WAL; one table is not flushed", 1,
-        AbstractFSWALProvider.getNumRolledLogFiles(log));
+      assertEquals(1, AbstractFSWALProvider.getNumRolledLogFiles(log),
+        "Should have WAL; one table is not flushed");
 
       // Flush table to make latest WAL obsolete; write another record, and roll again.
       admin.flush(table.getName());
       doPut(table, 1);
       log.rollWriter(); // Now 2nd WAL is deleted and 3rd is added.
-      assertEquals("Should have 1 WALs at the end", 1,
-        AbstractFSWALProvider.getNumRolledLogFiles(log));
+      assertEquals(1, AbstractFSWALProvider.getNumRolledLogFiles(log),
+        "Should have 1 WALs at the end");
     }
   }
 

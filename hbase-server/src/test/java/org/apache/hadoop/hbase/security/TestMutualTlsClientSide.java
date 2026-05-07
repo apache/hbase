@@ -21,35 +21,30 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Comprehensively tests all permutations of certificate and host verification on the client side.
  * Tests each permutation of that against each value of {@link CertConfig}, i.e. passing a bad cert,
  * etc. See inline comments in {@link #data()} below for what the expectations are
  */
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, "
+  + "validateServerHostnames={3}, testCase={4}, certConfig={5}")
 public class TestMutualTlsClientSide extends AbstractTestMutualTls {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMutualTlsClientSide.class);
-
-  @Parameterized.Parameters(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, "
-    + "validateServerHostnames={3}, testCase={4}")
-  public static List<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
         for (String keyPassword : new String[] { "", "pa$$w0rd" }) {
@@ -58,17 +53,22 @@ public class TestMutualTlsClientSide extends AbstractTestMutualTls {
           for (boolean validateServerHostnames : new Boolean[] { true, false }) {
             // fail for non-verifiable certs or certs with bad hostnames when validateServerHostname
             // is true. otherwise succeed.
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, false,
-              validateServerHostnames, CertConfig.NON_VERIFIABLE_CERT });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, !validateServerHostnames,
-              validateServerHostnames, CertConfig.VERIFIABLE_CERT_WITH_BAD_HOST });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, true,
-              validateServerHostnames, CertConfig.GOOD_CERT });
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, false,
+              validateServerHostnames, CertConfig.NON_VERIFIABLE_CERT));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, !validateServerHostnames,
+              validateServerHostnames, CertConfig.VERIFIABLE_CERT_WITH_BAD_HOST));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true,
+              validateServerHostnames, CertConfig.GOOD_CERT));
           }
         }
       }
     }
-    return params;
+    return params.stream();
+  }
+
+  public TestMutualTlsClientSide(X509KeyType caKeyType, X509KeyType certKeyType, String keyPassword,
+    boolean expectSuccess, boolean validateHostnames, CertConfig certConfig) {
+    super(caKeyType, certKeyType, keyPassword, expectSuccess, validateHostnames, certConfig);
   }
 
   @Override

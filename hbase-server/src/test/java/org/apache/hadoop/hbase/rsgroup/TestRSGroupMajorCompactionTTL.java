@@ -17,37 +17,34 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.ServerManager;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.compaction.TestMajorCompactorTTL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ RSGroupTests.class, LargeTests.class })
+@Tag(RSGroupTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupMajorCompactionTTL.class);
 
   private final static int NUM_SLAVES_BASE = 6;
 
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     utility = new HBaseTestingUtil();
@@ -70,17 +67,17 @@ public class TestRSGroupMajorCompactionTTL extends TestMajorCompactorTTL {
     admin = utility.getAdmin();
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     utility.shutdownMiniCluster();
   }
 
   @Test
-  public void testCompactingTables() throws Exception {
+  public void testCompactingTables(TestInfo testInfo) throws Exception {
     List<TableName> tableNames = Lists.newArrayList();
     for (int i = 0; i < 10; i++) {
-      tableNames.add(createTable(name.getMethodName() + "___" + i));
+      tableNames.add(createTable(testInfo.getTestMethod().get().getName() + "___" + i));
     }
 
     // Delay a bit, so we can set the table TTL to 5 seconds

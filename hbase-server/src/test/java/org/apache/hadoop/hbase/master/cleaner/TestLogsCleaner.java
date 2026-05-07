@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,12 +34,10 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -61,24 +59,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MockServer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestLogsCleaner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogsCleaner.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLogsCleaner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -98,23 +92,20 @@ public class TestLogsCleaner {
 
   private ReplicationQueueStorage queueStorage;
 
-  @Rule
-  public final TableNameTestRule tableNameRule = new TableNameTestRule();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     POOL = DirScanPool.getLogCleanerScanPool(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     POOL.shutdownNow();
   }
 
-  @Before
-  public void beforeTest() throws Exception {
+  @BeforeEach
+  public void beforeTest(TestInfo testInfo) throws Exception {
     conf = TEST_UTIL.getConfiguration();
 
     FileSystem fs = TEST_UTIL.getDFSCluster().getFileSystem();
@@ -124,7 +115,7 @@ public class TestLogsCleaner {
     // root directory
     fs.mkdirs(OLD_WALS_DIR);
 
-    TableName tableName = tableNameRule.getTableName();
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor td = ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName);
     TEST_UTIL.getAdmin().createTable(td);
     TEST_UTIL.waitTableAvailable(tableName);

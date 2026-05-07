@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import javax.validation.constraints.Null;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Delete;
@@ -33,24 +34,19 @@ import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.OutputCommitter;
 import org.apache.hadoop.mapreduce.RecordWriter;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
  * Simple Tests to check whether the durability of the Mutation is changed or not, for
  * {@link TableOutputFormat} if {@link TableOutputFormat#WAL_PROPERTY} is set to false.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestTableOutputFormat {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableOutputFormat.class);
 
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("TEST_TABLE");
@@ -60,7 +56,7 @@ public class TestTableOutputFormat {
   private static TaskAttemptContext context;
   private static TableOutputFormat<Null> tableOutputFormat;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     util.startMiniCluster();
     util.createTable(TABLE_NAME, columnFamily);
@@ -71,12 +67,12 @@ public class TestTableOutputFormat {
     conf.set(TableOutputFormat.OUTPUT_TABLE, "TEST_TABLE");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     util.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void close() throws IOException, InterruptedException {
     if (writer != null && context != null) {
       writer.close(context);
@@ -96,14 +92,14 @@ public class TestTableOutputFormat {
     put.addColumn(columnFamily, Bytes.toBytes("aa"), Bytes.toBytes("value"));
 
     // verifying whether durability of mutation is USE_DEFAULT or not, before commiting write.
-    Assert.assertEquals("Durability of the mutation should be USE_DEFAULT", Durability.USE_DEFAULT,
-      put.getDurability());
+    assertEquals(Durability.USE_DEFAULT, put.getDurability(),
+      "Durability of the mutation should be USE_DEFAULT");
 
     writer.write(null, put);
 
     // verifying whether durability of mutation got changed to the SKIP_WAL or not.
-    Assert.assertEquals("Durability of the mutation should be SKIP_WAL", Durability.SKIP_WAL,
-      put.getDurability());
+    assertEquals(Durability.SKIP_WAL, put.getDurability(),
+      "Durability of the mutation should be SKIP_WAL");
   }
 
   @Test
@@ -120,14 +116,14 @@ public class TestTableOutputFormat {
     delete.addColumn(columnFamily, Bytes.toBytes("aa"));
 
     // verifying whether durability of mutation is USE_DEFAULT or not, before commiting write.
-    Assert.assertEquals("Durability of the mutation should be USE_DEFAULT", Durability.USE_DEFAULT,
-      delete.getDurability());
+    assertEquals(Durability.USE_DEFAULT, delete.getDurability(),
+      "Durability of the mutation should be USE_DEFAULT");
 
     writer.write(null, delete);
 
     // verifying whether durability of mutation got changed from USE_DEFAULT to the SKIP_WAL or not.
-    Assert.assertEquals("Durability of the mutation should be SKIP_WAL", Durability.SKIP_WAL,
-      delete.getDurability());
+    assertEquals(Durability.SKIP_WAL, delete.getDurability(),
+      "Durability of the mutation should be SKIP_WAL");
   }
 
   @Test
@@ -135,14 +131,14 @@ public class TestTableOutputFormat {
     // 1. Verify it returns the default committer when the property is not set.
     conf.unset(TableOutputFormat.OUTPUT_COMMITTER_CLASS);
     tableOutputFormat.setConf(conf);
-    Assert.assertEquals("Should use default committer", TableOutputCommitter.class,
-      tableOutputFormat.getOutputCommitter(context).getClass());
+    assertEquals(TableOutputCommitter.class,
+      tableOutputFormat.getOutputCommitter(context).getClass(), "Should use default committer");
 
     // 2. Verify it returns the custom committer when the property is set.
     conf.set(TableOutputFormat.OUTPUT_COMMITTER_CLASS, DummyCommitter.class.getName());
     tableOutputFormat.setConf(conf);
-    Assert.assertEquals("Should use custom committer", DummyCommitter.class,
-      tableOutputFormat.getOutputCommitter(context).getClass());
+    assertEquals(DummyCommitter.class, tableOutputFormat.getOutputCommitter(context).getClass(),
+      "Should use custom committer");
   }
 
   // Simple dummy committer for testing

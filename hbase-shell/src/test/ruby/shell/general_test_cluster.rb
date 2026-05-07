@@ -19,6 +19,8 @@
 
 require 'hbase_constants'
 require 'hbase_shell'
+require 'irb/hirb'
+require 'stringio'
 
 class ShellTest < Test::Unit::TestCase
   include Hbase::TestHelpers
@@ -136,7 +138,7 @@ class ShellTest < Test::Unit::TestCase
     @shell.interactive = true
     output = capture_stdout { @shell.print_banner }
     @shell.interactive = false
-    link_regex = %r{For Reference, please visit: http://hbase.apache.org/book.html#shell}
+    link_regex = %r{For Reference, please visit: https://hbase.apache.org/docs/shell}
     assert_match(link_regex, output)
   end
 
@@ -148,5 +150,80 @@ class ShellTest < Test::Unit::TestCase
     @shell.command('create', 'nothrow_table', 'family_1')
     # create a table that exists
     @shell.command('create', 'nothrow_table', 'family_1')
+  end
+
+  #-----------------------------------------------------------------------------
+
+  class MockInputMethod < IRB::InputMethod
+    def initialize(lines)
+      super()
+      @lines = lines
+    end
+    def gets
+      @lines.shift
+    end
+    def eof?
+      @lines.empty?
+    end
+    def encoding
+      Encoding::UTF_8
+    end
+    def readable_after_eof?
+      false
+    end
+  end
+
+  define_test 'Shell::Shell should prevent HBase commands from being shadowed by local variables (HBASE-28660)' do
+    workspace = @shell.workspace
+    IRB.setup(__FILE__) unless IRB.conf[:IRB_NAME]
+
+    lines = [
+      "list = 10\n",
+      "list_namespace, 'ns.*'\n",
+      "list_snapshots, 'snap01'\n",
+      "scan = 20\n",
+      "processlist = 30\n",
+      "my_var = 5\n"
+    ]
+
+    input_method = MockInputMethod.new(lines)
+    hirb = IRB::HIRB.new(workspace, true, input_method)
+
+    hirb.context.prompt_i = ""
+    hirb.context.prompt_s = ""
+    hirb.context.prompt_c = ""
+    hirb.context.prompt_n = ""
+    hirb.context.return_format = ""
+    hirb.context.echo = false
+
+    old_stderr = $stderr
+    $stderr = StringIO.new
+    err_output = ""
+    begin
+      capture_stdout do
+        hirb.eval_input
+      end
+    ensure
+      err_output = $stderr.string
+      $stderr = old_stderr
+    end
+
+    final_workspace = hirb.context.workspace
+    final_vars = final_workspace.binding.local_variables
+
+    assert(final_vars.include?(:my_var), "Valid variables should be preserved")
+    assert_equal(5, final_workspace.binding.local_variable_get(:my_var))
+
+    assert(!final_vars.include?(:list), "Command 'list' should not be shadowed")
+    assert(!final_vars.include?(:list_namespace), "Command 'list_namespace' should not be shadowed")
+    assert(!final_vars.include?(:list_snapshots), "Command 'list_snapshots' should not be shadowed")
+    assert(!final_vars.include?(:scan), "Command 'scan' should not be shadowed")
+    assert(!final_vars.include?(:processlist), "Command 'processlist' should not be shadowed")
+
+    assert_match(/WARN: 'list' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'list_namespace' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'list_snapshots' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'scan' is a reserved HBase command/, err_output)
+    assert_match(/WARN: 'processlist' is a reserved HBase command/, err_output)
   end
 end

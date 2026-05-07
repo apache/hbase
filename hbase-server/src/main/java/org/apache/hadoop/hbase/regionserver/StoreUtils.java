@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -35,6 +36,7 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -181,6 +183,15 @@ public final class StoreUtils {
 
   public static List<StoreFileInfo> toStoreFileInfo(Collection<HStoreFile> storefiles) {
     return storefiles.stream().map(HStoreFile::getFileInfo).collect(Collectors.toList());
+  }
+
+  public static List<HStoreFile> toHStoreFile(List<StoreFileInfo> storeFileInfoList,
+    BloomType bloomType, CacheConfig cacheConf) throws IOException {
+    List<HStoreFile> hStoreFiles = new ArrayList<HStoreFile>();
+    for (StoreFileInfo storeFileInfo : storeFileInfoList) {
+      hStoreFiles.add(new HStoreFile(storeFileInfo, bloomType, cacheConf));
+    }
+    return hStoreFiles;
   }
 
   public static long getTotalUncompressedBytes(List<HStoreFile> files) {

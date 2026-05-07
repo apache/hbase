@@ -93,10 +93,10 @@ public class TestStoreFileInfo {
     HFileLink link2 = new HFileLink(new Path(origin, "f1"), new Path(tmp, "f1"),
       new Path(mob, "f1"), new Path(archive, "f1"));
 
-    StoreFileInfo info1 =
-      new StoreFileInfo(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(), null, link1);
-    StoreFileInfo info2 =
-      new StoreFileInfo(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(), null, link2);
+    StoreFileInfo info1 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), new Path(archive, "f1"), link1);
+    StoreFileInfo info2 = new StoreFileInfo(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), new Path(archive, "f1"), link2);
 
     assertEquals(info1, info2);
     assertEquals(info1.hashCode(), info2.hashCode());

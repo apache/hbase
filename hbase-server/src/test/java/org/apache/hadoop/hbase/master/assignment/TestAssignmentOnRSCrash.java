@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -36,20 +35,16 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAssignmentOnRSCrash {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAssignmentOnRSCrash.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentOnRSCrash.class);
 
@@ -65,7 +60,7 @@ public class TestAssignmentOnRSCrash {
     conf.set("hbase.balancer.tablesOnMaster", "none");
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     UTIL = new HBaseTestingUtil();
 
@@ -76,7 +71,7 @@ public class TestAssignmentOnRSCrash {
       Bytes.toBytes("D"), Bytes.toBytes("F"), Bytes.toBytes("L") });
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -129,7 +124,7 @@ public class TestAssignmentOnRSCrash {
         break;
       }
     }
-    assertTrue("expected RSs to be killed", nkilled > 0);
+    assertTrue(nkilled > 0, "expected RSs to be killed");
   }
 
   @Test
@@ -159,7 +154,7 @@ public class TestAssignmentOnRSCrash {
         break;
       }
     }
-    assertTrue("expected RSs to be killed", nkilled > 0);
+    assertTrue(nkilled > 0, "expected RSs to be killed");
   }
 
   private void testInsert(final RegionInfo hri, final int nrows) throws IOException {

@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -28,17 +28,15 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.security.HBaseSaslRpcServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -53,12 +51,9 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
 /**
  * Confirm that we truly close the NettyRpcConnection when the netty channel is closed.
  */
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestNettyIPCCloseConnection {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyIPCCloseConnection.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -70,7 +65,7 @@ public class TestNettyIPCCloseConnection {
 
   private TestProtobufRpcProto.BlockingInterface stub;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     group = new NioEventLoopGroup();
     server = new NettyRpcServer(null, getClass().getSimpleName(),
@@ -82,7 +77,7 @@ public class TestNettyIPCCloseConnection {
     stub = TestProtobufRpcServiceImpl.newBlockingStub(client, server.getListenerAddress());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(client, true);
     server.stop();

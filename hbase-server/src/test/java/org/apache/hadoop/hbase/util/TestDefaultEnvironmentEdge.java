@@ -17,39 +17,34 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests to make sure that the default environment edge conforms to appropriate behaviour.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDefaultEnvironmentEdge {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultEnvironmentEdge.class);
 
   @Test
   public void testGetCurrentTimeUsesSystemClock() {
     DefaultEnvironmentEdge edge = new DefaultEnvironmentEdge();
     long systemTime = EnvironmentEdgeManager.currentTime();
     long edgeTime = edge.currentTime();
-    assertTrue("System time must be either the same or less than the edge time",
-      systemTime < edgeTime || systemTime == edgeTime);
+    assertTrue(systemTime < edgeTime || systemTime == edgeTime,
+      "System time must be either the same or less than the edge time");
     try {
       Thread.sleep(1);
     } catch (InterruptedException e) {
       fail(e.getMessage());
     }
     long secondEdgeTime = edge.currentTime();
-    assertTrue("Second time must be greater than the first", secondEdgeTime > edgeTime);
+    assertTrue(secondEdgeTime > edgeTime, "Second time must be greater than the first");
   }
 }

@@ -21,11 +21,15 @@ import java.io.IOException;
 import java.util.AbstractList;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Optional;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
@@ -94,6 +98,8 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   private final String operationId;
 
   private RegionServerServices rsServices;
+
+  private final Set<Path> filesRead = new HashSet<>();
 
   @Override
   public RegionInfo getRegionInfo() {
@@ -760,10 +766,12 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   private void closeInternal() {
     if (storeHeap != null) {
       storeHeap.close();
+      filesRead.addAll(storeHeap.getFilesRead());
       storeHeap = null;
     }
     if (joinedHeap != null) {
       joinedHeap.close();
+      filesRead.addAll(joinedHeap.getFilesRead());
       joinedHeap = null;
     }
     // no need to synchronize here.
@@ -774,6 +782,15 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
   @Override
   public synchronized void close() {
     TraceUtil.trace(this::closeInternal, () -> region.createRegionSpan("RegionScanner.close"));
+  }
+
+  /**
+   * Returns the set of store file paths that were successfully read by this scanner. Populated at
+   * close from the underlying store heap and joined heap (if any).
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    return Collections.unmodifiableSet(filesRead);
   }
 
   @Override

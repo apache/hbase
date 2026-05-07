@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.wal;
 
 import static org.apache.hadoop.hbase.regionserver.wal.AbstractTestWALReplay.addRegionEdits;
 import static org.apache.hadoop.hbase.wal.WALSplitter.WAL_SPLIT_TO_HFILE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -73,26 +72,22 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALSplitToHFile {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALSplitToHFile.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestWALReplay.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALSplitToHFile.class);
   static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private final EnvironmentEdge ee = EnvironmentEdgeManager.getDelegate();
   private Path rootDir = null;
@@ -109,10 +104,9 @@ public class TestWALSplitToHFile {
   private static final byte[] VALUE2 = Bytes.toBytes("value2");
   private static final int countPerFamily = 10;
 
-  @Rule
-  public final TestName TEST_NAME = new TestName();
+  private String testMethodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean(WAL_SPLIT_TO_HFILE, true);
@@ -122,30 +116,30 @@ public class TestWALSplitToHFile {
     CommonFSUtils.setRootDir(conf, hbaseRootDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName();
     this.conf = HBaseConfiguration.create(UTIL.getConfiguration());
     this.conf.setBoolean(HConstants.HREGION_EDITS_REPLAY_SKIP_ERRORS, false);
     this.fs = UTIL.getDFSCluster().getFileSystem();
     this.rootDir = CommonFSUtils.getRootDir(this.conf);
     this.oldLogDir = new Path(this.rootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName = ServerName
-      .valueOf(TEST_NAME.getMethodName() + "-manual", 16010, EnvironmentEdgeManager.currentTime())
-      .toString();
+      .valueOf(testMethodName + "-manual", 16010, EnvironmentEdgeManager.currentTime()).toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(this.rootDir, logName);
     if (UTIL.getDFSCluster().getFileSystem().exists(this.rootDir)) {
       UTIL.getDFSCluster().getFileSystem().delete(this.rootDir, true);
     }
-    this.wals = new WALFactory(conf, TEST_NAME.getMethodName());
+    this.wals = new WALFactory(conf, testMethodName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     this.wals.close();
     UTIL.getDFSCluster().getFileSystem().delete(this.rootDir, true);
@@ -188,7 +182,7 @@ public class TestWALSplitToHFile {
   }
 
   private Pair<TableDescriptor, RegionInfo> setupTableAndRegion() throws IOException {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final TableDescriptor td = createBasic3FamilyTD(tableName);
     final RegionInfo ri = RegionInfoBuilder.newBuilder(tableName).build();
     final Path tableDir = CommonFSUtils.getTableDir(this.rootDir, tableName);
@@ -215,11 +209,10 @@ public class TestWALSplitToHFile {
     FileSystem walFs = CommonFSUtils.getWALFileSystem(this.conf);
     this.oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
     String serverName = ServerName
-      .valueOf(TEST_NAME.getMethodName() + "-manual", 16010, EnvironmentEdgeManager.currentTime())
-      .toString();
+      .valueOf(testMethodName + "-manual", 16010, EnvironmentEdgeManager.currentTime()).toString();
     this.logName = AbstractFSWALProvider.getWALDirectoryName(serverName);
     this.logDir = new Path(walRootDir, logName);
-    this.wals = new WALFactory(conf, TEST_NAME.getMethodName());
+    this.wals = new WALFactory(conf, testMethodName);
 
     Pair<TableDescriptor, RegionInfo> pair = setupTableAndRegion();
     TableDescriptor td = pair.getFirst();

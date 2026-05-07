@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Set;
 import java.util.function.IntConsumer;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -138,6 +139,12 @@ public interface KeyValueScanner extends Shipper, Closeable {
    * @see #isFileScanner()
    */
   Path getFilePath();
+
+  /**
+   * Returns the set of store file paths that were successfully read by this scanner. Typically
+   * populated only after the scanner is closed.
+   */
+  Set<Path> getFilesRead();
 
   // Support for "Reversed Scanner"
   /**

@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY;
 import static org.apache.hadoop.hbase.quotas.MasterQuotasObserver.REMOVE_QUOTA_ON_TABLE_DELETE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
@@ -29,30 +29,24 @@ import static org.mockito.Mockito.mock;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for MasterQuotasObserver that does not require a cluster.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMasterQuotasObserverWithMocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterQuotasObserverWithMocks.class);
 
   private HMaster master;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = HBaseConfiguration.create();
     master = mock(HMaster.class);
@@ -79,9 +73,9 @@ public class TestMasterQuotasObserverWithMocks {
     master.updateConfigurationForQuotasObserver(conf);
     Set<String> coprocs = new HashSet<>(conf.getStringCollection(MASTER_COPROCESSOR_CONF_KEY));
     assertEquals(2, coprocs.size());
-    assertTrue("Observed coprocessors were: " + coprocs,
-      coprocs.contains(AccessController.class.getName()));
-    assertTrue("Observed coprocessors were: " + coprocs,
-      coprocs.contains(MasterQuotasObserver.class.getName()));
+    assertTrue(coprocs.contains(AccessController.class.getName()),
+      "Observed coprocessors were: " + coprocs);
+    assertTrue(coprocs.contains(MasterQuotasObserver.class.getName()),
+      "Observed coprocessors were: " + coprocs);
   }
 }

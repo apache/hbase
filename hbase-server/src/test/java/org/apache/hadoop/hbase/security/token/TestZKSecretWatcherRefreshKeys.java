@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -29,24 +31,19 @@ import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the refreshKeys in ZKSecretWatcher
  */
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestZKSecretWatcherRefreshKeys {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKSecretWatcherRefreshKeys.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcherRefreshKeys.class);
   private static HBaseTestingUtil TEST_UTIL;
@@ -66,13 +63,13 @@ public class TestZKSecretWatcherRefreshKeys {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -99,10 +96,10 @@ public class TestZKSecretWatcherRefreshKeys {
       ZKUtil.createWithParents(zk,
         ZNodePaths.joinZNode(watcher.getKeysParentZNode(), key.toString()), Writables.getBytes(ak));
     }
-    Assert.assertNull(keyManager.getCurrentKey());
+    assertNull(keyManager.getCurrentKey());
     watcher.refreshKeys();
     for (Integer key : keys) {
-      Assert.assertNotNull(keyManager.getKey(key.intValue()));
+      assertNotNull(keyManager.getKey(key.intValue()));
     }
   }
 }

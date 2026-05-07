@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,49 +33,47 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
  */
-@RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@Tag(RegionServerTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestVerifyBucketCacheFile {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyBucketCacheFile.class);
 
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 8192, null },
-      { 16 * 1024,
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(8192, null),
+      Arguments.of(16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-          128 * 1024 + 1024 } } });
+          128 * 1024 + 1024 }));
   }
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
+  private final int constructedBlockSize;
+  private final int[] constructedBlockSizes;
 
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  public TestVerifyBucketCacheFile(int constructedBlockSize, int[] constructedBlockSizes) {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+  }
 
   final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
@@ -91,7 +89,7 @@ public class TestVerifyBucketCacheFile {
    * cache file and persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testRetrieveFromFile() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -174,7 +172,7 @@ public class TestVerifyBucketCacheFile {
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testRetrieveFromFileAfterDelete() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -226,7 +224,7 @@ public class TestVerifyBucketCacheFile {
    * persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileData() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -291,7 +289,7 @@ public class TestVerifyBucketCacheFile {
    * recoverable from the cache.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileTime() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -349,7 +347,7 @@ public class TestVerifyBucketCacheFile {
    * corruption.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testBucketCacheRecovery() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -408,18 +406,18 @@ public class TestVerifyBucketCacheFile {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSingleChunk() throws Exception {
     testChunkedBackingMapRecovery(5, 5);
   }
 
-  @Test
+  @TestTemplate
   public void testCompletelyFilledChunks() throws Exception {
     // Test where the all the chunks are complete with chunkSize entries
     testChunkedBackingMapRecovery(5, 10);
   }
 
-  @Test
+  @TestTemplate
   public void testPartiallyFilledChunks() throws Exception {
     // Test where the last chunk is not completely filled.
     testChunkedBackingMapRecovery(5, 13);

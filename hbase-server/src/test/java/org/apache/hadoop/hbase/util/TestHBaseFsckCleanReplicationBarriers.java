@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -52,19 +51,16 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseFsckCleanReplicationBarriers {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseFsckCleanReplicationBarriers.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -78,7 +74,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
 
   private static String COLUMN_FAMILY = "info";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     QUEUE_STORAGE = ReplicationStorageFactory.getReplicationQueueStorage(UTIL.getConnection(),
@@ -86,7 +82,7 @@ public class TestHBaseFsckCleanReplicationBarriers {
     createPeer();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -111,10 +107,10 @@ public class TestHBaseFsckCleanReplicationBarriers {
       regionInfos.add(regionInfo);
       addStateAndBarrier(regionInfo, RegionState.State.OPEN, 10, 100);
       updatePushedSeqId(regionInfo, 10);
-      assertEquals("check if there is lastPushedId", 10,
-        QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_1));
-      assertEquals("check if there is lastPushedId", 10,
-        QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_2));
+      assertEquals(10, QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_1),
+        "check if there is lastPushedId");
+      assertEquals(10, QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_2),
+        "check if there is lastPushedId");
     }
     Scan barrierScan = new Scan();
     barrierScan.setCaching(100);
@@ -134,10 +130,10 @@ public class TestHBaseFsckCleanReplicationBarriers {
     boolean cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertTrue(cleaned);
     for (RegionInfo regionInfo : regionInfos) {
-      assertEquals("check if there is lastPushedId", -1,
-        QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_1));
-      assertEquals("check if there is lastPushedId", -1,
-        QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_2));
+      assertEquals(-1, QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_1),
+        "check if there is lastPushedId");
+      assertEquals(-1, QUEUE_STORAGE.getLastSequenceId(regionInfo.getEncodedName(), PEER_2),
+        "check if there is lastPushedId");
     }
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);
@@ -159,18 +155,18 @@ public class TestHBaseFsckCleanReplicationBarriers {
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
       addStateAndBarrier(region, RegionState.State.OFFLINE, 10, 100);
       updatePushedSeqId(region, 10);
-      assertEquals("check if there is lastPushedId", 10,
-        QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_1));
-      assertEquals("check if there is lastPushedId", 10,
-        QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_2));
+      assertEquals(10, QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_1),
+        "check if there is lastPushedId");
+      assertEquals(10, QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_2),
+        "check if there is lastPushedId");
     }
     boolean cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertTrue(cleaned);
     for (RegionInfo region : UTIL.getAdmin().getRegions(tableName)) {
-      assertEquals("check if there is lastPushedId", -1,
-        QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_1));
-      assertEquals("check if there is lastPushedId", -1,
-        QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_2));
+      assertEquals(-1, QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_1),
+        "check if there is lastPushedId");
+      assertEquals(-1, QUEUE_STORAGE.getLastSequenceId(region.getEncodedName(), PEER_2),
+        "check if there is lastPushedId");
     }
     cleaned = HbckTestingUtil.cleanReplicationBarrier(UTIL.getConfiguration(), tableName);
     assertFalse(cleaned);

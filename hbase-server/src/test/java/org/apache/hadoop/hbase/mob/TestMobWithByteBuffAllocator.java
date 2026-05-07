@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,24 +36,18 @@ import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the MOB feature when enable RPC ByteBuffAllocator (HBASE-22122)
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestMobWithByteBuffAllocator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobWithByteBuffAllocator.class);
 
   private static final String TABLE_NAME = "TestMobWithByteBuffAllocator";
   private static final Logger LOG = LoggerFactory.getLogger(TestMobWithByteBuffAllocator.class);
@@ -60,7 +56,7 @@ public class TestMobWithByteBuffAllocator {
   private static final Configuration CONF = UTIL.getConfiguration();
   private static final byte[] FAMILY = Bytes.toBytes("f");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Must use the ByteBuffAllocator here
     CONF.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
@@ -73,7 +69,7 @@ public class TestMobWithByteBuffAllocator {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -103,11 +99,11 @@ public class TestMobWithByteBuffAllocator {
         for (Result res; (res = scanner.next()) != null;) {
           rows++;
           for (Cell cell : res.listCells()) {
-            Assert.assertTrue(CellUtil.cloneValue(cell).length > 0);
+            assertTrue(CellUtil.cloneValue(cell).length > 0);
           }
         }
       }
     }
-    Assert.assertEquals(expectedRows, rows);
+    assertEquals(expectedRows, rows);
   }
 }

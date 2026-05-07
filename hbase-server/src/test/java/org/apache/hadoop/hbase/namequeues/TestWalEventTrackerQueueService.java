@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.namequeues;
 
 import static org.apache.hadoop.hbase.master.waleventtracker.WALEventTrackerTableCreator.WAL_EVENT_TRACKER_ENABLED_KEY;
 import static org.apache.hadoop.hbase.namequeues.WALEventTrackerTableAccessor.WAL_EVENT_TRACKER_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -28,33 +28,24 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.regionserver.wal.WALEventTrackerListener;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestWalEventTrackerQueueService {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWalEventTrackerQueueService.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   /*
    * Test whether wal event tracker metrics are being incremented.
    */
   @Test
-  public void testMetrics() throws Exception {
+  public void testMetrics(TestInfo testInfo) throws Exception {
+    String methodName = testInfo.getTestMethod().get().getName();
     String rsName = "test-region-server";
     String walName = "test-wal-0";
     long timeStamp = EnvironmentEdgeManager.currentTime();
@@ -65,8 +56,8 @@ public class TestWalEventTrackerQueueService {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(WAL_EVENT_TRACKER_ENABLED_KEY, true);
     conf.setLong(WALEventTrackerTableAccessor.SLEEP_INTERVAL_KEY, 100);
-    MetricsWALEventTrackerSourceImpl source = new MetricsWALEventTrackerSourceImpl(
-      name.getMethodName(), name.getMethodName(), name.getMethodName(), name.getMethodName());
+    MetricsWALEventTrackerSourceImpl source =
+      new MetricsWALEventTrackerSourceImpl(methodName, methodName, methodName, methodName);
     WALEventTrackerQueueService service = new WALEventTrackerQueueService(conf, source);
     service.addToQueue(payload);
     Connection mockConnection = mock(Connection.class);

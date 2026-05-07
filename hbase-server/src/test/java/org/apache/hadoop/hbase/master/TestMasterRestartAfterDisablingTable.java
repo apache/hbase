@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.NavigableSet;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -37,26 +36,25 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterRestartAfterDisablingTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRestartAfterDisablingTable.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestMasterRestartAfterDisablingTable.class);
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testForCheckingIfEnableAndDisableWorksFineAfterSwitch() throws Exception {
@@ -75,7 +73,7 @@ public class TestMasterRestartAfterDisablingTable {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(tableName, family, NUM_REGIONS_TO_CREATE);
@@ -90,8 +88,8 @@ public class TestMasterRestartAfterDisablingTable {
     TEST_UTIL.getAdmin().disableTable(tableName);
 
     NavigableSet<String> regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
-    assertEquals("The number of regions for the table tableRestart should be 0 and only"
-      + "the catalog table should be present.", 1, regions.size());
+    assertEquals(1, regions.size(), "The number of regions for the table tableRestart should be 0 "
+      + "and onlythe catalog table should be present.");
 
     List<MasterThread> masterThreads = cluster.getMasterThreads();
     MasterThread activeMaster = null;
@@ -105,10 +103,10 @@ public class TestMasterRestartAfterDisablingTable {
     cluster.hbaseCluster.waitOnMaster(activeMaster);
     cluster.waitForActiveAndReadyMaster();
 
-    assertTrue("The table should not be in enabled state",
-      cluster.getMaster().getTableStateManager().isTableState(
-        TableName.valueOf(name.getMethodName()), TableState.State.DISABLED,
-        TableState.State.DISABLING));
+    assertTrue(
+      cluster.getMaster().getTableStateManager().isTableState(TableName.valueOf(testMethodName),
+        TableState.State.DISABLED, TableState.State.DISABLING),
+      "The table should not be in enabled state");
     log("Enabling table\n");
     // Need a new Admin, the previous one is on the old master
     Admin admin = TEST_UTIL.getAdmin();
@@ -118,10 +116,11 @@ public class TestMasterRestartAfterDisablingTable {
     TEST_UTIL.waitUntilNoRegionsInTransition(60000);
     log("Verifying there are " + numRegions + " assigned on cluster\n");
     regions = HBaseTestingUtil.getAllOnlineRegions(cluster);
-    assertEquals("The assigned regions were not onlined after master"
-      + " switch except for the catalog table.", 5, regions.size());
-    assertTrue("The table should be in enabled state", cluster.getMaster().getTableStateManager()
-      .isTableState(TableName.valueOf(name.getMethodName()), TableState.State.ENABLED));
+    assertEquals(5, regions.size(),
+      "The assigned regions were not onlined after master switch except for the catalog table.");
+    assertTrue(cluster.getMaster().getTableStateManager()
+      .isTableState(TableName.valueOf(testMethodName), TableState.State.ENABLED),
+      "The table should be in enabled state");
     ht.close();
     TEST_UTIL.shutdownMiniCluster();
   }

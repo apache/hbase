@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.net.InetAddress;
@@ -32,7 +36,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.RpcCall;
@@ -42,10 +45,8 @@ import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,12 +66,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPaylo
 /**
  * Tests for Online SlowLog Provider Service
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestNamedQueueRecorder {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamedQueueRecorder.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
 
@@ -128,7 +126,7 @@ public class TestNamedQueueRecorder {
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
     namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
     int i = 0;
@@ -140,14 +138,14 @@ public class TestNamedQueueRecorder {
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 5));
     List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
-    Assert.assertTrue(confirmPayloadParams(0, 5, slowLogPayloads));
-    Assert.assertTrue(confirmPayloadParams(1, 4, slowLogPayloads));
-    Assert.assertTrue(confirmPayloadParams(2, 3, slowLogPayloads));
-    Assert.assertTrue(confirmPayloadParams(3, 2, slowLogPayloads));
-    Assert.assertTrue(confirmPayloadParams(4, 1, slowLogPayloads));
+    assertTrue(confirmPayloadParams(0, 5, slowLogPayloads));
+    assertTrue(confirmPayloadParams(1, 4, slowLogPayloads));
+    assertTrue(confirmPayloadParams(2, 3, slowLogPayloads));
+    assertTrue(confirmPayloadParams(3, 2, slowLogPayloads));
+    assertTrue(confirmPayloadParams(4, 1, slowLogPayloads));
 
     // add 2 more records
     for (; i < 7; i++) {
@@ -156,10 +154,10 @@ public class TestNamedQueueRecorder {
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 7));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
       return slowLogPayloadsList.size() == 7 && confirmPayloadParams(0, 7, slowLogPayloadsList)
         && confirmPayloadParams(5, 2, slowLogPayloadsList)
@@ -173,10 +171,10 @@ public class TestNamedQueueRecorder {
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 8));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
       // confirm ringbuffer is full
       return slowLogPayloadsList.size() == 8 && confirmPayloadParams(7, 3, slowLogPayloadsList)
@@ -191,10 +189,10 @@ public class TestNamedQueueRecorder {
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 8));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(request);
       // confirm ringbuffer is full
       // and ordered events
@@ -207,7 +205,7 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest largeLogRequest =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15)
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG).build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloadsList = getSlowLogPayloads(largeLogRequest);
       // confirm ringbuffer is full
       // and ordered events
@@ -217,7 +215,7 @@ public class TestNamedQueueRecorder {
         && confirmPayloadParams(3, 11, slowLogPayloadsList);
     }));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       boolean isRingBufferCleaned =
         namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
 
@@ -252,7 +250,7 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
     for (int i = 0; i < 14 * 11; i++) {
@@ -262,10 +260,10 @@ public class TestNamedQueueRecorder {
     }
     LOG.debug("Added 14 * 11 records, ringbuffer should only provide latest 14 records");
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
 
       // confirm strict order of slow log payloads
@@ -287,12 +285,12 @@ public class TestNamedQueueRecorder {
 
     boolean isRingBufferCleaned =
       namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
-    Assert.assertTrue(isRingBufferCleaned);
+    assertTrue(isRingBufferCleaned);
     LOG.debug("cleared the ringbuffer of Online Slow Log records");
     List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
 
     // confirm ringbuffer is empty
-    Assert.assertEquals(slowLogPayloads.size(), 0);
+    assertEquals(slowLogPayloads.size(), 0);
   }
 
   @Test
@@ -306,14 +304,14 @@ public class TestNamedQueueRecorder {
     namedQueueRecorder = constructor.newInstance(conf);
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().build();
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     for (int i = 0; i < 300; i++) {
       RpcLogDetails rpcLogDetails =
         getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
       return slowLogPayloads.size() == 0;
     }));
@@ -331,14 +329,14 @@ public class TestNamedQueueRecorder {
 
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().build();
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     for (int i = 0; i < 300; i++) {
       RpcLogDetails rpcLogDetails =
         getRpcLogDetails("userName_" + (i + 1), "client_" + (i + 1), "class_" + (i + 1));
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
       return slowLogPayloads.size() == 0;
     }));
@@ -356,7 +354,7 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request = AdminProtos.SlowLogResponseRequest.newBuilder()
       .setLimit(15).setUserName("userName_87").build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
 
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
@@ -367,17 +365,17 @@ public class TestNamedQueueRecorder {
     }
     LOG.debug("Added 100 records, ringbuffer should only 1 record with matching filter");
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 1));
 
     AdminProtos.SlowLogResponseRequest requestClient = AdminProtos.SlowLogResponseRequest
       .newBuilder().setLimit(15).setClientAddress("client_85").build();
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestClient).size() == 1));
 
     AdminProtos.SlowLogResponseRequest requestSlowLog =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestSlowLog).size() == 15));
   }
 
@@ -390,7 +388,7 @@ public class TestNamedQueueRecorder {
     namedQueueRecorder = constructor.newInstance(conf);
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().build();
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
 
     String[] clientAddressArray = new String[] { "[127:1:1:1:1:1:1:1]:1", "[127:1:1:1:1:1:1:1]:2",
       "[127:1:1:1:1:1:1:1]:3", "127.0.0.1:1", "127.0.0.1:2" };
@@ -413,25 +411,25 @@ public class TestNamedQueueRecorder {
       AdminProtos.SlowLogResponseRequest.newBuilder()
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
         .setClientAddress("[127:1:1:1:1:1:1:1]:2").build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> getSlowLogPayloads(largeLogRequestIPv6WithPort).size() == 1));
     AdminProtos.SlowLogResponseRequest largeLogRequestIPv6WithoutPort =
       AdminProtos.SlowLogResponseRequest.newBuilder()
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
         .setClientAddress("[127:1:1:1:1:1:1:1]").build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> getSlowLogPayloads(largeLogRequestIPv6WithoutPort).size() == 3));
     AdminProtos.SlowLogResponseRequest largeLogRequestIPv4WithPort =
       AdminProtos.SlowLogResponseRequest.newBuilder()
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
         .setClientAddress("127.0.0.1:1").build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> getSlowLogPayloads(largeLogRequestIPv4WithPort).size() == 1));
     AdminProtos.SlowLogResponseRequest largeLogRequestIPv4WithoutPort =
       AdminProtos.SlowLogResponseRequest.newBuilder()
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG)
         .setClientAddress("127.0.0.1").build();
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000,
       () -> getSlowLogPayloads(largeLogRequestIPv4WithoutPort).size() == 2));
   }
 
@@ -448,7 +446,7 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest largeLogRequest =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000)
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG).build();
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
     for (int j = 0; j < 1000; j++) {
@@ -465,9 +463,9 @@ public class TestNamedQueueRecorder {
 
     Uninterruptibles.sleepUninterruptibly(500, TimeUnit.MILLISECONDS);
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(5000, () -> getSlowLogPayloads(request).size() > 10000));
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(5000,
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(5000,
       () -> getSlowLogPayloads(largeLogRequest).size() > 10000));
   }
 
@@ -482,7 +480,7 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
 
     boolean isSlowLog;
@@ -501,10 +499,10 @@ public class TestNamedQueueRecorder {
     }
     LOG.debug("Added 14 * 11 records, ringbuffer should only provide latest 14 records");
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> slowLogPayloads = getSlowLogPayloads(request);
 
       // confirm strict order of slow log payloads
@@ -528,10 +526,10 @@ public class TestNamedQueueRecorder {
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(14 * 11)
         .setLogType(AdminProtos.SlowLogResponseRequest.LogType.LARGE_LOG).build();
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(largeLogRequest).size() == 14));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       List<SlowLogPayload> largeLogPayloads = getSlowLogPayloads(largeLogRequest);
 
       // confirm strict order of slow log payloads
@@ -563,7 +561,7 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request = AdminProtos.SlowLogResponseRequest.newBuilder()
       .setLimit(15).setUserName("userName_87").setClientAddress("client_88").build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(getSlowLogPayloads(request).size(), 0);
 
     for (int i = 0; i < 100; i++) {
       RpcLogDetails rpcLogDetails =
@@ -571,31 +569,31 @@ public class TestNamedQueueRecorder {
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 2));
 
     AdminProtos.SlowLogResponseRequest request2 = AdminProtos.SlowLogResponseRequest.newBuilder()
       .setLimit(15).setUserName("userName_1").setClientAddress("client_2").build();
-    Assert.assertEquals(0, getSlowLogPayloads(request2).size());
+    assertEquals(0, getSlowLogPayloads(request2).size());
 
     AdminProtos.SlowLogResponseRequest request3 = AdminProtos.SlowLogResponseRequest.newBuilder()
       .setLimit(15).setUserName("userName_87").setClientAddress("client_88")
       .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND).build();
-    Assert.assertEquals(0, getSlowLogPayloads(request3).size());
+    assertEquals(0, getSlowLogPayloads(request3).size());
 
     AdminProtos.SlowLogResponseRequest request4 = AdminProtos.SlowLogResponseRequest.newBuilder()
       .setLimit(15).setUserName("userName_87").setClientAddress("client_87")
       .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.AND).build();
-    Assert.assertEquals(1, getSlowLogPayloads(request4).size());
+    assertEquals(1, getSlowLogPayloads(request4).size());
 
     AdminProtos.SlowLogResponseRequest request5 = AdminProtos.SlowLogResponseRequest.newBuilder()
       .setLimit(15).setUserName("userName_88").setClientAddress("client_89")
       .setFilterByOperator(AdminProtos.SlowLogResponseRequest.FilterByOperator.OR).build();
-    Assert.assertEquals(2, getSlowLogPayloads(request5).size());
+    assertEquals(2, getSlowLogPayloads(request5).size());
 
     AdminProtos.SlowLogResponseRequest requestSlowLog =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(requestSlowLog).size() == 15));
   }
 
@@ -610,11 +608,11 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
       if (slowLogPayload.isPresent()) {
         return !slowLogPayload.get().hasScan();
@@ -634,11 +632,11 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
       if (slowLogPayload.isPresent()) {
         return !slowLogPayload.get().hasScan();
@@ -658,11 +656,11 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
       if (slowLogPayload.isPresent()) {
         return slowLogPayload.get().hasScan();
@@ -681,11 +679,11 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
       if (slowLogPayload.isPresent() && !slowLogPayload.get().getRequestAttributeList().isEmpty()) {
         return slowLogPayload.get().getRequestAttributeList().containsAll(REQUEST_HEADERS);
@@ -704,11 +702,11 @@ public class TestNamedQueueRecorder {
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(1).build();
 
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
     LOG.debug("Initially ringbuffer of Slow Log records is empty");
     RpcLogDetails rpcLogDetails = getRpcLogDetailsOfScan();
     namedQueueRecorder.addRecord(rpcLogDetails);
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> {
       Optional<SlowLogPayload> slowLogPayload = getSlowLogPayloads(request).stream().findAny();
       if (
         slowLogPayload.isPresent() && !slowLogPayload.get().getConnectionAttributeList().isEmpty()

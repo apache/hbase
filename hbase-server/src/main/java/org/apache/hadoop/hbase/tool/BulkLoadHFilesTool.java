@@ -1160,7 +1160,7 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
       + "=yes to ignore unmatched column families.\n"
       + " -loadTable for when directory of files to load has a depth of 3; target table must "
       + "exist;\n" + " must be last of the options on command line.\n"
-      + "See http://hbase.apache.org/book.html#arch.bulk.load.complete.strays for "
+      + "See https://hbase.apache.org/docs/architecture/bulk-loading#adopting-stray-data for "
       + "documentation.\n");
   }
 

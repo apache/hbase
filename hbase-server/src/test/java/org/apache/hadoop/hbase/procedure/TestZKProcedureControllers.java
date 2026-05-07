@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.procedure;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -27,7 +27,6 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -36,11 +35,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -55,12 +53,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 /**
  * Test zookeeper-based, procedure controllers
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZKProcedureControllers {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKProcedureControllers.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKProcedureControllers.class);
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -70,12 +65,12 @@ public class TestZKProcedureControllers {
 
   private final byte[] memberData = Bytes.toBytes("data from member");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupTest() throws Exception {
     UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     UTIL.shutdownMiniZKCluster();
   }
@@ -143,8 +138,8 @@ public class TestZKProcedureControllers {
     // Mockito.any());
     // cleanup after the test
     ZKUtil.deleteNodeRecursively(watcher, controller.getZkController().getBaseZnode());
-    assertEquals("Didn't delete prepare node", -1, ZKUtil.checkExists(watcher, prepare));
-    assertEquals("Didn't delete commit node", -1, ZKUtil.checkExists(watcher, commit));
+    assertEquals(-1, ZKUtil.checkExists(watcher, prepare), "Didn't delete prepare node");
+    assertEquals(-1, ZKUtil.checkExists(watcher, commit), "Didn't delete commit node");
   }
 
   @Test
@@ -229,10 +224,10 @@ public class TestZKProcedureControllers {
     Mockito.verify(coordinator, times(expected.size())).memberFinishedBarrier(
       Mockito.eq(operationName), Mockito.anyString(), Mockito.eq(memberData));
 
-    assertEquals("Incorrect number of members returnd data", expected.size(),
-      dataFromMembers.size());
+    assertEquals(expected.size(), dataFromMembers.size(),
+      "Incorrect number of members returnd data");
     for (byte[] result : dataFromMembers) {
-      assertArrayEquals("Incorrect data from member", memberData, result);
+      assertArrayEquals(memberData, result, "Incorrect data from member");
     }
 
     controller.resetMembers(p);
@@ -353,9 +348,9 @@ public class TestZKProcedureControllers {
     String prepare = ZKProcedureUtil.getAcquireBarrierNode(controller, operationName);
     String commit = ZKProcedureUtil.getReachedBarrierNode(controller, operationName);
     String abort = ZKProcedureUtil.getAbortNode(controller, operationName);
-    assertEquals("Didn't delete prepare node", -1, ZKUtil.checkExists(watcher, prepare));
-    assertEquals("Didn't delete commit node", -1, ZKUtil.checkExists(watcher, commit));
-    assertEquals("Didn't delete abort node", -1, ZKUtil.checkExists(watcher, abort));
+    assertEquals(-1, ZKUtil.checkExists(watcher, prepare), "Didn't delete prepare node");
+    assertEquals(-1, ZKUtil.checkExists(watcher, commit), "Didn't delete commit node");
+    assertEquals(-1, ZKUtil.checkExists(watcher, abort), "Didn't delete abort node");
   }
 
   /**

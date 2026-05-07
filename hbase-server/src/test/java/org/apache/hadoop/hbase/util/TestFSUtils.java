@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -39,7 +40,6 @@ import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,23 +55,18 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test {@link FSUtils}.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSUtils {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSUtils.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSUtils.class);
 
@@ -79,7 +74,7 @@ public class TestFSUtils {
   private FileSystem fs;
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseTestingUtil();
     fs = htu.getTestFileSystem();
@@ -235,8 +230,8 @@ public class TestFSUtils {
         blocksDistribution.getTopHosts().size() != 3
           && EnvironmentEdgeManager.currentTime() < maxTime
       );
-      assertEquals("Wrong number of hosts distributing blocks.", 3,
-        blocksDistribution.getTopHosts().size());
+      assertEquals(3, blocksDistribution.getTopHosts().size(),
+        "Wrong number of hosts distributing blocks.");
     } finally {
       htu.shutdownMiniDFSCluster();
     }
@@ -275,7 +270,7 @@ public class TestFSUtils {
     } catch (FileSystemVersionException e) {
       thrown = true;
     }
-    assertTrue("Expected FileSystemVersionException", thrown);
+    assertTrue(thrown, "Expected FileSystemVersionException");
     // Write out a good version file. See if we can read it in and convert.
     String version = HConstants.FILE_SYSTEM_VERSION;
     writeVersionFile(versionFile, version);
@@ -299,7 +294,7 @@ public class TestFSUtils {
     } catch (FileSystemVersionException e) {
       thrown = true;
     }
-    assertTrue("Expected FileSystemVersionException", thrown);
+    assertTrue(thrown, "Expected FileSystemVersionException");
   }
 
   @Test
@@ -354,7 +349,7 @@ public class TestFSUtils {
     try {
       FSDataOutputStream out = FSUtils.create(conf, fs, p, perms, null);
       out.close();
-      assertTrue("The created file should be present", CommonFSUtils.isExists(fs, p));
+      assertTrue(CommonFSUtils.isExists(fs, p), "The created file should be present");
       // delete the file with recursion as false. Only the file will be deleted.
       CommonFSUtils.delete(fs, p, false);
       // Create another file
@@ -362,7 +357,7 @@ public class TestFSUtils {
       out1.close();
       // delete the file with recursion as false. Still the file only will be deleted
       CommonFSUtils.delete(fs, p1, true);
-      assertFalse("The created file should be present", CommonFSUtils.isExists(fs, p1));
+      assertFalse(CommonFSUtils.isExists(fs, p1), "The created file should be present");
       // and then cleanup
     } finally {
       CommonFSUtils.delete(fs, p, true);
@@ -395,7 +390,7 @@ public class TestFSUtils {
 
     FSDataOutputStream out = fs.create(p);
     out.close();
-    assertTrue("The created file should be present", CommonFSUtils.isExists(fs, p));
+    assertTrue(CommonFSUtils.isExists(fs, p), "The created file should be present");
 
     long expect = EnvironmentEdgeManager.currentTime() + 1000;
     assertNotEquals(expect, fs.getFileStatus(p).getModificationTime());
@@ -408,8 +403,8 @@ public class TestFSUtils {
       Path dst = new Path(testDir, dstFile);
 
       assertTrue(CommonFSUtils.renameAndSetModifyTime(fs, p, dst));
-      assertFalse("The moved file should not be present", CommonFSUtils.isExists(fs, p));
-      assertTrue("The dst file should be present", CommonFSUtils.isExists(fs, dst));
+      assertFalse(CommonFSUtils.isExists(fs, p), "The moved file should not be present");
+      assertTrue(CommonFSUtils.isExists(fs, dst), "The dst file should be present");
 
       assertEquals(expect, fs.getFileStatus(dst).getModificationTime());
       cluster.shutdown();
@@ -437,13 +432,14 @@ public class TestFSUtils {
       CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"),
         HConstants.DEFAULT_WAL_STORAGE_POLICY, true);
     } catch (IOException e) {
-      Assert.fail("Should have bypassed the FS API when setting default storage policy");
+      org.junit.jupiter.api.Assertions
+        .fail("Should have bypassed the FS API when setting default storage policy");
     }
     // There should be exception thrown when given non-default storage policy, which indicates the
     // HDFS API has been called
     try {
       CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"), "HOT", true);
-      Assert.fail("Should have invoked the FS API but haven't");
+      fail("Should have invoked the FS API but haven't");
     } catch (IOException e) {
       // expected given an invalid path
     }
@@ -499,9 +495,9 @@ public class TestFSUtils {
         String hdfsDefaultPolicy = hfs.getStoragePolicyName(hfs.getHomeDirectory());
         LOG.debug("The default hdfs storage policy (indicated by home path: "
           + hfs.getHomeDirectory() + ") is " + hdfsDefaultPolicy);
-        Assert.assertEquals(hdfsDefaultPolicy, policySet);
+        assertEquals(hdfsDefaultPolicy, policySet);
       } else {
-        Assert.assertEquals(policy, policySet);
+        assertEquals(policy, policySet);
       }
       // will assert existence before deleting.
       cleanupFile(fs, testDir);
@@ -636,15 +632,15 @@ public class TestFSUtils {
       // should throw an exception
       res = e;
     }
-    assertTrue("Error reading beyond file boundary.", res != null);
+    assertTrue(res != null, "Error reading beyond file boundary.");
 
     stm.close();
   }
 
   private void checkAndEraseData(byte[] actual, int from, byte[] expected, String message) {
     for (int idx = 0; idx < actual.length; idx++) {
-      assertEquals(message + " byte " + (from + idx) + " differs. expected " + expected[from + idx]
-        + " actual " + actual[idx], actual[idx], expected[from + idx]);
+      assertEquals(expected[from + idx], actual[idx], message + " byte " + (from + idx)
+        + " differs. expected " + expected[from + idx] + " actual " + actual[idx]);
       actual[idx] = 0;
     }
   }
@@ -663,7 +659,7 @@ public class TestFSUtils {
 
     while (nread < length) {
       int nbytes = stm.read(position + nread, buffer, offset + nread, length - nread);
-      assertTrue("Error in pread", nbytes > 0);
+      assertTrue(nbytes > 0, "Error in pread");
       nread += nbytes;
     }
 

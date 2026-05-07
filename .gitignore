@@ -34,3 +34,4 @@ tags
 .codegenie/
 .vscode/
 **/__pycache__
+.opencode

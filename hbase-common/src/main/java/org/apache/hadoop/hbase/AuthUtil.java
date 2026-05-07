@@ -67,9 +67,9 @@ import org.slf4j.LoggerFactory;
  * </pre>
  *
  * This class will be internal used only from 2.2.0 version, and will transparently work for
- * kerberized applications. For more, please refer
- * <a href="http://hbase.apache.org/book.html#hbase.secure.configuration">Client-side Configuration
- * for Secure Operation</a>
+ * kerberized applications. For more, please refer <a
+ * href="https://hbase.apache.org/docs/security/client-access>Secure Client Access to Apache
+ * HBase</a>
  * @deprecated since 2.2.0, to be marked as
  *             {@link org.apache.yetus.audience.InterfaceAudience.Private} in 4.0.0.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-20886">HBASE-20886</a>

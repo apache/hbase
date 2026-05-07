@@ -86,7 +86,7 @@ public class Sleeper {
           LOG.warn(
             "We slept {}ms instead of {}ms, this is likely due to a long "
               + "garbage collecting pause and it's usually bad, see "
-              + "http://hbase.apache.org/book.html#trouble.rs.runtime.zkexpired",
+              + "https://hbase.apache.org/docs/troubleshooting#zookeeper-sessionexpired-events-toc",
             slept, this.period);
         }
       } catch (InterruptedException iex) {

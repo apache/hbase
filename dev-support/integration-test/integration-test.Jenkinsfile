@@ -46,7 +46,7 @@ pipeline {
       }
     }
     // This is meant to mimic what a release manager will do to create RCs.
-    // See http://hbase.apache.org/book.html#maven.release
+    // See https://hbase.apache.org/docs/building-and-developing/releasing#making-a-release-candidate
     // TODO (HBASE-23870): replace this with invocation of the release tool
     stage ('packaging test') {
       steps {

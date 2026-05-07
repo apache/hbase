@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static junit.framework.TestCase.assertFalse;
-import static junit.framework.TestCase.assertNotNull;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseServerBase;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,7 +38,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -51,12 +52,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,16 +68,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
  * Test of the HBCK-version of SCP. The HBCKSCP is an SCP only it reads hbase:meta for list of
  * Regions that were on the server-to-process rather than consult Master in-memory-state.
  */
-@Category({ MasterTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "replicas:{0} scheduler:{1} selector:{2}")
 public class TestHBCKSCP extends TestSCPBase {
   private static final Logger LOG = LoggerFactory.getLogger(TestHBCKSCP.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBCKSCP.class);
-  @Rule
-  public TableNameTestRule tableNameTestRule = new TableNameTestRule();
+  @RegisterExtension
+  public TableNameTestExtension tableNameTestExtension = new TableNameTestExtension();
 
   private final int replicas;
   private final HBCKSCPScheduler hbckscpScheduler;
@@ -91,16 +88,15 @@ public class TestHBCKSCP extends TestSCPBase {
     this.regionSelector = regionSelector;
   }
 
-  @Parameterized.Parameters(name = "replicas:{0} scheduler:{1} selector:{2}")
-  public static Object[][] params() {
-    return new Object[][] {
-      { 1, new ScheduleServerCrashProcedure(), new PrimaryNotMetaRegionSelector() },
-      { 3, new ScheduleServerCrashProcedure(), new ReplicaNonMetaRegionSelector() },
-      { 1, new ScheduleSCPsForUnknownServers(), new PrimaryNotMetaRegionSelector() },
-      { 3, new ScheduleSCPsForUnknownServers(), new ReplicaNonMetaRegionSelector() } };
+  public static Stream<Arguments> parameters() {
+    return Stream.of(
+      Arguments.of(1, new ScheduleServerCrashProcedure(), new PrimaryNotMetaRegionSelector()),
+      Arguments.of(3, new ScheduleServerCrashProcedure(), new ReplicaNonMetaRegionSelector()),
+      Arguments.of(1, new ScheduleSCPsForUnknownServers(), new PrimaryNotMetaRegionSelector()),
+      Arguments.of(3, new ScheduleSCPsForUnknownServers(), new ReplicaNonMetaRegionSelector()));
   }
 
-  @Test
+  @TestTemplate
   public void test() throws Exception {
     // we are about to do one for it?
     SingleProcessHBaseCluster cluster = this.util.getHBaseCluster();
@@ -109,12 +105,12 @@ public class TestHBCKSCP extends TestSCPBase {
     assertEquals(RS_COUNT, cluster.getLiveRegionServerThreads().size());
 
     int count;
-    try (Table table = createTable(tableNameTestRule.getTableName())) {
+    try (Table table = createTable(tableNameTestExtension.getTableName())) {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(table, HBaseTestingUtil.COLUMNS[0]);
       count = HBaseTestingUtil.countRows(table);
     }
-    assertTrue("expected some rows", count > 0);
+    assertTrue(count > 0, "expected some rows");
 
     // Make the test easier by not working on server hosting meta...
     // Find another RS. Purge it from Master memory w/o running SCP (if

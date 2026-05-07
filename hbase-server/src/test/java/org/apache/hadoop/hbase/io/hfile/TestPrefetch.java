@@ -29,12 +29,12 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasItems;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
-import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
 import java.io.IOException;
 import java.util.List;
@@ -49,7 +49,6 @@ import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -82,21 +81,18 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestPrefetch {
-  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPrefetch.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetch.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -108,10 +104,10 @@ public class TestPrefetch {
   private FileSystem fs;
   private BlockCache blockCache;
 
-  @Rule
-  public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
+  @RegisterExtension
+  private static OpenTelemetryExtension OTEL_EXT = OpenTelemetryExtension.create();
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, InterruptedException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
@@ -208,9 +204,9 @@ public class TestPrefetch {
       readStoreFile(storeFile);
     }, "testPrefetch");
 
-    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<>(otelRule::getSpans,
+    TEST_UTIL.waitFor(TimeUnit.MINUTES.toMillis(1), new MatcherPredicate<>(OTEL_EXT::getSpans,
       hasItems(hasName("testPrefetch"), hasName("PrefetchExecutor.request"))));
-    final List<SpanData> spans = otelRule.getSpans();
+    final List<SpanData> spans = OTEL_EXT.getSpans();
     if (LOG.isDebugEnabled()) {
       StringTraceRenderer renderer = new StringTraceRenderer(spans);
       renderer.render(LOG::debug);
@@ -367,14 +363,13 @@ public class TestPrefetch {
 
     // Wait for 20 seconds, no thread should start prefetch
     Thread.sleep(20000);
-    assertFalse("Prefetch threads should not be running at this point", reader.prefetchStarted());
-    long timeout = 10000;
+    assertFalse(reader.prefetchStarted(), "Prefetch threads should not be running at this point");
     Waiter.waitFor(conf, 10000, () -> (reader.prefetchStarted() || reader.prefetchComplete()));
 
     assertTrue(reader.prefetchStarted() || reader.prefetchComplete());
 
-    assertTrue("Prefetch should start post configured delay",
-      getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay());
+    assertTrue(getElapsedTime(startTime) > PrefetchExecutor.getPrefetchDelay(),
+      "Prefetch should start post configured delay");
 
     conf.setInt(PREFETCH_DELAY, 1000);
     conf.setFloat(PREFETCH_DELAY_VARIATION, PREFETCH_DELAY_VARIATION_DEFAULT_VALUE);
@@ -429,7 +424,7 @@ public class TestPrefetch {
         .withRegionFileSystem(regionFS).build());
     HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, fileWithSplitPoint.getSecond(), false,
-      new ConstantSizeRegionSplitPolicy(), sft);
+      new ConstantSizeRegionSplitPolicy(), sft).getPath();
     conf.setBoolean(HBASE_REGION_SERVER_ENABLE_COMPACTION, compactionEnabled);
     HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     refHsf.initReader();
@@ -552,7 +547,7 @@ public class TestPrefetch {
       }
     }
     sfw.close();
-    return new Pair(sfw.getPath(), splitPoint);
+    return new Pair<>(sfw.getPath(), splitPoint);
   }
 
   public static KeyValue.Type generateKeyType(Random rand) {
