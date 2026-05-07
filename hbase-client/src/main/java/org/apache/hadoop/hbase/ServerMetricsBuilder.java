@@ -90,7 +90,7 @@ public final class ServerMetricsBuilder {
       .setLastReportTimestamp(serverLoadPB.getReportStartTime()).setVersionNumber(versionNumber)
       .setVersion(version)
       .setCacheFreeSize(serverLoadPB.hasCacheFreeSize() ? serverLoadPB.getCacheFreeSize() : 0L)
-      .setRegionColdDataInfo(serverLoadPB.getRegionColdData());
+      .setRegionColdDataInfo(serverLoadPB.getRegionColdDataMap());
     return builder.build();
   }
 
