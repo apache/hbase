@@ -256,4 +256,12 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
     add(Collections.singleton(storeFileInfo));
     return reference;
   }
+
+  public void onTransitionToActive() {
+    if (backedFile != null) {
+      synchronized (storefiles) {
+        backedFile.resetWriteState();
+      }
+    }
+  }
 }
