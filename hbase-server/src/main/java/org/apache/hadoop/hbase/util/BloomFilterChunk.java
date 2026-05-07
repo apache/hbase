@@ -161,9 +161,7 @@ public class BloomFilterChunk implements BloomFilterBase {
      * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
      */
     HashKey<byte[]> hashKey = new ByteArrayHashKey(buf, offset, len);
-    int hash1 = this.hash.hash(hashKey, 0);
-    int hash2 = this.hash.hash(hashKey, hash1);
-    setHashLoc(hash1, hash2);
+    setHashLoc(hashKey);
   }
 
   public void add(Cell cell) {
@@ -171,22 +169,19 @@ public class BloomFilterChunk implements BloomFilterBase {
      * For faster hashing, use combinatorial generation
      * http://www.eecs.harvard.edu/~kirsch/pubs/bbbf/esa06.pdf
      */
-    int hash1;
-    int hash2;
     HashKey<Cell> hashKey;
     if (this.bloomType == BloomType.ROWCOL) {
       hashKey = new RowColBloomHashKey(cell);
-      hash1 = this.hash.hash(hashKey, 0);
-      hash2 = this.hash.hash(hashKey, hash1);
     } else {
       hashKey = new RowBloomHashKey(cell);
-      hash1 = this.hash.hash(hashKey, 0);
-      hash2 = this.hash.hash(hashKey, hash1);
     }
-    setHashLoc(hash1, hash2);
+    setHashLoc(hashKey);
   }
 
-  private void setHashLoc(int hash1, int hash2) {
+  private void setHashLoc(HashKey<?> hashKey) {
+    Pair<Integer, Integer> hashPair = BloomFilterUtil.getHashPair(this.hash, hashKey);
+    final int hash1 = hashPair.getFirst();
+    final int hash2 = hashPair.getSecond();
     for (int i = 0; i < this.hashCount; i++) {
       long hashLoc = Math.abs((hash1 + i * hash2) % (this.byteSize * 8));
       set(hashLoc);
