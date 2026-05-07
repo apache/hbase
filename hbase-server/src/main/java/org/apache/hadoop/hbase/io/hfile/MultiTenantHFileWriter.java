@@ -1281,8 +1281,15 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     }
 
     @Override
-    public long getPos() throws IOException {
-      return delegate.getPos() - baseOffset;
+    public long getPos() {
+      // FSDataOutputStream.getPos() is declared `throws IOException` in Hadoop 2 but not in
+      // Hadoop 3. Catching Exception keeps this source compatible with both versions.
+      try {
+        return delegate.getPos() - baseOffset;
+      } catch (Exception e) {
+        throw new UncheckedIOException(
+          e instanceof IOException ? (IOException) e : new IOException(e));
+      }
     }
 
     @Override
