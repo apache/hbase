@@ -2707,6 +2707,10 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
         try (DataInputStream dis = new DataInputStream(blockToRead.getByteStream())) {
           fileInfo.read(dis);
         }
+        // Mirror HFileInfo.initMetaAndIndex: FILE_SIZE and FILE_PATH are runtime-only
+        // entries populated from the ReaderContext, not read from disk.
+        fileInfo.put(HFileInfo.FILE_SIZE, Bytes.toBytes(context.getFileSize()));
+        fileInfo.put(HFileInfo.FILE_PATH, Bytes.toBytes(context.getFilePath().toString()));
         applyFileInfoMetadataToContext();
       } finally {
         if (blockToRead != null) {

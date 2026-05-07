@@ -704,10 +704,10 @@ public final class HFile {
 
   public static void checkHFileVersion(final Configuration c) {
     int version = c.getInt(FORMAT_VERSION_KEY, MAX_FORMAT_VERSION);
-    if (version < MAX_FORMAT_VERSION || version > MAX_FORMAT_VERSION) {
+    if (version < MIN_FORMAT_VERSION || version > MAX_FORMAT_VERSION) {
       throw new IllegalArgumentException(
         "The setting for " + FORMAT_VERSION_KEY + " (in your hbase-*.xml files) is " + version
-          + " which does not match " + MAX_FORMAT_VERSION
+          + " which is not between " + MIN_FORMAT_VERSION + " and " + MAX_FORMAT_VERSION
           + "; are you running with a configuration from an older or newer hbase install (an "
           + "incompatible hbase-default.xml or hbase-site.xml on your CLASSPATH)?");
     }

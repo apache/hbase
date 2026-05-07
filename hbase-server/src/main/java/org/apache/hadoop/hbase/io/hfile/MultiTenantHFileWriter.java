@@ -1272,7 +1272,8 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     private final long baseOffset;
     private final String displayName;
 
-    public SectionOutputStream(FSDataOutputStream delegate, long baseOffset, String displayName) {
+    public SectionOutputStream(FSDataOutputStream delegate, long baseOffset, String displayName)
+        throws IOException {
       super(delegate.getWrappedStream(), null);
       this.delegate = delegate;
       this.baseOffset = baseOffset;
@@ -1280,7 +1281,7 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     }
 
     @Override
-    public long getPos() {
+    public long getPos() throws IOException {
       return delegate.getPos() - baseOffset;
     }
 
