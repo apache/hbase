@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -51,6 +52,7 @@ import org.slf4j.LoggerFactory;
  * compacted memstore test case
  */
 @Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 @ParameterizedClass(name = "{index}: type={0}")
 @MethodSource("parameters")
 public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore {
@@ -99,6 +101,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   // Compaction tests
   //////////////////////////////////////////////////////////////////////////////
   @Override
+  @Test
   public void testCompaction1Bucket() throws IOException {
     int counter = 0;
     String[] keys1 = { "A", "A", "B", "C" }; // A1, A2, B3, C4
@@ -146,6 +149,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   }
 
   @Override
+  @Test
   public void testCompaction2Buckets() throws IOException {
     if (toCellChunkMap) {
       // set memstore to flat into CellChunkMap
@@ -209,6 +213,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   }
 
   @Override
+  @Test
   public void testCompaction3Buckets() throws IOException {
     if (toCellChunkMap) {
       // set memstore to flat into CellChunkMap
