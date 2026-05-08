@@ -67,7 +67,9 @@ public class TestHBaseFsckEncryption {
   @BeforeEach
   public void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    conf.setInt("hfile.format.version", 3);
+    // hfile.format.version is now strictly enforced as MAX_FORMAT_VERSION (v4) at
+    // RegionServer startup; using v3 here would fail HFile.checkHFileVersion.
+    conf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
 

@@ -133,9 +133,12 @@ public class TestHFileBlockIndex {
     conf = TEST_UTIL.getConfiguration();
     RNG.setSeed(2389757);
 
-    // This test validates the v3 data block index behavior (HFileBlockIndex + FixedFileTrailer
-    // numDataIndexLevels). HFile v4 has a different layout and repurposes trailer fields for the
-    // section index, so keep this pinned to v3.
+    // This test asserts v3 in-file layout: contiguous LEAF_INDEX blocks in the load-on-open
+    // area, fixed numDataIndexLevels in the trailer, and exact uncompressed-data-index byte
+    // sizes. HFile v4 reorganizes the load-on-open area around a section-index root and moves
+    // data block indexes inside each tenant section, so these invariants do not apply. v4 layout
+    // is covered by TestHFileV4BlockIndex and TestMultiTenantHFileMultiLevelIndex; keep this
+    // test pinned to v3.
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
 
     fs = HFileSystem.get(conf);
@@ -289,7 +292,12 @@ public class TestHFileBlockIndex {
     conf = TEST_UTIL.getConfiguration();
     RNG.setSeed(2389757);
 
-    // This test requires at least HFile format version 2.
+    // This test asserts v3 in-file layout: contiguous LEAF_INDEX blocks in the load-on-open
+    // area, fixed numDataIndexLevels in the trailer, and exact uncompressed-data-index byte
+    // sizes. HFile v4 reorganizes the load-on-open area around a section-index root and moves
+    // data block indexes inside each tenant section, so these invariants do not apply. v4 layout
+    // is covered by TestHFileV4BlockIndex and TestMultiTenantHFileMultiLevelIndex; keep this
+    // test pinned to v3.
     conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
 
     fs = HFileSystem.get(conf);

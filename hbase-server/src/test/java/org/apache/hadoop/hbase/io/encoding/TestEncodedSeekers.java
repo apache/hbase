@@ -111,7 +111,7 @@ public class TestEncodedSeekers {
     System.err.println("Testing encoded seekers for encoding : " + encoding + ", includeTags : "
       + includeTags + ", compressTags : " + compressTags);
     if (includeTags) {
-      testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
+      testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     }
 
     LruBlockCache cache =

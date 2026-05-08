@@ -72,13 +72,13 @@ import org.slf4j.LoggerFactory;
  * </ol>
  */
 @Category(LargeTests.class)
-public class MultiTenantHFileSplittingTest {
+public class TestMultiTenantHFileSplitting {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(MultiTenantHFileSplittingTest.class);
+    HBaseClassTestRule.forClass(TestMultiTenantHFileSplitting.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileSplittingTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiTenantHFileSplitting.class);
 
   private HBaseTestingUtility testUtil;
 

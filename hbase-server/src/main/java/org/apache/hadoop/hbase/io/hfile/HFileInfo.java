@@ -520,8 +520,13 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     }
   }
 
+  /**
+   * Returns the major HFile format version of *this* file (read from its trailer), not the max
+   * supported by the current binary. Phoenix and other downstream consumers branch on this to
+   * distinguish v2/v3/v4 files; returning a constant breaks that classification.
+   */
   public int getMajorVersion() {
-    return 4;
+    return trailer != null ? trailer.getMajorVersion() : HFile.MAX_FORMAT_VERSION;
   }
 
   public void setTrailer(FixedFileTrailer trailer) {

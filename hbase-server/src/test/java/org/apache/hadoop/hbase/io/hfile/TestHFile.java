@@ -815,7 +815,7 @@ public class TestHFile {
    */
   void basicWithSomeCodec(String codec, boolean useTags) throws IOException {
     if (useTags) {
-      conf.setInt("hfile.format.version", 3);
+      conf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     }
     Path ncHFile = new Path(ROOT_DIR, "basic.hfile." + codec.toString() + useTags);
     FSDataOutputStream fout = createFSOutput(ncHFile);

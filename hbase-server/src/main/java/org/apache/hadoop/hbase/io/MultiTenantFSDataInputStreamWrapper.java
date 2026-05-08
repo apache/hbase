@@ -350,6 +350,19 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
       LOG.debug("Created section stream wrapper for section starting at offset {}", sectionOffset);
     }
 
+    /**
+     * Translates a section-relative seek into an absolute file seek on the parent stream.
+     * <p>
+     * <b>Concurrency hazard:</b> when {@code ownsParent} is {@code false} (PREAD mode), this
+     * method mutates the position of a stream shared with other section readers and the parent
+     * file. Concurrent positional reads ({@code read(position, ...)}) are themselves safe, but
+     * a {@code seek()} interleaved with them races and produces mis-targeted reads. Callers in
+     * the steady-state read path must rely on positional reads exclusively; {@code seek()} here
+     * remains usable because section reader initialization (notably
+     * {@link org.apache.hadoop.hbase.io.hfile.FixedFileTrailer#readFromStream}) seeks before any
+     * other reader has a handle on the stream. A more durable fix is to open per-section streams
+     * in PREAD mode (see HBASE-29588 review item #7 / #19).
+     */
     @Override
     public void seek(long position) throws IOException {
       checkSeekBounds(position);
@@ -386,6 +399,8 @@ public class MultiTenantFSDataInputStreamWrapper extends FSDataInputStreamWrappe
 
     @Override
     public boolean seekToNewSource(long targetPosition) throws IOException {
+      // Same shared-stream caveat as seek(); see javadoc above. Retained for initialization-time
+      // callers; concurrent steady-state callers should use positional reads.
       checkSeekBounds(targetPosition);
       return rawStream.seekToNewSource(toAbsolutePosition(targetPosition));
     }

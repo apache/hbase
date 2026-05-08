@@ -381,6 +381,21 @@ public class StoreFileReader {
   }
 
   /**
+   * Cell-based overload retained for binary compatibility with Phoenix releases compiled against
+   * older branch-2 builds (this class is {@code @InterfaceAudience.LimitedPrivate(PHOENIX)}).
+   * Delegates to the {@link ExtendedCell} variant when applicable; if the supplied {@link Cell} is
+   * not an {@link ExtendedCell}, the bloom filter is treated as inconclusive and we return
+   * {@code true} (callers will fall back to a real read).
+   * @return True if the cell may pass the bloom filter
+   */
+  public boolean passesGeneralRowColBloomFilter(Cell cell) {
+    if (cell instanceof ExtendedCell) {
+      return passesGeneralRowColBloomFilter((ExtendedCell) cell);
+    }
+    return true;
+  }
+
+  /**
    * A method for checking Bloom filters. Called directly from StoreFileScanner in case of a
    * multi-column query. the cell to check if present in BloomFilter
    * @return True if passes

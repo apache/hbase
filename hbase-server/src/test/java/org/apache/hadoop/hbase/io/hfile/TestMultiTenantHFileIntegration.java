@@ -73,13 +73,13 @@ import org.slf4j.LoggerFactory;
  * access patterns (GET, SCAN, tenant-specific scans).
  */
 @Category(MediumTests.class)
-public class MultiTenantHFileIntegrationTest {
+public class TestMultiTenantHFileIntegration {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(MultiTenantHFileIntegrationTest.class);
+    HBaseClassTestRule.forClass(TestMultiTenantHFileIntegration.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(MultiTenantHFileIntegrationTest.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMultiTenantHFileIntegration.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

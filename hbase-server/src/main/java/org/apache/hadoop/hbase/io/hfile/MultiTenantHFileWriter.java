@@ -1273,22 +1273,26 @@ public class MultiTenantHFileWriter implements HFile.Writer, LastCellAwareWriter
     private final String displayName;
 
     public SectionOutputStream(FSDataOutputStream delegate, long baseOffset, String displayName)
-        throws IOException {
+      throws IOException {
       super(delegate.getWrappedStream(), null);
       this.delegate = delegate;
       this.baseOffset = baseOffset;
       this.displayName = displayName;
     }
 
+    // FSDataOutputStream.getPos() is declared `throws IOException` in Hadoop 2 but not in
+    // Hadoop 3. Catching Exception keeps this source compatible with both versions; the
+    // instanceof check is reachable when compiled against Hadoop 2, even though SpotBugs
+    // (which analyzes against one Hadoop version) thinks it is impossible.
+    @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "BC_IMPOSSIBLE_INSTANCEOF",
+        justification = "delegate.getPos() throws IOException on Hadoop 2; reachable there")
     @Override
     public long getPos() {
-      // FSDataOutputStream.getPos() is declared `throws IOException` in Hadoop 2 but not in
-      // Hadoop 3. Catching Exception keeps this source compatible with both versions.
       try {
         return delegate.getPos() - baseOffset;
       } catch (Exception e) {
-        throw new UncheckedIOException(
-          e instanceof IOException ? (IOException) e : new IOException(e));
+        IOException ioe = (e instanceof IOException) ? (IOException) e : new IOException(e);
+        throw new UncheckedIOException(ioe);
       }
     }
 

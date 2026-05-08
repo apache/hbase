@@ -57,8 +57,16 @@ public class BlockCacheUtil {
   public static final long NANOS_PER_SECOND = 1000000000;
 
   /**
-   * Multi-tenant HFile readers may decorate the underlying HFile name with a section suffix in the
-   * form {@code <hfileName>#<tenantSectionId>} to avoid cache key collisions across sections.
+   * Delimiter used to decorate cache keys for multi-tenant HFile sections. The cache stores blocks
+   * under the synthetic name {@code <hfileName>#<tenantSectionId>} so blocks belonging to different
+   * tenant sections of the same physical file do not collide on identical block offsets.
+   * <p>
+   * <b>Invariant:</b> the character {@code '#'} is reserved across the cache key space and MUST NOT
+   * appear in any underlying HFile name. {@link #getBaseHFileName} strips everything from the first
+   * {@code '#'} onward, so any out-of-tree producer that writes HFile names containing {@code '#'}
+   * will silently lose part of the name and confuse the cache. Standard HBase HFile names (32-char
+   * hex) cannot contain this character; if you build files outside the standard factory pipeline,
+   * validate names against this invariant.
    */
   public static final char MULTI_TENANT_HFILE_NAME_DELIMITER = '#';
 

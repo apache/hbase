@@ -1937,18 +1937,11 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
+    // getAllCacheKeysForFile already scans both the backing map (O(log n + matches) via
+    // skiplist subSet) and ramCache (O(n) over delegate.keySet) — no need to re-scan ramCache
+    // here. Previously this method walked the full ramCache keySet a second time, which was a
+    // measurable regression on store-file replacement under many open files.
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
-    // Also collect matching keys still in ramCache (not yet written to the backing map by the
-    // writer thread). Without this, blocks that were recently cached but not yet persisted to the
-    // IOEngine would be missed by eviction, leaving stale entries and an inflated block count.
-    for (BlockCacheKey key : ramCache.delegate.keySet()) {
-      if (
-        key.getOffset() >= initOffset && key.getOffset() <= endOffset
-          && BlockCacheUtil.matchesHFileName(key.getHfileName(), hfileName)
-      ) {
-        keySet.add(key);
-      }
-    }
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
     return evictBlockSet(keySet);
@@ -1967,6 +1960,15 @@ public class BucketCache implements BlockCache, HeapSize {
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
     Set<BlockCacheKey> keys = new HashSet<>(blocksByHFile.subSet(new BlockCacheKey(hfileName, init),
       true, new BlockCacheKey(hfileName, end), true));
+    // HBASE-29862: also include blocks still in ramCache that have not yet been published to
+    // the backingMap. doDrain() removes from ramCache only AFTER inserting into the backingMap,
+    // so reading ramCache here cannot double-count, and skipping it lets the first attempt of
+    // notifyFileCachingCompleted observe an undercount that the retry loop must paper over.
+    for (BlockCacheKey key : ramCache.getRamBlockCacheKeysForHFile(hfileName)) {
+      if (key.getOffset() >= init && key.getOffset() <= end) {
+        keys.add(key);
+      }
+    }
     if (!BlockCacheUtil.isMultiTenantSectionHFileName(hfileName)) {
       String prefix = hfileName + BlockCacheUtil.MULTI_TENANT_HFILE_NAME_DELIMITER;
       // Also include blocks cached under section-decorated names (hfileName#tenantId).
@@ -1974,6 +1976,16 @@ public class BucketCache implements BlockCache, HeapSize {
         new BlockCacheKey(prefix + Character.MAX_VALUE, Long.MAX_VALUE), true)) {
         if (
           key.getHfileName().startsWith(prefix) && key.getOffset() >= init && key.getOffset() <= end
+        ) {
+          keys.add(key);
+        }
+      }
+      // Same as above for ramCache: pull section-decorated names too.
+      for (BlockCacheKey key : ramCache.delegate.keySet()) {
+        String name = key.getHfileName();
+        if (
+          name != null && name.startsWith(prefix) && key.getOffset() >= init
+            && key.getOffset() <= end
         ) {
           keys.add(key);
         }

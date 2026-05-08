@@ -1514,9 +1514,16 @@ public abstract class AbstractMultiTenantReader extends HFileReaderImpl
       // Extract tenant section ID
       byte[] tenantSectionId = tenantExtractor.extractTenantSectionId(key);
 
-      // If tenant section changed, check direction before seeking
+      // If tenant section changed, check direction before seeking.
       if (!Bytes.equals(tenantSectionId, currentTenantSectionId)) {
         if (Bytes.compareTo(tenantSectionId, currentTenantSectionId) < 0) {
+          // Requested key sorts in a tenant section strictly before the current section.
+          // reseekTo is forward-only by contract, so the scanner stays at its current cell.
+          // Per HFileReaderImpl.reseekTo, the return value follows compareKey semantics:
+          // a positive value means "scanner cell is greater than requested key, no movement
+          // needed". The HFileScanner javadoc enumerates -1/0/1 as canonical returns; we use 1
+          // here so callers using the canonical interpretation (== 1 → past requested key) work
+          // correctly. See TestMultiTenantScannerReseekTo for the contract on backward reseek.
           return 1;
         }
         return seekTo(key);

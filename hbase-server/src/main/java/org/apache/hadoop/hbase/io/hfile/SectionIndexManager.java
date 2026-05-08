@@ -358,6 +358,17 @@ public class SectionIndexManager {
 
       // Group leaf blocks into intermediate blocks
       int intermediateBlocksNeeded = (leafBlocks.size() + maxChunkSize - 1) / maxChunkSize;
+      // The root block is built from one entry per intermediate block. With the current
+      // numLevels=3 cap, the root has to fit in a single block of `maxChunkSize` entries —
+      // i.e. the index can hold at most maxChunkSize² leaf entries (default 128² = 16,384
+      // sections). Beyond that the root would overflow a single block and produce a
+      // structurally invalid file the reader silently mis-parses (HBASE-29588 review).
+      if (intermediateBlocksNeeded > maxChunkSize) {
+        throw new IOException("Section index would require " + intermediateBlocksNeeded
+          + " intermediate blocks which exceeds the per-block fan-out limit of " + maxChunkSize
+          + " (entries=" + entries.size() + ", maxChunkSize=" + maxChunkSize + "). Increase "
+          + SECTION_INDEX_MAX_CHUNK_SIZE + " or split the file across fewer tenants.");
+      }
       for (int blockIndex = 0; blockIndex < intermediateBlocksNeeded; blockIndex++) {
         SectionIndexBlock block = new SectionIndexBlock();
         int startIndex = blockIndex * maxChunkSize;

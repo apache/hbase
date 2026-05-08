@@ -209,7 +209,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
 
   private static void initConf(Configuration conf) {
 
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt("hfile.format.version", 4);
     conf.setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
     conf.setInt("hbase.client.retries.number", 100);
     conf.setInt("hbase.hregion.max.filesize", 200000000);

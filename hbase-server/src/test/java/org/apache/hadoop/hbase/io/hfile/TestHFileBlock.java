@@ -349,7 +349,7 @@ public class TestHFileBlock {
   protected void testReaderV2Internals() throws IOException {
     final Configuration conf = TEST_UTIL.getConfiguration();
     if (includesTag) {
-      conf.setInt("hfile.format.version", 3);
+      conf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {
@@ -432,7 +432,7 @@ public class TestHFileBlock {
     final int numBlocks = 5;
     final Configuration conf = TEST_UTIL.getConfiguration();
     if (includesTag) {
-      conf.setInt("hfile.format.version", 3);
+      conf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     }
     for (Compression.Algorithm algo : COMPRESSION_ALGORITHMS) {
       for (boolean pread : new boolean[] { false, true }) {

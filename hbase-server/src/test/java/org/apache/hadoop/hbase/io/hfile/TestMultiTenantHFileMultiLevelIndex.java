@@ -52,14 +52,14 @@ import org.slf4j.LoggerFactory;
  * forces a multi-level index by setting small chunk sizes and writing many tenants.
  */
 @Category(MediumTests.class)
-public class MultiTenantHFileMultiLevelIndexTest {
+public class TestMultiTenantHFileMultiLevelIndex {
 
   @ClassRule
   public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(MultiTenantHFileMultiLevelIndexTest.class);
+    HBaseClassTestRule.forClass(TestMultiTenantHFileMultiLevelIndex.class);
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(MultiTenantHFileMultiLevelIndexTest.class);
+    LoggerFactory.getLogger(TestMultiTenantHFileMultiLevelIndex.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 

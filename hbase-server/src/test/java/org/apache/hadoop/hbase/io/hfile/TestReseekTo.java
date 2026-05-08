@@ -60,7 +60,7 @@ public class TestReseekTo {
     Path ncTFile = new Path(TEST_UTIL.getDataTestDir(), "basic.hfile");
     FSDataOutputStream fout = TEST_UTIL.getTestFileSystem().create(ncTFile);
     if (tagUsage != TagUsage.NO_TAG) {
-      TEST_UTIL.getConfiguration().setInt("hfile.format.version", 3);
+      TEST_UTIL.getConfiguration().setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     }
     CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());
     HFileContext context = new HFileContextBuilder().withBlockSize(4000).build();

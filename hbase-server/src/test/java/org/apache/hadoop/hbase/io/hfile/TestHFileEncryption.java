@@ -78,7 +78,7 @@ public class TestHFileEncryption {
     conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
 
     fs = FileSystem.get(conf);
 
