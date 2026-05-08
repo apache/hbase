@@ -169,6 +169,6 @@ public class TestRowKeyDateTieringValueProvider {
     String rowKeyStr = "order_9999999999999999_date";
     byte[] rowKey = Bytes.toBytes(rowKeyStr);
     Cell cell = PrivateCellUtil.createFirstOnRow(rowKey);
-    provider.getTieringValue(cell);
+    assertThrows(IllegalStateException.class, () -> provider.getTieringValue(cell));
   }
 }
