@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
@@ -39,13 +39,10 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Tag(MediumTests.TAG)
 public class TestCompactSplitThread {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompactSplitThread.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
   private final byte[] family = Bytes.toBytes("f");
@@ -114,11 +111,8 @@ public class TestCompactSplitThread {
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 4);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 5);
       conf.setInt(CompactSplit.SPLIT_THREADS, 6);
-      try {
-        regionServer.getCompactSplitThread().onConfigurationChange(conf);
-      } catch (IllegalArgumentException iae) {
-        fail("Update bigger configuration failed!");
-      }
+      assertDoesNotThrow(() -> regionServer.getCompactSplitThread().onConfigurationChange(conf),
+        "Update bigger configuration failed!");
 
       // check again after online update
       assertEquals(4, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());
@@ -129,11 +123,8 @@ public class TestCompactSplitThread {
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 2);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 3);
       conf.setInt(CompactSplit.SPLIT_THREADS, 4);
-      try {
-        regionServer.getCompactSplitThread().onConfigurationChange(conf);
-      } catch (IllegalArgumentException iae) {
-        fail("Update smaller configuration failed!");
-      }
+      assertDoesNotThrow(() -> regionServer.getCompactSplitThread().onConfigurationChange(conf),
+        "Update smaller configuration failed!");
 
       // check again after online update
       assertEquals(2, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());

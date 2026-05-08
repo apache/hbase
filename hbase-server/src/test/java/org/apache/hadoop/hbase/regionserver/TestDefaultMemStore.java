@@ -1083,7 +1083,7 @@ public class TestDefaultMemStore {
     assertTrue(oldHistorySize < hmc.getSnapshot().getCellsCount(),
       "History size has not increased");
     long t = memstore.timeOfOldestEdit();
-    assertTrue(t == Long.MAX_VALUE, "Time of oldest edit is not Long.MAX_VALUE");
+    assertEquals(Long.MAX_VALUE, t, "Time of oldest edit is not Long.MAX_VALUE");
     hmc.clearSnapshot(snapshot.getId());
     return t;
   }
