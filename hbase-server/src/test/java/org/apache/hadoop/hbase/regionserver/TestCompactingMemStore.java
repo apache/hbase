@@ -98,8 +98,8 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       .setColumnFamily(familyDescriptor).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf("foobar")).build();
     WAL wal = HBaseTestingUtil.createWal(conf, hbaseUtility.getDataTestDir(), info);
-    this.region = HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf,
-      tableDescriptor, wal, true);
+    this.region =
+      HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf, tableDescriptor, wal, true);
     this.regionServicesForStores = Mockito.spy(region.getRegionServicesForStores());
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);

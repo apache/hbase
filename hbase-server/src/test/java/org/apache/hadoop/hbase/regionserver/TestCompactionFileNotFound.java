@@ -18,10 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.fail;
 
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -39,8 +36,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * This class tests the scenario where a store refresh happens due to a file not found during scan,
@@ -50,7 +45,6 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 public class TestCompactionFileNotFound {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompactionFileNotFound.class);
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
 
   private static final TableName TEST_TABLE = TableName.valueOf("test");
@@ -182,16 +176,7 @@ public class TestCompactionFileNotFound {
       for (HStore store : hr1.getStores()) {
         store.closeAndArchiveCompactedFiles();
       }
-      try {
-        hr1.compact(false);
-      } catch (IOException e) {
-        LOG.error("Got an exception during compaction", e);
-        if (e instanceof FileNotFoundException) {
-          fail("Got a FNFE during compaction");
-        } else {
-          fail();
-        }
-      }
+      hr1.compact(false);
     } finally {
       if (admin != null) {
         admin.close();
