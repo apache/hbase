@@ -59,10 +59,8 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -79,16 +77,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected HRegion region;
   protected RegionServicesForStores regionServicesForStores;
   protected HStore store;
-
-  @Override
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    this.name = testInfo.getTestMethod().get().getName();
-    compactingSetUp();
-    this.memstore = new MyCompactingMemStore(HBaseConfiguration.create(),
-      CellComparator.getInstance(), store, regionServicesForStores, MemoryCompactionPolicy.EAGER);
-    ((CompactingMemStore) memstore).setIndexType(CompactingMemStore.IndexType.ARRAY_MAP);
-  }
+  private Configuration conf;
 
   @AfterEach
   public void tearDown() throws Exception {
@@ -96,9 +85,10 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     super.tearDown();
   }
 
-  protected void compactingSetUp() throws Exception {
+  @Override
+  protected void internalSetUp() throws Exception {
     super.internalSetUp();
-    Configuration conf = new Configuration();
+    conf = new Configuration();
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, true);
     conf.setFloat(MemStoreLAB.CHUNK_POOL_MAXSIZE_KEY, 0.2f);
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 1000);
@@ -108,13 +98,16 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       .setColumnFamily(familyDescriptor).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf("foobar")).build();
     WAL wal = HBaseTestingUtil.createWal(conf, hbaseUtility.getDataTestDir(), info);
-    this.region =
-      HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf, tableDescriptor, wal, true);
+    this.region = HRegion.createHRegion(info, hbaseUtility.getDataTestDir(), conf,
+      tableDescriptor, wal, true);
     this.regionServicesForStores = Mockito.spy(region.getRegionServicesForStores());
     ThreadPoolExecutor pool = (ThreadPoolExecutor) Executors.newFixedThreadPool(1);
     Mockito.when(regionServicesForStores.getInMemoryCompactionPool()).thenReturn(pool);
     this.store = new HStore(region, familyDescriptor, conf, false);
+  }
 
+  @Override
+  protected void createChunkCreator() {
     long globalMemStoreLimit =
       (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
         * MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, false));
@@ -122,6 +115,13 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       globalMemStoreLimit, 0.4f, MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     assertNotNull(chunkCreator);
+  }
+
+  @Override
+  protected void createMemStore() throws IOException {
+    this.memstore = new MyCompactingMemStore(HBaseConfiguration.create(),
+      CellComparator.getInstance(), store, regionServicesForStores, MemoryCompactionPolicy.EAGER);
+    ((CompactingMemStore) memstore).setIndexType(CompactingMemStore.IndexType.ARRAY_MAP);
   }
 
   /**

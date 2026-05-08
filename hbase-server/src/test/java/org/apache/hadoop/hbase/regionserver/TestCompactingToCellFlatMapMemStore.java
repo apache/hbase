@@ -36,12 +36,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
 import org.junit.jupiter.params.provider.MethodSource;
@@ -76,10 +73,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   }
 
   @Override
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    this.name = testInfo.getTestMethod().get().getName();
-    compactingSetUp();
+  protected void createMemStore() throws IOException {
     this.conf = HBaseConfiguration.create();
 
     // set memstore to do data compaction
@@ -88,13 +82,6 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.02);
     this.memstore = new MyCompactingMemStore(conf, CellComparatorImpl.COMPARATOR, store,
       regionServicesForStores, MemoryCompactionPolicy.EAGER);
-  }
-
-  @Override
-  @AfterEach
-  public void tearDown() throws Exception {
-    chunkCreator.clearChunksInPool();
-    super.tearDown();
   }
 
   //////////////////////////////////////////////////////////////////////////////

@@ -94,9 +94,17 @@ public class TestDefaultMemStore {
   public void setUp(TestInfo testInfo) throws Exception {
     this.name = testInfo.getTestMethod().get().getName();
     internalSetUp();
+    createChunkCreator();
+    createMemStore();
+  }
+
+  protected void createChunkCreator() {
     // no pool
     this.chunkCreator = ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0,
       null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
+  }
+
+  protected void createMemStore() throws IOException {
     this.memstore = new DefaultMemStore();
   }
 
