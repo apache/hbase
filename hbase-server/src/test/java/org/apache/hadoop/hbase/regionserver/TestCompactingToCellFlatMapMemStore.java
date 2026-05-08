@@ -63,13 +63,20 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   }
 
   public final boolean toCellChunkMap;
+  private final String type;
   Configuration conf;
 
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
   public TestCompactingToCellFlatMapMemStore(String type) {
+    this.type = type;
     toCellChunkMap = "CHUNK_MAP".equals(type);
+  }
+
+  @Override
+  protected String getParameterizedTestNameSuffix() {
+    return "_" + type;
   }
 
   @Override

@@ -70,18 +70,16 @@ import org.slf4j.LoggerFactory;
 public class TestCacheOnWriteInSchema {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
-  private String name;
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
-  private static byte[] table;
   private static byte[] family = Bytes.toBytes("family");
   private static final int NUM_KV = 25000;
   private static final Random rand = new Random(12983177L);
   /** The number of valid key types possible in a store file */
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
 
-  private static enum CacheOnWriteType {
+  private enum CacheOnWriteType {
     DATA_BLOCKS(BlockType.DATA, BlockType.ENCODED_DATA),
     BLOOM_BLOCKS(BlockType.BLOOM_CHUNK),
     INDEX_BLOCKS(BlockType.LEAF_INDEX, BlockType.INTERMEDIATE_INDEX);
@@ -89,11 +87,11 @@ public class TestCacheOnWriteInSchema {
     private final BlockType blockType1;
     private final BlockType blockType2;
 
-    private CacheOnWriteType(BlockType blockType) {
+    CacheOnWriteType(BlockType blockType) {
       this(blockType, blockType);
     }
 
-    private CacheOnWriteType(BlockType blockType1, BlockType blockType2) {
+    CacheOnWriteType(BlockType blockType1, BlockType blockType2) {
       this.blockType1 = blockType1;
       this.blockType2 = blockType2;
     }
@@ -137,9 +135,8 @@ public class TestCacheOnWriteInSchema {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws IOException {
-    this.name = testInfo.getTestMethod().get().getName();
-    // parameterized tests add [#] suffix get rid of [ and ].
-    table = Bytes.toBytes(name.replaceAll("[\\[\\]]", "_"));
+    String name = testInfo.getTestMethod().get().getName() + "_" + cowType;
+    byte[] table = Bytes.toBytes(name);
 
     conf = TEST_UTIL.getConfiguration();
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
@@ -265,5 +262,4 @@ public class TestCacheOnWriteInSchema {
       writer.append(kv);
     }
   }
-
 }

@@ -92,10 +92,24 @@ public class TestDefaultMemStore {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.name = getTestName(testInfo);
     internalSetUp();
     createChunkCreator();
     createMemStore();
+  }
+
+  protected String getTestName(TestInfo testInfo) {
+    String methodName = testInfo.getTestMethod().get().getName();
+    String displayName = testInfo.getDisplayName();
+    String name = methodName + getParameterizedTestNameSuffix();
+    if (!displayName.equals(methodName) && !displayName.equals(methodName + "()")) {
+      name += "_" + displayName;
+    }
+    return name.replaceAll("[^A-Za-z0-9_.-]", "_");
+  }
+
+  protected String getParameterizedTestNameSuffix() {
+    return "";
   }
 
   protected void createChunkCreator() {
@@ -1000,10 +1014,8 @@ public class TestDefaultMemStore {
     FSTableDescriptors.tryUpdateMetaTableDescriptor(conf);
     HRegion meta = HRegion.createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, testDir, conf,
       tds.get(TableName.META_TABLE_NAME), wFactory.getWAL(RegionInfoBuilder.FIRST_META_REGIONINFO));
-    // parameterized tests add [#] suffix get rid of [ and ].
-    TableDescriptor desc =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.replaceAll("[\\[\\]]", "_")))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("foo")).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(desc.getTableName())
       .setStartKey(Bytes.toBytes("row_0200")).setEndKey(Bytes.toBytes("row_0300")).build();
     HRegion r = HRegion.createHRegion(hri, testDir, conf, desc, wFactory.getWAL(hri));
