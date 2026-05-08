@@ -150,6 +150,18 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     }
   }
 
+  @Override
+  public void setToNewRow(ExtendedCell currentRow) {
+    super.setToNewRow(currentRow);
+    pendingSkipHint = null;
+  }
+
+  @Override
+  public void clearCurrentRow() {
+    super.clearCurrentRow();
+    pendingSkipHint = null;
+  }
+
   // At each structural short-circuit below (time-range, column-exclusion, version-exhaustion),
   // the filter is consulted via resolveSkipHint() before falling back to the default skip/seek
   // code. This lets filters provide a forward seek target even when filterCell is never called.
@@ -235,7 +247,8 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
           + "is not an ExtendedCell. Filter class: " + filter.getClass().getName());
     }
     ExtendedCell hint = (ExtendedCell) raw;
-    // Only accept the hint if it advances past the current cell in scan direction.
+    // Full-key compare is intentional: skip hints can advance within the same row
+    // (e.g., to a later column), not just across rows.
     int cmp = rowComparator.compare(hint, cell);
     if ((!reversed && cmp <= 0) || (reversed && cmp >= 0)) {
       return false;

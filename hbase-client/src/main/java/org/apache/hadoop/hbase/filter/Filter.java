@@ -212,6 +212,13 @@ public abstract class Filter {
    * side.</li>
    * <li>Returning {@code null} (the default) falls through to the existing {@code nextRow()}
    * behaviour, preserving full backward compatibility.</li>
+   * <li>For reversed scans ({@link org.apache.hadoop.hbase.client.Scan#isReversed()}), the hint
+   * must point to a <em>smaller</em> row key (earlier in reverse-scan direction). The scanner
+   * validates hint direction and falls back to {@code nextRow()} if the hint does not advance in
+   * the scan direction.</li>
+   * <li><strong>Composite filter limitation:</strong> {@code FilterList}, {@code SkipFilter}, and
+   * {@code WhileMatchFilter} do not currently delegate this method to wrapped sub-filters. Hints
+   * from filters used inside these wrappers will be silently ignored.</li>
    * </ul>
    * @param firstRowCell the first cell encountered in the rejected row; contains the row key that
    *                     was passed to {@code filterRowKey}
@@ -245,6 +252,12 @@ public abstract class Filter {
    * side.</li>
    * <li>Returning {@code null} (the default) falls through to the existing structural skip/seek
    * behaviour, preserving full backward compatibility.</li>
+   * <li>For reversed scans, the returned cell must have a <em>smaller</em> row key (i.e., earlier
+   * in reverse-scan direction) than the {@code skippedCell}. Hints that do not advance in the scan
+   * direction are silently ignored.</li>
+   * <li><strong>Composite filter limitation:</strong> {@code FilterList}, {@code SkipFilter}, and
+   * {@code WhileMatchFilter} do not currently delegate this method to wrapped sub-filters. Hints
+   * from filters used inside these wrappers will be silently ignored.</li>
    * </ul>
    * @param skippedCell the cell that was rejected by the time-range, column, or version gate before
    *                    {@code filterCell} could be consulted

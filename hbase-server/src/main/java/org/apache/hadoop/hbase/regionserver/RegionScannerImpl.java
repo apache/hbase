@@ -768,6 +768,19 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
    * The skipping-row mode flag is set around the seek so that block-level size tracking continues
    * to function (consistent with {@link #nextRow}), and the filter state is reset afterwards so the
    * next row starts with a clean filter context.
+   * <p>
+   * <strong>Stop-row invariant:</strong> This method does not validate that {@code hint} falls
+   * within the scan's stop row. If the hint overshoots, the next iteration's
+   * {@link #shouldStop(Cell)} check catches it and returns NO_MORE_VALUES. One wasted seek may
+   * occur, but correctness is maintained.
+   * <p>
+   * <strong>Metrics note:</strong> The rows-scanned metric is incremented once by the caller for
+   * the rejected row. Rows physically skipped by the seek are not individually counted — this
+   * reflects the fact that no per-row work was done for those rows.
+   * <p>
+   * <strong>Coprocessor note:</strong> {@code postScannerFilterRow} is invoked once with
+   * {@code curRowCell}, not once per skipped row. Coprocessors counting filtered rows should be
+   * aware of this semantic when the hint path is used.
    * @param scannerContext scanner context used for limit tracking
    * @param curRowCell     the first cell of the row that was rejected by {@code filterRowKey};
    *                       passed to the coprocessor hook for observability
@@ -781,7 +794,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     throws IOException {
     assert this.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
 
-    int difference = comparator.compare(hint, curRowCell);
+    int difference = comparator.compareRows(hint, curRowCell);
     if ((!reversed && difference > 0) || (reversed && difference < 0)) {
       scannerContext.setSkippingRow(true);
       if (reversed) {
