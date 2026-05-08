@@ -22,10 +22,10 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasProperty;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -42,14 +42,12 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Random;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -60,13 +58,11 @@ import org.apache.hadoop.hbase.util.ChecksumType;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
 import org.hamcrest.TypeSafeMatcher;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExternalResource;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,32 +71,52 @@ import org.slf4j.LoggerFactory;
  * HBase checksum validation can be applied. As of now, this is just
  * {@code onDiskSizeWithoutHeader}.
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileBlockHeaderCorruption {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileBlockHeaderCorruption.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileBlockHeaderCorruption.class);
+  private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
+  private static HFileSystem HFS;
+  private HFileContext hfileCtx;
+  private Path path;
 
-  private final HFileTestRule hFileTestRule;
+  @BeforeAll
+  public static void setUpBeforeAll() throws IOException {
+    HFS = (HFileSystem) HFileSystem.get(UTIL.getConfiguration());
+  }
 
-  @Rule
-  public final RuleChain ruleChain;
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    path = new Path(UTIL.getDataTestDirOnTestFS(), testInfo.getTestMethod().get().getName());
+    hfileCtx = new HFileContextBuilder().withBlockSize(4 * 1024).withHBaseCheckSum(true).build();
+    HFile.WriterFactory factory =
+      HFile.getWriterFactory(UTIL.getConfiguration(), CacheConfig.DISABLED).withPath(HFS, path)
+        .withFileContext(hfileCtx);
 
-  public TestHFileBlockHeaderCorruption() throws IOException {
-    TestName testName = new TestName();
-    hFileTestRule = new HFileTestRule(new HBaseTestingUtility(), testName);
-    ruleChain = RuleChain.outerRule(testName).around(hFileTestRule);
+    ExtendedCellBuilder cellBuilder = ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
+    Random rand = new Random(Instant.now().toEpochMilli());
+    byte[] family = Bytes.toBytes("f");
+    try (HFile.Writer writer = factory.create()) {
+      for (int i = 0; i < 40; i++) {
+        byte[] row = RandomKeyValueUtil.randomOrderedFixedLengthKey(rand, i, 100);
+        byte[] qualifier = RandomKeyValueUtil.randomRowOrQualifier(rand);
+        byte[] value = RandomKeyValueUtil.randomValue(rand);
+        ExtendedCell cell = cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family)
+          .setQualifier(qualifier).setValue(value).build();
+        writer.append(cell);
+        cellBuilder.clear();
+      }
+    }
   }
 
   @Test
   public void testChecksumTypeCorruptionFirstBlock() throws Exception {
     HFileBlockChannelPosition firstBlock = null;
     try {
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         assertTrue(it.hasNext());
         firstBlock = it.next();
       }
@@ -112,8 +128,8 @@ public class TestHFileBlockHeaderCorruption {
       // test corrupted HFileBlock with unknown checksumType code -1
       c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));
       logHeader(firstBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -134,8 +150,8 @@ public class TestHFileBlockHeaderCorruption {
       // test corrupted HFileBlock with unknown checksumType code 3
       c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));
       logHeader(firstBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -157,8 +173,8 @@ public class TestHFileBlockHeaderCorruption {
   public void testChecksumTypeCorruptionSecondBlock() throws Exception {
     HFileBlockChannelPosition secondBlock = null;
     try {
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         assertTrue(it.hasNext());
         it.next();
         assertTrue(it.hasNext());
@@ -171,8 +187,8 @@ public class TestHFileBlockHeaderCorruption {
       // test corrupted HFileBlock with unknown checksumType code -1
       c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { -1 }));
       logHeader(secondBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -193,8 +209,8 @@ public class TestHFileBlockHeaderCorruption {
       // test corrupted HFileBlock with unknown checksumType code 3
       c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX, ByteBuffer.wrap(new byte[] { 3 }));
       logHeader(secondBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -218,8 +234,7 @@ public class TestHFileBlockHeaderCorruption {
     c.write(HFileBlock.Header.CHECKSUM_TYPE_INDEX,
       ByteBuffer.wrap(new byte[] { checksumTypeCode }));
     logHeader(testBlock);
-    try (
-      HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(hFileTestRule)) {
+    try (HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
       CountingConsumer consumer = new CountingConsumer(it);
       try {
         consumer.readFully();
@@ -234,8 +249,8 @@ public class TestHFileBlockHeaderCorruption {
   public void testOnDiskSizeWithoutHeaderCorruptionFirstBlock() throws Exception {
     HFileBlockChannelPosition firstBlock = null;
     try {
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         assertTrue(it.hasNext());
         firstBlock = it.next();
       }
@@ -246,8 +261,8 @@ public class TestHFileBlockHeaderCorruption {
       c.write(HFileBlock.Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX,
         ByteBuffer.wrap(Bytes.toBytes(Integer.MIN_VALUE)));
       logHeader(firstBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -263,8 +278,8 @@ public class TestHFileBlockHeaderCorruption {
       c.write(HFileBlock.Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX,
         ByteBuffer.wrap(Bytes.toBytes(0)));
       logHeader(firstBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -279,8 +294,8 @@ public class TestHFileBlockHeaderCorruption {
       c.write(HFileBlock.Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX,
         ByteBuffer.wrap(Bytes.toBytes(Integer.MAX_VALUE)));
       logHeader(firstBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -302,8 +317,8 @@ public class TestHFileBlockHeaderCorruption {
   public void testOnDiskSizeWithoutHeaderCorruptionSecondBlock() throws Exception {
     HFileBlockChannelPosition secondBlock = null;
     try {
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         assertTrue(it.hasNext());
         it.next();
         assertTrue(it.hasNext());
@@ -316,8 +331,8 @@ public class TestHFileBlockHeaderCorruption {
       c.write(HFileBlock.Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX,
         ByteBuffer.wrap(Bytes.toBytes(Integer.MIN_VALUE)));
       logHeader(secondBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -333,8 +348,8 @@ public class TestHFileBlockHeaderCorruption {
       c.write(HFileBlock.Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX,
         ByteBuffer.wrap(Bytes.toBytes(0)));
       logHeader(secondBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -349,8 +364,8 @@ public class TestHFileBlockHeaderCorruption {
       c.write(HFileBlock.Header.ON_DISK_SIZE_WITHOUT_HEADER_INDEX,
         ByteBuffer.wrap(Bytes.toBytes(Integer.MAX_VALUE)));
       logHeader(secondBlock);
-      try (HFileBlockChannelPositionIterator it =
-        new HFileBlockChannelPositionIterator(hFileTestRule)) {
+      try (
+        HFileBlockChannelPositionIterator it = new HFileBlockChannelPositionIterator(HFS, path)) {
         CountingConsumer consumer = new CountingConsumer(it);
         try {
           consumer.readFully();
@@ -453,39 +468,25 @@ public class TestHFileBlockHeaderCorruption {
    */
   public static class HFileBlockChannelPositionIterator implements Closeable {
 
-    private final HFileTestRule hFileTestRule;
+    private final Path hfsPath;
     private final HFile.Reader reader;
     private final HFileBlock.BlockIterator iter;
     private HFileBlockChannelPosition current = null;
 
-    public HFileBlockChannelPositionIterator(HFileTestRule hFileTestRule) throws IOException {
-      Configuration conf = hFileTestRule.getConfiguration();
-      HFileSystem hfs = hFileTestRule.getHFileSystem();
-      Path hfsPath = hFileTestRule.getPath();
-
-      HFile.Reader reader = null;
-      HFileBlock.BlockIterator iter = null;
-      try {
-        reader = HFile.createReader(hfs, hfsPath, CacheConfig.DISABLED, true, conf);
-        HFileBlock.FSReader fsreader = reader.getUncachedBlockReader();
-        // The read block offset cannot out of the range:0,loadOnOpenDataOffset
-        iter = fsreader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());
-      } catch (IOException e) {
-        if (reader != null) {
-          closeQuietly(reader::close);
-        }
-        throw e;
-      }
-
-      this.hFileTestRule = hFileTestRule;
-      this.reader = reader;
-      this.iter = iter;
+    public HFileBlockChannelPositionIterator(HFileSystem hfs, Path hfsPath) throws IOException {
+      this.hfsPath = hfsPath;
+      this.reader = HFile.createReader(hfs, hfsPath, CacheConfig.DISABLED, true, hfs.getConf());
+      HFileBlock.FSReader fsreader = reader.getUncachedBlockReader();
+      // The read block offset cannot out of the range:0,loadOnOpenDataOffset
+      this.iter = fsreader.blockRange(0, reader.getTrailer().getLoadOnOpenDataOffset());
     }
 
     public boolean hasNext() throws IOException {
       HFileBlock next = iter.nextBlock();
-      SeekableByteChannel channel = hFileTestRule.getRWChannel();
       if (next != null) {
+        java.nio.file.Path p = FileSystems.getDefault().getPath(hfsPath.toString());
+        SeekableByteChannel channel = Files.newByteChannel(p, StandardOpenOption.READ,
+          StandardOpenOption.WRITE, StandardOpenOption.DSYNC);
         current = new HFileBlockChannelPosition(channel, next.getOffset());
       }
       return next != null;
@@ -556,69 +557,6 @@ public class TestHFileBlockHeaderCorruption {
       originalHeader.rewind();
       channelAndPosition.rewind();
       assertEquals(originalHeader.capacity(), channel.write(originalHeader));
-    }
-  }
-
-  public static class HFileTestRule extends ExternalResource {
-
-    private final HBaseTestingUtility testingUtility;
-    private final HFileSystem hfs;
-    private final HFileContext context;
-    private final TestName testName;
-    private Path path;
-
-    public HFileTestRule(HBaseTestingUtility testingUtility, TestName testName) throws IOException {
-      this.testingUtility = testingUtility;
-      this.testName = testName;
-      this.hfs = (HFileSystem) HFileSystem.get(testingUtility.getConfiguration());
-      this.context =
-        new HFileContextBuilder().withBlockSize(4 * 1024).withHBaseCheckSum(true).build();
-    }
-
-    public Configuration getConfiguration() {
-      return testingUtility.getConfiguration();
-    }
-
-    public HFileSystem getHFileSystem() {
-      return hfs;
-    }
-
-    public HFileContext getHFileContext() {
-      return context;
-    }
-
-    public Path getPath() {
-      return path;
-    }
-
-    public SeekableByteChannel getRWChannel() throws IOException {
-      java.nio.file.Path p = FileSystems.getDefault().getPath(path.toString());
-      return Files.newByteChannel(p, StandardOpenOption.READ, StandardOpenOption.WRITE,
-        StandardOpenOption.DSYNC);
-    }
-
-    @Override
-    protected void before() throws Throwable {
-      this.path = new Path(testingUtility.getDataTestDirOnTestFS(), testName.getMethodName());
-      HFile.WriterFactory factory =
-        HFile.getWriterFactory(testingUtility.getConfiguration(), CacheConfig.DISABLED)
-          .withPath(hfs, path).withFileContext(context);
-
-      ExtendedCellBuilder cellBuilder =
-        ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY);
-      Random rand = new Random(Instant.now().toEpochMilli());
-      byte[] family = Bytes.toBytes("f");
-      try (HFile.Writer writer = factory.create()) {
-        for (int i = 0; i < 40; i++) {
-          byte[] row = RandomKeyValueUtil.randomOrderedFixedLengthKey(rand, i, 100);
-          byte[] qualifier = RandomKeyValueUtil.randomRowOrQualifier(rand);
-          byte[] value = RandomKeyValueUtil.randomValue(rand);
-          ExtendedCell cell = cellBuilder.setType(Cell.Type.Put).setRow(row).setFamily(family)
-            .setQualifier(qualifier).setValue(value).build();
-          writer.append(cell);
-          cellBuilder.clear();
-        }
-      }
     }
   }
 
