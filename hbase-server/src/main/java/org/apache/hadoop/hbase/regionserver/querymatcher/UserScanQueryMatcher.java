@@ -152,14 +152,14 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   @Override
   public void setToNewRow(ExtendedCell currentRow) {
-    super.setToNewRow(currentRow);
     pendingSkipHint = null;
+    super.setToNewRow(currentRow);
   }
 
   @Override
   public void clearCurrentRow() {
-    super.clearCurrentRow();
     pendingSkipHint = null;
+    super.clearCurrentRow();
   }
 
   // At each structural short-circuit below (time-range, column-exclusion, version-exhaustion),

@@ -527,6 +527,35 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     assertNull(qm.getNextKeyHint(version2));
   }
 
+  /** Verify that pendingSkipHint is cleared when a row transition occurs via setToNewRow. */
+  @Test
+  public void testPendingSkipHintClearedOnRowTransition() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+
+    KeyValue hintCell = new KeyValue(row2, fam2, col1, now, data);
+    Scan scanWithFilter = new Scan().addFamily(fam2).setFilter(new FixedSkipHintFilter(hintCell));
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithFilter,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, now - ttl, now, null);
+
+    // Trigger a structural skip that stores pendingSkipHint.
+    KeyValue version1 = new KeyValue(row1, fam2, col1, now - 10, data);
+    qm.setToNewRow(version1);
+    assertEquals(MatchCode.INCLUDE, qm.match(version1));
+    KeyValue version2 = new KeyValue(row1, fam2, col1, now - 20, data);
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(version2));
+
+    // Do NOT consume the hint via getNextKeyHint. Instead, simulate a row transition.
+    KeyValue newRowCell = new KeyValue(row2, fam2, col1, now - 10, data);
+    qm.setToNewRow(newRowCell);
+
+    // After row transition, pendingSkipHint must be null — getNextKeyHint should delegate
+    // to the filter's getNextCellHint (which returns null for FixedSkipHintFilter).
+    assertNull(qm.getNextKeyHint(newRowCell));
+  }
+
   /** Verify that the normal filterCell/getNextCellHint path is unaffected by pendingSkipHint. */
   @Test
   public void testNormalFilterCellHintPathUnaffectedBySkipHintChange() throws IOException {

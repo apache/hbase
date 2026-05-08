@@ -507,13 +507,15 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
           if (isFilterDoneInternal()) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
-          // Typically the count of rows scanned is incremented inside #populateResult. However,
-          // here we are filtering a row based purely on its row key, preventing us from calling
-          // #populateResult. Thus, perform the necessary increment here to rows scanned metric
-          incrementCountOfRowsScannedMetric(scannerContext);
           // HBASE-29974: ask the filter for a seek hint so we can jump directly past the rejected
           // row instead of iterating through its cells one-by-one via nextRow().
           ExtendedCell rowHint = getHintForRejectedRow(current);
+          // Typically the count of rows scanned is incremented inside #populateResult. However,
+          // here we are filtering a row based purely on its row key, preventing us from calling
+          // #populateResult. Thus, perform the necessary increment here to rows scanned metric.
+          // Placed after getHintForRejectedRow so that a buggy filter throwing DNRIOE doesn't
+          // leave the metric incremented for a row that was never actually processed.
+          incrementCountOfRowsScannedMetric(scannerContext);
           boolean moreRows = (rowHint != null)
             ? nextRowViaHint(scannerContext, current, rowHint)
             : nextRow(scannerContext, current);
