@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -58,25 +57,26 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Provides FSHLog test cases.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSHLog extends AbstractTestFSWAL {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestFSHLog.class);
+  private String name;
 
   private static final long TEST_TIMEOUT_MS = 10000;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void initTestName(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
+  }
 
   @Override
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String walDir, String archiveDir,
@@ -109,9 +109,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
   @Test
   public void testSyncRunnerIndexOverflow() throws IOException, NoSuchFieldException,
     SecurityException, IllegalArgumentException, IllegalAccessException {
-    final String name = this.name.getMethodName();
-    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), name));
-    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     log.init();
     try {
@@ -123,9 +122,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
         FSHLog.RingBufferEventHandler.class.getDeclaredField("syncRunnerIndex");
       syncRunnerIndexField.setAccessible(true);
       syncRunnerIndexField.set(ringBufferEventHandler, Integer.MAX_VALUE - 1);
-      TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
@@ -197,7 +195,6 @@ public class TestFSHLog extends AbstractTestFSWAL {
       }
     }
 
-    final String name = this.name.getMethodName();
     Configuration conf = new Configuration(CONF);
     conf.set(FSHLogProvider.WRITER_IMPL, FailingWriter.class.getName());
     try (CustomFSHLog log = new CustomFSHLog(FS, CommonFSUtils.getRootDir(conf), name,
@@ -233,7 +230,6 @@ public class TestFSHLog extends AbstractTestFSWAL {
    */
   @Test
   public void testUnflushedSeqIdTracking() throws IOException, InterruptedException {
-    final String name = this.name.getMethodName();
     final byte[] b = Bytes.toBytes("b");
 
     final AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
@@ -241,8 +237,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
     final CountDownLatch flushFinished = new CountDownLatch(1);
     final CountDownLatch putFinished = new CountDownLatch(1);
 
-    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), name));
-    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.init();
       log.registerWALActionsListener(new WALActionsListener() {
@@ -259,9 +255,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
       });
 
       // open a new region which uses this WAL
-      TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
         MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
@@ -311,12 +306,12 @@ public class TestFSHLog extends AbstractTestFSWAL {
       flushFinished.await();
 
       // check whether flush went through
-      assertEquals("Region did not flush?", 1, region.getStoreFileList(new byte[][] { b }).size());
+      assertEquals(1, region.getStoreFileList(new byte[][] { b }).size(), "Region did not flush?");
 
       // now check the region's unflushed seqIds.
       long seqId = log.getEarliestMemStoreSeqNum(hri.getEncodedNameAsBytes());
-      assertEquals("Found seqId for the region which is already flushed", HConstants.NO_SEQNUM,
-        seqId);
+      assertEquals(HConstants.NO_SEQNUM, seqId,
+        "Found seqId for the region which is already flushed");
 
       region.close();
     }
@@ -354,7 +349,6 @@ public class TestFSHLog extends AbstractTestFSWAL {
       }
     }
     final byte[] b = Bytes.toBytes("b");
-    String name = this.name.getMethodName();
     FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), name));
     // Have a FSHLog writer implementation that fails during close
     try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
@@ -362,9 +356,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
       log.init();
 
       // create a region with the wal
-      TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
         MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
@@ -385,7 +378,7 @@ public class TestFSHLog extends AbstractTestFSWAL {
       log.rollWriter();
 
       TEST_UTIL.waitFor(10000, log.walFile2Props::isEmpty);
-      assertEquals("WAL Files not cleaned ", 0, log.walFile2Props.size());
+      assertEquals(0, log.walFile2Props.size(), "WAL Files not cleaned ");
       region.close();
     }
   }

@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -45,13 +45,12 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -67,17 +66,17 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
   protected Path dir;
   protected WALFactory wals;
 
-  @Rule
-  public final TestName currentTest = new TestName();
+  private String currentTest;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    currentTest = testInfo.getTestMethod().get().getName();
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
-    dir = new Path(TEST_UTIL.createRootDir(), currentTest.getMethodName());
-    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest.getMethodName());
+    dir = new Path(TEST_UTIL.createRootDir(), currentTest);
+    wals = new WALFactory(TEST_UTIL.getConfiguration(), currentTest);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     wals.close();
     FileStatus[] entries = fs.listStatus(new Path("/"));
@@ -86,7 +85,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
@@ -105,7 +104,7 @@ public abstract class AbstractTestProtobufLog<W extends Closeable> {
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
