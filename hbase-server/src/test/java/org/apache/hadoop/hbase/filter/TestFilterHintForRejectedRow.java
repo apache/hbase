@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -43,20 +42,15 @@ import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFilterHintForRejectedRow {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterHintForRejectedRow.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -67,13 +61,10 @@ public class TestFilterHintForRejectedRow {
 
   private HRegion region;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY2)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
@@ -81,7 +72,7 @@ public class TestFilterHintForRejectedRow {
       TEST_UTIL.getConfiguration(), tableDescriptor);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     HBaseTestingUtil.closeRegionAndWAL(this.region);
   }
@@ -163,16 +154,15 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(hintFilter));
     List<Cell> noHintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(noHintFilter));
 
-    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Both paths must return the same number of cells");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(acceptedCount * CELLS_PER_ROW, hintResults.size());
-    assertEquals(
-      "getHintForRejectedRow must be called exactly once: the hint skips all rejected rows", 1,
-      hintCallCount.get());
+    assertEquals(1, hintCallCount.get(),
+      "getHintForRejectedRow must be called exactly once: the hint skips all rejected rows");
   }
 
   @Test
@@ -195,8 +185,8 @@ public class TestFilterHintForRejectedRow {
     };
 
     List<Cell> results = scanAll(new Scan().addFamily(FAMILY).setFilter(beyondHintFilter));
-    assertTrue("When the hint is past the last row, no cells should be returned",
-      results.isEmpty());
+    assertTrue(results.isEmpty(),
+      "When the hint is past the last row, no cells should be returned");
   }
 
   @Test
@@ -227,13 +217,13 @@ public class TestFilterHintForRejectedRow {
 
     assertEquals(acceptedCount * CELLS_PER_ROW, results.size());
     for (Cell c : results) {
-      assertTrue("Every returned cell must belong to the accepted row range",
+      assertTrue(
         Bytes.compareTo(c.getRowArray(), c.getRowOffset(), c.getRowLength(), acceptedStartRow, 0,
-          acceptedStartRow.length) >= 0);
+          acceptedStartRow.length) >= 0,
+        "Every returned cell must belong to the accepted row range");
     }
-    assertEquals(
-      "getHintForRejectedRow must be called once per rejected row in the per-row hint strategy",
-      rejectedCount, hintCallCount.get());
+    assertEquals(rejectedCount, hintCallCount.get(),
+      "getHintForRejectedRow must be called once per rejected row in the per-row hint strategy");
   }
 
   @Test
@@ -278,15 +268,15 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(reversedHintScan);
     List<Cell> noHintResults = scanAll(reversedNoHintScan);
 
-    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Both paths must return the same number of cells");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(5 * CELLS_PER_ROW, hintResults.size());
-    assertEquals("getHintForRejectedRow must be called exactly once for reversed scan", 1,
-      hintCallCount.get());
+    assertEquals(1, hintCallCount.get(),
+      "getHintForRejectedRow must be called exactly once for reversed scan");
   }
 
   @Test
@@ -321,11 +311,11 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(hintScan);
     List<Cell> noHintResults = scanAll(noHintScan);
 
-    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Both paths must return the same number of cells");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(rowCount, hintResults.size());
   }
@@ -362,11 +352,11 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(backwardHintFilter));
     List<Cell> noHintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(noHintFilter));
 
-    assertEquals("Backward hint must produce same results as no-hint path", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Backward hint must produce same results as no-hint path");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
   }
 
@@ -403,11 +393,11 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(sameRowHintFilter));
     List<Cell> noHintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(noHintFilter));
 
-    assertEquals("Same-row hint must produce same results as no-hint path", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Same-row hint must produce same results as no-hint path");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(3 * CELLS_PER_ROW, hintResults.size());
   }
@@ -481,11 +471,11 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(hintScan);
     List<Cell> noHintResults = scanAll(noHintScan);
 
-    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Both paths must return the same number of cells");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(2 * CELLS_PER_ROW * acceptedCount, hintResults.size());
     assertEquals(1, hintCallCount.get());
@@ -518,11 +508,11 @@ public class TestFilterHintForRejectedRow {
     Scan unfilteredScan = new Scan().addFamily(FAMILY).withStartRow(acceptedStartRow);
     List<Cell> unfilteredResults = scanAll(unfilteredScan);
 
-    assertEquals("Filtered and unfiltered scans must return same cell count",
-      unfilteredResults.size(), filteredResults.size());
+    assertEquals(unfilteredResults.size(), filteredResults.size(),
+      "Filtered and unfiltered scans must return same cell count");
     for (int i = 0; i < filteredResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(filteredResults.get(i), unfilteredResults.get(i)));
+      assertTrue(CellUtil.equals(filteredResults.get(i), unfilteredResults.get(i)),
+        "Cell mismatch at index " + i);
     }
   }
 
@@ -557,7 +547,7 @@ public class TestFilterHintForRejectedRow {
     List<Cell> results = scanAll(scan);
 
     // The hint jumps past stopRow, so no cells should be returned.
-    assertTrue("Hint past stop row must terminate scan with no results", results.isEmpty());
+    assertTrue(results.isEmpty(), "Hint past stop row must terminate scan with no results");
   }
 
   @Test
@@ -591,11 +581,11 @@ public class TestFilterHintForRejectedRow {
       new Scan().addFamily(FAMILY).withStartRow(acceptedStartRow).withStopRow(stopRow);
     List<Cell> baselineResults = scanAll(baselineScan);
 
-    assertEquals("Hint within stop row must return same results as baseline",
-      baselineResults.size(), hintResults.size());
+    assertEquals(baselineResults.size(), hintResults.size(),
+      "Hint within stop row must return same results as baseline");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), baselineResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), baselineResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(4 * CELLS_PER_ROW, hintResults.size());
   }
@@ -643,14 +633,14 @@ public class TestFilterHintForRejectedRow {
     List<Cell> hintResults = scanAll(hintScan);
     List<Cell> noHintResults = scanAll(noHintScan);
 
-    assertEquals("Both paths must return the same number of cells", noHintResults.size(),
-      hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Both paths must return the same number of cells");
     for (int i = 0; i < hintResults.size(); i++) {
-      assertTrue("Cell mismatch at index " + i,
-        CellUtil.equals(hintResults.get(i), noHintResults.get(i)));
+      assertTrue(CellUtil.equals(hintResults.get(i), noHintResults.get(i)),
+        "Cell mismatch at index " + i);
     }
     assertEquals(rowCount, hintResults.size());
-    assertTrue("getSkipHint must be called at least once for reversed scan",
-      skipHintCalls.get() > 0);
+    assertTrue(skipHintCalls.get() > 0,
+      "getSkipHint must be called at least once for reversed scan");
   }
 }
