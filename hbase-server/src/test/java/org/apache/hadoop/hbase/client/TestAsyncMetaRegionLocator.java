@@ -158,7 +158,7 @@ public class TestAsyncMetaRegionLocator {
       spans.stream().filter(parentSpanMatcher::matches).findAny().orElseThrow(AssertionError::new);
 
     Matcher<SpanData> registryGetMetaRegionLocationsMatcher =
-      allOf(hasName(endsWith("ConnectionRegistry.getMetaRegionLocations")),
+      allOf(hasName(endsWith(registryClass.getSimpleName() + ".getMetaRegionLocations")),
         hasParentSpanId(parentSpan), hasKind(SpanKind.INTERNAL), hasEnded());
     assertThat(spans, hasItem(registryGetMetaRegionLocationsMatcher));
 
