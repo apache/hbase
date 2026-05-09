@@ -36,7 +36,8 @@ public class IntegrationTestIngestWithTags extends IntegrationTestIngest {
 
   @Override
   public void setUpCluster() throws Exception {
-    getTestingUtil(conf).getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
+    getTestingUtil(conf).getConfiguration().setInt(HFile.FORMAT_VERSION_KEY,
+      HFile.MAX_FORMAT_VERSION);
     super.setUpCluster();
   }
 
