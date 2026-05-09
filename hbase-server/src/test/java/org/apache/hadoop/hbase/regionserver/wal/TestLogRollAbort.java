@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.NavigableMap;
@@ -24,7 +26,6 @@ import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -54,25 +55,20 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tests for conditions that should trigger RegionServer aborts when rolling the current WAL fails.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestLogRollAbort {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogRollAbort.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLogRollAbort.class);
   private static MiniDFSCluster dfsCluster;
@@ -87,7 +83,7 @@ public class TestLogRollAbort {
 
   // Need to override this setup so we can edit the config before it gets sent
   // to the HDFS & HBase cluster startup.
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Tweak default timeout values down for faster recovery
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.errors.tolerated", 2);
@@ -109,7 +105,7 @@ public class TestLogRollAbort {
   private Configuration conf;
   private FileSystem fs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(2);
 
@@ -125,7 +121,7 @@ public class TestLogRollAbort {
     CommonFSUtils.setWALRootDir(conf, HBASELOGDIR);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -228,12 +224,12 @@ public class TestLogRollAbort {
       LOG.debug("Trying to roll the WAL.");
       try {
         log.rollWriter();
-        Assert.fail("rollWriter() did not throw any exception.");
+        fail("rollWriter() did not throw any exception.");
       } catch (IOException ioe) {
         if (ioe.getCause() instanceof FileNotFoundException) {
           LOG.info("Got the expected exception: ", ioe.getCause());
         } else {
-          Assert.fail("Unexpected exception: " + ioe);
+          fail("Unexpected exception: " + ioe);
         }
       }
     } finally {
