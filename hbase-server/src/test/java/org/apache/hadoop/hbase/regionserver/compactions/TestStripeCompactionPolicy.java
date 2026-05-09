@@ -21,11 +21,11 @@ import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MAX_FILES_K
 import static org.apache.hadoop.hbase.regionserver.StripeStoreConfig.MIN_FILES_KEY;
 import static org.apache.hadoop.hbase.regionserver.StripeStoreFileManager.OPEN_KEY;
 import static org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_SIZE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.AdditionalMatchers.aryEq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -47,12 +47,13 @@ import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.OptionalLong;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.KeyValue;
@@ -83,25 +84,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcatenatedLists;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.ArgumentMatcher;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: usePrivateReaders={0}")
 public class TestStripeCompactionPolicy {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStripeCompactionPolicy.class);
 
   private static final byte[] KEY_A = Bytes.toBytes("aaa");
   private static final byte[] KEY_B = Bytes.toBytes("bbb");
@@ -119,15 +113,17 @@ public class TestStripeCompactionPolicy {
   private final static int defaultInitialCount = 1;
   private static long defaultTtl = 1000 * 1000;
 
-  @Parameters(name = "{index}: usePrivateReaders={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { true }, new Object[] { false });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
-  @Parameter
-  public boolean usePrivateReaders;
+  private final boolean usePrivateReaders;
 
-  @Test
+  public TestStripeCompactionPolicy(boolean usePrivateReaders) {
+    this.usePrivateReaders = usePrivateReaders;
+  }
+
+  @TestTemplate
   public void testNoStripesFromFlush() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(StripeStoreConfig.FLUSH_TO_L0_KEY, true);
@@ -139,7 +135,7 @@ public class TestStripeCompactionPolicy {
     verifyFlush(policy, si, input, expected, null);
   }
 
-  @Test
+  @TestTemplate
   public void testOldStripesFromFlush() throws Exception {
     StripeCompactionPolicy policy = createPolicy(HBaseConfiguration.create());
     StripeInformationProvider si = createStripes(0, KEY_C, KEY_D);
@@ -150,7 +146,7 @@ public class TestStripeCompactionPolicy {
     verifyFlush(policy, si, input, expected, new byte[][] { OPEN_KEY, KEY_C, KEY_D, OPEN_KEY });
   }
 
-  @Test
+  @TestTemplate
   public void testNewStripesFromFlush() throws Exception {
     StripeCompactionPolicy policy = createPolicy(HBaseConfiguration.create());
     StripeInformationProvider si = createStripesL0Only(0, 0);
@@ -160,7 +156,7 @@ public class TestStripeCompactionPolicy {
     verifyFlush(policy, si, input, expected, new byte[][] { OPEN_KEY, OPEN_KEY });
   }
 
-  @Test
+  @TestTemplate
   public void testSingleStripeCompaction() throws Exception {
     // Create a special policy that only compacts single stripes, using standard methods.
     Configuration conf = HBaseConfiguration.create();
@@ -227,7 +223,7 @@ public class TestStripeCompactionPolicy {
     verifyCompaction(policy, si, sfs, null, 1, null, si.getStartRow(1), si.getEndRow(1), true);
   }
 
-  @Test
+  @TestTemplate
   public void testWithParallelCompaction() throws Exception {
     // TODO: currently only one compaction at a time per store is allowed. If this changes,
     // the appropriate file exclusion testing would need to be done in respective tests.
@@ -235,7 +231,7 @@ public class TestStripeCompactionPolicy {
       .selectCompaction(mock(StripeInformationProvider.class), al(createFile()), false));
   }
 
-  @Test
+  @TestTemplate
   public void testWithReferences() throws Exception {
     StripeCompactionPolicy policy = createPolicy(HBaseConfiguration.create());
     StripeCompactor sc = mock(StripeCompactor.class);
@@ -255,7 +251,7 @@ public class TestStripeCompactionPolicy {
       aryEq(OPEN_KEY), aryEq(OPEN_KEY), aryEq(OPEN_KEY), any(), any());
   }
 
-  @Test
+  @TestTemplate
   public void testInitialCountFromL0() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 2);
@@ -269,7 +265,7 @@ public class TestStripeCompactionPolicy {
     verifyCompaction(policy, si, si.getStoreFiles(), true, 6, 5L, OPEN_KEY, OPEN_KEY, true);
   }
 
-  @Test
+  @TestTemplate
   public void testSelectL0Compaction() throws Exception {
     // test select ALL L0 files when L0 files count > MIN_FILES_L0_KEY
     Configuration conf = HBaseConfiguration.create();
@@ -304,7 +300,7 @@ public class TestStripeCompactionPolicy {
     verifyCollectionsEqual(si.getLevel0Files().subList(0, 6), cr.getRequest().getFiles());
   }
 
-  @Test
+  @TestTemplate
   public void testExistingStripesFromL0() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 3);
@@ -313,7 +309,7 @@ public class TestStripeCompactionPolicy {
       si.getStripeBoundaries());
   }
 
-  @Test
+  @TestTemplate
   public void testNothingToCompactFromL0() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 4);
@@ -325,7 +321,7 @@ public class TestStripeCompactionPolicy {
     verifyNoCompaction(policy, si);
   }
 
-  @Test
+  @TestTemplate
   public void testCheckExpiredStripeCompaction() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_L0_KEY, 5);
@@ -354,7 +350,7 @@ public class TestStripeCompactionPolicy {
     assertTrue(policy.needsCompactions(si, al()));
   }
 
-  @Test
+  @TestTemplate
   public void testSplitOffStripe() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     // Test depends on this not being set to pass. Default breaks test. TODO: Revisit.
@@ -385,7 +381,7 @@ public class TestStripeCompactionPolicy {
     verifySingleStripeCompaction(specPolicy, si, 1, null);
   }
 
-  @Test
+  @TestTemplate
   public void testSplitOffStripeOffPeak() throws Exception {
     // for HBASE-11439
     Configuration conf = HBaseConfiguration.create();
@@ -405,7 +401,7 @@ public class TestStripeCompactionPolicy {
       createPolicy(conf).selectCompaction(si, al(), true).getRequest().getFiles().size());
   }
 
-  @Test
+  @TestTemplate
   public void testSplitOffStripeDropDeletes() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(StripeStoreConfig.MIN_FILES_KEY, 2);
@@ -424,7 +420,7 @@ public class TestStripeCompactionPolicy {
   }
 
   @SuppressWarnings("unchecked")
-  @Test
+  @TestTemplate
   public void testMergeExpiredFiles() throws Exception {
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
     long now = defaultTtl + 2;
@@ -463,7 +459,7 @@ public class TestStripeCompactionPolicy {
   }
 
   @SuppressWarnings("unchecked")
-  @Test
+  @TestTemplate
   public void testMergeExpiredStripes() throws Exception {
     // HBASE-11397
     ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
@@ -500,7 +496,7 @@ public class TestStripeCompactionPolicy {
       Lists.newArrayList(stripeFiles), new ArrayList<>());
   }
 
-  @Test
+  @TestTemplate
   public void testSingleStripeDropDeletes() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     // Test depends on this not being set to pass. Default breaks test. TODO: Revisit.
@@ -536,7 +532,7 @@ public class TestStripeCompactionPolicy {
       true);
   }
 
-  @Test
+  @TestTemplate
   public void testCheckExpiredL0Compaction() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     int minL0 = 100;

@@ -17,28 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestSequenceIdAccounting {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSequenceIdAccounting.class);
 
   private static final byte[] ENCODED_REGION_NAME = Bytes.toBytes("r");
   private static final byte[] FAMILY_NAME = Bytes.toBytes("cf");
@@ -90,7 +84,7 @@ public class TestSequenceIdAccounting {
     m.put(ENCODED_REGION_NAME, sequenceid);
     assertFalse(sida.areAllLower(m));
     long lowest = sida.getLowestSequenceId(ENCODED_REGION_NAME);
-    assertEquals("Lowest should be first sequence id inserted", 1, lowest);
+    assertEquals(1, lowest, "Lowest should be first sequence id inserted");
     m.put(ENCODED_REGION_NAME, lowest);
     assertFalse(sida.areAllLower(m));
     // Now make sure above works when flushing.
