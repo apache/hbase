@@ -81,6 +81,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
   protected final byte[] stopRow;
   protected final boolean includeStopRow;
+  protected final boolean reversed;
   protected final HRegion region;
   protected final CellComparator comparator;
 
@@ -123,6 +124,7 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     defaultScannerContext = ScannerContext.newBuilder().setBatchLimit(scan.getBatch()).build();
     this.stopRow = scan.getStopRow();
     this.includeStopRow = scan.includeStopRow();
+    this.reversed = scan.isReversed();
     this.operationId = scan.getId();
 
     // synchronize on scannerReadPoints so that nobody calculates
@@ -496,11 +498,18 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
           if (isFilterDoneInternal()) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
+          // HBASE-29974: ask the filter for a seek hint so we can jump directly past the rejected
+          // row instead of iterating through its cells one-by-one via nextRow().
+          Cell rowHint = getHintForRejectedRow(current);
           // Typically the count of rows scanned is incremented inside #populateResult. However,
           // here we are filtering a row based purely on its row key, preventing us from calling
-          // #populateResult. Thus, perform the necessary increment here to rows scanned metric
+          // #populateResult. Thus, perform the necessary increment here to rows scanned metric.
+          // Placed after getHintForRejectedRow so that a buggy filter throwing DNRIOE doesn't
+          // leave the metric incremented for a row that was never actually processed.
           incrementCountOfRowsScannedMetric(scannerContext);
-          boolean moreRows = nextRow(scannerContext, current);
+          boolean moreRows = (rowHint != null)
+            ? nextRowViaHint(scannerContext, current, rowHint)
+            : nextRow(scannerContext, current);
           if (!moreRows) {
             return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
           }
@@ -740,6 +749,49 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
     // Calling the hook in CP which allows it to do a fast forward
     return this.region.getCoprocessorHost() == null
       || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
+  }
+
+  /**
+   * Fast-path alternative to {@link #nextRow} used when the filter has provided a seek hint via
+   * {@link org.apache.hadoop.hbase.filter.Filter#getHintForRejectedRow(Cell)}. Instead of iterating
+   * through every cell in the rejected row one-by-one, this method issues a single seek to jump
+   * directly to the filter's suggested position ({@code requestSeek} for forward scans,
+   * {@code backwardSeek} for reversed scans).
+   */
+  private boolean nextRowViaHint(ScannerContext scannerContext, Cell curRowCell, Cell hint)
+    throws IOException {
+    assert this.joinedContinuationRow == null : "Trying to go to next row during joinedHeap read.";
+
+    int difference = comparator.compareRows(hint, curRowCell);
+    if ((!reversed && difference > 0) || (reversed && difference < 0)) {
+      scannerContext.setSkippingRow(true);
+      if (reversed) {
+        this.storeHeap.backwardSeek(hint);
+      } else {
+        this.storeHeap.requestSeek(hint, true, true);
+      }
+      scannerContext.setSkippingRow(false);
+
+      resetFilters();
+
+      return this.region.getCoprocessorHost() == null
+        || this.region.getCoprocessorHost().postScannerFilterRow(this, curRowCell);
+    }
+
+    return nextRow(scannerContext, curRowCell);
+  }
+
+  /**
+   * Asks the current {@link org.apache.hadoop.hbase.filter.FilterWrapper} for a seek hint to use
+   * after a row has been rejected by {@link #filterRowKey}. If the wrapped filter overrides
+   * {@link org.apache.hadoop.hbase.filter.Filter#getHintForRejectedRow(Cell)}, this returns its
+   * answer; otherwise returns {@code null}.
+   */
+  private Cell getHintForRejectedRow(Cell rowCell) throws IOException {
+    if (filter == null) {
+      return null;
+    }
+    return filter.getHintForRejectedRow(rowCell);
   }
 
   protected boolean shouldStop(Cell currentRowCell) {
