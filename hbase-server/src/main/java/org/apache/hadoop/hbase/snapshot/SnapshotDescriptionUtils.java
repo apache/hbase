@@ -303,16 +303,16 @@ public final class SnapshotDescriptionUtils {
    */
   public static SnapshotDescription validate(SnapshotDescription snapshot, Configuration conf)
     throws IllegalArgumentException, IOException {
-    // Fail fast on the basic invariant before paying the cost of creating a Connection (which
-    // involves a ZK session and, in Kerberos environments, a TGS request to the KDC). This also
-    // preserves the prior behavior of this overload, which callers (including unit tests with
-    // stub Configurations) rely on to throw without performing any I/O.
+    requireHasTable(snapshot);
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      return validate(conn, snapshot, conf);
+    }
+  }
+
+  private static void requireHasTable(SnapshotDescription snapshot) {
     if (!snapshot.hasTable()) {
       throw new IllegalArgumentException(
         "Descriptor doesn't apply to a table, so we can't build it.");
-    }
-    try (Connection conn = ConnectionFactory.createConnection(conf)) {
-      return validate(conn, snapshot, conf);
     }
   }
 
@@ -332,10 +332,7 @@ public final class SnapshotDescriptionUtils {
    */
   public static SnapshotDescription validate(Connection conn, SnapshotDescription snapshot,
     Configuration conf) throws IllegalArgumentException, IOException {
-    if (!snapshot.hasTable()) {
-      throw new IllegalArgumentException(
-        "Descriptor doesn't apply to a table, so we can't build it.");
-    }
+    requireHasTable(snapshot);
 
     SnapshotDescription.Builder builder = snapshot.toBuilder();
 
