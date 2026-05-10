@@ -59,6 +59,18 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   private Cell curColCell = null;
 
+  /**
+   * Holds a seek-hint produced by {@link org.apache.hadoop.hbase.filter.Filter#getSkipHint(Cell)}
+   * at one of the structural short-circuit points in {@link #matchColumn}. When non-null this is
+   * returned by {@link #getNextKeyHint} instead of delegating to
+   * {@link org.apache.hadoop.hbase.filter.Filter#getNextCellHint}, because the hint was computed
+   * for a cell that never reached {@code filterCell}. Cleared on every {@link #getNextKeyHint} call
+   * so it cannot leak across multiple seek-hint cycles.
+   */
+  private Cell pendingSkipHint = null;
+
+  private final boolean reversed;
+
   private static Cell createStartKey(Scan scan, ScanInfo scanInfo) {
     if (scan.includeStartRow()) {
       return createStartKeyFromRow(scan.getStartRow(), scanInfo);
@@ -80,6 +92,7 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
       this.versionsAfterFilter = 0;
     }
     this.stopRow = scan.getStopRow();
+    this.reversed = scan.isReversed();
     TimeRange timeRange = scan.getColumnFamilyTimeRange().get(scanInfo.getFamily());
     if (timeRange == null) {
       this.tr = scan.getTimeRange();
@@ -105,6 +118,11 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
 
   @Override
   public Cell getNextKeyHint(Cell cell) throws IOException {
+    if (pendingSkipHint != null) {
+      Cell hint = pendingSkipHint;
+      pendingSkipHint = null;
+      return hint;
+    }
     if (filter == null) {
       return null;
     } else {
@@ -118,20 +136,47 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     if (curColCell != null) {
       this.curColCell = KeyValueUtil.toNewKeyCell(this.curColCell);
     }
+    if (pendingSkipHint != null) {
+      this.pendingSkipHint = KeyValueUtil.toNewKeyCell(this.pendingSkipHint);
+    }
   }
 
+  @Override
+  public void setToNewRow(Cell currentRow) {
+    pendingSkipHint = null;
+    super.setToNewRow(currentRow);
+  }
+
+  @Override
+  public void clearCurrentRow() {
+    pendingSkipHint = null;
+    super.clearCurrentRow();
+  }
+
+  // At each structural short-circuit below (time-range, column-exclusion, version-exhaustion),
+  // the filter is consulted via resolveSkipHint() before falling back to the default skip/seek
+  // code. This lets filters provide a forward seek target even when filterCell is never called.
   protected final MatchCode matchColumn(Cell cell, long timestamp, byte typeByte)
     throws IOException {
     int tsCmp = tr.compare(timestamp);
     if (tsCmp > 0) {
+      if (resolveSkipHint(cell)) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
+      }
       return MatchCode.SKIP;
     }
     if (tsCmp < 0) {
+      if (resolveSkipHint(cell)) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
+      }
       return columns.getNextRowOrNextColumn(cell);
     }
     // STEP 1: Check if the column is part of the requested columns
     MatchCode matchCode = columns.checkColumn(cell, typeByte);
     if (matchCode != MatchCode.INCLUDE) {
+      if (resolveSkipHint(cell)) {
+        return MatchCode.SEEK_NEXT_USING_HINT;
+      }
       return matchCode;
     }
     /*
@@ -141,8 +186,14 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     matchCode = columns.checkVersions(cell, timestamp, typeByte, false);
     switch (matchCode) {
       case SKIP:
+        if (resolveSkipHint(cell)) {
+          return MatchCode.SEEK_NEXT_USING_HINT;
+        }
         return MatchCode.SKIP;
       case SEEK_NEXT_COL:
+        if (resolveSkipHint(cell)) {
+          return MatchCode.SEEK_NEXT_USING_HINT;
+        }
         return MatchCode.SEEK_NEXT_COL;
       default:
         // It means it is INCLUDE, INCLUDE_AND_SEEK_NEXT_COL or INCLUDE_AND_SEEK_NEXT_ROW.
@@ -154,6 +205,40 @@ public abstract class UserScanQueryMatcher extends ScanQueryMatcher {
     return filter == null
       ? matchCode
       : mergeFilterResponse(cell, matchCode, filter.filterCell(cell));
+  }
+
+  /**
+   * Asks the current filter for a seek hint via
+   * {@link org.apache.hadoop.hbase.filter.Filter#getSkipHint(Cell)}, validates the returned cell
+   * type, and if non-null stores it in {@link #pendingSkipHint} so that {@link #getNextKeyHint} can
+   * return it when the scan pipeline asks for the seek target after receiving
+   * {@link ScanQueryMatcher.MatchCode#SEEK_NEXT_USING_HINT}.
+   * <p>
+   * This is only called from the structural short-circuit branches of {@link #matchColumn}, where
+   * {@code filterCell} has <em>not</em> been called, in accordance with the stateless contract of
+   * {@code Filter#getSkipHint}. The filter-null guard is included here so call-sites need no
+   * boilerplate.
+   * @param cell the cell that triggered the structural short-circuit
+   * @return {@code true} if the filter returned a valid hint (stored in {@link #pendingSkipHint}),
+   *         {@code false} if no filter is set or the filter returned {@code null}
+   * @throws IOException if the filter signals an I/O failure
+   */
+  private boolean resolveSkipHint(Cell cell) throws IOException {
+    if (filter == null) {
+      return false;
+    }
+    Cell hint = filter.getSkipHint(cell);
+    if (hint == null) {
+      return false;
+    }
+    // Full-key compare is intentional: skip hints can advance within the same row
+    // (e.g., to a later column), not just across rows.
+    int cmp = rowComparator.compare(hint, cell);
+    if ((!reversed && cmp <= 0) || (reversed && cmp >= 0)) {
+      return false;
+    }
+    pendingSkipHint = hint;
+    return true;
   }
 
   /**
