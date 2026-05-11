@@ -392,6 +392,58 @@ public class FilterListWithOR extends FilterListBase {
     return minKeyHint;
   }
 
+  /**
+   * Minimal step: return the nearest hint. If any non-terminated sub-filter returns null, the
+   * composite cannot safely skip, so return null.
+   */
+  @Override
+  public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
+    if (isEmpty()) {
+      return super.getHintForRejectedRow(firstRowCell);
+    }
+    Cell minHint = null;
+    for (int i = 0, n = filters.size(); i < n; i++) {
+      Filter filter = filters.get(i);
+      if (filter.filterAllRemaining()) {
+        continue;
+      }
+      Cell hint = filter.getHintForRejectedRow(firstRowCell);
+      if (hint == null) {
+        return null;
+      }
+      if (minHint == null || this.compareCell(minHint, hint) > 0) {
+        minHint = hint;
+      }
+    }
+    return minHint;
+  }
+
+  /**
+   * Minimal step: return the nearest skip hint. Null from any sub-filter collapses the entire
+   * result to null.
+   */
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    if (isEmpty()) {
+      return super.getSkipHint(skippedCell);
+    }
+    Cell minHint = null;
+    for (int i = 0, n = filters.size(); i < n; i++) {
+      Filter filter = filters.get(i);
+      if (filter.filterAllRemaining()) {
+        continue;
+      }
+      Cell hint = filter.getSkipHint(skippedCell);
+      if (hint == null) {
+        return null;
+      }
+      if (minHint == null || this.compareCell(minHint, hint) > 0) {
+        minHint = hint;
+      }
+    }
+    return minHint;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
