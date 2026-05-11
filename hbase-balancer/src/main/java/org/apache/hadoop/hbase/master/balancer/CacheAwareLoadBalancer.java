@@ -88,10 +88,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private Long sleepTime;
   private Configuration configuration;
 
-  public enum GeneratorFunctionType {
-    LOAD,
-    CACHE_RATIO
-  }
+  private float lowCacheRatioThreshold;
+  private float potentialCacheRatioAfterMove;
+  private float minFreeCacheSpaceFactor;
 
   @Override
   public void loadConf(Configuration configuration) {
@@ -101,6 +100,12 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     ratioThreshold =
       this.configuration.getFloat(CACHE_RATIO_THRESHOLD, CACHE_RATIO_THRESHOLD_DEFAULT);
     sleepTime = configuration.getLong(MOVE_THROTTLING, MOVE_THROTTLING_DEFAULT.toMillis());
+    lowCacheRatioThreshold = configuration.getFloat(LOW_CACHE_RATIO_FOR_RELOCATION_KEY,
+      LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT);
+    potentialCacheRatioAfterMove = configuration.getFloat(POTENTIAL_CACHE_RATIO_AFTER_MOVE_KEY,
+      POTENTIAL_CACHE_RATIO_AFTER_MOVE_DEFAULT);
+    minFreeCacheSpaceFactor =
+      configuration.getFloat(MIN_FREE_CACHE_SPACE_FACTOR_KEY, MIN_FREE_CACHE_SPACE_FACTOR_DEFAULT);
   }
 
   @Override
@@ -310,6 +315,38 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         regionCacheRatioOnOldServerMap.remove(regionEncodedName);
         return action;
       }
+      return generatePlanForFreeCacheSpace(cluster);
+    }
+
+    private BalanceAction generatePlanForFreeCacheSpace(BalancerClusterState cluster) {
+      if (cluster.serverBlockCacheFreeSize == null) {
+        return BalanceAction.NULL_ACTION;
+      }
+      for (int region = 0; region < cluster.numRegions; region++) {
+        RegionInfo regionInfo = cluster.regions[region];
+        if (regionInfo.isMetaRegion() || regionInfo.getTable().isSystemTable()) {
+          continue;
+        }
+        int currentServer = cluster.regionIndexToServerIndex[region];
+        float ratio = cluster.getObservedRegionCacheRatio(region);
+        if (ratio >= lowCacheRatioThreshold) {
+          continue;
+        }
+        int regionSizeMb = cluster.getTotalRegionHFileSizeMB(region);
+        if (regionSizeMb <= 0) {
+          continue;
+        }
+        long bytesNeeded = (long) (regionSizeMb * 1024L * 1024L * minFreeCacheSpaceFactor);
+        for (int server = 0; server < cluster.numServers; server++) {
+          // Skips current server for region, as we can't generate a move to same server
+          if (server == currentServer) {
+            continue;
+          }
+          if (cluster.serverBlockCacheFreeSize[server] >= bytesNeeded) {
+            return getAction(currentServer, region, server, -1);
+          }
+        }
+      }
       return BalanceAction.NULL_ACTION;
     }
 
@@ -319,7 +356,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       return moveRegionToOldServer(cluster, regionIndex, currentServerIndex,
         cacheRatioOnCurrentServer, oldServerIndex, cacheRatioOnOldServer)
           ? getAction(currentServerIndex, regionIndex, oldServerIndex, -1)
-          : BalanceAction.NULL_ACTION;
+          : generatePlanForFreeCacheSpace(cluster);
     }
 
     private boolean moveRegionToOldServer(BalancerClusterState cluster, int regionIndex,
