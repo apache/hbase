@@ -61,7 +61,7 @@ public class TestSettingTimeoutOnBlockingPoint {
   }
 
   @AfterAll
-  public static void setUpAfterClass() throws Exception {
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 

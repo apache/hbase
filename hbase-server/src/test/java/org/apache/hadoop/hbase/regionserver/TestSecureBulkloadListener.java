@@ -78,7 +78,7 @@ public class TestSecureBulkloadListener {
   }
 
   @AfterEach
-  public void tearDownAfterClass() throws Exception {
+  public void tearDown() throws Exception {
     htu.shutdownMiniCluster();
   }
 
