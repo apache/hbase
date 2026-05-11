@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -53,7 +52,6 @@ import org.junit.jupiter.api.TestInfo;
 public class TestSecureBulkloadListener {
 
   private Configuration conf;
-  private MiniDFSCluster cluster;
   private HBaseTestingUtil htu;
   private DistributedFileSystem dfs;
   private final byte[] randomBytes = new byte[100];
@@ -63,12 +61,11 @@ public class TestSecureBulkloadListener {
   private static byte[] FAMILY = Bytes.toBytes("family");
   private static final String STAGING_DIR = "staging";
   private static final String CUSTOM_STAGING_DIR = "customStaging";
-
-  private String name;
+  private String methodName;
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
     Bytes.random(randomBytes);
     htu = new HBaseTestingUtil();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
@@ -77,7 +74,6 @@ public class TestSecureBulkloadListener {
       new String[] { host1, host2, host3 });
 
     conf = htu.getConfiguration();
-    cluster = htu.getDFSCluster();
     dfs = (DistributedFileSystem) FileSystem.get(conf);
   }
 
@@ -88,7 +84,7 @@ public class TestSecureBulkloadListener {
 
   @Test
   public void testMovingStagedFile() throws Exception {
-    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(methodName, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -119,7 +115,7 @@ public class TestSecureBulkloadListener {
 
   @Test
   public void testMovingStagedFileWithCustomStageDir() throws Exception {
-    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(methodName, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -137,7 +133,7 @@ public class TestSecureBulkloadListener {
     }
 
     Path customStagingDirPath =
-      new Path(dfs.getWorkingDirectory(), new Path(name, CUSTOM_STAGING_DIR));
+      new Path(dfs.getWorkingDirectory(), new Path(methodName, CUSTOM_STAGING_DIR));
     Path customStagedFamily = new Path(customStagingDirPath, new Path(Bytes.toString(FAMILY)));
     if (!dfs.exists(customStagedFamily)) {
       dfs.mkdirs(customStagedFamily);
@@ -158,7 +154,7 @@ public class TestSecureBulkloadListener {
 
   @Test
   public void testCopiedStagedFile() throws Exception {
-    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(methodName, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -189,7 +185,7 @@ public class TestSecureBulkloadListener {
 
   @Test
   public void testDeletedStagedFile() throws Exception {
-    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(name, STAGING_DIR));
+    Path stagingDirPath = new Path(dfs.getWorkingDirectory(), new Path(methodName, STAGING_DIR));
     if (!dfs.exists(stagingDirPath)) {
       dfs.mkdirs(stagingDirPath);
     }
@@ -220,7 +216,8 @@ public class TestSecureBulkloadListener {
 
   private String createHFileForFamilies(byte[] family) throws IOException {
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(conf);
-    Path testDir = new Path(dfs.getWorkingDirectory(), new Path(name, Bytes.toString(family)));
+    Path testDir =
+      new Path(dfs.getWorkingDirectory(), new Path(methodName, Bytes.toString(family)));
     if (!dfs.exists(testDir)) {
       dfs.mkdirs(testDir);
     }
@@ -248,5 +245,4 @@ public class TestSecureBulkloadListener {
     if (suffix != null) name += suffix;
     return name;
   }
-
 }

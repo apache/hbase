@@ -85,8 +85,6 @@ public class TestWALMonotonicallyIncreasingSeqId {
 
   public String walProvider;
 
-  private String name;
-
   public TestWALMonotonicallyIncreasingSeqId(String walProvider) {
     this.walProvider = walProvider;
   }
@@ -180,7 +178,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws IOException {
-    this.name = testInfo.getTestMethod().get().getName() + "_" + walProvider;
+    String name = testInfo.getTestMethod().get().getName() + "_" + walProvider;
     byte[][] families = new byte[][] { Bytes.toBytes("cf") };
     TableDescriptor htd =
       getTableDesc(TableName.valueOf(name.replaceAll("[^0-9A-Za-z_]", "_")), families);

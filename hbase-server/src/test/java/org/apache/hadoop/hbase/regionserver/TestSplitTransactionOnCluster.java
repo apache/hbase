@@ -137,7 +137,7 @@ public class TestSplitTransactionOnCluster {
 
   static final HBaseTestingUtil TESTING_UTIL = new HBaseTestingUtil();
 
-  private String name;
+  private String methodName;
 
   @BeforeAll
   public static void before() throws Exception {
@@ -154,7 +154,7 @@ public class TestSplitTransactionOnCluster {
 
   @BeforeEach
   public void setup(TestInfo testInfo) throws IOException {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
     TESTING_UTIL.ensureSomeNonStoppedRegionServersAvailable(NB_SERVERS);
     this.admin = TESTING_UTIL.getAdmin();
     this.cluster = TESTING_UTIL.getMiniHBaseCluster();
@@ -187,7 +187,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testRITStateForRollback() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     final HMaster master = cluster.getMaster();
     try {
       // Create table then get the single region for our new table.
@@ -204,7 +204,7 @@ public class TestSplitTransactionOnCluster {
 
       // find a splittable region
       final HRegion region = findSplittableRegion(regions);
-      assertTrue(region != null, "not able to find a splittable region");
+      assertNotNull(region, "not able to find a splittable region");
 
       // install master co-processor to fail splits
       master.getMasterCoprocessorHost().load(FailingSplitMasterObserver.class,
@@ -234,7 +234,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testSplitFailedCompactionAndSplit() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     // Create table then get the single region for our new table.
     byte[] cf = Bytes.toBytes("cf");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
@@ -278,7 +278,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testSplitCompactWithPriority() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     // Create table then get the single region for our new table.
     byte[] cf = Bytes.toBytes("cf");
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
@@ -305,7 +305,7 @@ public class TestSplitTransactionOnCluster {
     Optional<CompactionContext> compactionContext = store.requestCompaction();
     assertTrue(compactionContext.isPresent());
     assertFalse(compactionContext.get().getRequest().isAfterSplit());
-    assertEquals(compactionContext.get().getRequest().getPriority(), 13);
+    assertEquals(13, compactionContext.get().getRequest().getPriority());
 
     // Split
     long procId =
@@ -338,7 +338,7 @@ public class TestSplitTransactionOnCluster {
     // since we set mock reference to one of the storeFiles, we will get isAfterSplit=true &&
     // highest priority for hStore1's compactionContext
     assertTrue(compactionContext.get().getRequest().isAfterSplit());
-    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 1000);
+    assertEquals(Integer.MIN_VALUE + 1000, compactionContext.get().getRequest().getPriority());
 
     compactionContext =
       hStore2.requestCompaction(Integer.MIN_VALUE + 10, CompactionLifeCycleTracker.DUMMY, null);
@@ -347,14 +347,14 @@ public class TestSplitTransactionOnCluster {
     // compaction (Integer.MIN_VALUE + 1000), hence we are expecting request priority to
     // be accepted.
     assertTrue(compactionContext.get().getRequest().isAfterSplit());
-    assertEquals(compactionContext.get().getRequest().getPriority(), Integer.MIN_VALUE + 10);
+    assertEquals(Integer.MIN_VALUE + 10, compactionContext.get().getRequest().getPriority());
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
   }
 
   @Test
   public void testContinuousSplitUsingLinkFile() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     // Create table then get the single region for our new table.
     byte[] cf = Bytes.toBytes("cf");
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName)
@@ -486,7 +486,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testSplitRollbackOnRegionClosing() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
 
     // Create table then get the single region for our new table.
     Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -544,7 +544,7 @@ public class TestSplitTransactionOnCluster {
    */
   @Test
   public void testShutdownFixupWhenDaughterHasSplit() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
 
     // Create table then get the single region for our new table.
     Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
@@ -620,7 +620,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testSplitShouldNotThrowNPEEvenARegionHasEmptySplitFiles() throws Exception {
-    TableName userTableName = TableName.valueOf(name);
+    TableName userTableName = TableName.valueOf(methodName);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(userTableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("col")).build();
     admin.createTable(htd);
@@ -687,7 +687,7 @@ public class TestSplitTransactionOnCluster {
   public void testMasterRestartAtRegionSplitPendingCatalogJanitor()
     throws IOException, InterruptedException, NodeExistsException, KeeperException,
     ServiceException, ExecutionException, TimeoutException {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     // Create table then get the single region for our new table.
     try (Table t = createTableAndWait(tableName, HConstants.CATALOG_FAMILY)) {
       List<HRegion> regions = cluster.getRegions(tableName);
@@ -741,9 +741,9 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testSplitWithRegionReplicas() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     TableDescriptor htd = TESTING_UTIL
-      .createModifyableTableDescriptor(TableName.valueOf(name),
+      .createModifyableTableDescriptor(TableName.valueOf(methodName),
         ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
         ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED)
       .setRegionReplication(2).setCoprocessor(SlowMeCopro.class.getName()).build();
@@ -842,7 +842,7 @@ public class TestSplitTransactionOnCluster {
    */
   @Test
   public void testSplitRegionWithNoStoreFiles() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     // Create table then get the single region for our new table.
     createTableAndWait(tableName, HConstants.CATALOG_FAMILY);
     List<HRegion> regions = cluster.getRegions(tableName);
@@ -927,7 +927,7 @@ public class TestSplitTransactionOnCluster {
 
   @Test
   public void testStoreFileReferenceCreationWhenSplitPolicySaysToSkipRangeCheck() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     try {
       byte[] cf = Bytes.toBytes("f");
       byte[] cf1 = Bytes.toBytes("i_f");

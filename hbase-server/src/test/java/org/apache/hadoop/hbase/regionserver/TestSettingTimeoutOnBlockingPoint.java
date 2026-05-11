@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -51,13 +50,6 @@ public class TestSettingTimeoutOnBlockingPoint {
   private static final byte[] FAM = Bytes.toBytes("f");
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
-
-  private String testName;
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.testName = testInfo.getTestMethod().get().getName();
-  }
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
@@ -91,9 +83,10 @@ public class TestSettingTimeoutOnBlockingPoint {
   }
 
   @Test
-  public void testRowLock() throws IOException {
-    TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(testName)
-      .setCoprocessor(SleepCoprocessor.class.getName()).build();
+  public void testRowLock(TestInfo testInfo) throws IOException {
+    TableDescriptor hdt =
+      TEST_UTIL.createModifyableTableDescriptor(testInfo.getTestMethod().get().getName())
+        .setCoprocessor(SleepCoprocessor.class.getName()).build();
     TEST_UTIL.createTable(hdt, new byte[][] { FAM }, TEST_UTIL.getConfiguration());
     TableName tableName = hdt.getTableName();
     Thread incrementThread = new Thread(() -> {

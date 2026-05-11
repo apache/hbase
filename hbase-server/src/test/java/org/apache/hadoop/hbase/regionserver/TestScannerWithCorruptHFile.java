@@ -43,7 +43,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -56,12 +55,6 @@ public class TestScannerWithCorruptHFile {
 
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private String methodName;
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.methodName = testInfo.getTestMethod().get().getName();
-  }
 
   @BeforeAll
   public static void setup() throws Exception {
@@ -87,8 +80,8 @@ public class TestScannerWithCorruptHFile {
   }
 
   @Test
-  public void testScanOnCorruptHFile() throws IOException {
-    TableName tableName = TableName.valueOf(methodName);
+  public void testScanOnCorruptHFile(TestInfo testInfo) throws IOException {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setCoprocessor(CorruptHFileCoprocessor.class.getName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();

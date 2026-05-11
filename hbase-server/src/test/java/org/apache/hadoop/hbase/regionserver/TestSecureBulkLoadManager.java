@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -219,11 +219,8 @@ public class TestSecureBulkLoadManager {
         throw new MyExceptionToAvoidRetry(); // throw exception to avoid retry
       }
     };
-    try {
-      h.bulkLoad(TABLE, dir);
-      fail("MyExceptionToAvoidRetry is expected");
-    } catch (MyExceptionToAvoidRetry e) { // expected
-    }
+    assertThrows(MyExceptionToAvoidRetry.class, () -> h.bulkLoad(TABLE, dir),
+      "MyExceptionToAvoidRetry is expected");
   }
 
   private void prepareHFile(Path dir, byte[] key, byte[] value) throws Exception {

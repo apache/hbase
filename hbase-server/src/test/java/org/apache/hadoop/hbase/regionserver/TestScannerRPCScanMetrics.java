@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -52,13 +51,6 @@ public class TestScannerRPCScanMetrics {
   private static final byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final byte[] VALUE = Bytes.toBytes("testValue");
 
-  private String name;
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
-  }
-
   @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -72,8 +64,8 @@ public class TestScannerRPCScanMetrics {
   }
 
   @Test
-  public void testScannerRPCScanMetrics() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+  public void testScannerRPCScanMetrics(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[][] splits = new byte[1][];
     splits[0] = Bytes.toBytes("row-4");
     Table ht = TEST_UTIL.createTable(tableName, FAMILY, splits);

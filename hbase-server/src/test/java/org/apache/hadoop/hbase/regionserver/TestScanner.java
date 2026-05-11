@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -72,7 +71,6 @@ public class TestScanner {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private String methodName;
 
   private static final byte[] FIRST_ROW = HConstants.EMPTY_START_ROW;
   private static final byte[][] COLS = { HConstants.CATALOG_FAMILY };
@@ -92,11 +90,6 @@ public class TestScanner {
   /** HRegionInfo for root region */
   public static final RegionInfo REGION_INFO =
     RegionInfoBuilder.newBuilder(TESTTABLEDESC.getTableName()).build();
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.methodName = testInfo.getTestMethod().get().getName();
-  }
 
   private static final byte[] ROW_KEY = REGION_INFO.getRegionName();
 
@@ -490,10 +483,11 @@ public class TestScanner {
    * Make sure scanner returns correct result when we run a major compaction with deletes.
    */
   @Test
-  public void testScanAndConcurrentMajorCompact() throws Exception {
-    TableDescriptor htd = TEST_UTIL.createTableDescriptor(TableName.valueOf(methodName),
-      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+  public void testScanAndConcurrentMajorCompact(TestInfo testInfo) throws Exception {
+    TableDescriptor htd =
+      TEST_UTIL.createTableDescriptor(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Table hri = new RegionAsTable(region);
 
@@ -523,7 +517,7 @@ public class TestScanner {
       s.next(results);
 
       // make sure returns column2 of firstRow
-      assertTrue(results.size() == 1, "result is not correct, keyValues : " + results);
+      assertEquals(1, results.size(), "result is not correct, keyValues : " + results);
       assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
@@ -531,7 +525,7 @@ public class TestScanner {
       s.next(results);
 
       // get secondRow
-      assertTrue(results.size() == 2);
+      assertEquals(2, results.size());
       assertTrue(CellUtil.matchingRows(results.get(0), secondRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
@@ -542,7 +536,7 @@ public class TestScanner {
 
   /**
    * Count table.
-   * @param hri        Region
+   * @param countTable Table
    * @param flushIndex At what row we start the flush.
    * @param concurrent if the flush should be concurrent or sync.
    * @return Count of rows found.

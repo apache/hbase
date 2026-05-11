@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -156,7 +157,7 @@ public class TestStoreScannerClosure {
           if (memStoreLAB != null) {
             // There should be no unpooled chunks
             int refCount = ((MemStoreLABImpl) memStoreLAB).getRefCntValue();
-            assertTrue(refCount == 0, "The memstore should not have unpooled chunks");
+            assertEquals(0, refCount, "The memstore should not have unpooled chunks");
           }
         }
       }
@@ -257,7 +258,7 @@ public class TestStoreScannerClosure {
         // in the other case the fileReader will be null.
         int refCount = file.getReader().getRefCount();
         LOG.info("the store scanner count is " + refCount);
-        assertTrue(refCount == 0, "The store scanner count should be 0");
+        assertEquals(0, refCount, "The store scanner count should be 0");
       }
     }
   }

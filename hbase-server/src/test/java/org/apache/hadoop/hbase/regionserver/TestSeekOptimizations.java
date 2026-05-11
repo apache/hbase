@@ -110,9 +110,8 @@ public class TestSeekOptimizations {
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
-  public static final Stream<Arguments> parameters() {
-    return HBaseTestingUtil.BLOOM_AND_COMPRESSION_COMBINATIONS.stream()
-      .map(args -> Arguments.of(args[0], args[1]));
+  public static Stream<Arguments> parameters() {
+    return HBaseTestingUtil.BLOOM_AND_COMPRESSION_COMBINATIONS.stream().map(Arguments::of);
   }
 
   public TestSeekOptimizations(Compression.Algorithm comprAlgo, BloomType bloomType) {

@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -62,13 +61,6 @@ public class TestScannerRetriableFailure {
 
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
-
-  private TableName testTable;
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.testTable = TableName.valueOf(testInfo.getTestMethod().get().getName());
-  }
 
   public static class FaultyScannerObserver implements RegionCoprocessor, RegionObserver {
     private int faults = 0;
@@ -115,8 +107,8 @@ public class TestScannerRetriableFailure {
   }
 
   @Test
-  public void testFaultyScanner() throws Exception {
-    TableName tableName = testTable;
+  public void testFaultyScanner(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = UTIL.createTable(tableName, FAMILY_NAME);
     try {
       final int NUM_ROWS = 100;
