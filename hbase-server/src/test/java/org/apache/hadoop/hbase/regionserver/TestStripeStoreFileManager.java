@@ -51,6 +51,7 @@ import org.mockito.Mockito;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestStripeStoreFileManager {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Path BASEDIR =
     TEST_UTIL.getDataTestDir(TestStripeStoreFileManager.class.getSimpleName());

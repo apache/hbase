@@ -55,6 +55,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestScannerRetriableFailure {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerRetriableFailure.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();

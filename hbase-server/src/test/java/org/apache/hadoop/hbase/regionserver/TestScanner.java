@@ -69,10 +69,10 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestScanner {
-  private String name;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private String methodName;
 
   private static final byte[] FIRST_ROW = HConstants.EMPTY_START_ROW;
   private static final byte[][] COLS = { HConstants.CATALOG_FAMILY };
@@ -95,7 +95,7 @@ public class TestScanner {
 
   @BeforeEach
   public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
   }
 
   private static final byte[] ROW_KEY = REGION_INFO.getRegionName();
@@ -491,7 +491,7 @@ public class TestScanner {
    */
   @Test
   public void testScanAndConcurrentMajorCompact() throws Exception {
-    TableDescriptor htd = TEST_UTIL.createTableDescriptor(TableName.valueOf(name),
+    TableDescriptor htd = TEST_UTIL.createTableDescriptor(TableName.valueOf(methodName),
       ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
       ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);

@@ -55,7 +55,7 @@ public class TestStoreFileScanner {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String TEST_FAMILY = "cf";
 
-  private String name;
+  private String methodName;
 
   private Configuration conf;
   private Path testDir;
@@ -64,9 +64,9 @@ public class TestStoreFileScanner {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws IOException {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
     conf = TEST_UTIL.getConfiguration();
-    testDir = TEST_UTIL.getDataTestDir(name);
+    testDir = TEST_UTIL.getDataTestDir(methodName);
     fs = testDir.getFileSystem(conf);
     cacheConf = new CacheConfig(conf);
   }
@@ -86,7 +86,7 @@ public class TestStoreFileScanner {
   @Test
   public void testGetFilesRead() throws Exception {
     // Setup: region info, region fs, and HFile context; create store file and write data.
-    final RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).build();
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       new Path(testDir, hri.getTable().getNameAsString()), hri);
     HFileContext hFileContext = new HFileContextBuilder().withBlockSize(8 * 1024).build();

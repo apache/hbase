@@ -53,13 +53,14 @@ import org.junit.jupiter.api.TestInfo;
  */
 @Tag(MediumTests.TAG)
 public class TestScannerWithCorruptHFile {
-  private String name;
+
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private String methodName;
 
   @BeforeEach
   public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
   }
 
   @BeforeAll
@@ -87,7 +88,7 @@ public class TestScannerWithCorruptHFile {
 
   @Test
   public void testScanOnCorruptHFile() throws IOException {
-    TableName tableName = TableName.valueOf(name);
+    TableName tableName = TableName.valueOf(methodName);
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setCoprocessor(CorruptHFileCoprocessor.class.getName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY_NAME)).build();

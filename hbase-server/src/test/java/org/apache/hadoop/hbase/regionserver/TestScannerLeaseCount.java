@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 @Tag(MediumTests.TAG)
 @Tag(ClientTests.TAG)
 public class TestScannerLeaseCount {
+
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("ScannerLeaseCount");
   private static final byte[] FAM = Bytes.toBytes("Fam");

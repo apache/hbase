@@ -52,6 +52,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(LargeTests.TAG)
 public class TestScannerBlockSizeLimits {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE = TableName.valueOf("TestScannerBlockSizeLimits");
   private static final byte[] FAMILY1 = Bytes.toBytes("0");

@@ -46,10 +46,8 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,13 +67,6 @@ public class TestScannerTimeoutHandling {
   private static final int TIMEOUT = 3000;
   private static final TableName TABLE_NAME = TableName.valueOf("foo");
   private static Connection CONN;
-
-  private String name;
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
-  }
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {

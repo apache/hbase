@@ -48,6 +48,7 @@ import org.junit.jupiter.api.Test;
 @org.junit.jupiter.api.Tag(RegionServerTests.TAG)
 @org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestStoreFileScannerWithTagCompression {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
   private static CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());

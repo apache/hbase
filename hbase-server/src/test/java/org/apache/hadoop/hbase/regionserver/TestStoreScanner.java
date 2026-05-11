@@ -86,12 +86,13 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestStoreScanner {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreScanner.class);
-  private String name;
+  private String methodName;
 
   @BeforeEach
   public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
   }
 
   private static final String CF_STR = "cf";
@@ -1112,12 +1113,12 @@ public class TestStoreScanner {
     // Setup: test util, conf, fs, cache, region fs, and HFile context.
     HBaseTestingUtil testUtil = new HBaseTestingUtil();
     Configuration conf = testUtil.getConfiguration();
-    Path testDir = testUtil.getDataTestDir(name + "_directory");
+    Path testDir = testUtil.getDataTestDir(methodName + "_directory");
     FileSystem fs = testDir.getFileSystem(conf);
     CacheConfig cacheConf = new CacheConfig(conf);
     final String TEST_FAMILY = "cf";
 
-    final RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).build();
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       new Path(testDir, hri.getTable().getNameAsString()), hri);
     HFileContext hFileContext = new HFileContextBuilder().withBlockSize(8 * 1024).build();

@@ -55,6 +55,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestSwitchToStreamRead {
+
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static TableName TABLE_NAME = TableName.valueOf("stream");

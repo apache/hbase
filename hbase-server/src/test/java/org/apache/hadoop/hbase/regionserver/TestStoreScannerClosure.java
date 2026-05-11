@@ -55,10 +55,8 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,14 +68,9 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestStoreScannerClosure {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreScannerClosure.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
-  private String name;
-
-  @BeforeEach
-  public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
-  }
 
   private static final String CF_STR = "cf";
   private static HRegion region;

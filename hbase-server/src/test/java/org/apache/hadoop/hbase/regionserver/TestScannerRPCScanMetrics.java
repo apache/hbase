@@ -45,6 +45,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestScannerRPCScanMetrics {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerRPCScanMetrics.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");

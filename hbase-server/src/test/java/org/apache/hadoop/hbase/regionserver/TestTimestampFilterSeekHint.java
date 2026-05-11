@@ -39,6 +39,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestTimestampFilterSeekHint {
+
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final static String RK = "myRK";
   private final static byte[] RK_BYTES = Bytes.toBytes(RK);

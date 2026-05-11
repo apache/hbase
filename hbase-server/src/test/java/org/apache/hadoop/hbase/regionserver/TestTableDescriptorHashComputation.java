@@ -34,6 +34,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestTableDescriptorHashComputation {
+
   @Test
   public void testHashLength() {
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf("testTable"))

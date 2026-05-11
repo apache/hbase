@@ -53,6 +53,7 @@ import org.mockito.Mockito;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestWalAndCompactingMemStoreFlush {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
   public static final TableName TABLENAME =

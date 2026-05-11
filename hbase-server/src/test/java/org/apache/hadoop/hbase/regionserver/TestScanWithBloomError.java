@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 @Tag(SmallTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: bloomType={0}")
 public class TestScanWithBloomError {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestScanWithBloomError.class);
 
   private static final String TABLE_NAME = "ScanWithBloomError";

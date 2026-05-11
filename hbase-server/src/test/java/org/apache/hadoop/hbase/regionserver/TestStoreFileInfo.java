@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestStoreFileInfo {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   /**

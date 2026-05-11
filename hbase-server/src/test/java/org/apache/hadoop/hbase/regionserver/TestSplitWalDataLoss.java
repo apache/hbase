@@ -57,6 +57,7 @@ import org.slf4j.LoggerFactory;
  */
 @Tag(LargeTests.TAG)
 public class TestSplitWalDataLoss {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWalDataLoss.class);
 
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();

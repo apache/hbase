@@ -49,6 +49,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestStripeStoreEngine {
+
   @Test
   public void testCreateBasedOnConfig() throws Exception {
     Configuration conf = HBaseConfiguration.create();

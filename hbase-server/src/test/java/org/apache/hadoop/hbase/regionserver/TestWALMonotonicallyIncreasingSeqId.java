@@ -74,6 +74,7 @@ import org.slf4j.LoggerFactory;
 @Tag(SmallTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: wal={0}")
 public class TestWALMonotonicallyIncreasingSeqId {
+
   private final Logger LOG = LoggerFactory.getLogger(getClass());
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Path testDir = TEST_UTIL.getDataTestDir("TestWALMonotonicallyIncreasingSeqId");
@@ -179,7 +180,7 @@ public class TestWALMonotonicallyIncreasingSeqId {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws IOException {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.name = testInfo.getTestMethod().get().getName() + "_" + walProvider;
     byte[][] families = new byte[][] { Bytes.toBytes("cf") };
     TableDescriptor htd =
       getTableDesc(TableName.valueOf(name.replaceAll("[^0-9A-Za-z_]", "_")), families);

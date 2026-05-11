@@ -50,13 +50,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-@Tag(RegionServerTests.TAG)
-@Tag(MediumTests.TAG)
 /*
  * This test verifies that the scenarios illustrated by HBASE-10850 work w.r.t. essential column
  * family optimization
  */
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSCVFWithMiniCluster {
+
   private static final TableName HBASE_TABLE_NAME = TableName.valueOf("TestSCVFWithMiniCluster");
 
   private static final byte[] FAMILY_A = Bytes.toBytes("a");

@@ -70,6 +70,7 @@ import org.junit.jupiter.params.provider.Arguments;
 @HBaseParameterizedTestTemplate(
     name = "{index}: keepDeletedCells={0}, maxVersions={1}, newVersionBehavior={2}")
 public class TestStoreFileWriter {
+
   private final int ROW_NUM = 100;
   private final Random RANDOM = new Random(11);
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();

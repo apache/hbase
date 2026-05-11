@@ -129,6 +129,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestSplitTransactionOnCluster {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitTransactionOnCluster.class);
   private Admin admin = null;
   private SingleProcessHBaseCluster cluster = null;

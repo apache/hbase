@@ -46,6 +46,7 @@ import org.junit.jupiter.api.TestInfo;
 
 @Tag(MediumTests.TAG)
 public class TestSettingTimeoutOnBlockingPoint {
+
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM = Bytes.toBytes("f");
   private static final byte[] ROW1 = Bytes.toBytes("row1");

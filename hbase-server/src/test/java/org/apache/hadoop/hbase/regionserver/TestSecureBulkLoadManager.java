@@ -71,6 +71,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 @Tag(MediumTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestSecureBulkLoadManager {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureBulkLoadManager.class);
 
   private static TableName TABLE = TableName.valueOf(Bytes.toBytes("TestSecureBulkLoadManager"));

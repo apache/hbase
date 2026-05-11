@@ -60,6 +60,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestSplitLogWorker {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogWorker.class);
   private static final int WAIT_TIME = 15000;
   private final ServerName MANAGER = ServerName.valueOf("manager,1,1");

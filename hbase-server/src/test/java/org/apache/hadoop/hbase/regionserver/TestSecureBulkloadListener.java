@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
@@ -44,7 +43,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Tests for failedBulkLoad logic to make sure staged files are returned to their original location
@@ -53,8 +51,7 @@ import org.junit.jupiter.api.io.TempDir;
 @Tag(MiscTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestSecureBulkloadListener {
-  @TempDir
-  public static File testFolder;
+
   private Configuration conf;
   private MiniDFSCluster cluster;
   private HBaseTestingUtil htu;

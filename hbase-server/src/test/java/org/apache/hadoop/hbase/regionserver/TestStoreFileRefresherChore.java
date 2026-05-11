@@ -61,14 +61,15 @@ import org.junit.jupiter.api.TestInfo;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestStoreFileRefresherChore {
+
   private HBaseTestingUtil TEST_UTIL;
   private Path testDir;
 
-  private String name;
+  private String methodName;
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws IOException {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
     TEST_UTIL = new HBaseTestingUtil();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
@@ -190,7 +191,7 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
     String trackerName = FailingStoreFileTrackerForTest.class.getName();
-    TableDescriptor htd = getTableDesc(TableName.valueOf(name), 2, trackerName, families);
+    TableDescriptor htd = getTableDesc(TableName.valueOf(methodName), 2, trackerName, families);
     HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
@@ -242,7 +243,7 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
-    TableDescriptor htd = getTableDesc(TableName.valueOf(name), 2, null, families);
+    TableDescriptor htd = getTableDesc(TableName.valueOf(methodName), 2, null, families);
     HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
@@ -266,7 +267,7 @@ public class TestStoreFileRefresherChore {
     verifyData(primary, 0, 200, qf, families);
 
     // then the table is set to readonly
-    htd = getTableDesc(TableName.valueOf(name), 2, true, null, families);
+    htd = getTableDesc(TableName.valueOf(methodName), 2, true, null, families);
     primary.setTableDescriptor(htd);
     replica1.setTableDescriptor(htd);
 

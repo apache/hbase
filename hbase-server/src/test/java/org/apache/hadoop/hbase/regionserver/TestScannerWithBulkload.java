@@ -60,13 +60,14 @@ import org.junit.jupiter.api.TestInfo;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestScannerWithBulkload {
+
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  private String name;
+  private String methodName;
 
   @BeforeEach
   public void setTestName(TestInfo testInfo) {
-    this.name = testInfo.getTestMethod().get().getName();
+    this.methodName = testInfo.getTestMethod().get().getName();
   }
 
   @BeforeAll
@@ -84,7 +85,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoad() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     long l = EnvironmentEdgeManager.currentTime();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -216,7 +217,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadWithParallelScan() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     final long l = EnvironmentEdgeManager.currentTime();
     final Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);
@@ -258,7 +259,7 @@ public class TestScannerWithBulkload {
 
   @Test
   public void testBulkLoadNativeHFile() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     long l = EnvironmentEdgeManager.currentTime();
     Admin admin = TEST_UTIL.getAdmin();
     createTable(admin, tableName);

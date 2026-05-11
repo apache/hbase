@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
  */
 @Tag(LargeTests.TAG)
 public class TestScannerHeartbeatMessages {
+
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static AsyncConnection CONN;

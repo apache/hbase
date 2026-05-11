@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 @Tag(LargeTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: WAL={0}")
 public class TestShutdownWhileWALBroken {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestShutdownWhileWALBroken.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();

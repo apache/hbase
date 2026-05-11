@@ -43,6 +43,7 @@ import org.mockito.stubbing.Answer;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestServerNonceManager {
+
   @Test
   public void testMvcc() throws Exception {
     ServerNonceManager nm = createManager();

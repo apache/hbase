@@ -64,6 +64,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: comprAlgo={0}, bloomType={1}")
 public class TestSeekOptimizations {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestSeekOptimizations.class);
 
   // Constants
