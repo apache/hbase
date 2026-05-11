@@ -333,6 +333,55 @@ public class FilterListWithAND extends FilterListBase {
     return maxHint;
   }
 
+  /**
+   * Maximal step: return the farthest hint among sub-filters. Null hints are ignored; if no
+   * sub-filter provides a hint, return null.
+   */
+  @Override
+  public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
+    if (isEmpty()) {
+      return super.getHintForRejectedRow(firstRowCell);
+    }
+    Cell maxHint = null;
+    for (int i = 0, n = filters.size(); i < n; i++) {
+      Filter filter = filters.get(i);
+      if (filter.filterAllRemaining()) {
+        continue;
+      }
+      Cell hint = filter.getHintForRejectedRow(firstRowCell);
+      if (hint == null) {
+        continue;
+      }
+      if (maxHint == null || this.compareCell(maxHint, hint) < 0) {
+        maxHint = hint;
+      }
+    }
+    return maxHint;
+  }
+
+  /** Maximal step: return the farthest skip hint among sub-filters. */
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    if (isEmpty()) {
+      return super.getSkipHint(skippedCell);
+    }
+    Cell maxHint = null;
+    for (int i = 0, n = filters.size(); i < n; i++) {
+      Filter filter = filters.get(i);
+      if (filter.filterAllRemaining()) {
+        continue;
+      }
+      Cell hint = filter.getSkipHint(skippedCell);
+      if (hint == null) {
+        continue;
+      }
+      if (maxHint == null || this.compareCell(maxHint, hint) < 0) {
+        maxHint = hint;
+      }
+    }
+    return maxHint;
+  }
+
   @Override
   public boolean equals(Object obj) {
     if (this == obj) {
