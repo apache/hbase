@@ -75,6 +75,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionServerAbort {
+
   private static final byte[] FAMILY_BYTES = Bytes.toBytes("f");
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbort.class);

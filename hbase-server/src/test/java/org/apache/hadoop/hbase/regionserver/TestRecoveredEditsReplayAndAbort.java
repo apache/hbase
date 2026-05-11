@@ -63,6 +63,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestRecoveredEditsReplayAndAbort {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEditsReplayAndAbort.class);
 
   protected final byte[] row = Bytes.toBytes("rowA");

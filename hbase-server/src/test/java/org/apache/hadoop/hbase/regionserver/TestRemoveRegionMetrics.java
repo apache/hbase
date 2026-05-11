@@ -43,6 +43,7 @@ import org.junit.jupiter.api.TestInfo;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestRemoveRegionMetrics {
+
   private static SingleProcessHBaseCluster cluster;
   private static Configuration conf;
   private static HBaseTestingUtil TEST_UTIL;

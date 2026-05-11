@@ -38,6 +38,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRSChoresScheduled {
+
   private static HRegionServer hRegionServer;
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();

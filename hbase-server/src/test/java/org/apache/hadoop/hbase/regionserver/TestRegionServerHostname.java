@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionServerHostname {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerHostname.class);
 
   private HBaseTestingUtil TEST_UTIL;

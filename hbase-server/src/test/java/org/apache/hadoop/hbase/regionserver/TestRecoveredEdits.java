@@ -66,6 +66,7 @@ import org.slf4j.LoggerFactory;
  */
 @Tag(MediumTests.TAG)
 public class TestRecoveredEdits {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
 

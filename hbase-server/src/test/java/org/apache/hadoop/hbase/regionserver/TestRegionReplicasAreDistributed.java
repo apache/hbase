@@ -47,6 +47,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionReplicasAreDistributed {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicasAreDistributed.class);
 
   private static final int NB_SERVERS = 3;

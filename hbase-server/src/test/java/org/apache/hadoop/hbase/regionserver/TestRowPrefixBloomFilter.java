@@ -59,6 +59,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestRowPrefixBloomFilter {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRowPrefixBloomFilter.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private CacheConfig cacheConf = new CacheConfig(TEST_UTIL.getConfiguration());

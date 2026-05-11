@@ -70,6 +70,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestRegionInterrupt {
+
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionInterrupt.class);
 

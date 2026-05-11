@@ -45,6 +45,7 @@ import org.junit.jupiter.params.provider.Arguments;
 @Tag(MediumTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: disableBeforeModifying={0}")
 public class TestRegionReplicasWithModifyTable {
+
   private static final int NB_SERVERS = 3;
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();

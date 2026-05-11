@@ -73,6 +73,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestReversibleScanners {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
   HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 

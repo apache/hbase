@@ -46,6 +46,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestOpenSeqNumUnexpectedIncrease {
+
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static AtomicInteger FAILED_OPEN = new AtomicInteger(0);

@@ -49,6 +49,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionFavoredNodes {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Table table;
   private static final TableName TABLE_NAME = TableName.valueOf("table");

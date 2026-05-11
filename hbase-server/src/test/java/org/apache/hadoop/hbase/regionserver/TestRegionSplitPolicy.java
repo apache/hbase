@@ -48,6 +48,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestRegionSplitPolicy {
+
   private Configuration conf;
   private HRegion mockRegion;
   private List<HStore> stores;

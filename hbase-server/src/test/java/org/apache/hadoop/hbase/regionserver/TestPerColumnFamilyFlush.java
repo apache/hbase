@@ -67,6 +67,7 @@ import org.apache.hbase.thirdparty.com.google.common.hash.Hashing;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestPerColumnFamilyFlush {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestPerColumnFamilyFlush.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();

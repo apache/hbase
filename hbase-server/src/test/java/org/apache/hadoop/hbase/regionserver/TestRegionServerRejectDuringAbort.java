@@ -62,6 +62,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionServerRejectDuringAbort {
+
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerRejectDuringAbort.class);
 

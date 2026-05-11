@@ -40,6 +40,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRequestsPerSecondMetric {
+
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final long METRICS_PERIOD = 2000L;
   private static Configuration conf;

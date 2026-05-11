@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  */
 @Tag(SmallTests.TAG)
 public class TestRegionServerRegionSpaceUseReport {
+
   @Test
   public void testConversion() {
     TableName tn = TableName.valueOf("table1");

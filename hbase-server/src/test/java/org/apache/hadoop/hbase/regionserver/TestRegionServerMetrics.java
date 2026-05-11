@@ -76,6 +76,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestRegionServerMetrics {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerMetrics.class);
 
   private static MetricsAssertHelper metricsHelper;

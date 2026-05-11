@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
  */
 @Tag(MediumTests.TAG)
 public class TestRegionIncrement {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionIncrement.class);
 
   private String name;

@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestRegionInfo {
+
   private String methodName;
 
   @BeforeEach

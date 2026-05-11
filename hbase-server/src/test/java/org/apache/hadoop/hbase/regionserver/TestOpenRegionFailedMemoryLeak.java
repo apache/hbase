@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestOpenRegionFailedMemoryLeak {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestOpenRegionFailedMemoryLeak.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();

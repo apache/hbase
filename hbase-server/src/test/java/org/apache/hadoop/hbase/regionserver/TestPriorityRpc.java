@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestPriorityRpc {
+
   private static Configuration CONF = HBaseConfiguration.create();
 
   @Test

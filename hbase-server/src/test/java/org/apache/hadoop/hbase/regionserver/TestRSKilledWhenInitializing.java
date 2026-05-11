@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @Tag(MediumTests.TAG)
 @Disabled("See HBASE-19515")
 public class TestRSKilledWhenInitializing {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRSKilledWhenInitializing.class);
 
   // This boolean needs to be globally available. It is used below in our

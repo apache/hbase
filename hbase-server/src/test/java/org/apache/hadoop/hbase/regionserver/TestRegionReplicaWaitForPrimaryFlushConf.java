@@ -49,6 +49,7 @@ import org.junit.jupiter.api.TestInfo;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionReplicaWaitForPrimaryFlushConf {
+
   private static final byte[] FAMILY = Bytes.toBytes("family_test");
 
   private TableName tableName;

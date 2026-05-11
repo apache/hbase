@@ -56,6 +56,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestParallelPut {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestParallelPut.class);
 
   private HRegion region = null;
@@ -79,9 +80,6 @@ public class TestParallelPut {
     HBTU.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREADS100);
   }
 
-  /**
-   * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
-   */
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
     name = testInfo.getTestMethod().get().getName();

@@ -36,7 +36,9 @@ import org.mockito.MockitoAnnotations;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestRegionSplitRestriction {
+
   Configuration conf;
+
   @Mock
   TableDescriptor tableDescriptor;
 

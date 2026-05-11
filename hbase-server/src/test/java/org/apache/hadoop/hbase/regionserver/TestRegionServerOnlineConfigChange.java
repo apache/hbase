@@ -58,6 +58,7 @@ import org.slf4j.LoggerFactory;
 
 @Tag(MediumTests.TAG)
 public class TestRegionServerOnlineConfigChange {
+
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
   private static final long WAIT_TIMEOUT = TimeUnit.MINUTES.toMillis(2);

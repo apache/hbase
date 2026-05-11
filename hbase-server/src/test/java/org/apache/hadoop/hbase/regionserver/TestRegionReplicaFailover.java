@@ -54,6 +54,7 @@ import org.slf4j.LoggerFactory;
  */
 @Tag(LargeTests.TAG)
 public class TestRegionReplicaFailover {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaFailover.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();

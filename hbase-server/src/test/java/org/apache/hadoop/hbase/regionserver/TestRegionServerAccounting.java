@@ -29,6 +29,7 @@ import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 public class TestRegionServerAccounting {
+
   private final static float DEFAULT_MEMSTORE_SIZE = 0.2f;
 
   private static Configuration conf;

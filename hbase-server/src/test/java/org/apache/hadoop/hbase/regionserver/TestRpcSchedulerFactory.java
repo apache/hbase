@@ -37,6 +37,7 @@ import org.junit.jupiter.api.Test;
  */
 @Tag(SmallTests.TAG)
 public class TestRpcSchedulerFactory {
+
   private Configuration conf;
 
   @BeforeEach

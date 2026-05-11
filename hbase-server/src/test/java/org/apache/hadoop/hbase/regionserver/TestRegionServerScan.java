@@ -56,6 +56,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestRegionServerScan {
+
   private static final byte[] CF = Bytes.toBytes("CF");
   private static final byte[] CQ = Bytes.toBytes("CQ");
   private static final byte[] VALUE = new byte[1200];

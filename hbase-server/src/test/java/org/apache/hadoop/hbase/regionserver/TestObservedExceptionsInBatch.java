@@ -31,6 +31,7 @@ import org.junit.jupiter.api.Test;
  */
 @Tag(SmallTests.TAG)
 public class TestObservedExceptionsInBatch {
+
   private ObservedExceptionsInBatch observedExceptions;
 
   @BeforeEach

@@ -70,6 +70,7 @@ import org.slf4j.LoggerFactory;
 @Disabled // Depends on Master being able to host regions. Needs fixing.
 @Tag(MediumTests.TAG)
 public class TestRegionServerReadRequestMetrics {
+
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerReadRequestMetrics.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();

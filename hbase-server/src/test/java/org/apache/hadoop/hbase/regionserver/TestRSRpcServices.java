@@ -39,6 +39,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRSRpcServices {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRSRpcServices.class);
 
   /**

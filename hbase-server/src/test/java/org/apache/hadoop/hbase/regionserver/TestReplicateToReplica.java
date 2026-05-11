@@ -81,6 +81,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestReplicateToReplica {
+
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static byte[] FAMILY = Bytes.toBytes("family");

@@ -61,6 +61,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 
 @Tag(LargeTests.TAG)
 public class TestRegionServerReportForDuty {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerReportForDuty.class);
 
   private static final long SLEEP_INTERVAL = 500;

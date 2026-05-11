@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRSSnapshotVerifier {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRSSnapshotVerifier.class);
   private HBaseTestingUtil TEST_UTIL;
   private final TableName tableName = TableName.valueOf("TestRSSnapshotVerifier");

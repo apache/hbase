@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiReque
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRSQosFunction extends QosTestBase {
+
   private Configuration conf;
   private RSRpcServices rpcServices;
   private RSAnnotationReadingPriorityFunction qosFunction;

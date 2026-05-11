@@ -47,6 +47,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRowTooBig {
+
   private final static HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static Path rootRegionDir;
   private static final TableDescriptor TEST_TD = TableDescriptorBuilder

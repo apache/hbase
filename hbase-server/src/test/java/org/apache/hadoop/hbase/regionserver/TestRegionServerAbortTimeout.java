@@ -51,6 +51,7 @@ import org.slf4j.LoggerFactory;
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRegionServerAbortTimeout {
+
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbortTimeout.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();

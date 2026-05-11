@@ -46,6 +46,7 @@ import org.junit.jupiter.api.TestInfo;
  */
 @Tag(MediumTests.TAG)
 public class TestRegionMove {
+
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   public static Configuration CONF;
   protected static final String F1 = "f1";

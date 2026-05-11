@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 @Tag(RegionServerTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestRegionMergeTransactionOnCluster {
+
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionMergeTransactionOnCluster.class);
 

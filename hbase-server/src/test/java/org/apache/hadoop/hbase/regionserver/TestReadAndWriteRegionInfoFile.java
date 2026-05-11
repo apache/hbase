@@ -41,6 +41,7 @@ import org.junit.jupiter.api.Test;
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestReadAndWriteRegionInfoFile {
+
   private static final HBaseCommonTestingUtil UTIL = new HBaseTestingUtil();
 
   private static final Configuration CONF = UTIL.getConfiguration();
