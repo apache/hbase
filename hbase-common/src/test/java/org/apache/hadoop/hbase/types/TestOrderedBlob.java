@@ -17,26 +17,21 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOrderedBlob {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOrderedBlob.class);
-
   private static final byte[][] VALUES =
     new byte[][] { null, Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"),
       Bytes.toBytes("333"), Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
@@ -57,8 +52,8 @@ public class TestOrderedBlob {
       for (final byte[] val : VALUES) {
         buff.setPosition(0);
         type.encode(buff, val);
-        assertEquals("encodedLength does not match actual, " + Bytes.toStringBinary(val),
-          buff.getPosition(), type.encodedLength(val));
+        assertEquals(buff.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + Bytes.toStringBinary(val));
       }
     }
   }

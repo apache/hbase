@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
@@ -39,7 +39,6 @@ import java.util.List;
 import java.util.Random;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.X509ExtendedTrustManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
@@ -55,12 +54,11 @@ import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.ContentSigner;
 import org.bouncycastle.operator.jcajce.JcaContentSignerBuilder;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.stubbing.Answer;
 
 //
@@ -71,12 +69,9 @@ import org.mockito.stubbing.Answer;
  *      "https://github.com/apache/zookeeper/blob/c74658d398cdc1d207aa296cb6e20de00faec03e/zookeeper-server/src/test/java/org/apache/zookeeper/common/HBaseTrustManagerTest.java">Base
  *      revision</a>
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseTrustManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseTrustManager.class);
 
   private static KeyPair keyPair;
 
@@ -91,7 +86,7 @@ public class TestHBaseTrustManager {
   private SSLEngine mockSSLEngineWithoutPeerhost;
   private SSLEngine mockSSLEngineWithPeerhost;
 
-  @BeforeClass
+  @BeforeAll
   public static void createKeyPair() throws Exception {
     Security.addProvider(new BouncyCastleProvider());
     KeyPairGenerator keyPairGenerator =
@@ -100,12 +95,12 @@ public class TestHBaseTrustManager {
     keyPair = keyPairGenerator.genKeyPair();
   }
 
-  @AfterClass
+  @AfterAll
   public static void removeBouncyCastleProvider() throws Exception {
     Security.removeProvider("BC");
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     mockX509ExtendedTrustManager = mock(X509ExtendedTrustManager.class);
 
@@ -192,7 +187,6 @@ public class TestHBaseTrustManager {
       mockSocketWithHostname);
   }
 
-  @SuppressWarnings("checkstyle:linelength")
   @Test
   public void testServerTrustedWithHostnameVerificationDisabled() throws Exception {
     HBaseTrustManager trustManager =
@@ -370,12 +364,13 @@ public class TestHBaseTrustManager {
     trustManager.checkClientTrusted(certificateChain, null, mockSSLEngineWithPeerhost);
   }
 
-  @Test(expected = CertificateException.class)
+  @Test
   public void testClientTrustedSslEngineWithPeerHostNoReverseLookup() throws Exception {
     HBaseTrustManager trustManager =
       new HBaseTrustManager(mockX509ExtendedTrustManager, true, false);
     X509Certificate[] certificateChain = createSelfSignedCertificateChain(null, HOSTNAME);
-    trustManager.checkClientTrusted(certificateChain, null, mockSSLEngineWithPeerhost);
+    assertThrows(CertificateException.class,
+      () -> trustManager.checkClientTrusted(certificateChain, null, mockSSLEngineWithPeerhost));
   }
 
   @Test
