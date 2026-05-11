@@ -44,7 +44,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   private LinkedBlockingDeque<CallRunner> queue;
 
   // so we can calculate actual threshold to switch to LIFO under load
-  private volatile int currentQueueLimit;
+  private volatile int softLimit;
 
   // metrics (shared across all queues)
   private LongAdder numGeneralCallsDropped;
@@ -79,7 +79,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
     this.lifoThreshold = lifoThreshold;
     this.numGeneralCallsDropped = numGeneralCallsDropped;
     this.numLifoModeSwitches = numLifoModeSwitches;
-    this.currentQueueLimit = currentQueueLimit;
+    this.softLimit = currentQueueLimit;
   }
 
   /**
@@ -94,7 +94,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
     this.codelTargetDelay = newCodelTargetDelay;
     this.codelInterval = newCodelInterval;
     this.lifoThreshold = newLifoThreshold;
-    this.currentQueueLimit = currentQueueLimit;
+    this.softLimit = currentQueueLimit;
   }
 
   /**
@@ -107,7 +107,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
   public CallRunner take() throws InterruptedException {
     CallRunner cr;
     while (true) {
-      if (((double) queue.size() / this.currentQueueLimit) > lifoThreshold) {
+      if (((double) queue.size() / this.softLimit) > lifoThreshold) {
         numLifoModeSwitches.increment();
         cr = queue.takeLast();
       } else {
@@ -127,7 +127,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
     CallRunner cr;
     boolean switched = false;
     while (true) {
-      if (((double) queue.size() / this.currentQueueLimit) > lifoThreshold) {
+      if (((double) queue.size() / this.softLimit) > lifoThreshold) {
         // Only count once per switch.
         if (!switched) {
           switched = true;
