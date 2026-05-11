@@ -1168,6 +1168,46 @@ public class TestFilterHintForRejectedRow {
   }
 
   @Test
+  public void testMultipleColumnPrefixFilterGetSkipHintIntegration() throws IOException {
+    final long insideTs = 2000;
+    final long outsideTs = 500;
+    final int rowCount = 5;
+
+    for (int i = 0; i < rowCount; i++) {
+      byte[] row = Bytes.toBytes(String.format("mcpfx-%02d", i));
+      Put p = new Put(row);
+      p.setDurability(Durability.SKIP_WAL);
+      // Qualifiers: "aaa", "abc", "abd", "bbb", "xyz"
+      p.addColumn(FAMILY, Bytes.toBytes("aaa"), insideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("aaa"), outsideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("abc"), insideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("abc"), outsideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("abd"), insideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("abd"), outsideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("bbb"), insideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("bbb"), outsideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("xyz"), insideTs, VALUE);
+      p.addColumn(FAMILY, Bytes.toBytes("xyz"), outsideTs, VALUE);
+      region.put(p);
+    }
+    region.flush(true);
+
+    // MultipleColumnPrefixFilter with prefixes "ab" and "bb" should match "abc", "abd", "bbb".
+    MultipleColumnPrefixFilter mcpFilter =
+      new MultipleColumnPrefixFilter(new byte[][] { Bytes.toBytes("ab"), Bytes.toBytes("bb") });
+
+    Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(mcpFilter);
+    Scan noHintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(mcpFilter);
+
+    List<Cell> hintResults = scanAll(hintScan);
+    List<Cell> noHintResults = scanAll(noHintScan);
+
+    assertEquals(noHintResults.size(), hintResults.size());
+    // Should get "abc", "abd", "bbb" qualifiers for each row, only insideTs versions.
+    assertEquals(rowCount * 3, hintResults.size());
+  }
+
+  @Test
   public void testFilterListANDGetSkipHintComposition() throws IOException {
     final long insideTs = 2000;
     final long outsideTs = 500;

@@ -442,6 +442,48 @@ public class TestFilterListHintDelegation {
       "Terminated sub-filters (filterAllRemaining=true) must be skipped");
   }
 
+  // ---- All sub-filters terminated ----
+
+  @Test
+  public void testORAllSubFiltersTerminated_getHintForRejectedRow() throws IOException {
+    Cell hint = kv(ROW_B);
+    FilterList fl = new FilterList(Operator.MUST_PASS_ONE,
+      Arrays.asList(terminatedFilter(hint), terminatedFilter(hint)));
+
+    assertNull(fl.getHintForRejectedRow(kv(ROW_A)),
+      "OR with all terminated sub-filters must return null for getHintForRejectedRow");
+  }
+
+  @Test
+  public void testORAllSubFiltersTerminated_getSkipHint() throws IOException {
+    Cell hint = kv(ROW_B);
+    FilterList fl = new FilterList(Operator.MUST_PASS_ONE,
+      Arrays.asList(terminatedFilter(hint), terminatedFilter(hint)));
+
+    assertNull(fl.getSkipHint(kv(ROW_A)),
+      "OR with all terminated sub-filters must return null for getSkipHint");
+  }
+
+  @Test
+  public void testANDAllSubFiltersTerminated_getHintForRejectedRow() throws IOException {
+    Cell hint = kv(ROW_B);
+    FilterList fl = new FilterList(Operator.MUST_PASS_ALL,
+      Arrays.asList(terminatedFilter(hint), terminatedFilter(hint)));
+
+    assertNull(fl.getHintForRejectedRow(kv(ROW_A)),
+      "AND with all terminated sub-filters must return null for getHintForRejectedRow");
+  }
+
+  @Test
+  public void testANDAllSubFiltersTerminated_getSkipHint() throws IOException {
+    Cell hint = kv(ROW_B);
+    FilterList fl = new FilterList(Operator.MUST_PASS_ALL,
+      Arrays.asList(terminatedFilter(hint), terminatedFilter(hint)));
+
+    assertNull(fl.getSkipHint(kv(ROW_A)),
+      "AND with all terminated sub-filters must return null for getSkipHint");
+  }
+
   // ---- Empty FilterList ----
 
   @Test
