@@ -46,6 +46,7 @@ public class ReplicationPeerConfig {
   // Default value is true, means replicate all user tables to peer cluster.
   private boolean replicateAllUserTables = true;
   private Map<TableName, ? extends Collection<String>> excludeTableCFsMap = null;
+  private Map<TableName, TableName> sourceTablesToTargetTables = null;
   private Set<String> excludeNamespaces = null;
   private long bandwidth = 0;
   private final boolean serial;
@@ -64,6 +65,9 @@ public class ReplicationPeerConfig {
     this.replicateAllUserTables = builder.replicateAllUserTables;
     this.excludeTableCFsMap = builder.excludeTableCFsMap != null
       ? unmodifiableTableCFsMap(builder.excludeTableCFsMap)
+      : null;
+    this.sourceTablesToTargetTables = builder.sourceTablesToTargetTables != null
+      ? Collections.unmodifiableMap(builder.sourceTablesToTargetTables)
       : null;
     this.excludeNamespaces = builder.excludeNamespaces != null
       ? Collections.unmodifiableSet(builder.excludeNamespaces)
@@ -117,6 +121,10 @@ public class ReplicationPeerConfig {
     return (Map<TableName, List<String>>) excludeTableCFsMap;
   }
 
+  public Map<TableName, TableName> getSourceTablesToTargetTables() {
+    return sourceTablesToTargetTables;
+  }
+
   public Set<String> getExcludeNamespaces() {
     return this.excludeNamespaces;
   }
@@ -148,6 +156,7 @@ public class ReplicationPeerConfig {
       .setTableCFsMap(peerConfig.getTableCFsMap()).setNamespaces(peerConfig.getNamespaces())
       .setReplicateAllUserTables(peerConfig.replicateAllUserTables())
       .setExcludeTableCFsMap(peerConfig.getExcludeTableCFsMap())
+      .setSourceTablesToTargetTable(peerConfig.getSourceTablesToTargetTables())
       .setExcludeNamespaces(peerConfig.getExcludeNamespaces())
       .setBandwidth(peerConfig.getBandwidth()).setSerial(peerConfig.isSerial())
       .setRemoteWALDir(peerConfig.getRemoteWALDir());
@@ -172,6 +181,7 @@ public class ReplicationPeerConfig {
     private boolean replicateAllUserTables = true;
 
     private Map<TableName, List<String>> excludeTableCFsMap = null;
+    private Map<TableName, TableName> sourceTablesToTargetTables = null;
 
     private Set<String> excludeNamespaces = null;
 
@@ -237,6 +247,13 @@ public class ReplicationPeerConfig {
     }
 
     @Override
+    public ReplicationPeerConfigBuilder
+      setSourceTablesToTargetTable(Map<TableName, TableName> sourceTablesToTargetTable) {
+      this.sourceTablesToTargetTables = sourceTablesToTargetTable;
+      return this;
+    }
+
+    @Override
     public ReplicationPeerConfigBuilder setExcludeNamespaces(Set<String> excludeNamespaces) {
       this.excludeNamespaces = excludeNamespaces;
       return this;
@@ -288,6 +305,11 @@ public class ReplicationPeerConfig {
         builder.append("tableCFs=").append(tableCFsMap.toString()).append(",");
       }
     }
+
+    if (sourceTablesToTargetTables != null) {
+      builder.append("sourceTablesToTargetTables").append(sourceTablesToTargetTables).append(",");
+    }
+
     builder.append("bandwidth=").append(bandwidth).append(",");
     builder.append("serial=").append(serial);
     if (this.remoteWALDir != null) {
