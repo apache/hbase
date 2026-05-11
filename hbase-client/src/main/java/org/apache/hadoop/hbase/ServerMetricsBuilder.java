@@ -245,7 +245,8 @@ public final class ServerMetricsBuilder {
   public ServerMetrics build() {
     return new ServerMetricsImpl(serverName, versionNumber, version, requestCountPerSecond,
       requestCount, usedHeapSize, maxHeapSize, infoServerPort, sources, sink, regionStatus,
-      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics, tasks, regionCachedInfo, cacheFreeSize, regionColdDataInfo);
+      coprocessorNames, reportTimestamp, lastReportTimestamp, userMetrics, tasks, regionCachedInfo,
+      cacheFreeSize, regionColdDataInfo);
   }
 
   private static class ServerMetricsImpl implements ServerMetrics {
