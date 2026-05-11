@@ -90,7 +90,7 @@ public abstract class RpcExecutor {
   public static final String CALL_QUEUE_CODEL_LIFO_THRESHOLD =
     "hbase.ipc.server.callqueue.codel.lifo.threshold";
 
-  public static final int CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY = 100;
+  public static final int CALL_QUEUE_CODEL_DEFAULT_TARGET_DELAY = 5;
   public static final int CALL_QUEUE_CODEL_DEFAULT_INTERVAL = 100;
   public static final double CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD = 0.8;
 
