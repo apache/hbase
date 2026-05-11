@@ -1089,10 +1089,12 @@ possible configurations would overwhelm and obscure the important.
   </property>
   <property>
       <name>hfile.format.version</name>
-      <value>3</value>
+      <value>4</value>
       <description>The HFile format version to use for new files.
       Version 3 adds support for tags in hfiles (See
       https://hbase.apache.org/docs/security/data-access#tags).
+      Version 4 introduces the multi-tenant HFile layout while remaining backward compatible
+      with older readers.
       Also see the configuration 'hbase.replication.rpc.codec'.
       </description>
   </property>

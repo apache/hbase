@@ -28,7 +28,11 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.io.hfile.BlockWithScanInfo;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.FixedFileTrailer;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl;
 import org.apache.hadoop.hbase.io.hfile.HFileScanner;
@@ -370,31 +374,97 @@ public class HalfStoreFileReader extends StoreFileReader {
   public void close(boolean evictOnClose) throws IOException {
     if (closed.compareAndSet(false, true)) {
       if (evictOnClose) {
-        final HFileReaderImpl.HFileScannerImpl s =
-          (HFileReaderImpl.HFileScannerImpl) super.getScanner(false, true, false);
         final String reference = this.reader.getHFileInfo().getHFileContext().getHFileName();
         final String referred = StoreFileInfo.getReferredToRegionAndFile(reference).getSecond();
-        s.seekTo(splitCell);
-        if (s.getCurBlock() != null) {
-          long offset = s.getCurBlock().getOffset();
-          LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
-            this, reference, top, offset);
-          ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
-            int numEvictedReferred = top
-              ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
-              : cache.evictBlocksRangeByHfileName(referred, 0, offset);
-            int numEvictedReference = cache.evictBlocksByHfileName(reference);
+        // For v4 multi-tenant referred files, findSplitBlockOffset() reports a section-relative
+        // offset (the data block index reader is null at the file level for multi-tenant files,
+        // so we fall back to a section scanner whose getCurBlock() offset is local to that
+        // section). Using that as a file-level eviction range mis-targets blocks. Until we have
+        // a section-aware eviction range, fall back to evicting all blocks for the referred file
+        // when this reader is over a multi-tenant container — correctness over surgical eviction.
+        boolean referredIsMultiTenant = isReferredMultiTenant();
+        ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
+          int numEvictedReferred;
+          if (referredIsMultiTenant) {
+            numEvictedReferred = cache.evictBlocksByHfileName(referred);
             LOG.trace(
-              "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
-                + "evicted for reference: {}",
-              reference, referred, top, numEvictedReferred, numEvictedReference);
-          });
-        }
-        s.close();
+              "Multi-tenant referred file {}: doing full-file eviction (range eviction is not"
+                + " section-aware). evictedReferred={}",
+              referred, numEvictedReferred);
+          } else {
+            long splitBlockOffset = -1L;
+            try {
+              splitBlockOffset = findSplitBlockOffset();
+            } catch (IOException e) {
+              LOG.warn("Failed to determine split block offset for reference {} (top? {});"
+                + " falling back to full-file eviction", reference, top, e);
+            }
+            if (splitBlockOffset >= 0) {
+              LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split: {}", this,
+                reference, top, splitBlockOffset);
+              numEvictedReferred = top
+                ? cache.evictBlocksRangeByHfileName(referred, splitBlockOffset, Long.MAX_VALUE)
+                : cache.evictBlocksRangeByHfileName(referred, 0, splitBlockOffset);
+            } else {
+              LOG.debug("Unable to determine split block offset for reference {} (top? {});"
+                + " falling back to full-file eviction", reference, top);
+              numEvictedReferred = cache.evictBlocksByHfileName(referred);
+            }
+          }
+          int numEvictedReference = cache.evictBlocksByHfileName(reference);
+          LOG.trace(
+            "Closing reference: {}; referred file: {}; was top? {}; evicted for referred: {};"
+              + " evicted for reference: {}",
+            reference, referred, top, numEvictedReferred, numEvictedReference);
+        });
         reader.close(false);
       } else {
         reader.close(evictOnClose);
       }
     }
+  }
+
+  /**
+   * Returns true if the underlying referred reader is a v4 multi-tenant container. Used to decide
+   * whether {@link #findSplitBlockOffset()} can produce a meaningful file-level offset for
+   * block-range eviction.
+   */
+  private boolean isReferredMultiTenant() {
+    try {
+      FixedFileTrailer trailer = reader.getTrailer();
+      return trailer != null && trailer.isMultiTenant();
+    } catch (Exception e) {
+      // Defensive: if anything is off (no trailer, wrong type), treat as multi-tenant=false.
+      return false;
+    }
+  }
+
+  private long findSplitBlockOffset() throws IOException {
+    HFileBlockIndex.BlockIndexReader indexReader = reader.getDataBlockIndexReader();
+    if (indexReader != null) {
+      BlockWithScanInfo blockWithScanInfo = indexReader.loadDataBlockWithScanInfo(splitCell, null,
+        false, true, false, reader.getEffectiveEncodingInCache(false), reader);
+      if (blockWithScanInfo != null) {
+        HFileBlock block = blockWithScanInfo.getHFileBlock();
+        if (block != null) {
+          try {
+            return block.getOffset();
+          } finally {
+            block.release();
+          }
+        }
+      }
+    }
+
+    try (HFileScanner scanner = super.getScanner(false, true, false)) {
+      if (scanner instanceof HFileReaderImpl.HFileScannerImpl) {
+        HFileReaderImpl.HFileScannerImpl delegate = (HFileReaderImpl.HFileScannerImpl) scanner;
+        delegate.seekTo(splitCell);
+        if (delegate.getCurBlock() != null) {
+          return delegate.getCurBlock().getOffset();
+        }
+      }
+    }
+    return -1L;
   }
 }

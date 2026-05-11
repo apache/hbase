@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.regionserver.MiniBatchOperationInProgress;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
@@ -125,7 +126,7 @@ public class TestReplicationWithWALExtendedAttributes {
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     Configuration conf2 = HBaseConfiguration.create(conf1);
-    conf2.setInt("hfile.format.version", 3);
+    conf2.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf2.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf2.setBoolean("hbase.tests.use.shortcircuit.reads", false);

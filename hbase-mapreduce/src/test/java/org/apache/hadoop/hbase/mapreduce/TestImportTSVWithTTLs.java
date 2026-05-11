@@ -88,7 +88,7 @@ public class TestImportTSVWithTTLs implements Configurable {
     conf = util.getConfiguration();
     // We don't check persistence in HFiles in this test, but if we ever do we will
     // need this where the default hfile version is not 3 (i.e. 0.98)
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt("hfile.format.version", 4);
     conf.set("hbase.coprocessor.region.classes", TTLCheckingObserver.class.getName());
     util.startMiniCluster();
   }

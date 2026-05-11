@@ -63,7 +63,7 @@ public class TestStoreFileScannerWithTagCompression {
 
   @BeforeClass
   public static void setUp() throws IOException {
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt("hfile.format.version", 4);
     fs = FileSystem.get(conf);
   }
 

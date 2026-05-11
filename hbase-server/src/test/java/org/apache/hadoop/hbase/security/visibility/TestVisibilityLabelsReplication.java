@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 import org.apache.hadoop.hbase.replication.ReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
@@ -121,7 +122,7 @@ public class TestVisibilityLabelsReplication {
   protected void setUpTest() throws Exception {
     // setup configuration
     conf = HBaseConfiguration.create();
-    conf.setInt("hfile.format.version", 3);
+    conf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
     conf.setInt("replication.source.size.capacity", 10240);
     conf.setLong("replication.source.sleepforretries", 100);
@@ -155,7 +156,7 @@ public class TestVisibilityLabelsReplication {
 
     // Base conf2 on conf1 so it gets the right zk cluster.
     conf1 = HBaseConfiguration.create(conf);
-    conf1.setInt("hfile.format.version", 3);
+    conf1.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
     conf1.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 6);
     conf1.setBoolean("hbase.tests.use.shortcircuit.reads", false);

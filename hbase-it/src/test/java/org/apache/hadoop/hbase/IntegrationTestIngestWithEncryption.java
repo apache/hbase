@@ -47,7 +47,7 @@ public class IntegrationTestIngestWithEncryption extends IntegrationTestIngest {
     Configuration conf = util.getConfiguration();
     if (!util.isDistributedCluster()) {
       // Inject required configuration if we are not running in distributed mode
-      conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+      conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
       conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
       conf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
       conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);

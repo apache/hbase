@@ -56,7 +56,7 @@ public class IntegrationTestIngestWithACL extends IntegrationTestIngest {
   public void setUpCluster() throws Exception {
     util = getTestingUtil(null);
     Configuration conf = util.getConfiguration();
-    conf.setInt(HFile.FORMAT_VERSION_KEY, 3);
+    conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
     conf.set("hbase.coprocessor.master.classes", AccessController.class.getName());
     conf.set("hbase.coprocessor.region.classes", AccessController.class.getName());
     conf.setBoolean("hbase.security.access.early_out", false);

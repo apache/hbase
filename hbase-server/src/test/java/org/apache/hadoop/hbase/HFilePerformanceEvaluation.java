@@ -124,7 +124,7 @@ public class HFilePerformanceEvaluation {
     final Configuration aesconf = new Configuration();
     aesconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     aesconf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    aesconf.setInt("hfile.format.version", 3);
+    aesconf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     final FileSystem aesfs = FileSystem.get(aesconf);
     final Path aesmf = aesfs.makeQualified(new Path("performanceevaluation.aes.mapfile"));
 
@@ -140,7 +140,7 @@ public class HFilePerformanceEvaluation {
     final Configuration cryptoconf = new Configuration();
     cryptoconf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     cryptoconf.set(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, "hbase");
-    cryptoconf.setInt("hfile.format.version", 3);
+    cryptoconf.setInt("hfile.format.version", HFile.MAX_FORMAT_VERSION);
     cryptoconf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, CryptoCipherProvider.class.getName());
     final FileSystem cryptofs = FileSystem.get(cryptoconf);
     final Path cryptof = cryptofs.makeQualified(new Path("performanceevaluation.aes.mapfile"));

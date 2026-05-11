@@ -57,6 +57,57 @@ public class BlockCacheUtil {
   public static final long NANOS_PER_SECOND = 1000000000;
 
   /**
+   * Delimiter used to decorate cache keys for multi-tenant HFile sections. The cache stores blocks
+   * under the synthetic name {@code <hfileName>#<tenantSectionId>} so blocks belonging to different
+   * tenant sections of the same physical file do not collide on identical block offsets.
+   * <p>
+   * <b>Invariant:</b> the character {@code '#'} is reserved across the cache key space and MUST NOT
+   * appear in any underlying HFile name. {@link #getBaseHFileName} strips everything from the first
+   * {@code '#'} onward, so any out-of-tree producer that writes HFile names containing {@code '#'}
+   * will silently lose part of the name and confuse the cache. Standard HBase HFile names (32-char
+   * hex) cannot contain this character; if you build files outside the standard factory pipeline,
+   * validate names against this invariant.
+   */
+  public static final char MULTI_TENANT_HFILE_NAME_DELIMITER = '#';
+
+  /**
+   * Return the base HFile name, stripping any multi-tenant section suffix ({@code #...}).
+   */
+  public static String getBaseHFileName(String hfileName) {
+    if (hfileName == null) {
+      return null;
+    }
+    int idx = hfileName.indexOf(MULTI_TENANT_HFILE_NAME_DELIMITER);
+    return idx >= 0 ? hfileName.substring(0, idx) : hfileName;
+  }
+
+  /** Returns true if the given HFile name contains a multi-tenant section suffix ({@code #...}). */
+  public static boolean isMultiTenantSectionHFileName(String hfileName) {
+    return hfileName != null && hfileName.indexOf(MULTI_TENANT_HFILE_NAME_DELIMITER) >= 0;
+  }
+
+  /**
+   * Match an HFile name for operations where callers use the base storefile name while the cache
+   * may contain multi-tenant section-decorated names.
+   * <p>
+   * If {@code requestedHFileName} already includes a section suffix ({@code #...}), this performs
+   * an exact match. Otherwise it matches either the exact base name or any section-decorated name
+   * that starts with {@code <requestedHFileName>#}.
+   */
+  public static boolean matchesHFileName(String cachedHFileName, String requestedHFileName) {
+    if (cachedHFileName == null || requestedHFileName == null) {
+      return false;
+    }
+    if (cachedHFileName.equals(requestedHFileName)) {
+      return true;
+    }
+    if (isMultiTenantSectionHFileName(requestedHFileName)) {
+      return false;
+    }
+    return cachedHFileName.startsWith(requestedHFileName + MULTI_TENANT_HFILE_NAME_DELIMITER);
+  }
+
+  /**
    * Needed generating JSON.
    */
   private static final Gson GSON =
