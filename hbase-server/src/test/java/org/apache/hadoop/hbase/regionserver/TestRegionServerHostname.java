@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -182,7 +183,7 @@ public class TestRegionServerHostname {
         } finally {
           TEST_UTIL.shutdownMiniCluster();
         }
-        assertTrue(false, "Failed to validate against conflict hostname configurations");
+        fail("Failed to validate against conflict hostname configurations");
       }
     }
   }
@@ -203,7 +204,7 @@ public class TestRegionServerHostname {
 
   private boolean ignoreNetworkInterface(NetworkInterface networkInterface) throws Exception {
     return networkInterface == null || networkInterface.isLoopback() || networkInterface.isVirtual()
-      || networkInterface.isPointToPoint() || !networkInterface.isUp();
+      || !networkInterface.isUp();
   }
 
   private List<NetworkInterface> getValidNetworkInterfaces() throws Exception {

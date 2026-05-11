@@ -363,7 +363,7 @@ public class TestPerColumnFamilyFlush {
 
       Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(TABLENAME);
       HRegion desiredRegion = desiredRegionAndServer.getFirst();
-      assertTrue(desiredRegion != null, "Could not find a region which hosts the new region.");
+      assertNotNull(desiredRegion, "Could not find a region which hosts the new region.");
 
       // Flush the region selectively.
       desiredRegion.flush(false);
@@ -457,7 +457,7 @@ public class TestPerColumnFamilyFlush {
       Table table = TEST_UTIL.createTable(tableName, FAMILIES);
       Pair<HRegion, HRegionServer> desiredRegionAndServer = getRegionWithName(tableName);
       final HRegion desiredRegion = desiredRegionAndServer.getFirst();
-      assertTrue(desiredRegion != null, "Could not find a region which hosts the new region.");
+      assertNotNull(desiredRegion, "Could not find a region which hosts the new region.");
       LOG.info("Writing to region=" + desiredRegion);
 
       // Add one row for both CFs.

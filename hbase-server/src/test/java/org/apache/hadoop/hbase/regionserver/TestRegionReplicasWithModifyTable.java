@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -36,30 +37,29 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.junit.jupiter.params.Parameter;
-import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
-import org.junit.jupiter.params.provider.MethodSource;
 
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
-@ParameterizedClass(name = "{index}: disableBeforeModifying={0}")
-@MethodSource("parameters")
+@HBaseParameterizedTestTemplate(name = "{index}: disableBeforeModifying={0}")
 public class TestRegionReplicasWithModifyTable {
   private static final int NB_SERVERS = 3;
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
-  @Parameter
-  private boolean disableBeforeModifying;
+  private final boolean disableBeforeModifying;
 
   private TableName tableName;
 
   public static Stream<Arguments> parameters() {
     return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
+
+  public TestRegionReplicasWithModifyTable(boolean disableBeforeModifying) {
+    this.disableBeforeModifying = disableBeforeModifying;
   }
 
   @BeforeAll
@@ -125,33 +125,33 @@ public class TestRegionReplicasWithModifyTable {
     assertEquals(expected, actual);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicasUsingEnableTable() throws Exception {
     enableReplicationByModification(false, 0, 3, 0);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicasUsingEnableTableForMultipleRegions() throws Exception {
     enableReplicationByModification(false, 0, 3, 10);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreased() throws Exception {
     enableReplicationByModification(true, 2, 3, 0);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicasByEnableTableWhenReplicaCountIsDecreased() throws Exception {
     enableReplicationByModification(true, 3, 2, 0);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicasByEnableTableWhenReplicaCountIsDecreasedWithMultipleRegions()
     throws Exception {
     enableReplicationByModification(true, 3, 2, 20);
   }
 
-  @Test
+  @TestTemplate
   public void testRegionReplicasByEnableTableWhenReplicaCountIsIncreasedWithMultipleRegions()
     throws Exception {
     enableReplicationByModification(true, 2, 3, 15);

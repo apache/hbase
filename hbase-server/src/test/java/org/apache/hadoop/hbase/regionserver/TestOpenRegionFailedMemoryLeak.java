@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.spy;
@@ -102,7 +103,7 @@ public class TestOpenRegionFailedMemoryLeak {
         field.setAccessible(true);
         BlockingQueue<Runnable> workQueue = (BlockingQueue<Runnable>) field.get(executor);
         // there are still two task not cancel, can not cause to memory lack
-        assertTrue(2 == workQueue.size(), "ScheduledExecutor#workQueue should equals 2, now is "
+        assertEquals(2, workQueue.size(), "ScheduledExecutor#workQueue should equals 2, now is "
           + workQueue.size() + " please check region is close");
         found = true;
       }

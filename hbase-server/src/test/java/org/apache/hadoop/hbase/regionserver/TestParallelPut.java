@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
@@ -221,7 +222,7 @@ public class TestParallelPut {
           assertEquals(OperationStatusCode.SUCCESS, ret[0].getOperationStatusCode());
           assertGet(this.region, rowkey, fam1, qual1, value);
         } catch (IOException e) {
-          assertTrue(false, "Thread id " + threadNumber + " operation " + i + " failed.");
+          fail("Thread id " + threadNumber + " operation " + i + " failed.", e);
         }
       }
     }

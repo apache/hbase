@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -239,11 +240,8 @@ public class TestRegionServerNoMaster {
     // That's a close without ZK.
     AdminProtos.CloseRegionRequest crr =
       ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), regionName);
-    try {
-      getRS().getRpcServices().closeRegion(null, crr);
-      assertTrue(false);
-    } catch (org.apache.hbase.thirdparty.com.google.protobuf.ServiceException expected) {
-    }
+    assertThrows(org.apache.hbase.thirdparty.com.google.protobuf.ServiceException.class,
+      () -> getRS().getRpcServices().closeRegion(null, crr));
 
     // The state in RIT should have changed to close
     assertEquals(Boolean.FALSE,
