@@ -19,15 +19,14 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -35,19 +34,15 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBucketWriterThread {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBucketWriterThread.class);
 
   private BucketCache bc;
   private BucketCache.WriterThread wt;
@@ -75,7 +70,7 @@ public class TestBucketWriterThread {
    * Set up variables and get BucketCache and WriterThread into state where tests can manually
    * control the running of WriterThread and BucketCache is empty.
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Arbitrary capacity.
     final int capacity = 16;
@@ -99,7 +94,7 @@ public class TestBucketWriterThread {
     assertTrue(q.isEmpty());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (this.bc != null) this.bc.shutdown();
   }

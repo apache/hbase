@@ -17,21 +17,21 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -40,13 +40,11 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,33 +54,33 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
  * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig}, and
  * {@link LruBlockCache}.
  */
-@Category({ IOTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: cacheOnWrite={0}")
 public class TestLazyDataBlockDecompression {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLazyDataBlockDecompression.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestLazyDataBlockDecompression.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Random RNG = new Random(9713312); // Just a fixed seed.
 
   private FileSystem fs;
 
-  @Parameterized.Parameter(0)
-  public boolean cacheOnWrite;
+  private final boolean cacheOnWrite;
 
-  @Parameterized.Parameters
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { false }, { true } });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
   }
 
-  @Before
+  public TestLazyDataBlockDecompression(boolean cacheOnWrite) {
+    this.cacheOnWrite = cacheOnWrite;
+  }
+
+  @BeforeEach
   public void setUp() throws IOException {
     fs = FileSystem.get(TEST_UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     fs = null;
   }
@@ -134,7 +132,7 @@ public class TestLazyDataBlockDecompression {
     reader.close();
   }
 
-  @Test
+  @TestTemplate
   public void testCompressionIncreasesEffectiveBlockCacheSize() throws Exception {
     // enough room for 2 uncompressed block
     int maxSize = (int) (HConstants.DEFAULT_BLOCKSIZE * 2.1);
@@ -156,11 +154,11 @@ public class TestLazyDataBlockDecompression {
     assertFalse(cc.isCombinedBlockCache());
     LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("disabledBlockCache=" + disabledBlockCache);
-    assertEquals("test inconsistency detected.", maxSize, disabledBlockCache.getMaxSize());
-    assertTrue("eviction thread spawned unintentionally.",
-      disabledBlockCache.getEvictionThread() == null);
-    assertEquals("freshly created blockcache contains blocks.", 0,
-      disabledBlockCache.getBlockCount());
+    assertEquals(maxSize, disabledBlockCache.getMaxSize(), "test inconsistency detected.");
+    assertTrue(disabledBlockCache.getEvictionThread() == null,
+      "eviction thread spawned unintentionally.");
+    assertEquals(0, disabledBlockCache.getBlockCount(),
+      "freshly created blockcache contains blocks.");
 
     // 2000 kv's is ~3.6 full unencoded data blocks.
     // Requires a conf and CacheConfig but should not be specific to this instance's cache settings
@@ -169,13 +167,13 @@ public class TestLazyDataBlockDecompression {
     // populate the cache
     cacheBlocks(lazyCompressDisabled, cc, fs, hfilePath, context);
     long disabledBlockCount = disabledBlockCache.getBlockCount();
-    assertTrue("blockcache should contain blocks. disabledBlockCount=" + disabledBlockCount,
-      disabledBlockCount > 0);
+    assertTrue(disabledBlockCount > 0,
+      "blockcache should contain blocks. disabledBlockCount=" + disabledBlockCount);
     long disabledEvictedCount = disabledBlockCache.getStats().getEvictedCount();
     for (Map.Entry<BlockCacheKey, LruCachedBlock> e : disabledBlockCache.getMapForTests()
       .entrySet()) {
       HFileBlock block = (HFileBlock) e.getValue().getBuffer();
-      assertTrue("found a packed block, block=" + block, block.isUnpacked());
+      assertTrue(block.isUnpacked(), "found a packed block, block=" + block);
     }
 
     // count blocks with lazy decompression
@@ -186,20 +184,20 @@ public class TestLazyDataBlockDecompression {
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
     cc = new CacheConfig(lazyCompressEnabled,
       new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled));
-    assertTrue("test improperly configured.", cc.shouldCacheDataCompressed());
+    assertTrue(cc.shouldCacheDataCompressed(), "test improperly configured.");
     assertTrue(cc.getBlockCache().get() instanceof LruBlockCache);
     LruBlockCache enabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
     LOG.info("enabledBlockCache=" + enabledBlockCache);
-    assertEquals("test inconsistency detected", maxSize, enabledBlockCache.getMaxSize());
-    assertTrue("eviction thread spawned unintentionally.",
-      enabledBlockCache.getEvictionThread() == null);
-    assertEquals("freshly created blockcache contains blocks.", 0,
-      enabledBlockCache.getBlockCount());
+    assertEquals(maxSize, enabledBlockCache.getMaxSize(), "test inconsistency detected");
+    assertTrue(enabledBlockCache.getEvictionThread() == null,
+      "eviction thread spawned unintentionally.");
+    assertEquals(0, enabledBlockCache.getBlockCount(),
+      "freshly created blockcache contains blocks.");
 
     cacheBlocks(lazyCompressEnabled, cc, fs, hfilePath, context);
     long enabledBlockCount = enabledBlockCache.getBlockCount();
-    assertTrue("blockcache should contain blocks. enabledBlockCount=" + enabledBlockCount,
-      enabledBlockCount > 0);
+    assertTrue(enabledBlockCount > 0,
+      "blockcache should contain blocks. enabledBlockCount=" + enabledBlockCount);
     long enabledEvictedCount = enabledBlockCache.getStats().getEvictedCount();
     int candidatesFound = 0;
     for (Map.Entry<BlockCacheKey, LruCachedBlock> e : enabledBlockCache.getMapForTests()
@@ -207,24 +205,24 @@ public class TestLazyDataBlockDecompression {
       candidatesFound++;
       HFileBlock block = (HFileBlock) e.getValue().getBuffer();
       if (cc.shouldCacheCompressed(block.getBlockType().getCategory())) {
-        assertFalse("found an unpacked block, block=" + block + ", block buffer capacity="
-          + block.getBufferWithoutHeader().capacity(), block.isUnpacked());
+        assertFalse(block.isUnpacked(), "found an unpacked block, block=" + block
+          + ", block buffer capacity=" + block.getBufferWithoutHeader().capacity());
       }
     }
-    assertTrue("did not find any candidates for compressed caching. Invalid test.",
-      candidatesFound > 0);
+    assertTrue(candidatesFound > 0,
+      "did not find any candidates for compressed caching. Invalid test.");
 
     LOG.info(
       "disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" + enabledBlockCount);
-    assertTrue(
+    assertTrue(disabledBlockCount < enabledBlockCount,
       "enabling compressed data blocks should increase the effective cache size. "
-        + "disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" + enabledBlockCount,
-      disabledBlockCount < enabledBlockCount);
+        + "disabledBlockCount=" + disabledBlockCount + ", enabledBlockCount=" + enabledBlockCount);
 
     LOG.info("disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount="
       + enabledEvictedCount);
-    assertTrue("enabling compressed data blocks should reduce the number of evictions. "
-      + "disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount="
-      + enabledEvictedCount, enabledEvictedCount < disabledEvictedCount);
+    assertTrue(enabledEvictedCount < disabledEvictedCount,
+      "enabling compressed data blocks should reduce the number of evictions. "
+        + "disabledEvictedCount=" + disabledEvictedCount + ", enabledEvictedCount="
+        + enabledEvictedCount);
   }
 }
