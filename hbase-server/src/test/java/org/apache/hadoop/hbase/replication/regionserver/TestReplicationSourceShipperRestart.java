@@ -286,7 +286,8 @@ public class TestReplicationSourceShipperRestart {
     ReplicationSourceShipper spy = spy(s);
     doReturn(true, true, false).when(spy).isActive();
 
-    spy.run();
+    spy.start();
+    spy.join();
 
     verify(source, atLeastOnce()).restartShipper(eq("group"), eq(spy));
   }
@@ -307,7 +308,8 @@ public class TestReplicationSourceShipperRestart {
     ReplicationSourceShipper spy = spy(s);
     doReturn(true, true, false).when(spy).isActive();
 
-    spy.run();
+    spy.start();
+    spy.join();
 
     verify(source, never()).restartShipper(any(), any());
   }
