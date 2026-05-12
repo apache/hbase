@@ -193,7 +193,7 @@ public class TestStoreFileTableSkewCostFunction {
     private final RegionInfo[] testRegions;
 
     DummyBalancerClusterState(BalancerClusterState bcs) {
-      super(bcs.clusterState, null, null, null, null);
+      super(bcs.clusterState, null, null, null, null, null);
       this.testRegions = bcs.regions;
     }
 

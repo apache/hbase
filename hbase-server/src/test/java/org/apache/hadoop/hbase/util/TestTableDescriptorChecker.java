@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigKey;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
@@ -78,6 +79,40 @@ public class TestTableDescriptorChecker {
         cf.setValue(key, "");
       } else {
         cf.setConfiguration(key, "");
+      }
+      t.removeColumnFamily("cf".getBytes());
+      t.setColumnFamily(cf.build());
+      TableDescriptorChecker.sanityCheck(conf, t.build());
+    }
+  }
+
+  @Test
+  public void testBloomFilterPrefixLengthValidation() throws IOException {
+    Configuration conf = new Configuration();
+    String key = BloomFilterUtil.PREFIX_LENGTH_KEY;
+
+    for (boolean viaSetValue : new boolean[] { true, false }) {
+      ColumnFamilyDescriptorBuilder cf = ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
+        .setBloomFilterType(BloomType.ROWPREFIX_FIXED_LENGTH);
+      TableDescriptorBuilder t = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"));
+
+      // Invalid: prefix length must be > 0 for ROWPREFIX_FIXED_LENGTH
+      if (viaSetValue) {
+        cf.setValue(key, "0");
+      } else {
+        cf.setConfiguration(key, "0");
+      }
+      t.setColumnFamily(cf.build());
+      assertThrows(DoNotRetryIOException.class,
+        () -> TableDescriptorChecker.sanityCheck(conf, t.build()),
+        "Should reject ROWPREFIX_FIXED_LENGTH with prefix length 0 set via "
+          + (viaSetValue ? "setValue" : "setConfiguration"));
+
+      // Fix the error.
+      if (viaSetValue) {
+        cf.setValue(key, "5");
+      } else {
+        cf.setConfiguration(key, "5");
       }
       t.removeColumnFamily("cf".getBytes());
       t.setColumnFamily(cf.build());

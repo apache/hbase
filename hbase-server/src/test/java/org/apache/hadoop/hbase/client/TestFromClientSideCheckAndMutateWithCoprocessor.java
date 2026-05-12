@@ -19,27 +19,25 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
-/**
- * Run tests that use the HBase clients; {@link Table}. Sets up the HBase mini cluster once at start
- * and runs through all client tests. Each creates a table named for the method and does its stuff
- * against that. Parameterized to run with different registry implementations.
- */
 @Tag(LargeTests.TAG)
 @Tag(ClientTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: registryImpl={0}, numHedgedReqs={1}")
-public class TestFromClientSide5 extends FromClientSideTest5 {
+public class TestFromClientSideCheckAndMutateWithCoprocessor
+  extends FromClientSideTestCheckAndMutate {
 
-  public TestFromClientSide5(Class<? extends ConnectionRegistry> registryImpl, int numHedgedReqs) {
+  public TestFromClientSideCheckAndMutateWithCoprocessor(
+    Class<? extends ConnectionRegistry> registryImpl, int numHedgedReqs) {
     super(registryImpl, numHedgedReqs);
   }
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    initialize(MultiRowMutationEndpoint.class);
+    initialize(NoOpScanPolicyObserver.class, MultiRowMutationEndpoint.class);
   }
 }
