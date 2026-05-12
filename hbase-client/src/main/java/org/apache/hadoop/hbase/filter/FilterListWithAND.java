@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.filter;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
@@ -34,6 +35,7 @@ public class FilterListWithAND extends FilterListBase {
 
   private List<Filter> seekHintFilters = new ArrayList<>();
   private boolean[] hintingFilters;
+  private boolean[] rejectedByFilterRowKey;
 
   public FilterListWithAND(List<Filter> filters) {
     super(filters);
@@ -41,6 +43,7 @@ public class FilterListWithAND extends FilterListBase {
     // sub-filters (because all sub-filters return INCLUDE*). So here, fill this array with true. we
     // keep this in FilterListWithAND for abstracting the transformCell() in FilterListBase.
     subFiltersIncludedCell = new ArrayList<>(Collections.nCopies(filters.size(), true));
+    rejectedByFilterRowKey = new boolean[filters.size()];
     cacheHintingFilters();
   }
 
@@ -51,6 +54,7 @@ public class FilterListWithAND extends FilterListBase {
     }
     this.filters.addAll(filters);
     this.subFiltersIncludedCell.addAll(Collections.nCopies(filters.size(), true));
+    this.rejectedByFilterRowKey = new boolean[this.filters.size()];
     this.cacheHintingFilters();
   }
 
@@ -237,6 +241,7 @@ public class FilterListWithAND extends FilterListBase {
       filters.get(i).reset();
     }
     seekHintFilters.clear();
+    Arrays.fill(rejectedByFilterRowKey, false);
   }
 
   @Override
@@ -273,6 +278,7 @@ public class FilterListWithAND extends FilterListBase {
         // will catch the row changed event by filterRowKey(). If we return early here, those
         // filters will have no chance to update their row state.
         anyRowKeyFiltered = true;
+        rejectedByFilterRowKey[i] = true;
       } else if (hintingFilters[i]) {
         // If filterRowKey returns false and this is a hinting filter, then we must not filter this
         // rowkey.
@@ -334,8 +340,10 @@ public class FilterListWithAND extends FilterListBase {
   }
 
   /**
-   * Maximal step: return the farthest hint among sub-filters. Null hints are ignored; if no
-   * sub-filter provides a hint, return null.
+   * Maximal step: return the farthest hint among sub-filters that actually rejected the row. Only
+   * sub-filters whose {@link Filter#filterRowKey(Cell)} returned {@code true} are consulted,
+   * honouring the per-filter contract. Null hints are ignored; if no rejecting sub-filter provides
+   * a hint, return null.
    */
   @Override
   public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
@@ -344,6 +352,9 @@ public class FilterListWithAND extends FilterListBase {
     }
     Cell maxHint = null;
     for (int i = 0, n = filters.size(); i < n; i++) {
+      if (!rejectedByFilterRowKey[i]) {
+        continue;
+      }
       Filter filter = filters.get(i);
       if (filter.filterAllRemaining()) {
         continue;
