@@ -331,8 +331,9 @@ public class TestCacheAwareLoadBalancerCostFunctions extends BalancerTestBase {
       cluster));
   }
 
-  private static CacheAwareLoadBalancer newCacheAwareBalancer(Configuration cfg) {
+  private CacheAwareLoadBalancer newCacheAwareBalancer(Configuration cfg) {
     CacheAwareLoadBalancer lb = new CacheAwareLoadBalancer();
+    lb.setMasterServices(services);
     lb.loadConf(cfg);
     return lb;
   }
