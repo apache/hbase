@@ -24,11 +24,12 @@ import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MAX_BUFFER_COUNT_KEY;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MIN_ALLOCATE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BLOCKCACHE_POLICY_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataInput;
 import java.io.DataOutput;
@@ -57,7 +58,6 @@ import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -85,13 +85,9 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.Writable;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,14 +97,9 @@ import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 /**
  * test hfile features.
  */
-@Category({ IOTests.class, SmallTests.class })
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestHFile {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestHFile.class);
-
-  @Rule
-  public TestName testName = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFile.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
@@ -120,7 +111,7 @@ public class TestHFile {
   private static Configuration conf;
   private static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     cacheConf = new CacheConfig(conf);
@@ -155,10 +146,10 @@ public class TestHFile {
     List<ByteBuff> buffs = new ArrayList<>();
     for (int i = 0; i < bufCount; i++) {
       buffs.add(alloc.allocateOneBuffer());
-      Assert.assertEquals(alloc.getFreeBufferCount(), 0);
+      assertEquals(alloc.getFreeBufferCount(), 0);
     }
     buffs.forEach(ByteBuff::release);
-    Assert.assertEquals(alloc.getFreeBufferCount(), bufCount);
+    assertEquals(alloc.getFreeBufferCount(), bufCount);
   }
 
   @Test
@@ -170,7 +161,7 @@ public class TestHFile {
     // start write to store file.
     Path path = writeStoreFile();
     readStoreFile(path, conf, alloc);
-    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
 
@@ -194,15 +185,15 @@ public class TestHFile {
       offset += block.getOnDiskSizeWithHeader();
       // Ensure the block is an heap one.
       Cacheable cachedBlock = lru.getBlock(key, false, false, true);
-      Assert.assertNotNull(cachedBlock);
-      Assert.assertTrue(cachedBlock instanceof HFileBlock);
-      Assert.assertFalse(((HFileBlock) cachedBlock).isSharedMem());
+      assertNotNull(cachedBlock);
+      assertTrue(cachedBlock instanceof HFileBlock);
+      assertFalse(((HFileBlock) cachedBlock).isSharedMem());
       // Should never allocate off-heap block from allocator because ensure that it's LRU.
-      Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+      assertEquals(bufCount, alloc.getFreeBufferCount());
       block.release(); // return back the ByteBuffer back to allocator.
     }
     reader.close();
-    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
     lru.shutdown();
   }
@@ -272,7 +263,7 @@ public class TestHFile {
 
     // Initialize the block cache and HFile reader
     BlockCache lru = BlockCacheFactory.createBlockCache(conf);
-    Assert.assertTrue(lru instanceof LruBlockCache);
+    assertTrue(lru instanceof LruBlockCache);
     CacheConfig cacheConfig = new CacheConfig(conf, null, lru, ByteBuffAllocator.HEAP);
     HFileReaderImpl reader =
       (HFileReaderImpl) HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
@@ -281,34 +272,34 @@ public class TestHFile {
     final int offset = 0;
     BlockCacheKey cacheKey = new BlockCacheKey(storeFilePath.getName(), offset);
     HFileBlock block = (HFileBlock) lru.getBlock(cacheKey, false, false, true);
-    Assert.assertNull(block);
+    assertNull(block);
 
     // Assert that first block has not been cached in the block cache and no disk I/O happened to
     // check that.
     ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset();
     ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset();
     block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, null);
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
 
     // Read the first block from the HFile.
     block = reader.readBlock(offset, -1, true, true, false, true, BlockType.DATA, null);
-    Assert.assertNotNull(block);
+    assertNotNull(block);
     int bytesReadFromFs = block.getOnDiskSizeWithHeader();
     if (block.getNextBlockOnDiskSize() > 0) {
       bytesReadFromFs += block.headerSize();
     }
     block.release();
     // Assert that disk I/O happened to read the first block.
-    Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromFs : 0,
+    assertEquals(isScanMetricsEnabled ? bytesReadFromFs : 0,
       ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
 
     // Read the first block again and assert that it has been cached in the block cache.
     block = reader.getCachedBlock(cacheKey, false, false, true, BlockType.DATA, encoding);
     long bytesReadFromCache = 0;
     if (encoding == DataBlockEncoding.NONE) {
-      Assert.assertNotNull(block);
+      assertNotNull(block);
       bytesReadFromCache = block.getOnDiskSizeWithHeader();
       if (block.getNextBlockOnDiskSize() > 0) {
         bytesReadFromCache += block.headerSize();
@@ -316,13 +307,13 @@ public class TestHFile {
       block.release();
       // Assert that bytes read from block cache account for same number of bytes that would have
       // been read from FS if block cache wasn't there.
-      Assert.assertEquals(bytesReadFromFs, bytesReadFromCache);
+      assertEquals(bytesReadFromFs, bytesReadFromCache);
     } else {
-      Assert.assertNull(block);
+      assertNull(block);
     }
-    Assert.assertEquals(isScanMetricsEnabled ? bytesReadFromCache : 0,
+    assertEquals(isScanMetricsEnabled ? bytesReadFromCache : 0,
       ThreadLocalServerSideScanMetrics.getBytesReadFromBlockCacheAndReset());
-    Assert.assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
+    assertEquals(0, ThreadLocalServerSideScanMetrics.getBytesReadFromFsAndReset());
 
     reader.close();
   }
@@ -351,8 +342,8 @@ public class TestHFile {
     that.set(BUCKET_CACHE_IOENGINE_KEY, "offheap");
     that.set(BLOCKCACHE_POLICY_KEY, l1CachePolicy);
     BlockCache bc = BlockCacheFactory.createBlockCache(that);
-    Assert.assertNotNull(bc);
-    Assert.assertTrue(bc instanceof CombinedBlockCache);
+    assertNotNull(bc);
+    assertTrue(bc instanceof CombinedBlockCache);
     return bc;
   }
 
@@ -378,15 +369,15 @@ public class TestHFile {
       // Read the cached block.
       Cacheable cachedBlock = combined.getBlock(key, false, false, true);
       try {
-        Assert.assertNotNull(cachedBlock);
-        Assert.assertTrue(cachedBlock instanceof HFileBlock);
+        assertNotNull(cachedBlock);
+        assertTrue(cachedBlock instanceof HFileBlock);
         HFileBlock hfb = (HFileBlock) cachedBlock;
         // Data block will be cached in BucketCache, so it should be an off-heap block.
         if (hfb.getBlockType().isData()) {
-          Assert.assertTrue(hfb.isSharedMem());
+          assertTrue(hfb.isSharedMem());
         } else {
           // Non-data block will be cached in LRUBlockCache, so it must be an on-heap block.
-          Assert.assertFalse(hfb.isSharedMem());
+          assertFalse(hfb.isSharedMem());
         }
       } finally {
         cachedBlock.release();
@@ -395,7 +386,7 @@ public class TestHFile {
     }
     reader.close();
     combined.shutdown();
-    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
 
@@ -451,7 +442,7 @@ public class TestHFile {
     }
 
     reader.close();
-    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
     lru.shutdown();
   }
@@ -511,7 +502,7 @@ public class TestHFile {
 
     reader.close();
     combined.shutdown();
-    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
 
@@ -528,13 +519,13 @@ public class TestHFile {
       throw e;
     }
 
-    Assert.assertEquals(expectSharedMem, block.isSharedMem());
+    assertEquals(expectSharedMem, block.isSharedMem());
 
     if (expectSharedMem) {
-      Assert.assertTrue(alloc.getFreeBufferCount() < alloc.getTotalBufferCount());
+      assertTrue(alloc.getFreeBufferCount() < alloc.getTotalBufferCount());
     } else {
       // Should never allocate off-heap block from allocator because ensure that it's LRU.
-      Assert.assertEquals(alloc.getTotalBufferCount(), alloc.getFreeBufferCount());
+      assertEquals(alloc.getTotalBufferCount(), alloc.getFreeBufferCount());
     }
 
     try {
@@ -596,8 +587,8 @@ public class TestHFile {
    * Test empty HFile. Test all features work reasonably when hfile is empty of entries.
    */
   @Test
-  public void testEmptyHFile() throws IOException {
-    Path f = new Path(ROOT_DIR, testName.getMethodName());
+  public void testEmptyHFile(TestInfo testInfo) throws IOException {
+    Path f = new Path(ROOT_DIR, testInfo.getTestMethod().get().getName());
     HFileContext context = new HFileContextBuilder().withIncludesTags(false).build();
     Writer w =
       HFile.getWriterFactory(conf, cacheConf).withPath(fs, f).withFileContext(context).create();
@@ -611,8 +602,8 @@ public class TestHFile {
    * Create 0-length hfile and show that it fails
    */
   @Test
-  public void testCorrupt0LengthHFile() throws IOException {
-    Path f = new Path(ROOT_DIR, testName.getMethodName());
+  public void testCorrupt0LengthHFile(TestInfo testInfo) throws IOException {
+    Path f = new Path(ROOT_DIR, testInfo.getTestMethod().get().getName());
     FSDataOutputStream fsos = fs.create(f);
     fsos.close();
 
@@ -626,13 +617,13 @@ public class TestHFile {
   }
 
   @Test
-  public void testCorruptOutOfOrderHFileWrite() throws IOException {
-    Path path = new Path(ROOT_DIR, testName.getMethodName());
+  public void testCorruptOutOfOrderHFileWrite(TestInfo testInfo) throws IOException {
+    Path path = new Path(ROOT_DIR, testInfo.getTestMethod().get().getName());
     FSDataOutputStream mockedOutputStream = Mockito.mock(FSDataOutputStream.class);
     String columnFamily = "MyColumnFamily";
     String tableName = "MyTableName";
     HFileContext fileContext =
-      new HFileContextBuilder().withHFileName(testName.getMethodName() + "HFile")
+      new HFileContextBuilder().withHFileName(testInfo.getTestMethod().get().getName() + "HFile")
         .withBlockSize(minBlockSize).withColumnFamily(Bytes.toBytes(columnFamily))
         .withTableName(Bytes.toBytes(tableName)).withHBaseCheckSum(false)
         .withCompression(Compression.Algorithm.NONE).withCompressTags(false).build();
@@ -656,12 +647,12 @@ public class TestHFile {
       writer.append(secondCell);
     } catch (IOException ie) {
       String message = ie.getMessage();
-      Assert.assertTrue(message.contains("not lexically larger"));
-      Assert.assertTrue(message.contains(tableName));
-      Assert.assertTrue(message.contains(columnFamily));
+      assertTrue(message.contains("not lexically larger"));
+      assertTrue(message.contains(tableName));
+      assertTrue(message.contains(columnFamily));
       return;
     }
-    Assert.fail("Exception wasn't thrown even though Cells were appended in the wrong order!");
+    fail("Exception wasn't thrown even though Cells were appended in the wrong order!");
   }
 
   public static void truncateFile(FileSystem fs, Path src, Path dst) throws IOException {
@@ -683,8 +674,8 @@ public class TestHFile {
    * Create a truncated hfile and verify that exception thrown.
    */
   @Test
-  public void testCorruptTruncatedHFile() throws IOException {
-    Path f = new Path(ROOT_DIR, testName.getMethodName());
+  public void testCorruptTruncatedHFile(TestInfo testInfo) throws IOException {
+    Path f = new Path(ROOT_DIR, testInfo.getTestMethod().get().getName());
     HFileContext context = new HFileContextBuilder().build();
     Writer w = HFile.getWriterFactory(conf, cacheConf).withPath(this.fs, f).withFileContext(context)
       .create();
@@ -744,11 +735,11 @@ public class TestHFile {
         Bytes.toBytes("qual"), Bytes.toBytes(valStr));
       byte[] keyBytes =
         new KeyValue.KeyOnlyKeyValue(Bytes.toBytes(key), 0, Bytes.toBytes(key).length).getKey();
-      assertTrue("bytes for keys do not match " + keyStr + " " + Bytes.toString(Bytes.toBytes(key)),
-        Arrays.equals(kv.getKey(), keyBytes));
+      assertTrue(Arrays.equals(kv.getKey(), keyBytes),
+        "bytes for keys do not match " + keyStr + " " + Bytes.toString(Bytes.toBytes(key)));
       byte[] valBytes = Bytes.toBytes(val);
-      assertTrue("bytes for vals do not match " + valStr + " " + Bytes.toString(valBytes),
-        Arrays.equals(Bytes.toBytes(valStr), valBytes));
+      assertTrue(Arrays.equals(Bytes.toBytes(valStr), valBytes),
+        "bytes for vals do not match " + valStr + " " + Bytes.toString(valBytes));
       if (!scanner.next()) {
         break;
       }
@@ -793,7 +784,7 @@ public class TestHFile {
     FSDataInputStream fin = fs.open(ncHFile);
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, ncHFile).build();
     Reader reader = createReaderFromStream(context, cacheConf, conf);
-    System.out.println(cacheConf.toString());
+    LOG.info(cacheConf.toString());
     // Load up the index.
     // Get a scanner that caches and that does not use pread.
     HFileScanner scanner = reader.getScanner(conf, true, false);
@@ -801,12 +792,12 @@ public class TestHFile {
     scanner.seekTo();
     readAllRecords(scanner);
     int seekTo = scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50)));
-    System.out.println(seekTo);
-    assertTrue("location lookup failed",
-      scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50))) == 0);
+    LOG.info("" + seekTo);
+    assertTrue(scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(50))) == 0,
+      "location lookup failed");
     // read the key and see if it matches
     ByteBuffer readKey = ByteBuffer.wrap(((KeyValue) scanner.getKey()).getKey());
-    assertTrue("seeked key does not match", Arrays.equals(getSomeKey(50), Bytes.toBytes(readKey)));
+    assertTrue(Arrays.equals(getSomeKey(50), Bytes.toBytes(readKey)), "seeked key does not match");
 
     scanner.seekTo(KeyValueUtil.createKeyValueFromKey(getSomeKey(0)));
     ByteBuffer val1 = scanner.getValue();
@@ -859,9 +850,9 @@ public class TestHFile {
   private void readNumMetablocks(Reader reader, int n) throws IOException {
     for (int i = 0; i < n; i++) {
       ByteBuff actual = reader.getMetaBlock("HFileMeta" + i, false).getBufferWithoutHeader();
-      ByteBuffer expected = ByteBuffer.wrap(("something to test" + i).getBytes());
-      assertEquals("failed to match metadata", Bytes.toStringBinary(expected), Bytes.toStringBinary(
-        actual.array(), actual.arrayOffset() + actual.position(), actual.capacity()));
+      ByteBuffer expected = ByteBuffer.wrap(Bytes.toBytes("something to test" + i));
+      assertEquals(Bytes.toStringBinary(expected), Bytes.toStringBinary(actual.array(),
+        actual.arrayOffset() + actual.position(), actual.capacity()), "failed to match metadata");
     }
   }
 
@@ -1113,13 +1104,13 @@ public class TestHFile {
   }
 
   @Test
-  public void testDBEShipped() throws IOException {
+  public void testDBEShipped(TestInfo testInfo) throws IOException {
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       DataBlockEncoder encoder = encoding.getEncoder();
       if (encoder == null) {
         continue;
       }
-      Path f = new Path(ROOT_DIR, testName.getMethodName() + "_" + encoding);
+      Path f = new Path(ROOT_DIR, testInfo.getTestMethod().get().getName() + "_" + encoding);
       HFileContext context =
         new HFileContextBuilder().withIncludesTags(false).withDataBlockEncoding(encoding).build();
       HFileWriterImpl writer = (HFileWriterImpl) HFile.getWriterFactory(conf, cacheConf)
@@ -1192,14 +1183,14 @@ public class TestHFile {
       // Read the cached block.
       cachedBlock = combined.getBlock(key, false, false, true);
       try {
-        Assert.assertNotNull(cachedBlock);
-        Assert.assertTrue(cachedBlock instanceof HFileBlock);
+        assertNotNull(cachedBlock);
+        assertTrue(cachedBlock instanceof HFileBlock);
         HFileBlock hfb = (HFileBlock) cachedBlock;
         // Data block will be cached in BucketCache, so it should be an off-heap block.
         if (hfb.getBlockType().isData()) {
-          Assert.assertTrue(hfb.isSharedMem());
+          assertTrue(hfb.isSharedMem());
         } else if (!l1CachePolicy.equals("TinyLfu")) {
-          Assert.assertFalse(hfb.isSharedMem());
+          assertFalse(hfb.isSharedMem());
         }
       } finally {
         cachedBlock.release();
@@ -1209,9 +1200,9 @@ public class TestHFile {
     reader.close();
     combined.shutdown();
     if (cachedBlock != null) {
-      Assert.assertEquals(0, cachedBlock.refCnt());
+      assertEquals(0, cachedBlock.refCnt());
     }
-    Assert.assertEquals(bufCount, alloc.getFreeBufferCount());
+    assertEquals(bufCount, alloc.getFreeBufferCount());
     alloc.clean();
   }
 
