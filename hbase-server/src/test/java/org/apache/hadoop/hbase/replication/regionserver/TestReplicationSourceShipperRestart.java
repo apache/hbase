@@ -17,8 +17,20 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.mockito.ArgumentMatchers.*;
-import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
+import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.inOrder;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -60,13 +72,8 @@ public class TestReplicationSourceShipperRestart {
 
     when(endpoint.replicate(any())).thenReturn(true);
 
-    // 🔥 IMPORTANT: isolate heavy HBase logic
     doNothing().when(source).logPositionAndCleanOldLogs(any());
   }
-
-  // ------------------------------------------------------------------------
-  // Helpers
-  // ------------------------------------------------------------------------
 
   private WALEntryBatch emptyBatch() {
     WALEntryBatch b = mock(WALEntryBatch.class);
