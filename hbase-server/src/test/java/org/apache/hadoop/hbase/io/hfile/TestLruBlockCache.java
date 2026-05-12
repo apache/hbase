@@ -18,10 +18,11 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.Random;
@@ -32,7 +33,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
@@ -43,10 +43,8 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,12 +54,9 @@ import org.slf4j.LoggerFactory;
  * Tests will ensure it grows and shrinks in size properly, evictions run when they're supposed to
  * and do what they should, and that cached blocks are accessible when expected to be.
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestLruBlockCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLruBlockCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestLruBlockCache.class);
 
@@ -73,7 +68,7 @@ public class TestLruBlockCache {
     int numBlocks = 9;
     int testRuns = 10;
     final long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
-    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
+    assertTrue(blockSize * numBlocks <= maxSize, "calculateBlockSize appears broken.");
 
     final LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
@@ -124,7 +119,7 @@ public class TestLruBlockCache {
     long maxSize = 100000;
     int numBlocks = 9;
     long blockSize = calculateBlockSizeDefault(maxSize, numBlocks);
-    assertTrue("calculateBlockSize appears broken.", blockSize * numBlocks <= maxSize);
+    assertTrue(blockSize * numBlocks <= maxSize, "calculateBlockSize appears broken.");
 
     LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
     EvictionThread evictionThread = cache.getEvictionThread();
@@ -165,7 +160,7 @@ public class TestLruBlockCache {
     for (long prevCnt = 0 /* < number of blocks added */, curCnt = cache.getBlockCount(); prevCnt
         != curCnt; prevCnt = curCnt, curCnt = cache.getBlockCount()) {
       Thread.sleep(200);
-      assertTrue("Cache never stabilized.", n++ < 100);
+      assertTrue(n++ < 100, "Cache never stabilized.");
     }
 
     long evictionCount = cache.getStats().getEvictionCount();
@@ -210,8 +205,8 @@ public class TestLruBlockCache {
     for (CachedItem block : blocks) {
       cache.cacheBlock(block.cacheKey, block);
     }
-    assertEquals("Cache should ignore cache requests for blocks already in cache",
-      expectedBlockCount, cache.getBlockCount());
+    assertEquals(expectedBlockCount, cache.getBlockCount(),
+      "Cache should ignore cache requests for blocks already in cache");
 
     // Verify correctly calculated cache heap size
     assertEquals(expectedCacheSize, cache.heapSize());
@@ -980,9 +975,9 @@ public class TestLruBlockCache {
     t1.join();
     t2.join();
     t3.join();
-    Assert.assertFalse(err1.get());
-    Assert.assertFalse(err2.get());
-    Assert.assertFalse(err3.get());
+    assertFalse(err1.get());
+    assertFalse(err2.get());
+    assertFalse(err3.get());
   }
 
   @Test
