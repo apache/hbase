@@ -280,16 +280,20 @@ public class TestReplicationSourceShipperRestart {
 
     doThrow(new IOException()).when(endpoint).beforePersistingReplicationOffset();
 
-    ReplicationSourceShipper s =
-      new ReplicationSourceShipper(new Configuration(), "group", source, reader);
+    ReplicationSourceShipper shipper =
+      new ReplicationSourceShipper(new Configuration(), "group", source, reader) {
+        int loops = 0;
 
-    ReplicationSourceShipper spy = spy(s);
-    doReturn(true, true, false).when(spy).isActive();
+        @Override
+        protected boolean isActive() {
+          return loops++ < 2;
+        }
+      };
 
-    spy.start();
-    spy.join();
+    shipper.start();
+    shipper.join();
 
-    verify(source, atLeastOnce()).restartShipper(eq("group"), eq(spy));
+    verify(source, atLeastOnce()).restartShipper(eq("group"), eq(shipper));
   }
 
   // ------------------------------------------------------------------------
