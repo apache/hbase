@@ -1247,4 +1247,69 @@ public class TestFilterHintForRejectedRow {
     // Should get "b" and "c" for each row, only insideTs.
     assertEquals(rowCount * 2, results.size());
   }
+
+  @Test
+  public void testFilterListANDDivergentHints() throws IOException {
+    final String prefix = "row";
+    final int totalRows = 10;
+    writeRows(prefix, totalRows);
+
+    // Filter A rejects rows 0-4, hints to row-03 (a conservative hint).
+    // Filter B rejects rows 0-6, hints to row-07 (a more aggressive hint).
+    // Both reject rows 0-4 (overlap). AND merges => takes max => row-07.
+    // Rows 0-6 are rejected by the composite (at least one rejects each).
+    // Scan should return rows 07-09.
+    final byte[] rejectThresholdA = Bytes.toBytes(String.format("%s-%02d", prefix, 5));
+    final byte[] hintTargetA = Bytes.toBytes(String.format("%s-%02d", prefix, 3));
+    final byte[] rejectThresholdB = Bytes.toBytes(String.format("%s-%02d", prefix, 7));
+    final byte[] hintTargetB = Bytes.toBytes(String.format("%s-%02d", prefix, 7));
+
+    FilterBase filterA = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          rejectThresholdA, 0, rejectThresholdA.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        return PrivateCellUtil.createFirstOnRow(hintTargetA);
+      }
+    };
+
+    FilterBase filterB = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          rejectThresholdB, 0, rejectThresholdB.length) < 0;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        return PrivateCellUtil.createFirstOnRow(hintTargetB);
+      }
+    };
+
+    FilterList andFilter =
+      new FilterList(FilterList.Operator.MUST_PASS_ALL, Arrays.asList(filterA, filterB));
+
+    FilterBase baseline = new FilterBase() {
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        return Bytes.compareTo(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength(),
+          rejectThresholdB, 0, rejectThresholdB.length) < 0;
+      }
+    };
+
+    List<Cell> hintResults = scanAll(new Scan().addFamily(FAMILY).setFilter(andFilter));
+    List<Cell> baselineResults = scanAll(new Scan().addFamily(FAMILY).setFilter(baseline));
+
+    assertEquals(baselineResults.size(), hintResults.size(),
+      "AND with divergent hints must return same cells as baseline");
+    for (int i = 0; i < hintResults.size(); i++) {
+      assertTrue(CellUtil.equals(hintResults.get(i), baselineResults.get(i)),
+        "Cell mismatch at index " + i);
+    }
+    assertEquals(3 * CELLS_PER_ROW, hintResults.size());
+  }
 }

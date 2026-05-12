@@ -246,8 +246,9 @@ public abstract class Filter {
    * the scan direction.</li>
    * <li><strong>Composite filter support:</strong> {@code FilterList} (both {@code MUST_PASS_ALL}
    * and {@code MUST_PASS_ONE}), {@code SkipFilter}, and {@code WhileMatchFilter} delegate this
-   * method to their sub-filters and merge the results (maximal step for AND, minimal step for
-   * OR).</li>
+   * method to their sub-filters and merge the results (maximal step for AND; for OR, the nearest
+   * hint is returned only when every non-terminated sub-filter provides one — any null collapses
+   * the OR result to null).</li>
    * </ul>
    * @param firstRowCell the first cell encountered in the rejected row; contains the row key that
    *                     was passed to {@code filterRowKey}
@@ -283,8 +284,9 @@ public abstract class Filter {
    * direction are silently ignored.</li>
    * <li><strong>Composite filter support:</strong> {@code FilterList} (both {@code MUST_PASS_ALL}
    * and {@code MUST_PASS_ONE}), {@code SkipFilter}, and {@code WhileMatchFilter} delegate this
-   * method to their sub-filters and merge the results (maximal step for AND, minimal step for
-   * OR).</li>
+   * method to their sub-filters and merge the results (maximal step for AND; for OR, the nearest
+   * hint is returned only when every non-terminated sub-filter provides one — any null collapses
+   * the OR result to null).</li>
    * </ul>
    * @param skippedCell the cell that was rejected by the time-range, column, or version gate before
    *                    {@code filterCell} could be consulted
