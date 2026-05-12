@@ -27,9 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * {@code tools.profiler:async-profiler} JAR and its native library on the classpath.
  * <p>
  * This class is intentionally isolated in its own file so that the JVM never loads
- * {@code one.profiler.AsyncProfiler} on systems where the JAR is absent. It is only
- * instantiated reflectively from {@link ProfilerBackend#detect} after confirming the
- * class is resolvable.
+ * {@code one.profiler.AsyncProfiler} on systems where the JAR is absent. It is only instantiated
+ * reflectively from {@link ProfilerBackend#detect} after confirming the class is resolvable.
  */
 @InterfaceAudience.Private
 final class LibraryBackend implements ProfilerBackend {

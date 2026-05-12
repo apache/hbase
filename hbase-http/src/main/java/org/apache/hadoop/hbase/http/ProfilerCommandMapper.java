@@ -43,8 +43,8 @@ final class ProfilerCommandMapper {
   }
 
   /**
-   * Builds the start command string for the async-profiler Java API.
-   * Format: {@code start,event=<event>[,interval=N][,jstackdepth=N][,bufsize=N][,threads][,simple]}
+   * Builds the start command string for the async-profiler Java API. Format:
+   * {@code start,event=<event>[,interval=N][,jstackdepth=N][,bufsize=N][,threads][,simple]}
    */
   static String toLibraryStartCommand(ProfileServlet.ProfileRequest request) {
     StringBuilder sb = new StringBuilder("start");
@@ -62,8 +62,8 @@ final class ProfilerCommandMapper {
   }
 
   /**
-   * Builds the stop command string for the async-profiler Java API.
-   * Format: {@code stop,file=<path>,format=<fmt>[,width=N][,height=N][,minwidth=N][,reverse]}
+   * Builds the stop command string for the async-profiler Java API. Format:
+   * {@code stop,file=<path>,format=<fmt>[,width=N][,height=N][,minwidth=N][,reverse]}
    */
   static String toLibraryStopCommand(ProfileServlet.ProfileRequest request, File outputFile) {
     StringBuilder sb = new StringBuilder("stop");

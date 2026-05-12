@@ -57,16 +57,16 @@ interface ProfilerBackend {
    * Detects which backend is available. Prefers {@link LibraryBackend} over {@link BinaryBackend}.
    * Returns {@code null} if neither is available.
    * <p>
-   * When both the library and a binary home are available, {@link LibraryBackend} is preferred
-   * and {@code ASYNC_PROFILER_HOME} is ignored.
+   * When both the library and a binary home are available, {@link LibraryBackend} is preferred and
+   * {@code ASYNC_PROFILER_HOME} is ignored.
    * <p>
    * {@link LibraryBackend} is instantiated reflectively so that its class — and therefore
    * {@code one.profiler.AsyncProfiler} — is never loaded on systems where the JAR is absent.
    */
   static ProfilerBackend detect(String asyncProfilerHome) {
     // 1. Try in-process Java API (optional maven dependency).
-    //    Use Class.forName to probe without triggering a hard class-load of LibraryBackend,
-    //    which would pull in one.profiler.AsyncProfiler and fail on binary-only systems.
+    // Use Class.forName to probe without triggering a hard class-load of LibraryBackend,
+    // which would pull in one.profiler.AsyncProfiler and fail on binary-only systems.
     try {
       // Use the classloader that loaded this class so that isolated-classloader tests
       // (which block one.profiler.*) correctly see the library as absent.
@@ -74,8 +74,7 @@ interface ProfilerBackend {
       Class.forName("one.profiler.AsyncProfiler", false, cl);
       // AsyncProfiler resolved — now safe to load LibraryBackend through the same loader
       return (ProfilerBackend) Class
-        .forName("org.apache.hadoop.hbase.http.LibraryBackend", true, cl)
-        .getDeclaredConstructor()
+        .forName("org.apache.hadoop.hbase.http.LibraryBackend", true, cl).getDeclaredConstructor()
         .newInstance();
     } catch (UnsatisfiedLinkError | ReflectiveOperationException e) {
       // library not on classpath or native lib failed to load
@@ -107,9 +106,7 @@ final class BinaryBackend implements ProfilerBackend {
   @Override
   public String executeStart(ProfileServlet.ProfileRequest request, File outputFile)
     throws IOException {
-    Integer pid = request.getPid() != null
-      ? request.getPid()
-      : ProcessUtils.getPid();
+    Integer pid = request.getPid() != null ? request.getPid() : ProcessUtils.getPid();
     if (pid == null) {
       throw new IOException("Unable to determine PID of current process. "
         + "Set the JVM_PID environment variable or pass '?pid=<pid>' explicitly.");

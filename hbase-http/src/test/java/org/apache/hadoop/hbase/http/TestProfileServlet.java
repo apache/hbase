@@ -49,9 +49,8 @@ public class TestProfileServlet {
   @Test
   public void testParseProfileRequestDefaults() {
     ProfileServlet servlet = new ProfileServlet(null);
-    HttpServletRequest req = mockRequest(Collections.emptyMap(),
-      "pid", null, "duration", null, "output", null, "event", null,
-      "interval", null, "jstackdepth", null, "bufsize", null,
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", null,
+      "output", null, "event", null, "interval", null, "jstackdepth", null, "bufsize", null,
       "width", null, "height", null, "minwidth", null, "refreshDelay", null);
 
     ProfileServlet.ProfileRequest parsed = servlet.parseProfileRequest(req);
@@ -72,10 +71,9 @@ public class TestProfileServlet {
     flags.put("reverse", new String[] { "" });
 
     ProfileServlet servlet = new ProfileServlet(null);
-    HttpServletRequest req = mockRequest(flags,
-      "pid", "42", "duration", "60", "output", "tree", "event", "alloc",
-      "interval", "1000", "jstackdepth", "256", "bufsize", "100000",
-      "width", "1200", "height", "16", "minwidth", "0.5", "refreshDelay", "3");
+    HttpServletRequest req = mockRequest(flags, "pid", "42", "duration", "60", "output", "tree",
+      "event", "alloc", "interval", "1000", "jstackdepth", "256", "bufsize", "100000", "width",
+      "1200", "height", "16", "minwidth", "0.5", "refreshDelay", "3");
 
     ProfileServlet.ProfileRequest parsed = servlet.parseProfileRequest(req);
     assertEquals(42, parsed.getPid());
@@ -104,9 +102,8 @@ public class TestProfileServlet {
     ProfileServlet servlet = new ProfileServlet(mockBackend);
     servlet.init(mockServletConfig());
 
-    HttpServletRequest req = mockRequest(Collections.emptyMap(),
-      "pid", null, "duration", "1", "refreshDelay", "2",
-      "output", null, "event", null, "interval", null, "jstackdepth", null,
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "1",
+      "refreshDelay", "2", "output", null, "event", null, "interval", null, "jstackdepth", null,
       "bufsize", null, "width", null, "height", null, "minwidth", null);
 
     HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);

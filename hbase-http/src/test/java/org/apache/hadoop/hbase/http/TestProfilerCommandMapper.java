@@ -63,8 +63,8 @@ public class TestProfilerCommandMapper {
     flags.put("thread", new String[] { "" });
     flags.put("simple", new String[] { "" });
 
-    ProfileServlet.ProfileRequest req = parseRequest(flags,
-      "event", "alloc", "interval", "1000", "jstackdepth", "256", "bufsize", "100000");
+    ProfileServlet.ProfileRequest req = parseRequest(flags, "event", "alloc", "interval", "1000",
+      "jstackdepth", "256", "bufsize", "100000");
     String cmd = ProfilerCommandMapper.toLibraryStartCommand(req);
     assertTrue(cmd.contains("event=alloc"));
     assertTrue(cmd.contains("interval=1000"));
@@ -80,8 +80,8 @@ public class TestProfilerCommandMapper {
   public void testLibraryStopCommand() throws IOException {
     Map<String, String[]> flags = new HashMap<>();
     flags.put("reverse", new String[] { "" });
-    ProfileServlet.ProfileRequest req = parseRequest(flags,
-      "output", "html", "width", "1200", "height", "16", "minwidth", "0.5");
+    ProfileServlet.ProfileRequest req =
+      parseRequest(flags, "output", "html", "width", "1200", "height", "16", "minwidth", "0.5");
 
     File outputFile = File.createTempFile("prof", ".html");
     outputFile.deleteOnExit();
@@ -104,8 +104,8 @@ public class TestProfilerCommandMapper {
     Path binDir = Files.createDirectories(tempDir.resolve("bin"));
     Files.createFile(binDir.resolve("asprof"));
 
-    ProfileServlet.ProfileRequest req = parseRequest(Collections.emptyMap(),
-      "duration", "30", "output", "html");
+    ProfileServlet.ProfileRequest req =
+      parseRequest(Collections.emptyMap(), "duration", "30", "output", "html");
     File outputFile = File.createTempFile("prof", ".html");
     outputFile.deleteOnExit();
 
@@ -147,14 +147,12 @@ public class TestProfilerCommandMapper {
     flags.put("simple", new String[] { "" });
     flags.put("reverse", new String[] { "" });
 
-    ProfileServlet.ProfileRequest req = parseRequest(flags,
-      "event", "alloc", "interval", "500", "jstackdepth", "128",
-      "bufsize", "50000", "width", "800", "height", "12", "minwidth", "1.0");
+    ProfileServlet.ProfileRequest req = parseRequest(flags, "event", "alloc", "interval", "500",
+      "jstackdepth", "128", "bufsize", "50000", "width", "800", "height", "12", "minwidth", "1.0");
     File outputFile = File.createTempFile("prof", ".html");
     outputFile.deleteOnExit();
 
-    List<String> cmd =
-      ProfilerCommandMapper.toCliCommand(req, outputFile, tempDir.toString(), 99);
+    List<String> cmd = ProfilerCommandMapper.toCliCommand(req, outputFile, tempDir.toString(), 99);
     assertTrue(cmd.contains("-e"));
     assertTrue(cmd.contains("alloc"));
     assertTrue(cmd.contains("-i"));
@@ -197,9 +195,8 @@ public class TestProfilerCommandMapper {
     HttpServletRequest req = Mockito.mock(HttpServletRequest.class);
     Mockito.when(req.getParameterMap()).thenReturn(paramMap);
     // defaults
-    String[] keys =
-      { "pid", "duration", "output", "event", "interval", "jstackdepth", "bufsize", "width",
-        "height", "minwidth", "refreshDelay" };
+    String[] keys = { "pid", "duration", "output", "event", "interval", "jstackdepth", "bufsize",
+      "width", "height", "minwidth", "refreshDelay" };
     for (String k : keys) {
       Mockito.when(req.getParameter(k)).thenReturn(null);
     }

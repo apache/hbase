@@ -34,15 +34,14 @@ import org.junit.jupiter.api.io.TempDir;
  * Verifies {@link ProfilerBackend#detect} fallback behaviour when
  * {@code one.profiler.AsyncProfiler} is absent from the classpath.
  * <p>
- * Each test loads {@code ProfilerBackend} through a custom {@link ClassLoader} that
- * blocks {@code one.profiler.*}, simulating a deployment where the async-profiler JAR
- * was never packaged. This is the exact scenario for users who have async-profiler
- * installed as a native binary ({@code ASYNC_PROFILER_HOME}) but are not allowed to
- * bundle the JAR.
+ * Each test loads {@code ProfilerBackend} through a custom {@link ClassLoader} that blocks
+ * {@code one.profiler.*}, simulating a deployment where the async-profiler JAR was never packaged.
+ * This is the exact scenario for users who have async-profiler installed as a native binary
+ * ({@code ASYNC_PROFILER_HOME}) but are not allowed to bundle the JAR.
  * <p>
  * The split of {@link LibraryBackend} into its own file is what makes this possible:
- * {@code ProfilerBackend.class} carries no static reference to {@code AsyncProfiler},
- * so the isolated loader can load it without a {@code NoClassDefFoundError}.
+ * {@code ProfilerBackend.class} carries no static reference to {@code AsyncProfiler}, so the
+ * isolated loader can load it without a {@code NoClassDefFoundError}.
  */
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
@@ -52,8 +51,8 @@ public class TestProfilerBackendIsolated {
   Path tempDir;
 
   /**
-   * When the library is absent AND no home is set, detect() must return null so that
-   * HttpServer registers DisabledServlet instead of crashing.
+   * When the library is absent AND no home is set, detect() must return null so that HttpServer
+   * registers DisabledServlet instead of crashing.
    */
   @Test
   public void testDetectReturnsNullWhenLibraryAbsentAndNoHome() throws Exception {
@@ -66,8 +65,8 @@ public class TestProfilerBackendIsolated {
   }
 
   /**
-   * User has async-profiler installed as a native binary (ASYNC_PROFILER_HOME set,
-   * bin/asprof present) but no JAR on the classpath. detect() must return BinaryBackend.
+   * User has async-profiler installed as a native binary (ASYNC_PROFILER_HOME set, bin/asprof
+   * present) but no JAR on the classpath. detect() must return BinaryBackend.
    */
   @Test
   public void testDetectReturnsBinaryBackendWhenLibraryAbsentButHomeSet() throws Exception {
@@ -111,11 +110,10 @@ public class TestProfilerBackendIsolated {
   // ---- helpers ----
 
   /**
-   * Returns a ClassLoader that:
-   * - blocks {@code one.profiler.*} entirely (simulates absent async-profiler JAR)
-   * - reloads {@code org.apache.hadoop.hbase.http.*} classes fresh (so LibraryBackend
-   *   resolves its own imports through this loader and also sees one.profiler.* as absent)
-   * - delegates everything else to the parent
+   * Returns a ClassLoader that: - blocks {@code one.profiler.*} entirely (simulates absent
+   * async-profiler JAR) - reloads {@code org.apache.hadoop.hbase.http.*} classes fresh (so
+   * LibraryBackend resolves its own imports through this loader and also sees one.profiler.* as
+   * absent) - delegates everything else to the parent
    */
   private ClassLoader isolatedLoader() {
     ClassLoader parent = getClass().getClassLoader();
@@ -153,8 +151,8 @@ public class TestProfilerBackendIsolated {
   }
 
   /**
-   * Loads {@code ProfilerBackend} through the given loader and returns its
-   * {@code detect(String)} method, made accessible across loader boundaries.
+   * Loads {@code ProfilerBackend} through the given loader and returns its {@code detect(String)}
+   * method, made accessible across loader boundaries.
    */
   private Method detectMethod(ClassLoader loader) throws Exception {
     Class<?> backendClass = loader.loadClass("org.apache.hadoop.hbase.http.ProfilerBackend");
