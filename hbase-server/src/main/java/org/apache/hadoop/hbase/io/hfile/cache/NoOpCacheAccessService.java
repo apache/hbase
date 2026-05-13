@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -31,6 +33,11 @@ import org.apache.yetus.audience.InterfaceAudience;
  * want to depend on a non-null {@link CacheAccessService}. It never stores blocks, never returns
  * cached blocks, reports zero capacity and occupancy, and treats all invalidation requests as
  * no-ops.
+ * </p>
+ * <p>
+ * Even though this implementation does not perform cache operations, it still validates caller
+ * inputs consistently with other {@link CacheAccessService} implementations. This prevents the
+ * disabled-cache path from masking caller bugs that would fail when a real cache is configured.
  * </p>
  * <p>
  * This implementation should not be used to hide configuration mistakes. It represents an explicit
@@ -81,18 +88,22 @@ public final class NoOpCacheAccessService implements CacheAccessService {
    */
   @Override
   public Cacheable getBlock(BlockCacheKey cacheKey, CacheRequestContext context) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(context, "context must not be null");
     return null;
   }
 
   /**
-   * Ignores cache insertion requests.
+   * Validates the request and ignores the cache insertion.
    * @param cacheKey block cache key
    * @param block    block contents
    * @param context  cache write context
    */
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable block, CacheWriteContext context) {
-    // noop
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(block, "block must not be null");
+    Objects.requireNonNull(context, "context must not be null");
   }
 
   /**
@@ -102,6 +113,7 @@ public final class NoOpCacheAccessService implements CacheAccessService {
    */
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     return false;
   }
 
@@ -112,6 +124,31 @@ public final class NoOpCacheAccessService implements CacheAccessService {
    */
   @Override
   public int evictBlocksByHfileName(String hfileName) {
+    Objects.requireNonNull(hfileName, "hfileName must not be null");
+    return 0;
+  }
+
+  /**
+   * Always returns {@code 0} because this service does not store blocks.
+   * @param hfileName  HFile name
+   * @param initOffset inclusive start offset
+   * @param endOffset  inclusive end offset
+   * @return always {@code 0}
+   */
+  @Override
+  public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
+    Objects.requireNonNull(hfileName, "hfileName must not be null");
+    return 0;
+  }
+
+  /**
+   * Always returns {@code 0} because this service does not store blocks.
+   * @param regionName region name
+   * @return always {@code 0}
+   */
+  @Override
+  public int evictBlocksByRegionName(String regionName) {
+    Objects.requireNonNull(regionName, "regionName must not be null");
     return 0;
   }
 
@@ -187,6 +224,39 @@ public final class NoOpCacheAccessService implements CacheAccessService {
   }
 
   /**
+   * Always returns {@link Optional#empty()} because this service has no capacity.
+   * @param block block to check
+   * @return always {@link Optional#empty()}
+   */
+  @Override
+  public Optional<Boolean> blockFitsIntoTheCache(HFileBlock block) {
+    Objects.requireNonNull(block, "block must not be null");
+    return Optional.empty();
+  }
+
+  /**
+   * Always returns {@link Optional#empty()} because this service does not store blocks.
+   * @param key block cache key
+   * @return always {@link Optional#empty()}
+   */
+  @Override
+  public Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
+    Objects.requireNonNull(key, "key must not be null");
+    return Optional.empty();
+  }
+
+  /**
+   * Always returns {@link Optional#empty()} because this service does not store blocks.
+   * @param key block cache key
+   * @return always {@link Optional#empty()}
+   */
+  @Override
+  public Optional<Integer> getBlockSize(BlockCacheKey key) {
+    Objects.requireNonNull(key, "key must not be null");
+    return Optional.empty();
+  }
+
+  /**
    * Always returns {@code false} because cache access is disabled.
    * @return always {@code false}
    */
@@ -206,11 +276,11 @@ public final class NoOpCacheAccessService implements CacheAccessService {
   }
 
   /**
-   * Ignores configuration changes.
+   * Validates the request and ignores the configuration change.
    * @param config new configuration
    */
   @Override
   public void onConfigurationChange(Configuration config) {
-    // noop
+    Objects.requireNonNull(config, "config must not be null");
   }
 }

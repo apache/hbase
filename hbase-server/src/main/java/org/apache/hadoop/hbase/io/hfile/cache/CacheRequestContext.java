@@ -80,7 +80,7 @@ public final class CacheRequestContext {
 
   /**
    * Returns the expected block type, if known.
-   * @return block type, or null if unknown
+   * @return an {@link Optional} containing the block type, or empty if unknown
    */
   public Optional<BlockType> getBlockType() {
     return Optional.ofNullable(blockType);

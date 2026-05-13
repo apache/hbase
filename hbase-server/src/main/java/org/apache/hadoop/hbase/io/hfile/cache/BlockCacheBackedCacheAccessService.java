@@ -159,8 +159,10 @@ public class BlockCacheBackedCacheAccessService implements CacheAccessService {
    */
   @Override
   public int evictBlocksByRegionName(String regionName) {
-    return 0; // BlockCache does not support region-based eviction, so we return 0 to indicate no
-              // blocks removed
+    Objects.requireNonNull(regionName, "regionName must not be null");
+    // BlockCache does not support region-based eviction, so we return 0 to indicate no
+    // blocks removed
+    return 0;
   }
 
   /**

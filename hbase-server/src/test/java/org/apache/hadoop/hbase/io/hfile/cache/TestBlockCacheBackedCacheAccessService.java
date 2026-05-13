@@ -47,6 +47,14 @@ import org.junit.jupiter.api.Test;
 @Tag(SmallTests.TAG)
 public class TestBlockCacheBackedCacheAccessService {
 
+  private static final String HFILE_NAME = "file";
+
+  private static final long BLOCK_OFFSET = 1L;
+
+  private static final long RANGE_START_OFFSET = 1L;
+
+  private static final long RANGE_END_OFFSET = 10L;
+
   /**
    * Verifies that context-based lookup delegates to the block-type aware legacy lookup method.
    */
@@ -54,7 +62,7 @@ public class TestBlockCacheBackedCacheAccessService {
   void testGetBlockWithBlockTypeDelegatesToBlockCache() {
     BlockCache blockCache = mock(BlockCache.class);
     CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
 
     when(blockCache.getBlock(key, true, true, false, BlockType.DATA)).thenReturn(block);
@@ -73,7 +81,7 @@ public class TestBlockCacheBackedCacheAccessService {
   void testGetBlockWithoutBlockTypeDelegatesToBlockCache() {
     BlockCache blockCache = mock(BlockCache.class);
     CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
 
     when(blockCache.getBlock(key, true, false, true)).thenReturn(block);
@@ -92,7 +100,7 @@ public class TestBlockCacheBackedCacheAccessService {
   void testCacheBlockDelegatesToBlockCache() {
     BlockCache blockCache = mock(BlockCache.class);
     CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
 
     CacheWriteContext context = CacheWriteContext.newBuilder().setInMemory(true)
@@ -110,19 +118,22 @@ public class TestBlockCacheBackedCacheAccessService {
   void testEvictionDelegatesToBlockCache() {
     BlockCache blockCache = mock(BlockCache.class);
     CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
 
     when(blockCache.evictBlock(key)).thenReturn(true);
-    when(blockCache.evictBlocksByHfileName("file")).thenReturn(3);
-    when(blockCache.evictBlocksRangeByHfileName("file", 1L, 10L)).thenReturn(2);
+    when(blockCache.evictBlocksByHfileName(HFILE_NAME)).thenReturn(3);
+    when(blockCache.evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET))
+      .thenReturn(2);
 
     assertTrue(service.evictBlock(key));
-    assertEquals(3, service.evictBlocksByHfileName("file"));
-    assertEquals(2, service.evictBlocksRangeByHfileName("file", 1L, 10L));
+    assertEquals(3, service.evictBlocksByHfileName(HFILE_NAME));
+    assertEquals(2,
+      service.evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET));
 
     verify(blockCache).evictBlock(key);
-    verify(blockCache).evictBlocksByHfileName("file");
-    verify(blockCache).evictBlocksRangeByHfileName("file", 1L, 10L);
+    verify(blockCache).evictBlocksByHfileName(HFILE_NAME);
+    verify(blockCache).evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET,
+      RANGE_END_OFFSET);
   }
 
   /**
@@ -134,7 +145,7 @@ public class TestBlockCacheBackedCacheAccessService {
     CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
     CacheStats stats = new CacheStats("test");
     HFileBlock hfileBlock = mock(HFileBlock.class);
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Configuration conf = new Configuration(false);
 
     when(blockCache.getStats()).thenReturn(stats);
@@ -195,7 +206,7 @@ public class TestBlockCacheBackedCacheAccessService {
     service.cacheBlock(mock(BlockCacheKey.class), mock(Cacheable.class),
       mock(CacheWriteContext.class));
     assertFalse(service.evictBlock(mock(BlockCacheKey.class)));
-    assertEquals(0, service.evictBlocksByHfileName("file"));
+    assertEquals(0, service.evictBlocksByHfileName(HFILE_NAME));
     assertEquals(0L, service.getMaxSize());
     assertEquals(0L, service.getFreeSize());
     assertEquals(0L, service.size());

@@ -45,8 +45,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * abstractions directly through {@link CacheAccessService}.
  * </p>
  * <p>
- * Representation conversion is not performed by this initial implementation. This preserves current
- * behavior while leaving room for future packed/unpacked or engine-default representation handling.
+ * Representation selection is intentionally not invoked by this initial implementation. Until the
+ * service can actually apply representation decisions safely, especially around HFileBlock
+ * lifecycle and packed/unpacked storage, representation policy is left to a later integration step.
  * </p>
  */
 @InterfaceAudience.Private
@@ -167,7 +168,6 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
       return;
     }
 
-    policy.selectRepresentation(cacheKey, block, context, topologyView);
     TierDecision tierDecision = policy.selectTier(cacheKey, block, context, topologyView);
     for (CacheTier tier : tierDecision.getTiers()) {
       Optional<CacheEngine> engine = topology.getEngine(tier);
@@ -460,9 +460,10 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
 
   private void maybePromote(BlockCacheKey cacheKey, Cacheable block, CacheTier sourceTier,
     CacheEngine sourceEngine, CacheRequestContext context) {
-    PromotionDecision decision =
-      policy.shouldPromote(cacheKey, block, sourceTier, context, topologyView);
-    if (decision == null || !decision.shouldPromote()) {
+    PromotionDecision decision = Objects.requireNonNull(
+      policy.shouldPromote(cacheKey, block, sourceTier, context, topologyView),
+      "policy should not return null from shouldPromote()");
+    if (!decision.shouldPromote()) {
       return;
     }
 

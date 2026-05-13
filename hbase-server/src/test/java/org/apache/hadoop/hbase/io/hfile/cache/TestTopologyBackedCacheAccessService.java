@@ -46,13 +46,20 @@ import org.junit.jupiter.api.Test;
 @Tag(IOTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestTopologyBackedCacheAccessService {
+  private static final String HFILE_NAME = "file";
+
+  private static final long BLOCK_OFFSET = 1L;
+
+  private static final long RANGE_START_OFFSET = 10L;
+
+  private static final long RANGE_END_OFFSET = 100L;
 
   /**
    * Verifies that lookup checks topology tiers in order and returns the first cached block found.
    */
   @Test
   void testGetBlockChecksTiersInOrder() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey("file", BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
@@ -85,7 +92,7 @@ public class TestTopologyBackedCacheAccessService {
    */
   @Test
   void testGetBlockPromotesOnPolicyDecision() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
@@ -117,7 +124,7 @@ public class TestTopologyBackedCacheAccessService {
    */
   @Test
   void testCacheBlockSkipsInsertionWhenRejected() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
@@ -144,7 +151,7 @@ public class TestTopologyBackedCacheAccessService {
    */
   @Test
   void testCacheBlockInsertsIntoSelectedTier() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
@@ -166,7 +173,7 @@ public class TestTopologyBackedCacheAccessService {
     service.cacheBlock(key, block, context);
 
     verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, topologyView);
-    verify(policy).selectRepresentation(key, block, context, topologyView);
+    verify(policy, never()).selectRepresentation(key, block, context, topologyView);
     verify(policy).selectTier(key, block, context, topologyView);
     verify(engine).cacheBlock(key, block, true, true);
   }
@@ -176,7 +183,7 @@ public class TestTopologyBackedCacheAccessService {
    */
   @Test
   void testCacheBlockInsertsIntoMultipleSelectedTiers() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
@@ -208,7 +215,7 @@ public class TestTopologyBackedCacheAccessService {
    */
   @Test
   void testEvictBlockEvictsFromAllEngines() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
     CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
@@ -241,15 +248,15 @@ public class TestTopologyBackedCacheAccessService {
 
     when(topology.getView()).thenReturn(topologyView);
     when(topology.getEngines()).thenReturn(List.of(l1, l2));
-    when(l1.evictBlocksByHfileName("file")).thenReturn(2);
-    when(l2.evictBlocksByHfileName("file")).thenReturn(3);
+    when(l1.evictBlocksByHfileName(HFILE_NAME)).thenReturn(2);
+    when(l2.evictBlocksByHfileName(HFILE_NAME)).thenReturn(3);
 
     CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
 
-    assertEquals(5, service.evictBlocksByHfileName("file"));
+    assertEquals(5, service.evictBlocksByHfileName(HFILE_NAME));
 
-    verify(l1).evictBlocksByHfileName("file");
-    verify(l2).evictBlocksByHfileName("file");
+    verify(l1).evictBlocksByHfileName(HFILE_NAME);
+    verify(l2).evictBlocksByHfileName(HFILE_NAME);
   }
 
   /**
@@ -311,7 +318,7 @@ public class TestTopologyBackedCacheAccessService {
    */
   @Test
   void testOptionalHelpersUseParticipatingEngines() {
-    BlockCacheKey key = new BlockCacheKey("file", 1L);
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     HFileBlock block = mock(HFileBlock.class);
     CacheTopology topology = mock(CacheTopology.class);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
@@ -382,6 +389,59 @@ public class TestTopologyBackedCacheAccessService {
     verify(l1).onConfigurationChange(conf);
     verify(l2).onConfigurationChange(conf);
     verify(topology).shutdown();
+  }
+
+  /**
+   * Verifies that range-based HFile eviction is propagated to all participating engines and sums
+   * their results.
+   */
+  @Test
+  void testEvictBlocksRangeByHfileNameSumsEngineResults() {
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getEngines()).thenReturn(List.of(l1, l2));
+    when(l1.evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET))
+      .thenReturn(2);
+    when(l2.evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET))
+      .thenReturn(3);
+
+    CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
+
+    assertEquals(5,
+      service.evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET));
+
+    verify(l1).evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET);
+    verify(l2).evictBlocksRangeByHfileName(HFILE_NAME, RANGE_START_OFFSET, RANGE_END_OFFSET);
+  }
+
+  /**
+   * Verifies that region-level eviction is propagated to all participating engines and sums their
+   * results.
+   */
+  @Test
+  void testEvictBlocksByRegionNameSumsEngineResults() {
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getEngines()).thenReturn(List.of(l1, l2));
+    when(l1.evictBlocksByRegionName("region")).thenReturn(4);
+    when(l2.evictBlocksByRegionName("region")).thenReturn(5);
+
+    CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
+
+    assertEquals(9, service.evictBlocksByRegionName("region"));
+
+    verify(l1).evictBlocksByRegionName("region");
+    verify(l2).evictBlocksByRegionName("region");
   }
 
   /**
