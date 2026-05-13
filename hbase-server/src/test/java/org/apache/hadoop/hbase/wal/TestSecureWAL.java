@@ -40,8 +40,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.crypto.KeyProviderForTesting;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -54,13 +54,13 @@ import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 
 @Tag(RegionServerTests.TAG)
-@Tag(MediumTests.TAG)
-@HBaseParameterizedTestTemplate
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "[{index}]: provider={0}")
 public class TestSecureWAL {
 
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  private String testMethodName;
+  private TableName tableName;
 
   public String walProvider;
 
@@ -89,13 +89,13 @@ public class TestSecureWAL {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) {
-    testMethodName = testInfo.getTestMethod().get().getName() + "_" + walProvider;
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[^a-zA-Z0-9]", "_"));
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
   }
 
   @TestTemplate
   public void testSecureWAL() throws Exception {
-    TableName tableName = TableName.valueOf(testMethodName.replaceAll("[^a-zA-Z0-9]", "_"));
     NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     scopes.put(tableName.getName(), 0);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
