@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -42,38 +41,33 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test StoreFileScanner
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreFileScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileScanner.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final String TEST_FAMILY = "cf";
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
   private Configuration conf;
   private Path testDir;
   private FileSystem fs;
   private CacheConfig cacheConf;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    this.methodName = testInfo.getTestMethod().get().getName();
     conf = TEST_UTIL.getConfiguration();
-    testDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    testDir = TEST_UTIL.getDataTestDir(methodName);
     fs = testDir.getFileSystem(conf);
     cacheConf = new CacheConfig(conf);
   }
@@ -93,8 +87,7 @@ public class TestStoreFileScanner {
   @Test
   public void testGetFilesRead() throws Exception {
     // Setup: region info, region fs, and HFile context; create store file and write data.
-    final RegionInfo hri =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    final RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       new Path(testDir, hri.getTable().getNameAsString()), hri);
     HFileContext hFileContext = new HFileContextBuilder().withBlockSize(8 * 1024).build();
@@ -120,13 +113,13 @@ public class TestStoreFileScanner {
 
     // Before close: getFilesRead must be empty.
     Set<Path> filesRead = scanner.getFilesRead();
-    assertTrue("Should return empty set before closing scanner", filesRead.isEmpty());
+    assertTrue(filesRead.isEmpty(), "Should return empty set before closing scanner");
 
     scanner.close();
 
     // After close: set must contain the single qualified store file path.
     filesRead = scanner.getFilesRead();
-    assertEquals("Should return set with one file path after closing", 1, filesRead.size());
-    assertTrue("Should contain the qualified file path", filesRead.contains(qualifiedPath));
+    assertEquals(1, filesRead.size(), "Should return set with one file path after closing");
+    assertTrue(filesRead.contains(qualifiedPath), "Should contain the qualified file path");
   }
 }
