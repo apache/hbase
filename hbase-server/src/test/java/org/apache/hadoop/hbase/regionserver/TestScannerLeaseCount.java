@@ -21,7 +21,6 @@ import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -40,21 +39,17 @@ import org.apache.hadoop.hbase.quotas.TestNoopOperationQuota;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestScannerLeaseCount {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerLeaseCount.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("ScannerLeaseCount");
@@ -70,7 +65,7 @@ public class TestScannerLeaseCount {
   private static Connection CONN;
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     StartTestingClusterOption option =
       StartTestingClusterOption.builder().rsClass(MockedQuotaManagerRegionServer.class).build();
@@ -83,7 +78,7 @@ public class TestScannerLeaseCount {
     UTIL.loadTable(TABLE, FAM);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     try {
       TABLE.close();
@@ -96,7 +91,7 @@ public class TestScannerLeaseCount {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     SHOULD_THROW = false;
     SCAN_SEEN.set(false);
