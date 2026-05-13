@@ -254,9 +254,11 @@ public abstract class Filter {
    * the scan direction.</li>
    * <li><strong>Composite filter support:</strong> {@code FilterList} (both {@code MUST_PASS_ALL}
    * and {@code MUST_PASS_ONE}), {@code SkipFilter}, and {@code WhileMatchFilter} delegate this
-   * method to their sub-filters and merge the results (maximal step for AND; for OR, the nearest
-   * hint is returned only when every non-terminated sub-filter provides one — any null collapses
-   * the OR result to null).</li>
+   * method to their sub-filters and merge the results. For AND ({@code MUST_PASS_ALL}), only
+   * sub-filters whose {@code filterRowKey} individually returned {@code true} are consulted, and
+   * the farthest (maximal-step) hint among them is returned. For OR ({@code MUST_PASS_ONE}), the
+   * nearest hint is returned only when every non-terminated sub-filter provides one — any null
+   * collapses the OR result to null.</li>
    * </ul>
    * @param firstRowCell the first cell encountered in the rejected row; contains the row key that
    *                     was passed to {@code filterRowKey}
