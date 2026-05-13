@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -33,18 +32,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestScannerBlockSizeLimits {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerBlockSizeLimits.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE = TableName.valueOf("TestScannerBlockSizeLimits");
@@ -59,7 +53,7 @@ public class TestScannerBlockSizeLimits {
   private static final byte[] COLUMN3 = Bytes.toBytes(2);
   private static final byte[] COLUMN5 = Bytes.toBytes(5);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_SERVER_SCANNER_MAX_RESULT_SIZE_KEY, 4200);
@@ -68,7 +62,7 @@ public class TestScannerBlockSizeLimits {
     createTestData();
   }
 
-  @Before
+  @BeforeEach
   public void setupEach() throws Exception {
     HRegionServer regionServer = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
     for (HRegion region : regionServer.getRegions(TABLE)) {

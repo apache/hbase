@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -45,22 +44,18 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
 /*
  * This test verifies that the scenarios illustrated by HBASE-10850 work w.r.t. essential column
  * family optimization
  */
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSCVFWithMiniCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSCVFWithMiniCluster.class);
 
   private static final TableName HBASE_TABLE_NAME = TableName.valueOf("TestSCVFWithMiniCluster");
 
@@ -76,7 +71,7 @@ public class TestSCVFWithMiniCluster {
 
   private int expected = 1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     HBaseTestingUtility util = new HBaseTestingUtility();
 
@@ -127,7 +122,7 @@ public class TestSCVFWithMiniCluster {
     ((SingleColumnValueFilter) scanFilter).setFilterIfMissing(true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     htable.close();
   }

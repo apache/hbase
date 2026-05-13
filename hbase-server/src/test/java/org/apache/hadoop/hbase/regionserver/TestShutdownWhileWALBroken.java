@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CountDownLatch;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,28 +36,21 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.zookeeper.KeeperException.SessionExpiredException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * See HBASE-19929 for more details.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: WAL={0}")
 public class TestShutdownWhileWALBroken {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShutdownWhileWALBroken.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestShutdownWhileWALBroken.class);
 
@@ -68,12 +60,14 @@ public class TestShutdownWhileWALBroken {
 
   private static byte[] CF = Bytes.toBytes("CF");
 
-  @Parameter
   public String walType;
 
-  @Parameters(name = "{index}: WAL={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { "asyncfs" }, new Object[] { "filesystem" });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("asyncfs"), Arguments.of("filesystem"));
+  }
+
+  public TestShutdownWhileWALBroken(String walType) {
+    this.walType = walType;
   }
 
   public static final class MyRegionServer extends HRegionServer {
@@ -111,7 +105,7 @@ public class TestShutdownWhileWALBroken {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     UTIL.getConfiguration().setClass(HConstants.REGION_SERVER_IMPL, MyRegionServer.class,
       HRegionServer.class);
@@ -119,12 +113,12 @@ public class TestShutdownWhileWALBroken {
     UTIL.startMiniCluster(2);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void test() throws Exception {
     UTIL.createMultiRegionTable(TABLE_NAME, CF);
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
