@@ -35,6 +35,11 @@ public class FilterListWithAND extends FilterListBase {
 
   private List<Filter> seekHintFilters = new ArrayList<>();
   private boolean[] hintingFilters;
+  /**
+   * Tracks which sub-filters returned {@code true} from {@link Filter#filterRowKey(Cell)}. Set in
+   * {@code filterRowKey()}, consumed by {@code getHintForRejectedRow()}, cleared only by
+   * {@code reset()} — callers must invoke {@code reset()} between rows to avoid stale state.
+   */
   private boolean[] rejectedByFilterRowKey;
 
   public FilterListWithAND(List<Filter> filters) {
@@ -54,7 +59,7 @@ public class FilterListWithAND extends FilterListBase {
     }
     this.filters.addAll(filters);
     this.subFiltersIncludedCell.addAll(Collections.nCopies(filters.size(), true));
-    this.rejectedByFilterRowKey = new boolean[this.filters.size()];
+    this.rejectedByFilterRowKey = Arrays.copyOf(this.rejectedByFilterRowKey, this.filters.size());
     this.cacheHintingFilters();
   }
 
