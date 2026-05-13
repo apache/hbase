@@ -52,7 +52,11 @@ public class TestFilterListHintDelegation {
     return new KeyValue(row, FAMILY, QUALIFIER, 1L, KeyValue.Type.Put, Bytes.toBytes("v"));
   }
 
-  /** Filter that returns a fixed hint from {@code getHintForRejectedRow}. */
+  /**
+   * Filter that returns a fixed hint from {@code getHintForRejectedRow} without overriding
+   * {@code filterRowKey}. Used in OR / SkipFilter / WhileMatchFilter tests where the AND
+   * per-sub-filter rejection tracking does not apply.
+   */
   private static FilterBase fixedRejectedRowHintFilter(Cell hint) {
     return new FilterBase() {
       @Override
@@ -62,7 +66,11 @@ public class TestFilterListHintDelegation {
     };
   }
 
-  /** Filter that rejects every row via {@code filterRowKey} and returns a fixed hint. */
+  /**
+   * Filter that rejects every row via {@code filterRowKey} and returns a fixed hint. Used in AND
+   * tests where {@code FilterListWithAND.getHintForRejectedRow} requires sub-filters to have
+   * individually rejected via {@code filterRowKey} before being consulted.
+   */
   private static FilterBase rejectingRowHintFilter(Cell hint) {
     return new FilterBase() {
       @Override
@@ -587,6 +595,42 @@ public class TestFilterListHintDelegation {
     assertNotNull(result);
     assertEquals(0, CellComparator.getInstance().compare(hint, result),
       "AND must return the hint from the rejecting sub-filter only");
+  }
+
+  @Test
+  public void testANDGetHintForRejectedRow_resetClearsRejectionState() throws IOException {
+    Cell hint = kv(ROW_C);
+    FilterBase sometimesRejects = new FilterBase() {
+      private boolean shouldReject = true;
+
+      @Override
+      public boolean filterRowKey(Cell cell) {
+        if (shouldReject) {
+          shouldReject = false;
+          return true;
+        }
+        return false;
+      }
+
+      @Override
+      public Cell getHintForRejectedRow(Cell firstRowCell) {
+        return hint;
+      }
+    };
+
+    FilterList fl = new FilterList(Operator.MUST_PASS_ALL, sometimesRejects);
+
+    // Row 1: filter rejects, hint is available
+    assertTrue(fl.filterRowKey(kv(ROW_A)));
+    assertNotNull(fl.getHintForRejectedRow(kv(ROW_A)));
+
+    // Reset between rows (as the scanner does)
+    fl.reset();
+
+    // Row 2: filter accepts, no rejection state should remain
+    fl.filterRowKey(kv(ROW_B));
+    assertNull(fl.getHintForRejectedRow(kv(ROW_B)),
+      "After reset(), rejection state must be cleared — no stale hints");
   }
 
   @Test
