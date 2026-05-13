@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.CellUtil.createCell;
 import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +39,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -59,26 +58,19 @@ import org.apache.hadoop.hbase.util.CollectionBackedScanner;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 // Can't be small as it plays with EnvironmentEdgeManager
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreScanner {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreScanner.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreScanner.class);
-  @Rule
-  public TestName name = new TestName();
+
   private static final String CF_STR = "cf";
   private static final byte[] CF = Bytes.toBytes(CF_STR);
   static Configuration CONF = HBaseConfiguration.create();
@@ -304,8 +296,8 @@ public class TestStoreScanner {
       assertEquals(2, results.size());
       assertTrue(CellUtil.matchingColumn(results.get(0), CELL_WITH_VERSIONS[0]));
       assertTrue(CellUtil.matchingColumn(results.get(1), CELL_WITH_VERSIONS[2]));
-      assertTrue("Optimize should do some optimizations",
-        scannerNoOptimize.optimization.get() == 0);
+      assertEquals(0, scannerNoOptimize.optimization.get(),
+        "Optimize should do some optimizations");
     }
 
     get.setFilter(new ColumnCountGetFilter(2));
@@ -318,7 +310,7 @@ public class TestStoreScanner {
       assertEquals(2, results.size());
       assertTrue(CellUtil.matchingColumn(results.get(0), CELL_WITH_VERSIONS[0]));
       assertTrue(CellUtil.matchingColumn(results.get(1), CELL_WITH_VERSIONS[2]));
-      assertTrue("Optimize should do some optimizations", scanner.optimization.get() > 0);
+      assertTrue(scanner.optimization.get() > 0, "Optimize should do some optimizations");
     }
   }
 
@@ -399,7 +391,7 @@ public class TestStoreScanner {
         assertTrue(Bytes.equals(ONE, 0, ONE.length, cell.getQualifierArray(),
           cell.getQualifierOffset(), cell.getQualifierLength()));
       }
-      assertTrue("Optimize should do some optimizations", scanner.optimization.get() > 0);
+      assertTrue(scanner.optimization.get() > 0, "Optimize should do some optimizations");
     }
   }
 
@@ -420,13 +412,13 @@ public class TestStoreScanner {
     try (CellGridStoreScanner scanner = new CellGridStoreScanner(scan, this.scanInfo)) {
       List<Cell> results = new ArrayList<>();
       // For a Get there should be no more next's after the first call.
-      assertEquals(false, scanner.next(results));
+      assertFalse(scanner.next(results));
       // Should be one result only.
       assertEquals(2, results.size());
       // And we should have gone through optimize twice only.
-      assertEquals("First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW", 3,
-        scanner.count.get());
-      assertEquals("Memstore Read count should be", 1, scanner.memstoreOnlyReads);
+      assertEquals(3, scanner.count.get(),
+        "First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW");
+      assertEquals(1, scanner.memstoreOnlyReads, "Memstore Read count should be");
     }
   }
 
@@ -448,12 +440,12 @@ public class TestStoreScanner {
     try (CellGridStoreScanner scanner = new CellGridStoreScanner(scan, this.scanInfo)) {
       List<Cell> results = new ArrayList<>();
       // For a Get there should be no more next's after the first call.
-      assertEquals(false, scanner.next(results));
+      assertFalse(scanner.next(results));
       // Should be one result only.
       assertEquals(1, results.size());
       // And we should have gone through optimize twice only.
-      assertEquals("First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW", 2,
-        scanner.count.get());
+      assertEquals(2, scanner.count.get(),
+        "First qcode is SEEK_NEXT_COL and second INCLUDE_AND_SEEK_NEXT_ROW");
     }
   }
 
@@ -474,7 +466,7 @@ public class TestStoreScanner {
     List<Cell> results = null;
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(5, results.size());
       assertEquals(kvs[kvs.length - 1], results.get(0));
     }
@@ -484,7 +476,7 @@ public class TestStoreScanner {
     scanSpec.readAllVersions();
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(2, results.size());
     }
     // Another range.
@@ -493,7 +485,7 @@ public class TestStoreScanner {
     scanSpec.readAllVersions();
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
     }
     // See how TimeRange and Versions interact.
@@ -503,7 +495,7 @@ public class TestStoreScanner {
     scanSpec.readVersions(3);
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(3, results.size());
     }
   }
@@ -520,7 +512,7 @@ public class TestStoreScanner {
     // this only uses maxVersions (default=1) and TimeRange (default=all)
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(1, scan.memstoreOnlyReads);
       assertEquals(kvs[0], results.get(0));
@@ -540,7 +532,7 @@ public class TestStoreScanner {
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners,
       ScanType.COMPACT_RETAIN_DELETES)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(0, scan.memstoreOnlyReads);
       assertEquals(kvs[0], results.get(0));
@@ -606,14 +598,14 @@ public class TestStoreScanner {
     Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1"));
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(0, results.size());
 
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(kvs[2], results.get(0));
 
-      assertEquals(false, scan.next(results));
+      assertFalse(scan.next(results));
     }
   }
 
@@ -634,7 +626,7 @@ public class TestStoreScanner {
       // the two put at ts=now will be masked by the 1 delete, and
       // since the scan default returns 1 version we'll return the newest
       // key, which is kvs[2], now-100.
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(kvs2[1], results.get(0));
     }
@@ -655,7 +647,7 @@ public class TestStoreScanner {
     Scan scanSpec = new Scan().withStartRow(Bytes.toBytes("R1")).readVersions(2);
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, getCols("a"), scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(2, results.size());
       assertEquals(kvs2[1], results.get(0));
       assertEquals(kvs2[0], results.get(1));
@@ -671,7 +663,7 @@ public class TestStoreScanner {
     try (StoreScanner scan =
       new StoreScanner(new Scan().withStartRow(Bytes.toBytes("R1")), scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(2, results.size());
       assertEquals(kvs[0], results.get(0));
       assertEquals(kvs[1], results.get(1));
@@ -710,7 +702,7 @@ public class TestStoreScanner {
     try (
       StoreScanner scan = new StoreScanner(new Scan().readVersions(2), scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(5, results.size());
       assertEquals(kvs[0], results.get(0));
       assertEquals(kvs[2], results.get(1));
@@ -739,13 +731,13 @@ public class TestStoreScanner {
     try (StoreScanner scan =
       new StoreScanner(new Scan().readAllVersions(), scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(0, results.size());
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(kvs[kvs.length - 1], results.get(0));
 
-      assertEquals(false, scan.next(results));
+      assertFalse(scan.next(results));
     }
   }
 
@@ -759,7 +751,7 @@ public class TestStoreScanner {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     try (StoreScanner scan = new StoreScanner(new Scan(), scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(kvs[3], results.get(0));
     }
@@ -782,18 +774,18 @@ public class TestStoreScanner {
     List<KeyValueScanner> scanners = scanFixture(kvs);
     try (StoreScanner scan = new StoreScanner(new Scan(), scanInfo, getCols("a", "d"), scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(2, results.size());
       assertEquals(kvs[0], results.get(0));
       assertEquals(kvs[3], results.get(1));
       results.clear();
 
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(1, results.size());
       assertEquals(kvs[kvs.length - 1], results.get(0));
 
       results.clear();
-      assertEquals(false, scan.next(results));
+      assertFalse(scan.next(results));
     }
   }
 
@@ -820,20 +812,20 @@ public class TestStoreScanner {
       HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
     try (StoreScanner scanner = new StoreScanner(scan, scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scanner.next(results));
+      assertTrue(scanner.next(results));
       assertEquals(2, results.size());
       assertEquals(kvs[1], results.get(0));
       assertEquals(kvs[2], results.get(1));
       results.clear();
 
-      assertEquals(true, scanner.next(results));
+      assertTrue(scanner.next(results));
       assertEquals(3, results.size());
       assertEquals(kvs[4], results.get(0));
       assertEquals(kvs[5], results.get(1));
       assertEquals(kvs[6], results.get(2));
       results.clear();
 
-      assertEquals(false, scanner.next(results));
+      assertFalse(scanner.next(results));
     }
   }
 
@@ -851,7 +843,7 @@ public class TestStoreScanner {
   }
 
   @Test
-  @Ignore("this fails, since we don't handle deletions, etc, in peek")
+  @Disabled("this fails, since we don't handle deletions, etc, in peek")
   public void testPeek() throws Exception {
     KeyValue[] kvs = new KeyValue[] { create("R1", "cf", "a", 1, KeyValue.Type.Put, "dont-care"),
       create("R1", "cf", "a", 1, KeyValue.Type.Delete, "dont-care"), };
@@ -880,12 +872,12 @@ public class TestStoreScanner {
       HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
     try (StoreScanner scanner = new StoreScanner(scan, scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scanner.next(results));
+      assertTrue(scanner.next(results));
       assertEquals(1, results.size());
       assertEquals(kvs[1], results.get(0));
       results.clear();
 
-      assertEquals(false, scanner.next(results));
+      assertFalse(scanner.next(results));
     }
   }
 
@@ -944,7 +936,7 @@ public class TestStoreScanner {
         new StoreScanner(scanInfo, 2, ScanType.COMPACT_DROP_DELETES, scanners)) {
         List<Cell> results = new ArrayList<>();
         results = new ArrayList<>();
-        assertEquals(true, scanner.next(results));
+        assertTrue(scanner.next(results));
         assertEquals(kvs[0], results.get(0));
         assertEquals(kvs[2], results.get(1));
         assertEquals(kvs[3], results.get(2));
@@ -991,7 +983,7 @@ public class TestStoreScanner {
     scanSpec.setFilter(filter);
     try (StoreScanner scan = new StoreScanner(scanSpec, scanInfo, null, scanners)) {
       List<Cell> results = new ArrayList<>();
-      assertEquals(true, scan.next(results));
+      assertTrue(scan.next(results));
       assertEquals(2, results.size());
     }
   }
