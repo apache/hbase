@@ -356,7 +356,7 @@ public class MetaTableAccessor {
     throws IOException {
     RowFilter rowFilter =
       new RowFilter(CompareOperator.EQUAL, new SubstringComparator(regionEncodedName));
-    Scan scan = getMetaScan(connection.getConfiguration(), 1);
+    Scan scan = getMetaScan(connection.getConfiguration(), 1, false);
     scan.setFilter(rowFilter);
     try (Table table = getMetaHTable(connection);
       ResultScanner resultScanner = table.getScanner(scan)) {
@@ -558,13 +558,13 @@ public class MetaTableAccessor {
     // Stop key appends the smallest possible char to the table name
     byte[] stopKey = getTableStopRowForMeta(tableName, QueryType.REGION);
 
-    Scan scan = getMetaScan(conf, -1);
+    Scan scan = getMetaScan(conf, -1, false);
     scan.setStartRow(startKey);
     scan.setStopRow(stopKey);
     return scan;
   }
 
-  private static Scan getMetaScan(Configuration conf, int rowUpperLimit) {
+  private static Scan getMetaScan(Configuration conf, int rowUpperLimit, boolean isPagedScan) {
     Scan scan = new Scan();
     int scannerCaching = conf.getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
@@ -575,7 +575,14 @@ public class MetaTableAccessor {
       scan.setLimit(rowUpperLimit);
       scan.setReadType(Scan.ReadType.PREAD);
     }
-    scan.setCaching(scannerCaching);
+    if (isPagedScan) {
+      // Caller is doing a bounded paged scan and expects the whole slice back in one ScannerNext
+      // RPC. Size caching to the slice. Trade-off: a single larger response uses more
+      // RegionServer heap, fine for meta rows (small).
+      scan.setCaching(rowUpperLimit);
+    } else {
+      scan.setCaching(scannerCaching);
+    }
     scan.setPriority(HConstants.INTERNAL_READ_QOS);
     return scan;
   }
@@ -710,9 +717,9 @@ public class MetaTableAccessor {
    * Scan meta for regions of {@code tableName}, starting at the meta row derived from
    * {@code startRow} and returning at most {@code rowLimit} rows. {@code startRow} must be a region
    * start-key boundary (e.g. the end key of the previously visited region), or {@code null}/empty
-   * to start at the first region. The combination of {@code rowLimit} and the existing
-   * {@code setLimit + PREAD} machinery in {@link #getMetaScan(Configuration, int)} causes the
-   * underlying scan to complete in a single RPC.
+   * to start at the first region. The scan is sized so that the whole {@code rowLimit}-row slice
+   * comes back in a single ScannerNext RPC, regardless of the configured
+   * {@code hbase.meta.scanner.caching}.
    */
   public static void scanMetaForTableRegions(Connection connection, Visitor visitor,
     TableName tableName, byte[] startRow, int rowLimit, CatalogReplicaMode metaReplicaMode)
@@ -721,7 +728,7 @@ public class MetaTableAccessor {
       ? getTableStartRowForMeta(tableName, QueryType.REGION)
       : RegionInfo.createRegionName(tableName, startRow, HConstants.ZEROES, false);
     byte[] metaStop = getTableStopRowForMeta(tableName, QueryType.REGION);
-    scanMeta(connection, metaStart, metaStop, QueryType.REGION, null, rowLimit, visitor,
+    scanMeta(connection, metaStart, metaStop, QueryType.REGION, null, rowLimit, true, visitor,
       metaReplicaMode);
   }
 
@@ -779,8 +786,15 @@ public class MetaTableAccessor {
   private static void scanMeta(Connection connection, @Nullable final byte[] startRow,
     @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
     final Visitor visitor, CatalogReplicaMode metaReplicaMode) throws IOException {
+    scanMeta(connection, startRow, stopRow, type, filter, maxRows, false, visitor, metaReplicaMode);
+  }
+
+  private static void scanMeta(Connection connection, @Nullable final byte[] startRow,
+    @Nullable final byte[] stopRow, QueryType type, @Nullable Filter filter, int maxRows,
+    boolean isPagedScan, final Visitor visitor, CatalogReplicaMode metaReplicaMode)
+    throws IOException {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
-    Scan scan = getMetaScan(connection.getConfiguration(), rowUpperLimit);
+    Scan scan = getMetaScan(connection.getConfiguration(), rowUpperLimit, isPagedScan);
 
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
@@ -849,7 +863,7 @@ public class MetaTableAccessor {
   private static RegionInfo getClosestRegionInfo(Connection connection,
     @NonNull final TableName tableName, @NonNull final byte[] row) throws IOException {
     byte[] searchRow = RegionInfo.createRegionName(tableName, row, HConstants.NINES, false);
-    Scan scan = getMetaScan(connection.getConfiguration(), 1);
+    Scan scan = getMetaScan(connection.getConfiguration(), 1, false);
     scan.setReversed(true);
     scan.withStartRow(searchRow);
     try (ResultScanner resultScanner = getMetaHTable(connection).getScanner(scan)) {
