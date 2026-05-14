@@ -706,6 +706,25 @@ public class MetaTableAccessor {
     scanMetaForTableRegions(connection, visitor, tableName, CatalogReplicaMode.NONE);
   }
 
+  /**
+   * Scan meta for regions of {@code tableName}, starting at the meta row derived from
+   * {@code startRow} and returning at most {@code rowLimit} rows. {@code startRow} must be a region
+   * start-key boundary (e.g. the end key of the previously visited region), or {@code null}/empty
+   * to start at the first region. The combination of {@code rowLimit} and the existing
+   * {@code setLimit + PREAD} machinery in {@link #getMetaScan(Configuration, int)} causes the
+   * underlying scan to complete in a single RPC.
+   */
+  public static void scanMetaForTableRegions(Connection connection, Visitor visitor,
+    TableName tableName, byte[] startRow, int rowLimit, CatalogReplicaMode metaReplicaMode)
+    throws IOException {
+    byte[] metaStart = (startRow == null || startRow.length == 0)
+      ? getTableStartRowForMeta(tableName, QueryType.REGION)
+      : RegionInfo.createRegionName(tableName, startRow, HConstants.ZEROES, false);
+    byte[] metaStop = getTableStopRowForMeta(tableName, QueryType.REGION);
+    scanMeta(connection, metaStart, metaStop, QueryType.REGION, null, rowLimit, visitor,
+      metaReplicaMode);
+  }
+
   private static void scanMeta(Connection connection, TableName table, QueryType type, int maxRows,
     final Visitor visitor, CatalogReplicaMode metaReplicaMode) throws IOException {
     scanMeta(connection, getTableStartRowForMeta(table, type), getTableStopRowForMeta(table, type),
