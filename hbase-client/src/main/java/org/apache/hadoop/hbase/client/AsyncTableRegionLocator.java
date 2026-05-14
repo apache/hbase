@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Pair;
@@ -111,6 +112,43 @@ public interface AsyncTableRegionLocator {
    * @return a {@link List} of all regions associated with this table.
    */
   CompletableFuture<List<HRegionLocation>> getAllRegionLocations();
+
+  /**
+   * Bulk lookup of region locations from {@code hbase:meta} in a single RPC, starting at
+   * {@code startKey} (region start-key boundary, inclusive) and returning at most {@code limit}
+   * regions in start-key order.
+   * <p/>
+   * The returned list includes all replicas of each region (matching
+   * {@link #getAllRegionLocations()}), and the result is also written to the connection's region
+   * location cache.
+   * <p/>
+   * Ordering: regions are returned in ascending region start-key order (the natural order of
+   * {@code hbase:meta} rows for a single table). Within each region, replicas are returned in
+   * ascending replica-id order (replica 0, then 1, then 2, ...). Split parents are filtered out,
+   * which may cause a page to contain fewer than {@code limit} regions but never disturbs ordering
+   * of the survivors.
+   * <p/>
+   * To page through all regions of a table, call repeatedly passing
+   * {@code last.getRegion().getEndKey()} as the next {@code startKey}, where {@code last} is the
+   * final element of the previous response. All replicas of a region share the same
+   * {@link RegionInfo}, so the last entry's end key is the correct cursor regardless of which
+   * replica it is. Pass {@code null} for the first call. Stop paging when the returned list is
+   * empty or when the last region's end key is {@link HConstants#EMPTY_END_ROW} (zero-length) -
+   * that signals the end of the table; passing it back in would re-scan from the beginning since by
+   * convention an empty start key means "from the first region".
+   * <p/>
+   * Unlike {@link #getAllRegionLocations()}, this method performs at most one RPC against
+   * {@code hbase:meta} per invocation, so its latency is bounded by {@code limit} rather than table
+   * size. Note that this method does not coordinate with other in-flight meta lookups on the
+   * connection - aggregate pacing across concurrent callers is the caller's responsibility.
+   * @param startKey region start-key to begin scanning from (inclusive); {@code null} or empty
+   *                 starts from the first region
+   * @param limit    maximum number of regions to return; if &lt;= 0, falls back to
+   *                 {@code hbase.meta.scanner.caching}
+   * @return up to {@code limit} {@link HRegionLocation}s in start-key order, possibly empty when no
+   *         more regions exist; errors are reported via the returned future
+   */
+  CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] startKey, int limit);
 
   /**
    * Gets the starting row key for every region in the currently open table.

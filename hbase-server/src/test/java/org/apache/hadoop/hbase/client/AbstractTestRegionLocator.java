@@ -19,13 +19,18 @@ package org.apache.hadoop.hbase.client;
 
 import static org.junit.Assert.assertArrayEquals;
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertThrows;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -40,6 +45,13 @@ public abstract class AbstractTestRegionLocator {
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   protected static TableName TABLE_NAME = TableName.valueOf("Locator");
+
+  /**
+   * Single-replica companion table used only by tests that need to assert per-replica cache
+   * population without tripping over the multi-replica
+   * {@link AsyncNonMetaRegionLocator#addLocationToCache(HRegionLocation)} merge limitation.
+   */
+  protected static TableName TABLE_NAME_NO_REPLICA = TableName.valueOf("LocatorNoReplica");
 
   protected static byte[] FAMILY = Bytes.toBytes("family");
 
@@ -59,6 +71,10 @@ public abstract class AbstractTestRegionLocator {
     }
     UTIL.getAdmin().createTable(td, SPLIT_KEYS);
     UTIL.waitTableAvailable(TABLE_NAME);
+    TableDescriptor tdNoReplica = TableDescriptorBuilder.newBuilder(TABLE_NAME_NO_REPLICA)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
+    UTIL.getAdmin().createTable(tdNoReplica, SPLIT_KEYS);
+    UTIL.waitTableAvailable(TABLE_NAME_NO_REPLICA);
     try (ConnectionRegistry registry =
       ConnectionRegistryFactory.create(UTIL.getConfiguration(), User.getCurrent())) {
       RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(UTIL, registry);
@@ -69,6 +85,7 @@ public abstract class AbstractTestRegionLocator {
   @After
   public void tearDownAfterTest() throws IOException {
     clearCache(TABLE_NAME);
+    clearCache(TABLE_NAME_NO_REPLICA);
     clearCache(TableName.META_TABLE_NAME);
   }
 
@@ -160,6 +177,87 @@ public abstract class AbstractTestRegionLocator {
     }
   }
 
+  @Test
+  public void testGetRegionLocationsFirstPage() throws IOException {
+    List<HRegionLocation> page = getRegionLocations(TABLE_NAME, null, 2);
+    assertEquals(2 * REGION_REPLICATION, page.size());
+    for (int i = 0; i < 2; i++) {
+      for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
+        assertRegionLocation(page.get(i * REGION_REPLICATION + replicaId), i, replicaId);
+      }
+    }
+  }
+
+  @Test
+  public void testGetRegionLocationsPagination() throws IOException {
+    int pageSize = 3;
+    int totalRegions = SPLIT_KEYS.length + 1;
+    List<HRegionLocation> all = new ArrayList<>();
+    byte[] cursor = null;
+    while (true) {
+      List<HRegionLocation> page = getRegionLocations(TABLE_NAME, cursor, pageSize);
+      if (page.isEmpty()) {
+        break;
+      }
+      all.addAll(page);
+      HRegionLocation last = page.get(page.size() - 1);
+      byte[] endKey = last.getRegion().getEndKey();
+      if (endKey.length == 0) {
+        break;
+      }
+      cursor = endKey;
+    }
+    assertEquals(totalRegions * REGION_REPLICATION, all.size());
+    for (int i = 0; i <= SPLIT_KEYS.length; i++) {
+      for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
+        assertRegionLocation(all.get(i * REGION_REPLICATION + replicaId), i, replicaId);
+      }
+    }
+  }
+
+  @Test
+  public void testGetRegionLocationsEmptyAfterEnd() throws IOException {
+    // Use a startKey lexicographically after all split keys: SPLIT_KEYS go "1".."9", so "z".
+    List<HRegionLocation> page = getRegionLocations(TABLE_NAME, Bytes.toBytes("z"), 5);
+    assertTrue("expected empty page past the last region; got " + page.size() + " entries",
+      page.isEmpty());
+  }
+
+  @Test
+  public void testGetRegionLocationsLimitFallsBackToConfig() throws IOException {
+    // mini-cluster default for hbase.meta.scanner.caching is well above SPLIT_KEYS.length+1, so
+    // limit<=0 must return every region.
+    List<HRegionLocation> page = getRegionLocations(TABLE_NAME, null, 0);
+    assertEquals((SPLIT_KEYS.length + 1) * REGION_REPLICATION, page.size());
+    page = getRegionLocations(TABLE_NAME, null, -1);
+    assertEquals((SPLIT_KEYS.length + 1) * REGION_REPLICATION, page.size());
+  }
+
+  @Test
+  public void testGetRegionLocationsRejectsMeta() {
+    assertThrows(IOException.class,
+      () -> getRegionLocations(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW, 1));
+  }
+
+  @Test
+  public void testGetRegionLocationsPopulatesCache() throws IOException {
+    // Use the single-replica companion table so the multi-replica
+    // addLocationToCache merge limitation does not interfere with this test.
+    clearCache(TABLE_NAME_NO_REPLICA);
+    List<HRegionLocation> page = getRegionLocations(TABLE_NAME_NO_REPLICA, null, 3);
+    assertEquals(3, page.size());
+    for (HRegionLocation loc : page) {
+      byte[] startKey = loc.getRegion().getStartKey();
+      RegionLocations cached = getCachedLocation(TABLE_NAME_NO_REPLICA, startKey);
+      assertNotNull("metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
+        + " — bulk API did not populate the cache", cached);
+      HRegionLocation cachedLoc = cached.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID);
+      assertNotNull("metaCache had region but missing default replica entry", cachedLoc);
+      assertEquals("cached server differs from server returned by bulk API", loc.getServerName(),
+        cachedLoc.getServerName());
+    }
+  }
+
   private void assertMetaStartOrEndKeys(byte[][] keys) {
     assertEquals(1, keys.length);
     assertArrayEquals(HConstants.EMPTY_BYTE_ARRAY, keys[0]);
@@ -213,6 +311,12 @@ public abstract class AbstractTestRegionLocator {
     throws IOException;
 
   protected abstract List<HRegionLocation> getAllRegionLocations(TableName tableName)
+    throws IOException;
+
+  protected abstract List<HRegionLocation> getRegionLocations(TableName tableName, byte[] startKey,
+    int limit) throws IOException;
+
+  protected abstract RegionLocations getCachedLocation(TableName tableName, byte[] startKey)
     throws IOException;
 
   protected abstract void clearCache(TableName tableName) throws IOException;

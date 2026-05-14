@@ -63,6 +63,10 @@ class ConnectionOverAsyncConnection implements Connection {
     this.connConf = new ConnectionConfiguration(conn.getConfiguration());
   }
 
+  AsyncConnectionImpl getAsyncConnection() {
+    return conn;
+  }
+
   @Override
   public void abort(String why, Throwable error) {
     if (error != null) {

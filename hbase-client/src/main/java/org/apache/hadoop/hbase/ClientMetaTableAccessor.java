@@ -168,8 +168,34 @@ public final class ClientMetaTableAccessor {
    */
   public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
     AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName) {
+    return toHRegionLocations(getTableRegionsAndLocations(metaTable, tableName, true));
+  }
+
+  /**
+   * Used to get a single-RPC, paginated slice of region locations for the specific table, starting
+   * at the meta row derived from {@code startKey} and capped at {@code rowLimit} regions.
+   * {@code startKey} must be a region start-key boundary (e.g. the end key of the previously
+   * visited region), or {@code null}/empty to start at the first region.
+   * @param metaTable scanner over meta table
+   * @param tableName table we're looking for
+   * @param startKey  region start-key to begin scanning from (inclusive); {@code null} or empty
+   *                  starts from the first region
+   * @param rowLimit  maximum number of meta rows to return; if {@code <= 0}, the underlying scan is
+   *                  unbounded
+   * @return the list of region locations. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
+    AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName, byte[] startKey,
+    int rowLimit) {
+    return toHRegionLocations(
+      getTableRegionsAndLocations(metaTable, tableName, true, startKey, rowLimit));
+  }
+
+  private static CompletableFuture<List<HRegionLocation>>
+    toHRegionLocations(CompletableFuture<List<Pair<RegionInfo, ServerName>>> source) {
     CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-    addListener(getTableRegionsAndLocations(metaTable, tableName, true), (locations, err) -> {
+    addListener(source, (locations, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
       } else if (locations == null || locations.isEmpty()) {
@@ -212,6 +238,39 @@ public final class ClientMetaTableAccessor {
       }
       future.complete(visitor.getResults());
     });
+    return future;
+  }
+
+  /**
+   * Variant of {@link #getTableRegionsAndLocations} that scans a bounded slice of meta starting at
+   * the row derived from {@code startKey} and stopping after at most {@code rowLimit} rows.
+   */
+  private static CompletableFuture<List<Pair<RegionInfo, ServerName>>> getTableRegionsAndLocations(
+    final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
+    final boolean excludeOfflinedSplitParents, final byte[] startKey, final int rowLimit) {
+    CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      future.completeExceptionally(new IOException(
+        "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
+      return future;
+    }
+
+    CollectRegionLocationsVisitor visitor =
+      new CollectRegionLocationsVisitor(excludeOfflinedSplitParents);
+
+    byte[] metaStart = (startKey == null || startKey.length == 0)
+      ? getTableStartRowForMeta(tableName, QueryType.REGION)
+      : RegionInfo.createRegionName(tableName, startKey, HConstants.ZEROES, false);
+    byte[] metaStop = getTableStopRowForMeta(tableName, QueryType.REGION);
+
+    addListener(scanMeta(metaTable, metaStart, metaStop, QueryType.REGION, rowLimit, visitor),
+      (v, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
+        }
+        future.complete(visitor.getResults());
+      });
     return future;
   }
 
