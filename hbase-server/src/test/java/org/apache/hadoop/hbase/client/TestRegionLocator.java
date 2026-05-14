@@ -124,7 +124,8 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
           HRegionLocation loc = page.get(i * REGION_REPLICATION + replicaId);
           assertArrayEquals("region " + i + " replica " + replicaId + " start key",
             expectedStartKeys[i], loc.getRegion().getStartKey());
-          assertEquals("region " + i + " replica id at index " + (i * REGION_REPLICATION + replicaId),
+          assertEquals(
+            "region " + i + " replica id at index " + (i * REGION_REPLICATION + replicaId),
             replicaId, loc.getRegion().getReplicaId());
         }
       }
@@ -203,23 +204,24 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   public void testGetRegionLocationsHoldsUserRegionLock() throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
-    try (ConnectionImplementation conn =
-      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
+    try (
+      ConnectionImplementation conn =
+        (ConnectionImplementation) ConnectionFactory.createConnection(conf);
       RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
       MetricsConnection metrics = conn.getConnectionMetrics();
       long before = metrics.getUserRegionLockHeldTimer().getCount();
       locator.getRegionLocations(HConstants.EMPTY_START_ROW, 3);
       long after = metrics.getUserRegionLockHeldTimer().getCount();
-      assertEquals("userRegionLock held-timer should have incremented exactly once for the bulk"
-        + " lookup", before + 1, after);
+      assertEquals(
+        "userRegionLock held-timer should have incremented exactly once for the bulk" + " lookup",
+        before + 1, after);
     }
   }
 
   /**
    * Directly verify that the new API writes into the same {@code metaCache} that
-   * {@code ConnectionImplementation.locateRegionInMeta} reads from: after the bulk call, looking
-   * up each returned region's start key via the package-private cache accessor must return
-   * non-null.
+   * {@code ConnectionImplementation.locateRegionInMeta} reads from: after the bulk call, looking up
+   * each returned region's start key via the package-private cache accessor must return non-null.
    */
   @Test
   public void testGetRegionLocationsPopulatesMetaCacheDirect() throws IOException {
@@ -234,10 +236,10 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
         assertNotNull("metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
           + " — bulk API did not populate the same cache locateRegionInMeta uses", cached);
         HRegionLocation cachedLoc = cached.getRegionLocation(loc.getRegion().getReplicaId());
-        assertNotNull("metaCache had region but missing replica "
-          + loc.getRegion().getReplicaId(), cachedLoc);
-        assertEquals("cached server differs from server returned by bulk API",
-          loc.getServerName(), cachedLoc.getServerName());
+        assertNotNull("metaCache had region but missing replica " + loc.getRegion().getReplicaId(),
+          cachedLoc);
+        assertEquals("cached server differs from server returned by bulk API", loc.getServerName(),
+          cachedLoc.getServerName());
       }
     }
   }
@@ -245,16 +247,17 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   /**
    * Indirect verification of the same property: after the bulk call,
    * {@code RegionLocator.getRegionLocation(row, useCache=true)} for a row inside any returned
-   * region must be served from cache — i.e. it must NOT acquire the user-region lock (which is
-   * only taken when {@code locateRegionInMeta} actually issues a meta RPC). This is the
-   * end-to-end proof that the bulk API and the single-region API share the cache.
+   * region must be served from cache — i.e. it must NOT acquire the user-region lock (which is only
+   * taken when {@code locateRegionInMeta} actually issues a meta RPC). This is the end-to-end proof
+   * that the bulk API and the single-region API share the cache.
    */
   @Test
   public void testGetRegionLocationsAvoidsMetaRpcForCachedRows() throws IOException {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
-    try (ConnectionImplementation conn =
-      (ConnectionImplementation) ConnectionFactory.createConnection(conf);
+    try (
+      ConnectionImplementation conn =
+        (ConnectionImplementation) ConnectionFactory.createConnection(conf);
       RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
       conn.clearRegionCache(TABLE_NAME);
       MetricsConnection metrics = conn.getConnectionMetrics();
