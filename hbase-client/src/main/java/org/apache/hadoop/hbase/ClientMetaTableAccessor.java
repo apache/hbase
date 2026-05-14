@@ -263,7 +263,7 @@ public final class ClientMetaTableAccessor {
       : RegionInfo.createRegionName(tableName, startKey, HConstants.ZEROES, false);
     byte[] metaStop = getTableStopRowForMeta(tableName, QueryType.REGION);
 
-    addListener(scanMeta(metaTable, metaStart, metaStop, QueryType.REGION, rowLimit, visitor),
+    addListener(scanMeta(metaTable, metaStart, metaStop, QueryType.REGION, rowLimit, true, visitor),
       (v, error) -> {
         if (error != null) {
           future.completeExceptionally(error);
@@ -284,22 +284,26 @@ public final class ClientMetaTableAccessor {
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     TableName tableName, QueryType type, final Visitor visitor) {
     return scanMeta(metaTable, getTableStartRowForMeta(tableName, type),
-      getTableStopRowForMeta(tableName, type), type, Integer.MAX_VALUE, visitor);
+      getTableStopRowForMeta(tableName, type), type, Integer.MAX_VALUE, false, visitor);
   }
 
   /**
    * Performs a scan of META table for given table.
-   * @param metaTable scanner over meta table
-   * @param startRow  Where to start the scan
-   * @param stopRow   Where to stop the scan
-   * @param type      scanned part of meta
-   * @param maxRows   maximum rows to return
-   * @param visitor   Visitor invoked against each row
+   * @param metaTable   scanner over meta table
+   * @param startRow    Where to start the scan
+   * @param stopRow     Where to stop the scan
+   * @param type        scanned part of meta
+   * @param maxRows     maximum rows to return
+   * @param isPagedScan when {@code true}, the scan is sized so the whole slice (up to
+   *                    {@code maxRows}) returns in a single ScannerNext RPC. When {@code false},
+   *                    uses the configured {@code hbase.meta.scanner.caching}.
+   * @param visitor     Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
-    byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
+    byte[] startRow, byte[] stopRow, QueryType type, int maxRows, boolean isPagedScan,
+    final Visitor visitor) {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
-    Scan scan = getMetaScan(metaTable, rowUpperLimit);
+    Scan scan = getMetaScan(metaTable, rowUpperLimit, isPagedScan);
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
     }
@@ -496,7 +500,7 @@ public final class ClientMetaTableAccessor {
     }
   }
 
-  private static Scan getMetaScan(AsyncTable<?> metaTable, int rowUpperLimit) {
+  private static Scan getMetaScan(AsyncTable<?> metaTable, int rowUpperLimit, boolean isPagedScan) {
     Scan scan = new Scan();
     int scannerCaching = metaTable.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
@@ -506,11 +510,18 @@ public final class ClientMetaTableAccessor {
     ) {
       scan.setConsistency(Consistency.TIMELINE);
     }
-    if (rowUpperLimit <= scannerCaching) {
+    if (isPagedScan) {
+      // Caller is doing a bounded paged scan and expects the whole slice back in one ScannerNext
+      // RPC. Size caching to the slice. Trade-off: a single larger response uses more RegionServer
+      // heap, fine for meta rows (small).
       scan.setLimit(rowUpperLimit);
+      scan.setCaching(rowUpperLimit);
+    } else {
+      if (rowUpperLimit <= scannerCaching) {
+        scan.setLimit(rowUpperLimit);
+      }
+      scan.setCaching(Math.min(rowUpperLimit, scannerCaching));
     }
-    int rows = Math.min(rowUpperLimit, scannerCaching);
-    scan.setCaching(rows);
     return scan;
   }
 
