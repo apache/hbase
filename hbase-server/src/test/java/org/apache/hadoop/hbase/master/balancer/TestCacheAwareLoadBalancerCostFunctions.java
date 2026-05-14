@@ -251,8 +251,9 @@ public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerT
   @Test
   public void testCacheCost() {
     conf.set(HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY, "/tmp/prefetch.persistence");
+    CacheAwareLoadBalancer lb = newCacheAwareBalancer(conf);
     CacheAwareLoadBalancer.CacheAwareCostFunction costFunction =
-      new CacheAwareLoadBalancer.CacheAwareCostFunction(conf);
+      lb.new CacheAwareCostFunction(conf);
 
     for (int test = 0; test < clusterRegionCacheRatioMocks.length; test++) {
       int[][] clusterRegionLocations = clusterRegionCacheRatioMocks[test];
@@ -380,11 +381,6 @@ public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerT
     }
 
     @Override
-    public int getTotalRegionHFileSizeMB(int region) {
-      return 1;
-    }
-
-    @Override
     protected float getRegionCacheRatioOnRegionServer(int region, int regionServerIndex) {
       float cacheRatio = 0.0f;
 
@@ -412,5 +408,11 @@ public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerT
       }
       return cacheRatio;
     }
+
+    @Override
+    int getRegionSizeMinusColdDataMB(int region) {
+      return 1;
+    }
+
   }
 }

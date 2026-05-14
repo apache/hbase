@@ -688,6 +688,15 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       newCost = computeCost(cluster, currentCost);
 
+      if (LOG.isDebugEnabled()) {
+        LOG.debug(
+          "action moving region {} from {} to {} with cost {}. currentCost={}, functionCost={}",
+          cluster.regions[((MoveRegionAction) action).getRegion()].getEncodedName(),
+          cluster.servers[((MoveRegionAction) action).getFromServer()].getServerName(),
+          cluster.servers[((MoveRegionAction) action).getToServer()].getServerName(), newCost,
+          currentCost, functionCost());
+      }
+
       double costImprovement = currentCost - newCost;
       double minimumImprovement =
         Math.max(CostFunction.getCostEpsilon(currentCost), CostFunction.getCostEpsilon(newCost));

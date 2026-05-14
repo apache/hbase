@@ -200,8 +200,6 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
 
   @Test
   public void testRegionsPartiallyCachedOnOldServerAndNotCachedOnCurrentServer() throws Exception {
-    // The regions are partially cached on old server but not cached on the current server
-
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
     ServerName server1 = servers.get(1);
@@ -219,7 +217,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
@@ -456,7 +454,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
@@ -510,7 +508,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
@@ -564,7 +562,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
