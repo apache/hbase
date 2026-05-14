@@ -972,12 +972,13 @@ public class TestFilterHintForRejectedRow {
     WhileMatchFilter wmFilter = new WhileMatchFilter(innerHintFilter);
 
     // WhileMatchFilter delegates filterRowKey and sets filterAllRemaining on first true.
-    // After the first row is rejected, the scan terminates. So we expect 0 results.
-    // The hint should still be consulted before termination.
+    // The scanner checks isFilterDoneInternal() BEFORE calling getHintForRejectedRow,
+    // so the hint path is short-circuited and the scan terminates immediately.
     List<Cell> results = scanAll(new Scan().addFamily(FAMILY).setFilter(wmFilter));
 
-    // WhileMatchFilter ends the scan on first filterRowKey=true, so no data returned.
     assertTrue(results.isEmpty(), "WhileMatchFilter terminates scan on first rejection");
+    assertEquals(0, hintCalls.get(),
+      "WhileMatchFilter sets filterAllRemaining before getHintForRejectedRow is consulted");
   }
 
   @Test
@@ -1117,15 +1118,28 @@ public class TestFilterHintForRejectedRow {
     ColumnRangeFilter colFilter =
       new ColumnRangeFilter(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true);
 
+    // Baseline: same column range logic via filterCell, but no getSkipHint override.
+    FilterBase noHintBaseline = new FilterBase() {
+      private final ColumnRangeFilter delegate =
+        new ColumnRangeFilter(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true);
+
+      @Override
+      public ReturnCode filterCell(Cell c) throws IOException {
+        return delegate.filterCell(c);
+      }
+    };
+
     // Time range [1000, 3000): insideTs cells pass, outsideTs cells hit the time-range gate.
     // ColumnRangeFilter.getSkipHint() should be consulted for structurally skipped cells.
     Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(colFilter);
-    Scan noHintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(colFilter);
+    Scan noHintScan =
+      new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(noHintBaseline);
 
     List<Cell> hintResults = scanAll(hintScan);
     List<Cell> noHintResults = scanAll(noHintScan);
 
-    assertEquals(noHintResults.size(), hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Hint-aware scan must return same cells as no-hint baseline");
     // Should get "b" and "c" qualifiers for each row, only insideTs versions.
     assertEquals(rowCount * 2, hintResults.size());
   }
@@ -1156,13 +1170,25 @@ public class TestFilterHintForRejectedRow {
     // ColumnPrefixFilter with prefix "ab" should match "abc" and "abd".
     ColumnPrefixFilter prefixFilter = new ColumnPrefixFilter(Bytes.toBytes("ab"));
 
+    // Baseline: same prefix logic via filterCell, but no getSkipHint override.
+    FilterBase noHintBaseline = new FilterBase() {
+      private final ColumnPrefixFilter delegate = new ColumnPrefixFilter(Bytes.toBytes("ab"));
+
+      @Override
+      public ReturnCode filterCell(Cell c) throws IOException {
+        return delegate.filterCell(c);
+      }
+    };
+
     Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(prefixFilter);
-    Scan noHintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(prefixFilter);
+    Scan noHintScan =
+      new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(noHintBaseline);
 
     List<Cell> hintResults = scanAll(hintScan);
     List<Cell> noHintResults = scanAll(noHintScan);
 
-    assertEquals(noHintResults.size(), hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Hint-aware scan must return same cells as no-hint baseline");
     // Should get "abc" and "abd" qualifiers for each row, only insideTs versions.
     assertEquals(rowCount * 2, hintResults.size());
   }
@@ -1196,13 +1222,26 @@ public class TestFilterHintForRejectedRow {
     MultipleColumnPrefixFilter mcpFilter =
       new MultipleColumnPrefixFilter(new byte[][] { Bytes.toBytes("ab"), Bytes.toBytes("bb") });
 
+    // Baseline: same prefix logic via filterCell, but no getSkipHint override.
+    FilterBase noHintBaseline = new FilterBase() {
+      private final MultipleColumnPrefixFilter delegate =
+        new MultipleColumnPrefixFilter(new byte[][] { Bytes.toBytes("ab"), Bytes.toBytes("bb") });
+
+      @Override
+      public ReturnCode filterCell(Cell c) throws IOException {
+        return delegate.filterCell(c);
+      }
+    };
+
     Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(mcpFilter);
-    Scan noHintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(mcpFilter);
+    Scan noHintScan =
+      new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(noHintBaseline);
 
     List<Cell> hintResults = scanAll(hintScan);
     List<Cell> noHintResults = scanAll(noHintScan);
 
-    assertEquals(noHintResults.size(), hintResults.size());
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "Hint-aware scan must return same cells as no-hint baseline");
     // Should get "abc", "abd", "bbb" qualifiers for each row, only insideTs versions.
     assertEquals(rowCount * 3, hintResults.size());
   }
@@ -1243,11 +1282,28 @@ public class TestFilterHintForRejectedRow {
     FilterList andFilter =
       new FilterList(FilterList.Operator.MUST_PASS_ALL, Arrays.asList(colRange, customSkipHint));
 
-    Scan scan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(andFilter);
-    List<Cell> results = scanAll(scan);
+    // Baseline: same column range via filterCell, no getSkipHint.
+    FilterBase noHintBaseline = new FilterBase() {
+      private final ColumnRangeFilter delegate =
+        new ColumnRangeFilter(Bytes.toBytes("b"), true, Bytes.toBytes("c"), true);
 
+      @Override
+      public ReturnCode filterCell(Cell c) throws IOException {
+        return delegate.filterCell(c);
+      }
+    };
+
+    Scan hintScan = new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(andFilter);
+    Scan noHintScan =
+      new Scan().addFamily(FAMILY).setTimeRange(1000, 3000).setFilter(noHintBaseline);
+
+    List<Cell> hintResults = scanAll(hintScan);
+    List<Cell> noHintResults = scanAll(noHintScan);
+
+    assertEquals(noHintResults.size(), hintResults.size(),
+      "AND composed skip-hint must return same cells as no-hint baseline");
     // Should get "b" and "c" for each row, only insideTs.
-    assertEquals(rowCount * 2, results.size());
+    assertEquals(rowCount * 2, hintResults.size());
   }
 
   @Test
