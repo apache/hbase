@@ -113,10 +113,12 @@ public class HRegionLocator implements RegionLocator {
   }
 
   @Override
-  public List<HRegionLocation> getRegionLocations(byte[] startKey, int limit) throws IOException {
+  public List<HRegionLocation> getRegionLocationsPage(byte[] startKey, int limit)
+    throws IOException {
     if (TableName.isMetaTableName(tableName)) {
-      throw new IOException("getRegionLocations(startKey, limit) is not supported for hbase:meta;"
-        + " use getRegionLocation(EMPTY_START_ROW) instead.");
+      throw new IOException(
+        "getRegionLocationsPage(startKey, limit) is not supported for hbase:meta;"
+          + " use getRegionLocation(EMPTY_START_ROW) instead.");
     }
     final int effectiveLimit = limit > 0
       ? limit
@@ -127,7 +129,7 @@ public class HRegionLocator implements RegionLocator {
       .getConfiguration().get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
 
     final Supplier<Span> supplier = new TableSpanBuilder(connection)
-      .setName("HRegionLocator.getRegionLocations").setTableName(tableName);
+      .setName("HRegionLocator.getRegionLocationsPage").setTableName(tableName);
     return tracedLocationFuture(() -> {
       final List<HRegionLocation> out = new ArrayList<>(effectiveLimit);
       MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {

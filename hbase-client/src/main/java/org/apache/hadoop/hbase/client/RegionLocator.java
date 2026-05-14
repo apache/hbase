@@ -159,15 +159,25 @@ public interface RegionLocator extends Closeable {
    * {@code hbase:meta} per invocation, so its latency is bounded by {@code limit} rather than table
    * size. Suitable for callers that wrap meta lookups in a lock with a fixed timeout, e.g. for bulk
    * region-cache warmup.
+   * <p/>
+   * This method is optional. Implementations that cannot support paginated lookups should throw
+   * {@link UnsupportedOperationException} (the default behavior); callers should fall back to
+   * {@link #getAllRegionLocations()} in that case.
    * @param startKey region start-key to begin scanning from (inclusive); {@code null} or empty
    *                 starts from the first region
    * @param limit    maximum number of regions to return; if &lt;= 0, falls back to
    *                 {@code hbase.meta.scanner.caching}
    * @return up to {@code limit} {@link HRegionLocation}s in start-key order, possibly empty when no
    *         more regions exist
-   * @throws IOException if a remote or network exception occurs
+   * @throws IOException                   if a remote or network exception occurs
+   * @throws UnsupportedOperationException if this implementation does not support paginated lookups
    */
-  List<HRegionLocation> getRegionLocations(byte[] startKey, int limit) throws IOException;
+  default List<HRegionLocation> getRegionLocationsPage(byte[] startKey, int limit)
+    throws IOException {
+    throw new UnsupportedOperationException(
+      "getRegionLocationsPage(byte[], int) is not supported by this RegionLocator;"
+        + " fall back to getAllRegionLocations()");
+  }
 
   /**
    * Gets the starting row key for every region in the currently open table.
