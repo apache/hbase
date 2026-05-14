@@ -113,7 +113,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   @Test
   public void testGetRegionLocationsFirstPage() throws IOException {
     try (RegionLocator locator = UTIL.getConnection().getRegionLocator(TABLE_NAME)) {
-      List<HRegionLocation> page = locator.getRegionLocations(HConstants.EMPTY_START_ROW, 3);
+      List<HRegionLocation> page = locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 3);
       assertEquals(3 * REGION_REPLICATION, page.size());
       // Contract: regions in ascending start-key order, replicas in ascending replicaId order
       // within each region.
@@ -145,7 +145,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       byte[] cursor = null;
       int pages = 0;
       while (true) {
-        List<HRegionLocation> page = locator.getRegionLocations(cursor, 4);
+        List<HRegionLocation> page = locator.getRegionLocationsPage(cursor, 4);
         if (page.isEmpty()) {
           break;
         }
@@ -169,7 +169,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   public void testGetRegionLocationsEmptyAfterEnd() throws IOException {
     try (RegionLocator locator = UTIL.getConnection().getRegionLocator(TABLE_NAME)) {
       // Use a startKey lexicographically after all split keys: SPLIT_KEYS go "1".."9", so "z".
-      List<HRegionLocation> page = locator.getRegionLocations(Bytes.toBytes("z"), 5);
+      List<HRegionLocation> page = locator.getRegionLocationsPage(Bytes.toBytes("z"), 5);
       assertTrue("expected empty page past the last region; got " + page.size() + " entries",
         page.isEmpty());
     }
@@ -178,7 +178,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   @Test
   public void testGetRegionLocationsCursorMatchesAllReplicas() throws IOException {
     try (RegionLocator locator = UTIL.getConnection().getRegionLocator(TABLE_NAME)) {
-      List<HRegionLocation> page = locator.getRegionLocations(HConstants.EMPTY_START_ROW, 2);
+      List<HRegionLocation> page = locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 2);
       assertEquals(2 * REGION_REPLICATION, page.size());
       // Last REGION_REPLICATION entries are all replicas of the last region — same RegionInfo,
       // so same end key regardless of which one the caller picks as the cursor.
@@ -195,7 +195,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
     // Default HBASE_META_SCANNER_CACHING is 100, table has 10 regions; limit=0 must fall back
     // to the config and return everything in one shot.
     try (RegionLocator locator = UTIL.getConnection().getRegionLocator(TABLE_NAME)) {
-      List<HRegionLocation> page = locator.getRegionLocations(HConstants.EMPTY_START_ROW, 0);
+      List<HRegionLocation> page = locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 0);
       assertEquals(REGION_REPLICATION * (SPLIT_KEYS.length + 1), page.size());
     }
   }
@@ -210,7 +210,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
       MetricsConnection metrics = conn.getConnectionMetrics();
       long before = metrics.getUserRegionLockHeldTimer().getCount();
-      locator.getRegionLocations(HConstants.EMPTY_START_ROW, 3);
+      locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 3);
       long after = metrics.getUserRegionLockHeldTimer().getCount();
       assertEquals(
         "userRegionLock held-timer should have incremented exactly once for the bulk" + " lookup",
@@ -228,7 +228,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
     ConnectionImplementation conn = (ConnectionImplementation) UTIL.getConnection();
     conn.clearRegionCache(TABLE_NAME);
     try (RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
-      List<HRegionLocation> page = locator.getRegionLocations(HConstants.EMPTY_START_ROW, 4);
+      List<HRegionLocation> page = locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 4);
       assertEquals(4 * REGION_REPLICATION, page.size());
       for (HRegionLocation loc : page) {
         byte[] startKey = loc.getRegion().getStartKey();
@@ -262,7 +262,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       conn.clearRegionCache(TABLE_NAME);
       MetricsConnection metrics = conn.getConnectionMetrics();
 
-      List<HRegionLocation> page = locator.getRegionLocations(HConstants.EMPTY_START_ROW, 4);
+      List<HRegionLocation> page = locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 4);
       long afterBulk = metrics.getUserRegionLockHeldTimer().getCount();
 
       // For each returned region, look up a row inside it via the single-region API. Each lookup
