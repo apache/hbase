@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Optional;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -79,10 +80,10 @@ public final class CacheRequestContext {
 
   /**
    * Returns the expected block type, if known.
-   * @return block type, or null if unknown
+   * @return an {@link Optional} containing the block type, or empty if unknown
    */
-  public BlockType getBlockType() {
-    return blockType;
+  public Optional<BlockType> getBlockType() {
+    return Optional.ofNullable(blockType);
   }
 
   /**
