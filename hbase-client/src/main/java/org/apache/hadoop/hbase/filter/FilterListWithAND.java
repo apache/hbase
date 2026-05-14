@@ -269,6 +269,7 @@ public class FilterListWithAND extends FilterListBase {
     if (isEmpty()) {
       return super.filterRowKey(firstRowCell);
     }
+    Arrays.fill(rejectedByFilterRowKey, false);
     boolean anyRowKeyFiltered = false;
     boolean anyHintingPassed = false;
     for (int i = 0, n = filters.size(); i < n; i++) {
