@@ -189,9 +189,9 @@ public class RegionStateStore {
     final int replicaId = regionInfo.getReplicaId();
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
-    final StringBuilder info =
-      new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
-        .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
+    final StringBuilder info = new StringBuilder("pid=").append(pid).append(" updating ")
+      .append(master.getConnection().getMetaTableName()).append(" row=")
+      .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
         "Open region should be on a server");
@@ -283,7 +283,7 @@ public class RegionStateStore {
         future = FutureUtils.failedFuture(e);
       }
     } else {
-      AsyncTable<?> table = master.getAsyncConnection().getTable(TableName.META_TABLE_NAME);
+      AsyncTable<?> table = master.getAsyncConnection().getMetaTable();
       future = table.put(put);
     }
     FutureUtils.addListener(future, (r, e) -> {
@@ -329,8 +329,7 @@ public class RegionStateStore {
       }
     }
     MutateRowsRequest request = builder.build();
-    AsyncTable<?> table =
-      master.getConnection().toAsyncConnection().getTable(TableName.META_TABLE_NAME);
+    AsyncTable<?> table = master.getAsyncConnection().getMetaTable();
     CompletableFuture<MutateRowsResponse> future = table.<MultiRowMutationService,
       MutateRowsResponse> coprocessorService(MultiRowMutationService::newStub,
         (stub, controller, done) -> stub.mutateRows(controller, request, done), row);
@@ -338,7 +337,7 @@ public class RegionStateStore {
   }
 
   private Table getMetaTable() throws IOException {
-    return master.getConnection().getTable(TableName.META_TABLE_NAME);
+    return master.getConnection().getMetaTable();
   }
 
   private Result getRegionCatalogResult(RegionInfo region) throws IOException {
@@ -476,7 +475,6 @@ public class RegionStateStore {
 
   /**
    * Deletes merge qualifiers for the specified merge region.
-   * @param connection  connection we're using
    * @param mergeRegion the merged region
    */
   public void deleteMergeQualifiers(RegionInfo mergeRegion) throws IOException {
@@ -504,7 +502,7 @@ public class RegionStateStore {
         + " in meta table, they are cleaned up already, Skip.");
       return;
     }
-    try (Table table = master.getConnection().getTable(TableName.META_TABLE_NAME)) {
+    try (Table table = master.getConnection().getMetaTable()) {
       table.delete(delete);
     }
     LOG.info(
@@ -566,7 +564,6 @@ public class RegionStateStore {
   /**
    * Overwrites the specified regions from hbase:meta. Deletes old rows for the given regions and
    * adds new ones. Regions added back have state CLOSED.
-   * @param connection  connection we're using
    * @param regionInfos list of regions to be added to META
    */
   public void overwriteRegions(List<RegionInfo> regionInfos, int regionReplication)

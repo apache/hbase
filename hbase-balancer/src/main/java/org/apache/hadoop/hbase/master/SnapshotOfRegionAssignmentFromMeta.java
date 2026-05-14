@@ -170,9 +170,10 @@ public class SnapshotOfRegionAssignmentFromMeta {
    * Initialize the region assignment snapshot by scanning the hbase:meta table
    */
   public void initialize() throws IOException {
-    LOG.info("Start to scan the hbase:meta for the current region assignment " + "snappshot");
+    LOG.info("Start to scan {} for the current region assignment snapshot",
+      connection.getMetaTableName());
     // Scan hbase:meta to pick up user regions
-    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME);
+    try (Table metaTable = connection.getTable(connection.getMetaTableName());
       ResultScanner scanner = metaTable.getScanner(HConstants.CATALOG_FAMILY)) {
       for (;;) {
         Result result = scanner.next();
@@ -187,7 +188,8 @@ public class SnapshotOfRegionAssignmentFromMeta {
         }
       }
     }
-    LOG.info("Finished to scan the hbase:meta for the current region assignment" + "snapshot");
+    LOG.info("Finished scanning {} for the current region assignment snapshot",
+      connection.getMetaTableName());
   }
 
   private void addRegion(RegionInfo regionInfo) {

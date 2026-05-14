@@ -3686,6 +3686,42 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return metaRegionLocationCache.getMetaRegionLocations();
   }
 
+  /**
+   * Cached meta table name. Resolved lazily from {@link #asyncClusterConnection} on first
+   * successful call to {@link #getMetaTableName()} and never re-fetched, so callers see a stable
+   * value for the lifetime of the server. Before the cluster connection is up we fall back to the
+   * default meta table name, but we deliberately do not cache that fallback so a later call can
+   * still pick up the cluster-specific value once the connection is available.
+   */
+  private volatile TableName cachedMetaTableName;
+
+  /**
+   * RegionServers get the meta table name from Master via the connection registry. The result is
+   * cached after the first successful resolution to avoid the value flipping between the bootstrap
+   * default and the cluster-specific meta table name across calls.
+   */
+  @Override
+  public TableName getMetaTableName() {
+    TableName cached = cachedMetaTableName;
+    if (cached != null) {
+      return cached;
+    }
+    if (asyncClusterConnection != null) {
+      try {
+        TableName resolved = asyncClusterConnection.getMetaTableName();
+        if (resolved != null) {
+          cachedMetaTableName = resolved;
+          return resolved;
+        }
+      } catch (Exception e) {
+        LOG.warn("Failed to get meta table name from Master", e);
+      }
+    }
+    // Bootstrap: connection is not yet available. Return the default but do not cache it; the
+    // next call (after the connection is up) should be able to resolve the real value.
+    return super.getMetaTableName();
+  }
+
   @Override
   protected NamedQueueRecorder createNamedQueueRecord() {
     return NamedQueueRecorder.getInstance(conf);

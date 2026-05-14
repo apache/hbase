@@ -3325,7 +3325,7 @@ public final class ProtobufUtil {
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
     int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : defaultReplicaId;
-    if (tableName.equals(TableName.META_TABLE_NAME) && replicaId == defaultReplicaId) {
+    if (TableName.isMetaTableName(tableName) && replicaId == defaultReplicaId) {
       return RegionInfoBuilder.FIRST_META_REGIONINFO;
     }
     byte[] startKey = null;

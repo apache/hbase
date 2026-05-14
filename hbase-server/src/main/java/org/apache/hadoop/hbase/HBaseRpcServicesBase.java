@@ -89,6 +89,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMaste
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
@@ -375,6 +377,23 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       bootstrapNodesReply
         .forEach(serverName -> builder.addServerName(ProtobufUtil.toServerName(serverName)));
     } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
+    return builder.build();
+  }
+
+  @Override
+  public final GetMetaTableNameResponse getMetaTableName(RpcController controller,
+    GetMetaTableNameRequest request) throws ServiceException {
+    GetMetaTableNameResponse.Builder builder = GetMetaTableNameResponse.newBuilder();
+
+    try {
+      TableName metaTableName = server.getMetaTableName();
+      if (metaTableName != null) {
+        builder.setTableName(metaTableName.getNameAsString());
+      }
+    } catch (Exception e) {
       throw new ServiceException(e);
     }
 
