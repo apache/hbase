@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
 import org.apache.hadoop.hbase.trace.TraceUtil;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUtils;
@@ -108,6 +109,61 @@ public class HRegionLocator implements RegionLocator {
         }
       }
       return regions;
+    }, HRegionLocator::getRegionNames, supplier);
+  }
+
+  @Override
+  public List<HRegionLocation> getRegionLocations(byte[] startKey, int limit) throws IOException {
+    if (TableName.isMetaTableName(tableName)) {
+      throw new IOException("getRegionLocations(startKey, limit) is not supported for hbase:meta;"
+        + " use getRegionLocation(EMPTY_START_ROW) instead.");
+    }
+    final int effectiveLimit = limit > 0
+      ? limit
+      : connection.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
+        HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+    final byte[] effectiveStart = startKey == null ? HConstants.EMPTY_START_ROW : startKey;
+    final CatalogReplicaMode metaReplicaMode = CatalogReplicaMode.fromString(connection
+      .getConfiguration().get(LOCATOR_META_REPLICAS_MODE, CatalogReplicaMode.NONE.toString()));
+
+    final Supplier<Span> supplier = new TableSpanBuilder(connection)
+      .setName("HRegionLocator.getRegionLocations").setTableName(tableName);
+    return tracedLocationFuture(() -> {
+      final List<HRegionLocation> out = new ArrayList<>(effectiveLimit);
+      MetaTableAccessor.Visitor visitor = new MetaTableAccessor.TableVisitorBase(tableName) {
+        @Override
+        public boolean visitInternal(Result result) throws IOException {
+          RegionLocations locs = MetaTableAccessor.getRegionLocations(result);
+          if (locs == null) {
+            return true;
+          }
+          for (HRegionLocation loc : locs.getRegionLocations()) {
+            if (loc != null) {
+              out.add(loc);
+            }
+          }
+          RegionLocations cleaned = locs.removeElementsWithNullLocation();
+          if (cleaned != null) {
+            connection.cacheLocation(tableName, cleaned);
+          }
+          return true;
+        }
+      };
+
+      boolean locked = false;
+      long lockStart = 0;
+      try {
+        connection.takeUserRegionLock();
+        lockStart = EnvironmentEdgeManager.currentTime();
+        locked = true;
+        MetaTableAccessor.scanMetaForTableRegions(connection, visitor, tableName, effectiveStart,
+          effectiveLimit, metaReplicaMode);
+      } finally {
+        if (locked) {
+          connection.releaseUserRegionLock(lockStart);
+        }
+      }
+      return out;
     }, HRegionLocator::getRegionNames, supplier);
   }
 

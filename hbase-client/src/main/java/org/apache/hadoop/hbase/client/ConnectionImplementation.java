@@ -1146,11 +1146,7 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
         }
       } finally {
         if (lockedUserRegion) {
-          userRegionLock.unlock();
-          // update duration of the lock being held
-          if (metrics != null) {
-            metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - lockStartTime);
-          }
+          releaseUserRegionLock(lockStartTime);
         }
       }
       try {
@@ -1182,6 +1178,19 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
     } catch (InterruptedException ie) {
       LOG.error("Interrupted while waiting for a lock", ie);
       throw ExceptionUtil.asInterrupt(ie);
+    }
+  }
+
+  /**
+   * Release {@link #userRegionLock} previously acquired via {@link #takeUserRegionLock()} and
+   * record the held duration in metrics.
+   * @param lockStartTimeMs value of {@link EnvironmentEdgeManager#currentTime()} captured
+   *                        immediately after {@link #takeUserRegionLock()} returned
+   */
+  void releaseUserRegionLock(long lockStartTimeMs) {
+    userRegionLock.unlock();
+    if (metrics != null) {
+      metrics.updateUserRegionLockHeld(EnvironmentEdgeManager.currentTime() - lockStartTimeMs);
     }
   }
 
