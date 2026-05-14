@@ -93,10 +93,10 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
   }
 
   @Override
-  protected List<HRegionLocation> getRegionLocations(TableName tableName, byte[] startKey,
+  protected List<HRegionLocation> getRegionLocationsPage(TableName tableName, byte[] startKey,
     int limit) throws IOException {
     try (RegionLocator locator = UTIL.getConnection().getRegionLocator(tableName)) {
-      return locator.getRegionLocations(startKey, limit);
+      return locator.getRegionLocationsPage(startKey, limit);
     }
   }
 

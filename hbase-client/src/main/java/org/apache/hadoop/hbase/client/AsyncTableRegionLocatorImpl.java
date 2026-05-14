@@ -84,12 +84,13 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
   }
 
   @Override
-  public CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] startKey, int limit) {
+  public CompletableFuture<List<HRegionLocation>> getRegionLocationsPage(byte[] startKey,
+    int limit) {
     return tracedFuture(() -> {
       if (TableName.isMetaTableName(tableName)) {
         CompletableFuture<List<HRegionLocation>> failed = new CompletableFuture<>();
         failed.completeExceptionally(
-          new IOException("getRegionLocations(startKey, limit) is not supported for hbase:meta;"
+          new IOException("getRegionLocationsPage(startKey, limit) is not supported for hbase:meta;"
             + " use getRegionLocation(EMPTY_START_ROW) instead."));
         return failed;
       }
@@ -112,7 +113,7 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
         }
       });
       return future;
-    }, getClass().getSimpleName() + ".getRegionLocations");
+    }, getClass().getSimpleName() + ".getRegionLocationsPage");
   }
 
   @Override

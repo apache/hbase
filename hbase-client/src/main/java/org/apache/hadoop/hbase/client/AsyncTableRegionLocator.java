@@ -141,6 +141,10 @@ public interface AsyncTableRegionLocator {
    * {@code hbase:meta} per invocation, so its latency is bounded by {@code limit} rather than table
    * size. Note that this method does not coordinate with other in-flight meta lookups on the
    * connection - aggregate pacing across concurrent callers is the caller's responsibility.
+   * <p/>
+   * This method is optional. Implementations that cannot support paginated lookups will return a
+   * future that completes exceptionally with {@link UnsupportedOperationException} (the default
+   * behavior); callers should fall back to {@link #getAllRegionLocations()} in that case.
    * @param startKey region start-key to begin scanning from (inclusive); {@code null} or empty
    *                 starts from the first region
    * @param limit    maximum number of regions to return; if &lt;= 0, falls back to
@@ -148,7 +152,14 @@ public interface AsyncTableRegionLocator {
    * @return up to {@code limit} {@link HRegionLocation}s in start-key order, possibly empty when no
    *         more regions exist; errors are reported via the returned future
    */
-  CompletableFuture<List<HRegionLocation>> getRegionLocations(byte[] startKey, int limit);
+  default CompletableFuture<List<HRegionLocation>> getRegionLocationsPage(byte[] startKey,
+    int limit) {
+    CompletableFuture<List<HRegionLocation>> failed = new CompletableFuture<>();
+    failed.completeExceptionally(new UnsupportedOperationException(
+      "getRegionLocationsPage(byte[], int) is not supported by this AsyncTableRegionLocator;"
+        + " fall back to getAllRegionLocations()"));
+    return failed;
+  }
 
   /**
    * Gets the starting row key for every region in the currently open table.

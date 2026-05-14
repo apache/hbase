@@ -119,12 +119,6 @@ public final class SnapshotRegionLocator implements RegionLocator {
   }
 
   @Override
-  public List<HRegionLocation> getRegionLocations(byte[] startKey, int limit) throws IOException {
-    // No need to page as region locations are already in-memory.
-    return getAllRegionLocations();
-  }
-
-  @Override
   public TableName getName() {
     return tableName;
   }

@@ -98,9 +98,9 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
   }
 
   @Override
-  protected List<HRegionLocation> getRegionLocations(TableName tableName, byte[] startKey,
+  protected List<HRegionLocation> getRegionLocationsPage(TableName tableName, byte[] startKey,
     int limit) throws IOException {
-    return get(CONN.getRegionLocator(tableName).getRegionLocations(startKey, limit));
+    return get(CONN.getRegionLocator(tableName).getRegionLocationsPage(startKey, limit));
   }
 
   @Override
