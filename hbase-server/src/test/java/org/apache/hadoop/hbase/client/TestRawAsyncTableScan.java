@@ -32,49 +32,43 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.hamcrest.Matcher;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: scan={0}")
 public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   private static final Logger logger = LoggerFactory.getLogger(TestRawAsyncTableScan.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRawAsyncTableScan.class);
+  private Supplier<Scan> scanCreator;
 
-  @Parameter(0)
-  public String scanType;
+  // scanType is only for displaying
+  public TestRawAsyncTableScan(String scanType, Supplier<Scan> scanCreator) {
+    this.scanCreator = scanCreator;
+  }
 
-  @Parameter(1)
-  public Supplier<Scan> scanCreater;
-
-  @Parameters(name = "{index}: type={0}")
-  public static List<Object[]> params() {
+  public static Stream<Arguments> parameters() {
     return getScanCreatorParams();
   }
 
   @Override
   protected Scan createScan() {
-    return scanCreater.get();
+    return scanCreator.get();
   }
 
   @Override
   protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
     TracedAdvancedScanResultConsumer scanConsumer = new TracedAdvancedScanResultConsumer();
-    CONN_RULE.getAsyncConnection().getTable(TABLE_NAME).scan(scan, scanConsumer);
+    CONN.getTable(TABLE_NAME).scan(scan, scanConsumer);
     List<Result> results = new ArrayList<>();
     // these tests batch settings with the sample data result in each result being
     // split in two. so we must allow twice the expected results in order to reach
@@ -96,7 +90,7 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @Override
   protected void assertTraceContinuity() {
-    final String parentSpanName = testName.getMethodName();
+    final String parentSpanName = methodName;
     final Matcher<SpanData> parentSpanMatcher =
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
@@ -137,7 +131,7 @@ public class TestRawAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected void
     assertTraceError(Matcher<io.opentelemetry.api.common.Attributes> exceptionMatcher) {
-    final String parentSpanName = testName.getMethodName();
+    final String parentSpanName = methodName;
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 

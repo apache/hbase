@@ -32,49 +32,42 @@ import java.util.List;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.client.trace.StringTraceRenderer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.hamcrest.Matcher;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: scan={0}")
 public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   private static final Logger logger = LoggerFactory.getLogger(TestAsyncTableScan.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableScan.class);
+  private Supplier<Scan> scanCreator;
 
-  @Parameter(0)
-  public String scanType;
+  // scanType is only for displaying
+  public TestAsyncTableScan(String scanType, Supplier<Scan> scanCreator) {
+    this.scanCreator = scanCreator;
+  }
 
-  @Parameter(1)
-  public Supplier<Scan> scanCreater;
-
-  @Parameters(name = "{index}: scan={0}")
-  public static List<Object[]> params() {
+  public static Stream<Arguments> parameters() {
     return getScanCreatorParams();
   }
 
   @Override
   protected Scan createScan() {
-    return scanCreater.get();
+    return scanCreator.get();
   }
 
   @Override
   protected List<Result> doScan(Scan scan, int closeAfter) throws Exception {
-    AsyncTable<ScanResultConsumer> table =
-      CONN_RULE.getAsyncConnection().getTable(TABLE_NAME, ForkJoinPool.commonPool());
+    AsyncTable<ScanResultConsumer> table = CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
     List<Result> results;
     if (closeAfter > 0) {
       // these tests batch settings with the sample data result in each result being
@@ -101,7 +94,7 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
 
   @Override
   protected void assertTraceContinuity() {
-    final String parentSpanName = testName.getMethodName();
+    final String parentSpanName = methodName;
     final Matcher<SpanData> parentSpanMatcher =
       allOf(hasName(parentSpanName), hasStatusWithCode(StatusCode.OK), hasEnded());
     waitForSpan(parentSpanMatcher);
@@ -140,7 +133,7 @@ public class TestAsyncTableScan extends AbstractTestAsyncTableScan {
   @Override
   protected void
     assertTraceError(Matcher<io.opentelemetry.api.common.Attributes> exceptionMatcher) {
-    final String parentSpanName = testName.getMethodName();
+    final String parentSpanName = methodName;
     final Matcher<SpanData> parentSpanMatcher = allOf(hasName(parentSpanName), hasEnded());
     waitForSpan(parentSpanMatcher);
 

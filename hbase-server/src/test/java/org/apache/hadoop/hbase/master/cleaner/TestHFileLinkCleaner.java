@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -33,8 +34,11 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.io.HFileLink;
+import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -77,6 +81,8 @@ public class TestHFileLinkCleaner {
   private Path linkBackRef;
   private FileStatus[] backRefs;
   private HFileCleaner cleaner;
+  private StoreFileTracker sft;
+  private HFileLink hfileLink;
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static DirScanPool POOL;
   private static final long TTL = 1000;
@@ -119,7 +125,7 @@ public class TestHFileLinkCleaner {
 
     HRegionFileSystem regionFS = HRegionFileSystem.create(conf, fs,
       CommonFSUtils.getTableDir(rootDir, tableLinkName), hriLink);
-    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, true,
+    sft = StoreFileTrackerFactory.create(conf, true,
       StoreContext.getBuilder()
         .withFamilyStoreDirectoryPath(new Path(regionFS.getRegionDir(), familyName))
         .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyName))
@@ -136,8 +142,9 @@ public class TestHFileLinkCleaner {
     // Create link to hfile
     familyLinkPath = getFamilyDirPath(rootDir, tableLinkName, hriLink.getEncodedName(), familyName);
     fs.mkdirs(familyLinkPath);
-    hfileLinkName =
+    hfileLink =
       sft.createHFileLink(hri.getTable(), hri.getEncodedName(), hfileName, createBackReference);
+    hfileLinkName = hfileName;
     linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
     assertTrue(fs.exists(linkBackRefDir));
     backRefs = fs.listStatus(linkBackRefDir);
@@ -185,7 +192,12 @@ public class TestHFileLinkCleaner {
     assertTrue(fs.exists(hfilePath));
 
     // simulate after removing the reference in data directory, the Link backref can be removed
-    fs.delete(new Path(familyLinkPath, hfileLinkName), false);
+    Path linkPath = new Path(familyLinkPath,
+      HFileLink.createHFileLinkName(hri.getTable(), hri.getEncodedName(), hfileName));
+    HStoreFile storeFile =
+      new HStoreFile(new StoreFileInfo(conf, fs, linkPath, hfileLink), BloomType.NONE, null);
+    sft.removeStoreFiles(Collections.singletonList(storeFile));
+
     cleaner.chore();
     assertFalse(fs.exists(linkBackRef), "Link should be deleted");
   }

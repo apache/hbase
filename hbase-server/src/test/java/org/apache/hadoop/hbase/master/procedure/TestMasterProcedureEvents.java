@@ -52,7 +52,7 @@ import org.slf4j.LoggerFactory;
 @Tag(MediumTests.TAG)
 public class TestMasterProcedureEvents {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableProcedure.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestMasterProcedureEvents.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private String testMethodName;

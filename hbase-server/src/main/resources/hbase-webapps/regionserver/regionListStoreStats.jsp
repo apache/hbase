@@ -45,6 +45,7 @@
     <th>Data Locality</th>
     <th>Len Of Biggest Cell</th>
     <th>% Cached</th>
+    <th>% Cold Data</th>
   </tr>
   </thead>
 
@@ -111,6 +112,7 @@
         <td><%= load.getDataLocality() %></td>
         <td><%= String.format("%,1d", lenOfBiggestCellInRegion) %></td>
         <td><%= StringUtils.formatPercent(load.getCurrentRegionCachedRatio(), 2) %></td>
+        <td><%= StringUtils.formatPercent(load.getCurrentRegionColdDataRatio(), 2) %></td>
       <% } %>
     </tr>
   <% } %>

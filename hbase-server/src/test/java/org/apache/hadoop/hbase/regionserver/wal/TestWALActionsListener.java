@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -41,22 +40,18 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that the actions are called while playing with an WAL
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWALActionsListener {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALActionsListener.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -67,7 +62,7 @@ public class TestWALActionsListener {
   private static FileSystem fs;
   private static FileSystem logFs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("hbase.regionserver.maxlogs", 5);
@@ -77,14 +72,14 @@ public class TestWALActionsListener {
     logFs = CommonFSUtils.getWALFileSystem(conf);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs.delete(rootDir, true);
     logFs.delete(new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME), true);
     logFs.delete(new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME), true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     setUp();
   }

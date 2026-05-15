@@ -233,8 +233,8 @@ public final class TableDescriptorChecker {
     checkDateTieredCompactionForTimeRangeDataTiering(conf);
     for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
       // Column family level configurations
-      Configuration cfdConf =
-        new CompoundConfiguration().add(conf).addStringMap(cfd.getConfiguration());
+      Configuration cfdConf = new CompoundConfiguration().add(conf)
+        .addStringMap(cfd.getConfiguration()).addBytesMap(cfd.getValues());
       checkDateTieredCompactionForTimeRangeDataTiering(cfdConf);
     }
   }
@@ -318,7 +318,8 @@ public final class TableDescriptorChecker {
     throws IOException {
     warnOrThrowExceptionForFailure(conf, () -> {
       for (ColumnFamilyDescriptor cfd : td.getColumnFamilies()) {
-        Configuration cfdConf = new CompoundConfiguration().addStringMap(cfd.getConfiguration());
+        Configuration cfdConf = new CompoundConfiguration().addStringMap(cfd.getConfiguration())
+          .addBytesMap(cfd.getValues());
         try {
           BloomFilterUtil.getBloomFilterParam(cfd.getBloomFilterType(), cfdConf);
         } catch (IllegalArgumentException e) {

@@ -18,18 +18,20 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedClass;
 import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
-@HBaseParameterizedTestTemplate(name = "{index}: provider={0}")
+@ParameterizedClass(name = "{index}: provider={0}")
+@MethodSource("parameters")
 public class TestCompressedWAL extends CompressedWALTestBase {
 
   public String walProvider;

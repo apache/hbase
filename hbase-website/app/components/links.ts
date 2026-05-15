@@ -63,6 +63,10 @@ export const projectLinks: LinkType[] = [
     to: "/code-of-conduct"
   },
   {
+    label: "Security Model",
+    to: "/security-model"
+  },
+  {
     label: "Export Control",
     to: "/export-control"
   },

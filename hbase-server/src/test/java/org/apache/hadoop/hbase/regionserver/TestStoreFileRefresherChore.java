@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory.TRACKER_IMPL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
@@ -54,28 +53,23 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStoreFileRefresherChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileRefresherChore.class);
 
   private HBaseTestingUtil TEST_UTIL;
   private Path testDir;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    this.methodName = testInfo.getTestMethod().get().getName();
     TEST_UTIL = new HBaseTestingUtil();
     testDir = TEST_UTIL.getDataTestDir("TestStoreFileRefresherChore");
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), testDir);
@@ -197,8 +191,7 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
     String trackerName = FailingStoreFileTrackerForTest.class.getName();
-    TableDescriptor htd =
-      getTableDesc(TableName.valueOf(name.getMethodName()), 2, trackerName, families);
+    TableDescriptor htd = getTableDesc(TableName.valueOf(methodName), 2, trackerName, families);
     HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
@@ -250,7 +243,7 @@ public class TestStoreFileRefresherChore {
     when(regionServer.getOnlineRegionsLocalContext()).thenReturn(regions);
     when(regionServer.getConfiguration()).thenReturn(TEST_UTIL.getConfiguration());
 
-    TableDescriptor htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, null, families);
+    TableDescriptor htd = getTableDesc(TableName.valueOf(methodName), 2, null, families);
     HRegion primary = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 0);
     HRegion replica1 = initHRegion(htd, HConstants.EMPTY_START_ROW, HConstants.EMPTY_END_ROW, 1);
     regions.add(primary);
@@ -274,7 +267,7 @@ public class TestStoreFileRefresherChore {
     verifyData(primary, 0, 200, qf, families);
 
     // then the table is set to readonly
-    htd = getTableDesc(TableName.valueOf(name.getMethodName()), 2, true, null, families);
+    htd = getTableDesc(TableName.valueOf(methodName), 2, true, null, families);
     primary.setTableDescriptor(htd);
     replica1.setTableDescriptor(htd);
 

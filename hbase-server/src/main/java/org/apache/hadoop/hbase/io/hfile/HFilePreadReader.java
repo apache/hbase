@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class HFilePreadReader extends HFileReaderImpl {
-  private static final Logger LOG = LoggerFactory.getLogger(HFileReaderImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HFilePreadReader.class);
 
   private static final int WAIT_TIME_FOR_CACHE_INITIALIZATION = 10 * 60 * 1000;
 

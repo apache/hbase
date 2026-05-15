@@ -17,19 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.CorruptedSnapshotException;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class RestoreSnapshotFromClientSimpleTestBase extends RestoreSnapshotFromClientTestBase {
 
-  @Test
+  protected RestoreSnapshotFromClientSimpleTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testRestoreSnapshot() throws IOException {
     verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
     admin.disableTable(tableName);
@@ -38,30 +42,30 @@ public class RestoreSnapshotFromClientSimpleTestBase extends RestoreSnapshotFrom
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
     verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
 
     // Restore from emptySnapshot
     admin.disableTable(tableName);
     admin.restoreSnapshot(emptySnapshot);
     admin.enableTable(tableName);
     verifyRowCount(TEST_UTIL, tableName, 0);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
 
     // Restore from snapshot-1
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     admin.enableTable(tableName);
     verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
 
     // Restore from snapshot-1
     TEST_UTIL.deleteTable(tableName);
     admin.restoreSnapshot(snapshotName1);
     verifyRowCount(TEST_UTIL, tableName, snapshot1Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
   }
 
-  @Test
+  @TestTemplate
   public void testCorruptedSnapshot() throws IOException, InterruptedException {
     SnapshotTestingUtils.corruptSnapshot(TEST_UTIL, snapshotName0);
     TableName cloneName =

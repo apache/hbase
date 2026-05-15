@@ -47,7 +47,7 @@ import org.slf4j.LoggerFactory;
 @Tag(SmallTests.TAG)
 public class TestServletFilter extends HttpServerFunctionalTest {
 
-  private static final Logger LOG = LoggerFactory.getLogger(HttpServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestServletFilter.class);
   private static volatile String uri = null;
 
   /** A very simple filter which record the uri filtered. */

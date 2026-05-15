@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -30,34 +29,24 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test a drop timeout request. This test used to be in TestHCM but it has particulare requirements
  * -- i.e. one handler only -- so run it apart from the rest of TestHCM.
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestDropTimeoutRequest {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDropTimeoutRequest.class);
-
-  @Rule
-  public TestName name = new TestName();
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestDropTimeoutRequest.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final int RPC_RETRY = 5;
@@ -88,7 +77,7 @@ public class TestDropTimeoutRequest {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
@@ -100,19 +89,19 @@ public class TestDropTimeoutRequest {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testDropTimeoutRequest() throws Exception {
+  public void testDropTimeoutRequest(TestInfo testInfo) throws Exception {
     // Simulate the situation that the server is slow and client retries for several times because
     // of timeout. When a request can be handled after waiting in the queue, we will drop it if
     // it has been considered as timeout at client. If we don't drop it, the server will waste time
     // on handling timeout requests and finally all requests timeout and client throws exception.
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder builder = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()));
     builder.setCoprocessor(SleepLongerAtFirstCoprocessor.class.getName());
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAM_NAM).build();
     builder.setColumnFamily(cfd);
