@@ -21,7 +21,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class ShadedPrefixUtil {
+final class ShadedPrefixUtil {
   private static final Logger LOG = LoggerFactory.getLogger(ShadedPrefixUtil.class);
 
   // Marked with '!' to prevent shading tools from replacing this value
@@ -42,8 +42,8 @@ class ShadedPrefixUtil {
 
   /**
    * Cache from original class name to its resolved (shaded or original) equivalent. Class.forName
-   * for a missing class is expensive as it searches all classloaders, so we memoize the result to
-   * pay that cost at most once per distinct class name.
+   * for a missing class is expensive as it walks the supplied classloader's parent delegation
+   * chain, so we memoize the result to pay that cost at most once per distinct class name.
    */
   private final ConcurrentHashMap<String, String> resolvedClassNames = new ConcurrentHashMap<>();
 
