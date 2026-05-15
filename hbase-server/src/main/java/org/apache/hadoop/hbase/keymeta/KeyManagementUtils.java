@@ -55,16 +55,24 @@ public final class KeyManagementUtils {
    */
   public static ManagedKeyData retrieveActiveKey(ManagedKeyProvider provider,
     KeymetaTableAccessor accessor, String encKeyCust, ManagedKeyIdentity custNamespacePrefix,
-    ManagedKeyData existingActiveKey) throws IOException, KeyException {
+    ManagedKeyData existingActiveKey, MetricsKeyManagement metrics)
+    throws IOException, KeyException {
     Preconditions.checkArgument(
       existingActiveKey == null || existingActiveKey.getKeyState() == ManagedKeyState.ACTIVE,
       "Expected existing active key to be null or having ACTIVE state"
         + (existingActiveKey == null ? "" : ", but got: " + existingActiveKey.getKeyState()));
     String keyNamespaceStr = custNamespacePrefix.getNamespaceString();
     ManagedKeyData keyData;
+    long startTime = metrics != null ? System.currentTimeMillis() : 0;
     try {
       keyData = provider.getManagedKey(custNamespacePrefix);
-    } catch (IOException e) {
+      if (metrics != null) {
+        metrics.providerCallCompleted(System.currentTimeMillis() - startTime);
+      }
+    } catch (IOException | RuntimeException e) {
+      if (metrics != null) {
+        metrics.providerCallFailed(System.currentTimeMillis() - startTime);
+      }
       LOG.warn(
         "retrieveActiveKey: Failed to get managed key from provider for (custodian: {}, namespace: {})",
         encKeyCust, keyNamespaceStr, e);
@@ -116,12 +124,24 @@ public final class KeyManagementUtils {
    */
   public static ManagedKeyData retrieveKey(ManagedKeyProvider provider,
     KeymetaTableAccessor accessor, ManagedKeyIdentity custNamespacePrefix, String keyMetadata,
-    byte[] wrappedKey) throws IOException, KeyException {
+    byte[] wrappedKey, MetricsKeyManagement metrics) throws IOException, KeyException {
     Preconditions.checkArgument(keyMetadata != null && !keyMetadata.isEmpty(),
       "key_metadata must not be empty");
     String metadataHash =
       ManagedKeyProvider.encodeToStr(ManagedKeyIdentityUtils.constructMetadataHash(keyMetadata));
-    ManagedKeyData keyData = provider.unwrapKey(custNamespacePrefix, keyMetadata, wrappedKey);
+    long startTime = metrics != null ? System.currentTimeMillis() : 0;
+    ManagedKeyData keyData;
+    try {
+      keyData = provider.unwrapKey(custNamespacePrefix, keyMetadata, wrappedKey);
+      if (metrics != null) {
+        metrics.providerCallCompleted(System.currentTimeMillis() - startTime);
+      }
+    } catch (IOException | RuntimeException e) {
+      if (metrics != null) {
+        metrics.providerCallFailed(System.currentTimeMillis() - startTime);
+      }
+      throw e;
+    }
     // Do some validation of the resposne, as we can't trust that all providers honour the contract.
     // If the key is disabled, we expect a more specific key state to be used, not the generic
     // DISABLED state.
@@ -168,7 +188,8 @@ public final class KeyManagementUtils {
    * @throws KeyException if an error occurs
    */
   public static ManagedKeyData refreshKey(ManagedKeyProvider provider,
-    KeymetaTableAccessor accessor, ManagedKeyData keyData) throws IOException, KeyException {
+    KeymetaTableAccessor accessor, ManagedKeyData keyData, MetricsKeyManagement metrics)
+    throws IOException, KeyException {
     if (LOG.isDebugEnabled()) {
       LOG.debug(
         "refreshKey: entry with keyData state: {}, partial identity: {} for (custodian: {}, "
@@ -184,8 +205,12 @@ public final class KeyManagementUtils {
     // NOTE: Even FAILED keys can have metadata that is good enough for refreshing from provider.
     // Refresh key using unwrapKey
     ManagedKeyData newKeyData;
+    long startTime = metrics != null ? System.currentTimeMillis() : 0;
     try {
       newKeyData = provider.unwrapKey(keyData.getKeyIdentity(), keyData.getKeyMetadata(), null);
+      if (metrics != null) {
+        metrics.providerCallCompleted(System.currentTimeMillis() - startTime);
+      }
       if (LOG.isDebugEnabled()) {
         LOG.debug(
           "refreshKey: unwrapped key with state: {}, partial identity: {} for (custodian: "
@@ -193,7 +218,10 @@ public final class KeyManagementUtils {
           newKeyData.getKeyState(), newKeyData.getPartialIdentityEncoded(),
           newKeyData.getKeyCustodianEncoded(), newKeyData.getKeyNamespace());
       }
-    } catch (IOException e) {
+    } catch (IOException | RuntimeException e) {
+      if (metrics != null) {
+        metrics.providerCallFailed(System.currentTimeMillis() - startTime);
+      }
       LOG.warn("refreshKey: Failed to unwrap key for (custodian: {}, namespace: {})",
         keyData.getKeyCustodianEncoded(), keyData.getKeyNamespace(), e);
       newKeyData = new ManagedKeyData(keyData.getKeyCustodian(), keyData.getKeyNamespaceBytes(),
@@ -259,8 +287,8 @@ public final class KeyManagementUtils {
    * @throws KeyException if an error occurs
    */
   public static ManagedKeyData rotateActiveKey(ManagedKeyProvider provider,
-    KeymetaTableAccessor accessor, String encKeyCust, ManagedKeyIdentity custNamespacePrefix)
-    throws IOException, KeyException {
+    KeymetaTableAccessor accessor, String encKeyCust, ManagedKeyIdentity custNamespacePrefix,
+    MetricsKeyManagement metrics) throws IOException, KeyException {
     // Get current active key
     ManagedKeyData currentActiveKey = accessor.getKeyManagementStateMarker(custNamespacePrefix);
     if (currentActiveKey == null || currentActiveKey.getKeyState() != ManagedKeyState.ACTIVE) {
@@ -271,7 +299,7 @@ public final class KeyManagementUtils {
     // Retrieve new key from provider, We pass null accessor to skip default persistence logic,
     // because a failure to rotate shouldn't make the current active key invalid.
     ManagedKeyData newKey =
-      retrieveActiveKey(provider, null, encKeyCust, custNamespacePrefix, currentActiveKey);
+      retrieveActiveKey(provider, null, encKeyCust, custNamespacePrefix, currentActiveKey, metrics);
     if (newKey == null || newKey.equals(currentActiveKey)) {
       LOG.warn(
         "rotateActiveKey: failed to retrieve new active key for (custodian: {}, namespace: {})",

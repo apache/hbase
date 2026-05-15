@@ -51,6 +51,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
   private Cache<ManagedKeyIdentity, ManagedKeyData> cacheByIdentity;
   private Cache<ManagedKeyIdentity, ManagedKeyData> activeKeysCache;
   private final KeymetaTableAccessor keymetaAccessor;
+  private MetricsKeyManagement metrics;
 
   /**
    * Constructs the ManagedKeyDataCache with the given configuration and keymeta accessor. When
@@ -74,6 +75,14 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     this.activeKeysCache = Caffeine.newBuilder().maximumSize(activeKeysMaxEntries).build();
   }
 
+  public void setMetrics(MetricsKeyManagement metrics) {
+    this.metrics = metrics;
+  }
+
+  MetricsKeyManagement getMetrics() {
+    return metrics;
+  }
+
   /**
    * Retrieves an entry from the cache, loading from L2 or provider if not found. Exactly one of
    * partialIdentity or keyMetadata must be non-null. When keyMetadata is null, the provider is not
@@ -89,6 +98,9 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    */
   public ManagedKeyData getEntry(ManagedKeyIdentity fullKeyIdentity, String keyMetadata,
     byte[] wrappedKey) {
+    if (metrics != null) {
+      metrics.readKeyLookupRequest();
+    }
     Preconditions.checkArgument(
       fullKeyIdentity.getPartialIdentityLength() > 0 || keyMetadata != null,
       "Exactly one of partialIdentity or keyMetadata must be non-empty");
@@ -100,8 +112,20 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
     ManagedKeyData entry = cacheByIdentity.getIfPresent(fullKeyIdentity);
     if (entry != null) {
-      // Treat FAILED as "not found" so callers get null when L2 failed or key was missing
-      return entry.getKeyState() == ManagedKeyState.FAILED ? null : entry;
+      if (metrics != null) {
+        metrics.readKeyLookupCacheHit();
+      }
+      if (entry.getKeyState() == ManagedKeyState.FAILED) {
+        return null;
+      }
+      if (metrics != null) {
+        if (ManagedKeyState.isUsable(entry.getKeyState())) {
+          metrics.readKeyLookupResultUsable();
+        } else if (entry.getKeyState().getExternalState() == ManagedKeyState.DISABLED) {
+          metrics.readKeyLookupResultDisabled();
+        }
+      }
+      return entry;
     }
 
     // Technically we don't need to clone the fullKeyIdentity as all existing execution paths ensure
@@ -110,6 +134,9 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     // However, since we do lazy cloning, it avoids most of the extra cost.
     fullKeyIdentity = fullKeyIdentity.clone();
     entry = cacheByIdentity.get(fullKeyIdentity, keyIdentity -> {
+      if (metrics != null) {
+        metrics.readKeyLookupCacheMiss();
+      }
       // Try active keys cache first (same as L2/provider path so result is cached via get())
       ManagedKeyData keyData = getFromActiveKeysCache(keyIdentity);
       if (keyData != null) {
@@ -131,7 +158,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       if (keyData == null && isDynamicLookupEnabled() && keyMetadata != null) {
         try {
           keyData = KeyManagementUtils.retrieveKey(getKeyProvider(), keymetaAccessor, keyIdentity,
-            keyMetadata, wrappedKey);
+            keyMetadata, wrappedKey, metrics);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn(
             "Failed to retrieve key from provider for (custodian: {}, namespace: {}) with "
@@ -156,7 +183,16 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       return keyData;
     });
     if (entry != null && ManagedKeyState.isUsable(entry.getKeyState())) {
+      if (metrics != null) {
+        metrics.readKeyLookupResultUsable();
+      }
       return entry;
+    }
+    if (
+      metrics != null && entry != null
+        && entry.getKeyState().getExternalState() == ManagedKeyState.DISABLED
+    ) {
+      metrics.readKeyLookupResultDisabled();
     }
     return null;
   }
@@ -232,6 +268,12 @@ public class ManagedKeyDataCache extends KeyManagementBase {
     return (int) activeKeysCache.estimatedSize();
   }
 
+  /** Returns the count of entries in cacheByIdentity with usable state (ACTIVE or INACTIVE). */
+  public long getUsableEntryCount() {
+    return cacheByIdentity.asMap().values().stream()
+      .filter(entry -> ManagedKeyState.isUsable(entry.getKeyState())).count();
+  }
+
   /**
    * Retrieves the active entry from the cache based on its key custodian and key namespace. This
    * method also loads active keys from provider if not found in cache.
@@ -241,16 +283,31 @@ public class ManagedKeyDataCache extends KeyManagementBase {
    *         found
    */
   public ManagedKeyData getActiveEntry(final Bytes keyCust, final Bytes keyNamespace) {
+    if (metrics != null) {
+      metrics.writeKeyLookupRequest();
+    }
     ManagedKeyIdentity cacheKey = new KeyIdentityPrefixBytesBacked(keyCust, keyNamespace);
     ManagedKeyData keyData = activeKeysCache.getIfPresent(cacheKey);
     if (keyData != null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+      if (metrics != null) {
+        metrics.writeKeyLookupCacheHit();
+        metrics.writeKeyLookupResultUsable();
+      }
       return keyData;
+    }
+
+    // If non-null but not ACTIVE, the entry exists so get() won't invoke the loader.
+    if (metrics != null && keyData != null) {
+      metrics.writeKeyLookupCacheHit();
     }
 
     // Doing lazy cloning of the key custodian and namespace for long-term storage.
     cacheKey = new KeyIdentityPrefixBytesBacked(keyCust.clone(), keyNamespace.clone());
 
     keyData = activeKeysCache.get(cacheKey, key -> {
+      if (metrics != null) {
+        metrics.writeKeyLookupCacheMiss();
+      }
       ManagedKeyData retrievedKey = null;
 
       // Try to load from KeymetaTableAccessor if not found in cache
@@ -268,7 +325,7 @@ public class ManagedKeyDataCache extends KeyManagementBase {
       if (retrievedKey == null && isDynamicLookupEnabled()) {
         try {
           retrievedKey = KeyManagementUtils.retrieveActiveKey(getKeyProvider(), keymetaAccessor,
-            key.getCustodianEncoded(), key, null);
+            key.getCustodianEncoded(), key, null, metrics);
         } catch (IOException | KeyException | RuntimeException e) {
           LOG.warn("Failed to load active key from provider for custodian: {} namespace: {}",
             key.getCustodianEncoded(), key.getNamespaceString(), e);
@@ -284,7 +341,16 @@ public class ManagedKeyDataCache extends KeyManagementBase {
 
     // This should never be null, but adding a check just to satisfy spotbugs.
     if (keyData != null && keyData.getKeyState() == ManagedKeyState.ACTIVE) {
+      if (metrics != null) {
+        metrics.writeKeyLookupResultUsable();
+      }
       return keyData;
+    }
+    if (
+      metrics != null && keyData != null
+        && keyData.getKeyState().getExternalState() == ManagedKeyState.DISABLED
+    ) {
+      metrics.writeKeyLookupResultDisabled();
     }
     return null;
   }

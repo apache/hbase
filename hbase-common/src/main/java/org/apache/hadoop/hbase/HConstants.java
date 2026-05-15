@@ -1359,6 +1359,14 @@ public final class HConstants {
     "hbase.crypto.managed_keys.local_key_gen_per_file.enabled";
   public static final boolean CRYPTO_MANAGED_KEYS_LOCAL_KEY_GEN_PER_FILE_DEFAULT_ENABLED = false;
 
+  public static final String CRYPTO_MANAGED_KEYS_METRICS_ENABLED_CONF_KEY =
+    "hbase.regionserver.keymanagement.metrics.enabled";
+  public static final boolean CRYPTO_MANAGED_KEYS_METRICS_ENABLED_DEFAULT = false;
+
+  public static final String CRYPTO_MANAGED_KEYS_METRICS_PERIOD_CONF_KEY =
+    "hbase.regionserver.keymanagement.metrics.period";
+  public static final long CRYPTO_MANAGED_KEYS_METRICS_PERIOD_DEFAULT = 300_000L; // 5 minutes
+
   /**
    * Comma-separated list of digest algorithm names for key metadata digest (partial identity). Up
    * to 2 algorithms from DigestAlgo (XXH3, XXHASH64, MD5). Default is xxh3.

@@ -42,6 +42,7 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
   private static final Logger LOG = LoggerFactory.getLogger(KeymetaAdminImpl.class);
   private final Server server;
   private final KeymetaTableAccessor accessor;
+  private MetricsKeyManagement metrics;
 
   public KeymetaAdminImpl(Server server) {
     this(server, new KeymetaTableAccessor(server));
@@ -51,6 +52,10 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
     super(server.getKeyManagementService());
     this.server = server;
     this.accessor = accessor;
+  }
+
+  public void setMetrics(MetricsKeyManagement metrics) {
+    this.metrics = metrics;
   }
 
   protected Server getServer() {
@@ -82,7 +87,7 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
     // the previous attempt left it in a non-ACTIVE state. This may or may not succeed. When fails,
     // it can leave the key management state in FAILED or DISABLED.
     return KeyManagementUtils.retrieveActiveKey(getKeyProvider(), accessor, encodedCust,
-      custNamespacePrefix, null);
+      custNamespacePrefix, null, metrics);
   }
 
   @Override
@@ -265,7 +270,7 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
 
     // Attempt rotation
     return KeyManagementUtils.rotateActiveKey(getKeyProvider(), accessor, encodedCust,
-      custNamespacePrefix);
+      custNamespacePrefix, metrics);
   }
 
   @Override
@@ -282,7 +287,7 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
     }
     ManagedKeyData currentActiveKey = accessor.getKeyManagementStateMarker(custNamespacePrefix);
     ManagedKeyData keyData = KeyManagementUtils.retrieveKey(getKeyProvider(), accessor,
-      custNamespacePrefix, keyMetadata, null);
+      custNamespacePrefix, keyMetadata, null, metrics);
     if (keyData.getKeyState() == ManagedKeyState.ACTIVE && currentActiveKey != null) {
       ejectManagedKeyDataCacheEntry(keyCust, keyNamespace, currentActiveKey.getKeyMetadata());
     }
@@ -323,7 +328,7 @@ public class KeymetaAdminImpl extends KeyManagementBase implements KeymetaAdmin 
         keyData.getPartialIdentityEncoded(), encodedCust, keyNamespace, keyData.getKeyState());
       try {
         ManagedKeyData refreshedKey =
-          KeyManagementUtils.refreshKey(getKeyProvider(), accessor, keyData);
+          KeyManagementUtils.refreshKey(getKeyProvider(), accessor, keyData, metrics);
         if (refreshedKey == keyData) {
           LOG.debug(
             "refreshManagedKeys: Key with metadata hash: {} for custodian: {} under "

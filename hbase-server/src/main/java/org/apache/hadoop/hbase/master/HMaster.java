@@ -126,6 +126,7 @@ import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminImpl;
 import org.apache.hadoop.hbase.keymeta.KeymetaTableAccessor;
+import org.apache.hadoop.hbase.keymeta.MetricsKeyManagement;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.master.MasterRpcServices.BalanceSwitchMode;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
@@ -531,7 +532,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     super(conf, "Master");
     final Span span = TraceUtil.createSpan("HMaster.cxtor");
     try (Scope ignored = span.makeCurrent()) {
-      this.keymetaAdmin = new KeymetaAdminImpl(this, keymetaAccessor);
+      KeymetaAdminImpl adminImpl = new KeymetaAdminImpl(this, keymetaAccessor);
+      if (MetricsKeyManagement.isEnabled(conf)) {
+        adminImpl.setMetrics(new MetricsKeyManagement(conf, null));
+      }
+      this.keymetaAdmin = adminImpl;
       if (conf.getBoolean(MAINTENANCE_MODE, false)) {
         LOG.info("Detected {}=true via configuration.", MAINTENANCE_MODE);
         maintenanceMode = true;

@@ -82,7 +82,7 @@ public class TestKeyManagementUtils {
 
     KeyException exception = assertThrows(KeyException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertNotNull(exception.getMessage());
@@ -100,7 +100,7 @@ public class TestKeyManagementUtils {
 
     KeyException exception = assertThrows(KeyException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertNotNull(exception.getMessage());
@@ -118,7 +118,7 @@ public class TestKeyManagementUtils {
 
     KeyException exception = assertThrows(KeyException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertNotNull(exception.getMessage());
@@ -135,7 +135,7 @@ public class TestKeyManagementUtils {
 
     KeyException exception = assertThrows(KeyException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertNotNull(exception.getMessage());
@@ -151,7 +151,7 @@ public class TestKeyManagementUtils {
       .thenReturn(validKeyData);
 
     ManagedKeyData result = KeyManagementUtils.retrieveKey(mockProvider, mockAccessor,
-      custNamespacePrefix, keyMetadata, wrappedKey);
+      custNamespacePrefix, keyMetadata, wrappedKey, null);
 
     assertNotNull(result);
     assertEquals(keyMetadata, result.getKeyMetadata());
@@ -167,7 +167,7 @@ public class TestKeyManagementUtils {
       .thenReturn(keyDataWithFailedState);
 
     ManagedKeyData result = KeyManagementUtils.retrieveKey(mockProvider, mockAccessor,
-      custNamespacePrefix, keyMetadata, wrappedKey);
+      custNamespacePrefix, keyMetadata, wrappedKey, null);
 
     assertNotNull(result);
     assertEquals(ManagedKeyState.FAILED, result.getKeyState());
@@ -182,7 +182,7 @@ public class TestKeyManagementUtils {
       .thenReturn(keyDataWithInactiveState);
 
     ManagedKeyData result = KeyManagementUtils.retrieveKey(mockProvider, mockAccessor,
-      custNamespacePrefix, keyMetadata, wrappedKey);
+      custNamespacePrefix, keyMetadata, wrappedKey, null);
 
     assertNotNull(result);
     assertEquals(ManagedKeyState.INACTIVE, result.getKeyState());
@@ -197,7 +197,7 @@ public class TestKeyManagementUtils {
 
     KeyException exception = assertThrows(KeyException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertNotNull(exception.getMessage());
@@ -214,7 +214,7 @@ public class TestKeyManagementUtils {
 
     KeyException exception = assertThrows(KeyException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertNotNull(exception.getMessage());
@@ -232,7 +232,7 @@ public class TestKeyManagementUtils {
 
     IOException exception = assertThrows(IOException.class, () -> {
       KeyManagementUtils.retrieveKey(mockProvider, mockAccessor, custNamespacePrefix, keyMetadata,
-        wrappedKey);
+        wrappedKey, null);
     });
 
     assertEquals("persist failed", exception.getMessage());
@@ -253,7 +253,7 @@ public class TestKeyManagementUtils {
       new ManagedKeyData(keyCust, keyNamespace, testKey, ManagedKeyState.ACTIVE, keyMetadata);
     when(mockProvider.unwrapKey(any(ManagedKeyIdentity.class), any(), any())).thenReturn(keyData);
 
-    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData);
+    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData, null);
     assertNotNull(result);
     assertEquals(keyData, result);
     if (accessor != null) {
@@ -279,7 +279,7 @@ public class TestKeyManagementUtils {
     when(mockProvider.unwrapKey(any(ManagedKeyIdentity.class), any(), any()))
       .thenReturn(newKeyData);
 
-    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData);
+    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData, null);
     assertNotNull(result);
     assertEquals(newKeyData, result);
     if (accessor != null) {
@@ -306,7 +306,7 @@ public class TestKeyManagementUtils {
     when(mockProvider.unwrapKey(any(ManagedKeyIdentity.class), any(), any()))
       .thenReturn(newKeyData);
 
-    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData);
+    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData, null);
     assertNotNull(result);
     assertEquals(keyData, result);
     if (accessor != null) {
@@ -322,7 +322,7 @@ public class TestKeyManagementUtils {
     when(mockProvider.unwrapKey(any(ManagedKeyIdentity.class), any(), any()))
       .thenThrow(new IOException("Test exception"));
 
-    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, null, keyData);
+    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, null, keyData, null);
     assertNotNull(result);
     assertEquals(keyData, result);
   }
@@ -345,7 +345,7 @@ public class TestKeyManagementUtils {
     when(mockProvider.unwrapKey(any(ManagedKeyIdentity.class), any(), any()))
       .thenReturn(newKeyData);
 
-    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData);
+    ManagedKeyData result = KeyManagementUtils.refreshKey(mockProvider, accessor, keyData, null);
     assertNotNull(result);
     assertEquals(newKeyData, result);
     if (accessor != null) {
