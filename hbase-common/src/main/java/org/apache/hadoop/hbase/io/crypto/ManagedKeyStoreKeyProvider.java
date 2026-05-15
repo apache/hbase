@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import com.google.gson.reflect.TypeToken;
+import org.apache.hbase.thirdparty.com.google.gson.reflect.TypeToken;
 import java.io.IOException;
 import java.security.Key;
 import java.util.HashMap;
