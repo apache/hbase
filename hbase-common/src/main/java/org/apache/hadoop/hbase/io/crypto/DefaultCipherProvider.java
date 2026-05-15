@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.crypto.aes.AES256GCM;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -64,10 +65,10 @@ public final class DefaultCipherProvider implements CipherProvider {
 
   @Override
   public Cipher getCipher(String name) {
-    if (name.equalsIgnoreCase("AES")) {
+    if (name.equalsIgnoreCase(HConstants.CIPHER_AES)) {
       return new AES(this);
     }
-    if (name.equalsIgnoreCase("AES_256_GCM")) {
+    if (name.equalsIgnoreCase(HConstants.CIPHER_AES_256_GCM)) {
       return new AES256GCM(this);
     }
     throw new RuntimeException(
@@ -76,7 +77,7 @@ public final class DefaultCipherProvider implements CipherProvider {
 
   @Override
   public String[] getSupportedCiphers() {
-    return new String[] { "AES", "AES_256_GCM" };
+    return new String[] { HConstants.CIPHER_AES, HConstants.CIPHER_AES_256_GCM };
   }
 
 }

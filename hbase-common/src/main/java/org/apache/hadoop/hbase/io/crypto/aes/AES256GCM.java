@@ -21,6 +21,7 @@ import java.security.GeneralSecurityException;
 import org.apache.hadoop.hbase.io.crypto.CipherProvider;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -45,7 +46,7 @@ public class AES256GCM extends AESCipher {
 
   @Override
   public String getName() {
-    return "AES_256_GCM";
+    return HConstants.CIPHER_AES_256_GCM;
   }
 
   @Override

@@ -32,6 +32,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -53,7 +54,7 @@ public class TestAES256GCM {
   @Test
   public void testCipherProperties() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull("AES_256_GCM cipher should be available", cipher);
     assertEquals("AES_256_GCM", cipher.getName());
     assertEquals(32, cipher.getKeyLength());
@@ -64,7 +65,7 @@ public class TestAES256GCM {
   @Test
   public void testEncryptDecryptRoundTrip() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull(cipher);
 
     Key key = cipher.getRandomKey();
@@ -103,7 +104,7 @@ public class TestAES256GCM {
   @Test
   public void testEncryptDecryptLargeData() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull(cipher);
 
     Key key = cipher.getRandomKey();
@@ -136,7 +137,7 @@ public class TestAES256GCM {
   @Test
   public void testTamperedCiphertextDetection() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull(cipher);
 
     Key key = cipher.getRandomKey();
@@ -174,7 +175,7 @@ public class TestAES256GCM {
   @Test
   public void testIvIncrementIsOne() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull(cipher);
 
     Encryptor encryptor = cipher.getEncryptor();
@@ -186,7 +187,7 @@ public class TestAES256GCM {
   @Test
   public void testEncryptDecryptWithContextAPI() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull(cipher);
 
     Key key = cipher.getRandomKey();
@@ -217,7 +218,7 @@ public class TestAES256GCM {
   @Test
   public void testWrongKeyDecryptionFails() throws Exception {
     Configuration conf = HBaseConfiguration.create();
-    Cipher cipher = Encryption.getCipher(conf, "AES_256_GCM");
+    Cipher cipher = Encryption.getCipher(conf, HConstants.CIPHER_AES_256_GCM);
     assertNotNull(cipher);
 
     Key key1 = cipher.getRandomKey();

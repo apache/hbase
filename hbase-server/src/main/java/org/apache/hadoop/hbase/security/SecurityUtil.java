@@ -36,8 +36,12 @@ import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyIdentity;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
+import org.bouncycastle.crypto.digests.SHA256Digest;
+import org.bouncycastle.crypto.generators.HKDFBytesGenerator;
+import org.bouncycastle.crypto.params.HKDFParameters;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -427,7 +431,9 @@ public final class SecurityUtil {
           getCipherIfValid(conf, cipherName, key, key == null ? null : family.getNameAsString());
       }
       if (key == null) {
-        key = cipher.getRandomKey();
+        key = kekKeyData != null
+          ? deriveKeyWithHKDF(kekKeyData.getTheKey(), cipher)
+          : cipher.getRandomKey();
       }
       cryptoContext = Encryption.newContext(conf);
       cryptoContext.setCipher(cipher);
@@ -600,5 +606,26 @@ public final class SecurityUtil {
   public static boolean isKeyManagementEnabled(Configuration conf) {
     return conf.getBoolean(HConstants.CRYPTO_MANAGED_KEYS_ENABLED_CONF_KEY,
       HConstants.CRYPTO_MANAGED_KEYS_DEFAULT_ENABLED);
+  }
+
+  /**
+   * Derive a symmetric key using HKDF (RFC 5869) with the given seed key material, the current
+   * timestamp as the salt, and the cipher name as the info parameter. Uses SHA-256 as the
+   * underlying hash.
+   * @param seedKey the key whose encoded bytes are used as the input key material (IKM)
+   * @param cipher  the cipher that determines the derived key length and algorithm
+   * @return a new {@link Key} derived via HKDF
+   */
+  static Key deriveKeyWithHKDF(Key seedKey, Cipher cipher) {
+    byte[] ikm = seedKey.getEncoded();
+    byte[] salt = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
+    byte[] info = Bytes.toBytes(cipher.getName());
+
+    HKDFBytesGenerator hkdf = new HKDFBytesGenerator(new SHA256Digest());
+    hkdf.init(new HKDFParameters(ikm, salt, info));
+
+    byte[] okm = new byte[cipher.getKeyLength()];
+    hkdf.generateBytes(okm, 0, okm.length);
+    return new SecretKeySpec(okm, cipher.getKeyAlgorithm());
   }
 }

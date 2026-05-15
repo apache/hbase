@@ -38,6 +38,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
@@ -73,8 +74,8 @@ public class TestAES {
 
   @Parameters(name = "{0}")
   public static Collection<Object[]> ciphers() {
-    return Arrays.asList(new Object[][] { { "AES", Cipher.KEY_LENGTH, Cipher.IV_LENGTH },
-      { "AES_256_GCM", AES256GCM.KEY_LENGTH, AES256GCM.NONCE_LENGTH }, });
+    return Arrays.asList(new Object[][] { { HConstants.CIPHER_AES, Cipher.KEY_LENGTH, Cipher.IV_LENGTH },
+      { HConstants.CIPHER_AES_256_GCM, AES256GCM.KEY_LENGTH, AES256GCM.NONCE_LENGTH }, });
   }
 
   // Validation for AES in CTR mode with a 128 bit key
