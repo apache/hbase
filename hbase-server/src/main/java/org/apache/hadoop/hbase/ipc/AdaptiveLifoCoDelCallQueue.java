@@ -87,7 +87,7 @@ public class AdaptiveLifoCoDelCallQueue implements BlockingQueue<CallRunner> {
    * @param newCodelTargetDelay new CoDel target delay
    * @param newCodelInterval    new CoDel interval
    * @param newLifoThreshold    new Adaptive Lifo threshold
-   * @param currentQueueLimit   new limit of queue
+   * @param currentQueueLimit   new soft limit of queue
    */
   public void updateTunables(int newCodelTargetDelay, int newCodelInterval, double newLifoThreshold,
     int currentQueueLimit) {
