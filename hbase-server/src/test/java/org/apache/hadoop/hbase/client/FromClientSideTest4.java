@@ -870,7 +870,7 @@ public class FromClientSideTest4 extends FromClientSideTestBase {
       get.addFamily(FAMILY);
       Result r = table.get(get);
       assertFalse(r.isEmpty());
-      System.out.println("Row retrieved successfully");
+      LOG.info("Row retrieved successfully");
 
       byte[] missingrow = Bytes.toBytes("missingrow");
       get = new Get(missingrow);
@@ -916,7 +916,7 @@ public class FromClientSideTest4 extends FromClientSideTestBase {
       try (ResultScanner scanner = table.getScanner(scan)) {
         for (Result r : scanner) {
           for (Cell key : r.rawCells()) {
-            System.out.println(Bytes.toString(r.getRow()) + ": " + key.toString());
+            LOG.info(Bytes.toString(r.getRow()) + ": " + key.toString());
           }
         }
       }
