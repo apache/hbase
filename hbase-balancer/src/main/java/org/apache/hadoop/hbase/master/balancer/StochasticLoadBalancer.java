@@ -688,7 +688,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
 
       newCost = computeCost(cluster, currentCost);
 
-      if (LOG.isDebugEnabled()) {
+      if (LOG.isDebugEnabled() && action.getType() == BalanceAction.Type.MOVE_REGION) {
         LOG.debug(
           "action moving region {} from {} to {} with cost {}. currentCost={}, functionCost={}",
           cluster.regions[((MoveRegionAction) action).getRegion()].getEncodedName(),
