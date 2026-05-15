@@ -94,7 +94,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private float potentialCacheRatioAfterMove;
   private float minFreeCacheSpaceFactor;
 
-  private BigDecimal simulatedRatio = new BigDecimal(0);
+  private BigDecimal simulatedRatio = BigDecimal.ZERO;
 
   @Override
   public void loadConf(Configuration configuration) {
