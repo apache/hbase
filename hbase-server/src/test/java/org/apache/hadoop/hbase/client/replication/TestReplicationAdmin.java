@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ReplicationPeerNotFoundException;
@@ -51,26 +50,22 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.TestReplicationEndpoint.InterClusterReplicationEndpointForTest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Unit testing of ReplicationAdmin
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestReplicationAdmin {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationAdmin.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationAdmin.class);
 
@@ -84,13 +79,9 @@ public class TestReplicationAdmin {
   private static ReplicationAdmin admin;
   private static Admin hbaseAdmin;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     TEST_UTIL.startMiniCluster();
@@ -100,7 +91,7 @@ public class TestReplicationAdmin {
     KEY_SECOND = TEST_UTIL.getClusterKey() + "-test2";
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (admin != null) {
       admin.close();
@@ -108,7 +99,12 @@ public class TestReplicationAdmin {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @AfterEach
   public void tearDown() throws Exception {
     for (ReplicationPeerDescription desc : hbaseAdmin.listReplicationPeers()) {
       hbaseAdmin.removeReplicationPeer(desc.getPeerId());
@@ -342,12 +338,12 @@ public class TestReplicationAdmin {
   public void testAppendPeerTableCFs() throws Exception {
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "t1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "t2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "t3");
-    final TableName tableName4 = TableName.valueOf(name.getMethodName() + "t4");
-    final TableName tableName5 = TableName.valueOf(name.getMethodName() + "t5");
-    final TableName tableName6 = TableName.valueOf(name.getMethodName() + "t6");
+    final TableName tableName1 = TableName.valueOf(methodName + "t1");
+    final TableName tableName2 = TableName.valueOf(methodName + "t2");
+    final TableName tableName3 = TableName.valueOf(methodName + "t3");
+    final TableName tableName4 = TableName.valueOf(methodName + "t4");
+    final TableName tableName5 = TableName.valueOf(methodName + "t5");
+    final TableName tableName6 = TableName.valueOf(methodName + "t6");
 
     // Add a valid peer
     hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
@@ -372,8 +368,8 @@ public class TestReplicationAdmin {
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(2, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
     assertNull(result.get(tableName1));
     assertNull(result.get(tableName2));
 
@@ -384,9 +380,9 @@ public class TestReplicationAdmin {
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(3, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
-    assertTrue("Should contain t3", result.containsKey(tableName3));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
+    assertTrue(result.containsKey(tableName3), "Should contain t3");
     assertNull(result.get(tableName1));
     assertNull(result.get(tableName2));
     assertEquals(1, result.get(tableName3).size());
@@ -399,10 +395,10 @@ public class TestReplicationAdmin {
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(4, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
-    assertTrue("Should contain t3", result.containsKey(tableName3));
-    assertTrue("Should contain t4", result.containsKey(tableName4));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
+    assertTrue(result.containsKey(tableName3), "Should contain t3");
+    assertTrue(result.containsKey(tableName4), "Should contain t4");
     assertNull(result.get(tableName1));
     assertNull(result.get(tableName2));
     assertEquals(1, result.get(tableName3).size());
@@ -421,7 +417,7 @@ public class TestReplicationAdmin {
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(5, result.size());
-    assertTrue("Should contain t5", result.containsKey(tableName5));
+    assertTrue(result.containsKey(tableName5), "Should contain t5");
     // null means replication all cfs of tab5
     assertNull(result.get(tableName5));
 
@@ -435,7 +431,7 @@ public class TestReplicationAdmin {
     admin.appendPeerTableCFs(ID_ONE, tableCFs);
     result = ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(6, result.size());
-    assertTrue("Should contain t6", result.containsKey(tableName6));
+    assertTrue(result.containsKey(tableName6), "Should contain t6");
     // null means replication all cfs of tab6
     assertNull(result.get(tableName6));
 
@@ -446,10 +442,10 @@ public class TestReplicationAdmin {
   public void testRemovePeerTableCFs() throws Exception {
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "t1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "t2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "t3");
-    final TableName tableName4 = TableName.valueOf(name.getMethodName() + "t4");
+    final TableName tableName1 = TableName.valueOf(methodName + "t1");
+    final TableName tableName2 = TableName.valueOf(methodName + "t2");
+    final TableName tableName3 = TableName.valueOf(methodName + "t3");
+    final TableName tableName4 = TableName.valueOf(methodName + "t4");
 
     // Add a valid peer
     hbaseAdmin.addReplicationPeer(ID_ONE, rpc);
@@ -483,8 +479,8 @@ public class TestReplicationAdmin {
     Map<TableName, List<String>> result =
       ReplicationPeerConfigUtil.parseTableCFsFromConfig(admin.getPeerTableCFs(ID_ONE));
     assertEquals(2, result.size());
-    assertTrue("Should contain t1", result.containsKey(tableName1));
-    assertTrue("Should contain t2", result.containsKey(tableName2));
+    assertTrue(result.containsKey(tableName1), "Should contain t1");
+    assertTrue(result.containsKey(tableName2), "Should contain t2");
     assertNull(result.get(tableName1));
     assertEquals(1, result.get(tableName2).size());
     assertEquals("cf1", result.get(tableName2).get(0));
@@ -649,8 +645,8 @@ public class TestReplicationAdmin {
     hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
     result = hbaseAdmin.getReplicationPeerConfig(ID_ONE).getExcludeTableCFsMap();
     assertEquals(2, result.size());
-    assertTrue("Should contain t1", result.containsKey(tab1));
-    assertTrue("Should contain t2", result.containsKey(tab2));
+    assertTrue(result.containsKey(tab1), "Should contain t1");
+    assertTrue(result.containsKey(tab2), "Should contain t2");
     assertNull(result.get(tab1));
     assertEquals(1, result.get(tab2).size());
     assertEquals("f1", result.get(tab2).get(0));
@@ -664,8 +660,8 @@ public class TestReplicationAdmin {
     hbaseAdmin.updateReplicationPeerConfig(ID_ONE, rpc);
     result = hbaseAdmin.getReplicationPeerConfig(ID_ONE).getExcludeTableCFsMap();
     assertEquals(2, result.size());
-    assertTrue("Should contain t3", result.containsKey(tab3));
-    assertTrue("Should contain t4", result.containsKey(tab4));
+    assertTrue(result.containsKey(tab3), "Should contain t3");
+    assertTrue(result.containsKey(tab4), "Should contain t4");
     assertNull(result.get(tab3));
     assertEquals(2, result.get(tab4).size());
     assertEquals("f1", result.get(tab4).get(0));
@@ -752,8 +748,8 @@ public class TestReplicationAdmin {
   public void testNamespacesAndTableCfsConfigConflict() throws Exception {
     String ns1 = "ns1";
     String ns2 = "ns2";
-    final TableName tableName1 = TableName.valueOf(ns1 + ":" + name.getMethodName());
-    final TableName tableName2 = TableName.valueOf(ns2 + ":" + name.getMethodName() + "2");
+    final TableName tableName1 = TableName.valueOf(ns1 + ":" + methodName);
+    final TableName tableName2 = TableName.valueOf(ns2 + ":" + methodName + "2");
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(KEY_ONE);

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -53,22 +52,17 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, FlakeyTests.class })
+@Tag(MediumTests.TAG)
+@Tag(FlakeyTests.TAG)
 public class TestMultiParallel {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiParallel.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiParallel.class);
 
@@ -84,7 +78,7 @@ public class TestMultiParallel {
   private static final int slaves = 5; // also used for testing HTable pool size
   private static Connection CONNECTION;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // Uncomment the following lines if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
@@ -108,13 +102,13 @@ public class TestMultiParallel {
     assertTrue(MyMasterObserver.start.get());
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     CONNECTION.close();
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     final int balanceCount = MyMasterObserver.postBalanceCount.get();
     LOG.info("before");
@@ -228,14 +222,14 @@ public class TestMultiParallel {
       singleRes.add(table.get((Get) get));
     }
     // Compare results
-    Assert.assertEquals(singleRes.size(), multiRes.length);
+    assertEquals(singleRes.size(), multiRes.length);
     for (int i = 0; i < singleRes.size(); i++) {
-      Assert.assertTrue(singleRes.get(i).containsColumn(BYTES_FAMILY, QUALIFIER));
+      assertTrue(singleRes.get(i).containsColumn(BYTES_FAMILY, QUALIFIER));
       Cell[] singleKvs = singleRes.get(i).rawCells();
       Cell[] multiKvs = multiRes[i].rawCells();
       for (int j = 0; j < singleKvs.length; j++) {
-        Assert.assertEquals(singleKvs[j], multiKvs[j]);
-        Assert.assertEquals(0,
+        assertEquals(singleKvs[j], multiKvs[j]);
+        assertEquals(0,
           Bytes.compareTo(CellUtil.cloneValue(singleKvs[j]), CellUtil.cloneValue(multiKvs[j])));
       }
     }
@@ -332,8 +326,8 @@ public class TestMultiParallel {
       LOG.info("Count=" + count + ", Alive=" + t.getRegionServer());
     }
     LOG.info("Count=" + count);
-    Assert.assertEquals("Server count=" + count + ", abort=" + doAbort,
-      (doAbort ? (liveRScount - 1) : liveRScount), count);
+    assertEquals((doAbort ? (liveRScount - 1) : liveRScount), count,
+      "Server count=" + count + ", abort=" + doAbort);
     if (doAbort) {
       UTIL.getMiniHBaseCluster().waitOnRegionServer(0);
       UTIL.waitFor(15 * 1000, new Waiter.Predicate<Exception>() {
@@ -410,7 +404,7 @@ public class TestMultiParallel {
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      Assert.assertFalse(table.exists(get));
+      assertFalse(table.exists(get));
     }
     table.close();
   }
@@ -434,13 +428,13 @@ public class TestMultiParallel {
       deletes.add(delete);
     }
     table.delete(deletes);
-    Assert.assertTrue(deletes.isEmpty());
+    assertTrue(deletes.isEmpty());
 
     // Get to make sure ...
     for (byte[] k : KEYS) {
       Get get = new Get(k);
       get.addColumn(BYTES_FAMILY, QUALIFIER);
-      Assert.assertFalse(table.exists(get));
+      assertFalse(table.exists(get));
     }
     table.close();
   }
@@ -730,7 +724,7 @@ public class TestMultiParallel {
 
   private void validateResult(Object r1, byte[] qual, byte[] val) {
     Result r = (Result) r1;
-    Assert.assertTrue(r.containsColumn(BYTES_FAMILY, qual));
+    assertTrue(r.containsColumn(BYTES_FAMILY, qual));
     byte[] value = r.getValue(BYTES_FAMILY, qual);
     if (0 != Bytes.compareTo(val, value)) {
       fail("Expected [" + Bytes.toStringBinary(val) + "] but got [" + Bytes.toStringBinary(value)
@@ -783,8 +777,8 @@ public class TestMultiParallel {
     } else {
       if (results != null) {
         for (Result r : results) {
-          Assert.assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
-          Assert.assertEquals(0, Bytes.compareTo(VALUE, r.getValue(BYTES_FAMILY, QUALIFIER)));
+          assertTrue(r.containsColumn(BYTES_FAMILY, QUALIFIER));
+          assertEquals(0, Bytes.compareTo(VALUE, r.getValue(BYTES_FAMILY, QUALIFIER)));
         }
         LOG.info("Validating data on " + table + " successfully!");
       }
@@ -793,13 +787,13 @@ public class TestMultiParallel {
 
   private void validateEmpty(Object r1) {
     Result result = (Result) r1;
-    Assert.assertTrue(result != null);
-    Assert.assertTrue(result.isEmpty());
+    assertTrue(result != null);
+    assertTrue(result.isEmpty());
   }
 
   private void validateSizeAndEmpty(Object[] results, int expectedSize) {
     // Validate got back the same number of Result objects, all empty
-    Assert.assertEquals(expectedSize, results.length);
+    assertEquals(expectedSize, results.length);
     for (Object result : results) {
       validateEmpty(result);
     }

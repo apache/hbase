@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
@@ -32,27 +31,24 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncRegionLocationCaching {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncRegionLocationCaching.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static int SLAVES = 1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -157,7 +153,7 @@ public class TestAsyncRegionLocationCaching {
     for (int count = 0; count < 50; count++) {
       int number =
         ((AsyncConnectionImpl) conn).getLocator().getNumberOfCachedRegionLocations(tableName);
-      assertNotEquals("Expected non-zero number of cached region locations", 0, number);
+      assertNotEquals(0, number, "Expected non-zero number of cached region locations");
       Thread.sleep(100);
     }
   }
@@ -172,7 +168,7 @@ public class TestAsyncRegionLocationCaching {
     for (int count = 0; count < 50; count++) {
       int number =
         ((AsyncConnectionImpl) conn).getLocator().getNumberOfCachedRegionLocations(tableName);
-      assertEquals("Expected zero number of cached region locations", 0, number);
+      assertEquals(0, number, "Expected zero number of cached region locations");
       Thread.sleep(100);
     }
   }

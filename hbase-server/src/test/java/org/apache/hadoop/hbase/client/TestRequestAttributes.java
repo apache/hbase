@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScannable;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -51,18 +50,14 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRequestAttributes {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRequestAttributes.class);
 
   private static final byte[] ROW_KEY1 = Bytes.toBytes("1");
   private static final byte[] ROW_KEY2A = Bytes.toBytes("2A");
@@ -97,7 +92,7 @@ public class TestRequestAttributes {
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static MiniHBaseCluster cluster;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     cluster = TEST_UTIL.startMiniCluster(1);
     Table table = TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY }, 1,
@@ -105,7 +100,7 @@ public class TestRequestAttributes {
     table.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     cluster.close();
     TEST_UTIL.shutdownMiniCluster();

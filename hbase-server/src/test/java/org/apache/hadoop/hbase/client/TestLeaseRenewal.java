@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -32,24 +31,17 @@ import org.apache.hadoop.hbase.ipc.MetricsHBaseServerSource;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestLeaseRenewal {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLeaseRenewal.class);
 
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
@@ -63,39 +55,19 @@ public class TestLeaseRenewal {
   private final static int leaseTimeout =
     HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD / 4;
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       leaseTimeout);
     TEST_UTIL.startMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
-    // Nothing to do.
-  }
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (HTableDescriptor htd : TEST_UTIL.getAdmin().listTables()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());
@@ -104,8 +76,9 @@ public class TestLeaseRenewal {
   }
 
   @Test
-  public void testLeaseRenewal() throws Exception {
-    Table table = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILY);
+  public void testLeaseRenewal(TestInfo testInfo) throws Exception {
+    Table table =
+      TEST_UTIL.createTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), FAMILY);
     Put p = new Put(ROW_BYTES);
     p.addColumn(FAMILY, COL_QUAL, VAL_BYTES);
     table.put(p);

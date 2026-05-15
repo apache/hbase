@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -48,25 +47,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestFastFail {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFastFail.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFastFail.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -76,51 +69,33 @@ public class TestFastFail {
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
   private static final int SLEEPTIME = 5000;
 
-  @Rule
-  public TestName name = new TestName();
+  private TableName tableName;
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Just to prevent fastpath FIFO from picking calls up bypassing the queue.
     TEST_UTIL.getConfiguration().set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY, "deadline");
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     MyPreemptiveFastFailInterceptor.numBraveSouls.set(0);
     CallQueueTooBigPffeInterceptor.numCallQueueTooBig.set(0);
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
-  public void tearDown() throws Exception {
-    // Nothing to do.
-  }
-
-  @Ignore("Can go zombie -- see HBASE-14421; FIX")
+  @Disabled("Can go zombie -- see HBASE-14421; FIX")
   @Test
   public void testFastFail() throws IOException, InterruptedException {
     Admin admin = TEST_UTIL.getAdmin();
 
-    final String tableName = name.getMethodName();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes(tableName)));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), 32);
     final long numRows = 1000;
@@ -146,7 +121,7 @@ public class TestFastFail {
       put.addColumn(FAMILY, QUALIFIER, value);
       puts.add(put);
     }
-    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
+    try (Table table = connection.getTable(tableName)) {
       table.put(puts);
       LOG.info("Written all puts.");
     }
@@ -177,7 +152,7 @@ public class TestFastFail {
          */
         @Override
         public Boolean call() throws Exception {
-          try (Table table = connection.getTable(TableName.valueOf(tableName))) {
+          try (Table table = connection.getTable(tableName)) {
             Thread.sleep(Math.abs(random.nextInt()) % 250); // Add some jitter here
             byte[] row = longToByteArrayKey(Math.abs(random.nextLong()) % numRows);
             Get g = new Get(row);
@@ -264,36 +239,33 @@ public class TestFastFail {
         / (numBlockedWorkers.get() == 0 ? Long.MAX_VALUE : numBlockedWorkers.get())
       + " numPFFEs: " + numPreemptiveFastFailExceptions.get());
 
-    assertEquals(
+    assertEquals(nThreads, numFailedThreads.get() + numSuccessfullThreads.get(),
       "The expected number of all the successfull and the failed "
-        + "threads should equal the total number of threads that we spawned",
-      nThreads, numFailedThreads.get() + numSuccessfullThreads.get());
-    assertEquals("All the failures should be coming from the secondput failure",
-      numFailedThreads.get(), numThreadsReturnedFalse);
-    assertEquals("Number of threads that threw execution exceptions " + "otherwise should be 0", 0,
-      numThreadsThrewExceptions);
-    assertEquals(
-      "The regionservers that returned true should equal to the" + " number of successful threads",
-      numThreadsReturnedTrue, numSuccessfullThreads.get());
-    assertTrue("There will be atleast one thread that retried instead of failing",
-      MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0);
-    assertTrue("There will be atleast one PreemptiveFastFail exception,"
-      + " otherwise, the test makes little sense." + "numPreemptiveFastFailExceptions: "
-      + numPreemptiveFastFailExceptions.get(), numPreemptiveFastFailExceptions.get() > 0);
+        + "threads should equal the total number of threads that we spawned");
+    assertEquals(numFailedThreads.get(), numThreadsReturnedFalse,
+      "All the failures should be coming from the secondput failure");
+    assertEquals(0, numThreadsThrewExceptions,
+      "Number of threads that threw execution exceptions " + "otherwise should be 0");
+    assertEquals(numThreadsReturnedTrue, numSuccessfullThreads.get(),
+      "The regionservers that returned true should equal to the number of successful threads");
+    assertTrue(MyPreemptiveFastFailInterceptor.numBraveSouls.get() > 0,
+      "There will be atleast one thread that retried instead of failing");
+    assertTrue(numPreemptiveFastFailExceptions.get() > 0,
+      "There will be atleast one PreemptiveFastFail exception,"
+        + " otherwise, the test makes little sense. numPreemptiveFastFailExceptions: "
+        + numPreemptiveFastFailExceptions.get());
 
-    assertTrue(
+    assertTrue(numBlockedWorkers.get() <= MyPreemptiveFastFailInterceptor.numBraveSouls.get(),
       "Only few thread should ideally be waiting for the dead "
         + "regionserver to be coming back. numBlockedWorkers:" + numBlockedWorkers.get()
-        + " threads that retried : " + MyPreemptiveFastFailInterceptor.numBraveSouls.get(),
-      numBlockedWorkers.get() <= MyPreemptiveFastFailInterceptor.numBraveSouls.get());
+        + " threads that retried : " + MyPreemptiveFastFailInterceptor.numBraveSouls.get());
   }
 
   @Test
   public void testCallQueueTooBigExceptionDoesntTriggerPffe() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
 
-    final String tableName = name.getMethodName();
-    HTableDescriptor desc = new HTableDescriptor(TableName.valueOf(Bytes.toBytes(tableName)));
+    HTableDescriptor desc = new HTableDescriptor(tableName);
     desc.addFamily(new HColumnDescriptor(FAMILY));
     admin.createTable(desc, Bytes.toBytes("aaaa"), Bytes.toBytes("zzzz"), 3);
 
@@ -316,16 +288,15 @@ public class TestFastFail {
     newConf.setInt("hbase.ipc.server.max.callqueue.length", 0);
     srs.onConfigurationChange(newConf);
 
-    try (Table table = connection.getTable(TableName.valueOf(tableName))) {
+    try (Table table = connection.getTable(tableName)) {
       Get get = new Get(new byte[1]);
       table.get(get);
     } catch (Throwable ex) {
     }
 
-    assertEquals(
+    assertEquals(0, CallQueueTooBigPffeInterceptor.numCallQueueTooBig.get(),
       "We should have not entered PFFE mode on CQTBE, but we did;"
-        + " number of times this mode should have been entered:",
-      0, CallQueueTooBigPffeInterceptor.numCallQueueTooBig.get());
+        + " number of times this mode should have been entered:");
 
     newConf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     newConf.setInt("hbase.ipc.server.max.callqueue.length", 250);

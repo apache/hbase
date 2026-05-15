@@ -17,33 +17,27 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestHTableMultiplexer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHTableMultiplexer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableMultiplexer.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -54,13 +48,7 @@ public class TestHTableMultiplexer {
   private static int SLAVES = 3;
   private static int PER_REGIONSERVER_QUEUE_SIZE = 100000;
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
@@ -68,7 +56,7 @@ public class TestHTableMultiplexer {
   /**
    * @throws java.lang.Exception
    */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -81,7 +69,7 @@ public class TestHTableMultiplexer {
     get.addColumn(FAMILY, QUALIFIER);
     int nbTry = 0;
     do {
-      assertTrue("Fail to get from " + htable.getName() + " after " + nbTry + " tries", nbTry < 50);
+      assertTrue(nbTry < 50, "Fail to get from " + htable.getName() + " after " + nbTry + " tries");
       nbTry++;
       Thread.sleep(100);
       r = htable.get(get);
@@ -91,9 +79,10 @@ public class TestHTableMultiplexer {
   }
 
   @Test
-  public void testHTableMultiplexer() throws Exception {
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "_1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "_2");
+  public void testHTableMultiplexer(TestInfo testInfo) throws Exception {
+    String methodName = testInfo.getTestMethod().get().getName();
+    final TableName tableName1 = TableName.valueOf(methodName + "_1");
+    final TableName tableName2 = TableName.valueOf(methodName + "_2");
     final int NUM_REGIONS = 10;
     final int VERSION = 3;
     List<Put> failedPuts;
@@ -119,11 +108,11 @@ public class TestHTableMultiplexer {
         if (row == null || row.length <= 0) continue;
         Put put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
         success = multiplexer.put(tableName1, put);
-        assertTrue("multiplexer.put returns", success);
+        assertTrue(success, "multiplexer.put returns");
 
         put = new Put(row).addColumn(FAMILY, QUALIFIER, VALUE1);
         success = multiplexer.put(tableName2, put);
-        assertTrue("multiplexer.put failed", success);
+        assertTrue(success, "multiplexer.put failed");
 
         LOG.info("Put for " + Bytes.toStringBinary(startRows[i]) + " @ iteration " + (i + 1));
 
