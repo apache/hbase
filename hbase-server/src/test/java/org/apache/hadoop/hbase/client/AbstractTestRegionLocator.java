@@ -249,8 +249,8 @@ public abstract class AbstractTestRegionLocator {
     for (HRegionLocation loc : page) {
       byte[] startKey = loc.getRegion().getStartKey();
       RegionLocations cached = getCachedLocation(TABLE_NAME_NO_REPLICA, startKey);
-      assertNotNull(cached, "metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
-        + " — bulk API did not populate the cache");
+      assertNotNull(cached, "metaCache miss for region starting at "
+        + Bytes.toStringBinary(startKey) + " — bulk API did not populate the cache");
       HRegionLocation cachedLoc = cached.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID);
       assertNotNull(cachedLoc, "metaCache had region but missing default replica entry");
       assertEquals(loc.getServerName(), cachedLoc.getServerName(),
