@@ -385,6 +385,11 @@ public class TestRegionsRecoveryChore {
         return new HashMap<>();
       }
 
+      @Override
+      public Map<String, Integer> getRegionColdDataSize() {
+        return new HashMap<>();
+      }
+
     };
     return serverMetrics;
   }

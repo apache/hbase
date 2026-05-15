@@ -122,6 +122,8 @@ class BalancerClusterState {
   private int[] regionServerIndexWithBestRegionCachedRatio;
   // Maps regionName -> oldServerName -> cache ratio of the region on the old server
   Map<String, Pair<ServerName, Float>> regionCacheRatioOnOldServerMap;
+  // cache free space available on each server, aligned to the "servers" array indices;
+  long[] serverBlockCacheFreeSize;
 
   static class DefaultRackManager extends RackManager {
     @Override
@@ -133,20 +135,23 @@ class BalancerClusterState {
   BalancerClusterState(Map<ServerName, List<RegionInfo>> clusterState,
     Map<String, Deque<BalancerRegionLoad>> loads, RegionLocationFinder regionFinder,
     RackManager rackManager) {
-    this(null, clusterState, loads, regionFinder, rackManager, null);
+    this(null, clusterState, loads, regionFinder, rackManager, null, null);
   }
 
   protected BalancerClusterState(Map<ServerName, List<RegionInfo>> clusterState,
     Map<String, Deque<BalancerRegionLoad>> loads, RegionLocationFinder regionFinder,
-    RackManager rackManager, Map<String, Pair<ServerName, Float>> oldRegionServerRegionCacheRatio) {
-    this(null, clusterState, loads, regionFinder, rackManager, oldRegionServerRegionCacheRatio);
+    RackManager rackManager, Map<String, Pair<ServerName, Float>> oldRegionServerRegionCacheRatio,
+    Map<ServerName, Long> serverBlockCacheFreeByServer) {
+    this(null, clusterState, loads, regionFinder, rackManager, oldRegionServerRegionCacheRatio,
+      serverBlockCacheFreeByServer);
   }
 
   @SuppressWarnings("unchecked")
   BalancerClusterState(Collection<RegionInfo> unassignedRegions,
     Map<ServerName, List<RegionInfo>> clusterState, Map<String, Deque<BalancerRegionLoad>> loads,
     RegionLocationFinder regionFinder, RackManager rackManager,
-    Map<String, Pair<ServerName, Float>> oldRegionServerRegionCacheRatio) {
+    Map<String, Pair<ServerName, Float>> oldRegionServerRegionCacheRatio,
+    Map<ServerName, Long> serverBlockCacheFreeByServer) {
     if (unassignedRegions == null) {
       unassignedRegions = Collections.emptyList();
     }
@@ -364,6 +369,15 @@ class BalancerClusterState {
     if (numRacks > 1) {
       populateRegionPerLocationFromServer(regionsPerRack, colocatedReplicaCountsPerRack,
         serversPerRack);
+    }
+
+    this.serverBlockCacheFreeSize = new long[numServers];
+    if (serverBlockCacheFreeByServer != null) {
+      for (int i = 0; i < numServers; i++) {
+        ServerName sn = servers[i];
+        this.serverBlockCacheFreeSize[i] =
+          sn == null ? 0L : serverBlockCacheFreeByServer.getOrDefault(sn, 0L);
+      }
     }
   }
 
@@ -683,6 +697,18 @@ class BalancerClusterState {
       computeRegionServerRegionCacheRatio();
     }
     return regionServerIndexWithBestRegionCachedRatio;
+  }
+
+  /**
+   * Finds and return the latest reported cache ratio for the region on the RegionServer it's
+   * currently online.
+   */
+  float getObservedRegionCacheRatio(int region) {
+    Deque<BalancerRegionLoad> dq = regionLoads[region];
+    if (dq == null || dq.isEmpty()) {
+      return 0.0f;
+    }
+    return dq.getLast().getCurrentRegionCacheRatio();
   }
 
   /**

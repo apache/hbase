@@ -1538,6 +1538,12 @@ public class HRegionServer extends Thread
         });
       });
     });
+    serverLoad.setCacheFreeSize(regionServerWrapper.getBlockCacheFreeSize());
+    if (DataTieringManager.getInstance() != null) {
+      DataTieringManager.getInstance().getRegionColdDataSize()
+        .forEach((regionName, coldDataSize) -> serverLoad.putRegionColdData(regionName,
+          roundSize(coldDataSize.getSecond(), unitMB)));
+    }
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     if (this.infoServer != null) {
