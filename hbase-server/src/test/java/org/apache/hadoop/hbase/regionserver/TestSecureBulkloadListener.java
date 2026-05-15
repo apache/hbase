@@ -53,7 +53,6 @@ import org.junit.jupiter.api.TestInfo;
 public class TestSecureBulkloadListener {
 
   private Configuration conf;
-  private MiniDFSCluster cluster;
   private HBaseTestingUtility htu;
   private DistributedFileSystem dfs;
   private final byte[] randomBytes = new byte[100];
