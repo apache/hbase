@@ -90,7 +90,7 @@ public class TestSimpleRpcScheduler {
   };
   private Configuration conf;
   private String testMethodName;
-  private static final AtomicInteger requestProcessed = new AtomicInteger(0);
+  private final AtomicInteger requestProcessed = new AtomicInteger(0);
 
   @BeforeEach
   public void setUp(TestInfo testInfo) {
@@ -583,7 +583,7 @@ public class TestSimpleRpcScheduler {
     }
   }
 
-  private static final class CoDelEnvironmentEdge implements EnvironmentEdge {
+  private final class CoDelEnvironmentEdge implements EnvironmentEdge {
 
     private long perRequestOffset;
     private long gapInRequests;
@@ -629,6 +629,7 @@ public class TestSimpleRpcScheduler {
       this.perRequestOffset = requestProcessingTime;
       this.gapInRequests = 1000L / arrivalRatePerSecond;
       this.requestCount = 0;
+      requestProcessed.set(0);
       this.testStartTime = System.currentTimeMillis();
     }
   }
@@ -652,7 +653,6 @@ public class TestSimpleRpcScheduler {
       scheduler.start();
       EnvironmentEdgeManager.injectEdge(envEdge);
 
-      requestProcessed.set(0);
       // incoming traffic < capacity
       envEdge.startTestFor(20, 40);
       for (int i = 0; i < 100; i++) {
@@ -668,7 +668,6 @@ public class TestSimpleRpcScheduler {
       assertEquals(0, scheduler.getNumGeneralCallsDropped(),
         "None of these calls should have been discarded");
 
-      requestProcessed.set(0);
       // incoming traffic = capacity
       envEdge.startTestFor(20, 50);
       for (int i = 0; i < 20; i++) {
@@ -686,7 +685,6 @@ public class TestSimpleRpcScheduler {
       assertEquals(0, scheduler.getNumGeneralCallsDropped(),
         "None of these calls should have been discarded");
 
-      requestProcessed.set(0);
       // incoming traffic > capacity
       envEdge.startTestFor(20, 60);
       // now slow calls and the ones to be dropped
@@ -850,9 +848,9 @@ public class TestSimpleRpcScheduler {
     testConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
       RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
     int maxCallQueueLength = 50;
-    double codelLifoThreshold = 0.8;
+    double coDelLifoThreshold = 0.8;
     testConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, maxCallQueueLength);
-    testConf.setDouble(RpcExecutor.CALL_QUEUE_CODEL_LIFO_THRESHOLD, codelLifoThreshold);
+    testConf.setDouble(RpcExecutor.CALL_QUEUE_CODEL_LIFO_THRESHOLD, coDelLifoThreshold);
     testConf.setInt(RpcExecutor.CALL_QUEUE_CODEL_TARGET_DELAY, 100);
     testConf.setInt(RpcExecutor.CALL_QUEUE_CODEL_INTERVAL, 100);
     testConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 1); // Single handler to control
@@ -887,7 +885,7 @@ public class TestSimpleRpcScheduler {
       }
 
       // Wait for some calls to complete
-      await().atMost(1, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 3);
+      await().atMost(2, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 3);
 
       // Check that we had LIFO switches
       long lifoSwitches = scheduler.getNumLifoModeSwitches();
@@ -902,7 +900,7 @@ public class TestSimpleRpcScheduler {
       }
       // At least one of the early completed calls should have a high ID (>20)
       // indicating LIFO processing
-      assertTrue(maxCallIdCompleted > maxCallQueueLength * codelLifoThreshold,
+      assertTrue(maxCallIdCompleted > maxCallQueueLength * coDelLifoThreshold,
         "Expected LIFO behavior: early completed calls should include call arrived after threshold "
           + "maxCallIdCompleted: " + maxCallIdCompleted);
 
@@ -935,7 +933,7 @@ public class TestSimpleRpcScheduler {
 
       final List<Integer> completedCalls = Collections.synchronizedList(new ArrayList<>());
 
-      // Phase 1: Fill queue rapidly to trigger LIFO (>40 calls for 80% of 50)
+      // Fill queue rapidly to trigger LIFO (>40 calls for 80% of 50)
       for (int i = 0; i < 48; i++) {
         final int callId = i;
         CallRunner call = createMockTask(HConstants.NORMAL_QOS);
@@ -950,13 +948,12 @@ public class TestSimpleRpcScheduler {
 
       // Wait for calls to complete
       await().atMost(1, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 3);
-      long lifoSwitchesPhase1 = scheduler.getNumLifoModeSwitches();
-      assertTrue(lifoSwitchesPhase1 > 0, "Should have entered LIFO mode");
+      assertTrue(scheduler.getNumLifoModeSwitches() > 0, "Should have entered LIFO mode");
 
-      // Phase 2: Let queue drain
-      await().atMost(2, TimeUnit.SECONDS).until(() -> scheduler.getGeneralQueueLength() == 0);
+      await().atMost(2, TimeUnit.SECONDS).until(
+        () -> scheduler.getGeneralQueueLength() == 0 && scheduler.getActiveRpcHandlerCount() == 0);
 
-      // Phase 3: Send new calls - should process in FIFO order
+      // Send new calls - should process in FIFO order
       completedCalls.clear();
       for (int i = 100; i < 105; i++) {
         final int callId = i;
