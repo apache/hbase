@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -37,8 +37,8 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
 
 public abstract class AbstractTestRegionLocator {
 
@@ -82,7 +82,7 @@ public abstract class AbstractTestRegionLocator {
     UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     clearCache(TABLE_NAME);
     clearCache(TABLE_NAME_NO_REPLICA);
@@ -219,8 +219,8 @@ public abstract class AbstractTestRegionLocator {
   public void testGetRegionLocationsEmptyAfterEnd() throws IOException {
     // Use a startKey lexicographically after all split keys: SPLIT_KEYS go "1".."9", so "z".
     List<HRegionLocation> page = getRegionLocationsPage(TABLE_NAME, Bytes.toBytes("z"), 5);
-    assertTrue("expected empty page past the last region; got " + page.size() + " entries",
-      page.isEmpty());
+    assertTrue(page.isEmpty(),
+      "expected empty page past the last region; got " + page.size() + " entries");
   }
 
   @Test
@@ -249,12 +249,12 @@ public abstract class AbstractTestRegionLocator {
     for (HRegionLocation loc : page) {
       byte[] startKey = loc.getRegion().getStartKey();
       RegionLocations cached = getCachedLocation(TABLE_NAME_NO_REPLICA, startKey);
-      assertNotNull("metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
-        + " — bulk API did not populate the cache", cached);
+      assertNotNull(cached, "metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
+        + " — bulk API did not populate the cache");
       HRegionLocation cachedLoc = cached.getRegionLocation(RegionInfo.DEFAULT_REPLICA_ID);
-      assertNotNull("metaCache had region but missing default replica entry", cachedLoc);
-      assertEquals("cached server differs from server returned by bulk API", loc.getServerName(),
-        cachedLoc.getServerName());
+      assertNotNull(cachedLoc, "metaCache had region but missing default replica entry");
+      assertEquals(loc.getServerName(), cachedLoc.getServerName(),
+        "cached server differs from server returned by bulk API");
     }
   }
 

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -25,18 +26,14 @@ import org.apache.hadoop.hbase.regionserver.InvalidMutationDurabilityException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestInvalidMutationDurabilityException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInvalidMutationDurabilityException.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -52,7 +49,7 @@ public class TestInvalidMutationDurabilityException {
 
   private static Table tableNeedReplicate;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster();
     UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(TABLE_NOT_REPLICATE)
@@ -66,7 +63,7 @@ public class TestInvalidMutationDurabilityException {
     tableNeedReplicate = UTIL.getConnection().getTable(TABLE_NEED_REPLICATE);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.getAdmin().disableTable(TABLE_NOT_REPLICATE);
     UTIL.getAdmin().disableTable(TABLE_NEED_REPLICATE);
@@ -87,9 +84,10 @@ public class TestInvalidMutationDurabilityException {
     tableNotReplicate.put(newPutWithSkipWAL());
   }
 
-  @Test(expected = InvalidMutationDurabilityException.class)
+  @Test
   public void testPutToTableNeedReplicate() throws Exception {
-    tableNeedReplicate.put(newPutWithSkipWAL());
+    assertThrows(InvalidMutationDurabilityException.class,
+      () -> tableNeedReplicate.put(newPutWithSkipWAL()));
   }
 
   private Delete newDeleteWithSkipWAL() {
@@ -104,9 +102,10 @@ public class TestInvalidMutationDurabilityException {
     tableNotReplicate.delete(newDeleteWithSkipWAL());
   }
 
-  @Test(expected = InvalidMutationDurabilityException.class)
+  @Test
   public void testDeleteToTableNeedReplicate() throws Exception {
-    tableNeedReplicate.delete(newDeleteWithSkipWAL());
+    assertThrows(InvalidMutationDurabilityException.class,
+      () -> tableNeedReplicate.delete(newDeleteWithSkipWAL()));
   }
 
   private Append newAppendWithSkipWAL() {
@@ -121,9 +120,10 @@ public class TestInvalidMutationDurabilityException {
     tableNotReplicate.append(newAppendWithSkipWAL());
   }
 
-  @Test(expected = InvalidMutationDurabilityException.class)
+  @Test
   public void testAppendToTableNeedReplicate() throws Exception {
-    tableNeedReplicate.append(newAppendWithSkipWAL());
+    assertThrows(InvalidMutationDurabilityException.class,
+      () -> tableNeedReplicate.append(newAppendWithSkipWAL()));
   }
 
   private Increment newIncrementWithSkipWAL() {
@@ -138,9 +138,10 @@ public class TestInvalidMutationDurabilityException {
     tableNotReplicate.increment(newIncrementWithSkipWAL());
   }
 
-  @Test(expected = InvalidMutationDurabilityException.class)
+  @Test
   public void testIncrementToTableNeedReplicate() throws Exception {
-    tableNeedReplicate.increment(newIncrementWithSkipWAL());
+    assertThrows(InvalidMutationDurabilityException.class,
+      () -> tableNeedReplicate.increment(newIncrementWithSkipWAL()));
   }
 
   @Test
@@ -149,9 +150,10 @@ public class TestInvalidMutationDurabilityException {
       .thenPut(newPutWithSkipWAL());
   }
 
-  @Test(expected = InvalidMutationDurabilityException.class)
+  @Test
   public void testCheckWithMutateToTableNeedReplicate() throws Exception {
-    tableNeedReplicate.checkAndMutate(Bytes.toBytes("row"), CF).qualifier(CQ).ifNotExists()
-      .thenPut(newPutWithSkipWAL());
+    assertThrows(InvalidMutationDurabilityException.class,
+      () -> tableNeedReplicate.checkAndMutate(Bytes.toBytes("row"), CF).qualifier(CQ).ifNotExists()
+        .thenPut(newPutWithSkipWAL()));
   }
 }

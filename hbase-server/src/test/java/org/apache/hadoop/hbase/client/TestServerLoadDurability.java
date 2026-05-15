@@ -20,12 +20,10 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.BUFFER_SIZE_KEY;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.NettyRpcServer;
@@ -34,40 +32,33 @@ import org.apache.hadoop.hbase.ipc.SimpleRpcServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * HBASE-19496 noticed that the RegionLoad/ServerLoad may be corrupted if rpc server reuses the
  * bytebuffer backed, so this test call the Admin#getLastMajorCompactionTimestamp() to invoke
  * HMaster to iterate all stored server/region loads.
  */
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestServerLoadDurability {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerLoadDurability.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
 
-  @Parameterized.Parameter
-  public Configuration conf;
+  private final Configuration conf;
 
-  @Parameterized.Parameters
-  public static final Collection<Object[]> parameters() {
-    List<Object[]> configurations = new ArrayList<>();
-    configurations.add(new Object[] { createConfigurationForSimpleRpcServer() });
-    configurations.add(new Object[] { createConfigurationForNettyRpcServer() });
-    return configurations;
+  public TestServerLoadDurability(Configuration conf) {
+    this.conf = conf;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(createConfigurationForSimpleRpcServer()),
+      Arguments.of(createConfigurationForNettyRpcServer()));
   }
 
   private static Configuration createConfigurationForSimpleRpcServer() {
@@ -87,30 +78,27 @@ public class TestServerLoadDurability {
   protected Connection conn;
   protected Admin admin;
 
-  @Rule
-  public TestName testName = new TestName();
   protected TableName tableName;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     utility = new HBaseTestingUtil(conf);
     utility.startMiniCluster(2);
     conn = ConnectionFactory.createConnection(utility.getConfiguration());
     admin = conn.getAdmin();
-    String methodName = testName.getMethodName();
-    tableName = TableName.valueOf(methodName.substring(0, methodName.length() - 3));
+    tableName = TableName.valueOf("testTable");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     utility.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testCompactionTimestamps() throws Exception {
     createTableWithDefaultConf(tableName);
     try (Table table = conn.getTable(tableName)) {
-      long ts = admin.getLastMajorCompactionTimestamp(tableName);
+      admin.getLastMajorCompactionTimestamp(tableName);
     }
   }
 
@@ -119,5 +107,4 @@ public class TestServerLoadDurability {
     builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY));
     admin.createTable(builder.build());
   }
-
 }
