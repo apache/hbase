@@ -44,6 +44,8 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Class to test asynchronous table admin operations.
@@ -55,6 +57,8 @@ import org.junit.jupiter.api.TestTemplate;
 @Tag(ClientTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncTableAdminApi.class);
 
   public TestAsyncTableAdminApi(Supplier<AsyncAdmin> admin) {
     super(admin);
@@ -146,7 +150,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
 
     assertEquals(expectedRegions, regions.size(),
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
-    System.err.println("Found " + regions.size() + " regions");
+    LOG.info("Found " + regions.size() + " regions");
 
     RegionInfo hri;
     hris = regions.iterator();
@@ -198,7 +202,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     regions = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName2).get();
     assertEquals(expectedRegions, regions.size(),
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
-    System.err.println("Found " + regions.size() + " regions");
+    LOG.info("Found " + regions.size() + " regions");
 
     hris = regions.iterator();
     hri = hris.next().getRegion();
@@ -245,7 +249,7 @@ public class TestAsyncTableAdminApi extends TestAsyncAdminBase {
     regions = ClientMetaTableAccessor.getTableHRegionLocations(metaTable, tableName3).get();
     assertEquals(expectedRegions, regions.size(),
       "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
-    System.err.println("Found " + regions.size() + " regions");
+    LOG.info("Found " + regions.size() + " regions");
 
     // Try an invalid case where there are duplicate split keys
     splitKeys = new byte[][] { new byte[] { 1, 1, 1 }, new byte[] { 2, 2, 2 },

@@ -155,9 +155,9 @@ public class FromClientSideTestBase {
     int numberOfResults = 0;
     while (scanner.hasNext()) {
       Result result = scanner.next();
-      System.out.println("Got back key: " + Bytes.toString(result.getRow()));
+      LOG.info("Got back key: " + Bytes.toString(result.getRow()));
       for (Cell kv : result.rawCells()) {
-        System.out.println("kv=" + kv.toString() + ", " + Bytes.toString(CellUtil.cloneValue(kv)));
+        LOG.info("kv=" + kv.toString() + ", " + Bytes.toString(CellUtil.cloneValue(kv)));
       }
       numberOfResults++;
     }
@@ -192,7 +192,7 @@ public class FromClientSideTestBase {
   protected void putRows(Table ht, int numRows, String value, String key) throws IOException {
     for (int i = 0; i < numRows; i++) {
       String row = key + "_" + HBaseCommonTestingUtil.getRandomUUID().toString();
-      System.out.println(String.format("Saving row: %s, with value %s", row, value));
+      LOG.info(String.format("Saving row: %s, with value %s", row, value));
       Put put = new Put(Bytes.toBytes(row));
       put.setDurability(Durability.SKIP_WAL);
       put.addColumn(Bytes.toBytes("trans-blob"), null, Bytes.toBytes("value for blob"));

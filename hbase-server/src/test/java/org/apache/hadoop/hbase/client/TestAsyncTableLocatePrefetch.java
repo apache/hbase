@@ -17,29 +17,24 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.concurrent.ExecutionException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableLocatePrefetch {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableLocatePrefetch.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -51,7 +46,7 @@ public class TestAsyncTableLocatePrefetch {
 
   private static AsyncNonMetaRegionLocator LOCATOR;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt(AsyncNonMetaRegionLocator.LOCATE_PREFETCH_LIMIT, 100);
     TEST_UTIL.startMiniCluster(3);
@@ -62,7 +57,7 @@ public class TestAsyncTableLocatePrefetch {
       new AsyncNonMetaRegionLocator((AsyncConnectionImpl) CONN, AsyncConnectionImpl.RETRY_TIMER);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -77,8 +72,8 @@ public class TestAsyncTableLocatePrefetch {
     // confirm that the locations of all the regions have been cached.
     assertNotNull(LOCATOR.getRegionLocationInCache(TABLE_NAME, Bytes.toBytes("aaa")));
     for (byte[] row : HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE) {
-      assertNotNull("Expected location to not be null for " + Bytes.toStringBinary(row),
-        LOCATOR.getRegionLocationInCache(TABLE_NAME, row));
+      assertNotNull(LOCATOR.getRegionLocationInCache(TABLE_NAME, row),
+        "Expected location to not be null for " + Bytes.toStringBinary(row));
     }
   }
 }
