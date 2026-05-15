@@ -84,7 +84,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.EncryptionProtos;
   TestSecurityUtil.TestHashAlgorithmMismatch.class,
   TestSecurityUtil.TestCipherNamePropagation.class,
   TestSecurityUtil.TestEncryptDecryptRoundTrip.class,
-  TestSecurityUtil.TestDeriveKeyWithHKDF.class, })
+  TestSecurityUtil.TestHKDFKeyDeriver.class, })
 @Category({ SecurityTests.class, SmallTests.class })
 public class TestSecurityUtil {
 
@@ -1526,11 +1526,11 @@ public class TestSecurityUtil {
 
   @RunWith(Parameterized.class)
   @Category({ SecurityTests.class, SmallTests.class })
-  public static class TestDeriveKeyWithHKDF extends TestSecurityUtil {
+  public static class TestHKDFKeyDeriver extends TestSecurityUtil {
 
     @ClassRule
     public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestDeriveKeyWithHKDF.class);
+      HBaseClassTestRule.forClass(TestHKDFKeyDeriver.class);
 
     @Parameter(0)
     public String cipherName;
@@ -1550,91 +1550,124 @@ public class TestSecurityUtil {
     }
 
     @Test
-    public void testDerivedKeyHasCorrectLength() {
-      Key derived = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
+    public void testDerivedKeyProperties() {
+      SecurityUtil.HKDFKeyDeriver deriver =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+
+      Key derived = deriver.generate(Bytes.toBytes(42L));
 
       assertNotNull(derived);
       assertEquals(cipher.getKeyLength(), derived.getEncoded().length);
-    }
-
-    @Test
-    public void testDerivedKeyHasCorrectAlgorithm() {
-      Key derived = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
-
       assertEquals(cipher.getKeyAlgorithm(), derived.getAlgorithm());
     }
 
     @Test
     public void testDerivedKeyDiffersFromSeed() {
-      Key derived = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
+      SecurityUtil.HKDFKeyDeriver deriver =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+
+      Key derived = deriver.generate(Bytes.toBytes(42L));
 
       assertFalse("Derived key should differ from seed key",
         Bytes.equals(testKey.getEncoded(), derived.getEncoded()));
     }
 
     @Test
+    public void testDeterminism_sameSeedAndSaltProduceSameKey() {
+      byte[] salt = Bytes.toBytes(1234567890L);
+      SecurityUtil.HKDFKeyDeriver deriver1 =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+      SecurityUtil.HKDFKeyDeriver deriver2 =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+
+      Key key1 = deriver1.generate(salt);
+      Key key2 = deriver2.generate(salt);
+
+      assertTrue("Same seed and salt should produce same key",
+        Bytes.equals(key1.getEncoded(), key2.getEncoded()));
+    }
+
+    @Test
+    public void testDifferentSaltsProduceDifferentKeys() {
+      SecurityUtil.HKDFKeyDeriver deriver =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+
+      Key key1 = deriver.generate(Bytes.toBytes(1000L));
+      Key key2 = deriver.generate(Bytes.toBytes(2000L));
+
+      assertFalse("Different salts should produce different keys",
+        Bytes.equals(key1.getEncoded(), key2.getEncoded()));
+    }
+
+    @Test
     public void testDifferentSeedsProduceDifferentKeys() {
       Key seed1 = new SecretKeySpec("seed-key-1------".getBytes(), AES_CIPHER);
       Key seed2 = new SecretKeySpec("seed-key-2------".getBytes(), AES_CIPHER);
+      byte[] salt = Bytes.toBytes(12345L);
 
-      Key derived1 = SecurityUtil.deriveKeyWithHKDF(seed1, cipher);
-      Key derived2 = SecurityUtil.deriveKeyWithHKDF(seed2, cipher);
+      Key derived1 = SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(seed1, cipher).generate(salt);
+      Key derived2 = SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(seed2, cipher).generate(salt);
 
       assertFalse("Different seeds should produce different keys",
         Bytes.equals(derived1.getEncoded(), derived2.getEncoded()));
     }
 
     @Test
-    public void testSameSeedAndTimestampProduceSameKey() {
+    public void testReusedDeriverProducesCorrectKeys() {
+      SecurityUtil.HKDFKeyDeriver deriver =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+
+      byte[][] salts = new byte[10][];
+      Key[] keys = new Key[10];
+      for (int i = 0; i < 10; i++) {
+        salts[i] = Bytes.toBytes((long) i);
+        keys[i] = deriver.generate(salts[i]);
+      }
+
+      SecurityUtil.HKDFKeyDeriver freshDeriver =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+      for (int i = 0; i < 10; i++) {
+        Key reproduced = freshDeriver.generate(salts[i]);
+        assertTrue("Reused deriver should produce same key as fresh deriver for salt index " + i,
+          Bytes.equals(keys[i].getEncoded(), reproduced.getEncoded()));
+      }
+    }
+
+    @Test
+    public void testEquivalenceWithConvenienceMethod() {
+      long fixedTime = 9999999L;
       org.apache.hadoop.hbase.util.EnvironmentEdgeManager
         .injectEdge(new org.apache.hadoop.hbase.util.EnvironmentEdge() {
           @Override
           public long currentTime() {
-            return 1234567890L;
+            return fixedTime;
           }
         });
       try {
-        Key derived1 = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
-        Key derived2 = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
+        Key fromConvenience = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
+        SecurityUtil.HKDFKeyDeriver deriver =
+          SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+        Key fromDeriver = deriver.generate(Bytes.toBytes(fixedTime));
 
-        assertTrue("Same seed and timestamp should produce same key",
-          Bytes.equals(derived1.getEncoded(), derived2.getEncoded()));
+        assertTrue("Deriver should produce same result as convenience method",
+          Bytes.equals(fromConvenience.getEncoded(), fromDeriver.getEncoded()));
       } finally {
         org.apache.hadoop.hbase.util.EnvironmentEdgeManager.reset();
       }
     }
 
     @Test
-    public void testDifferentTimestampsProduceDifferentKeys() {
-      long[] timestamps = new long[] { 1000L, 2000L };
-
-      byte[][] derived = new byte[2][];
-      for (int i = 0; i < 2; i++) {
-        final long ts = timestamps[i];
-        org.apache.hadoop.hbase.util.EnvironmentEdgeManager
-          .injectEdge(new org.apache.hadoop.hbase.util.EnvironmentEdge() {
-            @Override
-            public long currentTime() {
-              return ts;
-            }
-          });
-        derived[i] = SecurityUtil.deriveKeyWithHKDF(testKey, cipher).getEncoded();
-      }
-      org.apache.hadoop.hbase.util.EnvironmentEdgeManager.reset();
-
-      assertFalse("Different timestamps should produce different keys",
-        Bytes.equals(derived[0], derived[1]));
-    }
-
-    @Test
     public void testDerivedKeyWorksForEncryptionDecryption() throws Exception {
-      Key derived = SecurityUtil.deriveKeyWithHKDF(testKey, cipher);
+      SecurityUtil.HKDFKeyDeriver deriver =
+        SecurityUtil.HKDFKeyDeriver.forKeyAndCipher(testKey, cipher);
+
+      Key derived = deriver.generate(Bytes.toBytes(12345L));
 
       Encryption.Context ctx = Encryption.newContext(conf);
       ctx.setCipher(cipher);
       ctx.setKey(derived);
 
-      byte[] plaintext = Bytes.toBytes("HKDF derived key round-trip test");
+      byte[] plaintext = Bytes.toBytes("HKDFKeyDeriver round-trip test");
       byte[] iv = new byte[cipher.getIvLength()];
       Bytes.secureRandom(iv);
 
@@ -1642,11 +1675,10 @@ public class TestSecurityUtil {
       Encryption.encrypt(encOut, plaintext, 0, plaintext.length, ctx, iv);
 
       byte[] decrypted = new byte[plaintext.length];
-      Encryption.decrypt(decrypted, 0,
-        new ByteArrayInputStream(encOut.toByteArray()), plaintext.length, ctx, iv);
+      Encryption.decrypt(decrypted, 0, new ByteArrayInputStream(encOut.toByteArray()),
+        plaintext.length, ctx, iv);
 
-      assertTrue("Decrypted data should match original",
-        Bytes.equals(plaintext, decrypted));
+      assertTrue("Decrypted data should match original", Bytes.equals(plaintext, decrypted));
     }
   }
 }

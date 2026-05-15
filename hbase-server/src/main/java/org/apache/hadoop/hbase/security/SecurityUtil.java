@@ -617,15 +617,55 @@ public final class SecurityUtil {
    * @return a new {@link Key} derived via HKDF
    */
   static Key deriveKeyWithHKDF(Key seedKey, Cipher cipher) {
-    byte[] ikm = seedKey.getEncoded();
-    byte[] salt = Bytes.toBytes(EnvironmentEdgeManager.currentTime());
-    byte[] info = Bytes.toBytes(cipher.getName());
+    return HKDFKeyDeriver.forKeyAndCipher(seedKey, cipher)
+      .generate(Bytes.toBytes(EnvironmentEdgeManager.currentTime()));
+  }
 
-    HKDFBytesGenerator hkdf = new HKDFBytesGenerator(new SHA256Digest());
-    hkdf.init(new HKDFParameters(ikm, salt, info));
+  /**
+   * Reusable HKDF (RFC 5869) key derivation context that pre-computes invariants (input key
+   * material, info, output buffer) at construction time, so that repeated calls to
+   * {@link #generate(byte[])} only pay for the HKDF extract-and-expand step.
+   * <p>
+   * This class is NOT thread-safe. Callers must use one instance per thread or synchronize
+   * externally.
+   */
+  @InterfaceAudience.Public
+  @InterfaceStability.Evolving
+  public static final class HKDFKeyDeriver {
+    private final HKDFBytesGenerator hkdf;
+    private final byte[] ikm;
+    private final byte[] info;
+    private final String keyAlgorithm;
+    private final byte[] okm;
 
-    byte[] okm = new byte[cipher.getKeyLength()];
-    hkdf.generateBytes(okm, 0, okm.length);
-    return new SecretKeySpec(okm, cipher.getKeyAlgorithm());
+    private HKDFKeyDeriver(Key seedKey, Cipher cipher) {
+      this.hkdf = new HKDFBytesGenerator(new SHA256Digest());
+      this.ikm = seedKey.getEncoded();
+      this.info = Bytes.toBytes(cipher.getName());
+      this.keyAlgorithm = cipher.getKeyAlgorithm();
+      this.okm = new byte[cipher.getKeyLength()];
+    }
+
+    /**
+     * Create a new deriver for the given seed key and cipher.
+     * @param seedKey the key whose encoded bytes are used as the input key material (IKM)
+     * @param cipher  the cipher that determines the derived key length and algorithm
+     * @return a new deriver instance
+     */
+    public static HKDFKeyDeriver forKeyAndCipher(Key seedKey, Cipher cipher) {
+      return new HKDFKeyDeriver(seedKey, cipher);
+    }
+
+    /**
+     * Derive a key using the provided salt. The caller is responsible for ensuring salt uniqueness
+     * across invocations to produce distinct keys.
+     * @param salt the salt bytes for this derivation
+     * @return a new {@link Key} derived via HKDF
+     */
+    public Key generate(byte[] salt) {
+      hkdf.init(new HKDFParameters(ikm, salt, info));
+      hkdf.generateBytes(okm, 0, okm.length);
+      return new SecretKeySpec(okm, keyAlgorithm);
+    }
   }
 }
