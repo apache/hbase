@@ -149,6 +149,14 @@ public class ColumnPrefixFilter extends FilterBase implements HintingFilter {
   }
 
   @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    if (this.prefix == null) {
+      return null;
+    }
+    return getNextCellHint(skippedCell);
+  }
+
+  @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + Bytes.toStringBinary(this.prefix);
   }
