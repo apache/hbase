@@ -186,7 +186,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
      * Creates a new configuration and sets region mover specific overrides
      */
     private static Configuration createConf() {
-      Configuration conf = HBaseConfiguration.create();
+      final Configuration conf = HBaseConfiguration.create();
+      return overrideConf(conf);
+    }
+
+    private static Configuration overrideConf(Configuration conf) {
       conf.setInt("hbase.client.prefetch.limit", 1);
       conf.setInt("hbase.client.pause", 500);
       conf.setInt("hbase.client.retries.number", 100);
@@ -208,7 +212,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       }
       this.filename = defaultDir + File.separator + System.getProperty("user.name") + this.hostname
         + ":" + Integer.toString(this.port);
-      this.conf = conf;
+      this.conf = overrideConf(new Configuration(conf));
     }
 
     /**
@@ -947,7 +951,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   @Override
   protected void processOptions(CommandLine cmd) {
     String hostname = cmd.getOptionValue("r");
-    rmbuilder = new RegionMoverBuilder(hostname);
+    rmbuilder = new RegionMoverBuilder(hostname, getConf());
     this.loadUnload = cmd.getOptionValue("o").toLowerCase(Locale.ROOT);
     if (cmd.hasOption('m')) {
       rmbuilder.maxthreads(Integer.parseInt(cmd.getOptionValue('m')));
