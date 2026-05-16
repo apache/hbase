@@ -179,6 +179,29 @@ public class MultipleColumnPrefixFilter extends FilterBase implements HintingFil
     return PrivateCellUtil.createFirstOnRowCol(cell, hint, 0, hint.length);
   }
 
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    if (sortedPrefixes.isEmpty()) {
+      return null;
+    }
+    byte[] qualifier = CellUtil.cloneQualifier(skippedCell);
+    TreeSet<byte[]> lesserOrEqual = (TreeSet<byte[]>) sortedPrefixes.headSet(qualifier, true);
+    byte[] target;
+    if (lesserOrEqual.isEmpty()) {
+      target = sortedPrefixes.first();
+    } else {
+      byte[] largest = lesserOrEqual.last();
+      if (Bytes.startsWith(qualifier, largest)) {
+        return null;
+      }
+      target = sortedPrefixes.higher(largest);
+      if (target == null) {
+        return null;
+      }
+    }
+    return PrivateCellUtil.createFirstOnRowCol(skippedCell, target, 0, target.length);
+  }
+
   public TreeSet<byte[]> createTreeSet() {
     return new TreeSet<>(new Comparator<Object>() {
       @Override
