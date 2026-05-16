@@ -254,6 +254,16 @@ final public class FilterList extends FilterBase {
   }
 
   @Override
+  public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
+    return this.filterListBase.getHintForRejectedRow(firstRowCell);
+  }
+
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    return this.filterListBase.getSkipHint(skippedCell);
+  }
+
+  @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return this.filterListBase.isFamilyEssential(name);
   }
