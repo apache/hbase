@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.ExecutorService;
@@ -63,6 +64,8 @@ class ConnectionOverAsyncConnection implements Connection {
     this.connConf = new ConnectionConfiguration(conn.getConfiguration());
   }
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
   AsyncConnectionImpl getAsyncConnection() {
     return conn;
   }

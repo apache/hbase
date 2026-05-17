@@ -139,16 +139,23 @@ public interface AsyncTableRegionLocator {
    * <p/>
    * Unlike {@link #getAllRegionLocations()}, this method performs at most one RPC against
    * {@code hbase:meta} per invocation, so its latency is bounded by {@code limit} rather than table
-   * size. Note that this method does not coordinate with other in-flight meta lookups on the
-   * connection - aggregate pacing across concurrent callers is the caller's responsibility.
+   * size. The single-RPC behavior is best-effort: if the response would exceed
+   * {@code hbase.client.scanner.max.result.size} (default 2 MB), the server may split the slice
+   * across multiple {@code ScannerNext} RPCs. For typical meta row sizes and default caching this
+   * rarely fires, but callers passing large {@code limit} values against clusters with replicas or
+   * heavy meta rows should treat single-RPC as a soft guarantee, not absolute. Note that this
+   * method does not coordinate with other in-flight meta lookups on the connection - aggregate
+   * pacing across concurrent callers is the caller's responsibility.
    * <p/>
    * This method is optional. Implementations that cannot support paginated lookups will return a
    * future that completes exceptionally with {@link UnsupportedOperationException} (the default
    * behavior); callers should fall back to {@link #getAllRegionLocations()} in that case.
    * @param startKey region start-key to begin scanning from (inclusive); {@code null} or empty
    *                 starts from the first region
-   * @param limit    maximum number of regions to return; if &lt;= 0, falls back to
-   *                 {@code hbase.meta.scanner.caching}
+   * @param limit    maximum number of regions to return. If &lt;= 0, falls back to
+   *                 {@code hbase.meta.scanner.caching} - this is a SOFT cap on a single page, NOT
+   *                 "all regions"; tables larger than the cap still require the caller to keep
+   *                 paging via {@code last.getRegion().getEndKey()}.
    * @return up to {@code limit} {@link HRegionLocation}s in start-key order, possibly empty when no
    *         more regions exist; errors are reported via the returned future
    */
