@@ -1352,6 +1352,11 @@ public class ColumnFamilyDescriptorBuilder {
       return getStringOrDefault(ENCRYPTION_KEY_NAMESPACE_BYTES, Function.identity(), null);
     }
 
+    @Override
+    public Bytes getEncryptionKeyNamespaceBytes() {
+      return getValue(ENCRYPTION_KEY_NAMESPACE_BYTES);
+    }
+
     /**
      * Set the encryption key namespace attribute for the family
      * @param keyNamespace the key namespace, or null to remove existing setting

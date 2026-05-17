@@ -19,71 +19,175 @@ package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
 import java.security.KeyException;
+import java.util.ArrayList;
 import java.util.List;
+import org.apache.commons.lang3.NotImplementedException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
-/**
- * STUB IMPLEMENTATION - Feature not yet complete. This class will be fully implemented in
- * HBASE-29368 feature PR.
- */
-@InterfaceAudience.Private
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.GetManagedKeysResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyMetadataRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ManagedKeysProtos;
+
+@InterfaceAudience.Public
 public class KeymetaAdminClient implements KeymetaAdmin {
+  private ManagedKeysProtos.ManagedKeysService.BlockingInterface stub;
 
   public KeymetaAdminClient(Connection conn) throws IOException {
-    // Stub constructor
+    this.stub =
+      ManagedKeysProtos.ManagedKeysService.newBlockingStub(conn.getAdmin().coprocessorService());
   }
 
   @Override
   public ManagedKeyData enableKeyManagement(byte[] keyCust, String keyNamespace)
-    throws IOException, KeyException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    throws IOException {
+    try {
+      ManagedKeyResponse response = stub.enableKeyManagement(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
   public List<ManagedKeyData> getManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    try {
+      GetManagedKeysResponse statusResponse =
+        stub.getManagedKeys(null, ManagedKeyRequest.newBuilder()
+          .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyDataList(statusResponse);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
   public boolean rotateSTK() throws IOException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    try {
+      BooleanMsg response = stub.rotateSTK(null, EmptyMsg.getDefaultInstance());
+      return response.getBoolMsg();
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
   public void ejectManagedKeyDataCacheEntry(byte[] keyCustodian, String keyNamespace,
     String keyMetadata) throws IOException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    throw new NotImplementedException(
+      "ejectManagedKeyDataCacheEntry not supported in KeymetaAdminClient");
   }
 
   @Override
   public void clearManagedKeyDataCache() throws IOException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    throw new NotImplementedException(
+      "clearManagedKeyDataCache not supported in KeymetaAdminClient");
   }
 
   @Override
   public ManagedKeyData disableKeyManagement(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    try {
+      ManagedKeyResponse response = stub.disableKeyManagement(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
-  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace,
-    byte[] keyMetadataHash) throws IOException, KeyException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+  public ManagedKeyData disableManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
+    try {
+      ManagedKeyResponse response = stub.disableManagedKey(null,
+        ManagedKeyMetadataRequest
+          .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+            .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
+          .setKeyMetadata(keyMetadata).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
   public ManagedKeyData rotateManagedKey(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    try {
+      ManagedKeyResponse response = stub.rotateManagedKey(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
   }
 
   @Override
   public void refreshManagedKeys(byte[] keyCust, String keyNamespace)
     throws IOException, KeyException {
-    throw new UnsupportedOperationException("KeymetaAdmin feature not yet implemented");
+    try {
+      stub.refreshManagedKeys(null, ManagedKeyRequest.newBuilder()
+        .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build());
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @Override
+  public ManagedKeyData setManagedKey(byte[] keyCust, String keyNamespace, String keyMetadata)
+    throws IOException, KeyException {
+    try {
+      ManagedKeyResponse response = stub.setManagedKey(null,
+        ManagedKeyMetadataRequest
+          .newBuilder().setKeyCustNs(ManagedKeyRequest.newBuilder()
+            .setKeyCust(ByteString.copyFrom(keyCust)).setKeyNamespace(keyNamespace).build())
+          .setKeyMetadata(keyMetadata).build());
+      return generateKeyData(response);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  private static List<ManagedKeyData> generateKeyDataList(GetManagedKeysResponse stateResponse) {
+    List<ManagedKeyData> keyStates = new ArrayList<>();
+    for (ManagedKeyResponse state : stateResponse.getStateList()) {
+      keyStates.add(generateKeyData(state));
+    }
+    return keyStates;
+  }
+
+  private static ManagedKeyData generateKeyData(ManagedKeyResponse response) {
+    // Convert namespace String from RPC response to byte[] once at this boundary.
+    byte[] keyCust = response.getKeyCust().toByteArray();
+    byte[] keyNamespace = Bytes.toBytes(response.getKeyNamespace());
+    byte[] keyMetadataHash =
+      response.hasKeyMetadataHash() ? response.getKeyMetadataHash().toByteArray() : null;
+    ManagedKeyIdentity fullKeyIdentity =
+      new KeyIdentityBytesBacked(new Bytes(keyCust), new Bytes(keyNamespace),
+        keyMetadataHash != null
+          ? new Bytes(keyMetadataHash)
+          : ManagedKeyIdentity.KEY_NULL_IDENTITY_BYTES);
+    if (keyMetadataHash == null) {
+      return new ManagedKeyData(fullKeyIdentity,
+        ManagedKeyState.forValue((byte) response.getKeyState().getNumber()));
+    } else {
+      return new ManagedKeyData(fullKeyIdentity,
+        ManagedKeyState.forValue((byte) response.getKeyState().getNumber()),
+        response.getRefreshTimestamp());
+    }
   }
 }

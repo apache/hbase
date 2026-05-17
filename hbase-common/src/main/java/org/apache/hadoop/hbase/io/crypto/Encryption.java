@@ -29,12 +29,14 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.BiFunction;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -97,7 +99,7 @@ public final class Encryption {
    * Crypto context
    */
   @InterfaceAudience.Public
-  public static class Context extends org.apache.hadoop.hbase.io.crypto.Context {
+  public static final class Context extends org.apache.hadoop.hbase.io.crypto.Context {
 
     /** The null crypto context */
     public static final Context NONE = new Context();
@@ -117,7 +119,7 @@ public final class Encryption {
     }
 
     public Context setKey(byte[] key) {
-      super.setKey(new SecretKeySpec(key, getCipher().getName()));
+      super.setKey(new SecretKeySpec(key, getCipher().getKeyAlgorithm()));
       return this;
     }
   }
@@ -400,7 +402,7 @@ public final class Encryption {
   public static void decrypt(OutputStream out, InputStream in, int outLen, Decryptor d)
     throws IOException {
     InputStream cin = d.createDecryptionStream(in);
-    byte buf[] = new byte[8 * 1024];
+    byte[] buf = new byte[8 * 1024];
     long remaining = outLen;
     try {
       while (remaining > 0) {
@@ -554,29 +556,50 @@ public final class Encryption {
     }
   }
 
-  static final Map<Pair<String, String>, KeyProvider> keyProviderCache = new ConcurrentHashMap<>();
+  static final Map<Pair<String, String>, Object> keyProviderCache = new ConcurrentHashMap<>();
 
-  public static KeyProvider getKeyProvider(Configuration conf) {
-    String providerClassName =
-      conf.get(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyStoreKeyProvider.class.getName());
-    String providerParameters = conf.get(HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, "");
-    try {
-      Pair<String, String> providerCacheKey = new Pair<>(providerClassName, providerParameters);
-      KeyProvider provider = keyProviderCache.get(providerCacheKey);
-      if (provider != null) {
-        return provider;
-      }
-      provider = (KeyProvider) ReflectionUtils
-        .newInstance(getClassLoaderForClass(KeyProvider.class).loadClass(providerClassName), conf);
-      provider.init(providerParameters);
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Installed " + providerClassName + " into key provider cache");
+  private static Object createProvider(final Configuration conf, String classNameKey,
+    String parametersKey, Class<?> defaultProviderClass, ClassLoader classLoaderForClass,
+    BiFunction<Object, String, Void> initFunction) {
+    String providerClassName = conf.get(classNameKey, defaultProviderClass.getName());
+    String providerParameters = conf.get(parametersKey, "");
+    Pair<String, String> providerCacheKey = new Pair<>(providerClassName, providerParameters);
+    Object provider = keyProviderCache.get(providerCacheKey);
+    if (provider == null) {
+      try {
+        provider =
+          ReflectionUtils.newInstance(classLoaderForClass.loadClass(providerClassName), conf);
+        initFunction.apply(provider, providerParameters);
+      } catch (Exception e) {
+        throw new RuntimeException(e);
       }
       keyProviderCache.put(providerCacheKey, provider);
-      return provider;
-    } catch (Exception e) {
-      throw new RuntimeException(e);
+      LOG.debug("Installed {} into key provider cache", providerClassName);
     }
+    return provider;
+  }
+
+  public static KeyProvider getKeyProvider(final Configuration conf) {
+    return (KeyProvider) createProvider(conf, HConstants.CRYPTO_KEYPROVIDER_CONF_KEY,
+      HConstants.CRYPTO_KEYPROVIDER_PARAMETERS_KEY, KeyStoreKeyProvider.class,
+      getClassLoaderForClass(KeyProvider.class), (provider, providerParameters) -> {
+        ((KeyProvider) provider).init(providerParameters);
+        return null;
+      });
+  }
+
+  public static ManagedKeyProvider getManagedKeyProvider(final Configuration conf) {
+    return (ManagedKeyProvider) createProvider(conf, HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
+      HConstants.CRYPTO_MANAGED_KEYPROVIDER_PARAMETERS_KEY, ManagedKeyProvider.class,
+      getClassLoaderForClass(ManagedKeyProvider.class), (provider, providerParameters) -> {
+        ((ManagedKeyProvider) provider).initConfig(conf, providerParameters);
+        return null;
+      });
+  }
+
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
+  public static void clearKeyProviderCache() {
+    keyProviderCache.clear();
   }
 
   public static void incrementIv(byte[] iv) {

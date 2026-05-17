@@ -47,6 +47,11 @@ public class ReaderContext {
   private final ManagedKeyDataCache managedKeyDataCache;
 
   public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
+    HFileSystem hfs, boolean primaryReplicaReader, ReaderType type) {
+    this(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type, null, null);
+  }
+
+  public ReaderContext(Path filePath, FSDataInputStreamWrapper fsdis, long fileSize,
     HFileSystem hfs, boolean primaryReplicaReader, ReaderType type, SystemKeyCache systemKeyCache,
     ManagedKeyDataCache managedKeyDataCache) {
     this.filePath = filePath;

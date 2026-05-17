@@ -18,44 +18,16 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import java.io.InputStream;
-import java.security.Key;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Decryptors apply a cipher to an InputStream to recover plaintext.
  */
 @InterfaceAudience.Public
-public interface Decryptor {
-
-  /**
-   * Set the secret key
-   */
-  public void setKey(Key key);
-
-  /**
-   * Get the expected length for the initialization vector
-   * @return the expected length for the initialization vector
-   */
-  public int getIvLength();
-
-  /**
-   * Get the cipher's internal block size
-   * @return the cipher's internal block size
-   */
-  public int getBlockSize();
-
-  /**
-   * Set the initialization vector
-   */
-  public void setIv(byte[] iv);
+public interface Decryptor extends CipherOperator {
 
   /**
    * Create a stream for decryption
    */
-  public InputStream createDecryptionStream(InputStream in);
-
-  /**
-   * Reset state, reinitialize with the key and iv
-   */
-  void reset();
+  InputStream createDecryptionStream(InputStream in);
 }

@@ -45,7 +45,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.Region;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -90,7 +90,7 @@ public class TestHBaseFsckEncryption {
       TableDescriptorBuilder.newBuilder(TableName.valueOf("default", "TestHBaseFsckEncryption"));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).setEncryptionType(algorithm)
-        .setEncryptionKey(EncryptionUtil.wrapKey(conf,
+        .setEncryptionKey(SecurityUtil.wrapKey(conf,
           conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
           cfKey))
         .build();

@@ -340,8 +340,7 @@ public class StoreFileInfo implements Configurable {
   }
 
   ReaderContext createReaderContext(boolean doDropBehind, long readahead, ReaderType type,
-    String keyNamespace, SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache)
-    throws IOException {
+    SystemKeyCache systemKeyCache, ManagedKeyDataCache managedKeyDataCache) throws IOException {
     FSDataInputStreamWrapper in;
     FileStatus status;
     if (this.link != null) {

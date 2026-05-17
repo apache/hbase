@@ -94,8 +94,10 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
           // plaintext to encode.
           decryptor.reset();
           dataInputStream = decryptor.createDecryptionStream(dataInputStream);
+          onDiskSizeWithoutHeader -= Bytes.SIZEOF_BYTE + ivLength + cipher.getAuthTagLength();
+        } else {
+          onDiskSizeWithoutHeader -= Bytes.SIZEOF_BYTE;
         }
-        onDiskSizeWithoutHeader -= Bytes.SIZEOF_BYTE + ivLength;
       }
 
       Compression.Algorithm compression = fileContext.getCompression();

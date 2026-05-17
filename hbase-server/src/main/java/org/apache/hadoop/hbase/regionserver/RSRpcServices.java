@@ -90,6 +90,7 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -103,6 +104,7 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
 import org.apache.hadoop.hbase.ipc.ServerRpcController;
+import org.apache.hadoop.hbase.keymeta.KeyIdentityBytesBacked;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.RSProcedureCallable;
@@ -4062,39 +4064,84 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   }
 
   /**
-   * STUB - Refreshes the system key cache on the region server. Feature not yet implemented in
-   * precursor PR.
+   * Refreshes the system key cache on the region server by rebuilding it with the latest keys. This
+   * is called by the master when a system key rotation has occurred.
+   * @param controller the RPC controller
+   * @param request    the request
+   * @return empty response
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public EmptyMsg refreshSystemKeyCache(final RpcController controller, final EmptyMsg request)
     throws ServiceException {
-    throw new ServiceException(
-      new UnsupportedOperationException("Key management feature not yet implemented"));
+    try {
+      checkOpen();
+      requestCount.increment();
+      LOG.info("Received RefreshSystemKeyCache request, rebuilding system key cache");
+      server.rebuildSystemKeyCache();
+      return EmptyMsg.getDefaultInstance();
+    } catch (IOException ie) {
+      LOG.error("Failed to rebuild system key cache", ie);
+      throw new ServiceException(ie);
+    }
   }
 
   /**
-   * STUB - Ejects a specific managed key entry from the cache. Feature not yet implemented in
-   * precursor PR.
+   * Ejects a specific managed key entry from the managed key data cache on the region server.
+   * @param controller the RPC controller
+   * @param request    the request containing key custodian, namespace, and metadata hash
+   * @return BooleanMsg indicating whether the key was ejected
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public BooleanMsg ejectManagedKeyDataCacheEntry(final RpcController controller,
     final ManagedKeyEntryRequest request) throws ServiceException {
-    throw new ServiceException(
-      new UnsupportedOperationException("Key management feature not yet implemented"));
+    try {
+      checkOpen();
+    } catch (IOException e) {
+      LOG.error("Failed to eject managed key data cache entry", e);
+      throw new ServiceException(e);
+    }
+    requestCount.increment();
+    byte[] keyCustodian = request.getKeyCustNs().getKeyCust().toByteArray();
+    String keyNamespace = request.getKeyCustNs().getKeyNamespace();
+    byte[] partialIdentity = request.getKeyMetadataHash().toByteArray();
+
+    if (LOG.isInfoEnabled()) {
+      String keyCustodianEncoded = ManagedKeyProvider.encodeToStr(keyCustodian);
+      String partialIdentityEncoded = ManagedKeyProvider.encodeToStr(partialIdentity);
+      LOG.info(
+        "Received EjectManagedKeyDataCacheEntry request for key custodian: {}, namespace: {}, "
+          + "partial identity: {}",
+        keyCustodianEncoded, keyNamespace, partialIdentityEncoded);
+    }
+
+    boolean ejected = server.getKeyManagementService().getManagedKeyDataCache()
+      .ejectKey(new KeyIdentityBytesBacked(new Bytes(keyCustodian),
+        new Bytes(Bytes.toBytes(keyNamespace)), new Bytes(partialIdentity)));
+    return BooleanMsg.newBuilder().setBoolMsg(ejected).build();
   }
 
   /**
-   * STUB - Clears all entries in the managed key data cache. Feature not yet implemented in
-   * precursor PR.
+   * Clears all entries in the managed key data cache on the region server.
+   * @param controller the RPC controller
+   * @param request    the request (empty)
+   * @return empty response
    */
   @Override
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public EmptyMsg clearManagedKeyDataCache(final RpcController controller, final EmptyMsg request)
     throws ServiceException {
-    throw new ServiceException(
-      new UnsupportedOperationException("Key management feature not yet implemented"));
+    try {
+      checkOpen();
+    } catch (IOException ie) {
+      LOG.error("Failed to clear managed key data cache", ie);
+      throw new ServiceException(ie);
+    }
+    requestCount.increment();
+    LOG.info("Received ClearManagedKeyDataCache request, clearing managed key data cache");
+    server.getKeyManagementService().getManagedKeyDataCache().clearCache();
+    return EmptyMsg.getDefaultInstance();
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,

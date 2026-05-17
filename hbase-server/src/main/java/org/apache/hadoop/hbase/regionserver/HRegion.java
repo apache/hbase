@@ -170,6 +170,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
@@ -386,6 +387,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   private final Configuration baseConf;
   private final int rowLockWaitDuration;
   static final int DEFAULT_ROWLOCK_WAIT_DURATION = 30000;
+  private final ManagedKeyDataCache managedKeyDataCache;
+  private final SystemKeyCache systemKeyCache;
 
   private Path regionWalDir;
   private FileSystem walFS;
@@ -983,6 +986,17 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     minBlockSizeBytes = Arrays.stream(this.htableDescriptor.getColumnFamilies())
       .mapToInt(ColumnFamilyDescriptor::getBlocksize).min().orElse(HConstants.DEFAULT_BLOCKSIZE);
+
+    if (SecurityUtil.isKeyManagementEnabled(conf)) {
+      if (keyManagementService == null) {
+        keyManagementService = KeyManagementService.createDefault(conf, fs.getFileSystem());
+      }
+      this.managedKeyDataCache = keyManagementService.getManagedKeyDataCache();
+      this.systemKeyCache = keyManagementService.getSystemKeyCache();
+    } else {
+      this.managedKeyDataCache = null;
+      this.systemKeyCache = null;
+    }
   }
 
   private void setHTableSpecificConf() {
@@ -2177,11 +2191,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   public ManagedKeyDataCache getManagedKeyDataCache() {
-    return null;
+    return this.managedKeyDataCache;
   }
 
   public SystemKeyCache getSystemKeyCache() {
-    return null;
+    return this.systemKeyCache;
   }
 
   /**

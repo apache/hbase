@@ -40,7 +40,7 @@ import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Decryptor;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.util.LRUDictionary;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -259,7 +259,7 @@ public abstract class AbstractProtobufWALReader
     // First try the WAL key, if one is configured
     if (walKeyName != null) {
       try {
-        key = EncryptionUtil.unwrapWALKey(conf, walKeyName, keyBytes);
+        key = SecurityUtil.unwrapKey(conf, walKeyName, keyBytes);
       } catch (KeyException e) {
         LOG.debug("Unable to unwrap key with WAL key '{}'", walKeyName, e);
         key = null;
@@ -270,7 +270,7 @@ public abstract class AbstractProtobufWALReader
         conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName());
       try {
         // Then, try the cluster master key
-        key = EncryptionUtil.unwrapWALKey(conf, masterKeyName, keyBytes);
+        key = SecurityUtil.unwrapKey(conf, masterKeyName, keyBytes);
       } catch (KeyException e) {
         // If the current master key fails to unwrap, try the alternate, if
         // one is configured
@@ -278,7 +278,7 @@ public abstract class AbstractProtobufWALReader
         String alternateKeyName = conf.get(HConstants.CRYPTO_MASTERKEY_ALTERNATE_NAME_CONF_KEY);
         if (alternateKeyName != null) {
           try {
-            key = EncryptionUtil.unwrapWALKey(conf, alternateKeyName, keyBytes);
+            key = SecurityUtil.unwrapKey(conf, alternateKeyName, keyBytes);
           } catch (KeyException ex) {
             throw new IOException(ex);
           }

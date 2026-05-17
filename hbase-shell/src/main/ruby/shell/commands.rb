@@ -106,6 +106,10 @@ module Shell
         @shell.hbase_rsgroup_admin
       end
 
+      def keymeta_admin
+        @shell.hbase_keymeta_admin
+      end
+
       #----------------------------------------------------------------------
       # Creates formatter instance first time and then reuses it.
       def formatter

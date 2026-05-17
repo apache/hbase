@@ -18,11 +18,7 @@
 package org.apache.hadoop.hbase.io.crypto.aes;
 
 import java.io.OutputStream;
-import java.security.InvalidAlgorithmParameterException;
-import java.security.InvalidKeyException;
-import java.security.Key;
 import java.security.SecureRandom;
-import javax.crypto.spec.IvParameterSpec;
 import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -31,47 +27,19 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
-public class AESEncryptor implements Encryptor {
+public class AESEncryptor extends AESCodecBase implements Encryptor {
 
-  private javax.crypto.Cipher cipher;
   private SecureRandom rng;
-  private Key key;
-  private byte[] iv;
-  private boolean initialized = false;
 
   public AESEncryptor(javax.crypto.Cipher cipher, SecureRandom rng) {
-    this.cipher = cipher;
+    super(cipher);
     this.rng = rng;
-  }
-
-  javax.crypto.Cipher getCipher() {
-    return cipher;
-  }
-
-  @Override
-  public void setKey(Key key) {
-    this.key = key;
-  }
-
-  @Override
-  public int getIvLength() {
-    return AES.IV_LENGTH;
-  }
-
-  @Override
-  public int getBlockSize() {
-    return AES.BLOCK_SIZE;
-  }
-
-  @Override
-  public byte[] getIv() {
-    return iv;
   }
 
   @Override
   public void setIv(byte[] iv) {
     if (iv != null) {
-      Preconditions.checkArgument(iv.length == AES.IV_LENGTH, "Invalid IV length");
+      Preconditions.checkArgument(iv.length == getIvLength(), "Invalid IV length");
     }
     this.iv = iv;
   }
@@ -81,27 +49,19 @@ public class AESEncryptor implements Encryptor {
     if (!initialized) {
       init();
     }
-    return new javax.crypto.CipherOutputStream(out, cipher);
+    return new javax.crypto.CipherOutputStream(out, getCipher());
   }
 
   @Override
-  public void reset() {
-    init();
-  }
-
-  protected void init() {
-    try {
-      if (iv == null) {
-        iv = new byte[getIvLength()];
-        rng.nextBytes(iv);
-      }
-      cipher.init(javax.crypto.Cipher.ENCRYPT_MODE, key, new IvParameterSpec(iv));
-    } catch (InvalidKeyException e) {
-      throw new RuntimeException(e);
-    } catch (InvalidAlgorithmParameterException e) {
-      throw new RuntimeException(e);
+  protected void initIv() {
+    if (iv == null) {
+      iv = new byte[getIvLength()];
+      rng.nextBytes(iv);
     }
-    initialized = true;
   }
 
+  @Override
+  protected int getOperationMode() {
+    return javax.crypto.Cipher.ENCRYPT_MODE;
+  }
 }
