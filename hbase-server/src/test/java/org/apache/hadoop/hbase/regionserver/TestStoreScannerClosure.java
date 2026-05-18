@@ -19,7 +19,8 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -53,12 +53,9 @@ import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,17 +64,13 @@ import org.slf4j.LoggerFactory;
  * {@link StoreScanner#updateReaders(List, List)} works perfectly ensuring that there are no
  * references on the existing Storescanner readers.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStoreScannerClosure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreScannerClosure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStoreScannerClosure.class);
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
-  @Rule
-  public TestName name = new TestName();
+
   private static final String CF_STR = "cf";
   private static HRegion region;
   private static final byte[] CF = Bytes.toBytes(CF_STR);
@@ -101,7 +94,7 @@ public class TestStoreScannerClosure {
       create("R1", "cf", "i", 11, KeyValue.Type.Put, "dont-care"),
       create("R2", "cf", "a", 11, KeyValue.Type.Put, "dont-care"), };
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
     cacheConf = new CacheConfig(CONF);
@@ -162,7 +155,7 @@ public class TestStoreScannerClosure {
           if (memStoreLAB != null) {
             // There should be no unpooled chunks
             int refCount = ((MemStoreLABImpl) memStoreLAB).getRefCntValue();
-            assertTrue("The memstore should not have unpooled chunks", refCount == 0);
+            assertEquals(0, refCount, "The memstore should not have unpooled chunks");
           }
         }
       }
@@ -263,7 +256,7 @@ public class TestStoreScannerClosure {
         // in the other case the fileReader will be null.
         int refCount = file.getReader().getRefCount();
         LOG.info("the store scanner count is " + refCount);
-        assertTrue("The store scanner count should be 0", refCount == 0);
+        assertEquals(0, refCount, "The store scanner count should be 0");
       }
     }
   }

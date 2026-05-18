@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +29,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -44,20 +43,16 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWideScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWideScanner.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -83,7 +78,7 @@ public class TestWideScanner {
   /** HRegionInfo for root region */
   private static HRegion REGION;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws IOException {
     Path testDir = UTIL.getDataTestDir();
     RegionInfo hri = RegionInfoBuilder.newBuilder(TESTTABLEDESC.getTableName()).build();
@@ -91,7 +86,7 @@ public class TestWideScanner {
       HBaseTestingUtility.createRegionAndWAL(hri, testDir, UTIL.getConfiguration(), TESTTABLEDESC);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (REGION != null) {
       HBaseTestingUtility.closeRegionAndWAL(REGION);
