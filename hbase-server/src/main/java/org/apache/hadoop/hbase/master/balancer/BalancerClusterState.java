@@ -518,7 +518,29 @@ class BalancerClusterState {
     if (load == null) {
       return 0;
     }
-    return regionLoads[region].getLast().getStorefileSizeMB();
+    return load.getLast().getStorefileSizeMB();
+  }
+
+  /**
+   * Finds and return the sum of latest reported cache ratio and cold data ratio for the region on
+   * the RegionServer it's currently online.
+   */
+  float getSumRegionCacheAndColdDataRatio(int region) {
+    Deque<BalancerRegionLoad> dq = regionLoads[region];
+    if (dq == null || dq.isEmpty()) {
+      return 0.0f;
+    }
+    BalancerRegionLoad load = dq.getLast();
+    return load.getCurrentRegionCacheRatio() + load.getRegionColdDataRatio();
+  }
+
+  int getRegionSizeMinusColdDataMB(int region) {
+    Deque<BalancerRegionLoad> dq = regionLoads[region];
+    if (dq == null || dq.isEmpty()) {
+      return 0;
+    }
+    BalancerRegionLoad load = dq.getLast();
+    return load.getRegionSizeMB() - (int) (load.getRegionSizeMB() * load.getRegionColdDataRatio());
   }
 
   /**
@@ -564,22 +586,10 @@ class BalancerClusterState {
   }
 
   /**
-   * Returns the size of hFiles from the most recent RegionLoad for region
-   */
-  public int getTotalRegionHFileSizeMB(int region) {
-    Deque<BalancerRegionLoad> load = regionLoads[region];
-    if (load == null) {
-      // This means, that the region has no actual data on disk
-      return 0;
-    }
-    return regionLoads[region].getLast().getRegionSizeMB();
-  }
-
-  /**
    * Returns the weighted cache ratio of a region on the given region server
    */
   public float getOrComputeWeightedRegionCacheRatio(int region, int server) {
-    return getTotalRegionHFileSizeMB(region) * getOrComputeRegionCacheRatio(region, server);
+    return getRegionSizeMinusColdDataMB(region) * getOrComputeRegionCacheRatio(region, server);
   }
 
   /**
