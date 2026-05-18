@@ -31,13 +31,18 @@ import org.mockito.MockedStatic;
 @Tag(SmallTests.TAG)
 public class TestByteBufferUtilsWoUnsafe extends ByteBufferUtilsTestBase {
 
-  @BeforeAll
-  public static void disableUnsafe() {
+  private static void disableUnsafe() {
     try (MockedStatic<HBasePlatformDependent> mocked = mockStatic(HBasePlatformDependent.class)) {
       mocked.when(HBasePlatformDependent::isUnsafeAvailable).thenReturn(false);
       mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
       assertFalse(ByteBufferUtils.UNSAFE_AVAIL);
       assertFalse(ByteBufferUtils.UNSAFE_UNALIGNED);
     }
+  }
+
+  @BeforeAll
+  public static void setUpBeforeClass() {
+    disableUnsafe();
+    initialize();
   }
 }

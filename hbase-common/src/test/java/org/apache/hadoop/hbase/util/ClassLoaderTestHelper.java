@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -148,7 +148,7 @@ public final class ClassLoaderTestHelper {
     LOG.debug("Setting classpath to: " + classpath);
 
     JavaCompiler.CompilationTask task = compiler.getTask(null, fm, null, options, null, cu);
-    assertTrue("Compile file " + sourceCodeFile + " failed.", task.call());
+    assertTrue(task.call(), "Compile file " + sourceCodeFile + " failed.");
 
     // build a jar file by the classes files
     String jarFileName = className + ".jar";
@@ -173,30 +173,29 @@ public final class ClassLoaderTestHelper {
    */
   public static void addJarFilesToJar(File targetJar, String libPrefix, File... srcJars)
     throws Exception {
-    FileOutputStream stream = new FileOutputStream(targetJar);
-    JarOutputStream out = new JarOutputStream(stream, new Manifest());
-    byte[] buffer = new byte[BUFFER_SIZE];
+    try (FileOutputStream stream = new FileOutputStream(targetJar);
+      JarOutputStream out = new JarOutputStream(stream, new Manifest())) {
+      byte[] buffer = new byte[BUFFER_SIZE];
 
-    for (File jarFile : srcJars) {
-      // Add archive entry
-      JarEntry jarAdd = new JarEntry(libPrefix + jarFile.getName());
-      jarAdd.setTime(jarFile.lastModified());
-      out.putNextEntry(jarAdd);
+      for (File jarFile : srcJars) {
+        // Add archive entry
+        JarEntry jarAdd = new JarEntry(libPrefix + jarFile.getName());
+        jarAdd.setTime(jarFile.lastModified());
+        out.putNextEntry(jarAdd);
 
-      // Write file to archive
-      FileInputStream in = new FileInputStream(jarFile);
-      while (true) {
-        int nRead = in.read(buffer, 0, buffer.length);
-        if (nRead <= 0) {
-          break;
+        // Write file to archive
+        try (FileInputStream in = new FileInputStream(jarFile)) {
+          while (true) {
+            int nRead = in.read(buffer, 0, buffer.length);
+            if (nRead <= 0) {
+              break;
+            }
+
+            out.write(buffer, 0, nRead);
+          }
         }
-
-        out.write(buffer, 0, nRead);
       }
-      in.close();
     }
-    out.close();
-    stream.close();
     LOG.info("Adding jar file to outer jar file completed");
   }
 
@@ -209,14 +208,14 @@ public final class ClassLoaderTestHelper {
     String jarFileName = className + ".jar";
     File file = new File(testDir, jarFileName);
     file.delete();
-    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+    assertFalse(file.exists(), "Should be deleted: " + file.getPath());
 
     file = new File(conf.get("hbase.dynamic.jars.dir"), jarFileName);
     file.delete();
-    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+    assertFalse(file.exists(), "Should be deleted: " + file.getPath());
 
     file = new File(ClassLoaderTestHelper.localDirPath(conf), jarFileName);
     file.delete();
-    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+    assertFalse(file.exists(), "Should be deleted: " + file.getPath());
   }
 }

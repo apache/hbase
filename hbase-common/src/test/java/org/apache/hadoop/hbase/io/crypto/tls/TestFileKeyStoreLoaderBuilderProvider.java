@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * This file has been copied from the Apache ZooKeeper project.
@@ -31,36 +32,34 @@ import org.junit.experimental.categories.Category;
  *      "https://github.com/apache/zookeeper/blob/master/zookeeper-server/src/test/java/org/apache/zookeeper/common/FileKeyStoreLoaderBuilderProviderTest.java">Base
  *      revision</a>
  */
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFileKeyStoreLoaderBuilderProvider {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFileKeyStoreLoaderBuilderProvider.class);
 
   @Test
   public void testGetBuilderForJKSFileType() {
     FileKeyStoreLoader.Builder<?> builder =
       FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(KeyStoreFileType.JKS);
-    Assert.assertTrue(builder instanceof JKSFileLoader.Builder);
+    assertThat(builder, instanceOf(JKSFileLoader.Builder.class));
   }
 
   @Test
   public void testGetBuilderForPEMFileType() {
     FileKeyStoreLoader.Builder<?> builder =
       FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(KeyStoreFileType.PEM);
-    Assert.assertTrue(builder instanceof PEMFileLoader.Builder);
+    assertThat(builder, instanceOf(PEMFileLoader.Builder.class));
   }
 
   @Test
   public void testGetBuilderForPKCS12FileType() {
     FileKeyStoreLoader.Builder<?> builder =
       FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(KeyStoreFileType.PKCS12);
-    Assert.assertTrue(builder instanceof PKCS12FileLoader.Builder);
+    assertThat(builder, instanceOf(PKCS12FileLoader.Builder.class));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testGetBuilderForNullFileType() {
-    FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(null);
+    assertThrows(NullPointerException.class,
+      () -> FileKeyStoreLoaderBuilderProvider.getBuilderForKeyStoreFileType(null));
   }
 }

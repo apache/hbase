@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,7 +32,6 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.LinkedBlockingDeque;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.compress.CompressionInputStream;
@@ -41,55 +40,51 @@ import org.apache.hadoop.io.compress.Decompressor;
 import org.apache.hadoop.io.compress.DefaultCodec;
 import org.apache.hadoop.io.compress.GzipCodec;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Along with CodecPool, this is copied from the class of the same name in hadoop-common. Modified
  * to accommodate changes to HBase's CodecPool.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCodecPool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCodecPool.class);
 
   private final String LEASE_COUNT_ERR = "Incorrect number of leased (de)compressors";
   DefaultCodec codec;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     CodecPool.initLeaseCounting();
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     this.codec = new DefaultCodec();
     this.codec.setConf(new Configuration());
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testCompressorPoolCounts() {
     // Get two compressors and return them
     Compressor comp1 = CodecPool.getCompressor(codec);
     Compressor comp2 = CodecPool.getCompressor(codec);
-    assertEquals(LEASE_COUNT_ERR, 2, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(2, CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnCompressor(comp2);
-    assertEquals(LEASE_COUNT_ERR, 1, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(1, CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnCompressor(comp1);
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnCompressor(comp1);
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testCompressorNotReturnSameInstance() {
     Compressor comp = CodecPool.getCompressor(codec);
     CodecPool.returnCompressor(comp);
@@ -104,24 +99,24 @@ public class TestCodecPool {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testDecompressorPoolCounts() {
     // Get two decompressors and return them
     Decompressor decomp1 = CodecPool.getDecompressor(codec);
     Decompressor decomp2 = CodecPool.getDecompressor(codec);
-    assertEquals(LEASE_COUNT_ERR, 2, CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(2, CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp2);
-    assertEquals(LEASE_COUNT_ERR, 1, CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(1, CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp1);
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
 
     CodecPool.returnDecompressor(decomp1);
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testMultiThreadedCompressorPool() throws InterruptedException {
     final int iterations = 4;
     ExecutorService threadpool = Executors.newFixedThreadPool(3);
@@ -155,10 +150,10 @@ public class TestCodecPool {
     threadpool.shutdown();
     threadpool.awaitTermination(1000, TimeUnit.SECONDS);
 
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedCompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedCompressorsCount(codec), LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testMultiThreadedDecompressorPool() throws InterruptedException {
     final int iterations = 4;
     ExecutorService threadpool = Executors.newFixedThreadPool(3);
@@ -192,10 +187,10 @@ public class TestCodecPool {
     threadpool.shutdown();
     threadpool.awaitTermination(1000, TimeUnit.SECONDS);
 
-    assertEquals(LEASE_COUNT_ERR, 0, CodecPool.getLeasedDecompressorsCount(codec));
+    assertEquals(0, CodecPool.getLeasedDecompressorsCount(codec), LEASE_COUNT_ERR);
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testDecompressorNotReturnSameInstance() {
     Decompressor decomp = CodecPool.getDecompressor(codec);
     CodecPool.returnDecompressor(decomp);
@@ -210,7 +205,7 @@ public class TestCodecPool {
     }
   }
 
-  @Test(timeout = 10000)
+  @Test
   public void testDoNotPoolDecompressorNotUseableAfterReturn() throws Exception {
 
     final GzipCodec gzipCodec = new GzipCodec();
