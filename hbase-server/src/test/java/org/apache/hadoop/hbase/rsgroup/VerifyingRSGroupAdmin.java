@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.Closeable;
@@ -429,6 +429,17 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions)
     throws IOException {
     return admin.modifyTableAsync(td, reopenRegions);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegionsAsync(tableName);
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegionsAsync(tableName, regions);
   }
 
   public void shutdown() throws IOException {
@@ -999,4 +1010,5 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
   public boolean isReplicationPeerModificationEnabled() throws IOException {
     return admin.isReplicationPeerModificationEnabled();
   }
+
 }

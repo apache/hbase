@@ -22,30 +22,25 @@ import java.nio.file.Paths;
 import java.util.UUID;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test that we correctly reload the cache, filter directories, etc. while the temporary directory
  * is on a different file system than the root directory
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotFileCacheWithDifferentWorkingDir extends TestSnapshotFileCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotFileCacheWithDifferentWorkingDir.class);
 
   protected static String TEMP_DIR =
     Paths.get(".", UUID.randomUUID().toString()).toAbsolutePath().toString();
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     initCommon();
 
@@ -56,7 +51,7 @@ public class TestSnapshotFileCacheWithDifferentWorkingDir extends TestSnapshotFi
     workingFs = workingDir.getFileSystem(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopCluster() throws Exception {
     UTIL.shutdownMiniDFSCluster();
     FileUtils.deleteDirectory(new File(TEMP_DIR));

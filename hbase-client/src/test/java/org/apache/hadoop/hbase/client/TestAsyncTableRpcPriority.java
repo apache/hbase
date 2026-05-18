@@ -21,10 +21,10 @@ import static org.apache.hadoop.hbase.HConstants.HIGH_QOS;
 import static org.apache.hadoop.hbase.HConstants.NORMAL_QOS;
 import static org.apache.hadoop.hbase.HConstants.SYSTEMTABLE_QOS;
 import static org.apache.hadoop.hbase.NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyLong;
@@ -47,7 +47,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -58,12 +57,10 @@ import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -88,12 +85,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRespon
 /**
  * Confirm that we will set the priority in {@link HBaseRpcController} for several table operations.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncTableRpcPriority {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRpcPriority.class);
 
   private static Configuration CONF = HBaseConfiguration.create();
 
@@ -103,11 +97,11 @@ public class TestAsyncTableRpcPriority {
 
   private AsyncConnection conn;
 
-  @Rule
-  public TestName name = new TestName();
+  public String name;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    name = testInfo.getTestMethod().get().getName();
     this.threadPool = Executors.newSingleThreadExecutor();
     stub = mock(ClientService.Interface.class);
 
@@ -217,21 +211,20 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testGet() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .get(new Get(Bytes.toBytes(0)).setPriority(11)).join();
+    conn.getTable(TableName.valueOf(name)).get(new Get(Bytes.toBytes(0)).setPriority(11)).join();
     verify(stub, times(1)).get(assertPriority(11), any(GetRequest.class), any());
   }
 
   @Test
   public void testGetNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName())).get(new Get(Bytes.toBytes(0))).join();
+    conn.getTable(TableName.valueOf(name)).get(new Get(Bytes.toBytes(0))).join();
     verify(stub, times(1)).get(assertPriority(NORMAL_QOS), any(GetRequest.class), any());
   }
 
   @Test
   public void testGetSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-      .get(new Get(Bytes.toBytes(0))).join();
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name)).get(new Get(Bytes.toBytes(0)))
+      .join();
     verify(stub, times(1)).get(assertPriority(SYSTEMTABLE_QOS), any(GetRequest.class), any());
   }
 
@@ -243,26 +236,22 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testPut() {
-    conn
-      .getTable(TableName.valueOf(name.getMethodName())).put(new Put(Bytes.toBytes(0))
-        .setPriority(12).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
-      .join();
+    conn.getTable(TableName.valueOf(name)).put(new Put(Bytes.toBytes(0)).setPriority(12)
+      .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(12), any(MutateRequest.class), any());
   }
 
   @Test
   public void testPutNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName())).put(new Put(Bytes.toBytes(0))
+    conn.getTable(TableName.valueOf(name)).put(new Put(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(NORMAL_QOS), any(MutateRequest.class), any());
   }
 
   @Test
   public void testPutSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
-      .put(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"),
-        Bytes.toBytes("v")))
-      .join();
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name)).put(new Put(Bytes.toBytes(0))
+      .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
 
@@ -275,21 +264,20 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testDelete() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .delete(new Delete(Bytes.toBytes(0)).setPriority(13)).join();
+    conn.getTable(TableName.valueOf(name)).delete(new Delete(Bytes.toBytes(0)).setPriority(13))
+      .join();
     verify(stub, times(1)).mutate(assertPriority(13), any(MutateRequest.class), any());
   }
 
   @Test
   public void testDeleteNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName())).delete(new Delete(Bytes.toBytes(0)))
-      .join();
+    conn.getTable(TableName.valueOf(name)).delete(new Delete(Bytes.toBytes(0))).join();
     verify(stub, times(1)).mutate(assertPriority(NORMAL_QOS), any(MutateRequest.class), any());
   }
 
   @Test
   public void testDeleteSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .delete(new Delete(Bytes.toBytes(0))).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
@@ -302,23 +290,21 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testAppend() {
-    conn
-      .getTable(TableName.valueOf(name.getMethodName())).append(new Append(Bytes.toBytes(0))
-        .setPriority(14).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
-      .join();
+    conn.getTable(TableName.valueOf(name)).append(new Append(Bytes.toBytes(0)).setPriority(14)
+      .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(14), any(MutateRequest.class), any());
   }
 
   @Test
   public void testAppendNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName())).append(new Append(Bytes.toBytes(0))
+    conn.getTable(TableName.valueOf(name)).append(new Append(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v"))).join();
     verify(stub, times(1)).mutate(assertPriority(NORMAL_QOS), any(MutateRequest.class), any());
   }
 
   @Test
   public void testAppendSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .append(new Append(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"),
         Bytes.toBytes("v")))
       .join();
@@ -334,21 +320,21 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testIncrement() {
-    conn.getTable(TableName.valueOf(name.getMethodName())).increment(new Increment(Bytes.toBytes(0))
+    conn.getTable(TableName.valueOf(name)).increment(new Increment(Bytes.toBytes(0))
       .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1).setPriority(15)).join();
     verify(stub, times(1)).mutate(assertPriority(15), any(MutateRequest.class), any());
   }
 
   @Test
   public void testIncrementNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
+    conn.getTable(TableName.valueOf(name))
       .incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1).join();
     verify(stub, times(1)).mutate(assertPriority(NORMAL_QOS), any(MutateRequest.class), any());
   }
 
   @Test
   public void testIncrementSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .incrementColumnValue(Bytes.toBytes(0), Bytes.toBytes("cf"), Bytes.toBytes("cq"), 1).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
   }
@@ -362,9 +348,8 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndPut() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-      .ifNotExists()
+    conn.getTable(TableName.valueOf(name)).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+      .qualifier(Bytes.toBytes("cq")).ifNotExists()
       .thenPut(new Put(Bytes.toBytes(0))
         .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")).setPriority(16))
       .join();
@@ -373,17 +358,16 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndPutNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-      .ifNotExists().thenPut(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
-        Bytes.toBytes("cq"), Bytes.toBytes("v")))
+    conn.getTable(TableName.valueOf(name)).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+      .qualifier(Bytes.toBytes("cq")).ifNotExists().thenPut(new Put(Bytes.toBytes(0))
+        .addColumn(Bytes.toBytes("cf"), Bytes.toBytes("cq"), Bytes.toBytes("v")))
       .join();
     verify(stub, times(1)).mutate(assertPriority(NORMAL_QOS), any(MutateRequest.class), any());
   }
 
   @Test
   public void testCheckAndPutSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
       .ifNotExists().thenPut(new Put(Bytes.toBytes(0)).addColumn(Bytes.toBytes("cf"),
         Bytes.toBytes("cq"), Bytes.toBytes("v")))
@@ -402,23 +386,23 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndDelete() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-      .ifEquals(Bytes.toBytes("v")).thenDelete(new Delete(Bytes.toBytes(0)).setPriority(17)).join();
+    conn.getTable(TableName.valueOf(name)).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+      .qualifier(Bytes.toBytes("cq")).ifEquals(Bytes.toBytes("v"))
+      .thenDelete(new Delete(Bytes.toBytes(0)).setPriority(17)).join();
     verify(stub, times(1)).mutate(assertPriority(17), any(MutateRequest.class), any());
   }
 
   @Test
   public void testCheckAndDeleteNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-      .ifEquals(Bytes.toBytes("v")).thenDelete(new Delete(Bytes.toBytes(0))).join();
+    conn.getTable(TableName.valueOf(name)).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+      .qualifier(Bytes.toBytes("cq")).ifEquals(Bytes.toBytes("v"))
+      .thenDelete(new Delete(Bytes.toBytes(0))).join();
     verify(stub, times(1)).mutate(assertPriority(NORMAL_QOS), any(MutateRequest.class), any());
   }
 
   @Test
   public void testCheckAndDeleteSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
       .ifEquals(Bytes.toBytes("v")).thenDelete(new Delete(Bytes.toBytes(0))).join();
     verify(stub, times(1)).mutate(assertPriority(SYSTEMTABLE_QOS), any(MutateRequest.class), any());
@@ -435,9 +419,9 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndMutate() throws IOException {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-      .ifEquals(Bytes.toBytes("v")).thenMutate(new RowMutations(Bytes.toBytes(0))
+    conn.getTable(TableName.valueOf(name)).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+      .qualifier(Bytes.toBytes("cq")).ifEquals(Bytes.toBytes("v"))
+      .thenMutate(new RowMutations(Bytes.toBytes(0))
         .add((Mutation) new Delete(Bytes.toBytes(0)).setPriority(18)))
       .join();
     verify(stub, times(1)).multi(assertPriority(18), any(ClientProtos.MultiRequest.class), any());
@@ -445,9 +429,8 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndMutateNormalTable() throws IOException {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
-      .ifEquals(Bytes.toBytes("v"))
+    conn.getTable(TableName.valueOf(name)).checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf"))
+      .qualifier(Bytes.toBytes("cq")).ifEquals(Bytes.toBytes("v"))
       .thenMutate(new RowMutations(Bytes.toBytes(0)).add((Mutation) new Delete(Bytes.toBytes(0))))
       .join();
     verify(stub, times(1)).multi(assertPriority(NORMAL_QOS), any(ClientProtos.MultiRequest.class),
@@ -456,7 +439,7 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testCheckAndMutateSystemTable() throws IOException {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .checkAndMutate(Bytes.toBytes(0), Bytes.toBytes("cf")).qualifier(Bytes.toBytes("cq"))
       .ifEquals(Bytes.toBytes("v"))
       .thenMutate(new RowMutations(Bytes.toBytes(0)).add((Mutation) new Delete(Bytes.toBytes(0))))
@@ -495,8 +478,8 @@ public class TestAsyncTableRpcPriority {
               future.complete(null);
             }
 
-            assertFalse("close scanner should not come in with scan priority " + scanPriority,
-              req.hasCloseScanner() && req.getCloseScanner());
+            assertFalse(req.hasCloseScanner() && req.getCloseScanner(),
+              "close scanner should not come in with scan priority " + scanPriority);
 
             Cell cell = CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY)
               .setType(Cell.Type.Put).setRow(Bytes.toBytes(scanNextCalled.incrementAndGet()))
@@ -520,10 +503,10 @@ public class TestAsyncTableRpcPriority {
         threadPool.submit(() -> {
           ScanRequest req = invocation.getArgument(1);
           RpcCallback<ScanResponse> done = invocation.getArgument(2);
-          assertTrue("close request should have scannerId", req.hasScannerId());
-          assertEquals("close request's scannerId should match", scannerId, req.getScannerId());
-          assertTrue("close request should have closerScanner set",
-            req.hasCloseScanner() && req.getCloseScanner());
+          assertTrue(req.hasScannerId(), "close request should have scannerId");
+          assertEquals(scannerId, req.getScannerId(), "close request's scannerId should match");
+          assertTrue(req.hasCloseScanner() && req.getCloseScanner(),
+            "close request should have closerScanner set");
 
           done.run(ScanResponse.getDefaultInstance());
         });
@@ -536,20 +519,19 @@ public class TestAsyncTableRpcPriority {
   @Test
   public void testScan() throws Exception {
     CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(19);
-    testForTable(TableName.valueOf(name.getMethodName()), renewFuture, Optional.of(19));
+    testForTable(TableName.valueOf(name), renewFuture, Optional.of(19));
   }
 
   @Test
   public void testScanNormalTable() throws Exception {
     CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(NORMAL_QOS);
-    testForTable(TableName.valueOf(name.getMethodName()), renewFuture, Optional.of(NORMAL_QOS));
+    testForTable(TableName.valueOf(name), renewFuture, Optional.of(NORMAL_QOS));
   }
 
   @Test
   public void testScanSystemTable() throws Exception {
     CompletableFuture<Void> renewFuture = mockScanReturnRenewFuture(SYSTEMTABLE_QOS);
-    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()), renewFuture,
-      Optional.empty());
+    testForTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name), renewFuture, Optional.empty());
   }
 
   @Test
@@ -582,15 +564,15 @@ public class TestAsyncTableRpcPriority {
 
   @Test
   public void testBatchNormalTable() {
-    conn.getTable(TableName.valueOf(name.getMethodName()))
-      .batchAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
+    conn.getTable(TableName.valueOf(name)).batchAll(Arrays.asList(new Delete(Bytes.toBytes(0))))
+      .join();
     verify(stub, times(1)).multi(assertPriority(NORMAL_QOS), any(ClientProtos.MultiRequest.class),
       any());
   }
 
   @Test
   public void testBatchSystemTable() {
-    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name.getMethodName()))
+    conn.getTable(TableName.valueOf(SYSTEM_NAMESPACE_NAME_STR, name))
       .batchAll(Arrays.asList(new Delete(Bytes.toBytes(0)))).join();
     verify(stub, times(1)).multi(assertPriority(SYSTEMTABLE_QOS),
       any(ClientProtos.MultiRequest.class), any());

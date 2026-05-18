@@ -17,50 +17,41 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test CoreCoprocessor Annotation works giving access to facility not usually available. Test
  * MasterCoprocessor.
  */
-@Category({ CoprocessorTests.class, SmallTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCoreMasterCoprocessor {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoreMasterCoprocessor.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private MasterServices ms;
   private MasterCoprocessorHost mch;
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     this.ms = new MockMasterServices(HTU.getConfiguration());
     this.mch = new MasterCoprocessorHost(this.ms, HTU.getConfiguration());
     this.mch.preMasterInitialization();
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     this.mch.preStopMaster();
   }

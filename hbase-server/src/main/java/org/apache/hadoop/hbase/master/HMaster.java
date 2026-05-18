@@ -253,6 +253,7 @@ import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -606,6 +607,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   protected String getUseThisHostnameInstead(Configuration conf) {
     return conf.get(MASTER_HOSTNAME_KEY);
+  }
+
+  @Override
+  protected DNS.ServerType getDNSServerType() {
+    return DNS.ServerType.MASTER;
   }
 
   private void registerConfigurationObservers() {
@@ -1424,6 +1430,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
       .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta()).build();
     long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc, 0, 0, false);
+    waitForProcedureToComplete(pid, "Failed to add table and rep_barrier CFs to meta");
+  }
+
+  private void waitForProcedureToComplete(long pid, String errorMessage) throws IOException {
     int tries = 30;
     while (
       !(getMasterProcedureExecutor().isFinished(pid)) && getMasterProcedureExecutor().isRunning()
@@ -1442,8 +1452,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } else {
       Procedure<?> result = getMasterProcedureExecutor().getResult(pid);
       if (result != null && result.isFailed()) {
-        throw new IOException("Failed to add table and rep_barrier CFs to meta. "
-          + MasterProcedureUtil.unwrapRemoteIOException(result));
+        throw new IOException(
+          errorMessage + ". " + MasterProcedureUtil.unwrapRemoteIOException(result));
       }
     }
   }
@@ -1630,6 +1640,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public MasterWalManager getMasterWalManager() {
     return this.walManager;
+  }
+
+  @Override
+  public boolean rotateSystemKeyIfChanged() throws IOException {
+    // STUB - Feature not yet implemented
+    return false;
   }
 
   @Override
@@ -2099,80 +2115,85 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     synchronized (this.balancer) {
-      // Only allow one balance run at at time.
-      if (this.assignmentManager.getRegionTransitScheduledCount() > 0) {
-        List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
-        // if hbase:meta region is in transition, result of assignment cannot be recorded
-        // ignore the force flag in that case
-        boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
-        List<RegionStateNode> toPrint = regionsInTransition;
-        int max = 5;
-        boolean truncated = false;
-        if (regionsInTransition.size() > max) {
-          toPrint = regionsInTransition.subList(0, max);
-          truncated = true;
-        }
+      try {
+        this.balancer.onBalancingStart();
+        // Only allow one balance run at at time.
+        if (this.assignmentManager.getRegionTransitScheduledCount() > 0) {
+          List<RegionStateNode> regionsInTransition = assignmentManager.getRegionsInTransition();
+          // if hbase:meta region is in transition, result of assignment cannot be recorded
+          // ignore the force flag in that case
+          boolean metaInTransition = assignmentManager.isMetaRegionInTransition();
+          List<RegionStateNode> toPrint = regionsInTransition;
+          int max = 5;
+          boolean truncated = false;
+          if (regionsInTransition.size() > max) {
+            toPrint = regionsInTransition.subList(0, max);
+            truncated = true;
+          }
 
-        if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
-          LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
-            + ") because " + assignmentManager.getRegionTransitScheduledCount()
-            + " region(s) are scheduled to transit " + toPrint
-            + (truncated ? "(truncated list)" : ""));
-          return responseBuilder.build();
-        }
-      }
-      if (this.serverManager.areDeadServersInProgress()) {
-        LOG.info("Not running balancer because processing dead regionserver(s): "
-          + this.serverManager.getDeadServers());
-        return responseBuilder.build();
-      }
-
-      if (this.cpHost != null) {
-        try {
-          if (this.cpHost.preBalance(request)) {
-            LOG.debug("Coprocessor bypassing balancer request");
+          if (!request.isIgnoreRegionsInTransition() || metaInTransition) {
+            LOG.info("Not running balancer (ignoreRIT=false" + ", metaRIT=" + metaInTransition
+              + ") because " + assignmentManager.getRegionTransitScheduledCount()
+              + " region(s) are scheduled to transit " + toPrint
+              + (truncated ? "(truncated list)" : ""));
             return responseBuilder.build();
           }
-        } catch (IOException ioe) {
-          LOG.error("Error invoking master coprocessor preBalance()", ioe);
+        }
+        if (this.serverManager.areDeadServersInProgress()) {
+          LOG.info("Not running balancer because processing dead regionserver(s): "
+            + this.serverManager.getDeadServers());
           return responseBuilder.build();
         }
-      }
 
-      Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-        this.assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager,
-          this.serverManager.getOnlineServersList());
-      for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
-        serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
-      }
-
-      // Give the balancer the current cluster state.
-      this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
-
-      List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
-
-      responseBuilder.setBalancerRan(true).setMovesCalculated(plans == null ? 0 : plans.size());
-
-      if (skipRegionManagementAction("balancer")) {
-        // make one last check that the cluster isn't shutting down before proceeding.
-        return responseBuilder.build();
-      }
-
-      // For dry run we don't actually want to execute the moves, but we do want
-      // to execute the coprocessor below
-      List<RegionPlan> sucRPs =
-        request.isDryRun() ? Collections.emptyList() : executeRegionPlansWithThrottling(plans);
-
-      if (this.cpHost != null) {
-        try {
-          this.cpHost.postBalance(request, sucRPs);
-        } catch (IOException ioe) {
-          // balancing already succeeded so don't change the result
-          LOG.error("Error invoking master coprocessor postBalance()", ioe);
+        if (this.cpHost != null) {
+          try {
+            if (this.cpHost.preBalance(request)) {
+              LOG.debug("Coprocessor bypassing balancer request");
+              return responseBuilder.build();
+            }
+          } catch (IOException ioe) {
+            LOG.error("Error invoking master coprocessor preBalance()", ioe);
+            return responseBuilder.build();
+          }
         }
-      }
 
-      responseBuilder.setMovesExecuted(sucRPs.size());
+        Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+          this.assignmentManager.getRegionStates().getAssignmentsForBalancer(tableStateManager,
+            this.serverManager.getOnlineServersList());
+        for (Map<ServerName, List<RegionInfo>> serverMap : assignments.values()) {
+          serverMap.keySet().removeAll(this.serverManager.getDrainingServersList());
+        }
+
+        // Give the balancer the current cluster state.
+        this.balancer.updateClusterMetrics(getClusterMetricsWithoutCoprocessor());
+
+        List<RegionPlan> plans = this.balancer.balanceCluster(assignments);
+
+        responseBuilder.setBalancerRan(true).setMovesCalculated(plans == null ? 0 : plans.size());
+
+        if (skipRegionManagementAction("balancer")) {
+          // make one last check that the cluster isn't shutting down before proceeding.
+          return responseBuilder.build();
+        }
+
+        // For dry run we don't actually want to execute the moves, but we do want
+        // to execute the coprocessor below
+        List<RegionPlan> sucRPs =
+          request.isDryRun() ? Collections.emptyList() : executeRegionPlansWithThrottling(plans);
+
+        if (this.cpHost != null) {
+          try {
+            this.cpHost.postBalance(request, sucRPs);
+          } catch (IOException ioe) {
+            // balancing already succeeded so don't change the result
+            LOG.error("Error invoking master coprocessor postBalance()", ioe);
+          }
+        }
+
+        responseBuilder.setMovesExecuted(sucRPs.size());
+      } finally {
+        this.balancer.onBalancingComplete();
+      }
     }
 
     // If LoadBalancer did not generate any plans, it means the cluster is already balanced.
@@ -2508,6 +2529,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   @Override
   public long createSystemTable(final TableDescriptor tableDescriptor) throws IOException {
+    return createSystemTable(tableDescriptor, false);
+  }
+
+  private long createSystemTable(final TableDescriptor tableDescriptor, final boolean isCritical)
+    throws IOException {
     if (isStopped()) {
       throw new MasterNotRunningException();
     }
@@ -2524,10 +2550,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     // This special create table is called locally to master. Therefore, no RPC means no need
     // to use nonce to detect duplicated RPC call.
-    long procId = this.procedureExecutor.submitProcedure(
-      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions));
-
-    return procId;
+    CreateTableProcedure proc =
+      new CreateTableProcedure(procedureExecutor.getEnvironment(), tableDescriptor, newRegions);
+    proc.setCriticalSystemTable(isCritical);
+    return this.procedureExecutor.submitProcedure(proc);
   }
 
   private void startActiveMasterManager(int infoPort) throws KeeperException {
@@ -4249,6 +4275,54 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
       });
 
+  }
+
+  /**
+   * Reopen regions provided in the argument. Applies throttling to the procedure to avoid
+   * overwhelming the system. This is used by the reopenTableRegions methods in the Admin API via
+   * HMaster.
+   * @param tableName   The current table name
+   * @param regionNames The region names of the regions to reopen
+   * @param nonceGroup  Identifier for the source of the request, a client or process
+   * @param nonce       A unique identifier for this operation from the client or process identified
+   *                    by <code>nonceGroup</code> (the source must ensure each operation gets a
+   *                    unique id).
+   * @return procedure Id
+   * @throws IOException if reopening region fails while running procedure
+   */
+  long reopenRegionsThrottled(final TableName tableName, final List<byte[]> regionNames,
+    final long nonceGroup, final long nonce) throws IOException {
+
+    checkInitialized();
+
+    if (!tableStateManager.isTablePresent(tableName)) {
+      throw new TableNotFoundException(tableName);
+    }
+
+    return MasterProcedureUtil
+      .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
+        @Override
+        protected void run() throws IOException {
+          ReopenTableRegionsProcedure proc;
+          if (regionNames.isEmpty()) {
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
+              getTableDescriptors().get(tableName));
+          } else {
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
+              getTableDescriptors().get(tableName), regionNames);
+          }
+
+          LOG.info("{} throttled reopening {} regions for table {}", getClientIdAuditPrefix(),
+            regionNames.isEmpty() ? "all" : regionNames.size(), tableName);
+
+          submitProcedure(proc);
+        }
+
+        @Override
+        protected String getDescription() {
+          return "Throttled ReopenTableRegionsProcedure for " + tableName;
+        }
+      });
   }
 
   @Override

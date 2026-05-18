@@ -102,6 +102,7 @@ public class HMobStore extends HStore {
   // table, we need to find the original mob files by this table name. For details please see
   // cloning snapshot for mob files.
   private final byte[] refCellTags;
+  private StoreFileTracker mobStoreSFT = null;
 
   public HMobStore(final HRegion region, final ColumnFamilyDescriptor family,
     final Configuration confParam, boolean warmup) throws IOException {

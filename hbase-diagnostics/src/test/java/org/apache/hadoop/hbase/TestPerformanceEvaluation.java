@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.codahale.metrics.Histogram;
 import com.codahale.metrics.Snapshot;
@@ -53,17 +53,14 @@ import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.GsonUtil;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestPerformanceEvaluation {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPerformanceEvaluation.class);
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
@@ -168,7 +165,7 @@ public class TestPerformanceEvaluation {
         break;
       }
     }
-    assertTrue("We need to get a value more than 1000", foundValue);
+    assertTrue(foundValue, "We need to get a value more than 1000");
   }
 
   @Test
@@ -385,7 +382,7 @@ public class TestPerformanceEvaluation {
     assertEquals("val1", options.getCommandProperties().get("prop1"));
   }
 
-  class PESampleTestImpl extends PerformanceEvaluation.Test {
+  static class PESampleTestImpl extends PerformanceEvaluation.Test {
 
     PESampleTestImpl(Connection con, TestOptions options, Status status) {
       super(con, options, status);

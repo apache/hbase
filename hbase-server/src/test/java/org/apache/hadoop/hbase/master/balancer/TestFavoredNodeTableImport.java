@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.apache.hadoop.hbase.favored.FavoredNodeAssignmentHelper.FAVORED_NODES_NUM;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -40,10 +39,9 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -53,12 +51,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * This case tests a scenario when a cluster with tables is moved from Stochastic Load Balancer
  * to FavoredStochasticLoadBalancer and the generation of favored nodes after switch.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestFavoredNodeTableImport {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFavoredNodeTableImport.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFavoredNodeTableImport.class);
 
@@ -67,7 +61,7 @@ public class TestFavoredNodeTableImport {
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Configuration conf = UTIL.getConfiguration();
 
-  @After
+  @AfterEach
   public void stopCluster() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -118,12 +112,12 @@ public class TestFavoredNodeTableImport {
       assertNotNull(fnm);
       List<ServerName> fns = fnm.getFavoredNodes(rInfo);
       LOG.info("FNS {} {}", rInfo, fns);
-      assertNotNull(rInfo.toString(), fns);
+      assertNotNull(fns, rInfo.toString());
       Set<ServerName> favNodes = Sets.newHashSet(fns);
       assertNotNull(favNodes);
-      assertEquals("Required no of favored nodes not found.", FAVORED_NODES_NUM, favNodes.size());
+      assertEquals(FAVORED_NODES_NUM, favNodes.size(), "Required no of favored nodes not found.");
       for (ServerName fn : favNodes) {
-        assertEquals("StartCode invalid for:" + fn, ServerName.NON_STARTCODE, fn.getStartcode());
+        assertEquals(ServerName.NON_STARTCODE, fn.getStartcode(), "StartCode invalid for:" + fn);
       }
     }
   }

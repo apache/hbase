@@ -20,7 +20,7 @@
 Provides HBase <a href="https://cwiki.apache.org/confluence/display/HADOOP2/HadoopMapReduce">MapReduce</a>
 Input/OutputFormats, a table indexing MapReduce job, and utility methods.
 
-<p>See <a href="http://hbase.apache.org/book.html#mapreduce">HBase and MapReduce</a>
+<p>See <a href="https://hbase.apache.org/docs/mapreduce">HBase and MapReduce</a>
 in the HBase Reference Guide for mapreduce over hbase documentation.
 */
 package org.apache.hadoop.hbase.mapred;

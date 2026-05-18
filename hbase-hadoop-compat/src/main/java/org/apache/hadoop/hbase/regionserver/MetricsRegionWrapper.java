@@ -61,6 +61,16 @@ public interface MetricsRegionWrapper {
   long getMemStoreSize();
 
   /**
+   * Get the size of the on heap memstore of this region
+   */
+  long getMemStoreHeapSize();
+
+  /**
+   * Get the size of the off heap memstore of this region
+   */
+  long getMemStoreOffHeapSize();
+
+  /**
    * Get the total size of the store files this region server is serving from.
    */
   long getStoreFileSize();
@@ -69,6 +79,11 @@ public interface MetricsRegionWrapper {
    * Gets the current cache % ratio for this region.
    */
   float getCurrentRegionCacheRatio();
+
+  /**
+   * Gets the current cold data % ratio for this region.
+   */
+  float getCurrentRegionColdDataRatio();
 
   /**
    * Get the total number of read requests that have been issued against this region

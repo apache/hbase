@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Random;
@@ -86,11 +86,11 @@ public class HFileTestBase {
     HFile.Reader reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
       scanner = reader.getScanner(conf, false, false);
-      assertTrue("Initial seekTo failed", scanner.seekTo());
+      assertTrue(scanner.seekTo(), "Initial seekTo failed");
       do {
         ExtendedCell kv = scanner.getCell();
-        assertTrue("Read back an unexpected or invalid KV",
-          testKvs.contains(KeyValueUtil.ensureKeyValue(kv)));
+        assertTrue(testKvs.contains(KeyValueUtil.ensureKeyValue(kv)),
+          "Read back an unexpected or invalid KV");
         i++;
       } while (scanner.next());
     } finally {
@@ -98,7 +98,7 @@ public class HFileTestBase {
       scanner.close();
     }
 
-    assertEquals("Did not read back as many KVs as written", i, testKvs.size());
+    assertEquals(i, testKvs.size(), "Did not read back as many KVs as written");
 
     // Test random seeks with pread
     Random rand = ThreadLocalRandom.current();
@@ -106,10 +106,10 @@ public class HFileTestBase {
     reader = HFile.createReader(FS, path, cacheConf, true, conf);
     try {
       scanner = reader.getScanner(conf, false, true);
-      assertTrue("Initial seekTo failed", scanner.seekTo());
+      assertTrue(scanner.seekTo(), "Initial seekTo failed");
       for (i = 0; i < 100; i++) {
         KeyValue kv = testKvs.get(rand.nextInt(testKvs.size()));
-        assertEquals("Unable to find KV as expected: " + kv, 0, scanner.seekTo(kv));
+        assertEquals(0, scanner.seekTo(kv), "Unable to find KV as expected: " + kv);
       }
     } finally {
       scanner.close();

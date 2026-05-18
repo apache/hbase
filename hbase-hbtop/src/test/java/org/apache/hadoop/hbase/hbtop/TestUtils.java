@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.hbtop;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.text.ParseException;
 import java.util.ArrayList;
@@ -150,35 +150,35 @@ public final class TestUtils {
     for (Record record : records) {
       switch (record.get(Field.REGION_NAME).asString()) {
         case "table1,,1.00000000000000000000000000000000.":
-          assertRecordInRegionMode(record, "default", "1", "", "table1",
+          assertRecordInRegionMode(record, "default", "1", "0", "table1",
             "00000000000000000000000000000000", "host1:1000", "host1.apache.com,1000,1", 0L, 0L, 0L,
             0L, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
             new Size(100, Size.Unit.MEGABYTE), 0.1f, "", 100L, 100L, 100f, "2019-07-22 00:00:00");
           break;
 
         case "table1,1,4.00000000000000000000000000000003.":
-          assertRecordInRegionMode(record, "default", "4", "", "table1",
+          assertRecordInRegionMode(record, "default", "4", "0", "table1",
             "00000000000000000000000000000003", "host2:1001", "host2.apache.com,1001,2", 0L, 0L, 0L,
             0L, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
             new Size(100, Size.Unit.MEGABYTE), 0.4f, "1", 100L, 50L, 50f, "2019-07-22 00:00:03");
           break;
 
         case "table2,,5.00000000000000000000000000000004.":
-          assertRecordInRegionMode(record, "default", "5", "", "table2",
+          assertRecordInRegionMode(record, "default", "5", "0", "table2",
             "00000000000000000000000000000004", "host2:1001", "host2.apache.com,1001,2", 0L, 0L, 0L,
             0L, new Size(200, Size.Unit.MEGABYTE), new Size(400, Size.Unit.MEGABYTE), 2,
             new Size(200, Size.Unit.MEGABYTE), 0.5f, "", 200L, 150L, 75f, "2019-07-22 00:00:04");
           break;
 
         case "table2,1,2.00000000000000000000000000000001.":
-          assertRecordInRegionMode(record, "default", "2", "", "table2",
+          assertRecordInRegionMode(record, "default", "2", "0", "table2",
             "00000000000000000000000000000001", "host1:1000", "host1.apache.com,1000,1", 0L, 0L, 0L,
             0L, new Size(200, Size.Unit.MEGABYTE), new Size(400, Size.Unit.MEGABYTE), 2,
             new Size(200, Size.Unit.MEGABYTE), 0.2f, "1", 200L, 50L, 25f, "2019-07-22 00:00:01");
           break;
 
         case "namespace:table3,,6.00000000000000000000000000000005.":
-          assertRecordInRegionMode(record, "namespace", "6", "", "table3",
+          assertRecordInRegionMode(record, "namespace", "6", "0", "table3",
             "00000000000000000000000000000005", "host2:1001", "host2.apache.com,1001,2", 0L, 0L, 0L,
             0L, new Size(300, Size.Unit.MEGABYTE), new Size(600, Size.Unit.MEGABYTE), 3,
             new Size(300, Size.Unit.MEGABYTE), 0.6f, "", 300L, 200L, 66.66667f,

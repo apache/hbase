@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +26,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -36,29 +35,28 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterBalancerNPE {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterBalancerNPE.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILYNAME = Bytes.toBytes("fam");
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
-  @Before
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeEach
   public void setupConfiguration() {
     /**
      * Make {@link BalancerChore} not run,so does not disrupt the test.
@@ -66,7 +64,7 @@ public class TestMasterBalancerNPE {
     HMaster.setDisableBalancerChoreForTest(true);
   }
 
-  @After
+  @AfterEach
   public void shutdown() throws Exception {
     HMaster.setDisableBalancerChoreForTest(false);
     TEST_UTIL.shutdownMiniCluster();
@@ -80,7 +78,7 @@ public class TestMasterBalancerNPE {
   public void testBalancerNPE() throws Exception {
     TEST_UTIL.startMiniCluster(2);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-    TableName tableName = createTable(name.getMethodName());
+    TableName tableName = createTable(testMethodName);
     final HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     List<RegionInfo> regionInfos = TEST_UTIL.getAdmin().getRegions(tableName);
     assertTrue(regionInfos.size() == 1);

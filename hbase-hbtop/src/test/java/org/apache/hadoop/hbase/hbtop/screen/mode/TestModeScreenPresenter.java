@@ -26,24 +26,18 @@ import static org.mockito.Mockito.verify;
 
 import java.util.Arrays;
 import java.util.function.Consumer;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.hbtop.screen.top.TopScreenView;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category(SmallTests.class)
-@RunWith(MockitoJUnitRunner.class)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestModeScreenPresenter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestModeScreenPresenter.class);
 
   @Mock
   private ModeScreenView modeScreenView;

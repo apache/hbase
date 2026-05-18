@@ -167,6 +167,10 @@ public class ColumnFamilyDescriptorBuilder {
   @InterfaceAudience.Private
   public static final String ENCRYPTION_KEY = "ENCRYPTION_KEY";
   private static final Bytes ENCRYPTION_KEY_BYTES = new Bytes(Bytes.toBytes(ENCRYPTION_KEY));
+  @InterfaceAudience.Private
+  public static final String ENCRYPTION_KEY_NAMESPACE = "ENCRYPTION_KEY_NAMESPACE";
+  private static final Bytes ENCRYPTION_KEY_NAMESPACE_BYTES =
+    new Bytes(Bytes.toBytes(ENCRYPTION_KEY_NAMESPACE));
 
   private static final boolean DEFAULT_MOB = false;
   @InterfaceAudience.Private
@@ -320,6 +324,7 @@ public class ColumnFamilyDescriptorBuilder {
     DEFAULT_VALUES.keySet().forEach(s -> RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(s))));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY)));
+    RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(ENCRYPTION_KEY_NAMESPACE)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(IS_MOB)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(MOB_THRESHOLD)));
     RESERVED_KEYWORDS.add(new Bytes(Bytes.toBytes(MOB_COMPACT_PARTITION_POLICY)));
@@ -519,6 +524,11 @@ public class ColumnFamilyDescriptorBuilder {
 
   public ColumnFamilyDescriptorBuilder setEncryptionKey(final byte[] value) {
     desc.setEncryptionKey(value);
+    return this;
+  }
+
+  public ColumnFamilyDescriptorBuilder setEncryptionKeyNamespace(final String value) {
+    desc.setEncryptionKeyNamespace(value);
     return this;
   }
 
@@ -818,8 +828,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution.
-     * See See <a href="http://hbase.apache.org/book.html#lzo.compression">LZO Compression</a> for
-     * how to enable it.
+     * See <a href="https://hbase.apache.org/docs/compression#install-hadoop-native-lzo-support">
+     * LZO Compression</a> for how to enable it.
      * @param type Compression type setting.
      * @return this (for chained invocation)
      */
@@ -893,8 +903,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution.
-     * See See <a href="http://hbase.apache.org/book.html#lzo.compression">LZO Compression</a> for
-     * how to enable it.
+     * See <a href="https://hbase.apache.org/docs/compression#install-hadoop-native-lzo-support">
+     * LZO Compression</a> for how to enable it.
      * @param type Compression type setting.
      * @return this (for chained invocation)
      */
@@ -1335,6 +1345,20 @@ public class ColumnFamilyDescriptorBuilder {
      */
     public ModifyableColumnFamilyDescriptor setEncryptionKey(byte[] keyBytes) {
       return setValue(ENCRYPTION_KEY_BYTES, new Bytes(keyBytes));
+    }
+
+    @Override
+    public String getEncryptionKeyNamespace() {
+      return getStringOrDefault(ENCRYPTION_KEY_NAMESPACE_BYTES, Function.identity(), null);
+    }
+
+    /**
+     * Set the encryption key namespace attribute for the family
+     * @param keyNamespace the key namespace, or null to remove existing setting
+     * @return this (for chained invocation)
+     */
+    public ModifyableColumnFamilyDescriptor setEncryptionKeyNamespace(String keyNamespace) {
+      return setValue(ENCRYPTION_KEY_NAMESPACE_BYTES, keyNamespace);
     }
 
     @Override

@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase;
 
 import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -52,11 +53,10 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,7 +71,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-7912">HBASE-7912</a>
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-14123">HBASE-14123</a>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBackupRestore extends IntegrationTestBase {
   private static final String CLASS_NAME = IntegrationTestBackupRestore.class.getSimpleName();
   protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBackupRestore.class);
@@ -135,7 +135,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = new IntegrationTestingUtility();
     Configuration conf = util.getConfiguration();
@@ -151,7 +151,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
     LOG.info("Cluster initialized and ready");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
     if (util.isDistributedCluster()) {
@@ -330,7 +330,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       restore(createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null,
         true), client);
       Table hTable = conn.getTable(table);
-      Assert.assertEquals(util.countRows(hTable), rowsInIteration * numIterations);
+      assertEquals(util.countRows(hTable), rowsInIteration * numIterations);
       hTable.close();
       LOG.info("{} loop {} finished.", Thread.currentThread().getName(), (count - 1));
     }
@@ -343,7 +343,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
       createRestoreRequest(BACKUP_ROOT_DIR, backupId, false, tablesRestoreIncMultiple, null, true),
       client);
     Table hTable = conn.getTable(table);
-    Assert.assertEquals(expectedRows, util.countRows(hTable));
+    assertEquals(expectedRows, util.countRows(hTable));
     hTable.close();
   }
 

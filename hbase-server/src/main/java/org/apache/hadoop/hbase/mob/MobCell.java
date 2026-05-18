@@ -19,6 +19,9 @@ package org.apache.hadoop.hbase.mob;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.Set;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
@@ -61,6 +64,14 @@ public class MobCell implements Closeable {
 
   public ExtendedCell getCell() {
     return cell;
+  }
+
+  /**
+   * Returns the set of file paths successfully read by the underlying MOB store file scanner.
+   * Should be called after {@link #close()} to get the path of the MOB file that was read.
+   */
+  public Set<Path> getFilesRead() {
+    return sfScanner != null ? sfScanner.getFilesRead() : Collections.emptySet();
   }
 
   @Override

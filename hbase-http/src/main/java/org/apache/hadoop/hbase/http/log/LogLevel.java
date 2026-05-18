@@ -27,6 +27,7 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.ServletException;
@@ -60,6 +61,7 @@ public final class LogLevel {
   public static final String PROTOCOL_HTTPS = "https";
 
   public static final String READONLY_LOGGERS_CONF_KEY = "hbase.ui.logLevels.readonly.loggers";
+  public static final String MASTER_UI_READONLY_CONF_KEY = "hbase.master.ui.readonly";
 
   /**
    * A command line implementation
@@ -213,7 +215,11 @@ public final class LogLevel {
      * @throws Exception                      if unable to connect
      */
     private void doGetLevel() throws Exception {
-      process(protocol + "://" + hostName + "/logLevel?log=" + className);
+      System.out.println(fetchGetLevelResponse());
+    }
+
+    String fetchGetLevelResponse() throws Exception {
+      return fetchResponse(protocol + "://" + hostName + "/logLevel?log=" + className);
     }
 
     /**
@@ -222,7 +228,12 @@ public final class LogLevel {
      * @throws Exception                      if unable to connect
      */
     private void doSetLevel() throws Exception {
-      process(protocol + "://" + hostName + "/logLevel?log=" + className + "&level=" + level);
+      System.out.println(fetchSetLevelResponse());
+    }
+
+    String fetchSetLevelResponse() throws Exception {
+      return fetchResponse(
+        protocol + "://" + hostName + "/logLevel?log=" + className + "&level=" + level);
     }
 
     /**
@@ -256,11 +267,12 @@ public final class LogLevel {
     }
 
     /**
-     * Configures the client to send HTTP request to the URL. Supports SPENGO for authentication.
+     * Send HTTP request and fetch response.
      * @param urlString URL and query string to the daemon's web UI
+     * @return the response from the daemon
      * @throws Exception if unable to connect
      */
-    private void process(String urlString) throws Exception {
+    private String fetchResponse(String urlString) throws Exception {
       URL url = new URL(urlString);
       System.out.println("Connecting to " + url);
 
@@ -272,16 +284,14 @@ public final class LogLevel {
       // disallowed in configuration" in Jetty 9
       LogLevelExceptionUtils.validateResponse(connection, 200);
 
-      // read from the servlet
-
       try (
         InputStreamReader streamReader =
           new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8);
         BufferedReader bufferedReader = new BufferedReader(streamReader)) {
-        bufferedReader.lines().filter(Objects::nonNull).filter(line -> line.startsWith(MARKER))
-          .forEach(line -> System.out.println(TAG.matcher(line).replaceAll("")));
-      } catch (IOException ioe) {
-        System.err.println("" + ioe);
+
+        return bufferedReader.lines().filter(Objects::nonNull)
+          .filter(line -> line.startsWith(MARKER)).map(line -> TAG.matcher(line).replaceAll(""))
+          .collect(Collectors.joining("\n"));
       }
     }
   }
@@ -303,14 +313,6 @@ public final class LogLevel {
       if (!HttpServer.hasAdministratorAccess(getServletContext(), request, response)) {
         return;
       }
-      // Disallow modification of the LogLevel if explicitly set to readonly
-      Configuration conf =
-        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
-      if (conf.getBoolean("hbase.master.ui.readonly", false)) {
-        sendError(response, HttpServletResponse.SC_FORBIDDEN,
-          "Modification of HBase via the UI is disallowed in configuration.");
-        return;
-      }
       response.setContentType("text/html");
       PrintWriter out;
       try {
@@ -326,6 +328,8 @@ public final class LogLevel {
       String logName = ServletUtil.getParameter(request, "log");
       String level = ServletUtil.getParameter(request, "level");
 
+      Configuration conf =
+        (Configuration) getServletContext().getAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE);
       String[] readOnlyLogLevels = conf.getStrings(READONLY_LOGGERS_CONF_KEY);
 
       if (logName != null) {
@@ -335,6 +339,13 @@ public final class LogLevel {
         Logger log = LoggerFactory.getLogger(logName);
         out.println(MARKER + "Log Class: <b>" + log.getClass().getName() + "</b><br />");
         if (level != null) {
+          // Disallow modification of the LogLevel if explicitly set to readonly
+          if (conf.getBoolean(MASTER_UI_READONLY_CONF_KEY, false)) {
+            sendError(response, HttpServletResponse.SC_FORBIDDEN,
+              "Modification of HBase via the UI is disallowed in configuration.");
+            return;
+          }
+
           if (!isLogLevelChangeAllowed(logName, readOnlyLogLevels)) {
             sendError(response, HttpServletResponse.SC_PRECONDITION_FAILED,
               "Modification of logger " + logName + " is disallowed in configuration.");

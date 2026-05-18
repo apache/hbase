@@ -23,7 +23,6 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -39,23 +38,18 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.CreateTableState;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCreateTableNoRegionServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCreateTableNoRegionServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCreateTableNoRegionServer.class);
 
@@ -113,20 +107,13 @@ public class TestCreateTableNoRegionServer {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(
       StartTestingClusterOption.builder().masterClass(HMasterForTest.class).build());
-    // this may cause dead lock if there is no live region server and want to start a new server.
-    // In JmxCacheBuster we will reinitialize the metrics system so it will get some metrics which
-    // will need to access meta, since there is no region server, the request will hang there for a
-    // long time while holding the lock of MetricsSystemImpl, but when start a new region server, we
-    // also need to update metrics in handleReportForDutyResponse, since we are all in the same
-    // process and uses the same metrics instance, we hit dead lock.
-    JmxCacheBuster.stop();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

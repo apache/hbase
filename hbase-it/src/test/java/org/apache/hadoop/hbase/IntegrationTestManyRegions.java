@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -29,13 +28,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.RegionSplitter.SplitAlgorithm;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestRule;
-import org.junit.rules.Timeout;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * verify it completes within a reasonable amount of time.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-7220">HBASE-7220</a>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestManyRegions {
   private static final String CLASS_NAME = IntegrationTestManyRegions.class.getSimpleName();
 
@@ -69,14 +65,10 @@ public class IntegrationTestManyRegions {
   protected static final int DEFAULT_TIMEOUT_MINUTES = 5;
   protected static final int TIMEOUT_MINUTES =
     UTIL.getConfiguration().getInt(TIMEOUT_MINUTES_KEY, DEFAULT_TIMEOUT_MINUTES);
-  // This timeout is suitable since there is only single testcase in this test.
-  @ClassRule
-  public static final TestRule timeout = Timeout.builder()
-    .withTimeout(TIMEOUT_MINUTES, TimeUnit.MINUTES).withLookingForStuckThread(true).build();
 
   private Admin admin;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     LOG.info(String.format("Initializing cluster with %d region servers.", REGION_SERVER_COUNT));
     UTIL.initializeCluster(REGION_SERVER_COUNT);
@@ -92,7 +84,7 @@ public class IntegrationTestManyRegions {
     LOG.info("Cluster ready");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
     if (admin.tableExists(TABLE_NAME)) {

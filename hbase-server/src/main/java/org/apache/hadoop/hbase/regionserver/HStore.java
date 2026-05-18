@@ -74,6 +74,7 @@ import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.coprocessor.ReadOnlyConfiguration;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -93,7 +94,7 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -336,7 +337,8 @@ public class HStore
 
   private StoreContext initializeStoreContext(ColumnFamilyDescriptor family) throws IOException {
     return new StoreContext.Builder().withBlockSize(family.getBlocksize())
-      .withEncryptionContext(EncryptionUtil.createEncryptionContext(conf, family))
+      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, region.getTableDescriptor(),
+        family, region.getManagedKeyDataCache(), region.getSystemKeyCache()))
       .withBloomType(family.getBloomFilterType()).withCacheConfig(createCacheConf(family))
       .withCellComparator(region.getTableDescriptor().isMetaTable() || conf
         .getBoolean(HRegion.USE_META_CELL_COMPARATOR, HRegion.DEFAULT_USE_META_CELL_COMPARATOR)
@@ -1278,6 +1280,10 @@ public class HStore
     }, () -> {
       synchronized (filesCompacting) {
         filesCompacting.removeAll(compactedFiles);
+        if (DataTieringManager.getInstance() != null) {
+          DataTieringManager.getInstance().updateRegionColdDataSize(
+            region.getRegionInfo().getEncodedName(), compactedFiles, result);
+        }
       }
     });
     // These may be null when the RS is shutting down. The space quota Chores will fix the Region
@@ -1392,6 +1398,11 @@ public class HStore
     for (HStoreFile sf : this.getStorefiles()) {
       if (inputFiles.contains(sf.getPath().getName())) {
         inputStoreFiles.add(sf);
+      } else if (
+        !isPrimaryReplicaStore() && sf.getFileInfo().isLink()
+          && inputFiles.contains(HFileLink.getReferencedHFileName(sf.getPath().getName()))
+      ) {
+        inputStoreFiles.add(sf);
       }
     }
 
@@ -1403,7 +1414,8 @@ public class HStore
         compactionOutputs.remove(sf.getPath().getName());
       }
       for (String compactionOutput : compactionOutputs) {
-        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
+        StoreFileTracker sft =
+          StoreFileTrackerFactory.create(conf, isPrimaryReplicaStore(), storeContext);
         StoreFileInfo storeFileInfo =
           getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), compactionOutput, sft);
         HStoreFile storeFile = storeEngine.createStoreFileAndReader(storeFileInfo);
@@ -2048,7 +2060,8 @@ public class HStore
       List<HStoreFile> storeFiles = new ArrayList<>(fileNames.size());
       for (String file : fileNames) {
         // open the file as a store file (hfile link, etc)
-        StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false, storeContext);
+        StoreFileTracker sft =
+          StoreFileTrackerFactory.create(conf, isPrimaryReplicaStore(), storeContext);
         StoreFileInfo storeFileInfo =
           getRegionFileSystem().getStoreFileInfo(getColumnFamilyName(), file, sft);
         HStoreFile storeFile = storeEngine.createStoreFileAndReader(storeFileInfo);

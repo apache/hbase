@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.apache.hadoop.hbase.SplitLogCounters.tot_mgr_wait_for_zk_delete;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -69,13 +69,12 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -85,7 +84,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * Base class for testing distributed log splitting.
  */
 public abstract class AbstractTestDLS {
-  private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogManager.class);
+  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestDLS.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -94,18 +93,12 @@ public abstract class AbstractTestDLS {
   private static final int NUM_RS = 5;
   private static byte[] COLUMN_FAMILY = Bytes.toBytes("family");
 
-  @Rule
-  public TestName testName = new TestName();
-
   private TableName tableName;
   private SingleProcessHBaseCluster cluster;
   private HMaster master;
   private Configuration conf;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     // Uncomment the following line if more verbosity is needed for
     // debugging (see HBASE-12285 for details).
@@ -114,7 +107,7 @@ public abstract class AbstractTestDLS {
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -147,13 +140,13 @@ public abstract class AbstractTestDLS {
     });
   }
 
-  @Before
-  public void before() throws Exception {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws Exception {
     conf = TEST_UTIL.getConfiguration();
-    tableName = TableName.valueOf(testName.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
     TEST_UTIL.getTestFileSystem().delete(CommonFSUtils.getRootDir(TEST_UTIL.getConfiguration()),

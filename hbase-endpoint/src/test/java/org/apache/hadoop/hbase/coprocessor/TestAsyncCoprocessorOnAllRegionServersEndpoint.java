@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.util.Collections;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.AsyncAdminClientUtils;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
@@ -36,13 +38,10 @@ import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -52,19 +51,21 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegion
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyResponse;
 import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.DummyRegionServerEndpointProtos.DummyService;
 
-@RunWith(Parameterized.class)
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: admin = {0}")
 public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdminBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncCoprocessorOnAllRegionServersEndpoint.class);
 
   private static final String THROW_CLASS_NAME = "java.io.FileNotFoundException";
   private static final String DUMMY_VALUE = "val";
   private static final int NUM_SLAVES = 5;
   private static final int NUM_SUCCESS_REGION_SERVERS = 3;
 
-  @BeforeClass
+  public TestAsyncCoprocessorOnAllRegionServersEndpoint(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -77,12 +78,12 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testRegionServersCoprocessorService()
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();
@@ -99,7 +100,7 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     });
   }
 
-  @Test
+  @TestTemplate
   public void testRegionServerCoprocessorsServiceAllFail()
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();
@@ -116,7 +117,7 @@ public class TestAsyncCoprocessorOnAllRegionServersEndpoint extends TestAsyncAdm
     });
   }
 
-  @Test
+  @TestTemplate
   public void testRegionServerCoprocessorsServicePartialFail()
     throws ExecutionException, InterruptedException {
     DummyRequest request = DummyRequest.getDefaultInstance();

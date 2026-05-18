@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.apache.hadoop.hbase.util.Threads.sleep;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -49,44 +48,41 @@ import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ RSGroupTests.class, LargeTests.class })
+@Tag(RSGroupTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsAdmin2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsAdmin2.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     setUpTestBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
-  @Before
-  public void beforeMethod() throws Exception {
-    setUpBeforeMethod();
+  @BeforeEach
+  public void beforeMethod(TestInfo testInfo) throws Exception {
+    setUpBeforeMethod(testInfo);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     tearDownAfterMethod();
   }
@@ -193,7 +189,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     } catch (IOException ex) {
       String exp = "Server foo:9999 is either offline or it does not exist.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
 
     // test success case
@@ -242,7 +238,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       String exp =
         "Server " + targetServer.getAddress() + " is an online server, not allowed to remove.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
@@ -273,7 +269,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
       String exp = "Server " + targetServer.getAddress() + " is on the dead servers list,"
         + " Maybe it will come back again, not allowed to remove.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
     assertTrue(newGroup.getServers().contains(targetServer.getAddress()));
 
@@ -343,7 +339,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     } catch (IOException ex) {
       String exp = "Server foo:9999 is either offline or it does not exist.";
       String msg = "Expected '" + exp + "' in exception message: ";
-      assertTrue(msg + " " + ex.getMessage(), ex.getMessage().contains(exp));
+      assertTrue(ex.getMessage().contains(exp), msg + " " + ex.getMessage());
     }
 
     // test move when src = dst
@@ -726,7 +722,7 @@ public class TestRSGroupsAdmin2 extends TestRSGroupsBase {
     // This test case is meant to be used for verifying the performance quickly by a developer.
     // Moving 100 regions takes much less than 15000 ms. Given 15000 ms so test cases passes
     // on all environment.
-    assertTrue(msg, timeTaken < 15000);
+    assertTrue(timeTaken < 15000, msg);
     LOG.info("Time taken to move a table with 100 region is {} ms", timeTaken);
   }
 }

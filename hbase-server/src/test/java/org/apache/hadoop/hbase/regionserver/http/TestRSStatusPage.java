@@ -17,18 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -43,23 +39,18 @@ import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.apache.hadoop.hbase.util.TestServerHttpUtils;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the region server status page and its template.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSStatusPage {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSStatusPage.class);
 
   private static LocalHBaseCluster CLUSTER;
 
@@ -67,10 +58,7 @@ public class TestRSStatusPage {
   public static final String TEST_TABLE_NAME_1 = "TEST_TABLE_1";
   public static final String TEST_TABLE_NAME_2 = "TEST_TABLE_2";
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     UTIL.startMiniZKCluster();
@@ -93,7 +81,7 @@ public class TestRSStatusPage {
   /**
    * Helper method to shut down the cluster (if running)
    */
-  @AfterClass
+  @AfterAll
   public static void shutDownMiniCluster() throws Exception {
     if (CLUSTER != null) {
       CLUSTER.shutdown();
@@ -123,7 +111,8 @@ public class TestRSStatusPage {
     String hostname = firstServerName.getHostname();
     int port = firstServerName.getPort();
 
-    String page = getRegionServerStatusPageContent(hostname, infoPort);
+    URL url = new URL("http://" + hostname + ":" + infoPort + "/regionserver.jsp");
+    String page = TestServerHttpUtils.getPageContent(url, "text/html;charset=utf-8");
 
     assertTrue(page.contains("<title>HBase Region Server: " + masterHostname + "</title>"));
 
@@ -152,27 +141,5 @@ public class TestRSStatusPage {
       .newBuilder(TableName.valueOf(TEST_TABLE_NAME_2)).setColumnFamily(cf).build();
     master.createTable(tableDescriptor2, null, 0, 0);
     master.flushMasterStore();
-  }
-
-  private static String getRegionServerStatusPageContent(String hostname, int infoPort)
-    throws IOException {
-    URL url = new URL("http://" + hostname + ":" + infoPort + "/regionserver.jsp");
-    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-    conn.connect();
-
-    assertEquals(200, conn.getResponseCode());
-    assertEquals("text/html;charset=utf-8", conn.getContentType());
-
-    return getResponseBody(conn);
-  }
-
-  private static String getResponseBody(HttpURLConnection conn) throws IOException {
-    StringBuilder sb = new StringBuilder();
-    BufferedReader br = new BufferedReader(new InputStreamReader(conn.getInputStream()));
-    String output;
-    while ((output = br.readLine()) != null) {
-      sb.append(output);
-    }
-    return sb.toString();
   }
 }

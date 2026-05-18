@@ -18,12 +18,13 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.Callable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.NamespaceExistException;
@@ -32,27 +33,26 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Class to test asynchronous namespace admin operations.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncNamespaceAdminApi.class);
 
   private String prefix = "TestNamespace";
 
-  @BeforeClass
+  public TestAsyncNamespaceAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -63,7 +63,12 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     LOG.info("Done initializing cluster");
   }
 
-  @Test
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testCreateAndDelete() throws Exception {
     String testName = "testCreateAndDelete";
     String nsName = prefix + "_" + testName;
@@ -78,7 +83,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     assertEquals(2, admin.listNamespaceDescriptors().get().size());
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteReservedNS() throws Exception {
     boolean exceptionCaught = false;
     try {
@@ -100,7 +105,7 @@ public class TestAsyncNamespaceAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testNamespaceOperations() throws Exception {
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns1").build()).join();
     admin.createNamespace(NamespaceDescriptor.create(prefix + "ns2").build()).join();

@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -36,10 +36,8 @@ import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -48,12 +46,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 /**
  * Test BalancerDecision ring buffer using namedQueue interface
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBalancerDecision extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBalancerDecision.class);
 
   @Test
   public void testBalancerDecisions() {
@@ -79,7 +74,7 @@ public class TestBalancerDecision extends StochasticBalancerTestBase {
             (Map) mockClusterServersWithTables(servers);
           List<RegionPlan> plans = loadBalancer.balanceCluster(LoadOfAllTable);
           boolean emptyPlans = plans == null || plans.isEmpty();
-          Assert.assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
+          assertTrue(emptyPlans || needsBalanceIdleRegion(mockCluster));
         }
       }
       final NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
@@ -93,7 +88,7 @@ public class TestBalancerDecision extends StochasticBalancerTestBase {
       MasterProtos.BalancerDecisionsResponse response = MasterProtos.BalancerDecisionsResponse
         .newBuilder().addAllBalancerDecision(balancerDecisions).build();
       List<LogEntry> balancerDecisionRecords = ProtobufUtil.getBalancerDecisionEntries(response);
-      Assert.assertTrue(balancerDecisionRecords.size() > 160);
+      assertTrue(balancerDecisionRecords.size() > 160);
     } finally {
       // reset config
       conf.unset(HConstants.HBASE_MASTER_LOADBALANCE_BYTABLE);

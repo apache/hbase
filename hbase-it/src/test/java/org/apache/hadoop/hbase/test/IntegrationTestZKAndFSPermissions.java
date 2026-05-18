@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.test;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -45,7 +45,7 @@ import org.apache.zookeeper.ZooDefs.Perms;
 import org.apache.zookeeper.data.ACL;
 import org.apache.zookeeper.data.Id;
 import org.apache.zookeeper.data.Stat;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,7 +62,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * <p>
  * Example usage: hbase org.apache.hadoop.hbase.test.IntegrationTestZnodeACLs -h
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestZKAndFSPermissions extends AbstractHBaseTool {
   private static final Logger LOG =
     LoggerFactory.getLogger(IntegrationTestZKAndFSPermissions.class);

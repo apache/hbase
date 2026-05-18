@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCellScannable;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,24 +40,20 @@ import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.checkerframework.checker.nullness.qual.Nullable;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ConcurrentHashMultiset;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multiset;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestRpcControllerFactory {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcControllerFactory.class);
 
   public static class StaticRpcControllerFactory extends RpcControllerFactory {
 
@@ -94,7 +89,7 @@ public class TestRpcControllerFactory {
     }
 
     @Override
-    public void setPriority(int priority) {
+    public void setPriority(int priority, @Nullable TableName tableName) {
       INT_PRIORITY.incrementAndGet();
       GROUPED_PRIORITY.add(priority);
     }
@@ -102,10 +97,7 @@ public class TestRpcControllerFactory {
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // load an endpoint so we have an endpoint to test - it doesn't matter which one, but
     // this is already in tests, so we can just use it.
@@ -116,7 +108,7 @@ public class TestRpcControllerFactory {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -128,13 +120,13 @@ public class TestRpcControllerFactory {
    * @throws Exception on failure
    */
   @Test
-  public void testCountController() throws Exception {
+  public void testCountController(TestInfo testInfo) throws Exception {
     Configuration conf = new Configuration(UTIL.getConfiguration());
     // setup our custom controller
     conf.set(RpcControllerFactory.CUSTOM_CONTROLLER_CONF_KEY,
       StaticRpcControllerFactory.class.getName());
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     UTIL.createTable(tableName, fam1).close();
 
     // change one of the connection properties so we get a new Connection with our configuration
@@ -201,9 +193,7 @@ public class TestRpcControllerFactory {
       Get get = new Get(row);
       get.setPriority(HConstants.ADMIN_QOS);
       table.get(get);
-      // we will reset the controller for setting the call timeout so it will lead to an extra
-      // setPriority
-      verifyPriorityGroupCount(HConstants.ADMIN_QOS, 2);
+      verifyPriorityGroupCount(HConstants.ADMIN_QOS, 1);
     }
   }
 
@@ -231,6 +221,6 @@ public class TestRpcControllerFactory {
     // Should not fail
     RpcControllerFactory factory = RpcControllerFactory.instantiate(conf);
     assertNotNull(factory);
-    assertEquals(factory.getClass(), RpcControllerFactory.class);
+    assertEquals(RpcControllerFactory.class, factory.getClass());
   }
 }

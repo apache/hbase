@@ -89,7 +89,6 @@ public abstract class AsyncRpcRetryingCaller<T> {
     this.startLogErrorsCnt = startLogErrorsCnt;
     this.future = new CompletableFuture<>();
     this.controller = conn.rpcControllerFactory.newController();
-    this.controller.setPriority(priority);
     this.controller.setRequestAttributes(requestAttributes);
     this.exceptions = new ArrayList<>();
     this.startNs = System.nanoTime();

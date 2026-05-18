@@ -34,10 +34,13 @@ import org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer.RowStati
 import org.apache.hadoop.hbase.coprocessor.example.row.stats.ringbuffer.RowStatisticsRingBufferPayload;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.impl.CounterImpl;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.Before;
 import org.junit.Test;
+import org.junit.jupiter.api.Tag;
 
+@Tag(SmallTests.TAG)
 public class TestRowStatisticsEventHandler {
 
   private static final String REGION_STRING = "REGION_STRING";

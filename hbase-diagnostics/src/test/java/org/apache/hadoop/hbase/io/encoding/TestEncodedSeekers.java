@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -48,23 +48,16 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.apache.hadoop.hbase.util.Strings;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Tests encoded seekers by loading and reading values.
  */
-@Category({ IOTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestEncodedSeekers {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEncodedSeekers.class);
 
   private static final String TABLE_NAME = "encodedSeekersTable";
   private static final String CF_NAME = "encodedSeekersCF";
@@ -87,17 +80,16 @@ public class TestEncodedSeekers {
   /** Enable when debugging */
   private static final boolean VERBOSE = false;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> paramList = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (DataBlockEncoding encoding : DataBlockEncoding.values()) {
       for (boolean includeTags : new boolean[] { false, true }) {
         for (boolean compressTags : new boolean[] { false, true }) {
-          paramList.add(new Object[] { encoding, includeTags, compressTags });
+          params.add(Arguments.of(encoding, includeTags, compressTags));
         }
       }
     }
-    return paramList;
+    return params.stream();
   }
 
   public TestEncodedSeekers(DataBlockEncoding encoding, boolean includeTags, boolean compressTags) {
@@ -106,7 +98,7 @@ public class TestEncodedSeekers {
     this.compressTags = compressTags;
   }
 
-  @Test
+  @TestTemplate
   public void testEncodedSeeker() throws IOException {
     System.err.println("Testing encoded seekers for encoding : " + encoding + ", includeTags : "
       + includeTags + ", compressTags : " + compressTags);

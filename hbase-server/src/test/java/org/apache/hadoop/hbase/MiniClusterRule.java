@@ -50,7 +50,14 @@ import org.junit.rules.TestRule;
  *   }
  * }
  * </pre>
+ *
+ * @deprecated Use {@link MiniClusterExtension} instead, Once we finish the migration of JUnit5,
+ *             which means we do not need {@link MiniClusterRule} any more, we can remove these
+ *             dependencies, see
+ *             <a href="https://issues.apache.org/jira/browse/HBASE-23671">HBASE-23671</a> for more
+ *             details.
  */
+@Deprecated
 public final class MiniClusterRule extends ExternalResource {
 
   /**

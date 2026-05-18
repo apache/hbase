@@ -23,24 +23,18 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.hbtop.screen.top.TopScreenView;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category(SmallTests.class)
-@RunWith(MockitoJUnitRunner.class)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestHelpScreenPresenter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHelpScreenPresenter.class);
 
   private static final long TEST_REFRESH_DELAY = 5;
 
@@ -52,7 +46,7 @@ public class TestHelpScreenPresenter {
 
   private HelpScreenPresenter helpScreenPresenter;
 
-  @Before
+  @BeforeEach
   public void setup() {
     helpScreenPresenter =
       new HelpScreenPresenter(helpScreenView, TEST_REFRESH_DELAY, topScreenView);

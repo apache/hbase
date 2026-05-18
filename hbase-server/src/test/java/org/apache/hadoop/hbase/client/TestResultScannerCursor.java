@@ -18,18 +18,25 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestResultScannerCursor extends AbstractTestResultScannerCursor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestResultScannerCursor.class);
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    startCluster();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    stopCluster();
+  }
 
   @Override
   protected ResultScanner getScanner(Scan scan) throws IOException {

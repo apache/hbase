@@ -17,26 +17,21 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableRegionModel.class);
 
   private static final String TABLE = "testtable";
   private static final byte[] START_KEY = Bytes.toBytes("abracadbra");
@@ -60,8 +55,7 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
 
   @Override
   protected TableRegionModel buildTestModel() {
-    TableRegionModel model = new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION);
-    return model;
+    return new TableRegionModel(TABLE, ID, START_KEY, END_KEY, LOCATION);
   }
 
   @Override
@@ -92,6 +86,7 @@ public class TestTableRegionModel extends TestModelBase<TableRegionModel> {
   }
 
   @Override
+  @Test
   public void testFromPB() throws Exception {
     // no pb ignore
   }

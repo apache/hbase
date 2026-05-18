@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.List;
 import javax.xml.bind.JAXBException;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.rest.client.Response;
 import org.apache.hadoop.hbase.rest.model.CellModel;
@@ -37,20 +36,17 @@ import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.http.Header;
 import org.apache.http.message.BasicHeader;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, MediumTests.class })
+@Tag(RestTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestGetAndPutResource extends RowResourceBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGetAndPutResource.class);
 
   private static final MetricsAssertHelper METRICS_ASSERT =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -310,8 +306,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
     assertEquals(Constants.MIMETYPE_JSON, response.getHeader("content-type"));
     CellSetModel cellSet = jsonMapper.readValue(response.getBody(), CellSetModel.class);
-    assertTrue(cellSet.getRows().size() == 1);
-    assertTrue(cellSet.getRows().get(0).getCells().size() == 1);
+    assertEquals(1, cellSet.getRows().size());
+    assertEquals(1, cellSet.getRows().get(0).getCells().size());
     CellModel cell = cellSet.getRows().get(0).getCells().get(0);
     assertEquals(VALUE_2, Bytes.toString(cell.getValue()));
     assertEquals(2L, cell.getTimestamp());
@@ -628,8 +624,8 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(200, response.getCode());
     CellSetModel cellSet =
       (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
-    assertTrue(cellSet.getRows().size() == 1);
-    assertTrue(cellSet.getRows().get(0).getCells().size() == 3);
+    assertEquals(1, cellSet.getRows().size());
+    assertEquals(3, cellSet.getRows().get(0).getCells().size());
     List<CellModel> cells = cellSet.getRows().get(0).getCells();
 
     assertTrue(containsCellModel(cells, COLUMN_1, VALUE_1));
@@ -686,7 +682,7 @@ public class TestGetAndPutResource extends RowResourceBase {
     assertEquals(Constants.MIMETYPE_XML, response.getHeader("content-type"));
     CellSetModel cellSet =
       (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
-    assertTrue(cellSet.getRows().size() == 2);
+    assertEquals(2, cellSet.getRows().size());
 
     response = deleteRow(TABLE, ROW_1);
     assertEquals(200, response.getCode());
@@ -730,9 +726,9 @@ public class TestGetAndPutResource extends RowResourceBase {
     CellSetModel cellSet =
       (CellSetModel) xmlUnmarshaller.unmarshal(new ByteArrayInputStream(response.getBody()));
     List<RowModel> rows = cellSet.getRows();
-    assertTrue(rows.size() == 2);
+    assertEquals(2, rows.size());
     for (RowModel row : rows) {
-      assertTrue(row.getCells().size() == 1);
+      assertEquals(1, row.getCells().size());
       assertEquals(COLUMN_1, Bytes.toString(row.getCells().get(0).getColumn()));
     }
     response = deleteRow(TABLE, ROW_1);

@@ -21,9 +21,10 @@ import java.io.File;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.crypto.tls.KeyStoreFileType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509TestContext;
@@ -38,63 +39,60 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2},"
+  + " acceptPlainText={3}, clientTlsEnabled={4}")
 public class TestSaslTlsIPC extends AbstractTestSecureIPC {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslTlsIPC.class);
 
   private static X509TestContextProvider PROVIDER;
 
-  @Parameterized.Parameter(0)
-  public X509KeyType caKeyType;
+  private X509KeyType caKeyType;
 
-  @Parameterized.Parameter(1)
-  public X509KeyType certKeyType;
+  private X509KeyType certKeyType;
 
-  @Parameterized.Parameter(2)
-  public char[] keyPassword;
+  private char[] keyPassword;
 
-  @Parameterized.Parameter(3)
-  public boolean acceptPlainText;
+  private boolean acceptPlainText;
 
-  @Parameterized.Parameter(4)
-  public boolean clientTlsEnabled;
+  private boolean clientTlsEnabled;
+
+  public TestSaslTlsIPC(X509KeyType caKeyType, X509KeyType certKeyType, char[] keyPassword,
+    boolean acceptPlainText, boolean clientTlsEnabled) {
+    this.caKeyType = caKeyType;
+    this.certKeyType = certKeyType;
+    this.keyPassword = keyPassword;
+    this.acceptPlainText = acceptPlainText;
+    this.clientTlsEnabled = clientTlsEnabled;
+  }
 
   private X509TestContext x509TestContext;
 
-  @Parameterized.Parameters(
-      name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, acceptPlainText={3},"
-        + " clientTlsEnabled={4}")
-  public static List<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
         for (char[] keyPassword : new char[][] { "".toCharArray(), "pa$$w0rd".toCharArray() }) {
           // do not accept plain text
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, false, true });
+          params.add(Arguments.of(caKeyType, certKeyType, keyPassword, false, true));
           // support plain text and client enables tls
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, true, true });
+          params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true, true));
           // support plain text and client disables tls
-          params.add(new Object[] { caKeyType, certKeyType, keyPassword, true, false });
+          params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true, false));
         }
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Security.addProvider(new BouncyCastleProvider());
     File dir = new File(TEST_UTIL.getDataTestDir(TestSaslTlsIPC.class.getSimpleName()).toString())
@@ -112,14 +110,14 @@ public class TestSaslTlsIPC extends AbstractTestSecureIPC {
     PROVIDER = new X509TestContextProvider(conf, dir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws InterruptedException {
     stopKDC();
     Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword);
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
@@ -129,7 +127,7 @@ public class TestSaslTlsIPC extends AbstractTestSecureIPC {
     setUpPrincipalAndConf();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     x509TestContext.clearConfigurations();
     x509TestContext.getConf().unset(X509Util.TLS_CONFIG_OCSP);

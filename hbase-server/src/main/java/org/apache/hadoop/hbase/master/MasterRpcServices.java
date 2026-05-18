@@ -193,6 +193,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionStoreSequenceIds;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameStringPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ProcedureDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -320,6 +323,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
@@ -1549,6 +1554,29 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         ProtobufUtil.toTableDescriptor(req.getTableSchema()), req.getNonceGroup(), req.getNonce(),
         req.getReopenRegions());
       return ModifyTableResponse.newBuilder().setProcId(procId).build();
+    } catch (IOException ioe) {
+      throw new ServiceException(ioe);
+    }
+  }
+
+  @Override
+  public ReopenTableRegionsResponse reopenTableRegions(RpcController controller,
+    ReopenTableRegionsRequest request) throws ServiceException {
+    try {
+      server.checkInitialized();
+
+      final TableName tableName = ProtobufUtil.toTableName(request.getTableName());
+      final List<byte[]> regionNames = request.getRegionNamesList().stream()
+        .map(ByteString::toByteArray).collect(Collectors.toList());
+
+      LOG.info("Reopening regions for table={}, regionCount={}", tableName,
+        regionNames.isEmpty() ? "all" : regionNames.size());
+
+      long procId = server.reopenRegionsThrottled(tableName, regionNames, request.getNonceGroup(),
+        request.getNonce());
+
+      return ReopenTableRegionsResponse.newBuilder().setProcId(procId).build();
+
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -3618,6 +3646,24 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public GetCachedFilesListResponse getCachedFilesList(RpcController controller,
     GetCachedFilesListRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public EmptyMsg refreshSystemKeyCache(RpcController controller, EmptyMsg request)
+    throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public BooleanMsg ejectManagedKeyDataCacheEntry(RpcController controller,
+    ManagedKeyEntryRequest request) throws ServiceException {
+    throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
+  }
+
+  @Override
+  public EmptyMsg clearManagedKeyDataCache(RpcController controller, EmptyMsg request)
+    throws ServiceException {
     throw new ServiceException(new DoNotRetryIOException("Unsupported method on master"));
   }
 

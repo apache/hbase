@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,6 +31,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -61,7 +62,6 @@ import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,11 +80,11 @@ public class SpaceQuotaHelperForTests {
   public static final long ONE_GIGABYTE = ONE_MEGABYTE * ONE_KILOBYTE;
 
   private final HBaseTestingUtil testUtil;
-  private final TestName testName;
+  private final Supplier<String> testName;
   private final AtomicLong counter;
   private static final int NUM_RETRIES = 10;
 
-  public SpaceQuotaHelperForTests(HBaseTestingUtil testUtil, TestName testName,
+  public SpaceQuotaHelperForTests(HBaseTestingUtil testUtil, Supplier<String> testName,
     AtomicLong counter) {
     this.testUtil = Objects.requireNonNull(testUtil);
     this.testName = Objects.requireNonNull(testName);
@@ -228,12 +228,13 @@ public class SpaceQuotaHelperForTests {
         assertTrue(
           msg.contains("TableNotEnabledException") || msg.contains(policyToViolate.name()));
       } else {
-        assertTrue("Expected exception message to contain the word '" + policyToViolate.name()
-          + "', but was " + msg, msg.contains(policyToViolate.name()));
+        assertTrue(msg.contains(policyToViolate.name()),
+          "Expected exception message to contain the word '" + policyToViolate.name()
+            + "', but was " + msg);
       }
     }
-    assertTrue("Expected to see an exception writing data to a table exceeding its quota",
-      sawError);
+    assertTrue(sawError,
+      "Expected to see an exception writing data to a table exceeding its quota");
   }
 
   /**
@@ -273,7 +274,7 @@ public class SpaceQuotaHelperForTests {
         scanner.close();
       }
     }
-    assertTrue("Expected to succeed in writing data to a table not having quota ", sawSuccess);
+    assertTrue(sawSuccess, "Expected to succeed in writing data to a table not having quota ");
   }
 
   /**
@@ -286,8 +287,8 @@ public class SpaceQuotaHelperForTests {
       ResultScanner rs = quotaTable.getScanner(s);
       sawUsageSnapshot = (rs.next() != null);
     }
-    assertTrue("Expected to succeed in getting table usage snapshots for space quota",
-      sawUsageSnapshot);
+    assertTrue(sawUsageSnapshot,
+      "Expected to succeed in getting table usage snapshots for space quota");
   }
 
   /**
@@ -515,7 +516,7 @@ public class SpaceQuotaHelperForTests {
   }
 
   TableName getNextTableName(String namespace) {
-    return TableName.valueOf(namespace, testName.getMethodName() + counter.getAndIncrement());
+    return TableName.valueOf(namespace, testName.get() + counter.getAndIncrement());
   }
 
   TableName createTable() throws Exception {
@@ -565,7 +566,7 @@ public class SpaceQuotaHelperForTests {
   TableName createTableInNamespace(NamespaceDescriptor nd) throws Exception {
     final Admin admin = testUtil.getAdmin();
     final TableName tn =
-      TableName.valueOf(nd.getName(), testName.getMethodName() + counter.getAndIncrement());
+      TableName.valueOf(nd.getName(), testName.get() + counter.getAndIncrement());
 
     // Delete the old table
     if (admin.tableExists(tn)) {
@@ -606,7 +607,7 @@ public class SpaceQuotaHelperForTests {
   Map<byte[], List<Path>> generateFileToLoad(TableName tn, int numFiles, int numRowsPerFile)
     throws Exception {
     FileSystem fs = testUtil.getTestFileSystem();
-    Path baseDir = new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files");
+    Path baseDir = new Path(fs.getHomeDirectory(), testName.get() + "_files");
     fs.mkdirs(baseDir);
     List<Path> hfiles = new ArrayList<>();
     for (int i = 1; i <= numFiles; i++) {

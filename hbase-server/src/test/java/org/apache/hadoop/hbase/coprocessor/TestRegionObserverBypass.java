@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static junit.framework.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -45,19 +44,15 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionObserverBypass {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionObserverBypass.class);
 
   private static HBaseTestingUtil util;
   private static final TableName tableName = TableName.valueOf("test");
@@ -67,7 +62,7 @@ public class TestRegionObserverBypass {
   private static final byte[] row3 = Bytes.toBytes("r3");
   private static final byte[] test = Bytes.toBytes("test");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Stack up three coprocessors just so I can check bypass skips subsequent calls.
     Configuration conf = HBaseConfiguration.create();
@@ -78,12 +73,12 @@ public class TestRegionObserverBypass {
     util.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Admin admin = util.getAdmin();
     if (admin.tableExists(tableName)) {
@@ -245,8 +240,8 @@ public class TestRegionObserverBypass {
     // three coprocessors in the chain. So we should have:
     // 3 invocations for first put + 1 invocation + 1 bypass for second put + 1 invocation +
     // 1 bypass for the last put. Assert.
-    assertEquals("Total CP invocation count", 5, TestCoprocessor.PREPUT_INVOCATIONS.get());
-    assertEquals("Total CP bypasses", 2, TestCoprocessor.PREPUT_BYPASSES.get());
+    assertEquals(5, TestCoprocessor.PREPUT_INVOCATIONS.get(), "Total CP invocation count");
+    assertEquals(2, TestCoprocessor.PREPUT_BYPASSES.get(), "Total CP bypasses");
   }
 
   public static class TestCoprocessor implements RegionCoprocessor, RegionObserver {

@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.concurrent.ExecutionException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.AsyncAggregationClient;
@@ -30,18 +29,14 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, CoprocessorTests.class })
+@Tag(MediumTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestAsyncAggregationClientPartialResult {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAggregationClientPartialResult.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -56,7 +51,7 @@ public class TestAsyncAggregationClientPartialResult {
 
   private static AsyncTable<AdvancedScanResultConsumer> TABLE;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -71,7 +66,7 @@ public class TestAsyncAggregationClientPartialResult {
     TABLE = CONN.getTable(TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     CONN.close();
     UTIL.shutdownMiniCluster();
@@ -88,5 +83,4 @@ public class TestAsyncAggregationClientPartialResult {
     assertEquals(2, AsyncAggregationClient
       .min(TABLE, new LongColumnInterpreter(), new Scan().addColumn(CF, CQ)).get().longValue());
   }
-
 }

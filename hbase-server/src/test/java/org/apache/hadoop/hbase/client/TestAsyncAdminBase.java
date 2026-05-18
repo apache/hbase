@@ -20,25 +20,20 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ForkJoinPool;
 import java.util.function.Supplier;
 import java.util.regex.Pattern;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,8 +53,11 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
   protected static AsyncConnection ASYNC_CONN;
   protected AsyncAdmin admin;
 
-  @Parameter
   public Supplier<AsyncAdmin> getAdmin;
+
+  public TestAsyncAdminBase(Supplier<AsyncAdmin> admin) {
+    this.getAdmin = admin;
+  }
 
   private static AsyncAdmin getRawAsyncAdmin() {
     return ASYNC_CONN.getAdmin();
@@ -69,17 +67,13 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
     return ASYNC_CONN.getAdmin(ForkJoinPool.commonPool());
   }
 
-  @Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestAsyncAdminBase::getRawAsyncAdmin },
-      new Supplier<?>[] { TestAsyncAdminBase::getAsyncAdmin });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of((Supplier<AsyncAdmin>) TestAsyncAdminBase::getRawAsyncAdmin),
+      Arguments.of((Supplier<AsyncAdmin>) TestAsyncAdminBase::getAsyncAdmin));
   }
 
-  @Rule
-  public TestName testName = new TestName();
   protected TableName tableName;
 
-  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -91,20 +85,19 @@ public abstract class TestAsyncAdminBase extends AbstractTestUpdateConfiguration
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     admin = getAdmin.get();
-    String methodName = testName.getMethodName();
+    String methodName = testInfo.getTestMethod().get().getName();
     tableName = TableName.valueOf(methodName.substring(0, methodName.length() - 3));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     admin.listTableNames(Pattern.compile(tableName.getNameAsString() + ".*"), false)
       .whenCompleteAsync((tables, err) -> {

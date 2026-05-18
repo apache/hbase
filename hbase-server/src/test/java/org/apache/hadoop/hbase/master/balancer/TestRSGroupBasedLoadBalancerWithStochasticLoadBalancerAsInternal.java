@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -30,7 +30,6 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,23 +42,16 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-/**
- * Test RSGroupBasedLoadBalancer with StochasticLoadBalancer as internal balancer
- */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal
   extends RSGroupableBalancerTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule
-    .forClass(TestRSGroupBasedLoadBalancerWithStochasticLoadBalancerAsInternal.class);
   private static RSGroupBasedLoadBalancer loadBalancer;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     groups = new String[] { RSGroupInfo.DEFAULT_GROUP };
     servers = generateServers(3);

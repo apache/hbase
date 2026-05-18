@@ -17,29 +17,40 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Test the admin operations for Balancer, Normalizer, CleanerChore, and CatalogJanitor.
  */
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncToolAdminApi extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncToolAdminApi.class);
+  public TestAsyncToolAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @Test
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testBalancer() throws Exception {
     boolean initialState = admin.isBalancerEnabled().get();
 
@@ -62,7 +73,7 @@ public class TestAsyncToolAdminApi extends TestAsyncAdminBase {
     assertEquals(initialState, admin.isBalancerEnabled().get());
   }
 
-  @Test
+  @TestTemplate
   public void testNormalizer() throws Exception {
     boolean initialState = admin.isNormalizerEnabled().get();
 
@@ -85,7 +96,7 @@ public class TestAsyncToolAdminApi extends TestAsyncAdminBase {
     assertEquals(initialState, admin.isNormalizerEnabled().get());
   }
 
-  @Test
+  @TestTemplate
   public void testCleanerChore() throws Exception {
     boolean initialState = admin.isCleanerChoreEnabled().get();
 
@@ -108,7 +119,7 @@ public class TestAsyncToolAdminApi extends TestAsyncAdminBase {
     assertEquals(initialState, admin.isCleanerChoreEnabled().get());
   }
 
-  @Test
+  @TestTemplate
   public void testCatalogJanitor() throws Exception {
     boolean initialState = admin.isCatalogJanitorEnabled().get();
 

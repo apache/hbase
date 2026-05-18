@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.util.PoolMap.PoolType;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 public abstract class PoolMapTestBase {
 
@@ -27,7 +27,7 @@ public abstract class PoolMapTestBase {
   protected static final int KEY_COUNT = 5;
   protected static final int POOL_SIZE = 3;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.poolMap = new PoolMap<>(getPoolType(), POOL_SIZE);
   }

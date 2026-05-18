@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.BufferedInputStream;
 import java.io.DataInputStream;
@@ -27,25 +27,21 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.MetricsConnection;
 import org.apache.hadoop.hbase.ipc.RpcServer.BlockingServiceAndInterface;
 import org.apache.hadoop.hbase.security.AuthMethod;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -58,28 +54,26 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ConnectionHea
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.ResponseHeader;
 
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}")
 public class TestRpcServerSlowConnectionSetup {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcServerSlowConnectionSetup.class);
 
   private RpcServer server;
 
   private Socket socket;
+  private final Class<? extends RpcServer> rpcServerImpl;
 
-  @Parameter
-  public Class<? extends RpcServer> rpcServerImpl;
-
-  @Parameters(name = "{index}: rpcServerImpl={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { SimpleRpcServer.class },
-      new Object[] { NettyRpcServer.class });
+  public TestRpcServerSlowConnectionSetup(Class<? extends RpcServer> rpcServerImpl) {
+    this.rpcServerImpl = rpcServerImpl;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return Arrays.stream(new Object[] { SimpleRpcServer.class, NettyRpcServer.class })
+      .map(Arguments::of);
+  }
+
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl.getName());
@@ -90,7 +84,7 @@ public class TestRpcServerSlowConnectionSetup {
     socket = new Socket("localhost", server.getListenerAddress().getPort());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (socket != null) {
       socket.close();
@@ -100,7 +94,7 @@ public class TestRpcServerSlowConnectionSetup {
     }
   }
 
-  @Test
+  @TestTemplate
   public void test() throws IOException, InterruptedException {
     int rpcHeaderLen = HConstants.RPC_HEADER.length;
     byte[] preamble = new byte[rpcHeaderLen + 2];

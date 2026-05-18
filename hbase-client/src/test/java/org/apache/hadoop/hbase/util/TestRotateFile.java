@@ -19,36 +19,30 @@ package org.apache.hadoop.hbase.util;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRotateFile {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRotateFile.class);
 
   private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
@@ -58,26 +52,24 @@ public class TestRotateFile {
 
   private RotateFile rotateFile;
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     FS = FileSystem.get(UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     UTIL.cleanupTestDir();
   }
 
-  @Before
-  public void setUp() throws IOException {
-    dir = UTIL.getDataTestDir(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    String methodName = testInfo.getTestMethod().get().getName();
+    dir = UTIL.getDataTestDir(methodName);
     if (!FS.mkdirs(dir)) {
       throw new IOException("Can not create dir " + dir);
     }
-    rotateFile = new RotateFile(FS, dir, name.getMethodName(), 1024);
+    rotateFile = new RotateFile(FS, dir, methodName, 1024);
     assertNull(rotateFile.read());
   }
 

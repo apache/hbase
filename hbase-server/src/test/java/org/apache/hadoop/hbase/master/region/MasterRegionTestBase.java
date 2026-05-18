@@ -26,20 +26,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class MasterRegionTestBase {
 
@@ -53,7 +53,7 @@ public class MasterRegionTestBase {
 
   protected DirScanPool logCleanerPool;
 
-  protected Server server;
+  protected MasterServices server;
 
   protected static byte[] CF1 = Bytes.toBytes("f1");
 
@@ -77,7 +77,7 @@ public class MasterRegionTestBase {
   protected void postSetUp() throws IOException {
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
@@ -96,7 +96,7 @@ public class MasterRegionTestBase {
     choreService = new ChoreService(getClass().getSimpleName());
     hfileCleanerPool = DirScanPool.getHFileCleanerScanPool(conf);
     logCleanerPool = DirScanPool.getLogCleanerScanPool(conf);
-    server = mock(Server.class);
+    server = mock(MasterServices.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
@@ -119,7 +119,7 @@ public class MasterRegionTestBase {
     postSetUp();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     region.close(true);
     hfileCleanerPool.shutdownNow();

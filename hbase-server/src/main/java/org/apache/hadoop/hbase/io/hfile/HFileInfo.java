@@ -22,7 +22,6 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.SequenceInputStream;
-import java.security.Key;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -39,10 +38,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
-import org.apache.hadoop.hbase.io.crypto.Cipher;
-import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.protobuf.ProtobufMagic;
-import org.apache.hadoop.hbase.security.EncryptionUtil;
+import org.apache.hadoop.hbase.security.SecurityUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -80,6 +77,8 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
   static final byte[] KEY_OF_BIGGEST_CELL = Bytes.toBytes(RESERVED_PREFIX + "KEY_OF_BIGGEST_CELL");
   static final byte[] LEN_OF_BIGGEST_CELL = Bytes.toBytes(RESERVED_PREFIX + "LEN_OF_BIGGEST_CELL");
   public static final byte[] MAX_TAGS_LEN = Bytes.toBytes(RESERVED_PREFIX + "MAX_TAGS_LEN");
+  public static final byte[] FILE_SIZE = Bytes.toBytes(RESERVED_PREFIX + "FILE_SIZE");
+  public static final byte[] FILE_PATH = Bytes.toBytes(RESERVED_PREFIX + "FILE_PATH");
   private final SortedMap<byte[], byte[]> map = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
   /**
@@ -351,7 +350,7 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
         context.getInputStreamWrapper().getStream(isHBaseChecksum), context.getFileSize());
       Path path = context.getFilePath();
       checkFileVersion(path);
-      this.hfileContext = createHFileContext(path, trailer, conf);
+      this.hfileContext = createHFileContext(context, path, trailer, conf);
       context.getInputStreamWrapper().unbuffer();
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
@@ -400,6 +399,9 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
       }
       // close the block reader
       context.getInputStreamWrapper().unbuffer();
+
+      put(FILE_SIZE, Bytes.toBytes(context.getFileSize()));
+      put(FILE_PATH, Bytes.toBytes(context.getFilePath().toString()));
     } catch (Throwable t) {
       IOUtils.closeQuietly(context.getInputStreamWrapper(),
         e -> LOG.warn("failed to close input stream wrapper", e));
@@ -409,30 +411,16 @@ public class HFileInfo implements SortedMap<byte[], byte[]> {
     initialized = true;
   }
 
-  private HFileContext createHFileContext(Path path, FixedFileTrailer trailer, Configuration conf)
-    throws IOException {
-    HFileContextBuilder builder = new HFileContextBuilder().withHBaseCheckSum(true)
-      .withHFileName(path.getName()).withCompression(trailer.getCompressionCodec())
+  private HFileContext createHFileContext(ReaderContext readerContext, Path path,
+    FixedFileTrailer trailer, Configuration conf) throws IOException {
+    return new HFileContextBuilder().withHBaseCheckSum(true).withHFileName(path.getName())
+      .withCompression(trailer.getCompressionCodec())
       .withDecompressionContext(
         trailer.getCompressionCodec().getHFileDecompressionContextForConfiguration(conf))
-      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()));
-    // Check for any key material available
-    byte[] keyBytes = trailer.getEncryptionKey();
-    if (keyBytes != null) {
-      Encryption.Context cryptoContext = Encryption.newContext(conf);
-      Key key = EncryptionUtil.unwrapKey(conf, keyBytes);
-      // Use the algorithm the key wants
-      Cipher cipher = Encryption.getCipher(conf, key.getAlgorithm());
-      if (cipher == null) {
-        throw new IOException(
-          "Cipher '" + key.getAlgorithm() + "' is not available" + ", path=" + path);
-      }
-      cryptoContext.setCipher(cipher);
-      cryptoContext.setKey(key);
-      builder.withEncryptionContext(cryptoContext);
-    }
-    HFileContext context = builder.build();
-    return context;
+      .withCellComparator(FixedFileTrailer.createComparator(trailer.getComparatorClassName()))
+      .withEncryptionContext(SecurityUtil.createEncryptionContext(conf, path, trailer,
+        readerContext.getManagedKeyDataCache(), readerContext.getSystemKeyCache()))
+      .build();
   }
 
   private void loadMetaInfo(HFileBlock.BlockIterator blockIter, HFileContext hfileContext)

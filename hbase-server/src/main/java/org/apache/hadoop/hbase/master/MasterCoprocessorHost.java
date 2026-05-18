@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.coprocessor.MasterCoprocessor;
 import org.apache.hadoop.hbase.coprocessor.MasterCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.MetricsCoprocessor;
+import org.apache.hadoop.hbase.coprocessor.ObserverRpcCallContext;
 import org.apache.hadoop.hbase.master.locking.LockProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
@@ -202,8 +203,12 @@ public class MasterCoprocessorHost
       super(masterObserverGetter, user);
     }
 
-    public MasterObserverOperation(User user, boolean bypassable) {
-      super(masterObserverGetter, user, bypassable);
+    public MasterObserverOperation(ObserverRpcCallContext rpcCallContext) {
+      super(masterObserverGetter, rpcCallContext);
+    }
+
+    public MasterObserverOperation(ObserverRpcCallContext rpcCallContext, boolean bypassable) {
+      super(masterObserverGetter, rpcCallContext, bypassable);
     }
   }
 

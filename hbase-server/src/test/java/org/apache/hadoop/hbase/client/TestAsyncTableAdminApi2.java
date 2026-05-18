@@ -17,15 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Supplier;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -34,39 +35,45 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Class to test asynchronous table admin operations
  * @see TestAsyncTableAdminApi This test and it used to be joined it was taking longer than our ten
  *      minute timeout so they were split.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableAdminApi2.class);
+  public TestAsyncTableAdminApi2(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @Test
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testDisableCatalogTable() throws Exception {
-    try {
-      this.admin.disableTable(TableName.META_TABLE_NAME).join();
-      fail("Expected to throw ConstraintException");
-    } catch (Exception e) {
-    }
+    assertThrows(Exception.class, () -> this.admin.disableTable(TableName.META_TABLE_NAME).join(),
+      "Expected to throw ConstraintException");
     // Before the fix for HBASE-6146, the below table creation was failing as the hbase:meta table
     // actually getting disabled by the disableTable() call.
     createTableWithDefaultConf(tableName);
   }
 
-  @Test
+  @TestTemplate
   public void testAddColumnFamily() throws Exception {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
@@ -81,7 +88,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
   }
 
-  @Test
+  @TestTemplate
   public void testAddSameColumnFamilyTwice() throws Exception {
     // Create a table with one families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
@@ -95,16 +102,14 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.of(FAMILY_1)).join();
     verifyTableDescriptor(tableName, FAMILY_0, FAMILY_1);
 
-    try {
-      // Add same column family again - expect failure
-      this.admin.addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.of(FAMILY_1)).join();
-      Assert.fail("Delete a non-exist column family should fail");
-    } catch (Exception e) {
-      // Expected.
-    }
+    // Add same column family again - expect failure
+    assertThrows(
+      Exception.class, () -> this.admin
+        .addColumnFamily(tableName, ColumnFamilyDescriptorBuilder.of(FAMILY_1)).join(),
+      "Delete a non-exist column family should fail");
   }
 
-  @Test
+  @TestTemplate
   public void testModifyColumnFamily() throws Exception {
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(FAMILY_0);
@@ -124,7 +129,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     assertTrue(hcfd.getBlocksize() == newBlockSize);
   }
 
-  @Test
+  @TestTemplate
   public void testModifyNonExistingColumnFamily() throws Exception {
     TableDescriptorBuilder tdBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.of(FAMILY_0);
@@ -135,18 +140,15 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     verifyTableDescriptor(tableName, FAMILY_0);
 
     int newBlockSize = 2 * blockSize;
-    cfd = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).setBlocksize(newBlockSize).build();
+    ColumnFamilyDescriptor cfd2 =
+      ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_1).setBlocksize(newBlockSize).build();
 
     // Modify a column family that is not in the table.
-    try {
-      admin.modifyColumnFamily(tableName, cfd).join();
-      Assert.fail("Modify a non-exist column family should fail");
-    } catch (Exception e) {
-      // Expected.
-    }
+    assertThrows(Exception.class, () -> admin.modifyColumnFamily(tableName, cfd2).join(),
+      "Modify a non-exist column family should fail");
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteColumnFamily() throws Exception {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
@@ -162,7 +164,7 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     verifyTableDescriptor(tableName, FAMILY_0);
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteSameColumnFamilyTwice() throws Exception {
     // Create a table with two families
     TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(tableName);
@@ -177,13 +179,9 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     admin.deleteColumnFamily(tableName, FAMILY_1).join();
     verifyTableDescriptor(tableName, FAMILY_0);
 
-    try {
-      // Delete again - expect failure
-      admin.deleteColumnFamily(tableName, FAMILY_1).join();
-      Assert.fail("Delete a non-exist column family should fail");
-    } catch (Exception e) {
-      // Expected.
-    }
+    // Delete again - expect failure
+    assertThrows(Exception.class, () -> admin.deleteColumnFamily(tableName, FAMILY_1).join(),
+      "Delete a non-exist column family should fail");
   }
 
   private void verifyTableDescriptor(final TableName tableName, final byte[]... families)
@@ -205,11 +203,11 @@ public class TestAsyncTableAdminApi2 extends TestAsyncAdminBase {
     assertEquals(tableName, htd.getTableName());
     assertEquals(families.length, htdFamilies.size());
     for (byte[] familyName : families) {
-      assertTrue("Expected family " + Bytes.toString(familyName), htdFamilies.contains(familyName));
+      assertTrue(htdFamilies.contains(familyName), "Expected family " + Bytes.toString(familyName));
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCompactionTimestamps() throws Exception {
     createTableWithDefaultConf(tableName);
     AsyncTable<?> table = ASYNC_CONN.getTable(tableName);

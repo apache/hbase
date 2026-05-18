@@ -22,23 +22,17 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category(SmallTests.class)
-@RunWith(MockitoJUnitRunner.class)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestMessageModeScreenPresenter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMessageModeScreenPresenter.class);
 
   private static final String TEST_MESSAGE = "test message";
 
@@ -50,7 +44,7 @@ public class TestMessageModeScreenPresenter {
 
   private MessageModeScreenPresenter messageModeScreenPresenter;
 
-  @Before
+  @BeforeEach
   public void setup() {
     messageModeScreenPresenter =
       new MessageModeScreenPresenter(messageModeScreenView, TEST_MESSAGE, topScreenView);

@@ -40,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * This class is not suitable as partitioner creating hfiles for incremental bulk loads as region
  * spread will likely change between time of hfile creation and load time. See
  * {@link org.apache.hadoop.hbase.tool.BulkLoadHFiles} and
- * <a href="http://hbase.apache.org/book.html#arch.bulk.load">Bulk Load</a>.
+ * <a href="https://hbase.apache.org/docs/architecture/bulk-loading">Bulk Loading</a>.
  * </p>
  * @param <KEY>   The type of the key.
  * @param <VALUE> The type of the value.

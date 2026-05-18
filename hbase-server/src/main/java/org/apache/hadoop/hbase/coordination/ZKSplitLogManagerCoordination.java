@@ -68,7 +68,7 @@ public class ZKSplitLogManagerCoordination extends ZKListener
   public static final int DEFAULT_ZK_RETRIES = 3;
   public static final int DEFAULT_MAX_RESUBMIT = 3;
 
-  private static final Logger LOG = LoggerFactory.getLogger(SplitLogManagerCoordination.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ZKSplitLogManagerCoordination.class);
 
   private final TaskFinisher taskFinisher;
   private final Configuration conf;

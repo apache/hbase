@@ -17,52 +17,43 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMutationGetCellBuilder {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMutationGetCellBuilder.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testMutationGetCellBuilder() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testMutationGetCellBuilder(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final byte[] rowKey = Bytes.toBytes("12345678");
     final byte[] uselessRowKey = Bytes.toBytes("123");
     final byte[] family = Bytes.toBytes("cf");
@@ -78,16 +69,16 @@ public class TestMutationGetCellBuilder {
       cellBuilder.setRow(uselessRowKey);
       put.add(cellBuilder.build());
       byte[] cloneRow = CellUtil.cloneRow(cellBuilder.build());
-      assertTrue("setRow must be useless", !Arrays.equals(cloneRow, uselessRowKey));
+      assertTrue(!Arrays.equals(cloneRow, uselessRowKey), "setRow must be useless");
       table.put(put);
 
       // get the row back and assert the values
       Get get = new Get(rowKey);
       get.setTimestamp(now);
       Result result = table.get(get);
-      assertTrue("row key must be same", Arrays.equals(result.getRow(), rowKey));
-      assertTrue("Column foo value should be bar",
-        Bytes.toString(result.getValue(family, qualifier)).equals("bar"));
+      assertTrue(Arrays.equals(result.getRow(), rowKey), "row key must be same");
+      assertTrue(Bytes.toString(result.getValue(family, qualifier)).equals("bar"),
+        "Column foo value should be bar");
 
       // Delete that row
       Delete delete = new Delete(rowKey);
@@ -101,7 +92,7 @@ public class TestMutationGetCellBuilder {
       get = new Get(rowKey);
       get.setTimestamp(now);
       result = table.get(get);
-      assertTrue("Column foo should not exist", result.getValue(family, qualifier) == null);
+      assertTrue(result.getValue(family, qualifier) == null, "Column foo should not exist");
     }
   }
 }

@@ -18,25 +18,7 @@
 
 import { Link } from "@/components/link";
 import { projectLinks, documentationLinks, asfLinks } from "./links";
-
-function ExternalIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="ml-1 inline-block h-3 w-3"
-    >
-      <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" />
-      <polyline points="15 3 21 3 21 9" />
-      <line x1="10" y1="14" x2="21" y2="3" />
-    </svg>
-  );
-}
+import { ExternalLink } from "lucide-react";
 
 export function SiteFooter() {
   return (
@@ -60,7 +42,7 @@ export function SiteFooter() {
                     className="hover:text-foreground inline-flex items-center"
                   >
                     {link.label}
-                    {link.external && <ExternalIcon />}
+                    {link.external && <ExternalLink className="ml-1 size-3 shrink-0" />}
                   </Link>
                 </li>
               ))}
@@ -78,7 +60,7 @@ export function SiteFooter() {
                       className="hover:text-foreground inline-flex items-center"
                     >
                       {link.label}
-                      {link.external && <ExternalIcon />}
+                      {link.external && <ExternalLink className="ml-1 size-3 shrink-0" />}
                     </Link>
                   </li>
                 ) : (
@@ -90,7 +72,7 @@ export function SiteFooter() {
                         className="hover:text-foreground inline-flex items-center"
                       >
                         {link.label}
-                        {link.external && <ExternalIcon />}
+                        {link.external && <ExternalLink className="ml-1 size-3 shrink-0" />}
                       </Link>
                     </li>
                   ))
@@ -109,7 +91,7 @@ export function SiteFooter() {
                     className="hover:text-foreground inline-flex items-center"
                   >
                     {link.label}
-                    {link.external && <ExternalIcon />}
+                    {link.external && <ExternalLink className="ml-1 size-3 shrink-0" />}
                   </Link>
                 </li>
               ))}
@@ -120,7 +102,7 @@ export function SiteFooter() {
         <hr className="border-border/60 my-8" />
 
         <p className="text-xs leading-6">
-          Copyright ©2007–2025 The Apache Software Foundation. All rights reserved. Apache HBase,
+          Copyright ©2007–2026 The Apache Software Foundation. All rights reserved. Apache HBase,
           HBase, Apache, the Apache HBase logo and the ASF logo are either registered trademarks or
           trademarks of the Apache Software Foundation. All other marks mentioned may be trademarks
           or registered trademarks of their respective owners.

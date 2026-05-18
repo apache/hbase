@@ -17,22 +17,18 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestSystemTableSnapshot extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSystemTableSnapshot.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSystemTableSnapshot.class);
 
@@ -40,7 +36,8 @@ public class TestSystemTableSnapshot extends TestBackupBase {
    * Verify backup system table snapshot.
    * @throws Exception if an operation on the table fails
    */
-  // @Test
+  @Disabled
+  @Test
   public void _testBackupRestoreSystemTable() throws Exception {
     LOG.info("test snapshot system table");
 

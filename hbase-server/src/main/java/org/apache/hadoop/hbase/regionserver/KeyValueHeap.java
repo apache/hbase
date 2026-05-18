@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.regionserver;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.PriorityQueue;
+import java.util.Set;
 import java.util.function.IntConsumer;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -65,6 +69,8 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   protected KeyValueScanner current = null;
 
   protected KVScannerComparator comparator;
+
+  private final Set<Path> filesRead = new HashSet<>();
 
   /**
    * Constructor. This KeyValueHeap will handle closing of passed in KeyValueScanners.
@@ -216,17 +222,29 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   public void close() {
     for (KeyValueScanner scanner : this.scannersForDelayedClose) {
       scanner.close();
+      filesRead.addAll(scanner.getFilesRead());
     }
     this.scannersForDelayedClose.clear();
     if (this.current != null) {
       this.current.close();
+      filesRead.addAll(this.current.getFilesRead());
     }
     if (this.heap != null) {
       // Order of closing the scanners shouldn't matter here, so simply iterate and close them.
       for (KeyValueScanner scanner : heap) {
         scanner.close();
+        filesRead.addAll(scanner.getFilesRead());
       }
     }
+  }
+
+  /**
+   * Returns the set of store file paths successfully read by the scanners in this heap. Populated
+   * as each scanner is closed (e.g. in close() or shipped()).
+   */
+  @Override
+  public Set<Path> getFilesRead() {
+    return Collections.unmodifiableSet(filesRead);
   }
 
   /**
@@ -419,6 +437,7 @@ public class KeyValueHeap extends NonReversedNonLazyKeyValueScanner
   public void shipped() throws IOException {
     for (KeyValueScanner scanner : this.scannersForDelayedClose) {
       scanner.close(); // There wont be further fetch of Cells from these scanners. Just close.
+      filesRead.addAll(scanner.getFilesRead());
     }
     this.scannersForDelayedClose.clear();
     if (this.current != null) {

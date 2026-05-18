@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.asyncfs;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -28,49 +28,40 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.protocol.AlreadyBeingCreatedException;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Used to confirm that it is OK to overwrite a file which is being written currently.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestOverwriteFileUnderConstruction extends AsyncFSTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOverwriteFileUnderConstruction.class);
 
   private static FileSystem FS;
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     startMiniDFSCluster(3);
     FS = CLUSTER.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     shutdownMiniDFSCluster();
   }
 
   @Test
-  public void testNotOverwrite() throws IOException {
-    Path file = new Path("/" + name.getMethodName());
+  public void testNotOverwrite(TestInfo testInfo) throws IOException {
+    Path file = new Path("/" + testInfo.getDisplayName());
     try (FSDataOutputStream out1 = FS.create(file)) {
       try {
         FS.create(file, false);
@@ -83,8 +74,8 @@ public class TestOverwriteFileUnderConstruction extends AsyncFSTestBase {
   }
 
   @Test
-  public void testOverwrite() throws IOException {
-    Path file = new Path("/" + name.getMethodName());
+  public void testOverwrite(TestInfo testInfo) throws IOException {
+    Path file = new Path("/" + testInfo.getDisplayName());
     FSDataOutputStream out1 = FS.create(file);
     FSDataOutputStream out2 = FS.create(file, true);
     out1.write(2);

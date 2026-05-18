@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.LogEntry;
@@ -34,10 +36,8 @@ import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
 import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
@@ -46,12 +46,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs;
 /**
  * Test BalancerRejection ring buffer using namedQueue interface
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBalancerRejection extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBalancerRejection.class);
 
   static class MockCostFunction extends CostFunction {
     public static double mockCost;
@@ -90,13 +87,13 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
       // Reject case 1: Total cost < 0
       MockCostFunction.mockCost = -Double.MAX_VALUE;
       // Since the Balancer was rejected, there should not be any plans
-      Assert.assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
+      assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
 
       // Reject case 2: Cost < minCostNeedBalance
       MockCostFunction.mockCost = 1;
       conf.setFloat("hbase.master.balancer.stochastic.minCostNeedBalance", Float.MAX_VALUE);
       loadBalancer.onConfigurationChange(conf);
-      Assert.assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
+      assertNull(loadBalancer.balanceCluster(LoadOfAllTable));
 
       // NamedQueue is an async Producer-consumer Pattern, waiting here until it completed
       int maxWaitingCount = 10;
@@ -105,9 +102,9 @@ public class TestBalancerRejection extends StochasticBalancerTestBase {
       }
       // There are two cases, should be 2 logEntries
       List<LogEntry> logEntries = getBalancerRejectionLogEntries(provider);
-      Assert.assertEquals(2, logEntries.size());
-      Assert.assertTrue(logEntries.get(0).toJsonPrettyPrint().contains("minCostNeedBalance"));
-      Assert.assertTrue(logEntries.get(1).toJsonPrettyPrint().contains("cost1*multiplier1"));
+      assertEquals(2, logEntries.size());
+      assertTrue(logEntries.get(0).toJsonPrettyPrint().contains("minCostNeedBalance"));
+      assertTrue(logEntries.get(1).toJsonPrettyPrint().contains("cost1*multiplier1"));
     } finally {
       conf.unset(StochasticLoadBalancer.COST_FUNCTIONS_COST_FUNCTIONS_KEY);
       conf.unset(BaseLoadBalancer.BALANCER_REJECTION_BUFFER_ENABLED);

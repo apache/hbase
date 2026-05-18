@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,7 +25,6 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -47,22 +46,15 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestVerifyReplicationSecureClusterCredentials {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplicationSecureClusterCredentials.class);
 
   private static MiniKdc KDC;
   private static final HBaseTestingUtil UTIL1 = new HBaseTestingUtil();
@@ -105,7 +97,7 @@ public class TestVerifyReplicationSecureClusterCredentials {
   /**
    * Sets the security firstly for getting the correct default realm.
    */
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     setUpKdcServer();
     setupCluster(UTIL1);
@@ -123,24 +115,21 @@ public class TestVerifyReplicationSecureClusterCredentials {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws IOException {
     UTIL1.shutdownMiniCluster();
     UTIL2.shutdownMiniCluster();
   }
 
-  @Parameters
   public static Collection<Supplier<String>> peer() {
     return Arrays.asList(() -> "1",
       () -> ZKConfig.getZooKeeperClusterKey(UTIL2.getConfiguration()));
   }
 
-  @Parameter
-  public Supplier<String> peer;
-
-  @Test
+  @ParameterizedTest
+  @MethodSource("peer")
   @SuppressWarnings("unchecked")
-  public void testJobCredentials() throws Exception {
+  public void testJobCredentials(Supplier<String> peer) throws Exception {
     Job job = new VerifyReplication().createSubmittableJob(
       new Configuration(UTIL1.getConfiguration()), new String[] { peer.get(), "table" });
 

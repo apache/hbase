@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
@@ -37,12 +35,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
  * filter. More test functionality can be found within
  * {@link org.apache.hadoop.hbase.filter.TestFilter#testColumnPaginationFilter()}
  */
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestColumnPaginationFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnPaginationFilter.class);
 
   private static final byte[] ROW = Bytes.toBytes("row_1_test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -52,7 +47,7 @@ public class TestColumnPaginationFilter {
   private Filter columnPaginationFilterOffset;
   private Filter columnPaginationFilter;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     columnPaginationFilter = getColumnPaginationFilter();
     columnPaginationFilterOffset = getColumnPaginationFilterOffset();
@@ -79,7 +74,7 @@ public class TestColumnPaginationFilter {
    */
   private void basicFilterTests(ColumnPaginationFilter filter) throws Exception {
     KeyValue c = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER, VAL_1);
-    assertTrue("basicFilter1", filter.filterCell(c) == Filter.ReturnCode.INCLUDE_AND_NEXT_COL);
+    assertTrue(filter.filterCell(c) == Filter.ReturnCode.INCLUDE_AND_NEXT_COL, "basicFilter1");
   }
 
   /**

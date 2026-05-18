@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
 import java.util.Collections;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.ServerNotRunningYetException;
@@ -42,14 +44,23 @@ public class AsyncMasterRequestRpcRetryingCaller<T> extends AsyncRpcRetryingCall
     CompletableFuture<T> call(HBaseRpcController controller, MasterService.Interface stub);
   }
 
+  private final Optional<TableName> tableName;
+
   private final Callable<T> callable;
 
   public AsyncMasterRequestRpcRetryingCaller(Timer retryTimer, AsyncConnectionImpl conn,
-    Callable<T> callable, int priority, long pauseNs, long pauseNsForServerOverloaded,
-    int maxRetries, long operationTimeoutNs, long rpcTimeoutNs, int startLogErrorsCnt) {
+    Callable<T> callable, TableName tableName, int priority, long pauseNs,
+    long pauseNsForServerOverloaded, int maxRetries, long operationTimeoutNs, long rpcTimeoutNs,
+    int startLogErrorsCnt) {
     super(retryTimer, conn, priority, pauseNs, pauseNsForServerOverloaded, maxRetries,
       operationTimeoutNs, rpcTimeoutNs, startLogErrorsCnt, Collections.emptyMap());
+    this.tableName = Optional.ofNullable(tableName);
     this.callable = callable;
+  }
+
+  @Override
+  protected Optional<TableName> getTableName() {
+    return tableName;
   }
 
   private void clearMasterStubCacheOnError(MasterService.Interface stub, Throwable error) {

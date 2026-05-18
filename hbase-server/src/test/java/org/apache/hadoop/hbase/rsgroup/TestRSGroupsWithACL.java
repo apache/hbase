@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -43,11 +42,10 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,12 +53,9 @@ import org.slf4j.LoggerFactory;
  * Performs authorization checks for rsgroup operations, according to different levels of authorized
  * users.
  */
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSGroupsWithACL extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsWithACL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsWithACL.class);
   private static TableName TEST_TABLE = TableName.valueOf("testtable1");
@@ -98,7 +93,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
   private static AccessChecker accessChecker;
   private static UserProvider userProvider;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -207,7 +202,7 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       PermissionStorage.getNamespacePermissions(conf, TEST_TABLE.getNamespaceAsString()).size());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     cleanUp();
     TEST_UTIL.shutdownMiniCluster();

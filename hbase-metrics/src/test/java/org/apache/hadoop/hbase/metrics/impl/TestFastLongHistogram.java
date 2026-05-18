@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testcases for FastLongHistogram.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFastLongHistogram {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFastLongHistogram.class);
 
   private static void doTestUniform(FastLongHistogram hist) {
     long[] VALUES = { 0, 10, 20, 30, 40, 50 };
@@ -54,8 +49,8 @@ public class TestFastLongHistogram {
       long[] vals = hist.getQuantiles(qs);
       System.out.println(Arrays.toString(vals));
       for (int j = 0; j < qs.length; j++) {
-        Assert.assertTrue(j + "-th element org: " + VALUES[j] + ", act: " + vals[j],
-          Math.abs(vals[j] - VALUES[j]) <= 10);
+        assertTrue(Math.abs(vals[j] - VALUES[j]) <= 10,
+          j + "-th element org: " + VALUES[j] + ", act: " + vals[j]);
       }
       hist.snapshotAndReset();
     }
@@ -87,9 +82,9 @@ public class TestFastLongHistogram {
       long[] vals = hist.getQuantiles(new double[] { 0.25, 0.75, 0.95 });
       System.out.println(Arrays.toString(vals));
       if (n == 0) {
-        Assert.assertTrue("Out of possible value", vals[0] >= 0 && vals[0] <= 50);
-        Assert.assertTrue("Out of possible value", vals[1] >= 50 && vals[1] <= 100);
-        Assert.assertTrue("Out of possible value", vals[2] >= 900 && vals[2] <= 1100);
+        assertTrue(vals[0] >= 0 && vals[0] <= 50, "Out of possible value");
+        assertTrue(vals[1] >= 50 && vals[1] <= 100, "Out of possible value");
+        assertTrue(vals[2] >= 900 && vals[2] <= 1100, "Out of possible value");
       }
 
       hist.snapshotAndReset();

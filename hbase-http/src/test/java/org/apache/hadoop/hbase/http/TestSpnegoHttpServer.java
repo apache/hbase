@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,7 +32,6 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
@@ -61,11 +61,10 @@ import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,11 +72,9 @@ import org.slf4j.LoggerFactory;
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that a simple Servlet is reachable via SPNEGO and unreachable w/o.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpnegoHttpServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpnegoHttpServer.class);
   private static final String KDC_SERVER_HOST = "localhost";
@@ -89,7 +86,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
   private static File infoServerKeytab;
   private static File clientKeytab;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupServer() throws Exception {
     Configuration conf = new Configuration();
     HBaseCommonTestingUtil htu = new HBaseCommonTestingUtil(conf);
@@ -121,7 +118,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopServer() throws Exception {
     try {
       if (null != server) {
@@ -221,7 +218,7 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     assertEquals("a:b", EntityUtils.toString(resp.getEntity()).trim());
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testMissingConfigurationThrowsException() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer.HTTP_MAX_THREADS, TestHttpServer.MAX_THREADS);
@@ -229,9 +226,12 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
     conf.set("hbase.security.authentication", "kerberos");
     // Intentionally skip keytab and principal
 
-    HttpServer customServer = createTestServerWithSecurity(conf);
-    customServer.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
-    customServer.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(), "/jersey/*");
-    customServer.start();
+    assertThrows(IllegalArgumentException.class, () -> {
+      HttpServer customServer = createTestServerWithSecurity(conf);
+      customServer.addUnprivilegedServlet("echo", "/echo", EchoServlet.class);
+      customServer.addJerseyResourcePackage(JerseyResource.class.getPackage().getName(),
+        "/jersey/*");
+      customServer.start();
+    });
   }
 }

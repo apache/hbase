@@ -36,6 +36,8 @@ import org.slf4j.LoggerFactory;
 public class MemorySizeUtil {
 
   public static final String MEMSTORE_SIZE_KEY = "hbase.regionserver.global.memstore.size";
+  public static final String MEMSTORE_MEMORY_SIZE_KEY =
+    "hbase.regionserver.global.memstore.memory.size";
   public static final String MEMSTORE_SIZE_OLD_KEY =
     "hbase.regionserver.global.memstore.upperLimit";
   public static final String MEMSTORE_SIZE_LOWER_LIMIT_KEY =
@@ -50,6 +52,8 @@ public class MemorySizeUtil {
   public static final float DEFAULT_MEMSTORE_SIZE = 0.4f;
   // Default lower water mark limit is 95% size of memstore size.
   public static final float DEFAULT_MEMSTORE_SIZE_LOWER_LIMIT = 0.95f;
+  private static final float MEMSTORE_HEAP_MIN_FRACTION = 0.0f;
+  private static final float MEMSTORE_HEAP_MAX_FRACTION = 0.8f;
 
   /**
    * Configuration key for the absolute amount of heap memory that must remain free for a
@@ -105,9 +109,10 @@ public class MemorySizeUtil {
       throw new RuntimeException(String.format(
         "RegionServer heap memory allocation is invalid: total memory usage exceeds 100%% "
           + "(memStore + blockCache + requiredFreeHeap). "
-          + "Check the following configuration values:%n" + "  - %s = %.2f%n" + "  - %s = %s%n"
-          + "  - %s = %s%n" + "  - %s = %s",
-        MEMSTORE_SIZE_KEY, memStoreFraction, HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
+          + "Check the following configuration values:%n" + "  - %s = %s%n" + "  - %s = %s%n"
+          + "  - %s = %s%n" + "  - %s = %s%n" + "  - %s = %s",
+        MEMSTORE_MEMORY_SIZE_KEY, conf.get(MEMSTORE_MEMORY_SIZE_KEY), MEMSTORE_SIZE_KEY,
+        conf.get(MEMSTORE_SIZE_KEY), HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY,
         conf.get(HConstants.HFILE_BLOCK_CACHE_MEMORY_SIZE_KEY),
         HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, conf.get(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY),
         HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY,
@@ -151,14 +156,36 @@ public class MemorySizeUtil {
   /**
    * Retrieve global memstore configured size as percentage of total heap.
    */
-  public static float getGlobalMemStoreHeapPercent(final Configuration c,
+  public static float getGlobalMemStoreHeapPercent(final Configuration conf,
     final boolean logInvalid) {
+    // Check if an explicit memstore size is configured.
+    long memStoreSizeInBytes = getMemstoreSizeInBytes(conf);
+    if (memStoreSizeInBytes > 0) {
+      final MemoryUsage usage = safeGetHeapMemoryUsage();
+      if (usage != null) {
+        float memStoreSizeFraction = (float) memStoreSizeInBytes / usage.getMax();
+        if (
+          memStoreSizeFraction > MEMSTORE_HEAP_MIN_FRACTION
+            && memStoreSizeFraction <= MEMSTORE_HEAP_MAX_FRACTION
+        ) {
+          return memStoreSizeFraction;
+        } else if (logInvalid) {
+          LOG.warn(
+            "Setting global memstore memory size to {} bytes ({} of max heap {}) is outside "
+              + "allowed range of ({} -> {}]; using configured percentage instead.",
+            memStoreSizeInBytes, memStoreSizeFraction, usage.getMax(), MEMSTORE_HEAP_MIN_FRACTION,
+            MEMSTORE_HEAP_MAX_FRACTION);
+        }
+      }
+    }
+
     float limit =
-      c.getFloat(MEMSTORE_SIZE_KEY, c.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
-    if (limit > 0.8f || limit <= 0.0f) {
+      conf.getFloat(MEMSTORE_SIZE_KEY, conf.getFloat(MEMSTORE_SIZE_OLD_KEY, DEFAULT_MEMSTORE_SIZE));
+    if (limit > MEMSTORE_HEAP_MAX_FRACTION || limit <= MEMSTORE_HEAP_MIN_FRACTION) {
       if (logInvalid) {
         LOG.warn("Setting global memstore limit to default of " + DEFAULT_MEMSTORE_SIZE
-          + " because supplied value outside allowed range of (0 -> 0.8]");
+          + " because supplied value outside allowed range of (" + MEMSTORE_HEAP_MIN_FRACTION
+          + " -> " + MEMSTORE_HEAP_MAX_FRACTION + "]");
       }
       limit = DEFAULT_MEMSTORE_SIZE;
     }
@@ -204,17 +231,17 @@ public class MemorySizeUtil {
   public static Pair<Long, MemoryType> getGlobalMemStoreSize(Configuration conf) {
     long offheapMSGlobal = conf.getLong(OFFHEAP_MEMSTORE_SIZE_KEY, 0);// Size in MBs
     if (offheapMSGlobal > 0) {
-      // Off heap memstore size has not relevance when MSLAB is turned OFF. We will go with making
-      // this entire size split into Chunks and pooling them in MemstoreLABPoool. We dont want to
+      // Off heap memstore size has no relevance when MSLAB is turned OFF. We will go with making
+      // this entire size split into Chunks and pooling them in MemstoreLABPool. We don't want to
       // create so many on demand off heap chunks. In fact when this off heap size is configured, we
       // will go with 100% of this size as the pool size
       if (MemStoreLAB.isEnabled(conf)) {
-        // We are in offheap Memstore use
-        long globalMemStoreLimit = (long) (offheapMSGlobal * 1024 * 1024); // Size in bytes
+        // We are in off heap memstore use
+        long globalMemStoreLimit = offheapMSGlobal * 1024 * 1024; // Size in bytes
         return new Pair<>(globalMemStoreLimit, MemoryType.NON_HEAP);
       } else {
         // Off heap max memstore size is configured with turning off MSLAB. It makes no sense. Do a
-        // warn log and go with on heap memstore percentage. By default it will be 40% of Xmx
+        // warn log and go with on heap memstore percentage. By default, it will be 40% of Xmx
         LOG.warn("There is no relevance of configuring '" + OFFHEAP_MEMSTORE_SIZE_KEY + "' when '"
           + MemStoreLAB.USEMSLAB_KEY + "' is turned off."
           + " Going with on heap global memstore size ('" + MEMSTORE_SIZE_KEY + "')");
@@ -297,6 +324,20 @@ public class MemorySizeUtil {
     } else {
       final long cacheSizeInBytes = getBlockCacheSizeInBytes(conf);
       return cacheSizeInBytes > 0 ? cacheSizeInBytes : (long) (heapMax * cachePercentage);
+    }
+  }
+
+  /**
+   * Retrieve an explicit memstore size in bytes in the configuration.
+   * @param conf used to read memstore configs
+   * @return the number of bytes to use for memstore, negative if not configured.
+   * @throws IllegalArgumentException if {@code MEMSTORE_MEMORY_SIZE_KEY} format is invalid
+   */
+  public static long getMemstoreSizeInBytes(Configuration conf) {
+    try {
+      return Long.parseLong(conf.get(MEMSTORE_MEMORY_SIZE_KEY, "-1"));
+    } catch (NumberFormatException e) {
+      return (long) conf.getStorageSize(MEMSTORE_MEMORY_SIZE_KEY, -1, StorageUnit.BYTES);
     }
   }
 

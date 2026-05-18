@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.security.User;
@@ -35,19 +35,16 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureNonce {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureNonce.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureNonce.class);
 
@@ -61,7 +58,7 @@ public class TestProcedureNonce {
   private FileSystem fs;
   private Path logDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     Path testDir = htu.getDataTestDir();
@@ -77,7 +74,7 @@ public class TestProcedureNonce {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, PROCEDURE_EXECUTOR_SLOTS, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -190,8 +187,8 @@ public class TestProcedureNonce {
       public void run() {
         try {
           // release the nonce and wake t2
-          assertFalse("unexpected already registered nonce",
-            procExecutor.registerNonce(nonceKey) >= 0);
+          assertFalse(procExecutor.registerNonce(nonceKey) >= 0,
+            "unexpected already registered nonce");
           t1NonceRegisteredLatch.countDown();
 
           // hold the submission until t2 is registering the nonce
@@ -229,7 +226,7 @@ public class TestProcedureNonce {
 
           // register the nonce
           t2BeforeNonceRegisteredLatch.countDown();
-          assertFalse("unexpected non registered nonce", procExecutor.registerNonce(nonceKey) < 0);
+          assertFalse(procExecutor.registerNonce(nonceKey) < 0, "unexpected non registered nonce");
         } catch (Throwable e) {
           t2Exception.set(e);
         } finally {
@@ -248,8 +245,8 @@ public class TestProcedureNonce {
     }
 
     ProcedureTestingUtility.waitNoProcedureRunning(procExecutor);
-    assertEquals(null, t1Exception.get());
-    assertEquals(null, t2Exception.get());
+    assertNull(t1Exception.get());
+    assertNull(t2Exception.get());
   }
 
   public static class TestSingleStepProcedure extends SequentialProcedure<TestProcEnv> {
@@ -262,7 +259,7 @@ public class TestProcedureNonce {
     protected Procedure[] execute(TestProcEnv env) throws InterruptedException {
       step++;
       env.waitOnLatch();
-      LOG.debug("execute procedure " + this + " step=" + step);
+      LOG.debug("execute procedure {} step={}", this, step);
       step++;
       setResult(Bytes.toBytes(step));
       return null;

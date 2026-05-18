@@ -19,20 +19,14 @@ package org.apache.hadoop.hbase.io.compress.zstd;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestZstdCodec extends CompressionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZstdCodec.class);
 
   @Test
   public void testZstdCodecSmall() throws Exception {
@@ -56,5 +50,4 @@ public class TestZstdCodec extends CompressionTestBase {
     codec.setConf(conf);
     codecVeryLargeTest(codec, 3); // like text
   }
-
 }

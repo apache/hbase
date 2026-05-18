@@ -882,6 +882,58 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
   }
 
+  /**
+   * Verify that when a WAL file switch is detected via the switched() check in
+   * ReplicationSourceWALReader.run(), currentPosition is reset so that a subsequent
+   * WALEntryFilterRetryableException does not cause the new file to be opened at the old file's
+   * position.
+   */
+  @Test
+  public void testPositionResetOnFileSwitchWithRetryableFilter() throws Exception {
+    appendEntriesToLogAndSync(3);
+    log.rollWriter();
+    AbstractFSWAL<?> abstractWAL = (AbstractFSWAL<?>) log;
+    Waiter.waitFor(CONF, 5000,
+      (Waiter.Predicate<Exception>) () -> abstractWAL.getInflightWALCloseCount() == 0);
+    appendEntriesToLogAndSync(3);
+
+    // Batch capacity of 1 ensures EOF on WAL A is detected by hasNext() in the run loop
+    // (not inside readWALEntries), which triggers the switched() path.
+    Configuration conf = new Configuration(CONF);
+    conf.setInt("replication.source.nb.capacity", 1);
+
+    AtomicInteger totalFilterCalls = new AtomicInteger(0);
+    AtomicBoolean threwOnce = new AtomicBoolean(false);
+    WALEntryFilter filter = entry -> {
+      int callNum = totalFilterCalls.incrementAndGet();
+      if (callNum > 3 && !threwOnce.get()) {
+        threwOnce.set(true);
+        throw new WALEntryFilterRetryableException("simulated filter failure after file switch");
+      }
+      return entry;
+    };
+
+    ReplicationSource source = mockReplicationSource(false, conf);
+    when(source.isPeerEnabled()).thenReturn(true);
+    ReplicationSourceWALReader reader =
+      new ReplicationSourceWALReader(fs, conf, logQueue, 0, filter, source, fakeWalGroupId);
+    reader.start();
+
+    int totalEntries = 0;
+    long deadline = System.currentTimeMillis() + 30000;
+    while (totalEntries < 6) {
+      long remaining = deadline - System.currentTimeMillis();
+      assertTrue("Reader appears stuck - likely position corruption. Only got " + totalEntries
+        + " of 6 entries", remaining > 0);
+      WALEntryBatch batch = reader.poll(1);
+      if (batch != null && batch != WALEntryBatch.NO_MORE_DATA) {
+        totalEntries += batch.getNbEntries();
+      }
+    }
+    assertEquals(6, totalEntries);
+    assertTrue("Filter should have thrown at least once", threwOnce.get());
+  }
+
   private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
     private int filteredWALEntryCount = -1;
     private int walEntryCount = 0;

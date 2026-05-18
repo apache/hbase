@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.Closeable;
 import java.lang.annotation.Annotation;
@@ -27,19 +27,14 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestInterfaceAlign {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInterfaceAlign.class);
 
   /**
    * Test methods name match up
@@ -64,14 +59,14 @@ public class TestInterfaceAlign {
       if (method.endsWith("Async")) {
         contains = asyncAdminMethodNames.contains(method.replace("Async", ""));
       }
-      assertTrue("Admin method " + method + " should in AsyncAdmin too", contains);
+      assertTrue(contains, "Admin method " + method + " should in AsyncAdmin too");
     });
     asyncAdminMethodNames.forEach(method -> {
       boolean contains = adminMethodNames.contains(method);
       if (!contains) {
         contains = adminMethodNames.contains(method + "Async");
       }
-      assertTrue("AsyncAdmin method " + method + " should in Admin too", contains);
+      assertTrue(contains, "AsyncAdmin method " + method + " should in Admin too");
     });
   }
 

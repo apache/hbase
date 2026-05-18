@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestBackupSmallTests extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupSmallTests.class);
 
   private static final UserGroupInformation DIANA =
     UserGroupInformation.createUserForTesting("diana", new String[] {});
@@ -47,14 +43,16 @@ public class TestBackupSmallTests extends TestBackupBase {
     fs.mkdirs(path);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testBackupPathIsNotAccessible() throws Exception {
-    Path path = new Path(PERMISSION_TEST_PATH);
-    FileSystem rootFs = FileSystem.get(TEST_UTIL.getConnection().getConfiguration());
-    rootFs.mkdirs(path.getParent());
-    rootFs.setPermission(path.getParent(), FsPermission.createImmutable((short) 000));
-    FileSystem fs =
-      DFSTestUtil.getFileSystemAs(DIANA, TEST_UTIL.getConnection().getConfiguration());
-    fs.mkdirs(path);
+    assertThrows(IOException.class, () -> {
+      Path path = new Path(PERMISSION_TEST_PATH);
+      FileSystem rootFs = FileSystem.get(TEST_UTIL.getConnection().getConfiguration());
+      rootFs.mkdirs(path.getParent());
+      rootFs.setPermission(path.getParent(), FsPermission.createImmutable((short) 000));
+      FileSystem fs =
+        DFSTestUtil.getFileSystemAs(DIANA, TEST_UTIL.getConnection().getConfiguration());
+      fs.mkdirs(path);
+    });
   }
 }

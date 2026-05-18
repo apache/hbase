@@ -21,12 +21,12 @@ import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.BlockCacheFactory.BUCKET_CACHE_BUCKETS_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.QUEUE_ADDITION_WAIT_TIME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -40,7 +40,6 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -80,29 +79,21 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestPrefetchWithBucketCache {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPrefetchWithBucketCache.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPrefetchWithBucketCache.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -113,20 +104,20 @@ public class TestPrefetchWithBucketCache {
   private FileSystem fs;
   private BlockCache blockCache;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
-    File testDir = new File(name.getMethodName());
+    File testDir = new File(testInfo.getTestMethod().get().getName());
     testDir.mkdir();
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "file:/" + testDir.getAbsolutePath() + "/bucket.cache");
   }
 
-  @After
-  public void tearDown() {
-    File cacheFile = new File(name.getMethodName() + "/bucket.cache");
-    File dir = new File(name.getMethodName());
+  @AfterEach
+  public void tearDown(TestInfo testInfo) {
+    File cacheFile = new File(testInfo.getTestMethod().get().getName() + "/bucket.cache");
+    File dir = new File(testInfo.getTestMethod().get().getName());
     cacheFile.delete();
     dir.delete();
   }
@@ -200,7 +191,7 @@ public class TestPrefetchWithBucketCache {
     byte[] splitPoint = RandomKeyValueUtil.randomOrderedKey(rand, 50);
     HStoreFile file = new HStoreFile(fs, storeFile, conf, cacheConf, BloomType.NONE, true, sft);
     Path ref = regionFS.splitStoreFile(region, "cf", file, splitPoint, false,
-      new ConstantSizeRegionSplitPolicy(), sft);
+      new ConstantSizeRegionSplitPolicy(), sft).getPath();
     HStoreFile refHsf = new HStoreFile(this.fs, ref, conf, cacheConf, BloomType.NONE, true, sft);
     // starts reader for the ref. The ref should resolve to the original file blocks
     // and not duplicate blocks in the cache.
@@ -322,13 +313,17 @@ public class TestPrefetchWithBucketCache {
   public void testPrefetchRunTriggersEvictions() throws Exception {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 1);
     conf.set(BUCKET_CACHE_BUCKETS_KEY, "3072");
-    conf.setDouble("hbase.bucketcache.acceptfactor", 0.98);
-    conf.setDouble("hbase.bucketcache.minfactor", 0.98);
+    // Use full capacity as the "acceptable" size so prefetch does not stop at ~98% total usage
+    // (via blockFitsIntoTheCache) before the cache writer path must run freeSpace/evictions.
+    conf.setDouble("hbase.bucketcache.acceptfactor", 1.0);
+    conf.setDouble("hbase.bucketcache.minfactor", 1.0);
     conf.setDouble("hbase.bucketcache.extrafreefactor", 0.0);
     conf.setLong(QUEUE_ADDITION_WAIT_TIME, 0);
+    // Ensures no prefetch interruption due to heap usage in the event of freeMemory() returning 0.
+    conf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, Double.MAX_VALUE);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
-    Path storeFile = writeStoreFile("testPrefetchInterruptOnCapacity", 10000);
+    Path storeFile = writeStoreFile("testPrefetchRunTriggersEvictions", 10000);
     // Prefetches the file blocks
     createReaderAndWaitForPrefetchInterruption(storeFile);
     Waiter.waitFor(conf, (PrefetchExecutor.getPrefetchDelay() + 1000),
@@ -345,7 +340,8 @@ public class TestPrefetchWithBucketCache {
     });
     if (bc.getStats().getFailedInserts() == 0) {
       // With no wait time configuration, prefetch should trigger evictions once it reaches
-      // cache capacity
+      // cache capacity. Writer threads can finish draining slightly after queue.offer returns.
+      Waiter.waitFor(conf, 15000, () -> bc.getStats().getEvictedCount() > 0);
       assertNotEquals(0, bc.getStats().getEvictedCount());
     } else {
       LOG.info("We had {} cache insert failures, which may cause cache usage "
@@ -378,15 +374,15 @@ public class TestPrefetchWithBucketCache {
   }
 
   @Test
-  public void testPrefetchMetricProgressForLinks() throws Exception {
+  public void testPrefetchMetricProgressForLinks(TestInfo testInfo) throws Exception {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 200);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
-    final RegionInfo hri =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    final RegionInfo hri = RegionInfoBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
-    Path testDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    Path testDir = TEST_UTIL.getDataTestDir(testInfo.getTestMethod().get().getName());
     CommonFSUtils.setRootDir(testConf, testDir);
     Path tableDir = CommonFSUtils.getTableDir(testDir, hri.getTable());
     RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
@@ -403,8 +399,8 @@ public class TestPrefetchWithBucketCache {
     Waiter.waitFor(testConf, 300, () -> bc.getBackingMap().size() == 6);
     long cachedSize = bc.getRegionCachedInfo().get().get(region.getEncodedName());
 
-    final RegionInfo dstHri =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    final RegionInfo dstHri = RegionInfoBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     HRegionFileSystem dstRegionFs = HRegionFileSystem.createRegionOnFileSystem(testConf, fs,
       CommonFSUtils.getTableDir(testDir, dstHri.getTable()), dstHri);
 
@@ -436,18 +432,18 @@ public class TestPrefetchWithBucketCache {
   }
 
   @Test
-  public void testPrefetchMetricProgressForLinksToArchived() throws Exception {
+  public void testPrefetchMetricProgressForLinksToArchived(TestInfo testInfo) throws Exception {
     conf.setLong(BUCKET_CACHE_SIZE_KEY, 200);
     blockCache = BlockCacheFactory.createBlockCache(conf);
     cacheConf = new CacheConfig(conf, blockCache);
 
     // force temp data in hbase/target/test-data instead of /tmp/hbase-xxxx/
     Configuration testConf = new Configuration(this.conf);
-    Path testDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    Path testDir = TEST_UTIL.getDataTestDir(testInfo.getTestMethod().get().getName());
     CommonFSUtils.setRootDir(testConf, testDir);
 
-    final RegionInfo hri =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    final RegionInfo hri = RegionInfoBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     Path tableDir = CommonFSUtils.getTableDir(testDir, hri.getTable());
     RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(tableDir.getName())).build();
     Path regionDir = new Path(tableDir, region.getEncodedName());

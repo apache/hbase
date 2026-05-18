@@ -17,23 +17,21 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.NoopProcedure;
 import org.apache.hadoop.hbase.procedure2.store.ProcedureStore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,12 +39,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Int32Value;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.ProcedureState;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestProcedureEvents {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureEvents.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureEvents.class);
 
@@ -58,7 +53,7 @@ public class TestProcedureEvents {
   private FileSystem fs;
   private Path logDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     Path testDir = htu.getDataTestDir();
@@ -72,7 +67,7 @@ public class TestProcedureEvents {
     ProcedureTestingUtility.initAndStartWorkers(procExecutor, 1, true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     procExecutor.stop();
     procStore.stop(false);
@@ -174,7 +169,7 @@ public class TestProcedureEvents {
     @Override
     protected synchronized boolean setTimeoutFailure(final TestProcEnv env) {
       int n = ntimeouts.incrementAndGet();
-      LOG.info("HANDLE TIMEOUT " + this + " ntimeouts=" + n);
+      LOG.info("HANDLE TIMEOUT {} ntimeouts={}", this, n);
       setState(ProcedureState.RUNNABLE);
       event.wake((AbstractProcedureScheduler) env.getProcedureScheduler());
       return false;

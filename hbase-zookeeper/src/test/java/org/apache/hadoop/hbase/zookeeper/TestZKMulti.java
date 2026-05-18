@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +28,6 @@ import java.util.LinkedList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
@@ -38,22 +37,19 @@ import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.KeeperException;
 import org.apache.zookeeper.Op;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test ZooKeeper multi-update functionality.
  */
-@Category({ ZKTests.class, MediumTests.class })
+@Tag(ZKTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestZKMulti {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKMulti.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKMulti.class);
   private final static HBaseZKTestingUtil TEST_UTIL = new HBaseZKTestingUtil();
@@ -71,7 +67,7 @@ public class TestZKMulti {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -79,7 +75,7 @@ public class TestZKMulti {
     zkw = new ZKWatcher(conf, "TestZKMulti", abortable, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -314,9 +310,9 @@ public class TestZKMulti {
 
     ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode);
 
-    assertTrue("Wrongly deleted parent znode!", ZKUtil.checkExists(zkw, parentZNode) > -1);
+    assertTrue(ZKUtil.checkExists(zkw, parentZNode) > -1, "Wrongly deleted parent znode!");
     List<String> children = zkw.getRecoverableZooKeeper().getChildren(parentZNode, false);
-    assertEquals("Failed to delete child znodes!", 0, children.size());
+    assertEquals(0, children.size(), "Failed to delete child znodes!");
   }
 
   /**
@@ -329,7 +325,7 @@ public class TestZKMulti {
     createZNodeTree(parentZNode);
 
     ZKUtil.deleteNodeRecursively(zkw, parentZNode);
-    assertEquals("Parent znode should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode));
+    assertEquals(-1, ZKUtil.checkExists(zkw, parentZNode), "Parent znode should be deleted.");
   }
 
   @Test
@@ -343,9 +339,9 @@ public class TestZKMulti {
 
     ZKUtil.deleteNodeRecursivelyMultiOrSequential(zkw, false, parentZNode1, parentZNode2,
       parentZNode3);
-    assertEquals("Parent znode 1 should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode1));
-    assertEquals("Parent znode 2 should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode2));
-    assertEquals("Parent znode 3 should be deleted.", -1, ZKUtil.checkExists(zkw, parentZNode3));
+    assertEquals(-1, ZKUtil.checkExists(zkw, parentZNode1), "Parent znode 1 should be deleted.");
+    assertEquals(-1, ZKUtil.checkExists(zkw, parentZNode2), "Parent znode 2 should be deleted.");
+    assertEquals(-1, ZKUtil.checkExists(zkw, parentZNode3), "Parent znode 3 should be deleted.");
   }
 
   @Test
@@ -360,17 +356,17 @@ public class TestZKMulti {
     ZKUtil.deleteChildrenRecursivelyMultiOrSequential(zkw, true, parentZNode1, parentZNode2,
       parentZNode3);
 
-    assertTrue("Wrongly deleted parent znode 1!", ZKUtil.checkExists(zkw, parentZNode1) > -1);
+    assertTrue(ZKUtil.checkExists(zkw, parentZNode1) > -1, "Wrongly deleted parent znode 1!");
     List<String> children = zkw.getRecoverableZooKeeper().getChildren(parentZNode1, false);
-    assertEquals("Failed to delete child znodes of parent znode 1!", 0, children.size());
+    assertEquals(0, children.size(), "Failed to delete child znodes of parent znode 1!");
 
-    assertTrue("Wrongly deleted parent znode 2!", ZKUtil.checkExists(zkw, parentZNode2) > -1);
+    assertTrue(ZKUtil.checkExists(zkw, parentZNode2) > -1, "Wrongly deleted parent znode 2!");
     children = zkw.getRecoverableZooKeeper().getChildren(parentZNode2, false);
-    assertEquals("Failed to delete child znodes of parent znode 1!", 0, children.size());
+    assertEquals(0, children.size(), "Failed to delete child znodes of parent znode 1!");
 
-    assertTrue("Wrongly deleted parent znode 3!", ZKUtil.checkExists(zkw, parentZNode3) > -1);
+    assertTrue(ZKUtil.checkExists(zkw, parentZNode3) > -1, "Wrongly deleted parent znode 3!");
     children = zkw.getRecoverableZooKeeper().getChildren(parentZNode3, false);
-    assertEquals("Failed to delete child znodes of parent znode 1!", 0, children.size());
+    assertEquals(0, children.size(), "Failed to delete child znodes of parent znode 1!");
   }
 
   @Test

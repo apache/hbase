@@ -30,7 +30,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class HThreadedSelectorServerArgs extends TThreadedSelectorServer.Args {
-  private static final Logger LOG = LoggerFactory.getLogger(TThreadedSelectorServer.class);
+  private static final Logger LOG = LoggerFactory.getLogger(HThreadedSelectorServerArgs.class);
 
   /**
    * Number of selector threads for reading and writing socket

@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.mock;
@@ -37,26 +37,21 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBufferedMutatorOverAsyncBufferedMutator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBufferedMutatorOverAsyncBufferedMutator.class);
 
   private AsyncBufferedMutator asyncMutator;
 
@@ -66,7 +61,7 @@ public class TestBufferedMutatorOverAsyncBufferedMutator {
 
   private MockedStatic<Pair> mockedPair;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     asyncMutator = mock(AsyncBufferedMutator.class);
     when(asyncMutator.getWriteBufferSize()).thenReturn(1024L * 1024);
@@ -78,7 +73,7 @@ public class TestBufferedMutatorOverAsyncBufferedMutator {
     mockedPair = mockStatic(Pair.class);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     mockedPair.closeOnDemand();
     executor.shutdown();

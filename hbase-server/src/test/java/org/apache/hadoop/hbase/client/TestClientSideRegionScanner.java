@@ -18,11 +18,14 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -30,12 +33,13 @@ import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -44,25 +48,23 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestClientSideRegionScanner {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientSideRegionScanner.class);
-
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("test");
   private static final byte[] FAM_NAME = Bytes.toBytes("f");
@@ -73,19 +75,21 @@ public class TestClientSideRegionScanner {
   private TableDescriptor htd;
   private RegionInfo hri;
   private Scan scan;
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    this.methodName = testInfo.getTestMethod().get().getName();
     conf = TEST_UTIL.getConfiguration();
     rootDir = TEST_UTIL.getDefaultRootDirPath();
     fs = TEST_UTIL.getTestFileSystem();
@@ -97,14 +101,14 @@ public class TestClientSideRegionScanner {
   @Test
   public void testDefaultBlockCache() throws IOException {
     Configuration copyConf = new Configuration(conf);
-    ClientSideRegionScanner clientSideRegionScanner =
-      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
-
-    BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
-    assertNotNull(blockCache);
-    assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
-    assertTrue(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT
-        == blockCache.getMaxSize());
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
+      assertNotNull(blockCache);
+      assertThat(blockCache, instanceOf(IndexOnlyLruBlockCache.class));
+      assertEquals(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT,
+        blockCache.getMaxSize());
+    }
   }
 
   @Test
@@ -113,24 +117,24 @@ public class TestClientSideRegionScanner {
     // tiny 1MB fixed cache size
     long blockCacheFixedSize = 1024 * 1024L;
     copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
-    ClientSideRegionScanner clientSideRegionScanner =
-      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
-
-    BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
-    assertNotNull(blockCache);
-    assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
-    assertTrue(blockCacheFixedSize == blockCache.getMaxSize());
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
+      assertNotNull(blockCache);
+      assertThat(blockCache, instanceOf(IndexOnlyLruBlockCache.class));
+      assertEquals(blockCacheFixedSize, blockCache.getMaxSize());
+    }
   }
 
   @Test
   public void testNoBlockCache() throws IOException {
     Configuration copyConf = new Configuration(conf);
     copyConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
-    ClientSideRegionScanner clientSideRegionScanner =
-      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
-
-    BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
-    assertNull(blockCache);
+    try (ClientSideRegionScanner clientSideRegionScanner =
+      new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+      BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
+      assertNull(blockCache);
+    }
   }
 
   @Test
@@ -160,27 +164,28 @@ public class TestClientSideRegionScanner {
       // Flush contents to disk so we can scan the fs
       TEST_UTIL.getAdmin().flush(TABLE_NAME);
 
-      ClientSideRegionScanner clientSideRegionScanner =
-        new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null);
-      RegionScanner scannerSpy = spy(clientSideRegionScanner.scanner);
-      clientSideRegionScanner.scanner = scannerSpy;
-      Result result = clientSideRegionScanner.next();
+      try (ClientSideRegionScanner clientSideRegionScanner =
+        new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
+        RegionScanner scannerSpy = spy(clientSideRegionScanner.scanner);
+        clientSideRegionScanner.scanner = scannerSpy;
+        Result result = clientSideRegionScanner.next();
 
-      verify(scannerSpy, times(6)).nextRaw(anyList());
-      assertNotNull(result);
-      assertEquals(Bytes.toInt(result.getRow()), 5);
-      assertTrue(clientSideRegionScanner.hasMore);
-
-      for (int i = 6; i < 10; ++i) {
-        result = clientSideRegionScanner.next();
-        verify(scannerSpy, times(i + 1)).nextRaw(anyList());
+        verify(scannerSpy, times(6)).nextRaw(anyList());
         assertNotNull(result);
-        assertEquals(Bytes.toInt(result.getRow()), i);
-      }
+        assertEquals(Bytes.toInt(result.getRow()), 5);
+        assertTrue(clientSideRegionScanner.hasMore);
 
-      result = clientSideRegionScanner.next();
-      assertNull(result);
-      assertFalse(clientSideRegionScanner.hasMore);
+        for (int i = 6; i < 10; ++i) {
+          result = clientSideRegionScanner.next();
+          verify(scannerSpy, times(i + 1)).nextRaw(anyList());
+          assertNotNull(result);
+          assertEquals(Bytes.toInt(result.getRow()), i);
+        }
+
+        result = clientSideRegionScanner.next();
+        assertNull(result);
+        assertFalse(clientSideRegionScanner.hasMore);
+      }
     }
   }
 
@@ -207,11 +212,11 @@ public class TestClientSideRegionScanner {
       ScanMetrics scanMetricsFromScanner = clientSideRegionScanner.getScanMetrics();
       assertNotNull(scanMetricsFromScanner);
       if (scanMetrics != null) {
-        Assert.assertSame(scanMetrics, scanMetricsFromScanner);
+        assertSame(scanMetrics, scanMetricsFromScanner);
       }
       Map<String, Long> metricsMap = scanMetricsFromScanner.getMetricsMap(false);
-      Assert.assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
-      Assert.assertTrue(scanMetricsFromScanner.collectMetricsByRegion(false).isEmpty());
+      assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
+      assertTrue(scanMetricsFromScanner.collectMetricsByRegion(false).isEmpty());
     }
   }
 
@@ -236,19 +241,19 @@ public class TestClientSideRegionScanner {
       ScanMetrics scanMetricsFromScanner = clientSideRegionScanner.getScanMetrics();
       assertNotNull(scanMetricsFromScanner);
       if (scanMetrics != null) {
-        Assert.assertSame(scanMetrics, scanMetricsFromScanner);
+        assertSame(scanMetrics, scanMetricsFromScanner);
       }
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
         scanMetricsFromScanner.collectMetricsByRegion();
-      Assert.assertEquals(1, scanMetricsByRegion.size());
+      assertEquals(1, scanMetricsByRegion.size());
       for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
         .entrySet()) {
         ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
         Map<String, Long> metricsMap = entry.getValue();
-        Assert.assertEquals(hri.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());
-        Assert.assertNull(scanMetricsRegionInfo.getServerName());
-        Assert.assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
-        Assert.assertEquals((long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME),
+        assertEquals(hri.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());
+        assertNull(scanMetricsRegionInfo.getServerName());
+        assertTrue(metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME) > 0);
+        assertEquals((long) metricsMap.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME),
           scanMetricsFromScanner.countOfRowsScanned.get());
       }
     }
@@ -262,6 +267,75 @@ public class TestClientSideRegionScanner {
   @Test
   public void testScanMetricsByRegionWithScanMetricsAsInput() throws IOException {
     testScanMetricByRegion(new ScanMetrics());
+  }
+
+  @Test
+  public void testGetFilesRead() throws Exception {
+    // Create a table and add some data
+    TableName tableName = TableName.valueOf(methodName);
+    try (Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAME })) {
+      TableDescriptor tableHtd = TEST_UTIL.getAdmin().getDescriptor(tableName);
+      RegionInfo tableHri = TEST_UTIL.getAdmin().getRegions(tableName).get(0);
+
+      // Add some data
+      for (int i = 0; i < 5; i++) {
+        byte[] row = Bytes.toBytes(i);
+        Put put = new Put(row);
+        put.addColumn(FAM_NAME, row, row);
+        table.put(put);
+      }
+
+      // Flush contents to disk so we can scan the fs
+      TEST_UTIL.getAdmin().flush(tableName);
+
+      // Create ClientSideRegionScanner with the correct table descriptor and region info
+      Configuration copyConf = new Configuration(conf);
+      Scan tableScan = new Scan();
+      ClientSideRegionScanner clientSideRegionScanner =
+        new ClientSideRegionScanner(copyConf, fs, rootDir, tableHtd, tableHri, tableScan, null);
+
+      // Get expected file paths from the region before closing
+      // (after closing, the region will be closed too)
+      Set<Path> expectedFilePaths = new HashSet<>();
+      HStore store = clientSideRegionScanner.getRegion().getStore(FAM_NAME);
+      for (HStoreFile storeFile : store.getStorefiles()) {
+        Path qualifiedPath = fs.makeQualified(storeFile.getPath());
+        expectedFilePaths.add(qualifiedPath);
+      }
+      int expectedFileCount = expectedFilePaths.size();
+      assertTrue(expectedFileCount >= 1, "Should have at least one store file after flush");
+
+      // Before closing, should return empty set
+      Set<Path> filesReadBeforeClose = clientSideRegionScanner.getFilesRead();
+      assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing");
+
+      // Scan through some results
+      Result result;
+      int count = 0;
+      while ((result = clientSideRegionScanner.next()) != null && count < 3) {
+        assertNotNull(result, "Result should not be null");
+        count++;
+      }
+
+      // Still should return empty set before closing
+      filesReadBeforeClose = clientSideRegionScanner.getFilesRead();
+      assertTrue(filesReadBeforeClose.isEmpty(),
+        "Should return empty set before closing even after scanning");
+
+      // Close the scanner - this should collect files from the underlying scanner
+      clientSideRegionScanner.close();
+
+      // After closing, should return files from the underlying scanner
+      Set<Path> filesReadAfterClose = clientSideRegionScanner.getFilesRead();
+      // Verify exact file count
+      assertEquals(expectedFileCount, filesReadAfterClose.size(),
+        "Should have exact file count after closing");
+      // Verify exact file names match
+      assertEquals(expectedFilePaths, filesReadAfterClose,
+        "Should contain all expected file paths");
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
   }
 
   private static Put createPut(int rowAsInt) {

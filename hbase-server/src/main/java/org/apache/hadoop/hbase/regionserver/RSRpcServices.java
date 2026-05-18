@@ -234,6 +234,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanReques
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.RegionLoad;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BooleanMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.EmptyMsg;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.ManagedKeyEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameBytesPair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.NameInt64Pair;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
@@ -4056,6 +4059,42 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();
+  }
+
+  /**
+   * STUB - Refreshes the system key cache on the region server. Feature not yet implemented in
+   * precursor PR.
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg refreshSystemKeyCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
+    throw new ServiceException(
+      new UnsupportedOperationException("Key management feature not yet implemented"));
+  }
+
+  /**
+   * STUB - Ejects a specific managed key entry from the cache. Feature not yet implemented in
+   * precursor PR.
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public BooleanMsg ejectManagedKeyDataCacheEntry(final RpcController controller,
+    final ManagedKeyEntryRequest request) throws ServiceException {
+    throw new ServiceException(
+      new UnsupportedOperationException("Key management feature not yet implemented"));
+  }
+
+  /**
+   * STUB - Clears all entries in the managed key data cache. Feature not yet implemented in
+   * precursor PR.
+   */
+  @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
+  public EmptyMsg clearManagedKeyDataCache(final RpcController controller, final EmptyMsg request)
+    throws ServiceException {
+    throw new ServiceException(
+      new UnsupportedOperationException("Key management feature not yet implemented"));
   }
 
   RegionScannerContext checkQuotaAndGetRegionScannerContext(ScanRequest request,

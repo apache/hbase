@@ -79,7 +79,7 @@
     <div class="row">
 
     <section>
-<a href="http://hbase.apache.org/book.html#_rest">Apache HBase documentation about REST</a>
+<a href="https://hbase.apache.org/docs/external-apis#rest">Apache HBase documentation about REST</a>
     </section>
     </div>
 </div>

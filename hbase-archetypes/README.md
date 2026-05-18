@@ -17,9 +17,9 @@ specific language governing permissions and limitations
 under the License.
 -->
 
-#hbase-archetypes
+# hbase-archetypes
 
-##Overview
+## Overview
 The hbase-archetypes subproject of hbase provides an infrastructure for
 creation and maintenance of Maven archetypes<sup id="a1">[1](#f1)</sup>
 pertinent to HBase. Upon deployment to the archetype
@@ -30,9 +30,9 @@ end-user developers to autogenerate completely configured Maven projects
 `archetype:generate` goal of the
 maven-archetype-plugin<sup id="a4">[4](#f4)</sup>.
 
-##Notes for contributors and committers to the HBase project
+## Notes for contributors and committers to the HBase project
 
-####The structure of hbase-archetypes
+#### The structure of hbase-archetypes
 The hbase-archetypes project contains a separate subproject for each archetype.
 The top level components of such a subproject comprise a complete, standalone
 exemplar Maven project containing:
@@ -47,7 +47,7 @@ code `./src/main/.../HelloHBase.java` and `./src/test/.../TestHelloHBase.java`,
 (b) a `pom.xml` file establishing dependency upon hbase-client and test-scope
 dependency upon hbase-testing-util, and (c) a `log4j.properties` resource file.
 
-####How archetypes are created during the hbase install process
+#### How archetypes are created during the hbase install process
 During the `mvn install` process, all standalone exemplar projects in the
 `hbase-archetypes` subdirectory are first packaged/tested/installed, and then
 the following steps are executed in `hbase-archetypes/hbase-archetype-builder`
@@ -74,7 +74,7 @@ repository. (Note that installation of an archetype automatically includes
 invocation of integration-testing prior to install, which performs a test
 generation of a project from the archetype.)
 
-####How to add a new archetype to the hbase-archetypes collection
+#### How to add a new archetype to the hbase-archetypes collection
 1. Create a new subdirectory in `hbase-archetypes`, populated with a
 completely configured Maven project, which will serve as the exemplar project
 of the new archetype. (It may be most straightforward to simply copy the `src`
@@ -93,7 +93,7 @@ elements and `<transformationSet>` elements within the `<plugin>` elements
 `createArchetypes.sh` and `installArchetypes.sh` scripts in the
 `hbase-archetype-builder` subdirectory (using the existing entries as a guide).
 
-####How to do additional testing/inspection of an archetype in this collection
+#### How to do additional testing/inspection of an archetype in this collection
 Although integration-testing (which is automatically performed for each
 archetype during the install process) already performs test generation of a
 project from an archetype, it may often be advisable to do further manual
@@ -106,7 +106,7 @@ and can be tested locally by executing the following:
 This displays a numbered list of all locally-installed archetypes for the user
 to choose from for generation of a new Maven project.
 
-##Footnotes:
+## Footnotes:
 <b id="f1">1</b> -- [Maven Archetype
 ](http://maven.apache.org/archetype/index.html) ("About" page).
 -- [↩](#a1)

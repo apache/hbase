@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -30,19 +29,16 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserverTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWriteHeavyIncrementObserver.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     WriteHeavyIncrementObserverTestBase.setUp();
     UTIL.getAdmin()
@@ -50,6 +46,14 @@ public class TestWriteHeavyIncrementObserver extends WriteHeavyIncrementObserver
         .setCoprocessor(WriteHeavyIncrementObserver.class.getName())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build());
     TABLE = UTIL.getConnection().getTable(NAME);
+  }
+
+  @AfterAll
+  public static void tearDown() throws Exception {
+    if (TABLE != null) {
+      TABLE.close();
+    }
+    UTIL.shutdownMiniCluster();
   }
 
   @Test

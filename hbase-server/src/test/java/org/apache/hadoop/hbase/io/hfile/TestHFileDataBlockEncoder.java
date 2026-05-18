@@ -17,20 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
@@ -45,20 +45,18 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: dataBlockEncoding={0}, includesMemstoreTS={1}")
 public class TestHFileDataBlockEncoder {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileDataBlockEncoder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHFileDataBlockEncoder.class);
 
   private final Configuration conf = HBaseConfiguration.create();
   private final RedundantKVGenerator generator = new RedundantKVGenerator();
@@ -72,14 +70,14 @@ public class TestHFileDataBlockEncoder {
   public TestHFileDataBlockEncoder(HFileDataBlockEncoder blockEncoder, boolean includesMemstoreTS) {
     this.blockEncoder = blockEncoder;
     this.includesMemstoreTS = includesMemstoreTS;
-    System.err.println("Encoding: " + blockEncoder.getDataBlockEncoding() + ", includesMemstoreTS: "
+    LOG.info("Encoding: " + blockEncoder.getDataBlockEncoding() + ", includesMemstoreTS: "
       + includesMemstoreTS);
   }
 
   /**
    * Test putting and taking out blocks into cache with different encoding options.
    */
-  @Test
+  @TestTemplate
   public void testEncodingWithCache() throws IOException {
     testEncodingWithCacheInternals(false);
     testEncodingWithCacheInternals(true);
@@ -103,14 +101,14 @@ public class TestHFileDataBlockEncoder {
       assertEquals(block.getBufferReadOnly(), returnedBlock.getBufferReadOnly());
     } else {
       if (BlockType.ENCODED_DATA != returnedBlock.getBlockType()) {
-        System.out.println(blockEncoder);
+        LOG.info("" + blockEncoder);
       }
       assertEquals(BlockType.ENCODED_DATA, returnedBlock.getBlockType());
     }
   }
 
   /** Test for HBASE-5746. */
-  @Test
+  @TestTemplate
   public void testHeaderSizeInCacheWithoutChecksum() throws Exception {
     testHeaderSizeInCacheWithoutChecksumInternals(false);
     testHeaderSizeInCacheWithoutChecksumInternals(true);
@@ -138,7 +136,7 @@ public class TestHFileDataBlockEncoder {
   /**
    * Test encoding.
    */
-  @Test
+  @TestTemplate
   public void testEncoding() throws IOException {
     testEncodingInternals(false);
     testEncodingInternals(true);
@@ -148,7 +146,7 @@ public class TestHFileDataBlockEncoder {
    * Test encoding with offheap keyvalue. This test just verifies if the encoders work with DBB and
    * does not use the getXXXArray() API
    */
-  @Test
+  @TestTemplate
   public void testEncodingWithOffheapKeyValue() throws IOException {
     // usually we have just block without headers, but don't complicate that
     try {
@@ -228,20 +226,18 @@ public class TestHFileDataBlockEncoder {
     }
   }
 
-  /** Returns All possible data block encoding configurations */
-  @Parameters
-  public static Collection<Object[]> getAllConfigurations() {
-    List<Object[]> configurations = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> configurations = new ArrayList<>();
 
     for (DataBlockEncoding diskAlgo : DataBlockEncoding.values()) {
       for (boolean includesMemstoreTS : new boolean[] { false, true }) {
         HFileDataBlockEncoder dbe = (diskAlgo == DataBlockEncoding.NONE)
           ? NoOpDataBlockEncoder.INSTANCE
           : new HFileDataBlockEncoderImpl(diskAlgo);
-        configurations.add(new Object[] { dbe, includesMemstoreTS });
+        configurations.add(Arguments.of(dbe, includesMemstoreTS));
       }
     }
 
-    return configurations;
+    return configurations.stream();
   }
 }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -45,10 +45,10 @@ import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,8 +71,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  *      </pre>
  */
 @SuppressWarnings("deprecation")
-
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestMobCompaction extends IntegrationTestBase {
   protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMobCompaction.class);
 
@@ -104,7 +103,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
   private static volatile boolean run = true;
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = getTestingUtil(getConf());
     conf = util.getConfiguration();
@@ -129,7 +128,7 @@ public class IntegrationTestMobCompaction extends IntegrationTestBase {
     table = util.createTable(tableDescriptor, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
     if (util.isDistributedCluster()) {

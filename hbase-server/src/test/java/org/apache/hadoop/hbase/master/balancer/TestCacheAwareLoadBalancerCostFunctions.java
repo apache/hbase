@@ -17,32 +17,39 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
+import java.util.ArrayDeque;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.Deque;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.Size;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCacheAwareLoadBalancerCostFunctions.class);
 
   // Mapping of test -> expected cache cost
   private final float[] expectedCacheCost = { 0.0f, 0.0f, 0.5f, 1.0f, 0.0f, 0.572f, 0.0f, 0.075f };
@@ -185,12 +192,12 @@ public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerT
 
   private CacheAwareLoadBalancer loadBalancer = new CacheAwareLoadBalancer();
 
-  @BeforeClass
+  @BeforeAll
   public static void saveInitialConfiguration() {
     storedConfiguration = new Configuration(conf);
   }
 
-  @Before
+  @BeforeEach
   public void beforeEachTest() {
     conf = new Configuration(storedConfiguration);
     loadBalancer.loadConf(conf);
@@ -256,12 +263,105 @@ public class TestCacheAwareLoadBalancerCostFunctions extends StochasticBalancerT
     }
   }
 
+  /**
+   * When block-cache persistence, cold regions (below
+   * {@link CacheAwareLoadBalancer#LOW_CACHE_RATIO_FOR_RELOCATION_KEY}) together with RS-reported
+   * block-cache free bytes inflate plausible best placement so weighted cache cost crosses
+   * {@code minCostNeedBalance}; {@link StochasticLoadBalancer#needsBalance} returns true even with
+   * evenly spread region-count skew.
+   */
+  @Test
+  public void testNeedsBalanceWhenLowCacheRatioRegionsAndFreeBlockCacheSpace() {
+    conf.set(HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY, "/tmp/prefetch.persistence");
+    CacheAwareLoadBalancer lb = newCacheAwareBalancer(conf);
+    int regionSizeMb = 64;
+    long cacheFreeInBytes = regionSizeMb * 1024L * 1024L;
+    // simulates a cache ratio lower than
+    // CacheAwareLoadBalancer.LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT
+    float simulatedCacheRatio = 0.1f;
+    Map<ServerName, List<RegionInfo>> clusterServers =
+      mockClusterServersUnsorted(new int[] { 1, 1 }, 1);
+    List<RegionInfo> regions = new ArrayList<>();
+    clusterServers.values().forEach(regions::addAll);
+    List<ServerName> serversList = getServersInInsertionOrder(clusterServers);
+    Map<ServerName, Long> blockCacheFree = new HashMap<>();
+    blockCacheFree.put(serversList.get(0), 0L);
+    blockCacheFree.put(serversList.get(1), cacheFreeInBytes);
+    BalancerClusterState cluster = new BalancerClusterState(clusterServers,
+      buildRegionLoads(regions, simulatedCacheRatio, regionSizeMb), null, null,
+      Collections.emptyMap(), blockCacheFree);
+    lb.initCosts(cluster);
+    assertTrue(lb.needsBalance(
+      TableName.valueOf("testNeedsBalanceWhenLowCacheRatioRegionsAndFreeBlockCacheSpace"),
+      cluster));
+  }
+
+  /**
+   * Checks that needsBalance isn't true when regions report high cache ratios
+   */
+  @Test
+  public void testNeedsBalanceFalseWhenWarmRegionsDespiteFreeBlockCacheSpace() {
+    conf.set(HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY, "/tmp/prefetch.persistence");
+    CacheAwareLoadBalancer lb = newCacheAwareBalancer(conf);
+    int regionSizeMb = 64;
+    long cacheFreeInBytes = regionSizeMb * 1024L * 1024L;
+    Map<ServerName, List<RegionInfo>> clusterServers =
+      mockClusterServersUnsorted(new int[] { 1, 1 }, 1);
+    List<RegionInfo> all = new ArrayList<>();
+    clusterServers.values().forEach(all::addAll);
+    List<ServerName> serversList = getServersInInsertionOrder(clusterServers);
+    Map<ServerName, Long> blockCacheFree = new HashMap<>();
+    blockCacheFree.put(serversList.get(0), cacheFreeInBytes + 1024 * 1024);
+    blockCacheFree.put(serversList.get(1), cacheFreeInBytes + 1024 * 1024);
+    BalancerClusterState cluster =
+      new BalancerClusterState(clusterServers, buildRegionLoads(all, 1.0f, regionSizeMb), null,
+        null, Collections.emptyMap(), blockCacheFree);
+    lb.initCosts(cluster);
+    assertFalse(lb.needsBalance(
+      TableName.valueOf("testNeedsBalanceFalseWhenWarmRegionsDespiteFreeBlockCacheSpace"),
+      cluster));
+  }
+
+  private static CacheAwareLoadBalancer newCacheAwareBalancer(Configuration cfg) {
+    CacheAwareLoadBalancer lb = new CacheAwareLoadBalancer();
+    lb.setClusterInfoProvider(new DummyClusterInfoProvider(cfg));
+    lb.loadConf(cfg);
+    return lb;
+  }
+
+  private static Map<String, Deque<BalancerRegionLoad>>
+    buildRegionLoads(Collection<RegionInfo> regions, float cachedRatio, int regionSizeMb) {
+    RegionMetrics rm = mock(RegionMetrics.class);
+    when(rm.getReadRequestCount()).thenReturn(0L);
+    when(rm.getCpRequestCount()).thenReturn(0L);
+    when(rm.getWriteRequestCount()).thenReturn(0L);
+    when(rm.getMemStoreSize()).thenReturn(Size.ZERO);
+    when(rm.getStoreFileSize()).thenReturn(Size.ZERO);
+    when(rm.getRegionSizeMB()).thenReturn(new Size(regionSizeMb, Size.Unit.MEGABYTE));
+    when(rm.getCurrentRegionCachedRatio()).thenReturn(cachedRatio);
+
+    BalancerRegionLoad brl = new BalancerRegionLoad(rm);
+    Map<String, Deque<BalancerRegionLoad>> loads = new HashMap<>();
+    for (RegionInfo ri : regions) {
+      ArrayDeque<BalancerRegionLoad> dq = new ArrayDeque<>(1);
+      dq.add(brl);
+      loads.put(ri.getRegionNameAsString(), dq);
+      loads.put(ri.getEncodedName(), dq);
+    }
+    return loads;
+  }
+
+  private static List<ServerName>
+    getServersInInsertionOrder(Map<ServerName, List<RegionInfo>> cluster) {
+    return new ArrayList<>(cluster.keySet());
+  }
+
   private class MockClusterForCacheCost extends BalancerClusterState {
     private final Map<Pair<Integer, Integer>, Float> regionServerCacheRatio = new HashMap<>();
 
     public MockClusterForCacheCost(int[][] regionsArray) {
       // regions[0] is an array where index = serverIndex and value = number of regions
-      super(mockClusterServersUnsorted(regionsArray[0], 1), null, null, null, null);
+      super(mockClusterServersUnsorted(regionsArray[0], 1), null, null, null, null, null);
       Map<String, Pair<ServerName, Float>> oldCacheRatio = new HashMap<>();
       for (int i = 1; i < regionsArray.length; i++) {
         int regionIndex = i - 1;

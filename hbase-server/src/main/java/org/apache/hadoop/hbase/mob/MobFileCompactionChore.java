@@ -102,15 +102,15 @@ public class MobFileCompactionChore extends ScheduledChore {
                 hcd.getNameAsString());
               if (regionBatchSize == MobConstants.DEFAULT_MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE) {
                 LOG.debug(
-                  "Table={} cf ={}: batch MOB compaction is disabled, {}=0 -"
+                  "Table={} cf={}: batch MOB compaction is disabled, {}=0 -"
                     + " all regions will be compacted in parallel",
-                  htd.getTableName(), hcd.getNameAsString(), "hbase.mob.compaction.batch.size");
+                  htd.getTableName(), hcd.getNameAsString(),
+                  MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE);
                 admin.majorCompact(htd.getTableName(), hcd.getName());
               } else {
-                LOG.info(
-                  "Table={} cf={}: performing MOB major compaction in batches "
-                    + "'hbase.mob.compaction.batch.size'={}",
-                  htd.getTableName(), hcd.getNameAsString(), regionBatchSize);
+                LOG.info("Table={} cf={}: performing MOB major compaction in batches {}={}",
+                  htd.getTableName(), hcd.getNameAsString(),
+                  MobConstants.MOB_MAJOR_COMPACTION_REGION_BATCH_SIZE, regionBatchSize);
                 performMajorCompactionInBatches(admin, htd, hcd);
               }
             } else {

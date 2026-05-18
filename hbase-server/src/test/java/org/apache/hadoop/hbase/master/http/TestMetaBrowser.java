@@ -28,12 +28,12 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
+import java.util.stream.Collectors;
 import javax.servlet.http.HttpServletRequest;
-import org.apache.hadoop.hbase.ClearUserNamespacesAndTablesRule;
-import org.apache.hadoop.hbase.ConnectionRule;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.MiniClusterRule;
+import org.apache.hadoop.hbase.ConnectionExtension;
+import org.apache.hadoop.hbase.MiniClusterExtension;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.AsyncAdmin;
@@ -46,53 +46,63 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.RuleChain;
-import org.junit.rules.TestName;
-import org.junit.rules.TestRule;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 import org.apache.hbase.thirdparty.org.apache.commons.collections4.IterableUtils;
 
 /**
  * Cluster-backed correctness tests for the functionality provided by {@link MetaBrowser}.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMetaBrowser {
 
-  @ClassRule
-  public static final HBaseClassTestRule testRule =
-    HBaseClassTestRule.forClass(TestMetaBrowser.class);
-  @ClassRule
-  public static final MiniClusterRule miniClusterRule = MiniClusterRule.newBuilder().build();
+  @RegisterExtension
+  private static final MiniClusterExtension miniClusterExtension =
+    MiniClusterExtension.newBuilder().build();
 
-  private final ConnectionRule connectionRule =
-    ConnectionRule.createAsyncConnectionRule(miniClusterRule::createAsyncConnection);
-  private final ClearUserNamespacesAndTablesRule clearUserNamespacesAndTablesRule =
-    new ClearUserNamespacesAndTablesRule(connectionRule::getAsyncConnection);
-
-  @Rule
-  public TestRule rule =
-    RuleChain.outerRule(connectionRule).around(clearUserNamespacesAndTablesRule);
-
-  @Rule
-  public TestName testNameRule = new TestName();
+  @RegisterExtension
+  private static final ConnectionExtension connectionExtension =
+    ConnectionExtension.createAsyncConnectionExtension(miniClusterExtension::createAsyncConnection);
 
   private AsyncConnection connection;
   private AsyncAdmin admin;
 
-  @Before
+  @BeforeEach
   public void before() {
-    connection = connectionRule.getAsyncConnection();
+    connection = connectionExtension.getAsyncConnection();
     admin = connection.getAdmin();
+    clearTablesAndNamespaces().join();
+  }
+
+  private CompletableFuture<Void> clearTablesAndNamespaces() {
+    return admin.listTableNames(false).thenApply(tableNames -> tableNames.stream()
+      .map(
+        tableName -> disableIfEnabled(tableName).thenCompose(_void -> admin.deleteTable(tableName)))
+      .toArray(CompletableFuture[]::new)).thenCompose(CompletableFuture::allOf)
+      .thenCompose(_void -> admin.listNamespaceDescriptors())
+      .thenApply(nds -> nds.stream().map(NamespaceDescriptor::getName)
+        .filter(name -> !Objects.equals(name, NamespaceDescriptor.SYSTEM_NAMESPACE.getName()))
+        .filter(name -> !Objects.equals(name, NamespaceDescriptor.DEFAULT_NAMESPACE.getName()))
+        .collect(Collectors.toList()))
+      .thenCompose(namespaces -> CompletableFuture
+        .allOf(namespaces.stream().map(admin::deleteNamespace).toArray(CompletableFuture[]::new)));
+  }
+
+  private CompletableFuture<Void> disableIfEnabled(final TableName tableName) {
+    return admin.isTableEnabled(tableName)
+      .thenCompose(isEnabled -> isEnabled
+        ? admin.disableTable(tableName)
+        : CompletableFuture.completedFuture(null));
   }
 
   @Test
   public void noFilters() {
-    final String namespaceName = testNameRule.getMethodName();
+    final String namespaceName = "noFilters";
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
@@ -112,8 +122,8 @@ public class TestMetaBrowser {
   }
 
   @Test
-  public void limit() {
-    final String tableName = testNameRule.getMethodName();
+  public void limit(TestInfo testInfo) {
+    final String tableName = testInfo.getTestMethod().get().getName();
     createTable(TableName.valueOf(tableName), 8).join();
 
     final HttpServletRequest request = new MockRequestBuilder().setLimit(5).build();
@@ -130,8 +140,8 @@ public class TestMetaBrowser {
   }
 
   @Test
-  public void regionStateFilter() {
-    final String namespaceName = testNameRule.getMethodName();
+  public void regionStateFilter(TestInfo testInfo) {
+    final String namespaceName = testInfo.getTestMethod().get().getName();
     final TableName foo = TableName.valueOf(namespaceName, "foo");
     final TableName bar = TableName.valueOf(namespaceName, "bar");
 
@@ -152,8 +162,8 @@ public class TestMetaBrowser {
   }
 
   @Test
-  public void scanTableFilter() {
-    final String namespaceName = testNameRule.getMethodName();
+  public void scanTableFilter(TestInfo testInfo) {
+    final String namespaceName = testInfo.getTestMethod().get().getName();
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
@@ -171,8 +181,8 @@ public class TestMetaBrowser {
   }
 
   @Test
-  public void paginateWithReplicas() {
-    final String namespaceName = testNameRule.getMethodName();
+  public void paginateWithReplicas(TestInfo testInfo) {
+    final String namespaceName = testInfo.getTestMethod().get().getName();
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 
@@ -202,8 +212,8 @@ public class TestMetaBrowser {
   }
 
   @Test
-  public void paginateWithTableFilter() {
-    final String namespaceName = testNameRule.getMethodName();
+  public void paginateWithTableFilter(TestInfo testInfo) {
+    final String namespaceName = testInfo.getTestMethod().get().getName();
     final TableName a = TableName.valueOf("a");
     final TableName b = TableName.valueOf(namespaceName, "b");
 

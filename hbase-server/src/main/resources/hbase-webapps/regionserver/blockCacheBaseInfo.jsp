@@ -39,4 +39,4 @@
     <td>Block cache implementing class</td>
   </tr>
 </table>
-<p>See <a href="http://hbase.apache.org/book.html#block.cache">block cache</a> in the HBase Reference Guide for help.</p>
+<p>See <a href="https://hbase.apache.org/docs/architecture/regionserver#architecture-regionserver-block-cache">block cache</a> in the HBase Reference Guide for help.</p>

@@ -17,4 +17,4 @@
 # limitations under the License.
 
 echo "Replaced by ./dev-support/create-release/do-release-docker.sh script."
-echo "See http://hbase.apache.org/book.html#do-release-docker.sh"
+echo "See https://hbase.apache.org/docs/building-and-developing/releasing#making-a-release-candidate"

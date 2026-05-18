@@ -89,6 +89,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdminClient;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.mapreduce.MapreduceTestingShim;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -133,6 +134,7 @@ import org.apache.hadoop.hbase.zookeeper.EmptyWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.DFSClient;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -141,6 +143,7 @@ import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
 import org.apache.hadoop.mapred.TaskLog;
+import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.WatchedEvent;
@@ -200,6 +203,20 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination();
+
+  private Admin hbaseAdmin = null;
+
+  static {
+    // JmxCacheBuster may cause dead lock in test environment. As on master side, the table/region
+    // related metrics updating will finally lead to a meta access, so if meta is not online yet, we
+    // will block when updating while holding the metrics lock. But when we assign meta, there are
+    // bunch of places where we need to register a new metrics thus need to get the metrics lock,
+    // and then lead to a dead lock and cause the test to hang forever.
+    // The code is in hadoop so there is no easy way for us to fix, so here we just stop
+    // JmxCacheBuster to stabilize our tests first. See HBASE-30118 for more details and future
+    // plans.
+    JmxCacheBuster.stop();
+  }
 
   /**
    * Checks to see if a specific port is available.
@@ -683,6 +700,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     createDirAndSetProperty("dfs.journalnode.edits.dir");
     createDirAndSetProperty("dfs.provided.aliasmap.inmemory.leveldb.dir");
     createDirAndSetProperty("fs.s3a.committer.staging.tmp.path");
+
+    // disable metrics logger since it depend on commons-logging internal classes and we do not want
+    // commons-logging on our classpath
+    conf.setInt(DFSConfigKeys.DFS_NAMENODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
+    conf.setInt(DFSConfigKeys.DFS_DATANODE_METRICS_LOGGER_PERIOD_SECONDS_KEY, 0);
   }
 
   /**
@@ -2777,10 +2799,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Expire a ZooKeeper session as recommended in ZooKeeper documentation
-   * http://hbase.apache.org/book.html#trouble.zookeeper There are issues when doing this: [1]
-   * http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html [2]
-   * https://issues.apache.org/jira/browse/ZOOKEEPER-1105
+   * Expire a ZooKeeper session as recommended in ZooKeeper documentation <a href=
+   * "https://hbase.apache.org/docs/troubleshooting#troubleshooting-zookeeper">Troubleshooting
+   * ZooKeeper</a>
+   * <p/>
+   * There are issues when doing this:
+   * <ol>
+   * <li>http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html</li>
+   * <li>https://issues.apache.org/jira/browse/ZOOKEEPER-1105</li>
+   * </ol>
    * @param nodeZK      - the ZK watcher to expire
    * @param checkStatus - true to check if we can create a Table with the current configuration.
    */
@@ -2942,7 +2969,9 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
     return hbaseAdmin;
   }
 
-  private Admin hbaseAdmin = null;
+  public KeymetaAdminClient getKeymetaAdmin() throws IOException {
+    return new KeymetaAdminClient(getConnection());
+  }
 
   /**
    * Returns an {@link Hbck} instance. Needs be closed when done.

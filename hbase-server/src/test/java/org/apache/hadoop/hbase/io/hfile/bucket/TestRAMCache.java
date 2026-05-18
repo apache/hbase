@@ -17,10 +17,14 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.nio.ByteBuffer;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -33,20 +37,15 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRAMCache {
   private static final Logger LOG = LoggerFactory.getLogger(TestRAMCache.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRAMCache.class);
 
   // Define a mock HFileBlock.
   private static class MockHFileBlock extends HFileBlock {
@@ -92,8 +91,8 @@ public class TestRAMCache {
       new HFileContextBuilder().build(), ByteBuffAllocator.HEAP);
     RAMQueueEntry re = new RAMQueueEntry(key, blk, 1, false, false, false);
 
-    Assert.assertNull(cache.putIfAbsent(key, re));
-    Assert.assertEquals(cache.putIfAbsent(key, re), re);
+    assertNull(cache.putIfAbsent(key, re));
+    assertEquals(cache.putIfAbsent(key, re), re);
 
     CountDownLatch latch = new CountDownLatch(1);
     blk.setLatch(latch);
@@ -116,11 +115,11 @@ public class TestRAMCache {
     });
     t2.start();
     Thread.sleep(200);
-    Assert.assertFalse(removed.get());
+    assertFalse(removed.get());
 
     latch.countDown();
     Thread.sleep(200);
-    Assert.assertTrue(removed.get());
-    Assert.assertFalse(error.get());
+    assertTrue(removed.get());
+    assertFalse(error.get());
   }
 }

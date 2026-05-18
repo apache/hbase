@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -31,10 +31,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,12 +42,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * 1. Create table t1, t2 2. Load data to t1, t2 3 Full backup t1, t2 4 Delete t2 5 Load data to t1
  * 6 Incremental backup t1
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestIncrementalBackupDeleteTable extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackupDeleteTable.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIncrementalBackupDeleteTable.class);
 
@@ -78,7 +72,7 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
       t1.put(p1);
     }
 
-    Assert.assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH * 2);
+    assertEquals(TEST_UTIL.countRows(t1), NB_ROWS_IN_BATCH * 2);
     t1.close();
 
     // Delete table table2
@@ -106,11 +100,11 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
 
     // #5.2 - checking row count of tables for full restore
     Table hTable = conn.getTable(table1_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH);
+    assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH);
     hTable.close();
 
     hTable = conn.getTable(table2_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH);
+    assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH);
     hTable.close();
 
     // #6 - restore incremental backup for table1
@@ -120,7 +114,7 @@ public class TestIncrementalBackupDeleteTable extends TestBackupBase {
       tablesRestoreIncMultiple, tablesMapIncMultiple, true));
 
     hTable = conn.getTable(table1_restore);
-    Assert.assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2);
+    assertEquals(TEST_UTIL.countRows(hTable), NB_ROWS_IN_BATCH * 2);
     hTable.close();
     admin.close();
     conn.close();

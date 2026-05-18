@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.rest;
 
 import static org.apache.hadoop.hbase.rest.RESTServlet.HBASE_REST_SUPPORT_PROXYUSER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
@@ -30,7 +30,6 @@ import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
@@ -86,11 +85,10 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 import org.apache.http.util.EntityUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -101,12 +99,9 @@ import org.apache.hbase.thirdparty.javax.ws.rs.core.MediaType;
  * Test class for SPNEGO authentication on the HttpServer. Uses Kerby's MiniKDC and Apache
  * HttpComponents to verify that a simple Servlet is reachable via SPNEGO and unreachable w/o.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSecureRESTServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureRESTServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSecureRESTServer.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -130,7 +125,7 @@ public class TestSecureRESTServer {
   private static File wheelKeytab;
   private static File serviceKeytab;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupServer() throws Exception {
     final File target = new File(System.getProperty("user.dir"), "target");
     assertTrue(target.exists());
@@ -235,7 +230,7 @@ public class TestSecureRESTServer {
     instertData();
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopServer() throws Exception {
     try {
       if (null != server) {
@@ -356,7 +351,7 @@ public class TestSecureRESTServer {
       public String run() throws Exception {
         try (CloseableHttpResponse response = client.execute(get, context)) {
           final int statusCode = response.getStatusLine().getStatusCode();
-          assertEquals(response.getStatusLine().toString(), responseCode, statusCode);
+          assertEquals(responseCode, statusCode, response.getStatusLine().toString());
           HttpEntity entity = response.getEntity();
           return EntityUtils.toString(entity);
         }
@@ -414,8 +409,8 @@ public class TestSecureRESTServer {
         try (CloseableHttpResponse response = client.execute(put, context)) {
           final int statusCode = response.getStatusLine().getStatusCode();
           HttpEntity entity = response.getEntity();
-          assertEquals("Got response: " + EntityUtils.toString(entity),
-            HttpURLConnection.HTTP_FORBIDDEN, statusCode);
+          assertEquals(HttpURLConnection.HTTP_FORBIDDEN, statusCode,
+            "Got response: " + EntityUtils.toString(entity));
         }
         return null;
       }

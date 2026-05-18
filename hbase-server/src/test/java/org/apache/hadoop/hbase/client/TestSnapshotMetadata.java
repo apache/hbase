@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +26,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -39,25 +38,21 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test class to verify that metadata is consistent before and after a snapshot attempt.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestSnapshotMetadata {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotMetadata.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotMetadata.class);
 
@@ -96,7 +91,7 @@ public class TestSnapshotMetadata {
   private static FileSystem fs;
   private static Path rootDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
@@ -105,7 +100,7 @@ public class TestSnapshotMetadata {
     rootDir = UTIL.getHBaseCluster().getMaster().getMasterFileSystem().getRootDir();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -134,13 +129,13 @@ public class TestSnapshotMetadata {
       ConstantSizeRegionSplitPolicy.class.getName());
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     admin = UTIL.getAdmin();
     createTableWithNonDefaultProperties();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     SnapshotTestingUtils.deleteAllSnapshots(admin);
   }
@@ -288,8 +283,8 @@ public class TestSnapshotMetadata {
       admin.disableTable(originalTableName);
       ColumnFamilyDescriptor familyDescriptor = ColumnFamilyDescriptorBuilder.of(newFamilyName);
       admin.addColumnFamily(originalTableName, familyDescriptor);
-      assertTrue("New column family was not added.",
-        admin.getDescriptor(originalTableName).toString().contains(newFamilyNameAsString));
+      assertTrue(admin.getDescriptor(originalTableName).toString().contains(newFamilyNameAsString),
+        "New column family was not added.");
     }
 
     // restore it

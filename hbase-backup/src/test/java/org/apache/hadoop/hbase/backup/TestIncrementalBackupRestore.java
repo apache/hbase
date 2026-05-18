@@ -90,14 +90,14 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
       // #2 - insert some data to table
       Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
       LOG.debug("writing {} rows to {}", ADD_ROWS, table1);
-      assertEquals(HBaseTestingUtil.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3);
+      assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_FAM3, HBaseTestingUtil.countRows(t1));
       LOG.debug("written {} rows to {}", ADD_ROWS, table1);
       // additionally, insert rows to MOB cf
       int NB_ROWS_MOB = 111;
       insertIntoTable(conn, table1, mobName, 3, NB_ROWS_MOB);
       LOG.debug("written {} rows to {} to Mob enabled CF", NB_ROWS_MOB, table1);
       t1.close();
-      assertEquals(HBaseTestingUtil.countRows(t1), NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB);
+      assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS + NB_ROWS_MOB, HBaseTestingUtil.countRows(t1));
       Table t2 = conn.getTable(table2);
       Put p2;
       for (int i = 0; i < 5; i++) {
@@ -178,7 +178,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
 
       // #6.2 - checking row count of tables for full restore
       try (Table hTable = conn.getTable(table1_restore)) {
-        assertEquals(HBaseTestingUtil.countRows(hTable), NB_ROWS_IN_BATCH + NB_ROWS_FAM3);
+        assertEquals(NB_ROWS_IN_BATCH + NB_ROWS_FAM3, HBaseTestingUtil.countRows(hTable));
       }
 
       try (Table hTable = conn.getTable(table2_restore)) {
@@ -194,15 +194,15 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
         LOG.debug("After incremental restore: {}", hTable.getDescriptor());
         int countFamName = HBaseTestingUtil.countRows(hTable, famName);
         LOG.debug("f1 has " + countFamName + " rows");
-        assertEquals(countFamName, NB_ROWS_IN_BATCH + ADD_ROWS);
+        assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, countFamName);
 
         int countFam2Name = HBaseTestingUtil.countRows(hTable, fam2Name);
         LOG.debug("f2 has {} rows", countFam2Name);
-        assertEquals(countFam2Name, NB_ROWS_FAM2);
+        assertEquals(NB_ROWS_FAM2, countFam2Name);
 
         int countMobName = HBaseTestingUtil.countRows(hTable, mobName);
         LOG.debug("mob has {} rows", countMobName);
-        assertEquals(countMobName, NB_ROWS_MOB);
+        assertEquals(NB_ROWS_MOB, countMobName);
       }
 
       try (Table hTable = conn.getTable(table2_restore)) {

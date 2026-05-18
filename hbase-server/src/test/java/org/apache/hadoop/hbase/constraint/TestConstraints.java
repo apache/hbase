@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.constraint;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.constraint.TestConstraint.CheckWasRunConstraint;
@@ -33,27 +32,24 @@ import org.apache.hadoop.hbase.constraint.WorksConstraint.NameConstraint;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test reading/writing the constraints into the {@link TableDescriptorBuilder}.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConstraints {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConstraints.class);
-
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  private TableName getTableName(TestInfo testInfo) {
+    return TableName.valueOf(testInfo.getTestMethod().get().getName());
+  }
 
   @Test
-  public void testSimpleReadWrite() throws Exception {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
+  public void testSimpleReadWrite(TestInfo testInfo) throws Exception {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(testInfo));
     Constraints.add(builder, WorksConstraint.class);
 
     List<? extends Constraint> constraints =
@@ -75,8 +71,8 @@ public class TestConstraints {
   }
 
   @Test
-  public void testReadWriteWithConf() throws Exception {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
+  public void testReadWriteWithConf(TestInfo testInfo) throws Exception {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(testInfo));
     Constraints.add(builder, new Pair<>(CheckConfigurationConstraint.class,
       CheckConfigurationConstraint.getConfiguration()));
 
@@ -102,8 +98,8 @@ public class TestConstraints {
    * Test that Constraints are properly enabled, disabled, and removed
    */
   @Test
-  public void testEnableDisableRemove() throws Exception {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
+  public void testEnableDisableRemove(TestInfo testInfo) throws Exception {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(testInfo));
     // check general enabling/disabling of constraints
     // first add a constraint
     Constraints.add(builder, AllPassConstraint.class);
@@ -135,8 +131,8 @@ public class TestConstraints {
    * Test that when we update a constraint the ordering is not modified.
    */
   @Test
-  public void testUpdateConstraint() throws Exception {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
+  public void testUpdateConstraint(TestInfo testInfo) throws Exception {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(testInfo));
     Constraints.add(builder, CheckConfigurationConstraint.class, CheckWasRunConstraint.class);
     Constraints.setConfiguration(builder, CheckConfigurationConstraint.class,
       CheckConfigurationConstraint.getConfiguration());
@@ -156,18 +152,18 @@ public class TestConstraints {
    * it.
    */
   @Test
-  public void testRemoveUnsetConstraint() throws Exception {
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
+  public void testRemoveUnsetConstraint(TestInfo testInfo) throws Exception {
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(testInfo));
     Constraints.remove(builder);
     Constraints.remove(builder, AlsoWorks.class);
   }
 
   @Test
-  public void testConfigurationPreserved() throws Exception {
+  public void testConfigurationPreserved(TestInfo testInfo) throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean("_ENABLED", false);
     conf.setLong("_PRIORITY", 10);
-    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(name.getTableName());
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(getTableName(testInfo));
     Constraints.add(builder, AlsoWorks.class, conf);
     Constraints.add(builder, WorksConstraint.class);
     assertFalse(Constraints.enabled(builder.build(), AlsoWorks.class));

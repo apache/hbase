@@ -216,6 +216,14 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
       mrb.addGauge(Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_SIZE,
         MetricsRegionServerSource.MEMSTORE_SIZE_DESC), this.regionWrapper.getMemStoreSize());
       mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_HEAP_SIZE,
+          MetricsRegionServerSource.MEMSTORE_HEAP_SIZE_DESC),
+        this.regionWrapper.getMemStoreHeapSize());
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE,
+          MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE_DESC),
+        this.regionWrapper.getMemStoreOffHeapSize());
+      mrb.addGauge(
         Interns.info(regionNamePrefix + MetricsRegionServerSource.MAX_STORE_FILE_AGE,
           MetricsRegionServerSource.MAX_STORE_FILE_AGE_DESC),
         this.regionWrapper.getMaxStoreFileAge());
@@ -237,6 +245,10 @@ public class MetricsRegionSourceImpl implements MetricsRegionSource {
         Interns.info(regionNamePrefix + MetricsRegionServerSource.CURRENT_REGION_CACHE_RATIO,
           MetricsRegionServerSource.CURRENT_REGION_CACHE_RATIO_DESC),
         this.regionWrapper.getCurrentRegionCacheRatio());
+      mrb.addGauge(
+        Interns.info(regionNamePrefix + MetricsRegionServerSource.CURRENT_REGION_COLD_DATA_RATIO,
+          MetricsRegionServerSource.CURRENT_REGION_COLD_DATA_RATIO_DESC),
+        this.regionWrapper.getCurrentRegionColdDataRatio());
       mrb.addCounter(
         Interns.info(regionNamePrefix + MetricsRegionSource.COMPACTIONS_COMPLETED_COUNT,
           MetricsRegionSource.COMPACTIONS_COMPLETED_DESC),

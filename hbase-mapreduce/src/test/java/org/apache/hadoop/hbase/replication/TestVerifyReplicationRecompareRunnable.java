@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
@@ -37,21 +37,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.Counter;
 import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.counters.GenericCounter;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category({ ReplicationTests.class, SmallTests.class })
-@RunWith(MockitoJUnitRunner.class)
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestVerifyReplicationRecompareRunnable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplicationRecompareRunnable.class);
 
   @Mock
   private Table sourceTable;
@@ -77,12 +73,12 @@ public class TestVerifyReplicationRecompareRunnable {
     return Bytes.toBytes(ThreadLocalRandom.current().nextInt());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     for (VerifyReplication.Verifier.Counters counter : VerifyReplication.Verifier.Counters
       .values()) {
       Counter emptyCounter = new GenericCounter(counter.name(), counter.name());
-      when(context.getCounter(counter)).thenReturn(emptyCounter);
+      lenient().when(context.getCounter(counter)).thenReturn(emptyCounter);
     }
   }
 
@@ -136,7 +132,7 @@ public class TestVerifyReplicationRecompareRunnable {
   @Test
   public void itHandlesExceptionOnRecompare() throws IOException {
     when(sourceTable.get(any(Get.class))).thenThrow(new IOException("Error!"));
-    when(replicatedTable.get(any(Get.class))).thenReturn(genResult(5));
+    lenient().when(replicatedTable.get(any(Get.class))).thenReturn(genResult(5));
 
     VerifyReplicationRecompareRunnable runnable = new VerifyReplicationRecompareRunnable(context,
       genResult(5), null, VerifyReplication.Verifier.Counters.ONLY_IN_SOURCE_TABLE_ROWS, "",

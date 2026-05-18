@@ -17,29 +17,25 @@
  */
 package org.apache.hadoop.hbase.io.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMemorySizeUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemorySizeUtil.class);
 
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = new Configuration();
   }
@@ -85,5 +81,38 @@ public class TestMemorySizeUtil {
     conf.set(MemorySizeUtil.HBASE_REGION_SERVER_FREE_HEAP_MIN_MEMORY_SIZE_KEY, "0");
     minFreeHeapFraction = MemorySizeUtil.getRegionServerMinFreeHeapFraction(conf);
     assertEquals(0.0f, minFreeHeapFraction, 0.0f);
+  }
+
+  @Test
+  public void testGetMemstoreSizeInBytes() {
+    // when memstore size is not set, it should return -1
+    long memstoreSizeInBytes = MemorySizeUtil.getMemstoreSizeInBytes(conf);
+    assertEquals(-1, memstoreSizeInBytes);
+
+    long expectedMemstoreSizeInBytes = 123456L;
+    conf.setLong(MemorySizeUtil.MEMSTORE_MEMORY_SIZE_KEY, expectedMemstoreSizeInBytes);
+    memstoreSizeInBytes = MemorySizeUtil.getMemstoreSizeInBytes(conf);
+    assertEquals(expectedMemstoreSizeInBytes, memstoreSizeInBytes);
+
+    conf.set(MemorySizeUtil.MEMSTORE_MEMORY_SIZE_KEY, "10m");
+    memstoreSizeInBytes = MemorySizeUtil.getMemstoreSizeInBytes(conf);
+    assertEquals(10 * 1024 * 1024, memstoreSizeInBytes);
+
+    conf.set(MemorySizeUtil.MEMSTORE_MEMORY_SIZE_KEY, "2GB");
+    memstoreSizeInBytes = MemorySizeUtil.getMemstoreSizeInBytes(conf);
+    assertEquals(2L * 1024 * 1024 * 1024, memstoreSizeInBytes);
+  }
+
+  @Test
+  public void testGetGlobalMemStoreHeapPercent() {
+    // set memstore size to a small value
+    conf.setLong(MemorySizeUtil.MEMSTORE_MEMORY_SIZE_KEY, 1);
+    conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, 0.4f);
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.5f);
+    assertEquals(HConstants.HBASE_CLUSTER_MINIMUM_MEMORY_THRESHOLD, 0.2f, 0.0f);
+    float globalMemStoreHeapPercent = MemorySizeUtil.getGlobalMemStoreHeapPercent(conf, true);
+    assertTrue(globalMemStoreHeapPercent > 0.0f);
+    assertTrue(globalMemStoreHeapPercent < 0.4f);
+    MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
   }
 }

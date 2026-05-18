@@ -37,7 +37,7 @@
     permitting operation. This configuration is for the developer workstation
     only and __should not be used in production!__
 
-    See also https://hbase.apache.org/book.html#standalone_dist
+    See also https://hbase.apache.org/docs/configuration/hbase-run-models
   -->
   <property>
     <name>hbase.cluster.distributed</name>

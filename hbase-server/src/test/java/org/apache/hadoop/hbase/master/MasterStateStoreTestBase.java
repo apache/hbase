@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
-import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -44,8 +43,8 @@ import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public abstract class MasterStateStoreTestBase {
 
@@ -63,7 +62,7 @@ public abstract class MasterStateStoreTestBase {
     TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(MasterRegionFactory.STATE_FAMILY)).build();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
@@ -72,7 +71,7 @@ public abstract class MasterStateStoreTestBase {
     CHORE_SERVICE = new ChoreService("TestMasterStateStore");
     HFILE_CLEANER_POOL = DirScanPool.getHFileCleanerScanPool(conf);
     LOG_CLEANER_POOL = DirScanPool.getLogCleanerScanPool(conf);
-    Server server = mock(Server.class);
+    MasterServices server = mock(MasterServices.class);
     when(server.getConfiguration()).thenReturn(conf);
     when(server.getServerName())
       .thenReturn(ServerName.valueOf("localhost", 12345, EnvironmentEdgeManager.currentTime()));
@@ -94,7 +93,7 @@ public abstract class MasterStateStoreTestBase {
     UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     REGION.close(true);
     HFILE_CLEANER_POOL.shutdownNow();

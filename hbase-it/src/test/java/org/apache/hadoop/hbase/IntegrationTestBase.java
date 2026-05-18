@@ -27,8 +27,8 @@ import org.apache.hadoop.hbase.chaos.factories.MonkeyConstants;
 import org.apache.hadoop.hbase.chaos.factories.MonkeyFactory;
 import org.apache.hadoop.hbase.chaos.monkies.ChaosMonkey;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -136,7 +136,8 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     ChoreService choreService = null;
 
     // Launches chore for refreshing kerberos credentials if security is enabled.
-    // Please see http://hbase.apache.org/book.html#_running_canary_in_a_kerberos_enabled_cluster
+    // Please see
+    // https://hbase.apache.org/docs/operational-management/tools#running-canary-in-a-kerberos-enabled-cluster
     // for more details.
     final ScheduledChore authChore = AuthUtil.getAuthChore(conf);
     if (authChore != null) {
@@ -159,13 +160,13 @@ public abstract class IntegrationTestBase extends AbstractHBaseTool {
     return result;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     setUpCluster();
     setUpMonkey();
   }
 
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     cleanUpMonkey();
     cleanUpCluster();

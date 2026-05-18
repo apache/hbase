@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.Optional;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -36,31 +37,21 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestSettingTimeoutOnBlockingPoint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSettingTimeoutOnBlockingPoint.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM = Bytes.toBytes("f");
   private static final byte[] ROW1 = Bytes.toBytes("row1");
   private static final byte[] ROW2 = Bytes.toBytes("row2");
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
@@ -69,8 +60,8 @@ public class TestSettingTimeoutOnBlockingPoint {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
-  public static void setUpAfterClass() throws Exception {
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
@@ -92,9 +83,10 @@ public class TestSettingTimeoutOnBlockingPoint {
   }
 
   @Test
-  public void testRowLock() throws IOException {
-    TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(testName.getMethodName())
-      .setCoprocessor(SleepCoprocessor.class.getName()).build();
+  public void testRowLock(TestInfo testInfo) throws IOException {
+    TableDescriptor hdt =
+      TEST_UTIL.createModifyableTableDescriptor(testInfo.getTestMethod().get().getName())
+        .setCoprocessor(SleepCoprocessor.class.getName()).build();
     TEST_UTIL.createTable(hdt, new byte[][] { FAM }, TEST_UTIL.getConfiguration());
     TableName tableName = hdt.getTableName();
     Thread incrementThread = new Thread(() -> {
@@ -103,7 +95,7 @@ public class TestSettingTimeoutOnBlockingPoint {
           table.incrementColumnValue(ROW1, FAM, FAM, 1);
         }
       } catch (IOException e) {
-        Assert.fail(e.getMessage());
+        fail(e.getMessage());
       }
     });
     Thread getThread = new Thread(() -> {
@@ -112,7 +104,7 @@ public class TestSettingTimeoutOnBlockingPoint {
         Delete delete = new Delete(ROW1);
         table.delete(delete);
       } catch (IOException e) {
-        Assert.fail(e.getMessage());
+        fail(e.getMessage());
       }
     });
 

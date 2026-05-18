@@ -17,22 +17,16 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCopyTableToPeerClusterWithRpcUri extends CopyTableToPeerClusterTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCopyTableToPeerClusterWithRpcUri.class);
 
   @Override
   protected String[] getPeerClusterOptions() throws Exception {
     return new String[] { "--peer.uri=" + UTIL2.getZkConnectionURI() };
   }
-
 }

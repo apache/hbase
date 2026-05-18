@@ -20,12 +20,13 @@ package org.apache.hadoop.hbase.client;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -39,10 +40,12 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
@@ -58,28 +61,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestAsyncTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTable.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -95,13 +89,15 @@ public class TestAsyncTable {
 
   private static AsyncConnection ASYNC_CONN;
 
-  @Rule
-  public TestName testName = new TestName();
+  private static final AtomicInteger ROW_COUNTER = new AtomicInteger(0);
 
   private byte[] row;
 
-  @Parameter
-  public Supplier<AsyncTable<?>> getTable;
+  private final Supplier<AsyncTable<?>> getTable;
+
+  public TestAsyncTable(Supplier<AsyncTable<?>> getTable) {
+    this.getTable = getTable;
+  }
 
   private static AsyncTable<?> getRawTable() {
     return ASYNC_CONN.getTable(TABLE_NAME);
@@ -111,13 +107,12 @@ public class TestAsyncTable {
     return ASYNC_CONN.getTable(TABLE_NAME, ForkJoinPool.commonPool());
   }
 
-  @Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestAsyncTable::getRawTable },
-      new Supplier<?>[] { TestAsyncTable::getTable });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of((Supplier<AsyncTable<?>>) TestAsyncTable::getRawTable),
+      Arguments.of((Supplier<AsyncTable<?>>) TestAsyncTable::getTable));
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY,
       MAX_KEY_VALUE_SIZE);
@@ -128,22 +123,22 @@ public class TestAsyncTable {
     assertFalse(ASYNC_CONN.isClosed());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(ASYNC_CONN, true);
     assertTrue(ASYNC_CONN.isClosed());
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, InterruptedException, ExecutionException {
-    row = Bytes.toBytes(testName.getMethodName().replaceAll("[^0-9A-Za-z]", "_"));
+    row = Bytes.toBytes("row" + ROW_COUNTER.getAndIncrement());
     if (ASYNC_CONN.getAdmin().isTableDisabled(TABLE_NAME).get()) {
       ASYNC_CONN.getAdmin().enableTable(TABLE_NAME).get();
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSimple() throws Exception {
     AsyncTable<?> table = getTable.get();
     table.put(new Put(row).addColumn(FAMILY, QUALIFIER, VALUE)).get();
@@ -161,7 +156,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   public void testSimpleMultiple() throws Exception {
     AsyncTable<?> table = getTable.get();
     int count = 100;
@@ -206,7 +201,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   public void testIncrement() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
     int count = 100;
@@ -224,7 +219,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   public void testAppend() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
     int count = 10;
@@ -248,7 +243,7 @@ public class TestAsyncTable {
     assertArrayEquals(IntStream.range(0, count).toArray(), actual);
   }
 
-  @Test
+  @TestTemplate
   public void testMutateRow() throws InterruptedException, ExecutionException, IOException {
     AsyncTable<?> table = getTable.get();
     RowMutations mutation = new RowMutations(row);
@@ -280,7 +275,7 @@ public class TestAsyncTable {
   // Tests for old checkAndMutate API
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndPutForOldApi() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
@@ -304,7 +299,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndDeleteForOldApi() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
@@ -343,7 +338,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateForOldApi() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
@@ -388,7 +383,7 @@ public class TestAsyncTable {
     });
   }
 
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateWithTimeRangeForOldApi() throws Exception {
     AsyncTable<?> table = getTable.get();
@@ -429,7 +424,7 @@ public class TestAsyncTable {
     assertTrue(ok);
   }
 
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateWithSingleFilterForOldApi() throws Throwable {
     AsyncTable<?> table = getTable.get();
@@ -489,7 +484,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("A"))).get());
   }
 
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateWithMultipleFiltersForOldApi() throws Throwable {
     AsyncTable<?> table = getTable.get();
@@ -561,7 +556,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("A"))).get());
   }
 
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateWithTimestampFilterForOldApi() throws Throwable {
     AsyncTable<?> table = getTable.get();
@@ -593,7 +588,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).get());
   }
 
-  @Test
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateWithFilterAndTimeRangeForOldApi() throws Throwable {
     AsyncTable<?> table = getTable.get();
@@ -625,17 +620,19 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).get());
   }
 
-  @Test(expected = NullPointerException.class)
+  @TestTemplate
   @Deprecated
   public void testCheckAndMutateWithoutConditionForOldApi() {
-    getTable.get().checkAndMutate(row, FAMILY)
-      .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+    assertThrows(NullPointerException.class, () -> {
+      getTable.get().checkAndMutate(row, FAMILY)
+        .thenPut(new Put(row).addColumn(FAMILY, Bytes.toBytes("D"), Bytes.toBytes("d")));
+    });
   }
 
   // Tests for new CheckAndMutate API
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   public void testCheckAndPut() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
     AtomicInteger successCount = new AtomicInteger(0);
@@ -660,7 +657,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   public void testCheckAndDelete() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
     int count = 10;
@@ -700,7 +697,7 @@ public class TestAsyncTable {
   }
 
   @SuppressWarnings("FutureReturnValueIgnored")
-  @Test
+  @TestTemplate
   public void testCheckAndMutate() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = getTable.get();
     int count = 10;
@@ -748,7 +745,7 @@ public class TestAsyncTable {
     });
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateWithTimeRange() throws Exception {
     AsyncTable<?> table = getTable.get();
     final long ts = EnvironmentEdgeManager.currentTime() / 2;
@@ -796,7 +793,7 @@ public class TestAsyncTable {
     assertNull(result.getResult());
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateWithSingleFilter() throws Throwable {
     AsyncTable<?> table = getTable.get();
 
@@ -858,7 +855,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("A"))).get());
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateWithMultipleFilters() throws Throwable {
     AsyncTable<?> table = getTable.get();
 
@@ -931,7 +928,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("A"))).get());
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateWithTimestampFilter() throws Throwable {
     AsyncTable<?> table = getTable.get();
 
@@ -964,7 +961,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).get());
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateWithFilterAndTimeRange() throws Throwable {
     AsyncTable<?> table = getTable.get();
 
@@ -995,7 +992,7 @@ public class TestAsyncTable {
     assertFalse(table.exists(new Get(row).addColumn(FAMILY, Bytes.toBytes("C"))).get());
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndIncrement() throws Throwable {
     AsyncTable<?> table = getTable.get();
 
@@ -1054,7 +1051,7 @@ public class TestAsyncTable {
     assertEquals(3, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("B"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndAppend() throws Throwable {
     AsyncTable<?> table = getTable.get();
 
@@ -1117,7 +1114,7 @@ public class TestAsyncTable {
     assertEquals("bbb", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("B"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndRowMutations() throws Throwable {
     final byte[] q1 = Bytes.toBytes("q1");
     final byte[] q2 = Bytes.toBytes("q2");
@@ -1171,7 +1168,7 @@ public class TestAsyncTable {
 
   // Tests for batch version of checkAndMutate
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateBatch() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1256,7 +1253,7 @@ public class TestAsyncTable {
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateBatch2() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1338,7 +1335,7 @@ public class TestAsyncTable {
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateBatchWithFilter() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1449,7 +1446,7 @@ public class TestAsyncTable {
     assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("F"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndMutateBatchWithFilterAndTimeRange() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1496,7 +1493,7 @@ public class TestAsyncTable {
     assertEquals("f", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("F"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndIncrementBatch() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1533,7 +1530,7 @@ public class TestAsyncTable {
     assertEquals(0, Bytes.toLong(result.getValue(FAMILY, Bytes.toBytes("D"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndAppendBatch() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1571,7 +1568,7 @@ public class TestAsyncTable {
     assertEquals("d", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("D"))));
   }
 
-  @Test
+  @TestTemplate
   public void testCheckAndRowMutationsBatch() throws Throwable {
     AsyncTable<?> table = getTable.get();
     byte[] row2 = Bytes.toBytes(Bytes.toString(row) + "2");
@@ -1627,7 +1624,7 @@ public class TestAsyncTable {
     assertEquals("h", Bytes.toString(result.getValue(FAMILY, Bytes.toBytes("H"))));
   }
 
-  @Test
+  @TestTemplate
   public void testDisabled() throws InterruptedException, ExecutionException {
     ASYNC_CONN.getAdmin().disableTable(TABLE_NAME).get();
     try {
@@ -1640,61 +1637,113 @@ public class TestAsyncTable {
     }
   }
 
-  @Test
-  public void testInvalidPut() {
-    try {
-      getTable.get().put(new Put(Bytes.toBytes(0)));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
-    }
+  @TestTemplate
+  public void testInvalidMutation() throws Exception {
+    Consumer<Mutation> executeMutation = mutation -> {
+      if (mutation instanceof Put) {
+        getTable.get().put((Put) mutation);
+      } else if (mutation instanceof Increment) {
+        getTable.get().increment((Increment) mutation);
+      } else if (mutation instanceof Append) {
+        getTable.get().append((Append) mutation);
+      }
+    };
 
-    try {
-      getTable.get()
-        .put(new Put(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    Mutation[] emptyMutations =
+      { new Put(Bytes.toBytes(0)), new Increment(Bytes.toBytes(0)), new Append(Bytes.toBytes(0)) };
+
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
+
+    Mutation[] oversizedMutations =
+      { new Put(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(Bytes.toBytes(0)).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(Bytes.toBytes(0)).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]) };
+
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        executeMutation.accept(emptyMutations[i]);
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
+
+      // Test oversized mutation
+      try {
+        executeMutation.accept(oversizedMutations[i]);
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
-  @Test
-  public void testInvalidPutInRowMutations() throws IOException {
+  @TestTemplate
+  public void testInvalidMutationInRowMutations() throws IOException {
     final byte[] row = Bytes.toBytes(0);
-    try {
-      getTable.get().mutateRow(new RowMutations(row).add(new Put(row)));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
-    }
 
-    try {
-      getTable.get().mutateRow(new RowMutations(row)
-        .add(new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE])));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    Mutation[] emptyMutations = { new Put(row), new Increment(row), new Append(row) };
+
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
+
+    Mutation[] oversizedMutations =
+      { new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]) };
+
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        getTable.get().mutateRow(new RowMutations(row).add(emptyMutations[i]));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
+
+      // Test oversized mutation
+      try {
+        getTable.get().mutateRow(new RowMutations(row).add(oversizedMutations[i]));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
-  @Test
-  public void testInvalidPutInRowMutationsInCheckAndMutate() throws IOException {
+  @TestTemplate
+  public void testInvalidMutationInRowMutationsInCheckAndMutate() throws IOException {
     final byte[] row = Bytes.toBytes(0);
-    try {
-      getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
-        .build(new RowMutations(row).add(new Put(row))));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
-    }
 
-    try {
-      getTable.get().checkAndMutate(
-        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER).build(new RowMutations(row)
-          .add(new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]))));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    Mutation[] emptyMutations = { new Put(row), new Increment(row), new Append(row) };
+
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
+
+    Mutation[] oversizedMutations =
+      { new Put(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(row).addColumn(FAMILY, QUALIFIER, new byte[MAX_KEY_VALUE_SIZE]) };
+
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+          .build(new RowMutations(row).add(emptyMutations[i])));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
+
+      // Test oversized mutation
+      try {
+        getTable.get().checkAndMutate(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, QUALIFIER)
+          .build(new RowMutations(row).add(oversizedMutations[i])));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 }

@@ -23,12 +23,11 @@ package org.apache.hadoop.hbase.master.balancer;
  * periodically and restores the cache when it is restarted. This balancer implements a mechanism
  * where it maintains the amount by which a region is cached on a region server. During balancer
  * run, a region plan is generated that takes into account this cache information and tries to
- * move the regions so that the cache minimally impacted.
+ * move the regions so that the cache is minimally impacted.
  */
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 
-import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -45,6 +44,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -59,6 +59,30 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     "hbase.master.balancer.stochastic.throttling.cacheRatio";
   public static final float CACHE_RATIO_THRESHOLD_DEFAULT = 0.8f;
 
+  /**
+   * Below this cache ratio on the current host, a move may be considered for the free-space
+   * heuristic.
+   */
+  public static final String LOW_CACHE_RATIO_FOR_RELOCATION_KEY =
+    "hbase.master.balancer.cacheaware.lowCacheRatioThreshold";
+  public static final float LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT = 0.35f;
+
+  /**
+   * Optimistic region cache ratio assumed for cost purposes when a better host has free cache space
+   * (actual warmup is not modeled).
+   */
+  public static final String POTENTIAL_CACHE_RATIO_AFTER_MOVE_KEY =
+    "hbase.master.balancer.cacheaware.potentialCacheRatioAfterMove";
+  public static final float POTENTIAL_CACHE_RATIO_AFTER_MOVE_DEFAULT = 0.95f;
+
+  /**
+   * Minimum free block cache on a target server, as a multiple of the region's on-disk size in
+   * bytes, required to count that server as a relocation opportunity.
+   */
+  public static final String MIN_FREE_CACHE_SPACE_FACTOR_KEY =
+    "hbase.master.balancer.cacheaware.minFreeCacheSpaceFactor";
+  public static final float MIN_FREE_CACHE_SPACE_FACTOR_DEFAULT = 1.0f;
+
   public Float ratioThreshold;
 
   private Long sleepTime;
@@ -70,7 +94,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public synchronized void loadConf(Configuration configuration) {
+  public void loadConf(Configuration configuration) {
     this.configuration = configuration;
     this.costFunctions = new ArrayList<>();
     super.loadConf(configuration);
@@ -110,6 +134,23 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     updateRegionLoad();
   }
 
+  protected Map<ServerName, Long> getServerBlockCacheFreeBytes() {
+    if (clusterStatus == null) {
+      return null;
+    }
+    Map<ServerName, Long> map = new HashMap<>();
+    clusterStatus.getLiveServerMetrics().forEach((sn, sm) -> map.put(sn, sm.getCacheFreeSize()));
+    return map;
+  }
+
+  @Override
+  protected BalancerClusterState createState(Map<ServerName, List<RegionInfo>> clusterState,
+    Map<String, Deque<BalancerRegionLoad>> loads, RegionHDFSBlockLocationFinder finder,
+    RackManager rackManager) {
+    return new BalancerClusterState(clusterState, loads, finder, rackManager,
+      regionCacheRatioOnOldServerMap, getServerBlockCacheFreeBytes());
+  }
+
   /**
    * Collect the amount of region cached for all the regions from all the active region servers.
    */
@@ -130,7 +171,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         int regionSizeMB = (int) rm.getRegionSizeMB().get(Size.Unit.MEGABYTE);
 
         rload.add(new BalancerRegionLoad(rm));
-        // Maintain a map of region and it's total size. This is needed to calculate the cache
+        // Maintain a map of region and its total size. This is needed to calculate the cache
         // ratios for the regions cached on old region servers
         regionCacheRatioOnCurrentServerMap.put(regionEncodedName, new Pair<>(sn, regionSizeMB));
         loads.put(regionEncodedName, rload);
@@ -150,8 +191,16 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
           if (!ServerName.isSameAddress(currentServer, sn)) {
             int regionSizeMB =
               regionCacheRatioOnCurrentServerMap.get(regionEncodedName).getSecond();
+            // The coldDataSize accounts for data size classified as "cold" by DataTieringManager,
+            // which should be kept out of cache. We sum cold region size in the cache ratio, as we
+            // don't want to move regions with low cache ratio due to data classified as cold.
             float regionCacheRatioOnOldServer =
-              regionSizeMB == 0 ? 0.0f : (float) regionSizeInCache / regionSizeMB;
+              regionSizeMB
+                  == 0
+                    ? 0.0f
+                    : (float) (regionSizeInCache
+                      + sm.getRegionColdDataSize().getOrDefault(regionEncodedName, 0))
+                      / regionSizeMB;
             regionCacheRatioOnOldServerMap.put(regionEncodedName,
               new Pair<>(sn, regionCacheRatioOnOldServer));
           }
@@ -173,7 +222,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   @Override
-  public void throttle(RegionPlan plan) {
+  public long getThrottleDurationMs(RegionPlan plan) {
     Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
     if (
       rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())
@@ -181,6 +230,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     ) {
       LOG.debug("Moving region {} to server {} with cache ratio {}. No throttling needed.",
         plan.getRegionInfo().getEncodedName(), plan.getDestination(), rsRatio.getSecond());
+      return 0L;
     } else {
       if (rsRatio != null) {
         LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
@@ -193,11 +243,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             + "Throttling move for {}ms.",
           plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
       }
-      try {
-        Thread.sleep(sleepTime);
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
-      }
+      return sleepTime;
     }
   }
 
@@ -285,9 +331,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         return false;
       }
 
-      DecimalFormat df = new DecimalFormat("#");
-      df.setMaximumFractionDigits(4);
-
       float cacheRatioDiffThreshold = 0.6f;
 
       // Conditions for moving the region
@@ -307,7 +350,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
           LOG.debug(
             "Region {} moved from {} to {} as the region is cached {} equally on both servers",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], df.format(cacheRatioOnCurrentServer));
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer);
         }
         return true;
       }
@@ -324,8 +367,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
             "Region {} moved from {} to {} as region cache ratio {} is better than the current "
               + "cache ratio {}",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
-            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
-            df.format(cacheRatioOnCurrentServer));
+            cluster.servers[oldServerIndex], cacheRatioOnOldServer, cacheRatioOnCurrentServer);
         }
         return true;
       }
@@ -334,8 +376,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         LOG.debug(
           "Region {} not moved from {} to {} with current cache ratio {} and old cache ratio {}",
           cluster.regions[regionIndex], cluster.servers[currentServerIndex],
-          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer,
-          df.format(cacheRatioOnCurrentServer));
+          cluster.servers[oldServerIndex], cacheRatioOnCurrentServer, cacheRatioOnOldServer);
       }
       return false;
     }
@@ -391,7 +432,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         if (LOG.isDebugEnabled()) {
           LOG.debug(
             "CacheAwareSkewnessCandidateGenerator: Region {} moved from {} to {} as it "
-              + "was hosted their earlier",
+              + "was hosted there earlier",
             regionEncodedName, cluster.servers[thisServer].getHostname(),
             cluster.servers[otherServer].getHostname());
         }
@@ -482,6 +523,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     private static final String CACHE_COST_KEY = "hbase.master.balancer.stochastic.cacheCost";
     private double cacheRatio;
     private double bestCacheRatio;
+    private final float lowCacheRatioThreshold;
+    private final float potentialCacheRatioAfterMove;
+    private final float minFreeCacheSpaceFactor;
 
     private static final float DEFAULT_CACHE_COST = 20;
 
@@ -492,25 +536,87 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         !isPersistentCache ? 0.0f : conf.getFloat(CACHE_COST_KEY, DEFAULT_CACHE_COST));
       bestCacheRatio = 0.0;
       cacheRatio = 0.0;
+      lowCacheRatioThreshold =
+        conf.getFloat(LOW_CACHE_RATIO_FOR_RELOCATION_KEY, LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT);
+      potentialCacheRatioAfterMove = Math.min(1.0f, conf
+        .getFloat(POTENTIAL_CACHE_RATIO_AFTER_MOVE_KEY, POTENTIAL_CACHE_RATIO_AFTER_MOVE_DEFAULT));
+      minFreeCacheSpaceFactor =
+        conf.getFloat(MIN_FREE_CACHE_SPACE_FACTOR_KEY, MIN_FREE_CACHE_SPACE_FACTOR_DEFAULT);
     }
 
     @Override
     void prepare(BalancerClusterState cluster) {
       super.prepare(cluster);
-      cacheRatio = 0.0;
-      bestCacheRatio = 0.0;
-
-      for (int region = 0; region < cluster.numRegions; region++) {
-        cacheRatio += cluster.getOrComputeWeightedRegionCacheRatio(region,
-          cluster.regionIndexToServerIndex[region]);
-        bestCacheRatio += cluster.getOrComputeWeightedRegionCacheRatio(region,
-          getServerWithBestCacheRatioForRegion(region));
-      }
-
-      cacheRatio = bestCacheRatio == 0 ? 1.0 : cacheRatio / bestCacheRatio;
+      recomputeCacheRatio(cluster);
       if (LOG.isDebugEnabled()) {
         LOG.debug("CacheAwareCostFunction: Cost: {}", 1 - cacheRatio);
       }
+    }
+
+    private void recomputeCacheRatio(BalancerClusterState cluster) {
+      double[] currentWeighted = computeCurrentWeightedContributions(cluster);
+      double currentSum = 0.0;
+      double bestCacheSum = 0.0;
+      for (int region = 0; region < cluster.numRegions; region++) {
+        currentSum += currentWeighted[region];
+        // here we only get the server index where this region cache ratio is the highest
+        int serverIndexBestCache = cluster.getOrComputeServerWithBestRegionCachedRatio()[region];
+        double currentHighestCache =
+          cluster.getOrComputeWeightedRegionCacheRatio(region, serverIndexBestCache);
+        // Get a hypothetical best cache ratio for this region if any server has enough free cache
+        // to host it.
+        double potentialHighestCache =
+          potentialBestWeightedFromFreeCache(cluster, region, currentHighestCache);
+        double actualHighest = Math.max(currentHighestCache, potentialHighestCache);
+        bestCacheSum += actualHighest;
+      }
+      bestCacheRatio = bestCacheSum;
+      if (bestCacheSum <= 0.0) {
+        cacheRatio = cluster.numRegions == 0 ? 1.0 : 0.0;
+      } else {
+        cacheRatio = Math.min(1.0, currentSum / bestCacheSum);
+      }
+    }
+
+    private double[] computeCurrentWeightedContributions(BalancerClusterState cluster) {
+      int totalRegions = cluster.numRegions;
+      double[] contrib = new double[totalRegions];
+      for (int r = 0; r < totalRegions; r++) {
+        int s = cluster.regionIndexToServerIndex[r];
+        int sizeMb = cluster.getTotalRegionHFileSizeMB(r);
+        if (sizeMb <= 0) {
+          contrib[r] = 0.0;
+          continue;
+        }
+        contrib[r] = cluster.getOrComputeWeightedRegionCacheRatio(r, s);
+      }
+      return contrib;
+    }
+
+    /*
+     * If this region is cold in metrics and at least one RS (including its current host) reports
+     * enough free block cache to hold it, return an optimistic weighted cache score ({@link
+     * #potentialCacheRatioAfterMove} * region MB) so placement is not considered optimal solely
+     * from low ratios when capacity exists somewhere in the cluster.
+     */
+    private double potentialBestWeightedFromFreeCache(BalancerClusterState cluster, int region,
+      double currentHighestCache) {
+      float observedRatio = cluster.getObservedRegionCacheRatio(region);
+      if (observedRatio >= lowCacheRatioThreshold) {
+        return 0.0;
+      }
+      int regionSizeMb = cluster.getTotalRegionHFileSizeMB(region);
+      if (regionSizeMb <= 0) {
+        return 0.0;
+      }
+      long regionSizeBytes = (long) regionSizeMb * 1024L * 1024L;
+      long requiredFree = (long) (regionSizeBytes * minFreeCacheSpaceFactor);
+      for (int s = 0; s < cluster.numServers; s++) {
+        if (cluster.serverBlockCacheFreeSize[s] >= requiredFree) {
+          return Math.max(currentHighestCache, regionSizeMb * potentialCacheRatioAfterMove);
+        }
+      }
+      return 0.0;
     }
 
     @Override

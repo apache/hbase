@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupBoundaryTests extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupBoundaryTests.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBackupBoundaryTests.class);
 
@@ -66,33 +62,39 @@ public class TestBackupBoundaryTests extends TestBackupBase {
    * Verify that full backup fails on a single table that does not exist.
    * @throws Exception if doing the full backup fails
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testFullBackupSingleDNE() throws Exception {
-    LOG.info("test full backup fails on a single table that does not exist");
-    List<TableName> tables = toList("tabledne");
-    fullTableBackup(tables);
+    assertThrows(IOException.class, () -> {
+      LOG.info("test full backup fails on a single table that does not exist");
+      List<TableName> tables = toList("tabledne");
+      fullTableBackup(tables);
+    });
   }
 
   /**
    * Verify that full backup fails on multiple tables that do not exist.
    * @throws Exception if doing the full backup fails
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testFullBackupMultipleDNE() throws Exception {
-    LOG.info("test full backup fails on multiple tables that do not exist");
-    List<TableName> tables = toList("table1dne", "table2dne");
-    fullTableBackup(tables);
+    assertThrows(IOException.class, () -> {
+      LOG.info("test full backup fails on multiple tables that do not exist");
+      List<TableName> tables = toList("table1dne", "table2dne");
+      fullTableBackup(tables);
+    });
   }
 
   /**
    * Verify that full backup fails on tableset containing real and fake tables.
    * @throws Exception if doing the full backup fails
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testFullBackupMixExistAndDNE() throws Exception {
-    LOG.info("create full backup fails on tableset containing real and fake table");
+    assertThrows(IOException.class, () -> {
+      LOG.info("create full backup fails on tableset containing real and fake table");
 
-    List<TableName> tables = toList(table1.getNameAsString(), "tabledne");
-    fullTableBackup(tables);
+      List<TableName> tables = toList(table1.getNameAsString(), "tabledne");
+      fullTableBackup(tables);
+    });
   }
 }

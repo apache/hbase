@@ -17,27 +17,23 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.security.Permission;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseZKTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ZKTests.class, SmallTests.class })
+@Tag(ZKTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestZKMainServer {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKMainServer.class);
 
   // ZKMS calls System.exit. Catch the call and prevent exit using trick described up in
   // http://stackoverflow.com/questions/309396/java-how-to-test-methods-that-call-system-exit
@@ -109,7 +105,7 @@ public class TestZKMainServer {
     assertEquals("example.com:" + port, parser.parse(c));
     c.set("hbase.zookeeper.quorum", "example1.com,example2.com,example3.com");
     String ensemble = parser.parse(c);
-    assertTrue(port, ensemble.matches("(example[1-3]\\.com:1234,){2}example[1-3]\\.com:" + port));
+    assertTrue(ensemble.matches("(example[1-3]\\.com:1234,){2}example[1-3]\\.com:" + port), port);
 
     // multiple servers with its own port
     c.set("hbase.zookeeper.quorum", "example1.com:5678,example2.com:9012,example3.com:3456");
@@ -119,7 +115,7 @@ public class TestZKMainServer {
     // some servers without its own port, which will be assigned the default client port
     c.set("hbase.zookeeper.quorum", "example1.com:5678,example2.com:9012,example3.com");
     ensemble = parser.parse(c);
-    assertEquals(ensemble, "example1.com:5678,example2.com:9012,example3.com:" + port);
+    assertEquals("example1.com:5678,example2.com:9012,example3.com:" + port, ensemble);
 
     // multiple servers(IPv6) with its own port
     c.set("hbase.zookeeper.quorum",
@@ -140,7 +136,7 @@ public class TestZKMainServer {
       c.set("hbase.zookeeper.quorum", "[1001:db8:1::242:ac11:8], [2001:db8:1::242:df23:2]:9876,"
         + "[1001:db8:1::242:ac11:8:89:67]:5678");
       parser.parse(c);
-      Assert.fail("IPv6 address should be 8 groups.");
+      fail("IPv6 address should be 8 groups.");
     } catch (IllegalArgumentException e) {
       // expected
     }

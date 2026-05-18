@@ -17,32 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCoprocessorDescriptor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorDescriptor.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   @Test
   public void testBuild() {
@@ -61,7 +52,8 @@ public class TestCoprocessorDescriptor {
   }
 
   @Test
-  public void testSetCoprocessor() throws IOException {
+  public void testSetCoprocessor(TestInfo testInfo) throws IOException {
+    String name = testInfo.getTestMethod().get().getName();
     String propertyKey = "propertyKey";
     List<CoprocessorDescriptor> cps = new ArrayList<>();
     for (String className : Arrays.asList("className0", "className1", "className2")) {
@@ -71,8 +63,8 @@ public class TestCoprocessorDescriptor {
       cps.add(CoprocessorDescriptorBuilder.newBuilder(className).setJarPath(path)
         .setPriority(priority).setProperty(propertyKey, propertyValue).build());
     }
-    TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName())).setCoprocessors(cps).build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setCoprocessors(cps).build();
     for (CoprocessorDescriptor cp : cps) {
       boolean match = false;
       for (CoprocessorDescriptor that : tableDescriptor.getCoprocessorDescriptors()) {

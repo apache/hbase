@@ -17,26 +17,23 @@
  */
 package org.apache.hadoop.hbase.procedure2.store.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestProcedureStoreTracker {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureStoreTracker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcedureStoreTracker.class);
 
@@ -58,7 +55,7 @@ public class TestProcedureStoreTracker {
       }
       // All the proc that are not yet inserted should be result as deleted
       for (int j = i + 1; j < MAX_PROC; ++j) {
-        assertTrue(tracker.isDeleted(j) != ProcedureStoreTracker.DeleteState.NO);
+        assertNotSame(ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(j));
       }
     }
 
@@ -213,7 +210,7 @@ public class TestProcedureStoreTracker {
       if (hasProc) {
         assertEquals(ProcedureStoreTracker.DeleteState.NO, tracker.isDeleted(i));
       } else {
-        assertEquals("procId=" + i, ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(i));
+        assertEquals(ProcedureStoreTracker.DeleteState.YES, tracker.isDeleted(i), "procId=" + i);
       }
     }
   }
@@ -227,24 +224,24 @@ public class TestProcedureStoreTracker {
     for (int i = 0; i < procIds.length; ++i) {
       tracker.insert(procIds[i]);
     }
-    assertEquals(false, tracker.isEmpty());
+    assertFalse(tracker.isEmpty());
 
     for (int i = 0; i < procIds.length; ++i) {
       tracker.setDeletedIfModified(procIds[i] - 1);
       tracker.setDeletedIfModified(procIds[i]);
       tracker.setDeletedIfModified(procIds[i] + 1);
     }
-    assertEquals(true, tracker.isEmpty());
+    assertTrue(tracker.isEmpty());
 
     // test batch
     tracker.reset();
     for (int i = 0; i < procIds.length; ++i) {
       tracker.insert(procIds[i]);
     }
-    assertEquals(false, tracker.isEmpty());
+    assertFalse(tracker.isEmpty());
 
     tracker.setDeletedIfModified(procIds);
-    assertEquals(true, tracker.isEmpty());
+    assertTrue(tracker.isEmpty());
   }
 
   @Test

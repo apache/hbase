@@ -18,15 +18,14 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -49,11 +48,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,12 +60,9 @@ import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AccessControlProtos.AccessControlService;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestNamespaceCommands extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamespaceCommands.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceCommands.class);
@@ -122,7 +117,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
   private static String TEST_TABLE = TEST_NAMESPACE + ":testtable";
   private static byte[] TEST_FAMILY = Bytes.toBytes("f1");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     conf = UTIL.getConfiguration();
     enableSecurity(conf);
@@ -201,7 +196,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
     grantGlobal(UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.getAdmin().deleteNamespace(TEST_NAMESPACE);
     UTIL.getAdmin().deleteNamespace(TEST_NAMESPACE2);

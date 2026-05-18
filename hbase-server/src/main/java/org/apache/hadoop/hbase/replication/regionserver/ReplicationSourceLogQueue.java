@@ -37,7 +37,7 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class ReplicationSourceLogQueue {
-  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSource.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationSourceLogQueue.class);
   // Queues of logs to process, entry in format of walGroupId->queue,
   // each presents a queue for one wal group
   private Map<String, PriorityBlockingQueue<Path>> queues = new ConcurrentHashMap<>();

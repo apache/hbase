@@ -17,20 +17,19 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.lang.Thread.UncaughtExceptionHandler;
 import java.util.Set;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Make sure the {@link UncaughtExceptionHandler} will be called when there are unchecked exceptions
@@ -38,14 +37,11 @@ import org.junit.rules.ExpectedException;
  * <p/>
  * See HBASE-21875 and HBASE-21890 for more details.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRemoteProcedureDispatcherUncaughtExceptionHandler {
 
   private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemoteProcedureDispatcherUncaughtExceptionHandler.class);
 
   private static final class ExceptionHandler implements UncaughtExceptionHandler {
 
@@ -88,21 +84,18 @@ public class TestRemoteProcedureDispatcherUncaughtExceptionHandler {
     }
   }
 
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
   private ExceptionHandler handler;
 
   private Dispatcher dispatcher;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     handler = new ExceptionHandler();
     dispatcher = new Dispatcher(handler);
     dispatcher.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     dispatcher.stop();
     dispatcher = null;
@@ -112,8 +105,6 @@ public class TestRemoteProcedureDispatcherUncaughtExceptionHandler {
   @Test
   public void testSubmit() throws Throwable {
     String message = "inject error";
-    thrown.expect(RuntimeException.class);
-    thrown.expectMessage(message);
     dispatcher.submitTask(new Runnable() {
 
       @Override
@@ -121,14 +112,13 @@ public class TestRemoteProcedureDispatcherUncaughtExceptionHandler {
         throw new RuntimeException(message);
       }
     });
-    handler.get();
+    RuntimeException exception = assertThrows(RuntimeException.class, () -> handler.get());
+    assertEquals(message, exception.getMessage());
   }
 
   @Test
   public void testDelayedSubmit() throws Throwable {
     String message = "inject error";
-    thrown.expect(RuntimeException.class);
-    thrown.expectMessage(message);
     dispatcher.submitTask(new Runnable() {
 
       @Override
@@ -136,6 +126,7 @@ public class TestRemoteProcedureDispatcherUncaughtExceptionHandler {
         throw new RuntimeException(message);
       }
     }, 100, TimeUnit.MILLISECONDS);
-    handler.get();
+    RuntimeException exception = assertThrows(RuntimeException.class, () -> handler.get());
+    assertEquals(message, exception.getMessage());
   }
 }

@@ -19,18 +19,28 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+import java.util.function.Predicate;
+import java.util.function.Supplier;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.HDFSBlocksDistribution;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalancerDecision;
+import org.apache.hadoop.hbase.client.BalancerRejection;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.LoadBalancer;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -55,16 +65,16 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     LoggerFactory.getLogger(LoadBalancerPerformanceEvaluation.class.getName());
 
   private static final int DEFAULT_NUM_REGIONS = 1000000;
-  private static Option NUM_REGIONS_OPT = new Option("regions", true,
+  private static final Option NUM_REGIONS_OPT = new Option("regions", true,
     "Number of regions to consider by load balancer. Default: " + DEFAULT_NUM_REGIONS);
 
   private static final int DEFAULT_NUM_SERVERS = 1000;
-  private static Option NUM_SERVERS_OPT = new Option("servers", true,
+  private static final Option NUM_SERVERS_OPT = new Option("servers", true,
     "Number of servers to consider by load balancer. Default: " + DEFAULT_NUM_SERVERS);
 
   private static final String DEFAULT_LOAD_BALANCER =
     "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer";
-  private static Option LOAD_BALANCER_OPT = new Option("load_balancer", true,
+  private static final Option LOAD_BALANCER_OPT = new Option("load_balancer", true,
     "Type of Load Balancer to use. Default: " + DEFAULT_LOAD_BALANCER);
 
   private int numRegions;
@@ -85,6 +95,13 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz,
       LoadBalancer.class);
     loadBalancer = LoadBalancerFactory.getLoadBalancer(conf);
+    loadBalancer.setClusterInfoProvider(new DummyClusterInfoProvider(conf));
+    try {
+      loadBalancer.initialize();
+    } catch (IOException e) {
+      LOG.error("Failed to initialize load balancer", e);
+      throw new RuntimeException("Failed to initialize load balancer", e);
+    }
   }
 
   private void generateRegionsAndServers() {
@@ -152,19 +169,19 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     generateRegionsAndServers();
 
     String methodName = "roundRobinAssignment";
-    LOG.info("Calling " + methodName);
+    LOG.info("Calling {}", methodName);
     Stopwatch watch = Stopwatch.createStarted();
     loadBalancer.roundRobinAssignment(regions, servers);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "retainAssignment";
-    LOG.info("Calling " + methodName);
+    LOG.info("Calling {}", methodName);
     watch.reset().start();
     loadBalancer.retainAssignment(regionServerMap, servers);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "balanceCluster";
-    LOG.info("Calling " + methodName);
+    LOG.info("Calling {}", methodName);
     watch.reset().start();
 
     loadBalancer.balanceCluster(tableServerRegionMap);
@@ -177,5 +194,97 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     LoadBalancerPerformanceEvaluation tool = new LoadBalancerPerformanceEvaluation();
     tool.setConf(HBaseConfiguration.create());
     tool.run(args);
+  }
+
+  private static class DummyClusterInfoProvider implements ClusterInfoProvider {
+
+    private volatile Configuration conf;
+
+    public DummyClusterInfoProvider(Configuration conf) {
+      this.conf = conf;
+    }
+
+    @Override
+    public Configuration getConfiguration() {
+      return conf;
+    }
+
+    @Override
+    public Connection getConnection() {
+      return null;
+    }
+
+    @Override
+    public List<RegionInfo> getAssignedRegions() {
+      return Collections.emptyList();
+    }
+
+    @Override
+    public void unassign(RegionInfo regionInfo) throws IOException {
+
+    }
+
+    @Override
+    public TableDescriptor getTableDescriptor(TableName tableName) throws IOException {
+      return null;
+    }
+
+    @Override
+    public int getNumberOfTables() throws IOException {
+      return 0;
+    }
+
+    @Override
+    public HDFSBlocksDistribution computeHDFSBlocksDistribution(Configuration conf,
+      TableDescriptor tableDescriptor, RegionInfo regionInfo) throws IOException {
+      return new HDFSBlocksDistribution();
+    }
+
+    @Override
+    public boolean hasRegionReplica(Collection<RegionInfo> regions) throws IOException {
+      return false;
+    }
+
+    @Override
+    public List<ServerName> getOnlineServersList() {
+      return Collections.emptyList();
+    }
+
+    @Override
+    public List<ServerName> getOnlineServersListWithPredicator(List<ServerName> servers,
+      Predicate<ServerMetrics> filter) {
+      return Collections.emptyList();
+    }
+
+    @Override
+    public Map<ServerName, List<RegionInfo>>
+      getSnapShotOfAssignment(Collection<RegionInfo> regions) {
+      return Collections.emptyMap();
+    }
+
+    @Override
+    public boolean isOffPeakHour() {
+      return false;
+    }
+
+    @Override
+    public void recordBalancerDecision(Supplier<BalancerDecision> decision) {
+
+    }
+
+    @Override
+    public void recordBalancerRejection(Supplier<BalancerRejection> rejection) {
+
+    }
+
+    @Override
+    public ServerMetrics getLoad(ServerName serverName) {
+      return null;
+    }
+
+    @Override
+    public void onConfigurationChange(Configuration conf) {
+      this.conf = conf;
+    }
   }
 }

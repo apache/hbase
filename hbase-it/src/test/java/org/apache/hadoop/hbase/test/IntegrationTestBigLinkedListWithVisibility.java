@@ -66,8 +66,8 @@ import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.TextOutputFormat;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -91,7 +91,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * 20000 /tmp 1 10000 or ./hbase org.apache.hadoop.hbase.IntegrationTestsDriver -r
  * .*IntegrationTestBigLinkedListWithVisibility.*
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestBigLinkedList {
 
   private static final String CONFIDENTIAL = "confidential";
@@ -635,7 +635,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       new String[] { "1", "1", "20000",
         util.getDataTestDirOnTestFS("IntegrationTestBigLinkedListWithVisibility").toString(), "1",
         "10000" });
-    org.junit.Assert.assertEquals(0, ret);
+    org.junit.jupiter.api.Assertions.assertEquals(0, ret);
   }
 
   public static void main(String[] args) throws Exception {

@@ -512,6 +512,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegions(tableName).toCompletableFuture();
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegions(tableName, regions).toCompletableFuture();
+  }
+
+  @Override
   public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
     throws IOException {
     return admin.modifyTableStoreFileTracker(tableName, dstSFT);

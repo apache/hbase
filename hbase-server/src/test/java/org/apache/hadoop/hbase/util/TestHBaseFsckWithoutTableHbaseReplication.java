@@ -17,52 +17,46 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseFsckWithoutTableHbaseReplication {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseFsckWithoutTableHbaseReplication.class);
-
-  @ClassRule
-  public static final TestName name = new TestName();
-
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
-  private static final TableName tableName =
-    TableName.valueOf("replication_" + name.getMethodName());
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     UTIL.getConfiguration().setBoolean("hbase.write.hbck1.lock.file", false);
+    TableName tableName =
+      TableName.valueOf("replication_" + testInfo.getTestMethod().get().getName());
     UTIL.getConfiguration().set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME,
       tableName.getNameAsString());
     UTIL.startMiniCluster(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void test() throws Exception {
+  public void test(TestInfo testInfo) throws Exception {
+    TableName tableName =
+      TableName.valueOf("replication_" + testInfo.getTestMethod().get().getName());
     assertFalse(UTIL.getAdmin().tableExists(tableName));
     HBaseFsck hBaseFsck = HbckTestingUtil.doFsck(UTIL.getConfiguration(), true);
     assertEquals(0, hBaseFsck.getRetCode());

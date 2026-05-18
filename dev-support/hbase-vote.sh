@@ -149,8 +149,8 @@ function verify_checksums() {
 }
 
 function unzip_from_source() {
-    tar -zxvf hbase-"${HBASE_VERSION}"-src.tar.gz
-    cd hbase-"${HBASE_VERSION}"
+    tar -zxvf *-src.tar.gz
+    cd "$(tar -tzf *-src.tar.gz | head -1 | cut -d/ -f1)"
 }
 
 function rat_test() {

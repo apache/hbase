@@ -26,6 +26,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
@@ -77,6 +79,16 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   private FavoredNodesManager favoredNodesManager;
   private volatile RSGroupInfoManager rsGroupInfoManager;
   private volatile LoadBalancer internalBalancer;
+
+  /**
+   * Tracks whether a balance run is currently in progress.
+   */
+  private final AtomicBoolean isBalancing = new AtomicBoolean(false);
+
+  /**
+   * Holds a configuration update that arrived while a balance run was in progress.
+   */
+  private AtomicReference<Configuration> pendingConfiguration = new AtomicReference<>();
 
   /**
    * Set this key to {@code true} to allow region fallback. Fallback to the default rsgroup first,
@@ -396,7 +408,26 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
   }
 
   @Override
-  public synchronized void onConfigurationChange(Configuration conf) {
+  public void onConfigurationChange(Configuration conf) {
+    // Refer to HBASE-29933
+    synchronized (this) {
+      // If balance is running, store configuration in pendingConfiguration and return immediately.
+      // Defer the config update.
+      if (isBalancing.get()) {
+        LOG.debug(
+          "Balance is in progress, defer applying configuration change until balance completed.");
+        pendingConfiguration.set(conf);
+      } else {
+        // Apply configuration change immediately.
+        updateConfiguration(conf);
+      }
+    }
+  }
+
+  /**
+   * Applies the given configuration.
+   */
+  private void updateConfiguration(Configuration conf) {
     boolean newFallbackEnabled = conf.getBoolean(FALLBACK_GROUP_ENABLE_KEY, false);
     if (fallbackEnabled != newFallbackEnabled) {
       LOG.info("Changing the value of {} from {} to {}", FALLBACK_GROUP_ENABLE_KEY, fallbackEnabled,
@@ -405,6 +436,51 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
     }
     provider.onConfigurationChange(conf);
     internalBalancer.onConfigurationChange(conf);
+  }
+
+  /**
+   * If a pending configuration was stored during a balance run, apply it and clear the pending
+   * reference.
+   */
+  public void applyPendingConfiguration() {
+    Configuration toApply = pendingConfiguration.getAndSet(null);
+    if (toApply != null) {
+      LOG.info("Applying pending configuration after balance completed.");
+      updateConfiguration(toApply);
+    }
+  }
+
+  /**
+   * Sets {@link #isBalancing} to {@code true} before a balance run starts.
+   */
+  @Override
+  public void onBalancingStart() {
+    LOG.debug("setting isBalancing to true as balance is starting");
+    isBalancing.set(true);
+  }
+
+  /**
+   * Sets {@link #isBalancing} to {@code false} after a balance run completes and applies any
+   * pending configuration that arrived during balancing.
+   */
+  @Override
+  public void onBalancingComplete() {
+    LOG.debug("setting isBalancing to false as balance is completed");
+    isBalancing.set(false);
+    applyPendingConfiguration();
+  }
+
+  @Override
+  public void throttle(RegionPlan plan) throws Exception {
+    long throttlingTime = internalBalancer.getThrottleDurationMs(plan);
+    if (throttlingTime > 0) {
+      try {
+        // Release the monitor while waiting to avoid blocking other threads.
+        wait(throttlingTime);
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
   }
 
   @Override

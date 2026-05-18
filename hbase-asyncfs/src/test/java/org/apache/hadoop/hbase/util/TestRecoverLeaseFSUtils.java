@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.RecoverLeaseFSUtils.LEASE_RECOVERABLE_CLASS_NAME;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -30,33 +30,32 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test our recoverLease loop against mocked up filesystem.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRecoverLeaseFSUtils {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecoverLeaseFSUtils.class);
-
   private static final HBaseCommonTestingUtil HTU = new HBaseCommonTestingUtil();
-  static {
+
+  private static Path FILE;
+
+  @BeforeAll
+  public static void setUp() {
     Configuration conf = HTU.getConfiguration();
     conf.setInt("hbase.lease.recovery.first.pause", 10);
     conf.setInt("hbase.lease.recovery.pause", 10);
+    FILE = new Path(HTU.getDataTestDir(), "file.txt");
   }
-
-  private static Path FILE = new Path(HTU.getDataTestDir(), "file.txt");
 
   /**
    * Test recover lease eventually succeeding.
@@ -80,22 +79,14 @@ public class TestRecoverLeaseFSUtils {
   }
 
   private interface FakeLeaseRecoverable {
-    @SuppressWarnings("unused")
-    boolean recoverLease(Path p) throws IOException;
 
-    @SuppressWarnings("unused")
-    boolean isFileClosed(Path p) throws IOException;
+    boolean recoverLease(Path p) throws IOException;
   }
 
   private static abstract class RecoverableFileSystem extends FileSystem
     implements FakeLeaseRecoverable {
     @Override
     public boolean recoverLease(Path p) throws IOException {
-      return true;
-    }
-
-    @Override
-    public boolean isFileClosed(Path p) throws IOException {
       return true;
     }
   }

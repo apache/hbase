@@ -20,14 +20,14 @@ package org.apache.hadoop.hbase.security.token;
 import static org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifier.HDFS_DELEGATION_KIND;
 import static org.apache.hadoop.hdfs.web.WebHdfsConstants.SWEBHDFS_TOKEN_KIND;
 import static org.apache.hadoop.hdfs.web.WebHdfsConstants.WEBHDFS_TOKEN_KIND;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
@@ -36,13 +36,13 @@ import org.apache.hadoop.hdfs.web.SWebHdfsFileSystem;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.security.token.Token;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFsDelegationToken {
   private UserProvider userProvider = Mockito.mock(UserProvider.class);
   private User user = Mockito.mock(User.class);
@@ -54,11 +54,7 @@ public class TestFsDelegationToken {
   private WebHdfsFileSystem swebHdfsFileSystem = Mockito.mock(SWebHdfsFileSystem.class);
   private FileSystem fileSystem = Mockito.mock(FileSystem.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFsDelegationToken.class);
-
-  @Before
+  @BeforeEach
   public void setup() throws IOException, URISyntaxException {
     when(userProvider.getCurrent()).thenReturn(user);
     when(userProvider.isHadoopSecurityEnabled()).thenReturn(true);
@@ -98,9 +94,10 @@ public class TestFsDelegationToken {
     assertEquals(fsDelegationToken.getUserToken().getKind(), SWEBHDFS_TOKEN_KIND);
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void acquireDelegationTokenByTokenKind_rejects_null_token_kind() throws IOException {
-    fsDelegationToken.acquireDelegationToken(null, fileSystem);
+    assertThrows(NullPointerException.class,
+      () -> fsDelegationToken.acquireDelegationToken(null, fileSystem));
   }
 
   @Test

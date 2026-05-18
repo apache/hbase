@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.nio.charset.StandardCharsets;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -34,20 +33,16 @@ import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.ContentType;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.ByteStreams;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHttpProxyExample {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHttpProxyExample.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -67,7 +62,7 @@ public class TestHttpProxyExample {
 
   private static int PORT;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.createTable(TABLE_NAME, Bytes.toBytes(FAMILY));
@@ -76,7 +71,7 @@ public class TestHttpProxyExample {
     PORT = PROXY.port();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (PROXY != null) {
       PROXY.stop();

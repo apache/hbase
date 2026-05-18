@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.List;
 import java.util.Map.Entry;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDeleteTimeStamp {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDeleteTimeStamp.class);
 
   private static final byte[] ROW = Bytes.toBytes("testRow");
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -53,7 +49,7 @@ public class TestDeleteTimeStamp {
     NavigableMap<byte[], List<Cell>> familyCellmap = delete.getFamilyCellMap();
     for (Entry<byte[], List<Cell>> entry : familyCellmap.entrySet()) {
       for (Cell cell : entry.getValue()) {
-        Assert.assertEquals(ts, cell.getTimestamp());
+        assertEquals(ts, cell.getTimestamp());
       }
     }
   }

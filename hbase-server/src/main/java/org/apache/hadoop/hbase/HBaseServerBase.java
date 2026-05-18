@@ -52,6 +52,10 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
+import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
@@ -69,6 +73,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
@@ -86,7 +91,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends Thread
-  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint {
+  implements Server, ConfigurationObserver, ConnectionRegistryEndpoint, KeyManagementService {
 
   private static final Logger LOG = LoggerFactory.getLogger(HBaseServerBase.class);
 
@@ -254,24 +259,20 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       this.msgInterval = conf.getInt("hbase.regionserver.msginterval", 3 * 1000);
       this.sleeper = new Sleeper(this.msgInterval, this);
       this.namedQueueRecorder = createNamedQueueRecord();
-      this.rpcServices = createRpcServices();
       useThisHostnameInstead = getUseThisHostnameInstead(conf);
-      InetSocketAddress addr = rpcServices.getSocketAddress();
-
-      // if use-ip is enabled, we will use ip to expose Master/RS service for client,
-      // see HBASE-27304 for details.
-      boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
-        HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
-      String isaHostName =
-        useIp ? addr.getAddress().getHostAddress() : addr.getAddress().getHostName();
-      String hostName =
-        StringUtils.isBlank(useThisHostnameInstead) ? isaHostName : useThisHostnameInstead;
-      serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
+      // Resolve the hostname up-front and log in before creating the RpcServer. The RpcServer
+      // constructor reads UserGroupInformation.getCurrentUser() (HBASE-28321); if the server
+      // has not logged in yet, UGI bootstraps from the ticket cache and spawns a TGT renewer
+      // for whichever principal happens to be there.
+      String hostName = resolveHostName(conf, useThisHostnameInstead);
       // login the zookeeper client principal (if using security)
       ZKAuthentication.loginClient(this.conf, HConstants.ZK_CLIENT_KEYTAB_FILE,
         HConstants.ZK_CLIENT_KERBEROS_PRINCIPAL, hostName);
       // login the server principal (if using secure Hadoop)
       login(userProvider, hostName);
+      this.rpcServices = createRpcServices();
+      InetSocketAddress addr = rpcServices.getSocketAddress();
+      serverName = ServerName.valueOf(hostName, addr.getPort(), this.startcode);
       // init superusers and add the server principal (if using security)
       // or process owner as default super user.
       Superusers.initialize(conf);
@@ -401,6 +402,21 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   @Override
   public ZKWatcher getZooKeeper() {
     return zooKeeper;
+  }
+
+  @Override
+  public KeymetaAdmin getKeymetaAdmin() {
+    return null;
+  }
+
+  @Override
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return null;
+  }
+
+  @Override
+  public SystemKeyCache getSystemKeyCache() {
+    return null;
   }
 
   protected final void shutdownChore(ScheduledChore chore) {
@@ -628,6 +644,11 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     postUpdateConfiguration();
   }
 
+  @Override
+  public KeyManagementService getKeyManagementService() {
+    return this;
+  }
+
   private void preUpdateConfiguration() throws IOException {
     CoprocessorHost<?, ?> coprocessorHost = getCoprocessorHost();
     if (coprocessorHost instanceof RegionServerCoprocessorHost) {
@@ -662,6 +683,21 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected abstract String getUseThisHostnameInstead(Configuration conf) throws IOException;
 
   protected abstract void login(UserProvider user, String host) throws IOException;
+
+  protected abstract DNS.ServerType getDNSServerType();
+
+  private String resolveHostName(Configuration conf, String useThisHostnameInstead)
+    throws IOException {
+    if (!StringUtils.isBlank(useThisHostnameInstead)) {
+      return useThisHostnameInstead;
+    }
+    // if use-ip is enabled, we will use ip to expose Master/RS service for client,
+    // see HBASE-27304 for details.
+    boolean useIp = conf.getBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY,
+      HConstants.HBASE_SERVER_USEIP_ENABLED_DEFAULT);
+    InetAddress addr = InetAddress.getByName(DNS.getHostname(conf, getDNSServerType()));
+    return useIp ? addr.getHostAddress() : addr.getHostName();
+  }
 
   protected abstract NamedQueueRecorder createNamedQueueRecord();
 

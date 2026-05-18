@@ -46,20 +46,9 @@ public interface MetricsTableSource extends Comparable<MetricsTableSource>, Clos
   MetricsTableAggregateSource getAggregateSource();
 
   /**
-   * Update the split transaction time histogram
-   * @param t time it took, in milliseconds
-   */
-  void updateSplitTime(long t);
-
-  /**
    * Increment number of a requested splits
    */
   void incrSplitRequest();
-
-  /**
-   * Increment number of successful splits
-   */
-  void incrSplitSuccess();
 
   /**
    * Update the flush time histogram

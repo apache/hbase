@@ -332,14 +332,10 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       Map<TableName, Map<String, Long>> newTableSetTimestampMap =
         backupManager.readLogTimestampMap();
 
-      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
-      Long newStartCode =
-        BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-      backupManager.writeBackupStartCode(newStartCode);
-
       List<BulkLoad> bulkLoads = handleBulkLoad(backupInfo.getTableNames());
 
       // backup complete
+      backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
       completeBackup(conn, backupInfo, BackupType.INCREMENTAL, conf);
 
       List<byte[]> bulkLoadedRows = Lists.transform(bulkLoads, BulkLoad::getRowKey);

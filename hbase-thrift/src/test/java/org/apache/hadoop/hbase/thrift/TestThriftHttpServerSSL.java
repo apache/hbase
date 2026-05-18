@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine.createBoundServer;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -32,7 +32,6 @@ import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLContext;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -53,21 +52,18 @@ import org.apache.http.ssl.SSLContexts;
 import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.TMemoryBuffer;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestThriftHttpServerSSL {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThriftHttpServerSSL.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThriftHttpServerSSL.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -79,7 +75,7 @@ public class TestThriftHttpServerSSL {
   private ThriftServerRunner tsr;
   private HttpPost httpPost = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(Constants.USE_HTTP_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
@@ -89,13 +85,13 @@ public class TestThriftHttpServerSSL {
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     EnvironmentEdgeManager.reset();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     initializeAlgorithmId();
     keyDir = initKeystoreDir();
@@ -134,7 +130,7 @@ public class TestThriftHttpServerSSL {
     httpPost.setHeader("User-Agent", "Java/THttpClient/HC");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (httpPost != null) {
       httpPost.releaseConnection();

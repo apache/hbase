@@ -17,55 +17,53 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestDefaultProviderSelector {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultProviderSelector.class);
 
   BuiltInProviderSelector selector;
 
-  @Before
+  @BeforeEach
   public void setup() {
     selector = new BuiltInProviderSelector();
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testExceptionOnMissingProviders() {
-    selector.configure(new Configuration(false), Collections.emptySet());
+    assertThrows(IllegalStateException.class,
+      () -> selector.configure(new Configuration(false), Collections.emptySet()));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullConfiguration() {
-    selector.configure(null, Collections.emptySet());
+    assertThrows(NullPointerException.class,
+      () -> selector.configure(null, Collections.emptySet()));
   }
 
-  @Test(expected = NullPointerException.class)
+  @Test
   public void testNullProviderMap() {
-    selector.configure(new Configuration(false), null);
+    assertThrows(NullPointerException.class, () -> selector.configure(new Configuration(), null));
   }
 
-  @Test(expected = IllegalStateException.class)
+  @Test
   public void testDuplicateProviders() {
     Set<SaslClientAuthenticationProvider> providers = new HashSet<>();
     providers.add(new SimpleSaslClientAuthenticationProvider());
     providers.add(new SimpleSaslClientAuthenticationProvider());
-    selector.configure(new Configuration(false), providers);
+    assertThrows(IllegalStateException.class,
+      () -> selector.configure(new Configuration(false), providers));
   }
 
   @Test
@@ -76,8 +74,8 @@ public class TestDefaultProviderSelector {
 
     selector.configure(new Configuration(false), providers);
 
-    assertNotNull("Simple provider was null", selector.simpleAuth);
-    assertNotNull("Kerberos provider was null", selector.krbAuth);
-    assertNotNull("Digest provider was null", selector.digestAuth);
+    assertNotNull(selector.simpleAuth, "Simple provider was null");
+    assertNotNull(selector.krbAuth, "Kerberos provider was null");
+    assertNotNull(selector.digestAuth, "Digest provider was null");
   }
 }

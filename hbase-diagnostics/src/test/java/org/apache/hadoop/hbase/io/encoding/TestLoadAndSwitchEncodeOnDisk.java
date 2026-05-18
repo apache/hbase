@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -34,32 +33,21 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.TestMiniClusterLoadSequential;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Uses the load tester
  */
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLoadAndSwitchEncodeOnDisk.class);
 
   /** We do not alternate the multi-put flag in this test. */
   private static final boolean USE_MULTI_PUT = true;
-
-  /** Un-parameterize the test */
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][] { new Object[0] });
-  }
 
   public TestLoadAndSwitchEncodeOnDisk() {
     super(USE_MULTI_PUT, DataBlockEncoding.PREFIX);
@@ -118,7 +106,7 @@ public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential
       Scan s = new Scan().withStartRow(startkey);
       ResultScanner scanner = t.getScanner(s);
       Result r = scanner.next();
-      org.junit.Assert.assertTrue(r != null && r.size() > 0);
+      assertTrue(r != null && r.size() > 0);
       scanner.close();
     }
   }

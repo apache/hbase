@@ -19,13 +19,13 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.assertConfigEquals;
 import static org.apache.hadoop.hbase.replication.ReplicationPeerConfigTestUtil.getConfig;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
 public abstract class ReplicationPeerStorageTestBase {
 
@@ -85,10 +85,10 @@ public abstract class ReplicationPeerStorageTestBase {
   public void testNoSyncReplicationState() throws Exception {
     // This could happen for a peer created before we introduce sync replication.
     String peerId = "testNoSyncReplicationState";
-    assertThrows("Should throw a ReplicationException when getting state of inexist peer",
-      ReplicationException.class, () -> STORAGE.getPeerSyncReplicationState(peerId));
-    assertThrows("Should throw a ReplicationException when getting state of inexist peer",
-      ReplicationException.class, () -> STORAGE.getPeerNewSyncReplicationState(peerId));
+    assertThrows(ReplicationException.class, () -> STORAGE.getPeerSyncReplicationState(peerId),
+      "Should throw a ReplicationException when getting state of inexist peer");
+    assertThrows(ReplicationException.class, () -> STORAGE.getPeerNewSyncReplicationState(peerId),
+      "Should throw a ReplicationException when getting state of inexist peer");
 
     STORAGE.addPeer(peerId, getConfig(0), true, SyncReplicationState.NONE);
     // delete the sync replication state node to simulate

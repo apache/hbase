@@ -17,24 +17,19 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.Iterator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterStatusModel> {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStorageClusterStatusModel.class);
 
   public TestStorageClusterStatusModel() throws Exception {
     super(StorageClusterStatusModel.class);
@@ -107,7 +102,7 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     assertEquals(1024, node.getMaxHeapSizeMB());
     Iterator<StorageClusterStatusModel.Node.Region> regions = node.getRegions().iterator();
     StorageClusterStatusModel.Node.Region region = regions.next();
-    assertTrue(Bytes.toString(region.getName()).equals("hbase:root,,0"));
+    assertEquals("hbase:root,,0", Bytes.toString(region.getName()));
     assertEquals(1, region.getStores());
     assertEquals(1, region.getStorefiles());
     assertEquals(0, region.getStorefileSizeMB());
@@ -128,7 +123,7 @@ public class TestStorageClusterStatusModel extends TestModelBase<StorageClusterS
     assertEquals(1024, node.getMaxHeapSizeMB());
     regions = node.getRegions().iterator();
     region = regions.next();
-    assertEquals(Bytes.toString(region.getName()), TableName.META_TABLE_NAME + ",,1246000043724");
+    assertEquals(TableName.META_TABLE_NAME + ",,1246000043724", Bytes.toString(region.getName()));
     assertEquals(1, region.getStores());
     assertEquals(1, region.getStorefiles());
     assertEquals(0, region.getStorefileSizeMB());

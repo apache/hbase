@@ -263,6 +263,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineReg
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.OfflineRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RecommissionRegionServerResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ReopenTableRegionsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RestoreSnapshotResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RollAllWALWritersRequest;
@@ -377,7 +379,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncHBaseAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RawAsyncHBaseAdmin.class);
 
   private final AsyncConnectionImpl connection;
 
@@ -540,7 +542,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   private <PREQ, PRESP, PRES> CompletableFuture<PRES> procedureCall(TableName tableName, PREQ preq,
     MasterRpcCall<PRESP, PREQ> rpcCall, Converter<Long, PRESP> respConverter,
     Converter<PRES, ByteString> resultConverter, ProcedureBiConsumer<PRES> consumer) {
-    return procedureCall(b -> b.priority(tableName), preq, rpcCall, respConverter, resultConverter,
+    return procedureCall(b -> b.tableName(tableName), preq, rpcCall, respConverter, resultConverter,
       consumer);
   }
 
@@ -684,7 +686,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<TableDescriptor> getDescriptor(TableName tableName) {
     CompletableFuture<TableDescriptor> future = new CompletableFuture<>();
-    addListener(this.<List<TableSchema>> newMasterCaller().priority(tableName)
+    addListener(this.<List<TableSchema>> newMasterCaller().tableName(tableName)
       .action((controller, stub) -> this.<GetTableDescriptorsRequest, GetTableDescriptorsResponse,
         List<TableSchema>> call(controller, stub,
           RequestConverter.buildGetTableDescriptorsRequest(tableName),
@@ -752,6 +754,21 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         ng.newNonce(), reopenRegions),
       (s, c, req, done) -> s.modifyTable(c, req, done), (resp) -> resp.getProcId(),
       new ModifyTableProcedureBiConsumer(this, desc.getTableName()));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return reopenTableRegions(tableName, Collections.emptyList());
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    List<byte[]> regionNames = regions.stream().map(RegionInfo::getRegionName).toList();
+    return this.<ReopenTableRegionsRequest, ReopenTableRegionsResponse> procedureCall(tableName,
+      RequestConverter.buildReopenTableRegionsRequest(tableName, regionNames, ng.getNonceGroup(),
+        ng.newNonce()),
+      (s, c, req, done) -> s.reopenTableRegions(c, req, done), (resp) -> resp.getProcId(),
+      new ReopenTableRegionsProcedureBiConsumer(this, tableName));
   }
 
   @Override
@@ -1747,7 +1764,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        this.<Void> newMasterCaller().tableName(regionInfo.getTable())
           .action((controller, stub) -> this.<AssignRegionRequest, AssignRegionResponse, Void> call(
             controller, stub, RequestConverter.buildAssignRegionRequest(regionInfo.getRegionName()),
             (s, c, req, done) -> s.assignRegion(c, req, done), resp -> null))
@@ -1772,7 +1789,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         return;
       }
       addListener(
-        this.<Void> newMasterCaller().priority(regionInfo.getTable())
+        this.<Void> newMasterCaller().tableName(regionInfo.getTable())
           .action((controller, stub) -> this.<UnassignRegionRequest, UnassignRegionResponse,
             Void> call(controller, stub,
               RequestConverter.buildUnassignRegionRequest(regionInfo.getRegionName()),
@@ -1797,7 +1814,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         future.completeExceptionally(err);
         return;
       }
-      addListener(this.<Void> newMasterCaller().priority(regionInfo.getTable())
+      addListener(this.<Void> newMasterCaller().tableName(regionInfo.getTable())
         .action((controller, stub) -> this.<OfflineRegionRequest, OfflineRegionResponse, Void> call(
           controller, stub, RequestConverter.buildOfflineRegionRequest(regionInfo.getRegionName()),
           (s, c, req, done) -> s.offlineRegion(c, req, done), resp -> null))
@@ -1859,7 +1876,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
   }
 
   private CompletableFuture<Void> moveRegion(RegionInfo regionInfo, MoveRegionRequest request) {
-    return this.<Void> newMasterCaller().priority(regionInfo.getTable())
+    return this.<Void> newMasterCaller().tableName(regionInfo.getTable())
       .action(
         (controller, stub) -> this.<MoveRegionRequest, MoveRegionResponse, Void> call(controller,
           stub, request, (s, c, req, done) -> s.moveRegion(c, req, done), resp -> null))
@@ -2833,6 +2850,18 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
     }
   }
 
+  private static class ReopenTableRegionsProcedureBiConsumer extends TableProcedureBiConsumer {
+
+    ReopenTableRegionsProcedureBiConsumer(AsyncAdmin admin, TableName tableName) {
+      super(tableName);
+    }
+
+    @Override
+    String getOperationType() {
+      return "REOPEN_TABLE_REGIONS";
+    }
+  }
+
   private static class ModifyTableStoreFileTrackerProcedureBiConsumer
     extends TableProcedureBiConsumer {
 
@@ -3106,10 +3135,15 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
         .call(),
       (response, error) -> {
         if (error != null) {
-          LOG.warn("failed to get the procedure result procId={}", procId,
-            ConnectionUtils.translateException(error));
-          retryTimer.newTimeout(t -> getProcedureResult(procId, converter, future, retries + 1),
-            ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          Throwable exc = ConnectionUtils.translateException(error);
+          if (exc instanceof DoNotRetryIOException) {
+            // stop retrying on DNRIOE
+            future.completeExceptionally(exc);
+          } else {
+            LOG.warn("failed to get the procedure result procId={}", procId, exc);
+            retryTimer.newTimeout(t -> getProcedureResult(procId, converter, future, retries + 1),
+              ConnectionUtils.getPauseTime(pauseNs, retries), TimeUnit.NANOSECONDS);
+          }
           return;
         }
         if (response.getState() == GetProcedureResultResponse.State.RUNNING) {
