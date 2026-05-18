@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,10 +29,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -47,14 +47,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,13 +59,10 @@ import org.slf4j.LoggerFactory;
  * Test various seek optimizations for correctness and check if they are actually saving I/O
  * operations.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: comprAlgo={0}, bloomType={1}")
 public class TestSeekOptimizations {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeekOptimizations.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSeekOptimizations.class);
 
@@ -115,9 +109,8 @@ public class TestSeekOptimizations {
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
-  @Parameters
-  public static final Collection<Object[]> parameters() {
-    return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS;
+  public static Stream<Arguments> parameters() {
+    return HBaseTestingUtility.BLOOM_AND_COMPRESSION_COMBINATIONS.stream().map(Arguments::of);
   }
 
   public TestSeekOptimizations(Compression.Algorithm comprAlgo, BloomType bloomType) {
@@ -125,14 +118,14 @@ public class TestSeekOptimizations {
     this.bloomType = bloomType;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     RNG.setSeed(91238123L);
     expectedKVs.clear();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
   }
 
-  @Test
+  @TestTemplate
   public void testMultipleTimestampRanges() throws IOException {
     // enable seek counting
     StoreFileScanner.instrument();
@@ -174,9 +167,10 @@ public class TestSeekOptimizations {
     // Test that lazy seeks are buying us something. Without the actual
     // implementation of the lazy seek optimization this will be 0.
     final double expectedSeekSavings = 0.0;
-    assertTrue("Lazy seek is only saving " + String.format("%.2f%%", seekSavings * 100)
-      + " seeks but should " + "save at least "
-      + String.format("%.2f%%", expectedSeekSavings * 100), seekSavings >= expectedSeekSavings);
+    assertTrue(seekSavings >= expectedSeekSavings,
+      "Lazy seek is only saving " + String.format("%.2f%%", seekSavings * 100)
+        + " seeks but should " + "save at least "
+        + String.format("%.2f%%", expectedSeekSavings * 100));
   }
 
   private void testScan(final int[] columnArr, final boolean lazySeekEnabled, final int startRow,
@@ -415,7 +409,7 @@ public class TestSeekOptimizations {
     region.flush(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (region != null) {
       HBaseTestingUtility.closeRegionAndWAL(region);

@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -39,35 +40,27 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.CorruptHFileException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Tests a scanner on a corrupt hfile.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestScannerWithCorruptHFile {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerWithCorruptHFile.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("f");
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -85,16 +78,16 @@ public class TestScannerWithCorruptHFile {
     }
   }
 
-  @Test(expected = DoNotRetryIOException.class)
-  public void testScanOnCorruptHFile() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  @Test
+  public void testScanOnCorruptHFile(TestInfo testInfo) throws IOException {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     HTableDescriptor htd = new HTableDescriptor(tableName);
     htd.addCoprocessor(CorruptHFileCoprocessor.class.getName());
     htd.addFamily(new HColumnDescriptor(FAMILY_NAME));
     Table table = TEST_UTIL.createTable(htd, null);
     try {
       loadTable(table, 1);
-      scan(table);
+      assertThrows(DoNotRetryIOException.class, () -> scan(table));
     } finally {
       table.close();
     }

@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -41,19 +40,15 @@ import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSwitchToStreamRead {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSwitchToStreamRead.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -67,7 +62,7 @@ public class TestSwitchToStreamRead {
 
   private static HRegion REGION;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     UTIL.getConfiguration().setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 2048);
     StringBuilder sb = new StringBuilder(256);
@@ -92,7 +87,7 @@ public class TestSwitchToStreamRead {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     REGION.close(true);
     UTIL.cleanupTestDir();
@@ -187,7 +182,7 @@ public class TestSwitchToStreamRead {
   // until the row key is changed. And there we can only use NoLimitScannerContext so we can not
   // make the upper layer return immediately. Simply do not use NoLimitScannerContext will lead to
   // an infinite loop. Need to dig more, the code are way too complicated...
-  @Ignore
+  @Disabled
   @Test
   public void testFilterRowKey() throws IOException {
     testFilter(new MatchLastRowKeyFilter());

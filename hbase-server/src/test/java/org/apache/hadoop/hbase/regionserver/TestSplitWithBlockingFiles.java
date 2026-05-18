@@ -19,13 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.SPLIT_IGNORE_BLOCKING_ENABLED_KEY;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -43,25 +42,15 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestSplitWithBlockingFiles {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitWithBlockingFiles.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestSplitWithBlockingFiles.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static TableName TABLE_NAME = TableName.valueOf("test");
@@ -69,7 +58,7 @@ public class TestSplitWithBlockingFiles {
   private static byte[] CF = Bytes.toBytes("cf");
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     UTIL.getConfiguration().setLong(HConstants.HREGION_MAX_FILESIZE, 8 * 2 * 10240L);
     UTIL.getConfiguration().setInt(HStore.BLOCKING_STOREFILES_KEY, 1);
@@ -85,7 +74,7 @@ public class TestSplitWithBlockingFiles {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     Closeables.close(TABLE, true);
     UTIL.shutdownMiniCluster();
@@ -111,7 +100,7 @@ public class TestSplitWithBlockingFiles {
     while (results.next() != null) {
       count++;
     }
-    Assert.assertEquals("There should be 100 rows!", 100, count);
+    assertEquals(100, count, "There should be 100 rows!");
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegionServer(0).getRegions();
     regions.removeIf(r -> !r.getRegionInfo().getTable().equals(TABLE_NAME));
     assertEquals(1, regions.size());
@@ -140,7 +129,7 @@ public class TestSplitWithBlockingFiles {
     while (results.next() != null) {
       count++;
     }
-    Assert.assertEquals("There should be 100 rows!", 100, count);
+    assertEquals(100, count, "There should be 100 rows!");
     for (HRegion region : regions) {
       assertTrue(region.getCompactPriority() < PRIORITY_USER);
       assertFalse(

@@ -21,8 +21,8 @@ import static org.apache.hadoop.hbase.HConstants.HBASE_SPLIT_WAL_MAX_SPLITTER;
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.CoreMatchers.not;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Server;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.coordination.ZkCoordinatedStateManager;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -57,20 +55,16 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.CreateMode;
 import org.apache.zookeeper.ZooDefs.Ids;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSplitLogWorker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitLogWorker.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitLogWorker.class);
   private static final int WAIT_TIME = 15000;
@@ -164,8 +158,8 @@ public class TestSplitLogWorker {
 
   private void waitForCounter(LongAdder ctr, long oldval, long newval, long timems)
     throws Exception {
-    assertTrue("ctr=" + ctr.sum() + ", oldval=" + oldval + ", newval=" + newval,
-      waitForCounterBoolean(ctr, oldval, newval, timems));
+    assertTrue(waitForCounterBoolean(ctr, oldval, newval, timems),
+      "ctr=" + ctr.sum() + ", oldval=" + oldval + ", newval=" + newval);
   }
 
   private boolean waitForCounterBoolean(final LongAdder ctr, final long oldval, long newval,
@@ -192,7 +186,7 @@ public class TestSplitLogWorker {
     return true;
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -215,7 +209,7 @@ public class TestSplitLogWorker {
       .setExecutorType(ExecutorType.RS_LOG_REPLAY_OPS).setCorePoolSize(10));
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (executorService != null) {
       executorService.shutdown();
@@ -430,7 +424,7 @@ public class TestSplitLogWorker {
         byte[] data =
           ZKUtil.getData(zkw, ZNodePaths.joinZNode(zkw.getZNodePaths().splitLogZNode, fn));
         slt = SplitLogTask.parseFrom(data);
-        assertTrue(slt.toString(), slt.isDone(SRV));
+        assertTrue(slt.isDone(SRV), slt.toString());
       }
     }
     assertEquals(2, num);
