@@ -20,42 +20,37 @@ package org.apache.hadoop.hbase.util;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFutureUtils {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFutureUtils.class);
 
   private ExecutorService executor;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     executor = Executors.newFixedThreadPool(1, new ThreadFactoryBuilder().setDaemon(true).build());
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     executor.shutdownNow();
   }
@@ -64,25 +59,28 @@ public class TestFutureUtils {
   public void testRecordStackTrace() throws IOException {
     CompletableFuture<Void> future = new CompletableFuture<>();
     executor.execute(() -> future.completeExceptionally(new HBaseIOException("Inject error!")));
-    try {
-      FutureUtils.get(future);
-      fail("The future should have been completed exceptionally");
-    } catch (HBaseIOException e) {
-      assertEquals("Inject error!", e.getMessage());
-      StackTraceElement[] elements = e.getStackTrace();
-      assertThat(elements[0].toString(), containsString("java.lang.Thread.getStackTrace"));
-      assertThat(elements[1].toString(),
-        startsWith("org.apache.hadoop.hbase.util.FutureUtils.setStackTrace"));
-      assertThat(elements[2].toString(),
-        startsWith("org.apache.hadoop.hbase.util.FutureUtils.rethrow"));
-      assertThat(elements[3].toString(),
-        startsWith("org.apache.hadoop.hbase.util.FutureUtils.get"));
-      assertThat(elements[4].toString(),
-        startsWith("org.apache.hadoop.hbase.util.TestFutureUtils.testRecordStackTrace"));
-      assertTrue(Stream.of(elements)
-        .anyMatch(element -> element.toString().contains("--------Future.get--------")));
-    } catch (Throwable t) {
-      throw new AssertionError("Caught unexpected Throwable", t);
+    HBaseIOException e = assertThrows(HBaseIOException.class, () -> FutureUtils.get(future),
+      "The future should have been completed exceptionally");
+    assertEquals("Inject error!", e.getMessage());
+    StackTraceElement[] elements = e.getStackTrace();
+    assertThat(elements[0].toString(), containsString("java.lang.Thread.getStackTrace"));
+    assertThat(elements[1].toString(),
+      startsWith("org.apache.hadoop.hbase.util.FutureUtils.setStackTrace"));
+    assertThat(elements[2].toString(),
+      startsWith("org.apache.hadoop.hbase.util.FutureUtils.rethrow"));
+    assertThat(elements[3].toString(), startsWith("org.apache.hadoop.hbase.util.FutureUtils.get"));
+    assertThat(elements[4].toString(),
+      startsWith("org.apache.hadoop.hbase.util.TestFutureUtils.lambda"));
+    int i = 5;
+    for (;;) {
+      if (!elements[i].toString().contains("assertThrows")) {
+        break;
+      }
+      i++;
     }
+    assertThat(elements[i].toString(),
+      startsWith("org.apache.hadoop.hbase.util.TestFutureUtils.testRecordStackTrace"));
+    assertTrue(Stream.of(elements)
+      .anyMatch(element -> element.toString().contains("--------Future.get--------")));
   }
 }

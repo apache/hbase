@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.atLeastOnce;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
@@ -30,40 +30,35 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestChoreService {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChoreService.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChoreService.class);
 
   private static final Configuration CONF = HBaseConfiguration.create();
 
-  @Rule
-  public TestName name = new TestName();
-
   private int initialCorePoolSize = 3;
 
   private ChoreService service;
 
-  @Before
-  public void setUp() {
-    service = new ChoreService(name.getMethodName(), initialCorePoolSize, false);
+  private String testName;
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testName = testInfo.getTestMethod().get().getName();
+    service = new ChoreService(testName, initialCorePoolSize, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     shutdownService(service);
   }
@@ -286,10 +281,10 @@ public class TestChoreService {
         }
       };
 
-    assertEquals("Name construction failed", NAME, chore1.getName());
-    assertEquals("Period construction failed", PERIOD, chore1.getPeriod());
-    assertEquals("Initial Delay construction failed", VALID_DELAY, chore1.getInitialDelay());
-    assertEquals("TimeUnit construction failed", UNIT, chore1.getTimeUnit());
+    assertEquals(NAME, chore1.getName(), "Name construction failed");
+    assertEquals(PERIOD, chore1.getPeriod(), "Period construction failed");
+    assertEquals(VALID_DELAY, chore1.getInitialDelay(), "Initial Delay construction failed");
+    assertEquals(UNIT, chore1.getTimeUnit(), "TimeUnit construction failed");
 
     ScheduledChore invalidDelayChore =
       new ScheduledChore(NAME, new SampleStopper(), PERIOD, INVALID_DELAY, UNIT) {
@@ -299,8 +294,8 @@ public class TestChoreService {
         }
       };
 
-    assertEquals("Initial Delay should be set to 0 when invalid", 0,
-      invalidDelayChore.getInitialDelay());
+    assertEquals(0, invalidDelayChore.getInitialDelay(),
+      "Initial Delay should be set to 0 when invalid");
   }
 
   @Test
@@ -340,10 +335,10 @@ public class TestChoreService {
     service.scheduleChore(chore);
 
     Thread.sleep(10 * period + delta);
-    assertEquals("10 periods have elapsed.", 11, chore.getCountOfChoreCalls());
+    assertEquals(11, chore.getCountOfChoreCalls(), "10 periods have elapsed.");
 
     Thread.sleep(10 * period + delta);
-    assertEquals("20 periods have elapsed.", 21, chore.getCountOfChoreCalls());
+    assertEquals(21, chore.getCountOfChoreCalls(), "20 periods have elapsed.");
   }
 
   public void shutdownService(ChoreService service) {
@@ -359,7 +354,7 @@ public class TestChoreService {
     service.scheduleChore(chore);
     Thread.sleep(10 * period + delta);
 
-    assertEquals("10 periods have elapsed.", 11, chore.getCountOfChoreCalls());
+    assertEquals(11, chore.getCountOfChoreCalls(), "10 periods have elapsed.");
 
     // Force five runs of the chore to occur, sleeping between triggers to ensure the
     // chore has time to run
@@ -374,19 +369,19 @@ public class TestChoreService {
     chore.triggerNow();
     Thread.sleep(delta);
 
-    assertEquals("Trigger was called 5 times after 10 periods.", 16, chore.getCountOfChoreCalls());
+    assertEquals(16, chore.getCountOfChoreCalls(), "Trigger was called 5 times after 10 periods.");
 
     Thread.sleep(10 * period + delta);
 
     // Be loosey-goosey. It used to be '26' but it was a big flakey relying on timing.
-    assertTrue("Expected at least 16 invocations, instead got " + chore.getCountOfChoreCalls(),
-      chore.getCountOfChoreCalls() > 16);
+    assertTrue(chore.getCountOfChoreCalls() > 16,
+      "Expected at least 16 invocations, instead got " + chore.getCountOfChoreCalls());
   }
 
   @Test
   public void testCorePoolIncrease() throws InterruptedException {
-    assertEquals("Setting core pool size gave unexpected results.", initialCorePoolSize,
-      service.getCorePoolSize());
+    assertEquals(initialCorePoolSize, service.getCorePoolSize(),
+      "Setting core pool size gave unexpected results.");
 
     final int slowChorePeriod = 100;
     SlowChore slowChore1 = new SlowChore("slowChore1", slowChorePeriod);
@@ -398,22 +393,22 @@ public class TestChoreService {
     service.scheduleChore(slowChore3);
 
     Thread.sleep(slowChorePeriod * 10);
-    assertEquals("Should not create more pools than scheduled chores", 3,
-      service.getCorePoolSize());
+    assertEquals(3, service.getCorePoolSize(),
+      "Should not create more pools than scheduled chores");
 
     SlowChore slowChore4 = new SlowChore("slowChore4", slowChorePeriod);
     service.scheduleChore(slowChore4);
 
     Thread.sleep(slowChorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size", 4,
-      service.getCorePoolSize());
+    assertEquals(4, service.getCorePoolSize(),
+      "Chores are missing their start time. Should expand core pool size");
 
     SlowChore slowChore5 = new SlowChore("slowChore5", slowChorePeriod);
     service.scheduleChore(slowChore5);
 
     Thread.sleep(slowChorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size", 5,
-      service.getCorePoolSize());
+    assertEquals(5, service.getCorePoolSize(),
+      "Chores are missing their start time. Should expand core pool size");
   }
 
   @Test
@@ -430,20 +425,20 @@ public class TestChoreService {
     service.scheduleChore(slowChore3);
 
     Thread.sleep(chorePeriod * 10);
-    assertEquals("Should not create more pools than scheduled chores",
-      service.getNumberOfScheduledChores(), service.getCorePoolSize());
+    assertEquals(service.getNumberOfScheduledChores(), service.getCorePoolSize(),
+      "Should not create more pools than scheduled chores");
 
     SlowChore slowChore4 = new SlowChore("slowChore4", chorePeriod);
     service.scheduleChore(slowChore4);
     Thread.sleep(chorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size",
-      service.getNumberOfScheduledChores(), service.getCorePoolSize());
+    assertEquals(service.getNumberOfScheduledChores(), service.getCorePoolSize(),
+      "Chores are missing their start time. Should expand core pool size");
 
     SlowChore slowChore5 = new SlowChore("slowChore5", chorePeriod);
     service.scheduleChore(slowChore5);
     Thread.sleep(chorePeriod * 10);
-    assertEquals("Chores are missing their start time. Should expand core pool size",
-      service.getNumberOfScheduledChores(), service.getCorePoolSize());
+    assertEquals(service.getNumberOfScheduledChores(), service.getCorePoolSize(),
+      "Chores are missing their start time. Should expand core pool size");
     assertEquals(5, service.getNumberOfChoresMissingStartTime());
 
     // Now we begin to cancel the chores that caused an increase in the core thread pool of the
@@ -496,21 +491,21 @@ public class TestChoreService {
     service.scheduleChore(dn5);
 
     Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 5, service.getNumberOfScheduledChores());
+    assertEquals(5, service.getNumberOfScheduledChores(), "Scheduled chore mismatch");
 
     dn1.cancel();
     Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 4, service.getNumberOfScheduledChores());
+    assertEquals(4, service.getNumberOfScheduledChores(), "Scheduled chore mismatch");
 
     dn2.cancel();
     dn3.cancel();
     dn4.cancel();
     Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 1, service.getNumberOfScheduledChores());
+    assertEquals(1, service.getNumberOfScheduledChores(), "Scheduled chore mismatch");
 
     dn5.cancel();
     Thread.sleep(sleepTime);
-    assertEquals("Scheduled chore mismatch", 0, service.getNumberOfScheduledChores());
+    assertEquals(0, service.getNumberOfScheduledChores(), "Scheduled chore mismatch");
   }
 
   @Test
@@ -596,10 +591,10 @@ public class TestChoreService {
   }
 
   @Test
-  public void testChangingChoreServices() throws InterruptedException {
+  public void testChangingChoreServices(TestInfo testInfo) throws InterruptedException {
     final int period = 100;
     final int sleepTime = 10;
-    ChoreService anotherService = new ChoreService(name.getMethodName() + "_2");
+    ChoreService anotherService = new ChoreService(testInfo.getTestMethod().get().getName() + "_2");
     ScheduledChore chore = new DoNothingChore("sample", period);
 
     try {

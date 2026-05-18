@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -30,27 +31,23 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseConfiguration {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseConfiguration.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseConfiguration.class);
 
   private static HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.cleanupTestDir();
   }
@@ -104,13 +101,13 @@ public class TestHBaseConfiguration {
   public void testSecurityConfCaseInsensitive() {
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.security.authentication", "kerberos");
-    Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
+    assertTrue(User.isHBaseSecurityEnabled(conf));
 
     conf.set("hbase.security.authentication", "KERBEROS");
-    Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
+    assertTrue(User.isHBaseSecurityEnabled(conf));
 
     conf.set("hbase.security.authentication", "KERBeros");
-    Assert.assertTrue(User.isHBaseSecurityEnabled(conf));
+    assertTrue(User.isHBaseSecurityEnabled(conf));
   }
 
   @Test
