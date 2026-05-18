@@ -23,10 +23,15 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.ipc.RpcServer;
+import org.apache.hadoop.hbase.ipc.ServerRpcConnection;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.util.LossyCounting;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
 @InterfaceAudience.Private
 public class MetricsUserAggregateImpl implements MetricsUserAggregate {
@@ -83,23 +88,29 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate {
   }
 
   private void incrementClientReadMetrics(MetricsUserSource userSource) {
+    ClientConnectionContext ctx = getClientConnectionContext();
     String client = getClient();
     if (client != null && userSource != null) {
-      userSource.getOrCreateMetricsClient(client).incrementReadRequest();
+      userSource.getOrCreateMetricsClient(client, ctx.hostAddress, ctx.userName, ctx.clientVersion,
+        ctx.serviceName).incrementReadRequest();
     }
   }
 
   private void incrementFilteredReadRequests(MetricsUserSource userSource) {
+    ClientConnectionContext ctx = getClientConnectionContext();
     String client = getClient();
     if (client != null && userSource != null) {
-      userSource.getOrCreateMetricsClient(client).incrementFilteredReadRequests();
+      userSource.getOrCreateMetricsClient(client, ctx.hostAddress, ctx.userName, ctx.clientVersion,
+        ctx.serviceName).incrementFilteredReadRequests();
     }
   }
 
   private void incrementClientWriteMetrics(MetricsUserSource userSource) {
+    ClientConnectionContext ctx = getClientConnectionContext();
     String client = getClient();
     if (client != null && userSource != null) {
-      userSource.getOrCreateMetricsClient(client).incrementWriteRequest();
+      userSource.getOrCreateMetricsClient(client, ctx.hostAddress, ctx.userName, ctx.clientVersion,
+        ctx.serviceName).incrementWriteRequest();
     }
   }
 
@@ -192,5 +203,52 @@ public class MetricsUserAggregateImpl implements MetricsUserAggregate {
     MetricsUserSource userSource = source.getOrCreateMetricsUser(user);
     userMetricLossyCounting.add(userSource);
     return userSource;
+  }
+
+  private ClientConnectionContext getClientConnectionContext() {
+    String hostAddress = null;
+    String userName = "Unknown";
+    String clientVersion = "Unknown";
+    String serviceName = "Unknown";
+
+    Optional<ServerRpcConnection> rpcConnectionOptional = RpcServer.getCurrentServerRpcConnection();
+    if (rpcConnectionOptional.isPresent()) {
+      ServerRpcConnection rpcConnection = rpcConnectionOptional.get();
+      hostAddress = rpcConnection.getLocalHostAddress();
+      RPCProtos.ConnectionHeader connectionHeader = rpcConnection.getConnectionHeader();
+      if (connectionHeader.hasUserInfo()) {
+        RPCProtos.UserInformation userInfoProto = connectionHeader.getUserInfo();
+        if (userInfoProto.hasEffectiveUser()) {
+          userName = userInfoProto.getEffectiveUser();
+        }
+      }
+      if (connectionHeader.hasVersionInfo()) {
+        clientVersion = connectionHeader.getVersionInfo().getVersion();
+      }
+      if (connectionHeader.hasServiceName()) {
+        serviceName = connectionHeader.getServiceName();
+      }
+    }
+    return new ClientConnectionContext(hostAddress, userName, clientVersion, serviceName);
+  }
+
+  private static class ClientConnectionContext {
+    final String hostAddress;
+    final String userName;
+    final String clientVersion;
+    final String serviceName;
+
+    ClientConnectionContext(String hostAddress, String userName, String clientVersion,
+      String serviceName) {
+      this.hostAddress = hostAddress;
+      this.userName = userName;
+      this.clientVersion = clientVersion;
+      this.serviceName = serviceName;
+    }
+
+    public String toString() {
+      return "ClientConnectionContext{hostAddress=" + hostAddress + ", userName=" + userName
+        + ", clientVersion=" + clientVersion + ", serviceName=" + serviceName + "}";
+    }
   }
 }

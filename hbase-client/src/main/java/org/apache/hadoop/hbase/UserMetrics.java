@@ -38,6 +38,14 @@ public interface UserMetrics {
     long getWriteRequestsCount();
 
     long getFilteredReadRequestsCount();
+
+    String getHostAddress();
+
+    String getUserName();
+
+    String getClientVersion();
+
+    String getServiceName();
   }
 
   /** Returns the user name */

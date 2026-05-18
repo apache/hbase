@@ -66,6 +66,11 @@ class NettyServerRpcConnection extends ServerRpcConnection {
     } else {
       this.hostAddress = inetSocketAddress.getAddress().getHostAddress();
     }
+
+    InetSocketAddress localSocketAddress = ((InetSocketAddress) channel.localAddress());
+    this.localHostAddress = (localSocketAddress != null && localSocketAddress.getAddress() != null)
+      ? localSocketAddress.getAddress().getHostAddress()
+      : "*Unknown*";
     this.remotePort = inetSocketAddress.getPort();
   }
 

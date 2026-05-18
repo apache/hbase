@@ -70,7 +70,8 @@ class SimpleServerCall extends ServerCall<SimpleServerRpcConnection> {
     this.responder.doRespond(getConnection(), this);
   }
 
-  SimpleServerRpcConnection getConnection() {
+  @Override
+  public SimpleServerRpcConnection getConnection() {
     return this.connection;
   }
 }

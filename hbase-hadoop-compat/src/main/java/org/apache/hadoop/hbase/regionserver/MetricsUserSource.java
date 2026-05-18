@@ -39,6 +39,14 @@ public interface MetricsUserSource extends Comparable<MetricsUserSource> {
     void incrementFilteredReadRequests();
 
     long getFilteredReadRequests();
+
+    String getHostAddress();
+
+    String getUserName();
+
+    String getClientVersion();
+
+    String getServiceName();
   }
 
   String getUser();
@@ -77,5 +85,6 @@ public interface MetricsUserSource extends Comparable<MetricsUserSource> {
    * @param hostName hostname of the client
    * @return Instance of ClientMetrics
    */
-  ClientMetrics getOrCreateMetricsClient(String hostName);
+  ClientMetrics getOrCreateMetricsClient(String hostName, String hostAddress, String userName,
+    String clientVersion, String serviceName);
 }
