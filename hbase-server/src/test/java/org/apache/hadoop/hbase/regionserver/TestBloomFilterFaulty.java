@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -45,26 +44,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * A UT to make sure that everything is fine when we fail to load bloom filter.
  * <p>
  * See HBASE-27936 for more details.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBloomFilterFaulty {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBloomFilterFaulty.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -81,15 +75,13 @@ public class TestBloomFilterFaulty {
 
   private static final RegionInfo RI = RegionInfoBuilder.newBuilder(TD.getTableName()).build();
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     UTIL.cleanupTestDir();
   }
 
   private HRegion region;
-
-  @Rule
-  public final TestName name = new TestName();
+  private String name;
 
   private void generateHFiles() throws IOException {
     for (int i = 0; i < 4; i++) {
@@ -115,9 +107,10 @@ public class TestBloomFilterFaulty {
     }
   }
 
-  @Before
-  public void setUp() throws IOException {
-    Path rootDir = UTIL.getDataTestDir(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
+    Path rootDir = UTIL.getDataTestDir(name);
     // generate some hfiles so we can have StoreFileReader which has bloomfilters
     region = HBaseTestingUtil.createRegionAndWAL(RI, rootDir, UTIL.getConfiguration(), TD);
     generateHFiles();
@@ -131,7 +124,7 @@ public class TestBloomFilterFaulty {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (region != null) {
       HBaseTestingUtil.closeRegionAndWAL(region);
