@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -129,10 +130,76 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     assertEquals(5, targetServers.get(server1).size());
   }
 
+  /**
+   * Regions on the overloaded RS report low block-cache ratio; no RS reports prefetch/historical
+   * cache for those regions (so {@link CacheAwareLoadBalancer.CacheAwareCandidateGenerator} has no
+   * "old server" to prefer). Another RS has ample free block cache. The balancer should still emit
+   * plans that shed load from the hot RS onto the idle RS with spare cache capacity.
+   */
+  @Test
+  public void testLowCacheRatioNoHistoricalCacheRelocatesWhenTargetHasFreeBlockCache()
+    throws Exception {
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server2 = servers.get(2);
+
+    List<RegionInfo> regionsOnServer0 = randomRegions(10);
+    List<RegionInfo> regionsOnServer1 = randomRegions(0);
+    List<RegionInfo> regionsOnServer2 = randomRegions(5);
+
+    clusterState.put(server0, regionsOnServer0);
+    clusterState.put(server1, regionsOnServer1);
+    clusterState.put(server2, regionsOnServer2);
+
+    // Below LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT (0.35);
+    ServerMetrics sm0 = mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0, 0.1f,
+      new ArrayList<>(), 0, 10);
+    when(sm0.getCacheFreeSize()).thenReturn(0L);
+    ServerMetrics sm1 = mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1, 0.0f,
+      new ArrayList<>(), 0, 10);
+    // Simulates 1GB free cache space on server1
+    when(sm1.getCacheFreeSize()).thenReturn(1024L * 1024 * 1024);
+    ServerMetrics sm2 = mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2, 1.0f,
+      new ArrayList<>(), 0, 10);
+    when(sm2.getCacheFreeSize()).thenReturn(0L);
+
+    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+    serverMetricsMap.put(server0, sm0);
+    serverMetricsMap.put(server1, sm1);
+    serverMetricsMap.put(server2, sm2);
+    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
+    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    loadBalancer.updateClusterMetrics(clusterMetrics);
+
+    CacheAwareLoadBalancer internalBalancer =
+      (CacheAwareLoadBalancer) loadBalancer.getInternalBalancer();
+    assertNotNull(internalBalancer);
+    assertTrue(internalBalancer.regionCacheRatioOnOldServerMap.isEmpty());
+
+    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable =
+      (Map) mockClusterServersWithTables(clusterState);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(loadOfAllTable);
+    assertNotNull(plans);
+
+    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
+    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
+    for (RegionPlan plan : plans) {
+      if (plan.getSource().equals(server0)) {
+        regionsMovedFromServer0.add(plan.getRegionInfo());
+        if (!targetServers.containsKey(plan.getDestination())) {
+          targetServers.put(plan.getDestination(), new ArrayList<>());
+        }
+        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
+      }
+    }
+    assertEquals(5, regionsMovedFromServer0.size());
+    assertNotNull(targetServers.get(server1));
+    assertEquals(5, targetServers.get(server1).size());
+  }
+
   @Test
   public void testRegionsPartiallyCachedOnOldServerAndNotCachedOnCurrentServer() throws Exception {
-    // The regions are partially cached on old server but not cached on the current server
-
     Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
     ServerName server0 = servers.get(0);
     ServerName server1 = servers.get(1);
@@ -150,7 +217,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
@@ -387,7 +454,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
@@ -441,7 +508,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
@@ -495,7 +562,7 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
