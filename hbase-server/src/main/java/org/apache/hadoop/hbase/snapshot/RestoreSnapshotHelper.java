@@ -39,7 +39,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
+import org.apache.hadoop.hbase.backup.RestoreSnapshotHFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -415,7 +415,7 @@ public class RestoreSnapshotHelper {
     ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
       @Override
       public void editRegion(final RegionInfo hri) throws IOException {
-        HFileArchiver.archiveRegion(conf, fs, hri, rootDir, tableDir);
+        RestoreSnapshotHFileArchiver.archiveRegion(conf, fs, hri, rootDir, tableDir);
       }
     });
   }
@@ -556,7 +556,7 @@ public class RestoreSnapshotHelper {
           + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
         LOG.debug("Removing family=" + Bytes.toString(family) + " in snapshot=" + snapshotName
           + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-        HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
+        RestoreSnapshotHFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
 
