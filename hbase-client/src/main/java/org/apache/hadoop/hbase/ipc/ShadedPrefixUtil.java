@@ -41,9 +41,7 @@ final class ShadedPrefixUtil {
   private final String shadedBase;
 
   /**
-   * Cache from original class name to its resolved (shaded or original) equivalent. Class.forName
-   * for a missing class is expensive as it walks the supplied classloader's parent delegation
-   * chain, so we memoize the result to pay that cost at most once per distinct class name.
+   * Cache from original class name to its resolved (shaded or original) equivalent.
    */
   private final ConcurrentHashMap<String, String> resolvedClassNames = new ConcurrentHashMap<>();
 
