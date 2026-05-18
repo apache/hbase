@@ -17,23 +17,20 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOrderedNumeric {
   private static final Long[] LONG_VALUES =
     new Long[] { 1L, 22L, 333L, 4444L, 55555L, 666666L, 7777777L, 88888888L, 999999999L };
@@ -51,13 +48,6 @@ public class TestOrderedNumeric {
       new BigInteger("4444"), new BigInteger("55555"), new BigInteger("666666"),
       new BigInteger("7777777"), new BigInteger("88888888"), new BigInteger("999999999") };
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOrderedNumeric.class);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
-
   @Test
   public void testEncodedClassIsNumber() {
     final DataType<Number> type = new OrderedNumeric(Order.ASCENDING);
@@ -73,8 +63,8 @@ public class TestOrderedNumeric {
       for (final Number val : DOUBLE_VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }
@@ -87,8 +77,8 @@ public class TestOrderedNumeric {
       for (final Number val : BIG_DECIMAL_VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }
@@ -101,8 +91,8 @@ public class TestOrderedNumeric {
       for (final Number val : BIG_INTEGER_VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }
@@ -116,8 +106,8 @@ public class TestOrderedNumeric {
     type.encode(buffer, null);
     type.encode(new SimplePositionedMutableByteRange(20), null);
 
-    assertEquals("encodedLength does not match actual, " + null, buffer.getPosition(),
-      type.encodedLength(null));
+    assertEquals(buffer.getPosition(), type.encodedLength(null),
+      "encodedLength does not match actual, " + null);
   }
 
   @Test
@@ -128,8 +118,8 @@ public class TestOrderedNumeric {
       for (final Long val : LONG_VALUES) {
         buffer.setPosition(0);
         type.encodeLong(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }
@@ -142,8 +132,8 @@ public class TestOrderedNumeric {
       for (final Double val : DOUBLE_VALUES) {
         buffer.setPosition(0);
         type.encodeDouble(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }

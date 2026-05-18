@@ -17,140 +17,135 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(SmallTests.class)
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMovingAverage {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMovingAverage.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private long[] data = { 1, 12, 13, 24, 25, 26, 37, 38, 39, 40 };
   private double delta = 0.1;
 
   @Test
-  public void testSimpleMovingAverage() throws Exception {
-    MovingAverage<?> algorithm = new SimpleMovingAverage(name.getMethodName());
+  public void testSimpleMovingAverage(TestInfo testInfo) throws Exception {
+    MovingAverage<?> algorithm = new SimpleMovingAverage(testInfo.getTestMethod().get().getName());
     int index = 0;
     // [1, 12, 13, 24]
     int bound = 4;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(12.5, algorithm.getAverageTime(), delta);
+    assertEquals(12.5, algorithm.getAverageTime(), delta);
     // [1, 12, 13, 24, 25]
     bound = 5;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(15.0, algorithm.getAverageTime(), delta);
+    assertEquals(15.0, algorithm.getAverageTime(), delta);
     // [1, 12, 13, 24, 25, 26, 37, 38]
     bound = 8;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(22.0, algorithm.getAverageTime(), delta);
+    assertEquals(22.0, algorithm.getAverageTime(), delta);
     // [1, 12, 13, 24, 25, 26, 37, 38, 39, 40]
     for (; index < data.length; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(25.5, algorithm.getAverageTime(), delta);
+    assertEquals(25.5, algorithm.getAverageTime(), delta);
   }
 
   @Test
-  public void testWindowMovingAverage() throws Exception {
+  public void testWindowMovingAverage(TestInfo testInfo) throws Exception {
     // Default size is 5.
-    MovingAverage<?> algorithm = new WindowMovingAverage(name.getMethodName());
+    MovingAverage<?> algorithm = new WindowMovingAverage(testInfo.getTestMethod().get().getName());
     int index = 0;
     // [1, 12, 13, 24]
     int bound = 4;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(12.5, algorithm.getAverageTime(), delta);
+    assertEquals(12.5, algorithm.getAverageTime(), delta);
     // [1, 12, 13, 24, 25]
     bound = 5;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(15.0, algorithm.getAverageTime(), delta);
+    assertEquals(15.0, algorithm.getAverageTime(), delta);
     // [24, 25, 26, 37, 38]
     bound = 8;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(30.0, algorithm.getAverageTime(), delta);
+    assertEquals(30.0, algorithm.getAverageTime(), delta);
     // [26, 37, 38, 39, 40]
     for (; index < data.length; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(36.0, algorithm.getAverageTime(), delta);
+    assertEquals(36.0, algorithm.getAverageTime(), delta);
   }
 
   @Test
-  public void testWeightedMovingAverage() throws Exception {
+  public void testWeightedMovingAverage(TestInfo testInfo) throws Exception {
     // Default size is 5.
-    MovingAverage<?> algorithm = new WeightedMovingAverage(name.getMethodName());
+    MovingAverage<?> algorithm =
+      new WeightedMovingAverage(testInfo.getTestMethod().get().getName());
     int index = 0;
     // [1, 12, 13, 24]
     int bound = 4;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(12.5, algorithm.getAverageTime(), delta);
+    assertEquals(12.5, algorithm.getAverageTime(), delta);
     // [1, 12, 13, 24, 25]
     bound = 5;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(15.0, algorithm.getAverageTime(), delta);
+    assertEquals(15.0, algorithm.getAverageTime(), delta);
     // [24, 25, 26, 37, 38]
     bound = 8;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(32.67, algorithm.getAverageTime(), delta);
+    assertEquals(32.67, algorithm.getAverageTime(), delta);
     // [26, 37, 38, 39, 40]
     for (; index < data.length; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(38.0, algorithm.getAverageTime(), delta);
+    assertEquals(38.0, algorithm.getAverageTime(), delta);
   }
 
   @Test
-  public void testExponentialMovingAverage() throws Exception {
+  public void testExponentialMovingAverage(TestInfo testInfo) throws Exception {
     // [1, 12, 13, 24, 25, 26, 37, 38, 39, 40]
-    MovingAverage<?> algorithm = new ExponentialMovingAverage(name.getMethodName());
+    MovingAverage<?> algorithm =
+      new ExponentialMovingAverage(testInfo.getTestMethod().get().getName());
     int index = 0;
     int bound = 5;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(15.0, algorithm.getAverageTime(), delta);
+    assertEquals(15.0, algorithm.getAverageTime(), delta);
     bound = 6;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(18.67, algorithm.getAverageTime(), delta);
+    assertEquals(18.67, algorithm.getAverageTime(), delta);
     bound = 8;
     for (; index < bound; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(29.16, algorithm.getAverageTime(), delta);
+    assertEquals(29.16, algorithm.getAverageTime(), delta);
     for (; index < data.length; index++) {
       algorithm.updateMostRecentTime(data[index]);
     }
-    Assert.assertEquals(34.97, algorithm.getAverageTime(), delta);
+    assertEquals(34.97, algorithm.getAverageTime(), delta);
   }
 }

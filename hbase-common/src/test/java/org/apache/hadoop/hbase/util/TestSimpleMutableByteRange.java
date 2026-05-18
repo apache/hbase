@@ -17,63 +17,63 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSimpleMutableByteRange {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleMutableByteRange.class);
 
   @Test
   public void testEmpty() {
-    Assert.assertTrue(SimpleMutableByteRange.isEmpty(null));
+    assertTrue(SimpleMutableByteRange.isEmpty(null));
     ByteRange r = new SimpleMutableByteRange();
-    Assert.assertTrue(SimpleMutableByteRange.isEmpty(r));
-    Assert.assertTrue(r.isEmpty());
+    assertTrue(SimpleMutableByteRange.isEmpty(r));
+    assertTrue(r.isEmpty());
     r.set(new byte[0]);
-    Assert.assertEquals(0, r.getBytes().length);
-    Assert.assertEquals(0, r.getOffset());
-    Assert.assertEquals(0, r.getLength());
-    Assert.assertTrue(Bytes.equals(new byte[0], r.deepCopyToNewArray()));
-    Assert.assertEquals(0, r.compareTo(new SimpleMutableByteRange(new byte[0], 0, 0)));
-    Assert.assertEquals(0, r.hashCode());
+    assertEquals(0, r.getBytes().length);
+    assertEquals(0, r.getOffset());
+    assertEquals(0, r.getLength());
+    assertTrue(Bytes.equals(new byte[0], r.deepCopyToNewArray()));
+    assertEquals(0, r.compareTo(new SimpleMutableByteRange(new byte[0], 0, 0)));
+    assertEquals(0, r.hashCode());
   }
 
   @Test
   public void testBasics() {
     ByteRange r = new SimpleMutableByteRange(new byte[] { 1, 3, 2 });
-    Assert.assertFalse(SimpleMutableByteRange.isEmpty(r));
-    Assert.assertNotNull(r.getBytes());// should be empty byte[], but could change this behavior
-    Assert.assertEquals(3, r.getBytes().length);
-    Assert.assertEquals(0, r.getOffset());
-    Assert.assertEquals(3, r.getLength());
+    assertFalse(SimpleMutableByteRange.isEmpty(r));
+    assertNotNull(r.getBytes());// should be empty byte[], but could change this behavior
+    assertEquals(3, r.getBytes().length);
+    assertEquals(0, r.getOffset());
+    assertEquals(3, r.getLength());
 
     // cloning (deep copying)
-    Assert.assertTrue(Bytes.equals(new byte[] { 1, 3, 2 }, r.deepCopyToNewArray()));
-    Assert.assertNotSame(r.getBytes(), r.deepCopyToNewArray());
+    assertTrue(Bytes.equals(new byte[] { 1, 3, 2 }, r.deepCopyToNewArray()));
+    assertNotSame(r.getBytes(), r.deepCopyToNewArray());
 
     // hash code
-    Assert.assertTrue(r.hashCode() > 0);
-    Assert.assertEquals(r.hashCode(), r.deepCopy().hashCode());
+    assertTrue(r.hashCode() > 0);
+    assertEquals(r.hashCode(), r.deepCopy().hashCode());
 
     // copying to arrays
     byte[] destination = new byte[] { -59 };// junk
     r.deepCopySubRangeTo(2, 1, destination, 0);
-    Assert.assertTrue(Bytes.equals(new byte[] { 2 }, destination));
+    assertTrue(Bytes.equals(new byte[] { 2 }, destination));
 
     // set length
     r.setLength(1);
-    Assert.assertTrue(Bytes.equals(new byte[] { 1 }, r.deepCopyToNewArray()));
+    assertTrue(Bytes.equals(new byte[] { 1 }, r.deepCopyToNewArray()));
     r.setLength(2);// verify we retained the 2nd byte, but dangerous in real code
-    Assert.assertTrue(Bytes.equals(new byte[] { 1, 3 }, r.deepCopyToNewArray()));
+    assertTrue(Bytes.equals(new byte[] { 1, 3 }, r.deepCopyToNewArray()));
   }
 
   @Test
@@ -100,20 +100,20 @@ public class TestSimpleMutableByteRange {
     r.putVLong(offset, Long.MIN_VALUE);
 
     offset = 0;
-    Assert.assertEquals(i1, r.getInt(offset));
+    assertEquals(i1, r.getInt(offset));
     offset += Bytes.SIZEOF_INT;
-    Assert.assertEquals(i2, r.getInt(offset));
+    assertEquals(i2, r.getInt(offset));
     offset += Bytes.SIZEOF_INT;
-    Assert.assertEquals(s1, r.getShort(offset));
+    assertEquals(s1, r.getShort(offset));
     offset += Bytes.SIZEOF_SHORT;
-    Assert.assertEquals(l1, r.getLong(offset));
+    assertEquals(l1, r.getLong(offset));
     offset += Bytes.SIZEOF_LONG;
-    Assert.assertEquals(l1, r.getVLong(offset));
+    assertEquals(l1, r.getVLong(offset));
     offset += SimpleByteRange.getVLongSize(l1);
-    Assert.assertEquals(l2, r.getVLong(offset));
+    assertEquals(l2, r.getVLong(offset));
     offset += SimpleByteRange.getVLongSize(l2);
-    Assert.assertEquals(Long.MAX_VALUE, r.getVLong(offset));
+    assertEquals(Long.MAX_VALUE, r.getVLong(offset));
     offset += SimpleByteRange.getVLongSize(Long.MAX_VALUE);
-    Assert.assertEquals(Long.MIN_VALUE, r.getVLong(offset));
+    assertEquals(Long.MIN_VALUE, r.getVLong(offset));
   }
 }
