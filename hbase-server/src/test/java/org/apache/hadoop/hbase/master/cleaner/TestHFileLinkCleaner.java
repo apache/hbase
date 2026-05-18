@@ -24,6 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -144,7 +145,7 @@ public class TestHFileLinkCleaner {
     fs.mkdirs(familyLinkPath);
     hfileLink =
       sft.createHFileLink(hri.getTable(), hri.getEncodedName(), hfileName, createBackReference);
-    hfileLinkName = hfileName;
+    hfileLinkName = HFileLink.createHFileLinkName(hri.getTable(), hri.getEncodedName(), hfileName);
     linkBackRefDir = HFileLink.getBackReferencesDir(archiveStoreDir, hfileName);
     assertTrue(fs.exists(linkBackRefDir));
     backRefs = fs.listStatus(linkBackRefDir);
@@ -209,6 +210,56 @@ public class TestHFileLinkCleaner {
     assertTrue(fs.exists(linkBackRefDir), "back reference directory still exists");
     cleaner.chore();
     assertFalse(fs.exists(linkBackRefDir), "back reference directory should be deleted");
+  }
+
+  /**
+   * Verify that an HFileLink Reference file — created by
+   * {@code RestoreSnapshotHelper.restoreReferenceFile()} when cloning a snapshot that contains
+   * split/merge reference files — protects the archived HFile from deletion by
+   * {@link HFileLinkCleaner}.
+   *
+   * <p>Unlike a normal clone (which calls {@code HFileLink.create()} and gets a zero-byte HFileLink
+   * file plus a back-reference), {@code restoreReferenceFile()} writes only a Reference file whose
+   * base name is an HFileLink name (e.g. {@code srcTable=srcRegion-hfile.cloneRegion}). The
+   * back-reference points to a path that {@code HFileLinkCleaner} reconstructs as a zero-byte
+   * HFileLink file — but that file does not exist. The cleaner must also look for Reference files
+   * at that path before concluding the forward link is gone.
+   */
+  @Test
+  public void testHFileLinkReferenceFileProtectsArchivedHFile() throws Exception {
+    // @Before created: archived HFile, zero-byte HFileLink, and back-reference.
+    // restoreReferenceFile() does NOT create a zero-byte HFileLink file; it creates a Reference
+    // file whose base name is the HFileLink name.  Simulate that here.
+
+    // Step 1: remove the zero-byte HFileLink (restoreReferenceFile doesn't create one).
+    assertTrue(fs.delete(new Path(familyLinkPath, hfileLinkName), false));
+
+    // Step 2: create the HFileLink Reference file that restoreReferenceFile() produces.
+    // Name pattern: <table>=<srcRegion>-<hfile>.<cloneRegionEncoded>
+    String hfileLinkRefName = hfileLinkName + "." + hriLink.getEncodedName();
+    Path hfileLinkRefPath = new Path(familyLinkPath, hfileLinkRefName);
+    fs.createNewFile(hfileLinkRefPath);
+    // Sanity-check: the naming must satisfy StoreFileInfo.isReference() so HBase treats it as a
+    // reference file, not a plain HFile.
+    assertTrue(StoreFileInfo.isReference(hfileLinkRefPath),
+      "HFileLink Reference name must be recognized as a reference file");
+
+    // The back-reference dir+file already exists from @Before.
+    // The cleaner must NOT delete the archived HFile while the Reference file still exists.
+    cleaner.chore();
+    assertTrue(fs.exists(hfilePath),
+      "Archived HFile must be protected while an HFileLink Reference file exists in the clone");
+
+    // Step 3: simulate clone-table compaction — the Reference file is replaced by a real HFile
+    // and removed from the store.
+    assertTrue(fs.delete(hfileLinkRefPath, false));
+
+    // The back-reference's forward link is now gone; the cleaner should mark the back-ref
+    // deletable and remove it.
+    cleaner.chore();
+    assertFalse(fs.exists(linkBackRef),
+    "Back-reference should be removed after HFileLink Reference file is gone");
+    // Archived HFile cleanup (requires TTL to expire) is validated by @After.
   }
 
   private static Path getFamilyDirPath(final Path rootDir, final TableName table,
