@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -44,6 +45,7 @@ import org.junit.jupiter.api.TestTemplate;
  */
 @Tag(IOTests.TAG)
 @Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestLoadAndSwitchEncodeOnDisk extends TestMiniClusterLoadSequential {
 
   /** We do not alternate the multi-put flag in this test. */
