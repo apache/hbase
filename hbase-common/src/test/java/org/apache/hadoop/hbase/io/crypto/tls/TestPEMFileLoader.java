@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * This file has been copied from the Apache ZooKeeper project.
@@ -36,77 +35,90 @@ import org.junit.runners.Parameterized;
  *      "https://github.com/apache/zookeeper/blob/master/zookeeper-server/src/test/java/org/apache/zookeeper/common/PEMFileLoaderTest.java">Base
  *      revision</a>
  */
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}")
 public class TestPEMFileLoader extends AbstractTestX509Parameterized {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPEMFileLoader.class);
+  public TestPEMFileLoader(X509KeyType caKeyType, X509KeyType certKeyType, char[] keyPassword) {
+    super(caKeyType, certKeyType, keyPassword);
+  }
 
-  @Test
+  @TestTemplate
   public void testLoadKeyStore() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
     KeyStore ks = new PEMFileLoader.Builder().setKeyStorePath(path)
       .setKeyStorePassword(x509TestContext.getKeyStorePassword()).build().loadKeyStore();
-    Assert.assertEquals(1, ks.size());
+    assertEquals(1, ks.size());
   }
 
-  @Test(expected = Exception.class)
-  public void testLoadKeyStoreWithWrongPassword() throws Exception {
+  @TestTemplate
+  public void testLoadKeyStoreWithWrongPassword() throws IOException {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
-    new PEMFileLoader.Builder().setKeyStorePath(path)
-      .setKeyStorePassword("wrong password".toCharArray()).build().loadKeyStore();
+    assertThrows(Exception.class, () -> {
+      new PEMFileLoader.Builder().setKeyStorePath(path)
+        .setKeyStorePassword("wrong password".toCharArray()).build().loadKeyStore();
+    });
   }
 
-  @Test(expected = IOException.class)
-  public void testLoadKeyStoreWithWrongFilePath() throws Exception {
+  @TestTemplate
+  public void testLoadKeyStoreWithWrongFilePath() throws IOException {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
-    new PEMFileLoader.Builder().setKeyStorePath(path + ".does_not_exist")
-      .setKeyStorePassword(x509TestContext.getKeyStorePassword()).build().loadKeyStore();
+    assertThrows(IOException.class, () -> {
+      new PEMFileLoader.Builder().setKeyStorePath(path + ".does_not_exist")
+        .setKeyStorePassword(x509TestContext.getKeyStorePassword()).build().loadKeyStore();
+    });
   }
 
-  @Test(expected = NullPointerException.class)
-  public void testLoadKeyStoreWithNullFilePath() throws Exception {
-    new PEMFileLoader.Builder().setKeyStorePassword(x509TestContext.getKeyStorePassword()).build()
-      .loadKeyStore();
+  @TestTemplate
+  public void testLoadKeyStoreWithNullFilePath() {
+    assertThrows(NullPointerException.class, () -> {
+      new PEMFileLoader.Builder().setKeyStorePassword(x509TestContext.getKeyStorePassword()).build()
+        .loadKeyStore();
+    });
   }
 
-  @Test(expected = KeyStoreException.class)
-  public void testLoadKeyStoreWithWrongFileType() throws Exception {
-    // Trying to load a JKS file with PEM loader should fail
+  @TestTemplate
+  public void testLoadKeyStoreWithWrongFileType() throws IOException {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
-    new PEMFileLoader.Builder().setKeyStorePath(path)
-      .setKeyStorePassword(x509TestContext.getKeyStorePassword()).build().loadKeyStore();
+    assertThrows(KeyStoreException.class, () -> {
+      // Trying to load a JKS file with PEM loader should fail
+      new PEMFileLoader.Builder().setKeyStorePath(path)
+        .setKeyStorePassword(x509TestContext.getKeyStorePassword()).build().loadKeyStore();
+    });
   }
 
-  @Test
+  @TestTemplate
   public void testLoadTrustStore() throws Exception {
     String path = x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
     KeyStore ts = new PEMFileLoader.Builder().setTrustStorePath(path)
       .setTrustStorePassword(x509TestContext.getTrustStorePassword()).build().loadTrustStore();
-    Assert.assertEquals(1, ts.size());
+    assertEquals(1, ts.size());
   }
 
-  @Test(expected = IOException.class)
-  public void testLoadTrustStoreWithWrongFilePath() throws Exception {
+  @TestTemplate
+  public void testLoadTrustStoreWithWrongFilePath() throws IOException {
     String path = x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
-    new PEMFileLoader.Builder().setTrustStorePath(path + ".does_not_exist")
-      .setTrustStorePassword(x509TestContext.getTrustStorePassword()).build().loadTrustStore();
+    assertThrows(IOException.class, () -> {
+      new PEMFileLoader.Builder().setTrustStorePath(path + ".does_not_exist")
+        .setTrustStorePassword(x509TestContext.getTrustStorePassword()).build().loadTrustStore();
+    });
   }
 
-  @Test(expected = NullPointerException.class)
-  public void testLoadTrustStoreWithNullFilePath() throws Exception {
-    new PEMFileLoader.Builder().setTrustStorePassword(x509TestContext.getTrustStorePassword())
-      .build().loadTrustStore();
+  @TestTemplate
+  public void testLoadTrustStoreWithNullFilePath() {
+    assertThrows(NullPointerException.class, () -> {
+      new PEMFileLoader.Builder().setTrustStorePassword(x509TestContext.getTrustStorePassword())
+        .build().loadTrustStore();
+    });
   }
 
-  @Test
+  @TestTemplate
   public void testLoadTrustStoreWithWrongFileType() throws Exception {
     // Trying to load a JKS file with PEM loader should fail
     String path = x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
     KeyStore ts = new PEMFileLoader.Builder().setTrustStorePath(path)
       .setTrustStorePassword(x509TestContext.getTrustStorePassword()).build().loadTrustStore();
-    Assert.assertEquals(0, ts.size());
+    assertEquals(0, ts.size());
   }
 }
