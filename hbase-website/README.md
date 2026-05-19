@@ -537,6 +537,15 @@ mvn clean install -DskipSite
 
 ### Deployment
 
+#### Update the 404 Page
+
+- Edit the standalone static page in `public/404.html`.
+- The static 404 page supports dark mode without React: it applies the saved
+  `localStorage.theme` value when present and otherwise falls back to
+  `prefers-color-scheme`.
+- `public/robots.txt` excludes `/404.html` from crawlers.
+- `scripts/generate-sitemap.ts` excludes `404.html` from generated sitemaps.
+
 #### Static Hosting
 
 Since this site uses Static Site Generation (SSG), you can deploy the `build/client/` directory to any static file host:
