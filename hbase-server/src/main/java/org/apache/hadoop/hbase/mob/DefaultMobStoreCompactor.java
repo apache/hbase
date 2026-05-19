@@ -80,6 +80,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   protected long mobSizeThreshold;
   protected HMobStore mobStore;
   protected boolean ioOptimizedMode = false;
+  protected final boolean cacheMobBlocksOnCompaction;
 
   /*
    * MOB file reference set thread local variable. It contains set of a MOB file names, which newly
@@ -169,7 +170,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     this.ioOptimizedMode =
       conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.DEFAULT_MOB_COMPACTION_TYPE)
         .equals(MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
-
+    this.cacheMobBlocksOnCompaction = conf.getBoolean(MobConstants.MOB_COMPACTION_CACHE_BLOCKS,
+      MobConstants.DEFAULT_MOB_COMPACTION_CACHE_BLOCKS);
   }
 
   @Override
@@ -377,7 +379,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               String fName = MobUtils.getMobFileName(c);
               // Added to support migration
               try {
-                mobCell = mobStore.resolve(c, true, false).getCell();
+                mobCell = mobStore.resolve(c, cacheMobBlocksOnCompaction, false).getCell();
               } catch (DoNotRetryIOException e) {
                 if (
                   discardMobMiss && e.getCause() != null
