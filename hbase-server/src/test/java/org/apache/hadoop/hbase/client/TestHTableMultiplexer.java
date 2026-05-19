@@ -53,9 +53,6 @@ public class TestHTableMultiplexer {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -74,8 +71,8 @@ public class TestHTableMultiplexer {
       Thread.sleep(100);
       r = htable.get(get);
     } while (r == null || r.getValue(FAMILY, QUALIFIER) == null);
-    assertEquals("value", Bytes.toStringBinary(VALUE1),
-      Bytes.toStringBinary(r.getValue(FAMILY, QUALIFIER)));
+    assertEquals(Bytes.toStringBinary(VALUE1), Bytes.toStringBinary(r.getValue(FAMILY, QUALIFIER)),
+      "value");
   }
 
   @Test
