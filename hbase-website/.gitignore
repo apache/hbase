@@ -39,6 +39,7 @@ lerna-debug.log*
 /app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md
 /app/lib/export-pdf/hbase-version.json
 /public/books/**
+/public/sitemap.xml
 
 # Playwright
 node_modules/
