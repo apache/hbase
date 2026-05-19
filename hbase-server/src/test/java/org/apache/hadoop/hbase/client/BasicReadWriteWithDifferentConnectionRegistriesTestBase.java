@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.net.URI;
@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 public abstract class BasicReadWriteWithDifferentConnectionRegistriesTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestBasicReadWriteWithDifferentConnectionRegistries.class);
+    LoggerFactory.getLogger(BasicReadWriteWithDifferentConnectionRegistriesTestBase.class);
 
   protected static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 

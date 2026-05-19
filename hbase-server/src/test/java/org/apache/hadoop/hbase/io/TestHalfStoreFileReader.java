@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.io;
 
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.BUFFER_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.file.Paths;
@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -62,29 +61,29 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHalfStoreFileReader {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHalfStoreFileReader.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestHalfStoreFileReader.class);
 
   private static HBaseTestingUtil TEST_UTIL;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.cleanupTestDir();
   }
@@ -109,7 +108,7 @@ public class TestHalfStoreFileReader {
     fs.mkdirs(parentPath);
     String tableName = Paths.get(root_dir).getFileName().toString();
     RegionInfo splitAHri = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
-    Thread.currentThread().sleep(1000);
+    Thread.sleep(1000);
     RegionInfo splitBHri = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     Path splitAPath = new Path(new Path(root_dir, splitAHri.getRegionNameAsString()), "CF");
     Path splitBPath = new Path(new Path(root_dir, splitBHri.getRegionNameAsString()), "CF");
@@ -201,12 +200,10 @@ public class TestHalfStoreFileReader {
         curr = scanner.getCell();
         KeyValue reseekKv = getLastOnCol(curr);
         int ret = scanner.reseekTo(reseekKv);
-        assertTrue("reseek to returned: " + ret, ret > 0);
-        // System.out.println(curr + ": " + ret);
+        assertTrue(ret > 0, "reseek to returned: " + ret);
       } while (scanner.next());
 
       int ret = scanner.reseekTo(getLastOnCol(curr));
-      // System.out.println("Last reseek: " + ret);
       assertTrue(ret > 0);
     }
 
@@ -250,8 +247,8 @@ public class TestHalfStoreFileReader {
       }
       beforeMidKey = item;
     }
-    System.out.println("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
-    System.out.println("beforeMidKey: " + beforeMidKey);
+    LOG.info("midkey: " + midKV + " or: " + Bytes.toStringBinary(midkey));
+    LOG.info("beforeMidKey: " + beforeMidKey);
 
     // Seek on the splitKey, should be in top, not in bottom
     Cell foundKeyValue = doTestOfSeekBefore(p, fs, bottom, midKV, cacheConf);

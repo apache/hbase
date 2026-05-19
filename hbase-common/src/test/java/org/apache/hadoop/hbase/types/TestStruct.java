@@ -17,50 +17,49 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.Constructor;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Comparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * This class both tests and demonstrates how to construct compound rowkeys from a POJO. The code
  * under test is {@link Struct}. {@link SpecializedPojo1Type1} demonstrates how one might create
  * their own custom data type extension for an application POJO.
  */
-@RunWith(Parameterized.class)
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "[{index}]: generic = {0}, specialized = {1}")
 public class TestStruct {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestStruct.class);
 
-  @Parameterized.Parameter()
-  public Struct generic;
+  private Struct generic;
 
   @SuppressWarnings("rawtypes")
-  @Parameterized.Parameter(value = 1)
-  public DataType specialized;
+  private DataType specialized;
 
-  @Parameterized.Parameter(value = 2)
-  public Object[][] constructorArgs;
+  private Object[][] constructorArgs;
 
-  @Parameters
-  public static Collection<Object[]> params() {
+  @SuppressWarnings("rawtypes")
+  public TestStruct(Struct generic, DataType specialized, Object[][] constructorArgs) {
+    this.generic = generic;
+    this.specialized = specialized;
+    this.constructorArgs = constructorArgs;
+  }
+
+  public static Stream<Arguments> parameters() {
     Object[][] pojo1Args = { new Object[] { "foo", 5, 10.001 }, new Object[] { "foo", 100, 7.0 },
       new Object[] { "foo", 100, 10.001 }, new Object[] { "bar", 5, 10.001 },
       new Object[] { "bar", 100, 10.001 }, new Object[] { "baz", 5, 10.001 }, };
@@ -72,10 +71,9 @@ public class TestStruct {
         new Object[] { Bytes.toBytes("worst"), Bytes.toBytes("of"), "times,", new byte[0] },
         new Object[] { new byte[0], new byte[0], "", new byte[0] }, };
 
-    Object[][] params =
-      new Object[][] { { SpecializedPojo1Type1.GENERIC, new SpecializedPojo1Type1(), pojo1Args },
-        { SpecializedPojo2Type1.GENERIC, new SpecializedPojo2Type1(), pojo2Args }, };
-    return Arrays.asList(params);
+    return Stream.of(
+      Arguments.of(SpecializedPojo1Type1.GENERIC, new SpecializedPojo1Type1(), pojo1Args),
+      Arguments.of(SpecializedPojo2Type1.GENERIC, new SpecializedPojo2Type1(), pojo2Args));
   }
 
   static final Comparator<byte[]> NULL_SAFE_BYTES_COMPARATOR = (o1, o2) -> {
@@ -407,7 +405,7 @@ public class TestStruct {
     }
   }
 
-  @Test
+  @TestTemplate
   @SuppressWarnings("unchecked")
   public void testOrderPreservation() throws Exception {
     Object[] vals = new Object[constructorArgs.length];
@@ -436,10 +434,10 @@ public class TestStruct {
     Arrays.sort(encodedSpecialized);
 
     for (int i = 0; i < vals.length; i++) {
-      assertEquals("Struct encoder does not preserve sort order at position " + i, vals[i],
-        ctor.newInstance(new Object[] { generic.decode(encodedGeneric[i]) }));
-      assertEquals("Specialized encoder does not preserve sort order at position " + i, vals[i],
-        specialized.decode(encodedSpecialized[i]));
+      assertEquals(vals[i], ctor.newInstance(new Object[] { generic.decode(encodedGeneric[i]) }),
+        "Struct encoder does not preserve sort order at position " + i);
+      assertEquals(vals[i], specialized.decode(encodedSpecialized[i]),
+        "Specialized encoder does not preserve sort order at position " + i);
     }
   }
 }

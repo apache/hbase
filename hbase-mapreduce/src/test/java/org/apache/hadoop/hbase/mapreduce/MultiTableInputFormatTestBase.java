@@ -55,7 +55,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Base set of tests and setup for input formats touching multiple tables.
  */
 public abstract class MultiTableInputFormatTestBase {
-  static final Logger LOG = LoggerFactory.getLogger(TestMultiTableInputFormat.class);
+  static final Logger LOG = LoggerFactory.getLogger(MultiTableInputFormatTestBase.class);
   public static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static final String TABLE_NAME = "scantest";
   static final byte[] INPUT_FAMILY = Bytes.toBytes("contents");

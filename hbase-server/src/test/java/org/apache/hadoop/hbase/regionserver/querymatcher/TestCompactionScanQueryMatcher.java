@@ -20,12 +20,11 @@ package org.apache.hadoop.hbase.regionserver.querymatcher;
 import static org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode.INCLUDE;
 import static org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode.SEEK_NEXT_COL;
 import static org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchCode.SKIP;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,18 +38,14 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionScanQueryMatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionScanQueryMatcher.class);
 
@@ -187,7 +182,7 @@ public class TestCompactionScanQueryMatcher extends AbstractTestScanQueryMatcher
       ts--;
     }
     for (int i = 0; i < expected.length; i++) {
-      assertEquals("Mismatch at index " + i, expected[i], actual.get(i));
+      assertEquals(expected[i], actual.get(i), "Mismatch at index " + i);
     }
   }
 

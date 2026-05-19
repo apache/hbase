@@ -22,9 +22,10 @@ import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.BYTES_IN_RESULT
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_CALLS_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -32,7 +33,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -41,21 +41,16 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableScanMetricsWithScannerSuspending {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableScanMetricsWithScannerSuspending.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -70,7 +65,7 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
 
   private static AsyncConnection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     // Create 3 rows in the table, with rowkeys starting with "xxx*", "yyy*" and "zzz*" so that
@@ -83,7 +78,7 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
@@ -131,7 +126,7 @@ public class TestAsyncTableScanMetricsWithScannerSuspending {
       assertEquals(i, rowsReadCounter.get());
       results.add(scanner.next());
     }
-    Assert.assertNull(scanner.next());
+    assertNull(scanner.next());
 
     // Assert on overall scan metrics and scan metrics by region
     ScanMetrics scanMetrics = scanner.getScanMetrics();

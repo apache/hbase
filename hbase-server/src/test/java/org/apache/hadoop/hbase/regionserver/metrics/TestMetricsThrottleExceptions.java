@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.metrics;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.Metric;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
@@ -35,22 +34,18 @@ import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsThrottleExceptions {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsThrottleExceptions.class);
 
   private MetricRegistry testRegistry;
   private MetricsThrottleExceptions throttleMetrics;
 
-  @After
+  @AfterEach
   public void cleanup() {
     // Clean up global registries after each test to avoid interference
     MetricRegistries.global().clear();
@@ -67,11 +62,11 @@ public class TestMetricsThrottleExceptions {
     // Verify the counter exists and has correct value
     Optional<Metric> metric =
       testRegistry.get("RpcThrottlingException_Type_NumRequestsExceeded_User_alice_Table_users");
-    assertTrue("Counter metric should be present", metric.isPresent());
-    assertTrue("Metric should be a counter", metric.get() instanceof Counter);
+    assertTrue(metric.isPresent(), "Counter metric should be present");
+    assertTrue(metric.get() instanceof Counter, "Metric should be a counter");
 
     Counter counter = (Counter) metric.get();
-    assertEquals("Counter should have count of 1", 1, counter.getCount());
+    assertEquals(1, counter.getCount(), "Counter should have count of 1");
   }
 
   @Test
@@ -188,8 +183,8 @@ public class TestMetricsThrottleExceptions {
 
     // Wait for all threads to complete
     boolean completed = doneLatch.await(30, TimeUnit.SECONDS);
-    assertTrue("All threads should complete within timeout", completed);
-    assertEquals("No exceptions should occur during concurrent access", 0, exceptions.get());
+    assertTrue(completed, "All threads should complete within timeout");
+    assertEquals(0, exceptions.get(), "No exceptions should occur during concurrent access");
 
     // Verify the final counter value
     verifyCounter(testRegistry,
@@ -276,12 +271,12 @@ public class TestMetricsThrottleExceptions {
    */
   private void verifyCounter(MetricRegistry registry, String metricName, long expectedCount) {
     Optional<Metric> metric = registry.get(metricName);
-    assertTrue("Counter metric '" + metricName + "' should be present", metric.isPresent());
-    assertTrue("Metric should be a counter", metric.get() instanceof Counter);
+    assertTrue(metric.isPresent(), "Counter metric '" + metricName + "' should be present");
+    assertTrue(metric.get() instanceof Counter, "Metric should be a counter");
 
     Counter counter = (Counter) metric.get();
-    assertEquals("Counter '" + metricName + "' should have expected count", expectedCount,
-      counter.getCount());
+    assertEquals(expectedCount, counter.getCount(),
+      "Counter '" + metricName + "' should have expected count");
   }
 
   /**

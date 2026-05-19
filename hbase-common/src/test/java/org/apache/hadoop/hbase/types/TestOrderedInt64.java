@@ -17,32 +17,23 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOrderedInt64 {
   private static final Long[] VALUES =
     new Long[] { 1L, 22L, 333L, 4444L, 55555L, 666666L, 7777777L, 88888888L, 999999999L };
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOrderedInt64.class);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testIsNullableIsFalse() {
@@ -66,19 +57,18 @@ public class TestOrderedInt64 {
       for (final Long val : VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }
 
   @Test
   public void testEncodeNoSupportForNull() {
-    exception.expect(IllegalArgumentException.class);
-
     final DataType<Long> type = new OrderedInt64(Order.ASCENDING);
 
-    type.encode(new SimplePositionedMutableByteRange(20), null);
+    assertThrows(IllegalArgumentException.class,
+      () -> type.encode(new SimplePositionedMutableByteRange(20), null));
   }
 
   @Test
@@ -89,8 +79,8 @@ public class TestOrderedInt64 {
       for (final Long val : VALUES) {
         buffer.setPosition(0);
         type.encodeLong(buffer, val);
-        assertEquals("encodedLength does not match actual, " + val, buffer.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }

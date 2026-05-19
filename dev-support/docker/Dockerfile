@@ -78,8 +78,10 @@ RUN curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x
     && tar -xzf node.tar.gz -C /usr/local --strip-components=1 \
     && rm node.tar.gz
 
-# Install Playwright dependencies. Needed for docs PDF export and docs UI e2e tests.
-RUN npx -y playwright install --with-deps
+# Install OS-level dependencies for Playwright browsers used in CI.
+# Only chromium and firefox — webkit crashes on Ubuntu 22.04 due to
+# libsoup2/libsoup3 conflict (HBASE-30168).
+RUN npx -y playwright install-deps chromium firefox
 
 ##
 # download sundry dependencies

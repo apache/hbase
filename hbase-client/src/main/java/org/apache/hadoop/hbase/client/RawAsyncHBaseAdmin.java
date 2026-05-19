@@ -379,7 +379,7 @@ class RawAsyncHBaseAdmin implements AsyncAdmin {
 
   public static final String FLUSH_TABLE_PROCEDURE_SIGNATURE = "flush-table-proc";
 
-  private static final Logger LOG = LoggerFactory.getLogger(AsyncHBaseAdmin.class);
+  private static final Logger LOG = LoggerFactory.getLogger(RawAsyncHBaseAdmin.class);
 
   private final AsyncConnectionImpl connection;
 

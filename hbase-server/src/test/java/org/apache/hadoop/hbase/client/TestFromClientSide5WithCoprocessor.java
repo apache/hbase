@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.jupiter.api.BeforeAll;
@@ -41,6 +42,6 @@ public class TestFromClientSide5WithCoprocessor extends FromClientSideTest5 {
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    initialize(MultiRowMutationEndpoint.class);
+    initialize(NoOpScanPolicyObserver.class, MultiRowMutationEndpoint.class);
   }
 }

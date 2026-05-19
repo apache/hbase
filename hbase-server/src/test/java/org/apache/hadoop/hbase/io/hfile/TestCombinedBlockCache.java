@@ -20,27 +20,23 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache.CombinedCacheStats;
 import org.apache.hadoop.hbase.nio.ByteBuff;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestCombinedBlockCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCombinedBlockCache.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -138,7 +134,7 @@ public class TestCombinedBlockCache {
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "offheap");
     conf.setInt(BUCKET_CACHE_SIZE_KEY, 32);
     BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
-    Assert.assertTrue(blockCache instanceof CombinedBlockCache);
+    assertTrue(blockCache instanceof CombinedBlockCache);
     return (CombinedBlockCache) blockCache;
   }
 

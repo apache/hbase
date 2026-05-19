@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -67,6 +68,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   private float currentRegionCacheRatio;
   private final String tableDescriptorHash;
+
+  private float currentRegionColdDataRatio;
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
@@ -140,6 +143,10 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
   public float getCurrentRegionCacheRatio() {
     return currentRegionCacheRatio;
+  }
+
+  public float getCurrentRegionColdDataRatio() {
+    return currentRegionColdDataRatio;
   }
 
   @Override
@@ -349,6 +356,11 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           region.getRegionInfo().getEncodedName(), regionCachedAmount.getValue(),
           tempStoreFileSize);
         currentRegionCacheRatio = regionCachedAmount.floatValue() / tempStoreFileSize;
+        if (DataTieringManager.getInstance() != null) {
+          currentRegionColdDataRatio = DataTieringManager.getInstance().getRegionColdDataSize()
+            .getOrDefault(region.getRegionInfo().getEncodedName(), new Pair<>(null, 0L)).getSecond()
+            / (float) tempStoreFileSize;
+        }
       }
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;

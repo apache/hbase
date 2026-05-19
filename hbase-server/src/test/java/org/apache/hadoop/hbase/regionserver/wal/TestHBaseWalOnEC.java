@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -41,28 +40,21 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsAdmin;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestHBaseWalOnEC {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseWalOnEC.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     MiniDFSCluster cluster = UTIL.startMiniDFSCluster(3); // Need 3 DNs for RS-3-2 policy
     DistributedFileSystem fs = cluster.getFileSystem();
@@ -75,33 +67,35 @@ public class TestHBaseWalOnEC {
     try (FSDataOutputStream out = fs.create(new Path("/canary"))) {
       // If this comes back as having hflush then some test setup assumption is wrong.
       // Fail the test so that a developer has to look and triage
-      assertFalse("Did not enable EC!", out.hasCapability(StreamCapabilities.HFLUSH));
+      assertFalse(out.hasCapability(StreamCapabilities.HFLUSH), "Did not enable EC!");
     }
 
     UTIL.getConfiguration().setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, true);
 
   }
 
-  @Parameter
-  public String walProvider;
+  private final String walProvider;
 
-  @Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { "asyncfs" }, new Object[] { "filesystem" });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("asyncfs"), Arguments.of("filesystem"));
   }
 
-  @Before
+  public TestHBaseWalOnEC(String walProvider) {
+    this.walProvider = walProvider;
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
     UTIL.startMiniCluster(3);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testReadWrite() throws IOException {
     byte[] row = Bytes.toBytes("row");
     byte[] cf = Bytes.toBytes("cf");

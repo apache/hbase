@@ -17,37 +17,27 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRawBytes {
   private static final byte[][] VALUES =
     new byte[][] { Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
       Bytes.toBytes("4444"), Bytes.toBytes("55555"), Bytes.toBytes("666666"),
       Bytes.toBytes("7777777"), Bytes.toBytes("88888888"), Bytes.toBytes("999999999"), };
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRawBytes.class);
-
-  @Rule
-  public ExpectedException exception = ExpectedException.none();
 
   @Test
   public void testIsOrderPreservingIsTrue() {
@@ -92,8 +82,8 @@ public class TestRawBytes {
       for (final byte[] val : VALUES) {
         buffer.setPosition(0);
         type.encode(buffer, val);
-        assertEquals("encodedLength does not match actual, " + Arrays.toString(val),
-          buffer.getPosition(), type.encodedLength(val));
+        assertEquals(buffer.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + Arrays.toString(val));
       }
     }
   }

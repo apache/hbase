@@ -117,6 +117,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
             // accumulate the count
             mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
             mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
+            mt.perStoreFileSize.merge(tempKey, store.getStorefilesSize(), Long::sum);
           }
 
           mt.regionCount += 1;
@@ -177,6 +178,16 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
       return null;
     } else {
       return metricsTable.perStoreMixedReadCount;
+    }
+  }
+
+  @Override
+  public Map<String, Long> getStoreFileSizePerStore(String table) {
+    MetricsTableValues metricsTable = metricsTableMap.get(TableName.valueOf(table));
+    if (metricsTable == null) {
+      return null;
+    } else {
+      return metricsTable.perStoreFileSize;
     }
   }
 
@@ -443,6 +454,7 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
     long cpRequestCount;
     Map<String, Long> perStoreMemstoreOnlyReadCount = new HashMap<>();
     Map<String, Long> perStoreMixedReadCount = new HashMap<>();
+    Map<String, Long> perStoreFileSize = new HashMap<>();
   }
 
 }
