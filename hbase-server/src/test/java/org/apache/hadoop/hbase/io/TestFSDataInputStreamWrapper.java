@@ -36,8 +36,8 @@ import org.apache.hadoop.fs.StreamCapabilities;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.ByteBufferPool;
-import org.junit.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 @Tag(MiscTests.TAG)
