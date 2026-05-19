@@ -18,16 +18,21 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
+  import="java.net.URLEncoder"
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
+  import="org.apache.hadoop.fs.FileStatus"
   import="org.apache.hadoop.fs.FileSystem"
+  import="org.apache.hadoop.fs.Path"
   import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoDisplay"
+  import="org.apache.hadoop.hbase.mob.MobUtils"
+  import="org.apache.hadoop.hbase.regionserver.HMobStore"
   import="org.apache.hadoop.hbase.regionserver.HRegionServer"
-  import="org.apache.hadoop.hbase.regionserver.HStoreFile"
   import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.regionserver.HStore"
+  import="org.apache.hadoop.hbase.regionserver.HStoreFile"
 %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%
@@ -95,7 +100,51 @@
 
          <p> <%= count %> StoreFile(s) in set. <%= isReplicaRegion ? "The information about storefile(s) may not up-to-date because it's not the primary region." : "" %></p>
          </table>
-   <%  }
+
+       <% if (store instanceof HMobStore) { %>
+       <h4>MOB Files</h4>
+       <table class="table table-striped">
+         <tr>
+           <th>MOB File</th>
+           <th>Size (MB)</th>
+           <th>Modification time</th>
+         </tr>
+
+         <%
+         int mobCnt = 0;
+         for (HStoreFile sf : storeFiles) {
+           try {
+             byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
+             if (value == null) {
+               continue;
+             }
+
+             Collection<String> fileNames = MobUtils.deserializeMobFileRefs(value).build().values();
+             mobCnt += fileNames.size();
+             for (String fileName : fileNames) {
+               Path mobPath = new Path(((HMobStore) store).getPath(), fileName);
+               FileStatus status = fs.getFileStatus(mobPath);
+               String mobPathStr = mobPath.toString();
+               String encodedStr = URLEncoder.encode(mobPathStr, StandardCharsets.UTF_8.toString()); %>
+
+               <tr>
+                 <td><a href="storeFile.jsp?name=<%= encodedStr %>"><%= mobPathStr %></a></td>
+                 <td><%= status.getLen() / 1024 / 1024 %></td>
+                 <td><%= new Date(status.getModificationTime()) %></td>
+               </tr>
+
+             <% }
+           } catch (Exception e) { %>
+             <tr>
+               <td colspan="3"><%= e %></td>
+             </tr>
+           <% }
+         } %>
+
+         <p> <%= mobCnt %> MobFile(s) in set.</p>
+       </table>
+       <% }
+     }
    }%>
 </div>
 
