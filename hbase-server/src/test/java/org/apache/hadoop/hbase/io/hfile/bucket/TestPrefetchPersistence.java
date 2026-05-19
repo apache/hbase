@@ -139,8 +139,10 @@ public class TestPrefetchPersistence {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
     int retries = 0;
-    while (!reader.prefetchComplete()
-        && !bucketCache.fullyCachedFiles.containsKey(storeFilePath.getName()) && retries < 5) {
+    while (
+      !reader.prefetchComplete()
+        && !bucketCache.fullyCachedFiles.containsKey(storeFilePath.getName()) && retries < 5
+    ) {
       Thread.sleep(500);
       retries++;
     }
