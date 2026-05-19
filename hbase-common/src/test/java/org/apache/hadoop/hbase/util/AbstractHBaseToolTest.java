@@ -19,20 +19,25 @@ package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.AbstractHBaseTool.EXIT_FAILURE;
 import static org.apache.hadoop.hbase.util.AbstractHBaseTool.EXIT_SUCCESS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.junit.Before;
-import org.junit.Test;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class AbstractHBaseToolTest {
   static final class Options {
     static final Option REQUIRED = new Option(null, "required", true, "");
@@ -90,7 +95,7 @@ public class AbstractHBaseToolTest {
 
   TestTool tool;
 
-  @Before
+  @BeforeEach
   public void setup() {
     tool = new TestTool();
     tool.setConf(HBaseConfiguration.create());

@@ -24,15 +24,19 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestBuildThreadDiagnosticString {
 
+  private static final Logger LOG = LoggerFactory.getLogger(TestBuildThreadDiagnosticString.class);
+
   @Test
   public void test() {
     String threadDump = TimedOutTestsListener.buildThreadDiagnosticString();
-    System.out.println(threadDump);
+    LOG.info(threadDump);
     assertThat(threadDump,
       containsString(getClass().getName() + ".test(" + getClass().getSimpleName() + ".java:"));
   }

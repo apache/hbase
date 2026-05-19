@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
@@ -33,17 +33,17 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCellUtil {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellUtil.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestCellUtil.class);
 
   /**
    * CellScannable used in test. Returns a {@link TestCellScanner}
@@ -271,7 +271,7 @@ public class TestCellUtil {
     while (scanner.advance()) {
       count++;
     }
-    Assert.assertEquals(expected, count);
+    assertEquals(expected, count);
   }
 
   @Test
@@ -283,43 +283,43 @@ public class TestCellUtil {
     byte[] d = Bytes.toBytes("d");
 
     // overlaps
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, a, b));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, c, a, b));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, a, c));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(b, c, a, c));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, c, b, c));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, d, b, c));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(b, c, a, d));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, b, a, b));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, c, a, b));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, b, a, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(b, c, a, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, c, b, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, d, b, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(b, c, a, d));
 
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(empty, b, a, b));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(empty, b, a, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(empty, b, a, b));
+    assertTrue(PrivateCellUtil.overlappingKeys(empty, b, a, c));
 
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, b));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, b));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, c));
 
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, empty, a, b));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, empty, a, c));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, empty, a, b));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, empty, a, c));
 
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, empty));
-    Assert.assertTrue(PrivateCellUtil.overlappingKeys(empty, empty, a, b));
+    assertTrue(PrivateCellUtil.overlappingKeys(a, b, empty, empty));
+    assertTrue(PrivateCellUtil.overlappingKeys(empty, empty, a, b));
 
     // non overlaps
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(a, b, c, d));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(c, d, a, b));
+    assertFalse(PrivateCellUtil.overlappingKeys(a, b, c, d));
+    assertFalse(PrivateCellUtil.overlappingKeys(c, d, a, b));
 
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, c, d));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, c, empty));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, d, empty));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(c, d, b, c));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(c, empty, b, c));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(d, empty, b, c));
+    assertFalse(PrivateCellUtil.overlappingKeys(b, c, c, d));
+    assertFalse(PrivateCellUtil.overlappingKeys(b, c, c, empty));
+    assertFalse(PrivateCellUtil.overlappingKeys(b, c, d, empty));
+    assertFalse(PrivateCellUtil.overlappingKeys(c, d, b, c));
+    assertFalse(PrivateCellUtil.overlappingKeys(c, empty, b, c));
+    assertFalse(PrivateCellUtil.overlappingKeys(d, empty, b, c));
 
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, a, b));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, empty, b));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(b, c, empty, a));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(a, b, b, c));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(empty, b, b, c));
-    Assert.assertFalse(PrivateCellUtil.overlappingKeys(empty, a, b, c));
+    assertFalse(PrivateCellUtil.overlappingKeys(b, c, a, b));
+    assertFalse(PrivateCellUtil.overlappingKeys(b, c, empty, b));
+    assertFalse(PrivateCellUtil.overlappingKeys(b, c, empty, a));
+    assertFalse(PrivateCellUtil.overlappingKeys(a, b, b, c));
+    assertFalse(PrivateCellUtil.overlappingKeys(empty, b, b, c));
+    assertFalse(PrivateCellUtil.overlappingKeys(empty, a, b, c));
   }
 
   @Test
@@ -327,32 +327,32 @@ public class TestCellUtil {
     // The whole key matching case
     KeyValue kv1 =
       new KeyValue(Bytes.toBytes("r1"), Bytes.toBytes("f1"), Bytes.toBytes("q1"), null);
-    Assert.assertEquals(kv1.getKeyLength(),
+    assertEquals(kv1.getKeyLength(),
       PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, true));
-    Assert.assertEquals(kv1.getKeyLength(),
+    assertEquals(kv1.getKeyLength(),
       PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, false, true));
-    Assert.assertEquals(kv1.getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE,
+    assertEquals(kv1.getKeyLength() - KeyValue.TIMESTAMP_TYPE_SIZE,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv1, true, false));
     // The rk length itself mismatch
     KeyValue kv2 =
       new KeyValue(Bytes.toBytes("r12"), Bytes.toBytes("f1"), Bytes.toBytes("q1"), null);
-    Assert.assertEquals(1, PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv2, true, true));
+    assertEquals(1, PrivateCellUtil.findCommonPrefixInFlatKey(kv1, kv2, true, true));
     // part of rk is same
     KeyValue kv3 =
       new KeyValue(Bytes.toBytes("r14"), Bytes.toBytes("f1"), Bytes.toBytes("q1"), null);
-    Assert.assertEquals(KeyValue.ROW_LENGTH_SIZE + Bytes.toBytes("r1").length,
+    assertEquals(KeyValue.ROW_LENGTH_SIZE + Bytes.toBytes("r1").length,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv2, kv3, true, true));
     // entire rk is same but different cf name
     KeyValue kv4 =
       new KeyValue(Bytes.toBytes("r14"), Bytes.toBytes("f2"), Bytes.toBytes("q1"), null);
-    Assert.assertEquals(
+    assertEquals(
       KeyValue.ROW_LENGTH_SIZE + kv3.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + Bytes.toBytes("f").length,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv3, kv4, false, true));
     // rk and family are same and part of qualifier
     KeyValue kv5 =
       new KeyValue(Bytes.toBytes("r14"), Bytes.toBytes("f2"), Bytes.toBytes("q123"), null);
-    Assert.assertEquals(
+    assertEquals(
       KeyValue.ROW_LENGTH_SIZE + kv3.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv4.getFamilyLength() + kv4.getQualifierLength(),
       PrivateCellUtil.findCommonPrefixInFlatKey(kv4, kv5, true, true));
@@ -360,18 +360,18 @@ public class TestCellUtil {
     KeyValue kv6 = new KeyValue(Bytes.toBytes("rk"), 1234L);
     KeyValue kv7 = new KeyValue(Bytes.toBytes("rk"), 1235L);
     // only last byte out of 8 ts bytes in ts part differs
-    Assert.assertEquals(
+    assertEquals(
       KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + 7,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv7, true, true));
     // rk, cf, q and ts are same. Only type differs
     KeyValue kv8 = new KeyValue(Bytes.toBytes("rk"), 1234L, KeyValue.Type.Delete);
-    Assert.assertEquals(
+    assertEquals(
       KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength() + KeyValue.TIMESTAMP_SIZE,
       PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, true));
     // With out TS_TYPE check
-    Assert.assertEquals(
+    assertEquals(
       KeyValue.ROW_LENGTH_SIZE + kv6.getRowLength() + KeyValue.FAMILY_LENGTH_SIZE
         + kv6.getFamilyLength() + kv6.getQualifierLength(),
       PrivateCellUtil.findCommonPrefixInFlatKey(kv6, kv8, true, false));
@@ -418,13 +418,13 @@ public class TestCellUtil {
     String nonVerbose = CellUtil.toString(cell, false);
     String verbose = CellUtil.toString(cell, true);
 
-    System.out.println("nonVerbose=" + nonVerbose);
-    System.out.println("verbose=" + verbose);
+    LOG.info("nonVerbose=" + nonVerbose);
+    LOG.info("verbose=" + verbose);
 
-    Assert.assertEquals(String.format("%s/%s:%s/%d/%s/vlen=%s/seqid=%s", row, family, qualifier,
-      timestamp, type.toString(), Bytes.toBytes(value).length, seqId), nonVerbose);
+    assertEquals(String.format("%s/%s:%s/%d/%s/vlen=%s/seqid=%s", row, family, qualifier, timestamp,
+      type.toString(), Bytes.toBytes(value).length, seqId), nonVerbose);
 
-    Assert.assertEquals(String.format("%s/%s:%s/%d/%s/vlen=%s/seqid=%s/%s", row, family, qualifier,
+    assertEquals(String.format("%s/%s:%s/%d/%s/vlen=%s/seqid=%s/%s", row, family, qualifier,
       timestamp, type.toString(), Bytes.toBytes(value).length, seqId, value), verbose);
 
     // TODO: test with tags
