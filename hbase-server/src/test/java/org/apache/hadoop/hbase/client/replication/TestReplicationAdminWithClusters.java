@@ -69,7 +69,6 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TestReplicationBase.setUpBeforeClass();
     connection1 = ConnectionFactory.createConnection(CONF1);
     connection2 = ConnectionFactory.createConnection(CONF2);
     admin1 = connection1.getAdmin();
