@@ -17,42 +17,39 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.security.Key;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestKeyProvider {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyProvider.class);
 
   @Test
   public void testTestProvider() {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
     KeyProvider provider = Encryption.getKeyProvider(conf);
-    assertNotNull("Null returned for provider", provider);
-    assertTrue("Provider is not the expected type", provider instanceof KeyProviderForTesting);
+    assertNotNull(provider, "Null returned for provider");
+    assertThat("Provider is not the expected type", provider,
+      instanceOf(KeyProviderForTesting.class));
 
     Key key = provider.getKey("foo");
-    assertNotNull("Test provider did not return a key as expected", key);
-    assertEquals("Test provider did not create a key for AES", "AES", key.getAlgorithm());
-    assertEquals("Test provider did not create a key of adequate length", AES.KEY_LENGTH,
-      key.getEncoded().length);
+    assertNotNull(key, "Test provider did not return a key as expected");
+    assertEquals("AES", key.getAlgorithm(), "Test provider did not create a key for AES");
+    assertEquals(AES.KEY_LENGTH, key.getEncoded().length,
+      "Test provider did not create a key of adequate length");
   }
 
 }

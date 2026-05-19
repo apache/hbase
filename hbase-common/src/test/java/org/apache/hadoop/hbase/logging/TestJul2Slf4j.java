@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.logging;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -30,11 +30,10 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -42,12 +41,9 @@ import org.mockito.stubbing.Answer;
  * This should be in the hbase-logging module but the {@link HBaseClassTestRule} is in hbase-common
  * so we can only put the class in hbase-common module for now...
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestJul2Slf4j {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJul2Slf4j.class);
 
   static {
     System.setProperty("java.util.logging.config.class", JulToSlf4jInitializer.class.getName());
@@ -57,7 +53,7 @@ public class TestJul2Slf4j {
 
   private org.apache.logging.log4j.core.Appender mockAppender;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     mockAppender = mock(org.apache.logging.log4j.core.Appender.class);
     when(mockAppender.getName()).thenReturn("mockAppender");
@@ -66,7 +62,7 @@ public class TestJul2Slf4j {
       .getLogger(loggerName)).addAppender(mockAppender);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
       .getLogger(loggerName)).removeAppender(mockAppender);

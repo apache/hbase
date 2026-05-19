@@ -17,72 +17,40 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConcatenatedLists {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConcatenatedLists.class);
 
   @Test
   public void testUnsupportedOps() {
     // If adding support, add tests.
     ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addSublist(Arrays.asList(0L, 1L));
-    try {
-      c.add(2L);
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
-    try {
-      c.addAll(Arrays.asList(2L, 3L));
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
-    try {
-      c.remove(0L);
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
-    try {
-      c.removeAll(Arrays.asList(0L, 1L));
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
-    try {
-      c.clear();
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
-    try {
-      c.retainAll(Arrays.asList(0L, 2L));
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
+    assertThrows(UnsupportedOperationException.class, () -> c.add(2L));
+    assertThrows(UnsupportedOperationException.class, () -> c.addAll(Arrays.asList(2L, 3L)));
+    assertThrows(UnsupportedOperationException.class, () -> c.remove(0L));
+    assertThrows(UnsupportedOperationException.class, () -> c.removeAll(Arrays.asList(0L, 1L)));
+    assertThrows(UnsupportedOperationException.class, () -> c.clear());
+    assertThrows(UnsupportedOperationException.class, () -> c.retainAll(Arrays.asList(0L, 2L)));
+
     Iterator<Long> iter = c.iterator();
     iter.next();
-    try {
-      iter.remove();
-      fail("Should throw");
-    } catch (UnsupportedOperationException ex) {
-    }
+    assertThrows(UnsupportedOperationException.class, () -> iter.remove());
   }
 
   @Test
@@ -105,7 +73,6 @@ public class TestConcatenatedLists {
   }
 
   @Test
-  @SuppressWarnings("unchecked")
   public void testManyOne() {
     ConcatenatedLists<Long> c = new ConcatenatedLists<>();
     c.addSublist(Arrays.asList(0L));
@@ -143,11 +110,6 @@ public class TestConcatenatedLists {
     }
     assertTrue(c.containsAll(all));
     assertFalse(iter.hasNext());
-    try {
-      iter.next();
-      fail("Should have thrown");
-    } catch (NoSuchElementException nsee) {
-      // Expected
-    }
+    assertThrows(NoSuchElementException.class, () -> iter.next());
   }
 }

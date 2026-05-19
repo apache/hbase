@@ -17,24 +17,19 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicBoolean;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestThreads {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThreads.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestThreads.class);
 
@@ -72,13 +67,13 @@ public class TestThreads {
     sleeper.interrupt();
     sleeper.join();
 
-    assertTrue("sleepWithoutInterrupt did not preserve the thread's " + "interrupted status",
-      wasInterrupted.get());
+    assertTrue(wasInterrupted.get(),
+      "sleepWithoutInterrupt did not preserve the thread's " + "interrupted status");
 
     long timeElapsed = EnvironmentEdgeManager.currentTime() - startTime;
     // We expect to wait at least SLEEP_TIME_MS, but we can wait more if there is a GC.
-    assertTrue("Elapsed time " + timeElapsed + " ms is out of the expected " + " sleep time of "
-      + SLEEP_TIME_MS, SLEEP_TIME_MS - timeElapsed < TOLERANCE_MS);
+    assertTrue(SLEEP_TIME_MS - timeElapsed < TOLERANCE_MS, "Elapsed time " + timeElapsed
+      + " ms is out of the expected " + " sleep time of " + SLEEP_TIME_MS);
     LOG.debug("Target sleep time: " + SLEEP_TIME_MS + ", time elapsed: " + timeElapsed);
   }
 }

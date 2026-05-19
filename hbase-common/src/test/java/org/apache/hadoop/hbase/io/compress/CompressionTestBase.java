@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.compress;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -94,8 +94,9 @@ public class CompressionTestBase {
     LOG.info("{} compressed {} bytes to {} bytes in {} ms", codec.getClass().getSimpleName(), inLen,
       compressed.length, end - start);
     if (expectedCompressedSize != null) {
-      assertTrue("Expected compressed size does not match: (expected=" + expectedCompressedSize
-        + ", actual=" + compressed.length + ")", expectedCompressedSize == compressed.length);
+      assertEquals(expectedCompressedSize, compressed.length,
+        "Expected compressed size does not match: (expected=" + expectedCompressedSize + ", actual="
+          + compressed.length + ")");
     }
     // Decompress
     final byte[] plain = new byte[inLen];
@@ -111,8 +112,8 @@ public class CompressionTestBase {
     // Decompressed bytes should equal the original
     int offset = 0;
     for (int i = 0; i < input.length; i++) {
-      assertTrue("Comparison failed at offset " + offset,
-        Bytes.compareTo(plain, offset, input[i].length, input[i], 0, input[i].length) == 0);
+      assertEquals(0, Bytes.compareTo(plain, offset, input[i].length, input[i], 0, input[i].length),
+        "Comparison failed at offset " + offset);
       offset += input[i].length;
     }
   }

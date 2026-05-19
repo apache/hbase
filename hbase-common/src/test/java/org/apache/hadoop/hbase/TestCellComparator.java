@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -28,16 +28,12 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCellComparator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellComparator.class);
 
   private CellComparator comparator = CellComparator.getInstance();
   byte[] row1 = Bytes.toBytes("row1");
@@ -239,7 +235,8 @@ public class TestCellComparator {
     Collections.addAll(set, keys);
     count = 0;
     for (Cell k : set) {
-      assertTrue("count=" + count + ", " + k.toString(), count++ == k.getTimestamp());
+      int currentCount = count++;
+      assertTrue(currentCount == k.getTimestamp(), "count=" + currentCount + ", " + k.toString());
     }
   }
 }
