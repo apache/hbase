@@ -107,9 +107,11 @@ public abstract class RpcExecutor {
   private final Class<? extends BlockingQueue> queueClass;
   private final Object[] queueInitArgs;
 
-  // this is soft limit of the queue, not size. While initializing we will use hard limit as the
-  // size of queue, it will let us dynamically change the queue size
+  // this is soft limit of the queue, not size/capacity.
   protected volatile int currentQueueLimit;
+  // While initializing we will use hard limit as the capacity of queue, it will let us dynamically
+  // change the queue limit
+  protected int queueHardLimit;
 
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
   private final List<RpcHandler> handlers;
@@ -164,7 +166,7 @@ public abstract class RpcExecutor {
       maxQueueLength = handlerCountPerQueue * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER;
     }
     currentQueueLimit = maxQueueLength;
-    int queueHardLimit = Math.max(maxQueueLength, DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
+    queueHardLimit = Math.max(maxQueueLength, DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
 
     if (isDeadlineQueueType(callQueueType)) {
       this.name += ".Deadline";
@@ -456,11 +458,11 @@ public abstract class RpcExecutor {
     }
     final int queueLimit = currentQueueLimit;
     int newQueueLimit = conf.getInt(configKey, queueLimit);
-    if (newQueueLimit > DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT) {
+    if (newQueueLimit > queueHardLimit) {
       LOG.warn(
-        "Requested soft limit {} exceeds dynamic-resize ceiling {}. "
+        "Requested soft limit {} exceeds queue hard limit/capacity {}. "
           + "A region server restart is required to grow the underlying queue.",
-        newQueueLimit, DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
+        newQueueLimit, queueHardLimit);
       newQueueLimit = DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT;
     }
     currentQueueLimit = newQueueLimit;

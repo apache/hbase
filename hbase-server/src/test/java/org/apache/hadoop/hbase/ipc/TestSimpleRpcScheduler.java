@@ -632,6 +632,7 @@ public class TestSimpleRpcScheduler {
     schedConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 250);
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
       RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+    schedConf.setInt(RpcExecutor.CALL_QUEUE_CODEL_TARGET_DELAY, 5);
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
     SimpleRpcScheduler scheduler =
@@ -883,7 +884,7 @@ public class TestSimpleRpcScheduler {
       // Verify LIFO behavior: Among first completed calls, we should see higher call IDs
       // (indicating later dispatched calls completed first)
       int maxCallIdCompleted = -1;
-      for (int i = 0; i < 5 && i < completedCalls.size(); i++) {
+      for (int i = 0; i < completedCalls.size(); i++) {
         maxCallIdCompleted = Math.max(maxCallIdCompleted, completedCalls.get(i));
       }
       // At least one of the early completed calls should have a high ID (>20)
