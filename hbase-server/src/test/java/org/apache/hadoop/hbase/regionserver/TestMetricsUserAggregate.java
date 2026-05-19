@@ -73,7 +73,7 @@ public class TestMetricsUserAggregate {
     MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
     when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
     when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
-    when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
+    when(metricsTableRequests.isEnableTableQueryMeterMetrics()).thenReturn(false);
     for (int i = 0; i < 10; i++) {
       rsm.updateGet(region, 10, 10);
     }
@@ -151,7 +151,7 @@ public class TestMetricsUserAggregate {
             MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
             when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
             when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
-            when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
+            when(metricsTableRequests.isEnableTableQueryMeterMetrics()).thenReturn(false);
             rsm.updateGet(region, 10, 100);
             return null;
           }
