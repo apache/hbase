@@ -753,7 +753,7 @@ public final class MetaTableAccessor {
    * @param connection connection we're using
    * @param deletes    Deletes to add to hbase:meta This list should support #remove.
    */
-  private static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
+  public static void deleteFromMetaTable(final Connection connection, final List<Delete> deletes)
     throws IOException {
     try (Table t = getMetaHTable(connection)) {
       debugLogMutations(deletes);
@@ -859,7 +859,7 @@ public final class MetaTableAccessor {
   private static void updateTableState(Connection connection, TableState state) throws IOException {
     Put put = makePutFromTableState(state, EnvironmentEdgeManager.currentTime());
     putToMetaTable(connection, put);
-    LOG.info("Updated {} in hbase:meta", state);
+    LOG.info("Updated {} in {}", state, TableName.META_TABLE_NAME);
   }
 
   /**

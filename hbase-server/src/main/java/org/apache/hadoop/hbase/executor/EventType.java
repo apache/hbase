@@ -309,7 +309,13 @@ public enum EventType {
    * RS log roll.<br>
    * RS_LOG_ROLL
    */
-  RS_LOG_ROLL(91, ExecutorType.RS_LOG_ROLL);
+  RS_LOG_ROLL(91, ExecutorType.RS_LOG_ROLL),
+
+  /**
+   * RS refresh hfiles for a region.<br>
+   * RS_REFRESH_HFILES
+   */
+  RS_REFRESH_HFILES(92, ExecutorType.RS_REFRESH_HFILES);
 
   private final int code;
   private final ExecutorType executor;

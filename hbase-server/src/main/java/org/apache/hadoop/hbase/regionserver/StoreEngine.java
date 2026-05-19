@@ -579,4 +579,8 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
   public BloomFilterMetrics getBloomFilterMetrics() {
     return bloomFilterMetrics;
   }
+
+  public StoreFileTracker getStoreFileTracker() {
+    return storeFileTracker;
+  }
 }
