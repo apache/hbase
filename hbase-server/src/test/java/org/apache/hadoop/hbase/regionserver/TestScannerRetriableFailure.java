@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,10 +27,8 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -45,21 +43,17 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScannerRetriableFailure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerRetriableFailure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScannerRetriableFailure.class);
 
@@ -67,9 +61,6 @@ public class TestScannerRetriableFailure {
 
   private static final String FAMILY_NAME_STR = "f";
   private static final byte[] FAMILY_NAME = Bytes.toBytes(FAMILY_NAME_STR);
-
-  @Rule
-  public TableNameTestRule testTable = new TableNameTestRule();
 
   public static class FaultyScannerObserver implements RegionCoprocessor, RegionObserver {
     private int faults = 0;
@@ -100,13 +91,13 @@ public class TestScannerRetriableFailure {
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, FaultyScannerObserver.class.getName());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -116,8 +107,8 @@ public class TestScannerRetriableFailure {
   }
 
   @Test
-  public void testFaultyScanner() throws Exception {
-    TableName tableName = testTable.getTableName();
+  public void testFaultyScanner(TestInfo testInfo) throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = UTIL.createTable(tableName, FAMILY_NAME);
     try {
       final int NUM_ROWS = 100;

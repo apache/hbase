@@ -20,18 +20,17 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam2;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -55,26 +54,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test of a long-lived scanner validating as we go.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanner.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
@@ -491,8 +482,9 @@ public class TestScanner {
    */
   @Test
   @SuppressWarnings("deprecation")
-  public void testScanAndConcurrentMajorCompact() throws Exception {
-    HTableDescriptor htd = TEST_UTIL.createTableDescriptor(name.getMethodName());
+  public void testScanAndConcurrentMajorCompact(TestInfo testInfo) throws Exception {
+    HTableDescriptor htd =
+      TEST_UTIL.createTableDescriptor(testInfo.getTestMethod().get().getName());
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Table hri = new RegionAsTable(region);
 
@@ -522,7 +514,7 @@ public class TestScanner {
       s.next(results);
 
       // make sure returns column2 of firstRow
-      assertTrue("result is not correct, keyValues : " + results, results.size() == 1);
+      assertEquals(1, results.size(), "result is not correct, keyValues : " + results);
       assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
@@ -530,7 +522,7 @@ public class TestScanner {
       s.next(results);
 
       // get secondRow
-      assertTrue(results.size() == 2);
+      assertEquals(2, results.size());
       assertTrue(CellUtil.matchingRows(results.get(0), secondRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
@@ -541,7 +533,7 @@ public class TestScanner {
 
   /**
    * Count table.
-   * @param hri        Region
+   * @param countTable Table
    * @param flushIndex At what row we start the flush.
    * @param concurrent if the flush should be concurrent or sync.
    * @return Count of rows found.

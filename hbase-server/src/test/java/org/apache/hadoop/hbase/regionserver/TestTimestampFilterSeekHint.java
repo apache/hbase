@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.commons.lang3.RandomStringUtils;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.client.Get;
@@ -30,19 +29,15 @@ import org.apache.hadoop.hbase.filter.TimestampsFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTimestampFilterSeekHint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTimestampFilterSeekHint.class);
 
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
   private final static String RK = "myRK";
@@ -91,7 +86,7 @@ public class TestTimestampFilterSeekHint {
     assertTrue(finalSeekCount < initialSeekCount + 3);
   }
 
-  @Before
+  @BeforeEach
   public void prepareRegion() throws IOException {
     region = TEST_UTIL.createTestRegion("TestTimestampFilterSeekHint" + regionCount++,
       new HColumnDescriptor(FAMILY).setBlocksize(1024).setMaxVersions(MAX_VERSIONS));
