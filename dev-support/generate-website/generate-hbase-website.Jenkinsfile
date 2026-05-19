@@ -50,7 +50,7 @@ pipeline {
           user=$(whoami)
           docker build -t hbase-build-website -f "${WORKSPACE}/component/dev-support/docker/Dockerfile" .
           docker run --rm -v "${WORKSPACE}":/home/${user} -v /etc/passwd:/etc/passwd:ro -v /etc/group:/etc/group:ro \
-            -u `id -u`:`id -g` -e JAVA_HOME="/usr/lib/jvm/java-17" -e GIT_AUTHOR_NAME="HBase" \
+            -u `id -u`:`id -g` -e CI=true -e JAVA_HOME="/usr/lib/jvm/java-17" -e GIT_AUTHOR_NAME="HBase" \
             -e GIT_AUTHOR_EMAIL="dev@hbase.apache.org" -e GIT_COMMITTER_NAME="HBase" \
             -e GIT_COMMITTER_EMAIL="dev@hbase.apache.org" --workdir=/home/${user} hbase-build-website \
             "component/dev-support/generate-website/build-hbase-website.sh" \
