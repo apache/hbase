@@ -68,26 +68,26 @@ public class TestRegionInfo {
   @Test
   public void testIsStart() {
     assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isFirst());
-    org.apache.hadoop.hbase.client.RegionInfo ri = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setStartKey(Bytes.toBytes("not_start")).build();
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
+      .setStartKey(Bytes.toBytes("not_start")).build();
     assertFalse(ri.isFirst());
   }
 
   @Test
   public void testIsEnd() {
     assertTrue(RegionInfoBuilder.FIRST_META_REGIONINFO.isFirst());
-    org.apache.hadoop.hbase.client.RegionInfo ri = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setEndKey(Bytes.toBytes("not_end")).build();
+    RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
+      .setEndKey(Bytes.toBytes("not_end")).build();
     assertFalse(ri.isLast());
   }
 
   @Test
   public void testIsNext() {
     byte[] bytes = Bytes.toBytes("row");
-    org.apache.hadoop.hbase.client.RegionInfo ri = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setEndKey(bytes).build();
-    org.apache.hadoop.hbase.client.RegionInfo ri2 = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setStartKey(bytes).build();
+    RegionInfo ri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setEndKey(bytes).build();
+    RegionInfo ri2 =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(bytes).build();
     assertFalse(ri.isNext(RegionInfoBuilder.FIRST_META_REGIONINFO));
     assertTrue(ri.isNext(ri2));
   }
@@ -98,20 +98,15 @@ public class TestRegionInfo {
     byte[] b = Bytes.toBytes("b");
     byte[] c = Bytes.toBytes("c");
     byte[] d = Bytes.toBytes("d");
-    org.apache.hadoop.hbase.client.RegionInfo all = RegionInfoBuilder.FIRST_META_REGIONINFO;
-    org.apache.hadoop.hbase.client.RegionInfo ari = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setEndKey(a).build();
-    org.apache.hadoop.hbase.client.RegionInfo abri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
-        .setStartKey(a).setEndKey(b).build();
-    org.apache.hadoop.hbase.client.RegionInfo adri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
-        .setStartKey(a).setEndKey(d).build();
-    org.apache.hadoop.hbase.client.RegionInfo cdri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
-        .setStartKey(c).setEndKey(d).build();
-    org.apache.hadoop.hbase.client.RegionInfo dri = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setStartKey(d).build();
+    RegionInfo all = RegionInfoBuilder.FIRST_META_REGIONINFO;
+    RegionInfo ari = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setEndKey(a).build();
+    RegionInfo abri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(a).setEndKey(b).build();
+    RegionInfo adri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(a).setEndKey(d).build();
+    RegionInfo cdri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(c).setEndKey(d).build();
+    RegionInfo dri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(d).build();
     assertTrue(all.isOverlap(all));
     assertTrue(all.isOverlap(abri));
     assertFalse(abri.isOverlap(cdri));
@@ -137,19 +132,14 @@ public class TestRegionInfo {
     byte[] d = Bytes.toBytes("d");
     byte[] e = Bytes.toBytes("e");
     byte[] f = Bytes.toBytes("f");
-    org.apache.hadoop.hbase.client.RegionInfo ari = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setEndKey(a).build();
-    org.apache.hadoop.hbase.client.RegionInfo abri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
-        .setStartKey(a).setEndKey(b).build();
-    org.apache.hadoop.hbase.client.RegionInfo eri = org.apache.hadoop.hbase.client.RegionInfoBuilder
-      .newBuilder(TableName.META_TABLE_NAME).setEndKey(e).build();
-    org.apache.hadoop.hbase.client.RegionInfo cdri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
-        .setStartKey(c).setEndKey(d).build();
-    org.apache.hadoop.hbase.client.RegionInfo efri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME)
-        .setStartKey(e).setEndKey(f).build();
+    RegionInfo ari = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setEndKey(a).build();
+    RegionInfo abri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(a).setEndKey(b).build();
+    RegionInfo eri = RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setEndKey(e).build();
+    RegionInfo cdri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(c).setEndKey(d).build();
+    RegionInfo efri =
+      RegionInfoBuilder.newBuilder(TableName.META_TABLE_NAME).setStartKey(e).setEndKey(f).build();
     assertFalse(ari.isOverlap(abri));
     assertTrue(abri.isOverlap(eri));
     assertFalse(cdri.isOverlap(efri));
@@ -161,7 +151,7 @@ public class TestRegionInfo {
     RegionInfo hri = RegionInfoBuilder.FIRST_META_REGIONINFO;
     byte[] bytes = RegionInfo.toByteArray(hri);
     RegionInfo pbhri = RegionInfo.parseFrom(bytes);
-    assertTrue(hri.equals(pbhri));
+    assertEquals(hri, pbhri);
   }
 
   @Test
@@ -184,11 +174,9 @@ public class TestRegionInfo {
     long modtime2 = getModTime(r);
     assertEquals(modtime, modtime2);
     // Now load the file.
-    org.apache.hadoop.hbase.client.RegionInfo deserializedHri =
-      HRegionFileSystem.loadRegionInfoFileContent(r.getRegionFileSystem().getFileSystem(),
-        r.getRegionFileSystem().getRegionDir());
-    assertEquals(0,
-      org.apache.hadoop.hbase.client.RegionInfo.COMPARATOR.compare(hri, deserializedHri));
+    RegionInfo deserializedHri = HRegionFileSystem.loadRegionInfoFileContent(
+      r.getRegionFileSystem().getFileSystem(), r.getRegionFileSystem().getRegionDir());
+    assertEquals(0, RegionInfo.COMPARATOR.compare(hri, deserializedHri));
     HBaseTestingUtil.closeRegionAndWAL(r);
   }
 

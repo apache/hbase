@@ -96,7 +96,7 @@ public class TestRegionMergeTransactionOnCluster {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionMergeTransactionOnCluster.class);
 
-  private String name;
+  private String methodName;
 
   private static final int NB_SERVERS = 3;
 
@@ -129,7 +129,7 @@ public class TestRegionMergeTransactionOnCluster {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) {
-    name = testInfo.getTestMethod().get().getName();
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   @AfterAll
@@ -142,8 +142,8 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testWholesomeMerge() throws Exception {
-    LOG.info("Starting " + name);
-    final TableName tableName = TableName.valueOf(name);
+    LOG.info("Starting " + methodName);
+    final TableName tableName = TableName.valueOf(methodName);
 
     try {
       // Create table and load data.
@@ -187,7 +187,7 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMergeAndRestartingMaster() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
 
     try {
       // Create table and load data.
@@ -210,9 +210,9 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testCleanMergeReference() throws Exception {
-    LOG.info("Starting " + name);
+    LOG.info("Starting " + methodName);
     ADMIN.catalogJanitorSwitch(false);
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     try {
       // Create table and load data.
       Table table = createTableAndLoadData(MASTER, tableName);
@@ -332,8 +332,8 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMerge() throws Exception {
-    LOG.info("Starting " + name);
-    final TableName tableName = TableName.valueOf(name);
+    LOG.info("Starting " + methodName);
+    final TableName tableName = TableName.valueOf(methodName);
     final Admin admin = TEST_UTIL.getAdmin();
 
     try {
@@ -381,7 +381,7 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testMergeWithReplicas() throws Exception {
-    final TableName tableName = TableName.valueOf(name);
+    final TableName tableName = TableName.valueOf(methodName);
     try {
       // Create table and load data.
       Table table = createTableAndLoadData(MASTER, tableName, 5, 2);

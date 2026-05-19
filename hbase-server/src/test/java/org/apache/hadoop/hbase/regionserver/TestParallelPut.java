@@ -62,7 +62,7 @@ public class TestParallelPut {
   private HRegion region = null;
   private static HBaseTestingUtil HBTU = new HBaseTestingUtil();
   private static final int THREADS100 = 100;
-  private String name;
+  private String methodName;
 
   // Test names
   static byte[] tableName;
@@ -82,8 +82,8 @@ public class TestParallelPut {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
-    name = testInfo.getTestMethod().get().getName();
-    tableName = Bytes.toBytes(name);
+    methodName = testInfo.getTestMethod().get().getName();
+    tableName = Bytes.toBytes(methodName);
   }
 
   @AfterEach
@@ -94,8 +94,8 @@ public class TestParallelPut {
     }
   }
 
-  public String getName() {
-    return name;
+  public String getMethodName() {
+    return methodName;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -109,7 +109,7 @@ public class TestParallelPut {
   @Test
   public void testPut() throws IOException {
     LOG.info("Starting testPut");
-    this.region = initHRegion(tableName, getName(), fam1);
+    this.region = initHRegion(tableName, getMethodName(), fam1);
 
     long value = 1L;
 
@@ -128,7 +128,7 @@ public class TestParallelPut {
 
     LOG.info("Starting testParallelPuts");
 
-    this.region = initHRegion(tableName, getName(), fam1);
+    this.region = initHRegion(tableName, getMethodName(), fam1);
     int numOps = 1000; // these many operations per thread
 
     // create 100 threads, each will do its own puts

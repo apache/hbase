@@ -148,7 +148,7 @@ public class TestRegionServerNoMaster {
       RequestConverter.buildOpenRegionRequest(rs.getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = rs.getRpcServices().openRegion(null, orr);
 
-    assertTrue(responseOpen.getOpeningStateCount() == 1);
+    assertEquals(1, responseOpen.getOpeningStateCount());
     assertTrue(responseOpen.getOpeningState(0)
       .equals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED));
 

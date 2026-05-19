@@ -72,7 +72,7 @@ public class TestRecoveredEdits {
 
   private static BlockCache blockCache;
 
-  private String name;
+  private String methodName;
 
   /**
    * Path to a recovered.edits file in hbase-server test resources folder. This is a little fragile
@@ -106,7 +106,7 @@ public class TestRecoveredEdits {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) {
-    name = testInfo.getTestMethod().get().getName();
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   /**
@@ -127,8 +127,8 @@ public class TestRecoveredEdits {
     // Set it so we flush every 1M or so. Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy).toLowerCase());
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
-      .setColumnFamily(RECOVEREDEDITS_CFD).build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(methodName)).setColumnFamily(RECOVEREDEDITS_CFD).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     final String encodedRegionName = hri.getEncodedName();
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
