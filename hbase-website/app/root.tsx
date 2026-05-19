@@ -29,6 +29,7 @@ import type { Route } from "./+types/root";
 import appStyles from "./app.css?url";
 import "katex/dist/katex.css";
 import { ThemeProvider } from "./lib/theme-provider";
+import { Button } from "./ui/button";
 
 export const links: Route.LinksFunction = () => [
   {
@@ -96,12 +97,14 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
+  let eyebrow = "Error";
+  let message = "Something went wrong";
   let details = "An unexpected error occurred.";
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
+    eyebrow = String(error.status);
+    message = error.status === 404 ? "Page not found" : "Request failed";
     details =
       error.status === 404 ? "The requested page could not be found." : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
@@ -110,14 +113,38 @@ export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
   }
 
   return (
-    <main className="container mx-auto p-4 pt-16">
-      <h1>{message}</h1>
-      <p>{details}</p>
-      {stack && (
-        <pre className="w-full overflow-x-auto p-4">
-          <code>{stack}</code>
-        </pre>
-      )}
+    <main className="grid min-h-screen place-items-center bg-[radial-gradient(circle_at_top,rgba(186,22,12,0.08),transparent_32rem)] px-4 py-16">
+      <section
+        className="mx-auto flex w-full max-w-2xl flex-col items-center text-center"
+        aria-labelledby="error-title"
+      >
+        <img className="mb-8 h-auto w-36" src="/images/logo.svg" alt="Apache HBase" />
+        <p className="text-muted-foreground text-sm font-semibold tracking-[0.3em] uppercase">
+          {eyebrow}
+        </p>
+        <h1
+          id="error-title"
+          className="mt-4 text-4xl font-semibold tracking-tight text-balance md:text-6xl"
+        >
+          {message}
+        </h1>
+        <p className="text-muted-foreground mt-5 max-w-xl text-lg leading-8 text-pretty md:text-xl">
+          {details}
+        </p>
+        <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
+          <Button asChild size="lg">
+            <a href="/">Go back home</a>
+          </Button>
+          <Button asChild variant="outline" size="lg">
+            <a href="/docs/">Read documentation</a>
+          </Button>
+        </div>
+        {stack && (
+          <pre className="bg-muted/50 text-muted-foreground border-border mt-8 max-h-80 w-full overflow-x-auto rounded-lg border p-4 text-left text-sm">
+            <code>{stack}</code>
+          </pre>
+        )}
+      </section>
     </main>
   );
 }
