@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -32,19 +32,15 @@ import org.apache.hadoop.hbase.HealthChecker.HealthCheckerExitStatus;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.util.Shell;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestNodeHealthCheckChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNodeHealthCheckChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNodeHealthCheckChore.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -52,7 +48,7 @@ public class TestNodeHealthCheckChore {
   private File healthScriptFile;
   private String eol = System.getProperty("line.separator");
 
-  @After
+  @AfterEach
   public void cleanUp() throws IOException {
     // delete and recreate the test directory, ensuring a clean test dir between tests
     Path testDir = UTIL.getDataTestDir();
@@ -109,9 +105,9 @@ public class TestNodeHealthCheckChore {
       // Default threshold is three.
       rsChore.chore();
       rsChore.chore();
-      assertFalse("Stoppable must not be stopped.", stop.isStopped());
+      assertFalse(stop.isStopped(), "Stoppable must not be stopped.");
       rsChore.chore();
-      assertTrue("Stoppable must have been stopped.", stop.isStopped());
+      assertTrue(stop.isStopped(), "Stoppable must have been stopped.");
     } finally {
       stop.stop("Finished w/ test");
     }

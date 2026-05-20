@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import java.util.Arrays;
-import java.util.Collection;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -36,24 +38,16 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestDefaultMobStoreFlusher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultMobStoreFlusher.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private final static byte[] row1 = Bytes.toBytes("row1");
@@ -64,8 +58,7 @@ public class TestDefaultMobStoreFlusher {
   private final static byte[] value1 = Bytes.toBytes("value1");
   private final static byte[] value2 = Bytes.toBytes("value2");
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
   protected Boolean useFileBasedSFT;
 
@@ -73,14 +66,14 @@ public class TestDefaultMobStoreFlusher {
     this.useFileBasedSFT = useFileBasedSFT;
   }
 
-  @Parameterized.Parameters
-  public static Collection<Boolean> data() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(false, true).map(Arguments::of);
   }
 
-  @Before
-  public void setUpBefore() throws Exception {
+  @BeforeEach
+  public void setUpBefore(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[:= ]", "_").replaceAll("_+", "_").trim();
     if (useFileBasedSFT) {
       TEST_UTIL.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
         "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
@@ -88,23 +81,23 @@ public class TestDefaultMobStoreFlusher {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfter() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testFlushNonMobFile() throws Exception {
-    final TableName tableName = TableName.valueOf(TestMobUtils.getTableName(name));
+    final TableName tableName = TableName.valueOf(TestMobUtils.getTableName(testMethodName));
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(4).build())
       .build();
     testFlushFile(tableDescriptor);
   }
 
-  @Test
+  @TestTemplate
   public void testFlushMobFile() throws Exception {
-    final TableName tableName = TableName.valueOf(TestMobUtils.getTableName(name));
+    final TableName tableName = TableName.valueOf(TestMobUtils.getTableName(testMethodName));
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).setMobEnabled(true)
         .setMobThreshold(3L).setMaxVersions(4).build())
@@ -142,12 +135,12 @@ public class TestDefaultMobStoreFlusher {
         size++;
         List<Cell> cells = result.getColumnCells(family, qf1);
         // Verify the cell size
-        Assert.assertEquals(1, cells.size());
+        assertEquals(1, cells.size());
         // Verify the value
-        Assert.assertArrayEquals(value1, CellUtil.cloneValue(cells.get(0)));
+        assertArrayEquals(value1, CellUtil.cloneValue(cells.get(0)));
       }
       scanner.close();
-      Assert.assertEquals(1, size);
+      assertEquals(1, size);
     } finally {
       table.close();
     }

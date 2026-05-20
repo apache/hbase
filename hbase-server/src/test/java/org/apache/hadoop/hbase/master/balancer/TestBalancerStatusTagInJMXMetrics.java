@@ -17,33 +17,29 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.metrics2.MetricsSource;
 import org.apache.hadoop.metrics2.MetricsTag;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBalancerStatusTagInJMXMetrics.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBalancerStatusTagInJMXMetrics.class);
@@ -56,7 +52,7 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
   /**
    * Setup the environment for the test.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     conf = UTIL.getConfiguration();
     Random rand = ThreadLocalRandom.current();
@@ -85,7 +81,7 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -96,9 +92,9 @@ public class TestBalancerStatusTagInJMXMetrics extends BalancerTestBase {
   @Test
   public void testJmxMetrics() throws Exception {
 
-    assertEquals(getStatus(), "true");
+    assertEquals("true", getStatus());
     master.getLoadBalancer().updateBalancerStatus(false);
-    assertEquals(getStatus(), "false");
+    assertEquals("false", getStatus());
 
   }
 

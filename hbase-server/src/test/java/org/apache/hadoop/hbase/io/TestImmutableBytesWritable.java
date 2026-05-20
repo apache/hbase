@@ -17,27 +17,22 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestImmutableBytesWritable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImmutableBytesWritable.class);
 
   @Test
   public void testHash() throws Exception {
@@ -54,7 +49,7 @@ public class TestImmutableBytesWritable {
     ImmutableBytesWritable ibw1 = new ImmutableBytesWritable(new byte[] { 0x0f });
     ImmutableBytesWritable ibw2 = new ImmutableBytesWritable(new byte[] { 0x00, 0x00 });
     ImmutableBytesWritable.Comparator c = new ImmutableBytesWritable.Comparator();
-    assertFalse("ibw1 < ibw2", c.compare(ibw1, ibw2) < 0);
+    assertFalse(c.compare(ibw1, ibw2) < 0, "ibw1 < ibw2");
   }
 
   @Test
@@ -103,23 +98,22 @@ public class TestImmutableBytesWritable {
     a.write(new DataOutputStream(baosA));
     b.write(new DataOutputStream(baosB));
 
-    assertEquals("Comparing " + a + " and " + b + " as raw", signum(comparator
-      .compare(baosA.toByteArray(), 0, baosA.size(), baosB.toByteArray(), 0, baosB.size())),
-      expectedSignum);
+    assertEquals(signum(comparator.compare(baosA.toByteArray(), 0, baosA.size(),
+      baosB.toByteArray(), 0, baosB.size())), expectedSignum,
+      "Comparing " + a + " and " + b + " as raw");
 
-    assertEquals(
-      "Comparing " + a + " and " + b + " as raw (inverse)", -signum(comparator
-        .compare(baosB.toByteArray(), 0, baosB.size(), baosA.toByteArray(), 0, baosA.size())),
-      expectedSignum);
+    assertEquals(-signum(comparator.compare(baosB.toByteArray(), 0, baosB.size(),
+      baosA.toByteArray(), 0, baosA.size())), expectedSignum,
+      "Comparing " + a + " and " + b + " as raw (inverse)");
   }
 
   private void doComparisonsOnObjects(ImmutableBytesWritable a, ImmutableBytesWritable b,
     int expectedSignum) {
     ImmutableBytesWritable.Comparator comparator = new ImmutableBytesWritable.Comparator();
-    assertEquals("Comparing " + a + " and " + b + " as objects", signum(comparator.compare(a, b)),
-      expectedSignum);
-    assertEquals("Comparing " + a + " and " + b + " as objects (inverse)",
-      -signum(comparator.compare(b, a)), expectedSignum);
+    assertEquals(signum(comparator.compare(a, b)), expectedSignum,
+      "Comparing " + a + " and " + b + " as objects");
+    assertEquals(-signum(comparator.compare(b, a)), expectedSignum,
+      "Comparing " + a + " and " + b + " as objects (inverse)");
   }
 
 }

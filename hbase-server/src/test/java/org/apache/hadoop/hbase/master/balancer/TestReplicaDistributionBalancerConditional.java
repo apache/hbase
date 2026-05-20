@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.master.balancer;
 import static org.apache.hadoop.hbase.master.balancer.BalancerConditionalsTestUtil.validateAssertionsWithRetries;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,20 +33,16 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, MasterTests.class })
+@Tag(LargeTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestReplicaDistributionBalancerConditional {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicaDistributionBalancerConditional.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestReplicaDistributionBalancerConditional.class);
@@ -56,7 +51,7 @@ public class TestReplicaDistributionBalancerConditional {
   private static final int NUM_SERVERS = REPLICAS;
   private static final int REGIONS_PER_SERVER = 5;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     DistributeReplicasTestConditional
       .enableConditionalReplicaDistributionForTest(TEST_UTIL.getConfiguration());
@@ -74,7 +69,7 @@ public class TestReplicaDistributionBalancerConditional {
     TEST_UTIL.startMiniCluster(NUM_SERVERS);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

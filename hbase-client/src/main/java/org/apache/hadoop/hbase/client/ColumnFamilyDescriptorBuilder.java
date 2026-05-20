@@ -823,8 +823,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution.
-     * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a> for how
-     * to enable it.
+     * See <a href="https://hbase.apache.org/docs/compression#install-hadoop-native-lzo-support">
+     * LZO Compression</a> for how to enable it.
      * @param type Compression type setting.
      * @return this (for chained invocation)
      */
@@ -898,8 +898,8 @@ public class ColumnFamilyDescriptorBuilder {
 
     /**
      * Compression types supported in hbase. LZO is not bundled as part of the hbase distribution.
-     * See <a href="http://wiki.apache.org/hadoop/UsingLzoCompression">LZO Compression</a> for how
-     * to enable it.
+     * See <a href="https://hbase.apache.org/docs/compression#install-hadoop-native-lzo-support">
+     * LZO Compression</a> for how to enable it.
      * @param type Compression type setting.
      * @return this (for chained invocation)
      */

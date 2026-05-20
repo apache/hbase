@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.ByteString;
 import java.io.IOException;
@@ -28,10 +28,10 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
@@ -50,20 +50,15 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestVisibilityLabelsWithACL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsWithACL.class);
 
   private static final String PRIVATE = "private";
   private static final String CONFIDENTIAL = "confidential";
@@ -75,13 +70,11 @@ public class TestVisibilityLabelsWithACL {
   private final static byte[] value = Bytes.toBytes("value");
   private static Configuration conf;
 
-  @Rule
-  public final TestName TEST_NAME = new TestName();
   private static User SUPERUSER;
   private static User NORMAL_USER1;
   private static User NORMAL_USER2;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -110,17 +103,19 @@ public class TestVisibilityLabelsWithACL {
       null, Permission.Action.EXEC);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testScanForUserWithFewerLabelAuthsThanLabelsInScanAuthorizations() throws Throwable {
+  public void testScanForUserWithFewerLabelAuthsThanLabelsInScanAuthorizations(TestInfo testInfo)
+    throws Throwable {
     String[] auths = { SECRET };
     String user = "user2";
     VisibilityClient.setAuths(TEST_UTIL.getConnection(), auths, user);
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     final Table table = createTableAndWriteDataWithLabels(tableName,
       SECRET + "&" + CONFIDENTIAL + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
     SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER2.getShortName(), tableName, null, null,
@@ -146,13 +141,14 @@ public class TestVisibilityLabelsWithACL {
   }
 
   @Test
-  public void testScanForSuperUserWithFewerLabelAuths() throws Throwable {
+  public void testScanForSuperUserWithFewerLabelAuths(TestInfo testInfo) throws Throwable {
     String[] auths = { SECRET };
     String user = "admin";
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
       VisibilityClient.setAuths(conn, auths, user);
     }
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     final Table table = createTableAndWriteDataWithLabels(tableName,
       SECRET + "&" + CONFIDENTIAL + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
@@ -173,11 +169,12 @@ public class TestVisibilityLabelsWithACL {
   }
 
   @Test
-  public void testGetForSuperUserWithFewerLabelAuths() throws Throwable {
+  public void testGetForSuperUserWithFewerLabelAuths(TestInfo testInfo) throws Throwable {
     String[] auths = { SECRET };
     String user = "admin";
     VisibilityClient.setAuths(TEST_UTIL.getConnection(), auths, user);
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     final Table table = createTableAndWriteDataWithLabels(tableName,
       SECRET + "&" + CONFIDENTIAL + "&!" + PRIVATE, SECRET + "&!" + PRIVATE);
     PrivilegedExceptionAction<Void> scanAction = new PrivilegedExceptionAction<Void>() {
@@ -197,14 +194,15 @@ public class TestVisibilityLabelsWithACL {
   }
 
   @Test
-  public void testVisibilityLabelsForUserWithNoAuths() throws Throwable {
+  public void testVisibilityLabelsForUserWithNoAuths(TestInfo testInfo) throws Throwable {
     String user = "admin";
     String[] auths = { SECRET };
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
       VisibilityClient.clearAuths(conn, auths, user); // Removing all auths if any.
       VisibilityClient.setAuths(conn, auths, "user1");
     }
-    TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     final Table table = createTableAndWriteDataWithLabels(tableName, SECRET);
     SecureTestUtil.grantOnTable(TEST_UTIL, NORMAL_USER1.getShortName(), tableName, null, null,
       Permission.Action.READ);

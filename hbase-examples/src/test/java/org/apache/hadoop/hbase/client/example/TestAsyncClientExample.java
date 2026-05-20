@@ -17,39 +17,34 @@
  */
 package org.apache.hadoop.hbase.client.example;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncClientExample {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClientExample.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static final TableName TABLE_NAME = TableName.valueOf("test");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.createTable(TABLE_NAME, Bytes.toBytes("d"));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

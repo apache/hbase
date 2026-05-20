@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -37,8 +36,7 @@ import org.apache.hadoop.mapred.MapReduceBase;
 import org.apache.hadoop.mapred.OutputCollector;
 import org.apache.hadoop.mapred.Reporter;
 import org.apache.hadoop.mapred.RunningJob;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -47,13 +45,10 @@ import org.slf4j.LoggerFactory;
  * simple - take every row in the table, reverse the value of a particular cell, and write it back
  * to the table.
  */
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestTableMapReduce extends TestTableMapReduceBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableMapReduce.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableMapReduce.class.getName());
 

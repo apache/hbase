@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -47,11 +46,10 @@ import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider.AsyncWriter;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,12 +63,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 /**
  * Testcase for HBASE-25905
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncFSWALRollStuck {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncFSWALRollStuck.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncFSWALRollStuck.class);
 
@@ -131,7 +126,7 @@ public class TestAsyncFSWALRollStuck {
 
   private static ExecutorService ROLL_EXEC;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(AsyncFSWALProvider.WRITER_IMPL, TestAsyncWriter.class, AsyncWriter.class);
@@ -168,7 +163,7 @@ public class TestAsyncFSWALRollStuck {
     WAL.init();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     EXECUTOR.shutdownNow();
     ROLL_EXEC.shutdownNow();

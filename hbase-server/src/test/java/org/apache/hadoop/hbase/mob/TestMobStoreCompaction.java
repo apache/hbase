@@ -21,25 +21,24 @@ import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.MOB_CELLS_COUNT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -79,33 +78,26 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test mob store compaction
  */
-@RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestMobStoreCompaction {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobStoreCompaction.class);
-
-  @Rule
-  public TestName name = new TestName();
   static final Logger LOG = LoggerFactory.getLogger(TestMobStoreCompaction.class.getName());
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private Configuration conf = null;
+  private String testMethodName;
 
   private HRegion region = null;
   private HTableDescriptor htd = null;
@@ -124,10 +116,14 @@ public class TestMobStoreCompaction {
     this.useFileBasedSFT = useFileBasedSFT;
   }
 
-  @Parameterized.Parameters
-  public static Collection<Boolean> data() {
-    Boolean[] data = { false, true };
-    return Arrays.asList(data);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(false, true).map(Arguments::of);
+  }
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[:= ]", "_").replaceAll("_+", "_").trim();
   }
 
   private void init(Configuration conf, long mobThreshold) throws Exception {
@@ -141,7 +137,7 @@ public class TestMobStoreCompaction {
     HBaseTestingUtility UTIL = new HBaseTestingUtility(conf);
 
     compactionThreshold = conf.getInt("hbase.hstore.compactionThreshold", 3);
-    htd = UTIL.createTableDescriptor(TestMobUtils.getTableName(name));
+    htd = UTIL.createTableDescriptor(TestMobUtils.getTableName(testMethodName));
     hcd = new HColumnDescriptor(COLUMN_FAMILY);
     hcd.setMobEnabled(true);
     hcd.setMobThreshold(mobThreshold);
@@ -154,7 +150,7 @@ public class TestMobStoreCompaction {
     fs = FileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     region.close();
     fs.delete(UTIL.getDataTestDir(), true);
@@ -163,7 +159,7 @@ public class TestMobStoreCompaction {
   /**
    * During compaction, cells smaller than the threshold won't be affected.
    */
-  @Test
+  @TestTemplate
   public void testSmallerValue() throws Exception {
     init(UTIL.getConfiguration(), 500);
     byte[] dummyData = makeDummyData(300); // smaller than mob threshold
@@ -174,24 +170,24 @@ public class TestMobStoreCompaction {
       loader.put(p);
       region.flush(true);
     }
-    assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
-    assertEquals("Before compaction: mob file count", 0, countMobFiles());
-    assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
-    assertEquals("Before compaction: mob rows", 0, countMobRows());
+    assertEquals(compactionThreshold, countStoreFiles(), "Before compaction: store files");
+    assertEquals(0, countMobFiles(), "Before compaction: mob file count");
+    assertEquals(compactionThreshold, UTIL.countRows(region), "Before compaction: rows");
+    assertEquals(0, countMobRows(), "Before compaction: mob rows");
 
     region.compactStores();
 
-    assertEquals("After compaction: store files", 1, countStoreFiles());
-    assertEquals("After compaction: mob file count", 0, countMobFiles());
-    assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());
-    assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
-    assertEquals("After compaction: mob rows", 0, countMobRows());
+    assertEquals(1, countStoreFiles(), "After compaction: store files");
+    assertEquals(0, countMobFiles(), "After compaction: mob file count");
+    assertEquals(0, countReferencedMobFiles(), "After compaction: referenced mob file count");
+    assertEquals(compactionThreshold, UTIL.countRows(region), "After compaction: rows");
+    assertEquals(0, countMobRows(), "After compaction: mob rows");
   }
 
   /**
    * During compaction, the mob threshold size is changed.
    */
-  @Test
+  @TestTemplate
   public void testLargerValue() throws Exception {
     init(UTIL.getConfiguration(), 200);
     byte[] dummyData = makeDummyData(300); // larger than mob threshold
@@ -201,12 +197,12 @@ public class TestMobStoreCompaction {
       loader.put(p);
       region.flush(true);
     }
-    assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
-    assertEquals("Before compaction: mob file count", compactionThreshold, countMobFiles());
-    assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
-    assertEquals("Before compaction: mob rows", compactionThreshold, countMobRows());
-    assertEquals("Before compaction: number of mob cells", compactionThreshold,
-      countMobCellsInMetadata());
+    assertEquals(compactionThreshold, countStoreFiles(), "Before compaction: store files");
+    assertEquals(compactionThreshold, countMobFiles(), "Before compaction: mob file count");
+    assertEquals(compactionThreshold, UTIL.countRows(region), "Before compaction: rows");
+    assertEquals(compactionThreshold, countMobRows(), "Before compaction: mob rows");
+    assertEquals(compactionThreshold, countMobCellsInMetadata(),
+      "Before compaction: number of mob cells");
     // Change the threshold larger than the data size
     setMobThreshold(region, COLUMN_FAMILY, 500);
     region.initialize();
@@ -223,11 +219,11 @@ public class TestMobStoreCompaction {
       region.compact(context.get(), store, NoLimitThroughputController.INSTANCE, User.getCurrent());
     }
 
-    assertEquals("After compaction: store files", 1, countStoreFiles());
-    assertEquals("After compaction: mob file count", compactionThreshold, countMobFiles());
-    assertEquals("After compaction: referenced mob file count", 0, countReferencedMobFiles());
-    assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
-    assertEquals("After compaction: mob rows", 0, countMobRows());
+    assertEquals(1, countStoreFiles(), "After compaction: store files");
+    assertEquals(compactionThreshold, countMobFiles(), "After compaction: mob file count");
+    assertEquals(0, countReferencedMobFiles(), "After compaction: referenced mob file count");
+    assertEquals(compactionThreshold, UTIL.countRows(region), "After compaction: rows");
+    assertEquals(0, countMobRows(), "After compaction: mob rows");
   }
 
   private static HRegion setMobThreshold(HRegion region, byte[] cfName, long modThreshold) {
@@ -244,7 +240,7 @@ public class TestMobStoreCompaction {
    * This test will first generate store files, then bulk load them and trigger the compaction. When
    * compaction, the cell value will be larger than the threshold.
    */
-  @Test
+  @TestTemplate
   public void testMobCompactionWithBulkload() throws Exception {
     // The following will produce store files of 600.
     init(UTIL.getConfiguration(), 300);
@@ -262,25 +258,25 @@ public class TestMobStoreCompaction {
     // The following will bulk load the above generated store files and compact, with 600(fileSize)
     // > 300(threshold)
     Map<byte[], List<Path>> map = region.bulkLoadHFiles(hfiles, true, null);
-    assertTrue("Bulkload result:", !map.isEmpty());
-    assertEquals("Before compaction: store files", compactionThreshold, countStoreFiles());
-    assertEquals("Before compaction: mob file count", 0, countMobFiles());
-    assertEquals("Before compaction: rows", compactionThreshold, UTIL.countRows(region));
-    assertEquals("Before compaction: mob rows", 0, countMobRows());
-    assertEquals("Before compaction: referenced mob file count", 0, countReferencedMobFiles());
+    assertTrue(!map.isEmpty(), "Bulkload result:");
+    assertEquals(compactionThreshold, countStoreFiles(), "Before compaction: store files");
+    assertEquals(0, countMobFiles(), "Before compaction: mob file count");
+    assertEquals(compactionThreshold, UTIL.countRows(region), "Before compaction: rows");
+    assertEquals(0, countMobRows(), "Before compaction: mob rows");
+    assertEquals(0, countReferencedMobFiles(), "Before compaction: referenced mob file count");
 
     region.compactStores();
 
-    assertEquals("After compaction: store files", 1, countStoreFiles());
-    assertEquals("After compaction: mob file count:", 1, countMobFiles());
-    assertEquals("After compaction: rows", compactionThreshold, UTIL.countRows(region));
-    assertEquals("After compaction: mob rows", compactionThreshold, countMobRows());
-    assertEquals("After compaction: referenced mob file count", 1, countReferencedMobFiles());
-    assertEquals("After compaction: number of mob cells", compactionThreshold,
-      countMobCellsInMetadata());
+    assertEquals(1, countStoreFiles(), "After compaction: store files");
+    assertEquals(1, countMobFiles(), "After compaction: mob file count:");
+    assertEquals(compactionThreshold, UTIL.countRows(region), "After compaction: rows");
+    assertEquals(compactionThreshold, countMobRows(), "After compaction: mob rows");
+    assertEquals(1, countReferencedMobFiles(), "After compaction: referenced mob file count");
+    assertEquals(compactionThreshold, countMobCellsInMetadata(),
+      "After compaction: number of mob cells");
   }
 
-  @Test
+  @TestTemplate
   public void testMajorCompactionAfterDelete() throws Exception {
     init(UTIL.getConfiguration(), 100);
     byte[] dummyData = makeDummyData(200); // larger than mob threshold
@@ -293,22 +289,22 @@ public class TestMobStoreCompaction {
       loader.put(p);
       region.flush(true);
     }
-    assertEquals("Before compaction: store files", numHfiles, countStoreFiles());
-    assertEquals("Before compaction: mob file count", numHfiles, countMobFiles());
-    assertEquals("Before compaction: rows", numHfiles, UTIL.countRows(region));
-    assertEquals("Before compaction: mob rows", numHfiles, countMobRows());
-    assertEquals("Before compaction: number of mob cells", numHfiles, countMobCellsInMetadata());
+    assertEquals(numHfiles, countStoreFiles(), "Before compaction: store files");
+    assertEquals(numHfiles, countMobFiles(), "Before compaction: mob file count");
+    assertEquals(numHfiles, UTIL.countRows(region), "Before compaction: rows");
+    assertEquals(numHfiles, countMobRows(), "Before compaction: mob rows");
+    assertEquals(numHfiles, countMobCellsInMetadata(), "Before compaction: number of mob cells");
     // now let's delete some cells that contain mobs
     Delete delete = new Delete(deleteRow);
     delete.addFamily(COLUMN_FAMILY);
     region.delete(delete);
     region.flush(true);
 
-    assertEquals("Before compaction: store files", numHfiles + 1, countStoreFiles());
-    assertEquals("Before compaction: mob files", numHfiles, countMobFiles());
+    assertEquals(numHfiles + 1, countStoreFiles(), "Before compaction: store files");
+    assertEquals(numHfiles, countMobFiles(), "Before compaction: mob files");
     // region.compactStores();
     region.compact(true);
-    assertEquals("After compaction: store files", 1, countStoreFiles());
+    assertEquals(1, countStoreFiles(), "After compaction: store files");
   }
 
   private int countStoreFiles() throws IOException {

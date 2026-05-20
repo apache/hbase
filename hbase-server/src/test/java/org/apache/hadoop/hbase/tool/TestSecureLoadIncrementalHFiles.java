@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
@@ -26,9 +25,8 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Reruns TestLoadIncrementalHFiles using LoadIncrementalHFiles in secure mode. This suite is unable
@@ -39,14 +37,11 @@ import org.junit.experimental.categories.Category;
  * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
-@Category({ MiscTests.class, LargeTests.class })
-public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestSecureLoadIncrementalHFiles extends BulkLoadHFilesTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFiles.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // set the always on security provider
     UserProvider.setUserProviderForTesting(util.getConfiguration(),
@@ -66,5 +61,4 @@ public class TestSecureLoadIncrementalHFiles extends TestLoadIncrementalHFiles {
 
     setupNamespace();
   }
-
 }

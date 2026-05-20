@@ -21,17 +21,21 @@ import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class RestoreSnapshotFromClientCloneTestBase extends RestoreSnapshotFromClientTestBase {
 
-  @Test
+  protected RestoreSnapshotFromClientCloneTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testCloneSnapshotOfCloned() throws IOException, InterruptedException {
     TableName clonedTableName =
       TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     admin.cloneSnapshot(snapshotName0, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, numReplicas);
     admin.disableTable(clonedTableName);
     admin.snapshot(snapshotName2, clonedTableName);
     TEST_UTIL.deleteTable(clonedTableName);
@@ -39,25 +43,25 @@ public class RestoreSnapshotFromClientCloneTestBase extends RestoreSnapshotFromC
 
     admin.cloneSnapshot(snapshotName2, clonedTableName);
     verifyRowCount(TEST_UTIL, clonedTableName, snapshot0Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(clonedTableName, admin, numReplicas);
     TEST_UTIL.deleteTable(clonedTableName);
   }
 
-  @Test
+  @TestTemplate
   public void testCloneAndRestoreSnapshot() throws IOException, InterruptedException {
     TEST_UTIL.deleteTable(tableName);
     waitCleanerRun();
 
     admin.cloneSnapshot(snapshotName0, tableName);
     verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
     waitCleanerRun();
 
     admin.disableTable(tableName);
     admin.restoreSnapshot(snapshotName0);
     admin.enableTable(tableName);
     verifyRowCount(TEST_UTIL, tableName, snapshot0Rows);
-    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, getNumReplicas());
+    SnapshotTestingUtils.verifyReplicasCameOnline(tableName, admin, numReplicas);
   }
 
   private void waitCleanerRun() throws InterruptedException {

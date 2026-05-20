@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -30,13 +31,12 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -51,12 +51,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetRespons
 /**
  * Test {@link org.apache.hadoop.hbase.zookeeper.MetaTableLocator}
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMetaTableLocator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableLocator.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableLocator.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -65,19 +62,19 @@ public class TestMetaTableLocator {
   private ZKWatcher watcher;
   private Abortable abortable;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // Set this down so tests run quicker
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
     UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws IOException {
     UTIL.getZkCluster().shutdown();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     this.abortable = new Abortable() {
       @Override
@@ -94,7 +91,7 @@ public class TestMetaTableLocator {
       new ZKWatcher(UTIL.getConfiguration(), this.getClass().getSimpleName(), this.abortable, true);
   }
 
-  @After
+  @AfterEach
   public void after() {
     try {
       // Clean out meta location or later tests will be confused... they presume
@@ -140,9 +137,11 @@ public class TestMetaTableLocator {
     assertNull(MetaTableLocator.getMetaRegionLocation(this.watcher));
   }
 
-  @Test(expected = NotAllMetaRegionsOnlineException.class)
+  @Test
   public void testTimeoutWaitForMeta() throws IOException, InterruptedException {
-    MetaTableLocator.waitMetaRegionLocation(watcher, 100);
+    assertThrows(NotAllMetaRegionsOnlineException.class, () -> {
+      MetaTableLocator.waitMetaRegionLocation(watcher, 100);
+    });
   }
 
   /**
@@ -170,7 +169,7 @@ public class TestMetaTableLocator {
     UTIL.waitFor(2000, t::isAlive);
     // Wait one second.
     Threads.sleep(ms);
-    assertTrue("Assert " + t.getName() + " still waiting", t.isAlive());
+    assertTrue(t.isAlive(), "Assert " + t.getName() + " still waiting");
   }
 
   /**

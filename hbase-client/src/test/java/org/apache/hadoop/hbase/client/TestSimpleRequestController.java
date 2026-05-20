@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -33,7 +33,6 @@ import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -44,17 +43,12 @@ import org.apache.hadoop.hbase.client.RequestController.ReturnCode;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSimpleRequestController {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleRequestController.class);
 
   private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
   private static final byte[] DUMMY_BYTES_1 = Bytes.toBytes("DUMMY_BYTES_1");
@@ -362,7 +356,7 @@ public class TestSimpleRequestController {
         barrier.await();
         controller.waitForMaximumCurrentTasks(max.get(), 123, 1, null);
       } catch (InterruptedIOException | InterruptedException | BrokenBarrierException e) {
-        Assert.fail(e.getMessage());
+        fail(e.getMessage());
       }
     };
     // First test that our runnable thread only exits when tasks is zero.

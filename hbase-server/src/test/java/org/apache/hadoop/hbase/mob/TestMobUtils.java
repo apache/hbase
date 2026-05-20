@@ -17,27 +17,20 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSetMultimap;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMobUtils {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobUtils.class);
   public static final TableName TEST_TABLE_1 = TableName.valueOf("testTable1");
   public static final TableName TEST_TABLE_2 = TableName.valueOf("testTable2");
   public static final TableName TEST_TABLE_3 = TableName.valueOf("testTable3");
@@ -91,7 +84,7 @@ public class TestMobUtils {
     assertTrue(testTable3Refs.contains("file3b"));
   }
 
-  public static String getTableName(TestName test) {
-    return test.getMethodName().replace("[", "-").replace("]", "");
+  public static String getTableName(String testMethodName) {
+    return testMethodName.replace("[", "-").replace("]", "");
   }
 }

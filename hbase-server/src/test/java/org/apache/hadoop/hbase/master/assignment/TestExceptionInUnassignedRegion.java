@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import java.util.Optional;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -34,19 +36,14 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestExceptionInUnassignedRegion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExceptionInUnassignedRegion.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -54,7 +51,7 @@ public class TestExceptionInUnassignedRegion {
 
   private static final byte[] CF = Bytes.toBytes("cf");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       ThrowInCloseCP.class.getName());
@@ -64,7 +61,7 @@ public class TestExceptionInUnassignedRegion {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -93,14 +90,14 @@ public class TestExceptionInUnassignedRegion {
     long prodId = procedureExecutor.submitProcedure(moveRegionProcedure);
     ProcedureTestingUtility.waitProcedure(procedureExecutor, prodId);
 
-    Assert.assertEquals("Should be two RS since other is aborted", 2,
-      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size());
-    Assert.assertNull("RIT Map doesn't have correct value",
-      getRegionServer(0).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()));
-    Assert.assertNull("RIT Map doesn't have correct value",
-      getRegionServer(1).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()));
-    Assert.assertNull("RIT Map doesn't have correct value",
-      getRegionServer(2).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()));
+    assertEquals(2, UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size(),
+      "Should be two RS since other is aborted");
+    assertNull(getRegionServer(0).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
+      "RIT Map doesn't have correct value");
+    assertNull(getRegionServer(1).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
+      "RIT Map doesn't have correct value");
+    assertNull(getRegionServer(2).getRegionsInTransitionInRS().get(hri.getEncodedNameAsBytes()),
+      "RIT Map doesn't have correct value");
   }
 
   private HRegionServer getRegionServer(int index) {

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
@@ -158,6 +158,7 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.namenode.EditLogFileOutputStream;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.MiniMRCluster;
+import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.authentication.util.KerberosName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -229,6 +230,18 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
 
   /** This is for unit tests parameterized with a single boolean. */
   public static final List<Object[]> MEMSTORETS_TAGS_PARAMETRIZED = memStoreTSAndTagsCombination();
+
+  static {
+    // JmxCacheBuster may cause dead lock in test environment. As on master side, the table/region
+    // related metrics updating will finally lead to a meta access, so if meta is not online yet, we
+    // will block when updating while holding the metrics lock. But when we assign meta, there are
+    // bunch of places where we need to register a new metrics thus need to get the metrics lock,
+    // and then lead to a dead lock and cause the test to hang forever.
+    // The code is in hadoop so there is no easy way for us to fix, so here we just stop
+    // JmxCacheBuster to stabilize our tests first. See HBASE-30118 for more details and future
+    // plans.
+    JmxCacheBuster.stop();
+  }
 
   /**
    * Checks to see if a specific port is available.
@@ -2422,11 +2435,11 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       get.setReplicaId(replicaId);
       get.setConsistency(Consistency.TIMELINE);
       Result result = table.get(get);
-      assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
+      assertTrue(result.containsColumn(f, null), failMsg);
+      assertEquals(1, result.getColumnCells(f, null).size(), failMsg);
       Cell cell = result.getColumnLatestCell(f, null);
-      assertTrue(failMsg, Bytes.equals(data, 0, data.length, cell.getValueArray(),
-        cell.getValueOffset(), cell.getValueLength()));
+      assertTrue(Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength()), failMsg);
     }
   }
 
@@ -2453,14 +2466,14 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       Result result = region.get(new Get(data));
 
       boolean hasResult = result != null && !result.isEmpty();
-      assertEquals(failMsg + result, present, hasResult);
+      assertEquals(present, hasResult);
       if (!present) continue;
 
-      assertTrue(failMsg, result.containsColumn(f, null));
-      assertEquals(failMsg, 1, result.getColumnCells(f, null).size());
+      assertTrue(result.containsColumn(f, null), failMsg);
+      assertEquals(1, result.getColumnCells(f, null).size(), failMsg);
       Cell cell = result.getColumnLatestCell(f, null);
-      assertTrue(failMsg, Bytes.equals(data, 0, data.length, cell.getValueArray(),
-        cell.getValueOffset(), cell.getValueLength()));
+      assertTrue(Bytes.equals(data, 0, data.length, cell.getValueArray(), cell.getValueOffset(),
+        cell.getValueLength()), failMsg);
     }
   }
 
@@ -2979,10 +2992,15 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   /**
-   * Expire a ZooKeeper session as recommended in ZooKeeper documentation
-   * http://hbase.apache.org/book.html#trouble.zookeeper There are issues when doing this: [1]
-   * http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html [2]
-   * https://issues.apache.org/jira/browse/ZOOKEEPER-1105
+   * Expire a ZooKeeper session as recommended in ZooKeeper documentation <a href=
+   * "https://hbase.apache.org/docs/troubleshooting#troubleshooting-zookeeper">Troubleshooting
+   * ZooKeeper</a>
+   * <p/>
+   * There are issues when doing this:
+   * <ol>
+   * <li>http://www.mail-archive.com/dev@zookeeper.apache.org/msg01942.html</li>
+   * <li>https://issues.apache.org/jira/browse/ZOOKEEPER-1105</li>
+   * </ol>
    * @param nodeZK      - the ZK watcher to expire
    * @param checkStatus - true to check if we can create a Table with the current configuration.
    */
@@ -3620,6 +3638,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
       HMaster master = getHBaseCluster().getMaster();
       final RegionStates states = master.getAssignmentManager().getRegionStates();
       waitFor(timeout, 200, new ExplainingPredicate<IOException>() {
+
         @Override
         public String explainFailure() throws IOException {
           return explainTableAvailability(tableName);
@@ -3630,6 +3649,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           List<RegionInfo> hris = states.getRegionsOfTable(tableName);
           return hris != null && !hris.isEmpty();
         }
+
       });
     }
     LOG.info("All regions for table " + tableName + " assigned.");
@@ -4007,8 +4027,8 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
           }
           Collection<HRegion> hrs = rs.getOnlineRegionsLocalContext();
           for (HRegion r : hrs) {
-            assertTrue("Region should not be double assigned",
-              r.getRegionInfo().getRegionId() != hri.getRegionId());
+            assertTrue(r.getRegionInfo().getRegionId() != hri.getRegionId(),
+              "Region should not be double assigned");
           }
         }
         return; // good, we are happy

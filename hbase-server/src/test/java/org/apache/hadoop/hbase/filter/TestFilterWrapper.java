@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -26,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -46,11 +48,10 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +59,9 @@ import org.slf4j.LoggerFactory;
  * Test if the FilterWrapper retains the same semantics defined in the
  * {@link org.apache.hadoop.hbase.filter.Filter}
  */
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFilterWrapper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterWrapper.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterWrapper.class);
 
@@ -98,8 +96,8 @@ public class TestFilterWrapper {
         for (Cell kv : result.listCells()) {
           LOG.debug(kv_number + ". kv: " + kv);
           kv_number++;
-          assertEquals("Returned row is not correct", new String(CellUtil.cloneRow(kv)),
-            "row" + (row_number + 1));
+          assertEquals("row" + (row_number + 1), new String(CellUtil.cloneRow(kv)),
+            "Returned row is not correct");
         }
       }
 
@@ -107,17 +105,17 @@ public class TestFilterWrapper {
       table.close();
     } catch (Exception e) {
       // no correct result is expected
-      assertNull("Exception happens in scan", e);
+      assertNull(e, "Exception happens in scan");
     }
     LOG.debug("check the fetched kv number");
-    assertEquals("We should get 8 results returned.", 8, kv_number);
-    assertEquals("We should get 2 rows returned", 2, row_number);
+    assertEquals(8, kv_number, "We should get 8 results returned.");
+    assertEquals(2, row_number, "We should get 2 rows returned");
   }
 
   private static void prepareData() {
     try {
       Table table = connection.getTable(name);
-      assertTrue("Fail to create the table", admin.tableExists(name));
+      assertTrue(admin.tableExists(name), "Fail to create the table");
       List<Put> puts = new ArrayList<>();
 
       // row1 => <f1:c1, 1_c1, ts=1>, <f1:c2, 1_c2, ts=2>, <f1:c3, 1_c3,ts=3>,
@@ -140,12 +138,12 @@ public class TestFilterWrapper {
       table.put(puts);
       table.close();
     } catch (IOException e) {
-      assertNull("Exception found while putting data into table", e);
+      assertNull(e, "Exception found while putting data into table");
     }
   }
 
   private static void createTable() {
-    assertNotNull("HBaseAdmin is not initialized successfully.", admin);
+    assertNotNull(admin, "HBaseAdmin is not initialized successfully.");
     if (admin != null) {
 
       HTableDescriptor desc = new HTableDescriptor(name);
@@ -154,11 +152,10 @@ public class TestFilterWrapper {
 
       try {
         admin.createTable(desc);
-        assertTrue("Fail to create the table", admin.tableExists(name));
+        assertTrue(admin.tableExists(name), "Fail to create the table");
       } catch (IOException e) {
-        assertNull("Exception found while creating table", e);
+        assertNull(e, "Exception found while creating table");
       }
-
     }
   }
 
@@ -168,7 +165,7 @@ public class TestFilterWrapper {
         admin.disableTable(name);
         admin.deleteTable(name);
       } catch (IOException e) {
-        assertNull("Exception found deleting the table", e);
+        assertNull(e, "Exception found deleting the table");
       }
     }
   }
@@ -180,23 +177,23 @@ public class TestFilterWrapper {
       connection = ConnectionFactory.createConnection(TestFilterWrapper.conf);
       admin = TEST_UTIL.getAdmin();
     } catch (MasterNotRunningException e) {
-      assertNull("Master is not running", e);
+      assertNull(e, "Master is not running");
     } catch (ZooKeeperConnectionException e) {
-      assertNull("Cannot connect to ZooKeeper", e);
+      assertNull(e, "Cannot connect to ZooKeeper");
     } catch (IOException e) {
-      assertNull("Caught IOException", e);
+      assertNull(e, "Caught IOException");
     }
     createTable();
     prepareData();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     initialize(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     deleteTable();
     connection.close();

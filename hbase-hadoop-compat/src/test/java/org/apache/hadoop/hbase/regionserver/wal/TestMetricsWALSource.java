@@ -17,25 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsWALSource {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsWALSource.class);
-
-  @Test(expected = RuntimeException.class)
-  public void testGetInstanceNoHadoopCompat() throws Exception {
+  @Test
+  public void testGetInstance() throws Exception {
     // This should throw an exception because there is no compat lib on the class path.
-    CompatibilitySingletonFactory.getInstance(MetricsWALSource.class);
-
+    assertThrows(RuntimeException.class,
+      () -> CompatibilitySingletonFactory.getInstance(MetricsWALSource.class));
   }
 }

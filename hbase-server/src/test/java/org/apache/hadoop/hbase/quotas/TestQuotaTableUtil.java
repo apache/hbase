@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,6 @@ import java.util.Set;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -46,15 +45,13 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.HashMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
@@ -68,24 +65,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.Throttle;
 /**
  * Test the quota table helpers (e.g. CRUD operations)
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestQuotaTableUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaTableUtil.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Connection connection;
   private int tableNameCounter;
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, 2000);
@@ -98,32 +86,33 @@ public class TestQuotaTableUtil {
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     this.connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
     this.tableNameCounter = 0;
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     this.connection.close();
   }
 
   @Test
-  public void testDeleteSnapshots() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+  public void testDeleteSnapshots(TestInfo testInfo) throws Exception {
+    String methodName = testInfo.getTestMethod().get().getName();
+    TableName tn = TableName.valueOf(methodName);
     try (Table t = connection.getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
       Quotas quota =
         Quotas.newBuilder().setSpace(QuotaProtos.SpaceQuota.newBuilder().setSoftLimit(7L)
           .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.NO_WRITES).build()).build();
       QuotaUtil.addTableQuota(connection, tn, quota);
 
-      String snapshotName = name.getMethodName() + "_snapshot";
+      String snapshotName = methodName + "_snapshot";
       t.put(QuotaTableUtil.createPutForSnapshotSize(tn, snapshotName, 3L));
       t.put(QuotaTableUtil.createPutForSnapshotSize(tn, snapshotName, 5L));
       assertEquals(1, QuotaTableUtil.getObservedSnapshotSizes(connection).size());
@@ -134,7 +123,7 @@ public class TestQuotaTableUtil {
       t.delete(deletes);
       assertEquals(0, QuotaTableUtil.getObservedSnapshotSizes(connection).size());
 
-      String ns = name.getMethodName();
+      String ns = methodName;
       t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize(ns, 5L));
       t.put(QuotaTableUtil.createPutForNamespaceSnapshotSize(ns, 3L));
       assertEquals(3L, QuotaTableUtil.getNamespaceSnapshotSize(connection, ns));
@@ -177,8 +166,8 @@ public class TestQuotaTableUtil {
   }
 
   @Test
-  public void testTableQuotaUtil() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testTableQuotaUtil(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
 
     Quotas quota = Quotas.newBuilder()
       .setThrottle(Throttle.newBuilder()
@@ -221,8 +210,8 @@ public class TestQuotaTableUtil {
   }
 
   @Test
-  public void testUserQuotaUtil() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testUserQuotaUtil(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final String namespace = "testNS";
     final String user = "testUser";
 
@@ -274,14 +263,14 @@ public class TestQuotaTableUtil {
   }
 
   @Test
-  public void testSerDeViolationPolicies() throws Exception {
-    final TableName tn1 = getUniqueTableName();
+  public void testSerDeViolationPolicies(TestInfo testInfo) throws Exception {
+    final TableName tn1 = getUniqueTableName(testInfo);
     final SpaceQuotaSnapshot snapshot1 =
       new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 512L, 1024L);
-    final TableName tn2 = getUniqueTableName();
+    final TableName tn2 = getUniqueTableName(testInfo);
     final SpaceQuotaSnapshot snapshot2 =
       new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.NO_INSERTS), 512L, 1024L);
-    final TableName tn3 = getUniqueTableName();
+    final TableName tn3 = getUniqueTableName(testInfo);
     final SpaceQuotaSnapshot snapshot3 =
       new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.NO_WRITES), 512L, 1024L);
     List<Put> puts = new ArrayList<>();
@@ -350,8 +339,8 @@ public class TestQuotaTableUtil {
     }
   }
 
-  private TableName getUniqueTableName() {
-    return TableName.valueOf(testName.getMethodName() + "_" + tableNameCounter++);
+  private TableName getUniqueTableName(TestInfo testInfo) {
+    return TableName.valueOf(testInfo.getTestMethod().get().getName() + "_" + tableNameCounter++);
   }
 
   private void verifyTableSnapshotSize(Table quotaTable, TableName tn, String snapshotName,

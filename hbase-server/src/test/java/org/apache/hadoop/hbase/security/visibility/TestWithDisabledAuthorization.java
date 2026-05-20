@@ -18,16 +18,15 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.protobuf.ByteString;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -44,20 +43,15 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestWithDisabledAuthorization {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWithDisabledAuthorization.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -68,14 +62,11 @@ public class TestWithDisabledAuthorization {
   private static final byte[] TEST_QUALIFIER = Bytes.toBytes("q");
   private static final byte[] ZERO = Bytes.toBytes(0L);
 
-  @Rule
-  public final TestName TEST_NAME = new TestName();
-
   private static User SUPERUSER;
   private static User USER_RW;
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     // Up the handlers; this test needs more than usual.
@@ -114,7 +105,7 @@ public class TestWithDisabledAuthorization {
     });
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -192,10 +183,11 @@ public class TestWithDisabledAuthorization {
   }
 
   @Test
-  public void testPassiveVisibility() throws Exception {
+  public void testPassiveVisibility(TestInfo testInfo) throws Exception {
     // No values should be filtered regardless of authorization if we are passive
-    try (Table t = createTableAndWriteDataWithLabels(TableName.valueOf(TEST_NAME.getMethodName()),
-      SECRET, PRIVATE, SECRET + "|" + CONFIDENTIAL, PRIVATE + "|" + CONFIDENTIAL)) {
+    try (Table t =
+      createTableAndWriteDataWithLabels(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+        SECRET, PRIVATE, SECRET + "|" + CONFIDENTIAL, PRIVATE + "|" + CONFIDENTIAL)) {
       Scan s = new Scan();
       s.setAuthorizations(new Authorizations());
       try (ResultScanner scanner = t.getScanner(s)) {

@@ -18,13 +18,17 @@
 package org.apache.hadoop.hbase.fs;
 
 import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.reflect.Field;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -37,14 +41,10 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for the hdfs fix from HBASE-6435. Please don't add new subtest which involves starting /
@@ -52,12 +52,9 @@ import org.junit.rules.TestName;
  * cleared in hadoop's ShutdownHookManager in hadoop 3. This leads to 'Failed suppression of fs
  * shutdown hook' error in region server.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBlockReorderBlockLocation {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockReorderBlockLocation.class);
 
   private Configuration conf;
   private MiniDFSCluster cluster;
@@ -67,10 +64,7 @@ public class TestBlockReorderBlockLocation {
   private static final String host2 = "host2";
   private static final String host3 = "host3";
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     htu = new HBaseTestingUtility();
     htu.getConfiguration().setInt("dfs.blocksize", 1024);// For the test with multiple blocks
@@ -83,7 +77,7 @@ public class TestBlockReorderBlockLocation {
     dfs = (DistributedFileSystem) FileSystem.get(conf);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterClass() throws Exception {
     htu.shutdownMiniCluster();
   }
@@ -109,7 +103,7 @@ public class TestBlockReorderBlockLocation {
     Path p = new Path(fileName);
 
     final int repCount = 3;
-    Assert.assertTrue((short) cluster.getDataNodes().size() >= repCount);
+    assertTrue((short) cluster.getDataNodes().size() >= repCount);
 
     // Let's write the file
     FSDataOutputStream fop = dfs.create(p, (short) repCount);
@@ -123,36 +117,36 @@ public class TestBlockReorderBlockLocation {
       final long max = EnvironmentEdgeManager.currentTime() + 10000;
       do {
         lbs = getNamenode(dfs.getClient()).getBlockLocations(fileName, 0, 1);
-        Assert.assertNotNull(lbs.getLocatedBlocks());
-        Assert.assertEquals(1, lbs.getLocatedBlocks().size());
-        Assert.assertTrue(
-          "Expecting " + repCount + " , got " + getLocatedBlockLocations(lbs.get(0)).length,
-          EnvironmentEdgeManager.currentTime() < max);
+        assertNotNull(lbs.getLocatedBlocks());
+        assertEquals(1, lbs.getLocatedBlocks().size());
+        assertTrue(EnvironmentEdgeManager.currentTime() < max,
+          "Expecting " + repCount + " , got " + getLocatedBlockLocations(lbs.get(0)).length);
       } while (getLocatedBlockLocations(lbs.get(0)).length != repCount);
 
       // Should be filtered, the name is different => The order won't change
       Object[] originalList = lbs.getLocatedBlocks().toArray();
       HFileSystem.ReorderWALBlocks lrb = new HFileSystem.ReorderWALBlocks();
       lrb.reorderBlocks(conf, lbs, fileName);
-      Assert.assertArrayEquals(originalList, lbs.getLocatedBlocks().toArray());
+      assertArrayEquals(originalList, lbs.getLocatedBlocks().toArray());
 
       // Should be reordered, as we pretend to be a file name with a compliant stuff
-      Assert.assertNotNull(conf.get(HConstants.HBASE_DIR));
-      Assert.assertFalse(conf.get(HConstants.HBASE_DIR).isEmpty());
+      assertNotNull(conf.get(HConstants.HBASE_DIR));
+      assertFalse(conf.get(HConstants.HBASE_DIR).isEmpty());
       String pseudoLogFile = conf.get(HConstants.HBASE_DIR) + "/" + HConstants.HREGION_LOGDIR_NAME
         + "/" + host1 + ",6977,6576" + "/mylogfile";
 
       // Check that it will be possible to extract a ServerName from our construction
-      Assert.assertNotNull("log= " + pseudoLogFile,
-        AbstractFSWALProvider.getServerNameFromWALDirectoryName(dfs.getConf(), pseudoLogFile));
+      assertNotNull(
+        AbstractFSWALProvider.getServerNameFromWALDirectoryName(dfs.getConf(), pseudoLogFile),
+        "log= " + pseudoLogFile);
 
       // And check we're doing the right reorder.
       lrb.reorderBlocks(conf, lbs, pseudoLogFile);
-      Assert.assertEquals(host1, getLocatedBlockLocations(lbs.get(0))[2].getHostName());
+      assertEquals(host1, getLocatedBlockLocations(lbs.get(0))[2].getHostName());
 
       // Check again, it should remain the same.
       lrb.reorderBlocks(conf, lbs, pseudoLogFile);
-      Assert.assertEquals(host1, getLocatedBlockLocations(lbs.get(0))[2].getHostName());
+      assertEquals(host1, getLocatedBlockLocations(lbs.get(0))[2].getHostName());
     }
   }
 

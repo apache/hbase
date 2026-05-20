@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doNothing;
@@ -30,15 +30,13 @@ import java.util.Map;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
@@ -46,12 +44,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestMultiTableSnapshotInputFormatImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormatImpl.class);
 
   private MultiTableSnapshotInputFormatImpl subject;
   private Map<String, Collection<Scan>> snapshotScans;
@@ -59,7 +53,7 @@ public class TestMultiTableSnapshotInputFormatImpl {
   private Configuration conf;
   private Path rootDir;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.subject = Mockito.spy(new MultiTableSnapshotInputFormatImpl());
 
@@ -172,8 +166,8 @@ public class TestMultiTableSnapshotInputFormatImpl {
     Map<String, Path> restoreDirs = subject.getSnapshotDirs(conf);
 
     for (Path snapshotDir : restoreDirs.values()) {
-      assertEquals("Expected " + snapshotDir + " to be a child of " + restoreDir, restoreDir,
-        snapshotDir.getParent());
+      assertEquals(restoreDir, snapshotDir.getParent(),
+        "Expected " + snapshotDir + " to be a child of " + restoreDir);
     }
   }
 

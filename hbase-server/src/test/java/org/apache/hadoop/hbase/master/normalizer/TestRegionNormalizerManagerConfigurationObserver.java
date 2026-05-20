@@ -17,38 +17,35 @@
  */
 package org.apache.hadoop.hbase.master.normalizer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.MockitoAnnotations;
+import org.mockito.junit.jupiter.MockitoExtension;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.RateLimiter;
 
 /**
  * Test that configuration changes are propagated to all children.
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestRegionNormalizerManagerConfigurationObserver {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionNormalizerManagerConfigurationObserver.class);
 
   private static final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private static final Pattern rateLimitPattern =
@@ -67,9 +64,8 @@ public class TestRegionNormalizerManagerConfigurationObserver {
   private RegionNormalizerWorker worker;
   private ConfigurationManager configurationManager;
 
-  @Before
+  @BeforeEach
   public void before() {
-    MockitoAnnotations.initMocks(this);
     conf = testUtil.getConfiguration();
     normalizer = new SimpleRegionNormalizer();
     worker = new RegionNormalizerWorker(conf, masterServices, normalizer, queue);

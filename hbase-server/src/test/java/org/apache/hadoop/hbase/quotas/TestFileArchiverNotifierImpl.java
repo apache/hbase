@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -55,14 +54,12 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
@@ -76,25 +73,19 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test class for {@link FileArchiverNotifierImpl}.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestFileArchiverNotifierImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFileArchiverNotifierImpl.class);
-
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong();
-
-  @Rule
-  public TestName testName = new TestName();
 
   private Connection conn;
   private Admin admin;
   private SpaceQuotaHelperForTests helper;
   private FileSystem fs;
   private Configuration conf;
+  private String testName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
@@ -106,13 +97,14 @@ public class TestFileArchiverNotifierImpl {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     conn = TEST_UTIL.getConnection();
     admin = TEST_UTIL.getAdmin();
     helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
@@ -124,7 +116,7 @@ public class TestFileArchiverNotifierImpl {
   @Test
   public void testSnapshotSizePersistence() throws IOException {
     final Admin admin = TEST_UTIL.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final TableName tn = TableName.valueOf(testName);
     if (admin.tableExists(tn)) {
       admin.disableTable(tn);
       admin.deleteTable(tn);
@@ -156,7 +148,7 @@ public class TestFileArchiverNotifierImpl {
   @Test
   public void testIncrementalFileArchiving() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
-    final TableName tn = TableName.valueOf(testName.getMethodName());
+    final TableName tn = TableName.valueOf(testName);
     if (admin.tableExists(tn)) {
       admin.disableTable(tn);
       admin.deleteTable(tn);
@@ -177,9 +169,9 @@ public class TestFileArchiverNotifierImpl {
     FileArchiverNotifierImpl notifier = new FileArchiverNotifierImpl(conn, conf, fs, tn);
     long t1 = notifier.getLastFullCompute();
     long snapshotSize = notifier.computeAndStoreSnapshotSizes(Arrays.asList(snapshotName1));
-    assertEquals("The size of the snapshots should be zero", 0, snapshotSize);
-    assertTrue("Last compute time was not less than current compute time",
-      t1 < notifier.getLastFullCompute());
+    assertEquals(0, snapshotSize, "The size of the snapshots should be zero");
+    assertTrue(t1 < notifier.getLastFullCompute(),
+      "Last compute time was not less than current compute time");
 
     // No recently archived files and the snapshot should have no size
     assertEquals(0, extractSnapshotSize(quotaTable, tn, snapshotName1));
@@ -197,7 +189,7 @@ public class TestFileArchiverNotifierImpl {
 
     // Pull one file referenced by the snapshot out of the manifest
     Set<String> referencedFiles = getFilesReferencedBySnapshot(snapshotName1);
-    assertTrue("Found snapshot referenced files: " + referencedFiles, referencedFiles.size() >= 1);
+    assertTrue(referencedFiles.size() >= 1, "Found snapshot referenced files: " + referencedFiles);
     String referencedFile = Iterables.getFirst(referencedFiles, null);
     assertNotNull(referencedFile);
 
@@ -216,15 +208,15 @@ public class TestFileArchiverNotifierImpl {
     assertEquals(0, snapshotSize);
     assertEquals(0, extractSnapshotSize(quotaTable, tn, snapshotName1));
     // We should also have no recently archived files after a re-computation
-    assertTrue("Last compute time was not less than current compute time",
-      t2 < notifier.getLastFullCompute());
+    assertTrue(t2 < notifier.getLastFullCompute(),
+      "Last compute time was not less than current compute time");
   }
 
   @Test
   public void testParseOldNamespaceSnapshotSize() throws Exception {
     final Admin admin = TEST_UTIL.getAdmin();
-    final TableName fakeQuotaTableName = TableName.valueOf(testName.getMethodName());
-    final TableName tn = TableName.valueOf(testName.getMethodName() + "1");
+    final TableName fakeQuotaTableName = TableName.valueOf(testName);
+    final TableName tn = TableName.valueOf(testName + "1");
     if (admin.tableExists(fakeQuotaTableName)) {
       admin.disableTable(fakeQuotaTableName);
       admin.deleteTable(fakeQuotaTableName);

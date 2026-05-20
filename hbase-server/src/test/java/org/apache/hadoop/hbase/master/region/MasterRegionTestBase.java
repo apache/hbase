@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 public class MasterRegionTestBase {
 
@@ -77,7 +77,7 @@ public class MasterRegionTestBase {
   protected void postSetUp() throws IOException {
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     htu.getConfiguration().setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
@@ -119,7 +119,7 @@ public class MasterRegionTestBase {
     postSetUp();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     region.close(true);
     hfileCleanerPool.shutdownNow();

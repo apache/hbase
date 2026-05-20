@@ -21,17 +21,16 @@ import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Comprehensively tests all permutations of ClientAuth modes and host verification
@@ -39,20 +38,16 @@ import org.junit.runners.Parameterized;
  * {@link CertConfig}, i.e. passing no cert, a bad cert, etc. See inline comments in {@link #data()}
  * below for what the expectations are
  */
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, "
+  + "validateServerHostnames={3}, testCase={4}, certConfig={5}, clientAuthMode={6}")
 public class TestMutualTlsServerSide extends AbstractTestMutualTls {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMutualTlsServerSide.class);
-  @Parameterized.Parameter(6)
-  public X509Util.ClientAuth clientAuthMode;
+  private X509Util.ClientAuth clientAuthMode;
 
-  @Parameterized.Parameters(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}, "
-    + "validateClientHostnames={3}, testCase={4}, clientAuthMode={5}")
-  public static List<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (X509KeyType certKeyType : X509KeyType.values()) {
         for (String keyPassword : new String[] { "", "pa$$w0rd" }) {
@@ -62,45 +57,52 @@ public class TestMutualTlsServerSide extends AbstractTestMutualTls {
           for (boolean validateClientHostnames : new Boolean[] { true, false }) {
             // ClientAuth.NONE should succeed in all cases, because it never requests the
             // certificate for verification
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, true,
-              validateClientHostnames, CertConfig.NO_CLIENT_CERT, X509Util.ClientAuth.NONE });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, true,
-              validateClientHostnames, CertConfig.NON_VERIFIABLE_CERT, X509Util.ClientAuth.NONE });
-            params.add(
-              new Object[] { caKeyType, certKeyType, keyPassword, true, validateClientHostnames,
-                CertConfig.VERIFIABLE_CERT_WITH_BAD_HOST, X509Util.ClientAuth.NONE });
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true,
+              validateClientHostnames, CertConfig.NO_CLIENT_CERT, X509Util.ClientAuth.NONE));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true,
+              validateClientHostnames, CertConfig.NON_VERIFIABLE_CERT, X509Util.ClientAuth.NONE));
+            params
+              .add(Arguments.of(caKeyType, certKeyType, keyPassword, true, validateClientHostnames,
+                CertConfig.VERIFIABLE_CERT_WITH_BAD_HOST, X509Util.ClientAuth.NONE));
 
             // ClientAuth.WANT should succeed if no cert, but if the cert is provided it is
             // validated. So should fail on bad cert or good cert with bad host when host
             // verification is enabled
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, true,
-              validateClientHostnames, CertConfig.NO_CLIENT_CERT, X509Util.ClientAuth.WANT });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, false,
-              validateClientHostnames, CertConfig.NON_VERIFIABLE_CERT, X509Util.ClientAuth.WANT });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, !validateClientHostnames,
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true,
+              validateClientHostnames, CertConfig.NO_CLIENT_CERT, X509Util.ClientAuth.WANT));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, false,
+              validateClientHostnames, CertConfig.NON_VERIFIABLE_CERT, X509Util.ClientAuth.WANT));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, !validateClientHostnames,
               validateClientHostnames, CertConfig.VERIFIABLE_CERT_WITH_BAD_HOST,
-              X509Util.ClientAuth.WANT });
+              X509Util.ClientAuth.WANT));
 
             // ClientAuth.NEED is most restrictive, failing in all cases except "good cert/bad host"
             // when host verification is disabled
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, false,
-              validateClientHostnames, CertConfig.NO_CLIENT_CERT, X509Util.ClientAuth.NEED });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, false,
-              validateClientHostnames, CertConfig.NON_VERIFIABLE_CERT, X509Util.ClientAuth.NEED });
-            params.add(new Object[] { caKeyType, certKeyType, keyPassword, !validateClientHostnames,
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, false,
+              validateClientHostnames, CertConfig.NO_CLIENT_CERT, X509Util.ClientAuth.NEED));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, false,
+              validateClientHostnames, CertConfig.NON_VERIFIABLE_CERT, X509Util.ClientAuth.NEED));
+            params.add(Arguments.of(caKeyType, certKeyType, keyPassword, !validateClientHostnames,
               validateClientHostnames, CertConfig.VERIFIABLE_CERT_WITH_BAD_HOST,
-              X509Util.ClientAuth.NEED });
+              X509Util.ClientAuth.NEED));
 
             // additionally ensure that all modes succeed when a good cert is presented
             for (X509Util.ClientAuth mode : X509Util.ClientAuth.values()) {
-              params.add(new Object[] { caKeyType, certKeyType, keyPassword, true,
-                validateClientHostnames, CertConfig.GOOD_CERT, mode });
+              params.add(Arguments.of(caKeyType, certKeyType, keyPassword, true,
+                validateClientHostnames, CertConfig.GOOD_CERT, mode));
             }
           }
         }
       }
     }
-    return params;
+    return params.stream();
+  }
+
+  public TestMutualTlsServerSide(X509KeyType caKeyType, X509KeyType certKeyType, String keyPassword,
+    boolean expectSuccess, boolean validateHostnames, CertConfig certConfig,
+    X509Util.ClientAuth clientAuthMode) {
+    super(caKeyType, certKeyType, keyPassword, expectSuccess, validateHostnames, certConfig);
+    this.clientAuthMode = clientAuthMode;
   }
 
   @Override

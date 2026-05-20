@@ -81,7 +81,7 @@ public class TestWALEntrySinkFilter {
   public static final HBaseClassTestRule CLASS_RULE =
     HBaseClassTestRule.forClass(TestWALEntrySinkFilter.class);
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestWALEntrySinkFilter.class);
   @Rule
   public TestName name = new TestName();
   static final int BOUNDARY = 5;

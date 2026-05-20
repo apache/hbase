@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.codahale.metrics.MetricRegistry;
 import java.io.ByteArrayOutputStream;
@@ -27,28 +27,22 @@ import java.io.PrintStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.regionserver.TestHRegionServerBulkLoad;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFilePrettyPrinter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFilePrettyPrinter.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestHFilePrettyPrinter.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -61,7 +55,7 @@ public class TestHFilePrettyPrinter {
   private static PrintStream ps;
   private static ByteArrayOutputStream stream;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = UTIL.getConfiguration();
     // Runs on local filesystem. Test does not need sync. Turn off checks.
@@ -71,7 +65,7 @@ public class TestHFilePrettyPrinter {
     ps = new PrintStream(stream);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     original = System.out;
     System.setOut(original);
@@ -81,8 +75,8 @@ public class TestHFilePrettyPrinter {
   public void testHFilePrettyPrinterNonRootDir() throws Exception {
     Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, 1000);
-    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
-      fileNotInRootDir);
+    assertNotEquals(UTIL.getDefaultRootDirPath(), fileNotInRootDir,
+      "directory used is not an HBase root dir");
 
     System.setOut(ps);
     new HFilePrettyPrinter(conf).run(new String[] { "-v", String.valueOf(fileNotInRootDir) });
@@ -97,7 +91,7 @@ public class TestHFilePrettyPrinter {
     String rootString = rootPath + rootPath.SEPARATOR;
     Path fileInRootDir = new Path(rootString + "hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileInRootDir, cf, fam, value, 1000);
-    assertTrue("directory used is a root dir", fileInRootDir.toString().startsWith(rootString));
+    assertTrue(fileInRootDir.toString().startsWith(rootString), "directory used is a root dir");
 
     System.setOut(ps);
     HFilePrettyPrinter printer = new HFilePrettyPrinter();
@@ -113,8 +107,8 @@ public class TestHFilePrettyPrinter {
   public void testHFilePrettyPrinterSeekFirstRow() throws Exception {
     Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, 1000);
-    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
-      fileNotInRootDir);
+    assertNotEquals(UTIL.getDefaultRootDirPath(), fileNotInRootDir,
+      "directory used is not an HBase root dir");
 
     HFile.Reader reader =
       HFile.createReader(fs, fileNotInRootDir, CacheConfig.DISABLED, true, conf);
@@ -132,8 +126,8 @@ public class TestHFilePrettyPrinter {
   public void testHistograms() throws Exception {
     Path fileNotInRootDir = UTIL.getDataTestDir("hfile");
     TestHRegionServerBulkLoad.createHFile(fs, fileNotInRootDir, cf, fam, value, 1000);
-    assertNotEquals("directory used is not an HBase root dir", UTIL.getDefaultRootDirPath(),
-      fileNotInRootDir);
+    assertNotEquals(UTIL.getDefaultRootDirPath(), fileNotInRootDir,
+      "directory used is not an HBase root dir");
 
     System.setOut(ps);
     new HFilePrettyPrinter(conf).run(new String[] { "-s", "-d", String.valueOf(fileNotInRootDir) });
@@ -158,8 +152,8 @@ public class TestHFilePrettyPrinter {
   private void assertContainsRanges(String result, int... rangeCountPairs) {
     for (int i = 0; i < rangeCountPairs.length - 1; i += 2) {
       String expected = rangeCountPairs[i + 1] + " <= " + rangeCountPairs[i];
-      assertTrue("expected:\n" + result + "\nto contain: '" + expected + "'",
-        result.contains(expected));
+      assertTrue(result.contains(expected),
+        "expected:\n" + result + "\nto contain: '" + expected + "'");
     }
   }
 

@@ -17,12 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.commons.lang3.exception.ExceptionUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -43,22 +45,17 @@ import org.apache.hadoop.hbase.quotas.TestNoopOperationQuota;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestScannerLeaseCount {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScannerLeaseCount.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("ScannerLeaseCount");
@@ -74,7 +71,7 @@ public class TestScannerLeaseCount {
   private static Connection CONN;
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     StartMiniClusterOption option =
       StartMiniClusterOption.builder().rsClass(MockedQuotaManagerRegionServer.class).build();
@@ -89,7 +86,7 @@ public class TestScannerLeaseCount {
     UTIL.loadTable(TABLE, FAM);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     try {
       TABLE.close();
@@ -102,7 +99,7 @@ public class TestScannerLeaseCount {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() {
     SHOULD_THROW = false;
     SCAN_SEEN.set(false);
@@ -123,7 +120,7 @@ public class TestScannerLeaseCount {
   public void itDoesNotIncreaseScannerLeaseCount() throws Exception {
     SHOULD_THROW = true;
     try (ResultScanner scanner = TABLE.getScanner(SCAN)) {
-      Exception e = Assert.assertThrows(RetriesExhaustedException.class, scanner::next);
+      Exception e = assertThrows(RetriesExhaustedException.class, scanner::next);
       Throwable[] throwables = ExceptionUtils.getThrowables(e);
 
       boolean foundThrottleException = false;
@@ -133,7 +130,7 @@ public class TestScannerLeaseCount {
         }
       }
 
-      Assert.assertTrue(foundThrottleException);
+      assertTrue(foundThrottleException);
 
       // We need to wait until the scan and lease are created server-side.
       // Otherwise, our scanner counting will not reflect the new scan that was created

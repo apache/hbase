@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestHBaseMRTestingUtility {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseMRTestingUtility.class);
 
   @Test
   public void testMRYarnConfigsPopulation() throws IOException {
@@ -55,20 +51,18 @@ public class TestHBaseMRTestingUtility {
     }
 
     for (Map.Entry<String, String> entry : dummyProps.entrySet()) {
-      assertTrue(
+      assertTrue(hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()),
         "The Configuration for key " + entry.getKey() + " and value: " + entry.getValue()
-          + " is not populated correctly",
-        hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+          + " is not populated correctly");
     }
 
     hbt.startMiniMapReduceCluster();
 
     // Confirm that MiniMapReduceCluster overwrites the mr properties and updates the Configuration
     for (Map.Entry<String, String> entry : dummyProps.entrySet()) {
-      assertFalse(
+      assertFalse(hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()),
         "The MR prop: " + entry.getValue() + " is not overwritten when map reduce mini"
-          + "cluster is started",
-        hbt.getConfiguration().get(entry.getKey()).equals(entry.getValue()));
+          + "cluster is started");
     }
 
     hbt.shutdownMiniMapReduceCluster();

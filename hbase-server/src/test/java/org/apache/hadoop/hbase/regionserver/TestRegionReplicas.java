@@ -19,6 +19,11 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.openRegion;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -30,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -51,12 +55,10 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.util.StringUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,12 +72,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole cluster.
  * See {@link TestRegionServerNoMaster}.
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionReplicas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicas.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicas.class);
 
@@ -89,7 +88,7 @@ public class TestRegionReplicas {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     // Reduce the hdfs block size and prefetch to trigger the file-link reopen
     // when the file is moved to archive (e.g. compaction)
@@ -115,7 +114,7 @@ public class TestRegionReplicas {
     TestRegionServerNoMaster.stopMasterAndCacheMetaLocation(HTU);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     table.close();
@@ -134,7 +133,7 @@ public class TestRegionReplicas {
       HTU.loadNumericRows(table, f, 0, 1000);
 
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HTU.countRows(table));
+      assertEquals(1000, HTU.countRows(table));
     } finally {
       HTU.deleteNumericRows(table, f, 0, 1000);
       closeRegion(HTU, getRS(), hriSecondary);
@@ -164,7 +163,7 @@ public class TestRegionReplicas {
       // load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HTU.countRows(table));
+      assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -188,7 +187,7 @@ public class TestRegionReplicas {
       // load some data to primary
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HTU.countRows(table));
+      assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
       region.flush(true);
@@ -201,7 +200,7 @@ public class TestRegionReplicas {
       get.setConsistency(Consistency.TIMELINE);
       get.setReplicaId(1);
       Result result = table.get(get);
-      Assert.assertArrayEquals(row, result.getValue(f, null));
+      assertArrayEquals(row, result.getValue(f, null));
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, 0, 1000);
       closeRegion(HTU, getRS(), hriSecondary);
@@ -213,9 +212,9 @@ public class TestRegionReplicas {
     Get get = new Get(row);
     Result result = region.get(get);
     if (expect) {
-      Assert.assertArrayEquals(row, result.getValue(f, null));
+      assertArrayEquals(row, result.getValue(f, null));
     } else {
-      result.isEmpty();
+      assertTrue(result.isEmpty());
     }
   }
 
@@ -228,9 +227,9 @@ public class TestRegionReplicas {
     ClientProtos.GetResponse getResp = getRS().getRSRpcServices().get(null, getReq);
     Result result = ProtobufUtil.toResult(getResp.getResult());
     if (expect) {
-      Assert.assertArrayEquals(row, result.getValue(f, null));
+      assertArrayEquals(row, result.getValue(f, null));
     } else {
-      result.isEmpty();
+      assertTrue(result.isEmpty());
     }
   }
 
@@ -257,7 +256,7 @@ public class TestRegionReplicas {
       LOG.info("Loading data to primary region");
       HTU.loadNumericRows(table, f, 0, 1000);
       // assert that we can read back from primary
-      Assert.assertEquals(1000, HTU.countRows(table));
+      assertEquals(1000, HTU.countRows(table));
       // flush so that region replica can read
       LOG.info("Flushing primary region");
       HRegion region = getRS().getRegionByEncodedName(hriPrimary.getEncodedName());
@@ -270,7 +269,7 @@ public class TestRegionReplicas {
 
       LOG.info("Checking results from secondary region replica");
       Region secondaryRegion = getRS().getRegion(hriSecondary.getEncodedName());
-      Assert.assertEquals(1, secondaryRegion.getStore(f).getStorefilesCount());
+      assertEquals(1, secondaryRegion.getStore(f).getStorefilesCount());
 
       assertGet(secondaryRegion, 42, true);
       assertGetRpc(hriSecondary, 42, true);
@@ -293,7 +292,7 @@ public class TestRegionReplicas {
       assertGetRpc(hriSecondary, 2042, true);
 
       // ensure that we see the 3 store files
-      Assert.assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
+      assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
 
       // force compaction
       HTU.compact(table.getName(), true);
@@ -308,7 +307,7 @@ public class TestRegionReplicas {
 
       // ensure that we see the compacted file only
       // This will be 4 until the cleaner chore runs
-      Assert.assertEquals(4, secondaryRegion.getStore(f).getStorefilesCount());
+      assertEquals(4, secondaryRegion.getStore(f).getStorefilesCount());
 
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, 0, 1000);
@@ -436,7 +435,7 @@ public class TestRegionReplicas {
       executor.awaitTermination(30, TimeUnit.SECONDS);
 
       for (AtomicReference<Exception> exRef : exceptions) {
-        Assert.assertNull(exRef.get());
+        assertNull(exRef.get());
       }
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, startKey, endKey);
@@ -467,17 +466,17 @@ public class TestRegionReplicas {
       }
 
       HRegion primaryRegion = getRS().getRegion(hriPrimary.getEncodedName());
-      Assert.assertEquals(3, primaryRegion.getStore(f).getStorefilesCount());
+      assertEquals(3, primaryRegion.getStore(f).getStorefilesCount());
 
       // Refresh store files on the secondary
       Region secondaryRegion = getRS().getRegion(hriSecondary.getEncodedName());
       secondaryRegion.getStore(f).refreshStoreFiles();
-      Assert.assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
+      assertEquals(3, secondaryRegion.getStore(f).getStorefilesCount());
 
       // force compaction
       LOG.info("Force Major compaction on primary region " + hriPrimary);
       primaryRegion.compact(true);
-      Assert.assertEquals(1, primaryRegion.getStore(f).getStorefilesCount());
+      assertEquals(1, primaryRegion.getStore(f).getStorefilesCount());
       List<RegionServerThread> regionServerThreads =
         HTU.getMiniHBaseCluster().getRegionServerThreads();
       HRegionServer hrs = null;
@@ -501,7 +500,7 @@ public class TestRegionReplicas {
       for (HStoreFile sf : ((HStore) secondaryRegion.getStore(f)).getStorefiles()) {
         // Our file does not exist anymore. was moved by the compaction above.
         LOG.debug(Boolean.toString(getRS().getFileSystem().exists(sf.getPath())));
-        Assert.assertFalse(getRS().getFileSystem().exists(sf.getPath()));
+        assertFalse(getRS().getFileSystem().exists(sf.getPath()));
 
         HFileScanner scanner = sf.getReader().getScanner(false, false);
         scanner.seekTo();
@@ -513,8 +512,8 @@ public class TestRegionReplicas {
             .parseInt(Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
         } while (scanner.next());
       }
-      Assert.assertEquals(3000, keys);
-      Assert.assertEquals(4498500, sum);
+      assertEquals(3000, keys);
+      assertEquals(4498500, sum);
     } finally {
       HTU.deleteNumericRows(table, HConstants.CATALOG_FAMILY, 0, 1000);
       closeRegion(HTU, getRS(), hriSecondary);

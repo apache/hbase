@@ -26,8 +26,7 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
 
 /**
  * The class for set up a security cluster with kerberos, hdfs, hbase.
@@ -53,7 +52,7 @@ public class SecureTestCluster {
   // hbase-server jar, we need to provide a way for the implementation to refer to its own class
   // definition, so that KeyStoreTestUtil.getClasspathDir can resolve a valid path in the local FS
   // to place required SSL config files.
-  private static Class testRunnerClass = SecureTestCluster.class;
+  private static Class<?> testRunnerClass = SecureTestCluster.class;
 
   /**
    * SecureTestCluster extending classes can set their own <code>Class</code> reference type to be
@@ -62,15 +61,17 @@ public class SecureTestCluster {
    * @param testRunnerClass a <code>Class</code> reference from the <code>SecureTestCluster</code>
    *                        extender.
    */
-  protected static void setTestRunner(Class testRunnerClass) {
+  protected static void setTestRunner(Class<?> testRunnerClass) {
     SecureTestCluster.testRunnerClass = testRunnerClass;
   }
 
   /**
    * Setup and start kerberos, hbase
    */
-  @BeforeClass
-  public static void setUp() throws Exception {
+  protected static void setUpCluster() throws Exception {
+    // Can take a long time for the mini kdc to come up on loaded test cluster. Tolerate this in
+    // test by upping the skew time allowed from 30s to 90s.
+    TEST_UTIL.getConfiguration().setLong("hbase.master.maxclockskew", 90000);
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     USERNAME = UserGroupInformation.getLoginUser().getShortUserName();
     PRINCIPAL = USERNAME + "/" + HOST;
@@ -91,7 +92,7 @@ public class SecureTestCluster {
     CLUSTER.startup();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     try {
       if (CLUSTER != null) {

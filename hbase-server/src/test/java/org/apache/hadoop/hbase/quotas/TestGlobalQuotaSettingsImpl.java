@@ -17,26 +17,20 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestGlobalQuotaSettingsImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGlobalQuotaSettingsImpl.class);
 
   QuotaProtos.TimedQuota REQUEST_THROTTLE =
     QuotaProtos.TimedQuota.newBuilder().setScope(QuotaProtos.QuotaScope.MACHINE).setSoftLimit(100)

@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class RestoreSnapshotFromClientGetCompactionStateTestBase
   extends RestoreSnapshotFromClientTestBase {
 
-  @Test
+  protected RestoreSnapshotFromClientGetCompactionStateTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testGetCompactionStateAfterRestoringSnapshot()
     throws IOException, InterruptedException {
     // Take a snapshot

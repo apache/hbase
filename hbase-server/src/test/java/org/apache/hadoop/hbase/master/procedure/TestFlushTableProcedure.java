@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.Arrays;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestFlushTableProcedure extends TestFlushTableProcedureBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFlushTableProcedure.class);
 
   @Test
   public void testSimpleFlush() throws IOException {
@@ -48,9 +44,9 @@ public class TestFlushTableProcedure extends TestFlushTableProcedureBase {
   public void testFlushTableExceptionally() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     admin.disableTable(TABLE_NAME);
-    Assert.assertThrows(TableNotEnabledException.class, () -> admin.flush(TABLE_NAME));
+    assertThrows(TableNotEnabledException.class, () -> admin.flush(TABLE_NAME));
     admin.deleteTable(TABLE_NAME);
-    Assert.assertThrows(TableNotFoundException.class, () -> admin.flush(TABLE_NAME));
+    assertThrows(TableNotFoundException.class, () -> admin.flush(TABLE_NAME));
   }
 
   @Test

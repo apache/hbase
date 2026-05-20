@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -40,22 +39,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
  * This test verifies the correctness of the Per Column Family flushing strategy when part of the
  * memstores are compacted memstores
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestWalAndCompactingMemStoreFlush {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWalAndCompactingMemStoreFlush.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Path DIR = TEST_UTIL.getDataTestDir("TestHRegion");
@@ -125,7 +120,7 @@ public class TestWalAndCompactingMemStoreFlush {
       ((CompactingMemStore) ((HStore) region.getStore(FAMILY3)).memstore).getInmemoryFlushSize());
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     conf.set(FlushPolicyFactory.HBASE_FLUSH_POLICY_KEY,
@@ -202,8 +197,8 @@ public class TestWalAndCompactingMemStoreFlush {
     String msg = "totalMemstoreSize=" + totalMemstoreSize + " cf1MemstoreSizePhaseI="
       + cf1MemstoreSizePhaseI + " cf2MemstoreSizePhaseI=" + cf2MemstoreSizePhaseI
       + " cf3MemstoreSizePhaseI=" + cf3MemstoreSizePhaseI;
-    assertEquals(msg, totalMemstoreSize, cf1MemstoreSizePhaseI.getDataSize()
-      + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
+    assertEquals(totalMemstoreSize, cf1MemstoreSizePhaseI.getDataSize()
+      + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize(), msg);
 
     // Flush!!!!!!!!!!!!!!!!!!!!!!
     // We have big compacting memstore CF1 and two small memstores:
@@ -306,7 +301,7 @@ public class TestWalAndCompactingMemStoreFlush {
     assertEquals(smallestSeqCF3PhaseII, smallestSeqCF3PhaseIV);
 
     // CF3 should be bottleneck for WAL
-    assertEquals(s, smallestSeqInRegionCurrentMemstorePhaseIV, smallestSeqCF3PhaseIV);
+    assertEquals(smallestSeqInRegionCurrentMemstorePhaseIV, smallestSeqCF3PhaseIV, s);
 
     // Flush!!!!!!!!!!!!!!!!!!!!!!
     // Trying to clean the existing memstores, CF2 all flushed to disk. The single
@@ -670,8 +665,8 @@ public class TestWalAndCompactingMemStoreFlush {
       + DefaultMemStore.DEEP_OVERHEAD + " cf1MemstoreSizePhaseI=" + cf1MemstoreSizePhaseI
       + " cf2MemstoreSizePhaseI=" + cf2MemstoreSizePhaseI + " cf3MemstoreSizePhaseI="
       + cf3MemstoreSizePhaseI;
-    assertEquals(msg, totalMemstoreSize, cf1MemstoreSizePhaseI.getDataSize()
-      + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize());
+    assertEquals(totalMemstoreSize, cf1MemstoreSizePhaseI.getDataSize()
+      + cf2MemstoreSizePhaseI.getDataSize() + cf3MemstoreSizePhaseI.getDataSize(), msg);
 
     // Flush!
     CompactingMemStore cms1 = (CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore;
@@ -742,8 +737,8 @@ public class TestWalAndCompactingMemStoreFlush {
       + smallestSeqCF3PhaseIV + "\n";
 
     // now check that the LSN of the entire WAL, of CF1 and of CF3 has progressed due to compaction
-    assertTrue(s,
-      smallestSeqInRegionCurrentMemstorePhaseIV > smallestSeqInRegionCurrentMemstorePhaseIII);
+    assertTrue(
+      smallestSeqInRegionCurrentMemstorePhaseIV > smallestSeqInRegionCurrentMemstorePhaseIII, s);
     assertTrue(smallestSeqCF1PhaseIV > smallestSeqCF1PhaseIII);
     assertTrue(smallestSeqCF3PhaseIV > smallestSeqCF3PhaseIII);
 
@@ -882,16 +877,18 @@ public class TestWalAndCompactingMemStoreFlush {
     assertEquals(3, // active, one in pipeline, snapshot
       ((CompactingMemStore) ((HStore) region.getStore(FAMILY1)).memstore).getSegments().size());
     // CF2 should have been cleared
-    assertEquals("\n<<< DEBUG: The data--heap sizes of stores before/after first flushes,"
-      + " CF1: " + cf1MemstoreSizePhaseI.getDataSize() + "/" + cf1MemstoreSizePhaseII.getDataSize()
-      + "--" + cf1MemstoreSizePhaseI.getHeapSize() + "/" + cf1MemstoreSizePhaseII.getHeapSize()
-      + ", CF2: " + cf2MemstoreSizePhaseI.getDataSize() + "/" + cf2MemstoreSizePhaseII.getDataSize()
-      + "--" + cf2MemstoreSizePhaseI.getHeapSize() + "/" + cf2MemstoreSizePhaseII.getHeapSize()
-      + ", CF3: " + cf3MemstoreSizePhaseI.getDataSize() + "/" + cf3MemstoreSizePhaseII.getDataSize()
-      + "--" + cf3MemstoreSizePhaseI.getHeapSize() + "/" + cf3MemstoreSizePhaseII.getHeapSize()
-      + "\n<<< AND before/after second flushes " + " CF1: " + cf1MemstoreSizePhaseIII.getDataSize()
-      + "/" + cf1MemstoreSizePhaseIV.getDataSize() + "--" + cf1MemstoreSizePhaseIII.getHeapSize()
-      + "/" + cf1MemstoreSizePhaseIV.getHeapSize() + "\n", 0, cf2MemstoreSizePhaseIV.getDataSize());
+    assertEquals(0, cf2MemstoreSizePhaseIV.getDataSize(),
+      "\n<<< DEBUG: The data--heap sizes of stores before/after first flushes," + " CF1: "
+        + cf1MemstoreSizePhaseI.getDataSize() + "/" + cf1MemstoreSizePhaseII.getDataSize() + "--"
+        + cf1MemstoreSizePhaseI.getHeapSize() + "/" + cf1MemstoreSizePhaseII.getHeapSize()
+        + ", CF2: " + cf2MemstoreSizePhaseI.getDataSize() + "/"
+        + cf2MemstoreSizePhaseII.getDataSize() + "--" + cf2MemstoreSizePhaseI.getHeapSize() + "/"
+        + cf2MemstoreSizePhaseII.getHeapSize() + ", CF3: " + cf3MemstoreSizePhaseI.getDataSize()
+        + "/" + cf3MemstoreSizePhaseII.getDataSize() + "--" + cf3MemstoreSizePhaseI.getHeapSize()
+        + "/" + cf3MemstoreSizePhaseII.getHeapSize() + "\n<<< AND before/after second flushes "
+        + " CF1: " + cf1MemstoreSizePhaseIII.getDataSize() + "/"
+        + cf1MemstoreSizePhaseIV.getDataSize() + "--" + cf1MemstoreSizePhaseIII.getHeapSize() + "/"
+        + cf1MemstoreSizePhaseIV.getHeapSize() + "\n");
 
     HBaseTestingUtility.closeRegionAndWAL(region);
   }

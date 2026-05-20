@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.GetUserPermissionsRequest;
@@ -34,24 +35,23 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil.AccessTestAction;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@RunWith(Parameterized.class)
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: admin = {0}")
 public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAccessControlAdminApi.class);
+  public TestAsyncAccessControlAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     SecureTestUtil.enableSecurity(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(1);
@@ -59,7 +59,12 @@ public class TestAsyncAccessControlAdminApi extends TestAsyncAdminBase {
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @Test
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void test() throws Exception {
     TableName tableName = TableName.valueOf("test-table");
     String userName1 = "user1";

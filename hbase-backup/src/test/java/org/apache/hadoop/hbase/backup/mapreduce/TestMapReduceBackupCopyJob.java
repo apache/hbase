@@ -19,24 +19,18 @@ package org.apache.hadoop.hbase.backup.mapreduce;
 
 import static org.apache.hadoop.hbase.backup.mapreduce.MapReduceBackupCopyJob.BACKUP_COPY_OPTION_PREFIX;
 import static org.apache.hadoop.tools.DistCpConstants.CONF_LABEL_MAX_MAPS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMapReduceBackupCopyJob {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMapReduceBackupCopyJob.class);
 
   @Test
   public void testDistCpOptionParsing() {
@@ -46,7 +40,7 @@ public class TestMapReduceBackupCopyJob {
 
     List<String> expectedArgs = ImmutableList.<String> builder().add("-m", "1000").build();
 
-    assertEquals(args, expectedArgs);
+    assertEquals(expectedArgs, args);
   }
 
 }

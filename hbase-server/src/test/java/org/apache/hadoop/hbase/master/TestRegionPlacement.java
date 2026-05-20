@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -35,7 +35,6 @@ import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,21 +63,17 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.zookeeper.KeeperException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionPlacement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionPlacement.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -91,7 +86,7 @@ public class TestRegionPlacement {
   private int REGION_NUM = 10;
   private Map<RegionInfo, ServerName[]> favoredNodesAssignmentPlan = new HashMap<>();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Enable the favored nodes based load balancer
@@ -104,12 +99,12 @@ public class TestRegionPlacement {
     rp = new RegionPlacementMaintainer(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Ignore("Test for unfinished feature")
+  @Disabled("Test for unfinished feature")
   @Test
   public void testRegionPlacement() throws Exception {
     String tableStr = "testRegionAssignment";
@@ -180,12 +175,12 @@ public class TestRegionPlacement {
     assertTrue(report.getTotalFavoredAssignments() >= REGION_NUM);
     assertTrue(report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY) > 0);
     assertTrue(
+      (report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) > 0
+        || report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) > 0),
       "secondary "
         + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY)
         + " tertiary "
-        + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY),
-      (report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY) > 0
-        || report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY) > 0));
+        + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY));
     assertTrue((report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.PRIMARY)
       + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.SECONDARY)
       + report.getNumRegionsOnFavoredNodeByPosition(FavoredNodesPlan.Position.TERTIARY))
@@ -264,7 +259,7 @@ public class TestRegionPlacement {
   /**
    * Used to test the correctness of this class.
    */
-  @Ignore("Test for unfinished feature")
+  @Disabled("Test for unfinished feature")
   @Test
   public void testRandomizedMatrix() {
     int rows = 100;
@@ -367,8 +362,8 @@ public class TestRegionPlacement {
    */
   private void verifyMETAUpdated(FavoredNodesPlan expectedPlan) throws IOException {
     FavoredNodesPlan planFromMETA = rp.getRegionAssignmentSnapshot().getExistingAssignmentPlan();
-    assertTrue("The assignment plan is NOT consistent with the expected plan ",
-      planFromMETA.equals(expectedPlan));
+    assertTrue(planFromMETA.equals(expectedPlan),
+      "The assignment plan is NOT consistent with the expected plan ");
   }
 
   /**
@@ -396,8 +391,8 @@ public class TestRegionPlacement {
     // update the lastRegionOpenedCount
     lastRegionOpenedCount = currentRegionOpened;
 
-    assertEquals("There are only " + regionMovement + " instead of " + expected
-      + " region movement for " + attempt + " attempts", expected, regionMovement);
+    assertEquals(expected, regionMovement, "There are only " + regionMovement + " instead of "
+      + expected + " region movement for " + attempt + " attempts");
   }
 
   /**
@@ -407,9 +402,8 @@ public class TestRegionPlacement {
    */
   private void verifyRegionOnPrimaryRS(int expectedNum) throws IOException {
     lastRegionOnPrimaryRSCount = getNumRegionisOnPrimaryRS();
-    assertEquals(
-      "Only " + expectedNum + " of user regions running " + "on the primary region server",
-      expectedNum, lastRegionOnPrimaryRSCount);
+    assertEquals(expectedNum, lastRegionOnPrimaryRSCount,
+      "Only " + expectedNum + " of user regions running " + "on the primary region server");
   }
 
   /**
@@ -432,8 +426,8 @@ public class TestRegionPlacement {
           TableDescriptor desc = region.getTableDescriptor();
           // Verify they are ROOT and hbase:meta regions since no favored nodes
           assertNull(favoredSocketAddress);
-          assertTrue("User region " + region.getTableDescriptor().getTableName()
-            + " should have favored nodes", desc.isMetaRegion());
+          assertTrue(desc.isMetaRegion(), "User region "
+            + region.getTableDescriptor().getTableName() + " should have favored nodes");
         } else {
           // For user region, the favored nodes in the region server should be
           // identical to favored nodes in the assignmentPlan
@@ -446,11 +440,10 @@ public class TestRegionPlacement {
 
             assertNotNull(addrFromRS);
             assertNotNull(addrFromPlan);
-            assertTrue(
+            assertTrue(addrFromRS.equals(addrFromPlan),
               "Region server " + rs.getServerName().getAddress() + " has the " + positions[j]
                 + " for region " + region.getRegionInfo().getRegionNameAsString() + " is "
-                + addrFromRS + " which is inconsistent with the plan " + addrFromPlan,
-              addrFromRS.equals(addrFromPlan));
+                + addrFromRS + " which is inconsistent with the plan " + addrFromPlan);
           }
         }
       }
@@ -544,9 +537,8 @@ public class TestRegionPlacement {
 
     try (RegionLocator r = CONNECTION.getRegionLocator(tableName)) {
       List<HRegionLocation> regions = r.getAllRegionLocations();
-      assertEquals(
-        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size(),
-        expectedRegions, regions.size());
+      assertEquals(expectedRegions, regions.size(),
+        "Tried to create " + expectedRegions + " regions " + "but only found " + regions.size());
     }
   }
 }

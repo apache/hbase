@@ -21,7 +21,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -37,35 +36,30 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionMoverUseIp {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMoverUseIp.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoverUseIp.class);
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
   private static HBaseTestingUtility TEST_UTIL;
   private static ServerName rs0;
   private static ServerName rs1;
   private static ServerName rs2;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY, true);
@@ -82,14 +76,15 @@ public class TestRegionMoverUseIp {
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName();
+    final TableName tableName = TableName.valueOf(testMethodName);
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
@@ -99,7 +94,7 @@ public class TestRegionMoverUseIp {
 
   @Test
   public void testRegionUnloadUesIp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     MiniHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -117,9 +112,9 @@ public class TestRegionMoverUseIp {
     int numRegions1 = hRegionServer1.getNumberOfOnlineRegions();
     int numRegions2 = hRegionServer2.getNumberOfOnlineRegions();
 
-    Assert.assertTrue(numRegions0 >= 3);
-    Assert.assertTrue(numRegions1 >= 3);
-    Assert.assertTrue(numRegions2 >= 3);
+    Assertions.assertTrue(numRegions0 >= 3);
+    Assertions.assertTrue(numRegions1 >= 3);
+    Assertions.assertTrue(numRegions2 >= 3);
     int totalRegions = numRegions0 + numRegions1 + numRegions2;
 
     // source RS: rs0
@@ -132,8 +127,8 @@ public class TestRegionMoverUseIp {
       int newNumRegions0 = hRegionServer0.getNumberOfOnlineRegions();
       int newNumRegions1 = hRegionServer1.getNumberOfOnlineRegions();
       int newNumRegions2 = hRegionServer2.getNumberOfOnlineRegions();
-      Assert.assertEquals(0, newNumRegions0);
-      Assert.assertEquals(totalRegions, newNumRegions1 + newNumRegions2);
+      Assertions.assertEquals(0, newNumRegions0);
+      Assertions.assertEquals(totalRegions, newNumRegions1 + newNumRegions2);
     }
   }
 }

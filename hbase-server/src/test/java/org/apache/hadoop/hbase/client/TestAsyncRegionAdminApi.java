@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,9 +32,10 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -52,25 +53,36 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 /**
  * Class to test asynchronous region admin operations.
  * @see TestAsyncRegionAdminApi2 This test and it used to be joined it was taking longer than our
  *      ten minute timeout so they were split.
  */
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncRegionAdminApi.class);
 
-  @Test
+  public TestAsyncRegionAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testAssignRegionAndUnassignRegion() throws Exception {
     createTableWithDefaultConf(tableName);
 
@@ -126,7 +138,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testGetRegionByStateOfTable() throws Exception {
     RegionInfo hri = createTableAndGetOneRegion(tableName);
 
@@ -139,7 +151,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       .anyMatch(r -> RegionInfo.COMPARATOR.compare(r, hri) == 0));
   }
 
-  @Test
+  @TestTemplate
   public void testMoveRegion() throws Exception {
     admin.balancerSwitch(false).join();
 
@@ -178,7 +190,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     admin.balancerSwitch(true).join();
   }
 
-  @Test
+  @TestTemplate
   public void testGetOnlineRegions() throws Exception {
     createTableAndGetOneRegion(tableName);
     AtomicInteger regionServerCount = new AtomicInteger(0);
@@ -196,7 +208,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       regionServerCount.get());
   }
 
-  @Test
+  @TestTemplate
   public void testFlushTableAndRegion() throws Exception {
     RegionInfo hri = createTableAndGetOneRegion(tableName);
     ServerName serverName = TEST_UTIL.getHBaseCluster().getMaster().getAssignmentManager()
@@ -247,7 +259,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     assertEquals(CompactionState.NONE, state);
   }
 
-  @Test
+  @TestTemplate
   public void testCompactMob() throws Exception {
     ColumnFamilyDescriptor columnDescriptor = ColumnFamilyDescriptorBuilder
       .newBuilder(Bytes.toBytes("mob")).setMobEnabled(true).setMobThreshold(0).build();
@@ -268,7 +280,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     waitUntilMobCompactionFinished(tableName);
   }
 
-  @Test
+  @TestTemplate
   public void testCompactRegionServer() throws Exception {
     byte[][] families = { Bytes.toBytes("f1"), Bytes.toBytes("f2"), Bytes.toBytes("f3") };
     createTableWithDefaultConf(tableName, null, families);
@@ -297,7 +309,7 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     assertEquals(3, countAfterMajorCompaction);
   }
 
-  @Test
+  @TestTemplate
   public void testCompactionSwitchStates() throws Exception {
     // Create a table with regions
     byte[] family = Bytes.toBytes("family");
@@ -312,20 +324,20 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       admin.compactionSwitch(true, new ArrayList<>());
     Map<ServerName, Boolean> pairs = listCompletableFuture.get();
     for (Map.Entry<ServerName, Boolean> p : pairs.entrySet()) {
-      assertEquals("Default compaction state, expected=enabled actual=disabled", true,
-        p.getValue());
+      assertEquals(true, p.getValue(),
+        "Default compaction state, expected=enabled actual=disabled");
     }
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture1 =
       admin.compactionSwitch(false, new ArrayList<>());
     Map<ServerName, Boolean> pairs1 = listCompletableFuture1.get();
     for (Map.Entry<ServerName, Boolean> p : pairs1.entrySet()) {
-      assertEquals("Last compaction state, expected=enabled actual=disabled", true, p.getValue());
+      assertEquals(true, p.getValue(), "Last compaction state, expected=enabled actual=disabled");
     }
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture2 =
       admin.compactionSwitch(true, new ArrayList<>());
     Map<ServerName, Boolean> pairs2 = listCompletableFuture2.get();
     for (Map.Entry<ServerName, Boolean> p : pairs2.entrySet()) {
-      assertEquals("Last compaction state, expected=disabled actual=enabled", false, p.getValue());
+      assertEquals(false, p.getValue(), "Last compaction state, expected=disabled actual=enabled");
     }
     ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     List<String> serverNameList = new ArrayList<String>();
@@ -335,18 +347,18 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
     Map<ServerName, Boolean> pairs3 = listCompletableFuture3.get();
     assertEquals(pairs3.entrySet().size(), 1);
     for (Map.Entry<ServerName, Boolean> p : pairs3.entrySet()) {
-      assertEquals("Last compaction state, expected=enabled actual=disabled", true, p.getValue());
+      assertEquals(true, p.getValue(), "Last compaction state, expected=enabled actual=disabled");
     }
     CompletableFuture<Map<ServerName, Boolean>> listCompletableFuture4 =
       admin.compactionSwitch(true, serverNameList);
     Map<ServerName, Boolean> pairs4 = listCompletableFuture4.get();
     assertEquals(pairs4.entrySet().size(), 1);
     for (Map.Entry<ServerName, Boolean> p : pairs4.entrySet()) {
-      assertEquals("Last compaction state, expected=disabled actual=enabled", false, p.getValue());
+      assertEquals(false, p.getValue(), "Last compaction state, expected=disabled actual=enabled");
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCompact() throws Exception {
     compactionTest(TableName.valueOf("testCompact1"), 15, CompactionState.MINOR, false);
     compactionTest(TableName.valueOf("testCompact2"), 15, CompactionState.MINOR, true);
@@ -454,12 +466,12 @@ public class TestAsyncRegionAdminApi extends TestAsyncAdminBase {
       if (expectedState == CompactionState.MAJOR) {
         assertEquals(1, countAfterSingleFamily);
       } else {
-        assertTrue("" + countAfterSingleFamily, 1 <= countAfterSingleFamily);
+        assertTrue(1 <= countAfterSingleFamily, "" + countAfterSingleFamily);
       }
     }
   }
 
-  @Test
+  @TestTemplate
   public void testNonExistentTableCompaction() {
     testNonExistentTableCompaction(CompactionState.MINOR);
     testNonExistentTableCompaction(CompactionState.MAJOR);

@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -42,23 +41,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKNodeTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests unhandled exceptions thrown by coprocessors running on master. Expected result is that the
  * master will remove the buggy coprocessor from its set of coprocessors and throw a
  * org.apache.hadoop.hbase.exceptions.DoNotRetryIOException back to the client. (HBASE-4014).
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterCoprocessorExceptionWithRemove {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterCoprocessorExceptionWithRemove.class);
 
   public static class MasterTracker extends ZKNodeTracker {
     public boolean masterZKNodeWasDeleted = false;
@@ -130,7 +125,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
   private static byte[] TEST_TABLE2 = Bytes.toBytes("table2");
   private static byte[] TEST_FAMILY2 = Bytes.toBytes("fam2");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, BuggyMasterObserver.class.getName());
@@ -138,7 +133,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -150,7 +145,7 @@ public class TestMasterCoprocessorExceptionWithRemove {
     HMaster master = cluster.getMaster();
     MasterCoprocessorHost host = master.getMasterCoprocessorHost();
     BuggyMasterObserver cp = host.findCoprocessor(BuggyMasterObserver.class);
-    assertFalse("No table created yet", cp.wasCreateTableCalled());
+    assertFalse(cp.wasCreateTableCalled(), "No table created yet");
 
     // Set a watch on the zookeeper /hbase/master node. If the master dies,
     // the node will be deleted.
@@ -213,8 +208,8 @@ public class TestMasterCoprocessorExceptionWithRemove {
       fail("InterruptedException while sleeping.");
     }
 
-    assertFalse("Master survived coprocessor NPE, as expected.",
-      masterTracker.masterZKNodeWasDeleted);
+    assertFalse(masterTracker.masterZKNodeWasDeleted,
+      "Master survived coprocessor NPE, as expected.");
 
     String loadedCoprocessors = HMaster.getLoadedCoprocessors();
     assertTrue(loadedCoprocessors.contains(coprocessorName));

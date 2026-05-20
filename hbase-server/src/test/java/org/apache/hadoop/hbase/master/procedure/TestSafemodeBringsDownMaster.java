@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -36,22 +35,17 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestSafemodeBringsDownMaster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSafemodeBringsDownMaster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSafemodeBringsDownMaster.class);
 
@@ -62,13 +56,13 @@ public class TestSafemodeBringsDownMaster {
     conf.set(BaseLoadBalancer.TABLES_ON_MASTER, "none");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -77,7 +71,7 @@ public class TestSafemodeBringsDownMaster {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
   }
@@ -89,10 +83,10 @@ public class TestSafemodeBringsDownMaster {
   private void resetProcExecutorTestingKillFlag() {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    assertTrue("expected executor to be running", procExec.isRunning());
+    assertTrue(procExec.isRunning(), "expected executor to be running");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 

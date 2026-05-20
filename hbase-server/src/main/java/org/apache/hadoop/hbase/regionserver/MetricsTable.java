@@ -43,14 +43,6 @@ public class MetricsTable {
     tableSourceAgg.getOrCreateTableSource(table, wrapper).incrSplitRequest();
   }
 
-  public void incrSplitSuccess(String table) {
-    tableSourceAgg.getOrCreateTableSource(table, wrapper).incrSplitSuccess();
-  }
-
-  public void updateSplitTime(String table, long t) {
-    tableSourceAgg.getOrCreateTableSource(table, wrapper).updateSplitTime(t);
-  }
-
   public void updateFlushTime(String table, long t) {
     tableSourceAgg.getOrCreateTableSource(table, wrapper).updateFlushTime(t);
   }

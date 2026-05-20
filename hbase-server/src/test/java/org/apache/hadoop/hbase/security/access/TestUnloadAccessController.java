@@ -17,29 +17,24 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SecurityTests.class, SmallTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestUnloadAccessController extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUnloadAccessController.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static TableName TEST_TABLE = TableName.valueOf("TestUnloadAccessController");
@@ -47,14 +42,14 @@ public class TestUnloadAccessController extends SecureTestUtil {
     Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
   private static Admin admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.waitUntilAllSystemRegionsAssigned();
     admin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

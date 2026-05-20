@@ -17,28 +17,24 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsZooKeeperSourceImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsZooKeeperSourceImpl.class);
 
   @Test
   public void testGetInstance() {
     MetricsZooKeeperSource zkSource =
       CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class);
-    assertTrue(zkSource instanceof MetricsZooKeeperSourceImpl);
+    assertInstanceOf(MetricsZooKeeperSourceImpl.class, zkSource);
     assertSame(zkSource, CompatibilitySingletonFactory.getInstance(MetricsZooKeeperSource.class));
   }
 }

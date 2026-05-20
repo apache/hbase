@@ -17,33 +17,29 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for hadoop 2's version of MetricsThriftServerSourceFactory.
  */
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsThriftServerSourceFactoryImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsThriftServerSourceFactoryImpl.class);
 
   @Test
   public void testCompatabilityRegistered() {
     assertNotNull(
       CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class));
-    assertTrue(CompatibilitySingletonFactory.getInstance(
-      MetricsThriftServerSourceFactory.class) instanceof MetricsThriftServerSourceFactoryImpl);
+    assertInstanceOf(MetricsThriftServerSourceFactoryImpl.class,
+      CompatibilitySingletonFactory.getInstance(MetricsThriftServerSourceFactory.class));
   }
 
   @Test

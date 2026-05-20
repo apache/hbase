@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -48,14 +47,11 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -65,12 +61,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * We moved some of {@link TestVerifyReplication}'s tests here because it could take too long to
  * complete. In here we have miscellaneous.
  */
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestVerifyReplicationAdjunct extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyReplicationAdjunct.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestVerifyReplicationAdjunct.class);
 
@@ -78,18 +71,14 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
   private static final TableName peerTableName = TableName.valueOf("peerTest");
   private static Table htable3;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cleanUp();
     UTIL2.deleteTableData(peerTableName);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TestReplicationBase.setUpBeforeClass();
     TableDescriptor peerTable =
       TableDescriptorBuilder.newBuilder(peerTableName)
         .setColumnFamily(
@@ -253,31 +242,31 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
   public void testVerifyReplicationSnapshotArguments() {
     String[] args =
       new String[] { "--sourceSnapshotName=snapshot1", "2", tableName.getNameAsString() };
-    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertFalse(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
 
     args = new String[] { "--sourceSnapshotTmpDir=tmp", "2", tableName.getNameAsString() };
-    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertFalse(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
 
     args = new String[] { "--sourceSnapshotName=snapshot1", "--sourceSnapshotTmpDir=tmp", "2",
       tableName.getNameAsString() };
-    assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertTrue(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
 
     args = new String[] { "--peerSnapshotName=snapshot1", "2", tableName.getNameAsString() };
-    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertFalse(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
 
     args = new String[] { "--peerSnapshotTmpDir=/tmp/", "2", tableName.getNameAsString() };
-    assertFalse(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertFalse(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
 
     args = new String[] { "--peerSnapshotName=snapshot1", "--peerSnapshotTmpDir=/tmp/",
       "--peerFSAddress=tempfs", "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2",
       tableName.getNameAsString() };
-    assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertTrue(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
 
     args = new String[] { "--sourceSnapshotName=snapshot1", "--sourceSnapshotTmpDir=/tmp/",
       "--peerSnapshotName=snapshot2", "--peerSnapshotTmpDir=/tmp/", "--peerFSAddress=tempfs",
       "--peerHBaseRootAddress=hdfs://tempfs:50070/hbase/", "2", tableName.getNameAsString() };
 
-    assertTrue(Lists.newArrayList(args).toString(), new VerifyReplication().doCommandLine(args));
+    assertTrue(new VerifyReplication().doCommandLine(args), Lists.newArrayList(args).toString());
   }
 
   @Test
@@ -344,9 +333,8 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
     TestVerifyReplication.checkRestoreTmpDir(CONF2, temPath2, 2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     htable3.close();
-    TestReplicationBase.tearDownAfterClass();
   }
 }

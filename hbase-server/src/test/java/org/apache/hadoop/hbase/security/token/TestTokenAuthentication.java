@@ -18,10 +18,10 @@
 package org.apache.hadoop.hbase.security.token;
 
 import static org.apache.hadoop.fs.CommonConfigurationKeysPublic.HADOOP_SECURITY_AUTHORIZATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,15 +32,14 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
@@ -63,8 +62,8 @@ import org.apache.hadoop.hbase.protobuf.generated.AuthenticationProtos;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.security.SecurityInfo;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Sleeper;
@@ -79,15 +78,11 @@ import org.apache.hadoop.security.authorize.Service;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -104,13 +99,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 // RpcServer is all about shaded protobuf whereas the Token Service is a CPEP which does non-shaded
 // protobufs. Since hbase-2.0.0, we added convertion from shaded to non-shaded so this test keeps
 // working.
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}")
 public class TestTokenAuthentication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTokenAuthentication.class);
 
   static {
     // Setting whatever system properties after recommendation from
@@ -126,7 +118,6 @@ public class TestTokenAuthentication {
     implements AuthenticationProtos.AuthenticationService.BlockingInterface, Runnable, Server {
     private static final Logger LOG = LoggerFactory.getLogger(TokenServer.class);
     private Configuration conf;
-    private HBaseTestingUtility TEST_UTIL;
     private RpcServerInterface rpcServer;
     private InetSocketAddress isa;
     private ZKWatcher zookeeper;
@@ -136,9 +127,8 @@ public class TestTokenAuthentication {
     private boolean stopped = false;
     private long startcode;
 
-    public TokenServer(Configuration conf, HBaseTestingUtility TEST_UTIL) throws IOException {
+    public TokenServer(Configuration conf) throws IOException {
       this.conf = conf;
-      this.TEST_UTIL = TEST_UTIL;
       this.startcode = EnvironmentEdgeManager.currentTime();
       // Server to handle client requests.
       String hostname =
@@ -303,10 +293,6 @@ public class TestTokenAuthentication {
       return stopped;
     }
 
-    public InetSocketAddress getAddress() {
-      return isa;
-    }
-
     public SecretManager<? extends TokenIdentifier> getSecretManager() {
       return ((RpcServer) rpcServer).getSecretManager();
     }
@@ -364,14 +350,16 @@ public class TestTokenAuthentication {
     }
   }
 
-  @Parameters(name = "{index}: rpcServerImpl={0}")
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
-      new Object[] { NettyRpcServer.class.getName() });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(SimpleRpcServer.class.getName()),
+      Arguments.of(NettyRpcServer.class.getName()));
   }
 
-  @Parameter(0)
   public String rpcServerImpl;
+
+  public TestTokenAuthentication(String rpcServerImpl) {
+    this.rpcServerImpl = rpcServerImpl;
+  }
 
   private HBaseTestingUtility TEST_UTIL;
   private TokenServer server;
@@ -379,7 +367,7 @@ public class TestTokenAuthentication {
   private AuthenticationTokenSecretManager secretManager;
   private ClusterId clusterId = new ClusterId();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     // Override the connection registry to avoid spinning up a mini cluster for the connection below
@@ -397,7 +385,7 @@ public class TestTokenAuthentication {
     conf.set("hbase.security.authentication", "kerberos");
     conf.setBoolean(HADOOP_SECURITY_AUTHORIZATION, true);
     conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
-    server = new TokenServer(conf, TEST_UTIL);
+    server = new TokenServer(conf);
     serverThread = new Thread(server);
     Threads.setDaemonThreadRunning(serverThread,
       "TokenServer:" + server.getServerName().toString());
@@ -419,23 +407,23 @@ public class TestTokenAuthentication {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     server.stop("Test complete");
     Threads.shutdown(serverThread);
     TEST_UTIL.shutdownMiniZKCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testTokenCreation() throws Exception {
     Token<AuthenticationTokenIdentifier> token = secretManager.generateToken("testuser");
 
     AuthenticationTokenIdentifier ident = new AuthenticationTokenIdentifier();
     Writables.getWritable(token.getIdentifier(), ident);
-    assertEquals("Token username should match", "testuser", ident.getUsername());
+    assertEquals("testuser", ident.getUsername(), "Token username should match");
     byte[] passwd = secretManager.retrievePassword(ident);
-    assertTrue("Token password and password from secret manager should match",
-      Bytes.equals(token.getPassword(), passwd));
+    assertTrue(Bytes.equals(token.getPassword(), passwd),
+      "Token password and password from secret manager should match");
   }
   // This won't work any more now RpcServer takes Shaded Service. It depends on RPCServer being able
   // to provide a
@@ -486,7 +474,7 @@ public class TestTokenAuthentication {
   // });
   // }
 
-  @Test
+  @TestTemplate
   public void testUseExistingToken() throws Exception {
     User user = User.createUserForTesting(TEST_UTIL.getConfiguration(), "testuser2",
       new String[] { "testgroup" });

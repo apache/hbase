@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +35,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.LoadBalancer;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -57,16 +61,16 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
   protected static final HBaseCommonTestingUtility UTIL = new HBaseCommonTestingUtility();
 
   private static final int DEFAULT_NUM_REGIONS = 1000000;
-  private static Option NUM_REGIONS_OPT = new Option("regions", true,
+  private static final Option NUM_REGIONS_OPT = new Option("regions", true,
     "Number of regions to consider by load balancer. Default: " + DEFAULT_NUM_REGIONS);
 
   private static final int DEFAULT_NUM_SERVERS = 1000;
-  private static Option NUM_SERVERS_OPT = new Option("servers", true,
+  private static final Option NUM_SERVERS_OPT = new Option("servers", true,
     "Number of servers to consider by load balancer. Default: " + DEFAULT_NUM_SERVERS);
 
   private static final String DEFAULT_LOAD_BALANCER =
     "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer";
-  private static Option LOAD_BALANCER_OPT = new Option("load_balancer", true,
+  private static final Option LOAD_BALANCER_OPT = new Option("load_balancer", true,
     "Type of Load Balancer to use. Default: " + DEFAULT_LOAD_BALANCER);
 
   private int numRegions;
@@ -87,6 +91,15 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     conf.setClass(HConstants.HBASE_MASTER_LOADBALANCER_CLASS, loadBalancerClazz,
       LoadBalancer.class);
     loadBalancer = LoadBalancerFactory.getLoadBalancer(conf);
+    MasterServices services = mock(MasterServices.class);
+    when(services.getConfiguration()).thenReturn(conf);
+    loadBalancer.setMasterServices(services);
+    try {
+      loadBalancer.initialize();
+    } catch (IOException e) {
+      LOG.error("Failed to initialize load balancer", e);
+      throw new RuntimeException("Failed to initialize load balancer", e);
+    }
   }
 
   private void generateRegionsAndServers() {
@@ -154,19 +167,19 @@ public class LoadBalancerPerformanceEvaluation extends AbstractHBaseTool {
     generateRegionsAndServers();
 
     String methodName = "roundRobinAssignment";
-    LOG.info("Calling " + methodName);
+    LOG.info("Calling {}", methodName);
     Stopwatch watch = Stopwatch.createStarted();
     loadBalancer.roundRobinAssignment(regions, servers);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "retainAssignment";
-    LOG.info("Calling " + methodName);
+    LOG.info("Calling {}", methodName);
     watch.reset().start();
     loadBalancer.retainAssignment(regionServerMap, servers);
     System.out.print(formatResults(methodName, watch.elapsed(TimeUnit.MILLISECONDS)));
 
     methodName = "balanceCluster";
-    LOG.info("Calling " + methodName);
+    LOG.info("Calling {}", methodName);
     watch.reset().start();
 
     loadBalancer.balanceCluster(tableServerRegionMap);

@@ -22,7 +22,6 @@ import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.regionserver.wal.AsyncFSWAL;
 import org.apache.hadoop.hbase.regionserver.wal.FailedLogCloseException;
 import org.apache.hadoop.hbase.regionserver.wal.WALActionsListener;
@@ -30,10 +29,9 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
@@ -41,13 +39,10 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 /**
  * Testcase for HBASE-22539
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAsyncFSWALCorruptionDueToDanglingByteBuffer
   extends WALCorruptionDueToDanglingByteBufferTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncFSWALCorruptionDueToDanglingByteBuffer.class);
 
   public static final class PauseWAL extends AsyncFSWAL {
 
@@ -95,7 +90,7 @@ public class TestAsyncFSWALCorruptionDueToDanglingByteBuffer
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setClass(WALFactory.WAL_PROVIDER, PauseWALProvider.class,
       WALProvider.class);
@@ -104,7 +99,7 @@ public class TestAsyncFSWALCorruptionDueToDanglingByteBuffer
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

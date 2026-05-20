@@ -26,10 +26,10 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -39,7 +39,7 @@ import org.slf4j.LoggerFactory;
  * requests on the created table - the other replicas of the meta would be used to get the location
  * of the region of the created table.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestMetaReplicas {
   private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestMetaReplicas.class);
   /**
@@ -47,7 +47,7 @@ public class IntegrationTestMetaReplicas {
    */
   private static IntegrationTestingUtility util;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Set up the integration test util
     if (util == null) {
@@ -71,7 +71,7 @@ public class IntegrationTestMetaReplicas {
     waitUntilZnodeAvailable(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     // Clean everything up.
     util.restoreCluster();

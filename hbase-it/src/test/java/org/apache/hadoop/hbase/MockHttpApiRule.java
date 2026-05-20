@@ -28,7 +28,6 @@ import java.util.function.BiConsumer;
 import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-import org.junit.rules.ExternalResource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,10 +41,9 @@ import org.apache.hbase.thirdparty.org.eclipse.jetty.server.handler.AbstractHand
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.RegexSet;
 
 /**
- * A {@link org.junit.Rule} that manages a simple http server. The caller registers request handlers
- * to URI path regexp.
+ * A simple http server for testing. The caller registers request handlers to URI path regexp.
  */
-public class MockHttpApiRule extends ExternalResource {
+public class MockHttpApiRule {
   private static final Logger LOG = LoggerFactory.getLogger(MockHttpApiRule.class);
 
   private MockHandler handler;
@@ -92,8 +90,7 @@ public class MockHttpApiRule extends ExternalResource {
     return server.getURI();
   }
 
-  @Override
-  protected void before() throws Exception {
+  public void start() throws Exception {
     handler = new MockHandler();
     server = new Server();
     final ServerConnector http = new ServerConnector(server);
@@ -105,8 +102,7 @@ public class MockHttpApiRule extends ExternalResource {
     server.start();
   }
 
-  @Override
-  protected void after() {
+  public void close() {
     try {
       server.stop();
     } catch (Exception e) {

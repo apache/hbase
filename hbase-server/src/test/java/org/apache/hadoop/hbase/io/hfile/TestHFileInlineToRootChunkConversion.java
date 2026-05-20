@@ -25,16 +25,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test a case when an inline index chunk is converted to a root one. This reproduces the bug in
@@ -47,12 +45,9 @@ import org.junit.experimental.categories.Category;
  * entry to the root-level block, and that would prevent us from upgrading the leaf-level chunk to
  * the root chunk, thus not triggering the bug.
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileInlineToRootChunkConversion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileInlineToRootChunkConversion.class);
 
   private final HBaseTestingUtility testUtil = new HBaseTestingUtility();
   private final Configuration conf = testUtil.getConfiguration();

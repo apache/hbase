@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegistryEndpointsRefresher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegistryEndpointsRefresher.class);
 
   private static final String INITIAL_DELAY_SECS_CONFIG_NAME =
     "hbase.test.registry.initial.delay.secs";
@@ -58,14 +53,14 @@ public class TestRegistryEndpointsRefresher {
   private AtomicInteger refreshCallCounter;
   private CopyOnWriteArrayList<Long> callTimestamps;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = HBaseConfiguration.create();
     refreshCallCounter = new AtomicInteger(0);
     callTimestamps = new CopyOnWriteArrayList<>();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     if (refresher != null) {
       refresher.stop();
@@ -123,13 +118,13 @@ public class TestRegistryEndpointsRefresher {
     }
     // Overall wait time is 10000 ms, so the number of requests should be <=10
     // Actual calls to refresh should be much lower than the refresh count.
-    assertTrue(String.valueOf(refreshCallCounter.get()), refreshCallCounter.get() <= 20);
+    assertTrue(refreshCallCounter.get() <= 20, String.valueOf(refreshCallCounter.get()));
     assertTrue(callTimestamps.size() > 0);
     // Verify that the delta between subsequent refresh is at least 1sec as configured.
     for (int i = 1; i < callTimestamps.size() - 1; i++) {
       long delta = callTimestamps.get(i) - callTimestamps.get(i - 1);
       // Few ms cushion to account for any env jitter.
-      assertTrue(callTimestamps.toString(), delta > 990);
+      assertTrue(delta > 990, callTimestamps.toString());
     }
   }
 }

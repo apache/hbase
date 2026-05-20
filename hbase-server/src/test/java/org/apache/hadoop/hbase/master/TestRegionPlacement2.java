@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -25,7 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -39,22 +38,18 @@ import org.apache.hadoop.hbase.favored.FavoredNodesPlan.Position;
 import org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionPlacement2 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionPlacement2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionPlacement2.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -62,11 +57,14 @@ public class TestRegionPlacement2 {
   private final static int PRIMARY = Position.PRIMARY.ordinal();
   private final static int SECONDARY = Position.SECONDARY.ordinal();
   private final static int TERTIARY = Position.TERTIARY.ordinal();
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Enable the favored nodes based load balancer
@@ -76,7 +74,7 @@ public class TestRegionPlacement2 {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -92,8 +90,7 @@ public class TestRegionPlacement2 {
       servers.add(server);
     }
     List<RegionInfo> regions = new ArrayList<>(1);
-    RegionInfo region =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(testMethodName)).build();
     regions.add(region);
     Map<ServerName, List<RegionInfo>> assignmentMap =
       balancer.roundRobinAssignment(regions, servers);
@@ -152,8 +149,7 @@ public class TestRegionPlacement2 {
       servers.add(server);
     }
     List<RegionInfo> regions = new ArrayList<>(1);
-    RegionInfo region =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(testMethodName)).build();
     regions.add(region);
     ServerName serverBefore = balancer.randomAssignment(region, servers);
     List<ServerName> favoredNodesBefore =

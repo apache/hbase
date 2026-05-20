@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -42,10 +44,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +59,7 @@ public abstract class TableSnapshotInputFormatTestBase {
   protected FileSystem fs;
   protected Path rootDir;
 
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     StartMiniClusterOption option =
@@ -69,7 +70,7 @@ public abstract class TableSnapshotInputFormatTestBase {
     fs = rootDir.getFileSystem(UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDownCluster() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -142,11 +143,11 @@ public abstract class TableSnapshotInputFormatTestBase {
 
               Path path = HFileLink.getBackReferencesDir(storeDir, status.getPath().getName());
               // assert back references directory is empty
-              assertFalse("There is a back reference in " + path, fs.exists(path));
+              assertFalse(fs.exists(path), "There is a back reference in " + path);
 
               path = HFileLink.getBackReferencesDir(archiveStoreDir, status.getPath().getName());
               // assert back references directory is empty
-              assertFalse("There is a back reference in " + path, fs.exists(path));
+              assertFalse(fs.exists(path), "There is a back reference in " + path);
             }
           }
         }
@@ -176,14 +177,14 @@ public abstract class TableSnapshotInputFormatTestBase {
       Cell cell = scanner.current();
 
       // assert that all Cells in the Result have the same key
-      Assert.assertEquals(0, Bytes.compareTo(row, 0, row.length, cell.getRowArray(),
-        cell.getRowOffset(), cell.getRowLength()));
+      assertEquals(0, Bytes.compareTo(row, 0, row.length, cell.getRowArray(), cell.getRowOffset(),
+        cell.getRowLength()));
     }
 
     for (byte[] family : FAMILIES) {
       byte[] actual = result.getValue(family, family);
-      Assert.assertArrayEquals("Row in snapshot does not match, expected:" + Bytes.toString(row)
-        + " ,actual:" + Bytes.toString(actual), row, actual);
+      assertArrayEquals(row, actual, "Row in snapshot does not match, expected:"
+        + Bytes.toString(row) + " ,actual:" + Bytes.toString(actual));
     }
   }
 

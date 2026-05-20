@@ -34,13 +34,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -60,35 +60,31 @@ import org.apache.hadoop.hbase.testing.TestingHBaseCluster;
 import org.apache.hadoop.hbase.testing.TestingHBaseClusterOption;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
-@RunWith(Parameterized.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useBulkLoad={0}")
 public class TestIncrementalBackupMergeWithBulkLoad {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestIncrementalBackupMergeWithBulkLoad.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackupMergeWithBulkLoad.class);
+  public boolean useBulkLoad;
 
-  @Parameterized.Parameters(name = "{index}: useBulkLoad={0}")
-  public static Iterable<Object[]> data() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+  public TestIncrementalBackupMergeWithBulkLoad(boolean useBulkLoad) {
+    this.useBulkLoad = useBulkLoad;
   }
 
-  @Parameterized.Parameter(0)
-  public boolean useBulkLoad;
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
+  }
 
   private TableName sourceTable;
   private TableName targetTable;
@@ -98,7 +94,7 @@ public class TestIncrementalBackupMergeWithBulkLoad {
   private static final Path BACKUP_ROOT_DIR = new Path("backupIT");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("0");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     enableBackup(conf);
@@ -106,12 +102,12 @@ public class TestIncrementalBackupMergeWithBulkLoad {
     cluster.start();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     cluster.stop();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     sourceTable = TableName.valueOf("table-" + useBulkLoad);
     targetTable = TableName.valueOf("another-table-" + useBulkLoad);
@@ -120,7 +116,7 @@ public class TestIncrementalBackupMergeWithBulkLoad {
     createTable(targetTable);
   }
 
-  @Test
+  @TestTemplate
   public void testMergeContainingBulkloadedHfiles() throws Exception {
     Instant timestamp = Instant.now();
 

@@ -30,6 +30,10 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <li>{@link #reset()} : reset the filter state before filtering a new row.</li>
  * <li>{@link #filterAllRemaining()}: true means row scan is over; false means keep going.</li>
  * <li>{@link #filterRowKey(Cell)}: true means drop this row; false means include.</li>
+ * <li>{@link #getHintForRejectedRow(Cell)}: if {@code filterRowKey} returned true, optionally
+ * provide a seek hint to skip past the rejected row efficiently.</li>
+ * <li>{@link #getSkipHint(Cell)}: when a cell is structurally skipped (time-range, column, or
+ * version gate) before {@code filterCell} is reached, optionally provide a seek hint.</li>
  * <li>{@link #filterCell(Cell)}: decides whether to include or exclude this Cell. See
  * {@link ReturnCode}.</li>
  * <li>{@link #transformCell(Cell)}: if the Cell is included, let the filter transform the Cell.
@@ -223,6 +227,91 @@ public abstract class Filter {
    * @throws IOException in case an I/O or an filter specific failure needs to be signaled.
    */
   abstract public Cell getNextCellHint(final Cell currentCell) throws IOException;
+
+  /**
+   * Provides a seek hint to bypass row-by-row scanning after {@link #filterRowKey(Cell)} rejects a
+   * row. When {@code filterRowKey} returns {@code true} the scan pipeline would normally iterate
+   * through every remaining cell in the rejected row one-by-one (via {@code nextRow()}) before
+   * moving on. If the filter can determine a better forward position — for example, the next range
+   * boundary in a {@code MultiRowRangeFilter} — it should return that target cell here, allowing
+   * the scanner to seek directly past the unwanted rows.
+   * <p>
+   * Contract:
+   * <ul>
+   * <li>Only called after {@link #filterRowKey(Cell)} has returned {@code true} for the same
+   * {@code firstRowCell}.</li>
+   * <li>Implementations may use state that was set during {@link #filterRowKey(Cell)} (e.g. an
+   * updated range pointer), but <strong>must not</strong> invoke {@link #filterCell(Cell)} logic —
+   * the caller guarantees that {@code filterCell} has not been called for this row.</li>
+   * <li>The returned {@link Cell}, if non-null, must be an
+   * {@link org.apache.hadoop.hbase.ExtendedCell} because filters are evaluated on the server
+   * side.</li>
+   * <li>Returning {@code null} (the default) falls through to the existing {@code nextRow()}
+   * behaviour, preserving full backward compatibility.</li>
+   * <li>For reversed scans ({@link org.apache.hadoop.hbase.client.Scan#isReversed()}), the hint
+   * must point to a <em>smaller</em> row key (earlier in reverse-scan direction). The scanner
+   * validates hint direction and falls back to {@code nextRow()} if the hint does not advance in
+   * the scan direction.</li>
+   * <li><strong>Composite filter support:</strong> {@code FilterList} (both {@code MUST_PASS_ALL}
+   * and {@code MUST_PASS_ONE}), {@code SkipFilter}, and {@code WhileMatchFilter} delegate this
+   * method to their sub-filters and merge the results. For AND ({@code MUST_PASS_ALL}), only
+   * sub-filters whose {@code filterRowKey} individually returned {@code true} are consulted, and
+   * the farthest (maximal-step) hint among them is returned. For OR ({@code MUST_PASS_ONE}), the
+   * nearest hint is returned only when every non-terminated sub-filter provides one — any null
+   * collapses the OR result to null.</li>
+   * </ul>
+   * @param firstRowCell the first cell encountered in the rejected row; contains the row key that
+   *                     was passed to {@code filterRowKey}
+   * @return a {@link Cell} representing the earliest position the scanner should seek to, or
+   *         {@code null} if this filter cannot provide a better position than a sequential skip
+   * @throws IOException in case an I/O or filter-specific failure needs to be signaled
+   * @see #filterRowKey(Cell)
+   */
+  public Cell getHintForRejectedRow(final Cell firstRowCell) throws IOException {
+    return null;
+  }
+
+  /**
+   * Provides a seek hint for cells that are structurally skipped by the scan pipeline
+   * <em>before</em> {@link #filterCell(Cell)} is ever reached. The pipeline short-circuits on
+   * several criteria — time-range mismatch, column-set exclusion, and version-limit exhaustion —
+   * and in each case the filter is bypassed entirely. When an implementation can compute a
+   * meaningful forward position purely from the cell's coordinates (without needing the
+   * {@code filterCell} call sequence), it should return that position here so the scanner can seek
+   * ahead instead of advancing one cell at a time.
+   * <p>
+   * Contract:
+   * <ul>
+   * <li>May be called for cells that have <strong>never</strong> been passed to
+   * {@link #filterCell(Cell)}.</li>
+   * <li>Implementations <strong>must not</strong> modify any filter state; this method is treated
+   * as logically stateless. Only filters whose hint computation is based solely on immutable
+   * configuration (e.g. a fixed column range or a fuzzy-row pattern) should override this.</li>
+   * <li>The returned {@link Cell}, if non-null, must be an
+   * {@link org.apache.hadoop.hbase.ExtendedCell} because filters are evaluated on the server
+   * side.</li>
+   * <li>Returning {@code null} (the default) falls through to the existing structural skip/seek
+   * behaviour, preserving full backward compatibility.</li>
+   * <li>For reversed scans, the returned cell must have a <em>smaller</em> row key (i.e., earlier
+   * in reverse-scan direction) than the {@code skippedCell}. Hints that do not advance in the scan
+   * direction are silently ignored.</li>
+   * <li><strong>Composite filter support:</strong> {@code FilterList} (both {@code MUST_PASS_ALL}
+   * and {@code MUST_PASS_ONE}), {@code SkipFilter}, and {@code WhileMatchFilter} delegate this
+   * method to their sub-filters and merge the results (maximal step for AND; for OR, the nearest
+   * hint is returned only when every non-terminated sub-filter provides one — any null collapses
+   * the OR result to null).</li>
+   * </ul>
+   * @param skippedCell the cell that was rejected by the time-range, column, or version gate before
+   *                    {@code filterCell} could be consulted
+   * @return a {@link Cell} representing the earliest position the scanner should seek to, or
+   *         {@code null} if this filter cannot provide a better position than the structural hint
+   * @throws IOException in case an I/O or filter-specific failure needs to be signaled
+   * @see #filterCell(Cell)
+   * @see #getNextCellHint(Cell)
+   */
+  public Cell getSkipHint(final Cell skippedCell) throws IOException {
+    return null;
+  }
 
   /**
    * Check that given column family is essential for filter to check row. Most filters always return

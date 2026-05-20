@@ -18,35 +18,35 @@
 package org.apache.hadoop.hbase.security;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: caKeyType={0}, certKeyType={1}, keyPassword={2}")
 public class TestNettyTlsIPCRejectPlainText extends AbstractTestTlsRejectPlainText {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyTlsIPCRejectPlainText.class);
+  public TestNettyTlsIPCRejectPlainText(X509KeyType caKeyType, X509KeyType certKeyType,
+    char[] keyPassword) {
+    super(caKeyType, certKeyType, keyPassword);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     UTIL = new HBaseCommonTestingUtility();
     initialize();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     cleanUp();
   }

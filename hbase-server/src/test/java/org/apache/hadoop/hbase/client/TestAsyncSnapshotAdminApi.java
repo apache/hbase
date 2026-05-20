@@ -17,34 +17,32 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
+import java.util.function.Supplier;
 import java.util.regex.Pattern;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncSnapshotAdminApi.class);
 
   private static final Pattern MATCH_ALL = Pattern.compile(".*");
 
@@ -52,14 +50,28 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
   String snapshotName2 = "snapshotName2";
   String snapshotName3 = "snapshotName3";
 
-  @After
+  public TestAsyncSnapshotAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @AfterEach
   public void cleanup() throws Exception {
     admin.deleteSnapshots(MATCH_ALL).get();
     admin.listTableNames().get().forEach(t -> admin.disableTable(t).join());
     admin.listTableNames().get().forEach(t -> admin.deleteTable(t).join());
   }
 
-  @Test
+  @TestTemplate
   public void testTakeSnapshot() throws Exception {
     Admin syncAdmin = TEST_UTIL.getAdmin();
 
@@ -88,7 +100,7 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     assertEquals(SnapshotType.FLUSH, snapshots.get(1).getType());
   }
 
-  @Test
+  @TestTemplate
   public void testCloneSnapshot() throws Exception {
     TableName tableName2 = TableName.valueOf("testCloneSnapshot2");
     Admin syncAdmin = TEST_UTIL.getAdmin();
@@ -138,7 +150,7 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRestoreSnapshot() throws Exception {
     Table table = TEST_UTIL.createTable(tableName, Bytes.toBytes("f1"));
     for (int i = 0; i < 3000; i++) {
@@ -162,8 +174,9 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
     assertResult(tableName, 3000);
   }
 
-  @Test
-  public void testListSnapshots() throws Exception {
+  @TestTemplate
+  public void testListSnapshots(TestInfo testInfo) throws Exception {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = TEST_UTIL.createTable(tableName, Bytes.toBytes("f1"));
     for (int i = 0; i < 3000; i++) {
       table.put(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("f1"), Bytes.toBytes("cq"),
@@ -191,7 +204,7 @@ public class TestAsyncSnapshotAdminApi extends TestAsyncAdminBase {
         .size());
   }
 
-  @Test
+  @TestTemplate
   public void testDeleteSnapshots() throws Exception {
     Table table = TEST_UTIL.createTable(tableName, Bytes.toBytes("f1"));
     for (int i = 0; i < 3000; i++) {

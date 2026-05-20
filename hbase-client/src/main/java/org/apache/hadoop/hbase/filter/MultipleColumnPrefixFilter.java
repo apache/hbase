@@ -37,9 +37,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
 
 /**
- * This filter is used for selecting only those keys with columns that matches a particular prefix.
- * For example, if prefix is 'an', it will pass keys will columns like 'and', 'anti' but not keys
- * with columns like 'ball', 'act'.
+ * This filter is used for selecting only those keys with columns that match any of the given
+ * prefixes. For example, if prefixes are 'an' and 'ba', it will pass keys with columns like 'and',
+ * 'anti', 'ball' but not keys with columns like 'cat', 'act'. The prefixes are stored in a sorted
+ * set and the filter uses seek hints to efficiently skip columns that do not match any prefix.
  */
 @InterfaceAudience.Public
 public class MultipleColumnPrefixFilter extends FilterBase implements HintingFilter {
@@ -176,6 +177,29 @@ public class MultipleColumnPrefixFilter extends FilterBase implements HintingFil
   @Override
   public Cell getNextCellHint(Cell cell) {
     return PrivateCellUtil.createFirstOnRowCol(cell, hint, 0, hint.length);
+  }
+
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    if (sortedPrefixes.isEmpty()) {
+      return null;
+    }
+    byte[] qualifier = CellUtil.cloneQualifier(skippedCell);
+    TreeSet<byte[]> lesserOrEqual = (TreeSet<byte[]>) sortedPrefixes.headSet(qualifier, true);
+    byte[] target;
+    if (lesserOrEqual.isEmpty()) {
+      target = sortedPrefixes.first();
+    } else {
+      byte[] largest = lesserOrEqual.last();
+      if (Bytes.startsWith(qualifier, largest)) {
+        return null;
+      }
+      target = sortedPrefixes.higher(largest);
+      if (target == null) {
+        return null;
+      }
+    }
+    return PrivateCellUtil.createFirstOnRowCol(skippedCell, target, 0, target.length);
   }
 
   public TreeSet<byte[]> createTreeSet() {

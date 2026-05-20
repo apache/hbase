@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.startsWith;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -32,7 +32,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.IdentityHashMap;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -41,24 +40,20 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestAsyncBatchRpcRetryingCaller {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncBatchRpcRetryingCaller.class);
 
   private org.apache.logging.log4j.core.Appender mockAppender;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     mockAppender = mock(org.apache.logging.log4j.core.Appender.class);
     when(mockAppender.getName()).thenReturn("mockAppender");
@@ -68,7 +63,7 @@ public class TestAsyncBatchRpcRetryingCaller {
 
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
       .getLogger(AsyncBatchRpcRetryingCaller.class)).removeAppender(mockAppender);

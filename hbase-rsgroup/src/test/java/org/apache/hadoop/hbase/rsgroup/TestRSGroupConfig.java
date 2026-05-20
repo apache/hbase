@@ -17,44 +17,34 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.constraint.ConstraintException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestRSGroupConfig extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupConfig.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupConfig.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TestRSGroupsBase.setUpTestBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TestRSGroupsBase.tearDownAfterClass();
   }
@@ -65,8 +55,8 @@ public class TestRSGroupConfig extends TestRSGroupsBase {
   }
 
   @Test
-  public void testSetNonDefaultGroupConfiguration() throws IOException {
-    String group = getGroupName(name.getMethodName());
+  public void testSetNonDefaultGroupConfiguration(TestInfo testInfo) throws IOException {
+    String group = getGroupName(testInfo.getTestMethod().get().getName());
     rsGroupAdmin.addRSGroup(group);
     testSetConfiguration(group);
     rsGroupAdmin.removeRSGroup(group);

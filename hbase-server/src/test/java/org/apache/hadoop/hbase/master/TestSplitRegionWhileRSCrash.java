@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -34,23 +35,18 @@ import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSplitRegionWhileRSCrash {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitRegionWhileRSCrash.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitRegionWhileRSCrash.class);
 
@@ -60,7 +56,7 @@ public class TestSplitRegionWhileRSCrash {
   private static byte[] CF = Bytes.toBytes("cf");
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     UTIL.startMiniCluster(1);
     ADMIN = UTIL.getAdmin();
@@ -68,7 +64,7 @@ public class TestSplitRegionWhileRSCrash {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     Closeables.close(TABLE, true);
     UTIL.shutdownMiniCluster();
@@ -109,6 +105,6 @@ public class TestSplitRegionWhileRSCrash {
     while (results.next() != null) {
       count++;
     }
-    Assert.assertEquals("There should be 10 rows!", 10, count);
+    assertEquals(10, count, "There should be 10 rows!");
   }
 }

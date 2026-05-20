@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -40,24 +39,17 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAccessControlFilter extends SecureTestUtil {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAccessControlFilter.class);
-
-  @Rule
-  public TestName name = new TestName();
   private static HBaseTestingUtility TEST_UTIL;
 
   private static User READER;
@@ -69,12 +61,12 @@ public class TestAccessControlFilter extends SecureTestUtil {
   private static byte[] PRIVATE_COL = Bytes.toBytes("private");
   private static byte[] PUBLIC_COL = Bytes.toBytes("public");
 
-  @Before
-  public void setup() {
-    TABLE = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setup(TestInfo testInfo) {
+    TABLE = TableName.valueOf(testInfo.getTestMethod().get().getName());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -94,7 +86,7 @@ public class TestAccessControlFilter extends SecureTestUtil {
     DENIED = User.createUserForTesting(conf, "denied", new String[0]);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -132,11 +124,9 @@ public class TestAccessControlFilter extends SecureTestUtil {
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TABLE);
-        try {
-          ResultScanner rs = t.getScanner(new Scan());
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(TABLE); ResultScanner rs = t.getScanner(new Scan())) {
           int rowcnt = 0;
           for (Result r : rs) {
             rowcnt++;
@@ -146,11 +136,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
             assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
             assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
           }
-          assertEquals("Expected 100 rows returned", 100, rowcnt);
+          assertEquals(100, rowcnt, "Expected 100 rows returned");
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     });
@@ -161,11 +148,9 @@ public class TestAccessControlFilter extends SecureTestUtil {
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TABLE);
-        try {
-          ResultScanner rs = t.getScanner(new Scan());
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(TABLE); ResultScanner rs = t.getScanner(new Scan())) {
           int rowcnt = 0;
           for (Result r : rs) {
             rowcnt++;
@@ -174,11 +159,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
             assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
             assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
           }
-          assertEquals("Expected 100 rows returned", 100, rowcnt);
+          assertEquals(100, rowcnt, "Expected 100 rows returned");
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     });
@@ -189,11 +171,9 @@ public class TestAccessControlFilter extends SecureTestUtil {
       public Object run() throws Exception {
         Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
         // force a new RS connection
-        conf.set("testkey", TEST_UTIL.getRandomUUID().toString());
-        Connection connection = ConnectionFactory.createConnection(conf);
-        Table t = connection.getTable(TABLE);
-        try {
-          ResultScanner rs = t.getScanner(new Scan());
+        conf.set("testkey", HBaseTestingUtility.getRandomUUID().toString());
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table t = connection.getTable(TABLE); ResultScanner rs = t.getScanner(new Scan())) {
           int rowcnt = 0;
           for (Result r : rs) {
             rowcnt++;
@@ -202,11 +182,8 @@ public class TestAccessControlFilter extends SecureTestUtil {
             assertTrue(r.containsColumn(FAMILY, PUBLIC_COL));
             assertEquals("info " + rownum, Bytes.toString(r.getValue(FAMILY, PUBLIC_COL)));
           }
-          assertEquals("Expected 0 rows returned", 0, rowcnt);
+          assertEquals(0, rowcnt, "Expected 0 rows returned");
           return null;
-        } finally {
-          t.close();
-          connection.close();
         }
       }
     });

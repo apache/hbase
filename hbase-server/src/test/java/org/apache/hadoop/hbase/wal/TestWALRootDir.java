@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -39,21 +38,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestWALRootDir {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALRootDir.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALRootDir.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -67,12 +61,12 @@ public class TestWALRootDir {
   private static Path rootDir;
   private static WALFactory wals;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cleanup();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniDFSCluster(1);
@@ -82,7 +76,7 @@ public class TestWALRootDir {
     walFs = CommonFSUtils.getWALFileSystem(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     cleanup();
     TEST_UTIL.shutdownMiniDFSCluster();
@@ -102,7 +96,7 @@ public class TestWALRootDir {
     long txid = log.appendData(regionInfo,
       getWalKey(EnvironmentEdgeManager.currentTime(), regionInfo, 0), edit);
     log.sync(txid);
-    assertEquals("Expect 1 log have been created", 1, getWALFiles(walFs, walRootDir).size());
+    assertEquals(1, getWALFiles(walFs, walRootDir).size(), "Expect 1 log have been created");
     log.rollWriter();
     // Create 1 more WAL
     assertEquals(2,
@@ -115,8 +109,8 @@ public class TestWALRootDir {
     log.rollWriter();
     log.shutdown();
 
-    assertEquals("Expect 3 logs in WALs dir", 3,
-      getWALFiles(walFs, new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size());
+    assertEquals(3, getWALFiles(walFs, new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME)).size(),
+      "Expect 3 logs in WALs dir");
   }
 
   private WALKeyImpl getWalKey(final long time, RegionInfo hri, final long startPoint) {

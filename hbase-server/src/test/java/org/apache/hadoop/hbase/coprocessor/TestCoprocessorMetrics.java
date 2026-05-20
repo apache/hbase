@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -32,7 +32,6 @@ import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -67,14 +66,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -83,12 +80,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Testing of coprocessor metrics end-to-end.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCoprocessorMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorMetrics.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -96,8 +90,7 @@ public class TestCoprocessorMetrics {
   private static final byte[] foo = Bytes.toBytes("foo");
   private static final byte[] bar = Bytes.toBytes("bar");
 
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
 
   /**
    * MasterObserver that has a Timer metric for create table operation.
@@ -264,7 +257,7 @@ public class TestCoprocessorMetrics {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // inject master, regionserver and WAL coprocessors
@@ -276,13 +269,14 @@ public class TestCoprocessorMetrics {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    currentTestName = testInfo.getTestMethod().get().getName();
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       for (HTableDescriptor htd : admin.listTables()) {
@@ -308,7 +302,7 @@ public class TestCoprocessorMetrics {
       Timer createTableTimer = (Timer) metric.get();
       long prevCount = createTableTimer.getHistogram().getCount();
       LOG.info("Creating table");
-      admin.createTable(new HTableDescriptor(TableName.valueOf(name.getMethodName()))
+      admin.createTable(new HTableDescriptor(TableName.valueOf(currentTestName))
         .addFamily(new HColumnDescriptor("foo")));
 
       assertEquals(1, createTableTimer.getHistogram().getCount() - prevCount);
@@ -351,14 +345,14 @@ public class TestCoprocessorMetrics {
 
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
-      admin.createTable(new HTableDescriptor(TableName.valueOf(name.getMethodName()))
+      admin.createTable(new HTableDescriptor(TableName.valueOf(currentTestName))
         .addFamily(new HColumnDescriptor("foo")));
 
       Counter rollWalRequests = (Counter) metric.get();
       long prevCount = rollWalRequests.getCount();
       assertTrue(prevCount > 0);
 
-      try (Table table = connection.getTable(TableName.valueOf(name.getMethodName()))) {
+      try (Table table = connection.getTable(TableName.valueOf(currentTestName))) {
         table.put(new Put(foo).addColumn(foo, foo, foo));
       }
 
@@ -386,7 +380,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverSingleRegion() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
@@ -403,7 +397,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverMultiRegion() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
@@ -425,8 +419,8 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverMultiTable() throws IOException {
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+    final TableName tableName1 = TableName.valueOf(currentTestName + "1");
+    final TableName tableName2 = TableName.valueOf(currentTestName + "2");
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.createTable(new HTableDescriptor(tableName1).addFamily(new HColumnDescriptor(foo))
@@ -446,7 +440,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverMultiCoprocessor() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
@@ -466,7 +460,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverAfterRegionClosed() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))
@@ -508,7 +502,7 @@ public class TestCoprocessorMetrics {
 
   @Test
   public void testRegionObserverEndpoint() throws IOException, ServiceException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(currentTestName);
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
       admin.createTable(new HTableDescriptor(tableName).addFamily(new HColumnDescriptor(foo))

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -26,10 +26,11 @@ import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -42,53 +43,45 @@ import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ RegionServerTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@org.junit.jupiter.api.Tag(RegionServerTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestWALCellCodecWithCompression {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALCellCodecWithCompression.class);
-
-  private Compression.Algorithm compression;
+  private final Compression.Algorithm compression;
 
   public TestWALCellCodecWithCompression(Compression.Algorithm algo) {
     this.compression = algo;
   }
 
-  @Parameters
-  public static List<Object[]> params() {
-    return HBaseTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED;
+  public static Stream<Arguments> parameters() {
+    return HBaseTestingUtility.COMPRESSION_ALGORITHMS_PARAMETERIZED.stream().map(Arguments::of);
   }
 
-  @Test
+  @TestTemplate
   public void testEncodeDecodeKVsWithTags() throws Exception {
     doTest(false, false);
   }
 
-  @Test
+  @TestTemplate
   public void testEncodeDecodeKVsWithTagsWithTagsCompression() throws Exception {
     doTest(true, false);
   }
 
-  @Test
+  @TestTemplate
   public void testEncodeDecodeOffKVsWithTagsWithTagsCompression() throws Exception {
-    doTest(true, false);
+    doTest(true, true);
   }
 
-  @Test
-  public void testValueCompressionEnabled() throws Exception {
+  @TestTemplate
+  public void testEncodeDecodeOffKVsWithTags() throws Exception {
     doTest(false, true);
   }
 
-  @Test
+  @TestTemplate
   public void testValueCompression() throws Exception {
     final byte[] row_1 = Bytes.toBytes("row_1");
     final byte[] value_1 = new byte[20];

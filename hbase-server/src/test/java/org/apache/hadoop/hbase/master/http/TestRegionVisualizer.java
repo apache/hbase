@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Random;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.RegionMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,26 +36,21 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.http.RegionVisualizer.RegionDetails;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.gson.Gson;
 import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegionVisualizer {
-
-  @ClassRule
-  public static final HBaseClassTestRule testRule =
-    HBaseClassTestRule.forClass(TestRegionVisualizer.class);
 
   private static final Random rand = new Random();
   private static List<Method> regionMetricsBuilderLongValueSetters;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     regionMetricsBuilderLongValueSetters =
       Arrays.stream(RegionMetricsBuilder.class.getDeclaredMethods())
@@ -76,7 +70,6 @@ public class TestRegionVisualizer {
 
     final Gson gson = RegionVisualizer.buildGson();
     final JsonObject result = gson.fromJson(gson.toJson(regionDetails), JsonObject.class);
-    Assert.assertNotNull(result);
     assertEquals(serverName.toShortString(), result.get("server_name").getAsString());
     assertEquals(tableName.getNameAsString(), result.get("table_name").getAsString());
   }

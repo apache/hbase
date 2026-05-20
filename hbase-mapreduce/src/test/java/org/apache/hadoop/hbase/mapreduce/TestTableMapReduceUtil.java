@@ -18,15 +18,14 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import static org.apache.hadoop.security.UserGroupInformation.loginUserFromKeytab;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.Closeable;
 import java.io.File;
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.security.token.AuthenticationTokenIdentifier;
@@ -42,20 +41,16 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test different variants of initTableMapperJob method
  */
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTableMapReduceUtil {
   private static final String HTTP_PRINCIPAL = "HTTP/localhost";
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableMapReduceUtil.class);
 
   /*
    * initTableSnapshotMapperJob is tested in {@link TestTableSnapshotInputFormat} because the method

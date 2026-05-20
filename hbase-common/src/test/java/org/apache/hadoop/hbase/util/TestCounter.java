@@ -17,21 +17,17 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCounter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCounter.class);
 
   private static final int[] THREAD_COUNTS = { 1, 10, 100 };
   private static final int DATA_COUNT = 1000000;
@@ -52,7 +48,7 @@ public class TestCounter {
         }
       }, threadCount);
 
-      Assert.assertEquals(threadCount * (long) DATA_COUNT, counter.get());
+      assertEquals(threadCount * (long) DATA_COUNT, counter.get());
     }
   }
 
@@ -69,7 +65,7 @@ public class TestCounter {
         }
       }, threadCount);
 
-      Assert.assertEquals(threadCount * (long) DATA_COUNT, counter.get());
+      assertEquals(threadCount * (long) DATA_COUNT, counter.get());
     }
   }
 

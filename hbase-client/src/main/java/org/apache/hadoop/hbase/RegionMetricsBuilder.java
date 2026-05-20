@@ -80,7 +80,8 @@ public final class RegionMetricsBuilder {
       .setUncompressedStoreFileSize(
         new Size(regionLoadPB.getStoreUncompressedSizeMB(), Size.Unit.MEGABYTE))
       .setRegionSizeMB(new Size(regionLoadPB.getRegionSizeMB(), Size.Unit.MEGABYTE))
-      .setCurrentRegionCachedRatio(regionLoadPB.getCurrentRegionCachedRatio()).build();
+      .setCurrentRegionCachedRatio(regionLoadPB.getCurrentRegionCachedRatio())
+      .setCurrentRegionColdDataRatio(regionLoadPB.getCurrentRegionColdDataRatio()).build();
   }
 
   private static List<ClusterStatusProtos.StoreSequenceId>
@@ -120,7 +121,8 @@ public final class RegionMetricsBuilder {
       .setStoreUncompressedSizeMB(
         (int) regionMetrics.getUncompressedStoreFileSize().get(Size.Unit.MEGABYTE))
       .setRegionSizeMB((int) regionMetrics.getRegionSizeMB().get(Size.Unit.MEGABYTE))
-      .setCurrentRegionCachedRatio(regionMetrics.getCurrentRegionCachedRatio()).build();
+      .setCurrentRegionCachedRatio(regionMetrics.getCurrentRegionCachedRatio())
+      .setCurrentRegionColdDataRatio(regionMetrics.getCurrentRegionColdDataRatio()).build();
   }
 
   public static RegionMetricsBuilder newBuilder(byte[] name) {
@@ -155,6 +157,7 @@ public final class RegionMetricsBuilder {
   private CompactionState compactionState;
   private Size regionSizeMB = Size.ZERO;
   private float currentRegionCachedRatio;
+  private float currentRegionColdDataRatio;
 
   private RegionMetricsBuilder(byte[] name) {
     this.name = name;
@@ -295,6 +298,11 @@ public final class RegionMetricsBuilder {
     return this;
   }
 
+  public RegionMetricsBuilder setCurrentRegionColdDataRatio(float value) {
+    this.currentRegionColdDataRatio = value;
+    return this;
+  }
+
   public RegionMetrics build() {
     return new RegionMetricsImpl(name, storeCount, storeFileCount, storeRefCount,
       maxCompactedStoreFileRefCount, compactingCellCount, compactedCellCount, storeFileSize,
@@ -302,7 +310,7 @@ public final class RegionMetricsBuilder {
       uncompressedStoreFileSize, writeRequestCount, readRequestCount, filteredReadRequestCount,
       completedSequenceId, storeSequenceIds, dataLocality, lastMajorCompactionTimestamp,
       dataLocalityForSsd, blocksLocalWeight, blocksLocalWithSsdWeight, blocksTotalWeight,
-      compactionState, regionSizeMB, currentRegionCachedRatio);
+      compactionState, regionSizeMB, currentRegionCachedRatio, currentRegionColdDataRatio);
   }
 
   private static class RegionMetricsImpl implements RegionMetrics {
@@ -334,6 +342,7 @@ public final class RegionMetricsBuilder {
     private final CompactionState compactionState;
     private final Size regionSizeMB;
     private final float currentRegionCachedRatio;
+    private final float currentRegionColdDataRatio;
 
     RegionMetricsImpl(byte[] name, int storeCount, int storeFileCount, int storeRefCount,
       int maxCompactedStoreFileRefCount, final long compactingCellCount, long compactedCellCount,
@@ -343,7 +352,7 @@ public final class RegionMetricsBuilder {
       long completedSequenceId, Map<byte[], Long> storeSequenceIds, float dataLocality,
       long lastMajorCompactionTimestamp, float dataLocalityForSsd, long blocksLocalWeight,
       long blocksLocalWithSsdWeight, long blocksTotalWeight, CompactionState compactionState,
-      Size regionSizeMB, float currentRegionCachedRatio) {
+      Size regionSizeMB, float currentRegionCachedRatio, float currentRegionColdDataRatio) {
       this.name = Preconditions.checkNotNull(name);
       this.storeCount = storeCount;
       this.storeFileCount = storeFileCount;
@@ -372,6 +381,7 @@ public final class RegionMetricsBuilder {
       this.compactionState = compactionState;
       this.regionSizeMB = regionSizeMB;
       this.currentRegionCachedRatio = currentRegionCachedRatio;
+      this.currentRegionColdDataRatio = currentRegionColdDataRatio;
     }
 
     @Override
@@ -515,6 +525,11 @@ public final class RegionMetricsBuilder {
     }
 
     @Override
+    public float getCurrentRegionColdDataRatio() {
+      return currentRegionColdDataRatio;
+    }
+
+    @Override
     public String toString() {
       StringBuilder sb =
         Strings.appendKeyValue(new StringBuilder(), "storeCount", this.getStoreCount());
@@ -555,6 +570,7 @@ public final class RegionMetricsBuilder {
       Strings.appendKeyValue(sb, "compactionState", compactionState);
       Strings.appendKeyValue(sb, "regionSizeMB", regionSizeMB);
       Strings.appendKeyValue(sb, "currentRegionCachedRatio", currentRegionCachedRatio);
+      Strings.appendKeyValue(sb, "currentRegionColdDataRatio", currentRegionColdDataRatio);
       return sb.toString();
     }
   }

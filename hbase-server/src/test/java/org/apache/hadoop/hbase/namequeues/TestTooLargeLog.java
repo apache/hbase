@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -40,28 +39,19 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestTooLargeLog {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTooLargeLog.class);
 
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   protected static Admin ADMIN;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Slow log needs to be enabled initially to spin up the SlowLogQueueService
     TEST_UTIL.getConfiguration().setBoolean(HConstants.SLOW_LOG_BUFFER_ENABLED_KEY, true);
@@ -71,7 +61,7 @@ public class TestTooLargeLog {
     ADMIN = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -114,10 +104,10 @@ public class TestTooLargeLog {
 
     OnlineLogRecord record = (OnlineLogRecord) entries.get(0);
 
-    assertTrue("expected " + record.getBlockBytesScanned() + " to be >= 100",
-      record.getBlockBytesScanned() >= 100);
-    assertTrue("expected " + record.getResponseSize() + " to be < 100",
-      record.getResponseSize() < 100);
-    assertTrue("expected " + record.getFsReadTime() + " to be > 0", record.getFsReadTime() > 0);
+    assertTrue(record.getBlockBytesScanned() >= 100,
+      "expected " + record.getBlockBytesScanned() + " to be >= 100");
+    assertTrue(record.getResponseSize() < 100,
+      "expected " + record.getResponseSize() + " to be < 100");
+    assertTrue(record.getFsReadTime() > 0, "expected " + record.getFsReadTime() + " to be > 0");
   }
 }

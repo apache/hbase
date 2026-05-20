@@ -18,12 +18,11 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,24 +39,19 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.Assertions;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SecurityTests.class, MediumTests.class })
 /**
  * Test visibility by setting 'hbase.security.visibility.mutations.checkauths' to true
  */
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestVisibilityWithCheckAuths {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityWithCheckAuths.class);
 
   private static final String TOPSECRET = "TOPSECRET";
   private static final String PUBLIC = "PUBLIC";
@@ -68,12 +62,10 @@ public class TestVisibilityWithCheckAuths {
   private final static byte[] value = Bytes.toBytes("value");
   public static Configuration conf;
 
-  @Rule
-  public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER;
   public static User USER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -90,7 +82,7 @@ public class TestVisibilityWithCheckAuths {
     addLabels();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -113,7 +105,7 @@ public class TestVisibilityWithCheckAuths {
   }
 
   @Test
-  public void testVerifyAccessDeniedForInvalidUserAuths() throws Exception {
+  public void testVerifyAccessDeniedForInvalidUserAuths(TestInfo testInfo) throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
       new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
         @Override
@@ -126,7 +118,7 @@ public class TestVisibilityWithCheckAuths {
         }
       };
     SUPERUSER.runAs(action);
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Admin hBaseAdmin = TEST_UTIL.getAdmin();
     HColumnDescriptor colDesc = new HColumnDescriptor(fam);
     colDesc.setMaxVersions(5);
@@ -144,7 +136,7 @@ public class TestVisibilityWithCheckAuths {
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.addColumn(fam, qual, 125L, value);
             table.put(p);
-            Assert.fail("Testcase should fail with AccesDeniedException");
+            Assertions.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           }
@@ -158,7 +150,7 @@ public class TestVisibilityWithCheckAuths {
   }
 
   @Test
-  public void testLabelsWithAppend() throws Throwable {
+  public void testLabelsWithAppend(TestInfo testInfo) throws Throwable {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
       new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
         @Override
@@ -171,7 +163,7 @@ public class TestVisibilityWithCheckAuths {
         }
       };
     SUPERUSER.runAs(action);
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try (Table table = TEST_UTIL.createTable(tableName, fam)) {
       final byte[] row1 = Bytes.toBytes("row1");
       final byte[] val = Bytes.toBytes("a");
@@ -211,7 +203,7 @@ public class TestVisibilityWithCheckAuths {
             append.addColumn(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));
             table.append(append);
-            Assert.fail("Testcase should fail with AccesDeniedException");
+            Assertions.fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           }

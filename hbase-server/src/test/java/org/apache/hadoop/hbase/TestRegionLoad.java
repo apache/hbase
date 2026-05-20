@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -35,23 +35,19 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionLoad {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionLoad.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -63,7 +59,7 @@ public class TestRegionLoad {
   private static final TableName[] tables = new TableName[] { TABLE_1, TABLE_2, TABLE_3 };
   private static final int MSG_INTERVAL = 500; // ms
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // Make servers report eagerly. This test is about looking at the cluster status reported.
     // Make it so we don't have to wait around too long to see change.
@@ -74,7 +70,7 @@ public class TestRegionLoad {
     createTables();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -145,14 +141,14 @@ public class TestRegionLoad {
   private void compareRegionLoads(Map<byte[], RegionLoad> regionLoadCluster,
     Map<byte[], RegionLoad> regionLoads) {
 
-    assertEquals("No of regionLoads from clusterStatus and regionloads from RS doesn't match",
-      regionLoadCluster.size(), regionLoads.size());
+    assertEquals(regionLoadCluster.size(), regionLoads.size(),
+      "No of regionLoads from clusterStatus and regionloads from RS doesn't match");
 
     // The contents of region load from cluster and server should match
     for (byte[] regionName : regionLoadCluster.keySet()) {
       regionLoads.remove(regionName);
     }
-    assertEquals("regionLoads from SN should be empty", 0, regionLoads.size());
+    assertEquals(0, regionLoads.size(), "regionLoads from SN should be empty");
   }
 
   private void checkRegionsAndRegionLoads(Collection<HRegionInfo> regions,
@@ -162,15 +158,16 @@ public class TestRegionLoad {
       assertNotNull(load.regionLoadPB);
     }
 
-    assertEquals("No of regions and regionloads doesn't match", regions.size(), regionLoads.size());
+    assertEquals(regions.size(), regionLoads.size(), "No of regions and regionloads doesn't match");
 
     Map<byte[], RegionLoad> regionLoadMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (RegionLoad regionLoad : regionLoads) {
       regionLoadMap.put(regionLoad.getName(), regionLoad);
     }
     for (HRegionInfo info : regions) {
-      assertTrue("Region not in regionLoadMap region:" + info.getRegionNameAsString()
-        + " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
+      assertTrue(regionLoadMap.containsKey(info.getRegionName()),
+        "Region not in regionLoadMap region:" + info.getRegionNameAsString() + " regionMap: "
+          + regionLoadMap);
     }
   }
 }

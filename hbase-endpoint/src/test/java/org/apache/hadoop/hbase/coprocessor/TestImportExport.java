@@ -18,26 +18,27 @@
 package org.apache.hadoop.hbase.coprocessor;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.mapreduce.TestImportExportBase;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(LargeTests.class)
-public class TestImportExport extends org.apache.hadoop.hbase.mapreduce.TestImportExport {
+@Tag(LargeTests.TAG)
+public class TestImportExport extends TestImportExportBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImportExport.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Throwable {
     UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       org.apache.hadoop.hbase.coprocessor.Export.class.getName());
-    org.apache.hadoop.hbase.mapreduce.TestImportExport.beforeClass();
+    TestImportExportBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void afterClass() throws Throwable {
+    UTIL.shutdownMiniCluster();
   }
 
   @Override
@@ -52,7 +53,7 @@ public class TestImportExport extends org.apache.hadoop.hbase.mapreduce.TestImpo
   }
 
   @Test
-  @Ignore
+  @Disabled
   @Override
   public void testImport94Table() throws Throwable {
     // Skip the test which is unrelated to the coprocessor.Export.

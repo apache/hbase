@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -26,12 +27,11 @@ import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Base class for testing restore snapshot
@@ -51,13 +51,16 @@ public class RestoreSnapshotFromClientTestBase {
   protected int snapshot1Rows;
   protected Admin admin;
 
-  @Rule
-  public TestName name = new TestName();
+  protected int numReplicas;
 
-  @BeforeClass
-  public static void setupCluster() throws Exception {
-    setupConf(TEST_UTIL.getConfiguration());
-    TEST_UTIL.startMiniCluster(3);
+  private String testName;
+
+  protected RestoreSnapshotFromClientTestBase(int numReplicas) {
+    this.numReplicas = numReplicas;
+  }
+
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(1), Arguments.of(3));
   }
 
   protected static void setupConf(Configuration conf) {
@@ -69,7 +72,7 @@ public class RestoreSnapshotFromClientTestBase {
     TEST_UTIL.getConfiguration().setBoolean("hbase.master.enabletable.roundrobin", true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -79,10 +82,12 @@ public class RestoreSnapshotFromClientTestBase {
    * snapshotName1) of different states. The tableName, snapshotNames and the number of rows in the
    * snapshot are initialized.
    */
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     this.admin = TEST_UTIL.getAdmin();
     long tid = EnvironmentEdgeManager.currentTime();
+    testName = testInfo.getTestMethod().get().getName()
+      + testInfo.getDisplayName().replaceAll("[^0-9A-Za-z_]", "_");
     tableName = TableName.valueOf(getValidMethodName() + "-" + tid);
     emptySnapshot = Bytes.toBytes("emptySnaptb-" + tid);
     snapshotName0 = Bytes.toBytes("snaptb0-" + tid);
@@ -116,18 +121,14 @@ public class RestoreSnapshotFromClientTestBase {
   }
 
   protected void createTable() throws Exception {
-    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, numReplicas, FAMILY);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.deleteTable(tableName);
     SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(TEST_UTIL);
-  }
-
-  protected int getNumReplicas() {
-    return 1;
   }
 
   protected int countRows(Table table, byte[]... families) throws IOException {
@@ -145,6 +146,6 @@ public class RestoreSnapshotFromClientTestBase {
   }
 
   protected final String getValidMethodName() {
-    return name.getMethodName().replaceAll("[^0-9A-Za-z_]", "_");
+    return testName;
   }
 }

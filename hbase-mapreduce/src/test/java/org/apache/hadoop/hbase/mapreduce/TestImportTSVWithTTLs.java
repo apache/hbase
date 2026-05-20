@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -45,22 +44,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestImportTSVWithTTLs implements Configurable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImportTSVWithTTLs.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestImportTSVWithTTLs.class);
   protected static final String NAME = TestImportTsv.class.getSimpleName();
@@ -79,9 +73,6 @@ public class TestImportTSVWithTTLs implements Configurable {
   private final String FAMILY = "FAM";
   private static Configuration conf;
 
-  @Rule
-  public TestName name = new TestName();
-
   @Override
   public Configuration getConf() {
     return util.getConfiguration();
@@ -92,7 +83,7 @@ public class TestImportTSVWithTTLs implements Configurable {
     throw new IllegalArgumentException("setConf not supported");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void provisionCluster() throws Exception {
     conf = util.getConfiguration();
     // We don't check persistence in HFiles in this test, but if we ever do we will
@@ -102,14 +93,15 @@ public class TestImportTSVWithTTLs implements Configurable {
     util.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void releaseCluster() throws Exception {
     util.shutdownMiniCluster();
   }
 
   @Test
-  public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMROnTable(TestInfo testInfo) throws Exception {
+    final TableName tableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {

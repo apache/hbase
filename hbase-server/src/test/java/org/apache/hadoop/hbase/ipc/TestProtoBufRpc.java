@@ -19,29 +19,25 @@ package org.apache.hadoop.hbase.ipc;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -55,30 +51,29 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
  * of types in <code>src/test/protobuf/test.proto</code> and protobuf service definition from
  * <code>src/test/protobuf/test_rpc_service.proto</code>
  */
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, SmallTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}")
 public class TestProtoBufRpc {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProtoBufRpc.class);
 
   public final static String ADDRESS = "localhost";
   private static int PORT = 0;
   private InetSocketAddress isa;
   private Configuration conf;
   private RpcServerInterface server;
+  private final String rpcServerImpl;
 
-  @Parameters(name = "{index}: rpcServerImpl={0}")
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { SimpleRpcServer.class.getName() },
-      new Object[] { NettyRpcServer.class.getName() });
+  public TestProtoBufRpc(String rpcServerImpl) {
+    this.rpcServerImpl = rpcServerImpl;
   }
 
-  @Parameter(0)
-  public String rpcServerImpl;
+  public static Stream<Arguments> parameters() {
+    return Arrays
+      .stream(new Object[] { SimpleRpcServer.class.getName(), NettyRpcServer.class.getName() })
+      .map(Arguments::of);
+  }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException { // Setup server for both protocols
     this.conf = HBaseConfiguration.create();
     this.conf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
@@ -97,13 +92,12 @@ public class TestProtoBufRpc {
     this.server.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     server.stop();
   }
 
-  @Test(expected = org.apache.hbase.thirdparty.com.google.protobuf.ServiceException.class
-  /* Thrown when we call stub.error */)
+  @TestTemplate
   public void testProtoBufRpc() throws Exception {
     RpcClient rpcClient = RpcClientFactory.createClient(conf, HConstants.CLUSTER_ID_DEFAULT);
     try {
@@ -117,8 +111,8 @@ public class TestProtoBufRpc {
       EchoResponseProto echoResponse = stub.echo(null, echoRequest);
       assertEquals("hello", echoResponse.getMessage());
 
-      stub.error(null, emptyRequest);
-      fail("Expected exception is not thrown");
+      assertThrows(org.apache.hbase.thirdparty.com.google.protobuf.ServiceException.class,
+        () -> stub.error(null, emptyRequest));
     } finally {
       rpcClient.close();
     }

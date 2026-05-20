@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for hadoop 2's version of {@link MetricsRESTSource}.
  */
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsRESTSourceImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsRESTSourceImpl.class);
 
   @Test
   public void ensureCompatRegistered() {

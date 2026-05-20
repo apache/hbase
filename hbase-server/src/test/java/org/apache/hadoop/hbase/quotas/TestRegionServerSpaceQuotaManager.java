@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -27,7 +27,6 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement;
@@ -37,25 +36,20 @@ import org.apache.hadoop.hbase.quotas.policies.NoWritesCompactionsViolationPolic
 import org.apache.hadoop.hbase.quotas.policies.NoWritesViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link RegionServerSpaceQuotaManager}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestRegionServerSpaceQuotaManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerSpaceQuotaManager.class);
 
   private RegionServerSpaceQuotaManager quotaManager;
   private RegionServerServices rss;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     quotaManager = mock(RegionServerSpaceQuotaManager.class);
     rss = mock(RegionServerServices.class);
@@ -122,8 +116,8 @@ public class TestRegionServerSpaceQuotaManager {
     realManager.enforceViolationPolicy(tableName, snapshot);
     Map<TableName, SpaceViolationPolicyEnforcement> enforcements =
       realManager.copyActiveEnforcements();
-    assertTrue("Expected active enforcements to be empty, but were " + enforcements,
-      enforcements.isEmpty());
+    assertTrue(enforcements.isEmpty(),
+      "Expected active enforcements to be empty, but were " + enforcements);
   }
 
   @Test

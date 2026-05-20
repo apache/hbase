@@ -44,8 +44,8 @@ import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 public abstract class MasterStateStoreTestBase {
 
@@ -63,7 +63,7 @@ public abstract class MasterStateStoreTestBase {
     TableDescriptorBuilder.newBuilder(TableName.valueOf("test:local"))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(MasterRegionFactory.STATE_FAMILY)).build();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean(MemStoreLAB.USEMSLAB_KEY, false);
@@ -94,7 +94,7 @@ public abstract class MasterStateStoreTestBase {
     UTIL.startMiniZKCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     REGION.close(true);
     HFILE_CLEANER_POOL.shutdownNow();

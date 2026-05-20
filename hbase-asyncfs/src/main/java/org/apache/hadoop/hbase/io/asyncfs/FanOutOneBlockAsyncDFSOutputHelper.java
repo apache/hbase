@@ -436,7 +436,8 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
           if (PipelineAck.isRestartOOBStatus(pipelineStatus)) {
             throw new IOException("datanode " + dnInfo + " is restarting");
           }
-          String logInfo = "ack with firstBadLink as " + resp.getFirstBadLink();
+          String logInfo = "ack with firstBadLink as " + resp.getFirstBadLink() + " from datanode "
+            + dnInfo.getHostName() + "/" + dnInfo.getInfoAddr();
           if (resp.getStatus() != Status.SUCCESS) {
             if (resp.getStatus() == Status.ERROR_ACCESS_TOKEN) {
               throw new InvalidBlockTokenException("Got access token error" + ", status message "
@@ -469,8 +470,9 @@ public final class FanOutOneBlockAsyncDFSOutputHelper {
         @Override
         public void userEventTriggered(ChannelHandlerContext ctx, Object evt) throws Exception {
           if (evt instanceof IdleStateEvent && ((IdleStateEvent) evt).state() == READER_IDLE) {
-            promise
-              .tryFailure(new IOException("Timeout(" + timeoutMs + "ms) waiting for response"));
+            promise.tryFailure(
+              new IOException("Timeout(" + timeoutMs + "ms) waiting for response from datanode "
+                + dnInfo.getHostName() + "/" + dnInfo.getInfoAddr()));
           } else {
             super.userEventTriggered(ctx, evt);
           }

@@ -17,13 +17,15 @@
  */
 package org.apache.hadoop.hbase.namequeues;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 import java.io.IOException;
 import java.lang.reflect.Field;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Connection;
@@ -37,13 +39,11 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.slowlog.SlowLogTableAccessor;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,20 +55,17 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog;
 /**
  * Tests for SlowLog System Table
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestSlowLogAccessor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSlowLogAccessor.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestNamedQueueRecorder.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestSlowLogAccessor.class);
 
   private static final HBaseTestingUtility HBASE_TESTING_UTILITY = new HBaseTestingUtility();
 
   private NamedQueueRecorder namedQueueRecorder;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     try {
       HBASE_TESTING_UTILITY.shutdownMiniHBaseCluster();
@@ -84,12 +81,12 @@ public class TestSlowLogAccessor {
     HBASE_TESTING_UTILITY.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     HBASE_TESTING_UTILITY.shutdownMiniHBaseCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     HRegionServer hRegionServer = HBASE_TESTING_UTILITY.getMiniHBaseCluster().getRegionServer(0);
     Field slowLogRecorder = HRegionServer.class.getDeclaredField("namedQueueRecorder");
@@ -114,7 +111,7 @@ public class TestSlowLogAccessor {
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(15).build();
 
     namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
 
     int i = 0;
 
@@ -147,11 +144,10 @@ public class TestSlowLogAccessor {
       namedQueueRecorder.addRecord(rpcLogDetails);
     }
 
-    Assert.assertNotEquals(-1,
+    assertNotEquals(-1,
       HBASE_TESTING_UTILITY.waitFor(3000, () -> getSlowLogPayloads(request).size() == 14));
 
-    Assert.assertNotEquals(-1,
-      HBASE_TESTING_UTILITY.waitFor(3000, () -> getTableCount(connection) == 14));
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(3000, () -> getTableCount(connection) == 14));
   }
 
   private int getTableCount(Connection connection) {
@@ -168,7 +164,7 @@ public class TestSlowLogAccessor {
   }
 
   private Connection waitForSlowLogTableCreation() throws IOException {
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(2000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(2000, () -> {
       try {
         return HBASE_TESTING_UTILITY.getAdmin()
           .tableExists(SlowLogTableAccessor.SLOW_LOG_TABLE_NAME);
@@ -186,7 +182,7 @@ public class TestSlowLogAccessor {
     namedQueueRecorder.clearNamedQueue(NamedQueuePayload.NamedQueueEvent.SLOW_LOG);
     AdminProtos.SlowLogResponseRequest request =
       AdminProtos.SlowLogResponseRequest.newBuilder().setLimit(500000).build();
-    Assert.assertEquals(getSlowLogPayloads(request).size(), 0);
+    assertEquals(0, getSlowLogPayloads(request).size());
 
     for (int j = 0; j < 100; j++) {
       CompletableFuture.runAsync(() -> {
@@ -201,13 +197,13 @@ public class TestSlowLogAccessor {
       });
     }
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
       int count = getSlowLogPayloads(request).size();
       LOG.debug("RingBuffer records count: {}", count);
       return count > 2000;
     }));
 
-    Assert.assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
+    assertNotEquals(-1, HBASE_TESTING_UTILITY.waitFor(7000, () -> {
       int count = getTableCount(connection);
       LOG.debug("SlowLog Table records count: {}", count);
       return count > 2000;

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -51,21 +52,17 @@ import org.apache.hadoop.io.MapWritable;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.lib.output.NullOutputFormat;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTimeRangeMapRed {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTimeRangeMapRed.class);
 
   private final static Logger log = LoggerFactory.getLogger(TestTimeRangeMapRed.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -89,17 +86,17 @@ public class TestTimeRangeMapRed {
   static final byte[] FAMILY_NAME = Bytes.toBytes("text");
   static final byte[] COLUMN_NAME = Bytes.toBytes("input");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     this.admin = UTIL.getAdmin();
   }
@@ -199,8 +196,7 @@ public class TestTimeRangeMapRed {
         log.debug(Bytes.toString(r.getRow()) + "\t" + Bytes.toString(CellUtil.cloneFamily(kv))
           + "\t" + Bytes.toString(CellUtil.cloneQualifier(kv)) + "\t" + kv.getTimestamp() + "\t"
           + Bytes.toBoolean(CellUtil.cloneValue(kv)));
-        org.junit.Assert.assertEquals(TIMESTAMP.get(kv.getTimestamp()),
-          Bytes.toBoolean(CellUtil.cloneValue(kv)));
+        assertEquals(TIMESTAMP.get(kv.getTimestamp()), Bytes.toBoolean(CellUtil.cloneValue(kv)));
       }
     }
     scanner.close();

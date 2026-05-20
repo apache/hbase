@@ -17,34 +17,30 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.MiniClusterRule;
+import org.apache.hadoop.hbase.MiniClusterExtension;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestAlwaysStandByHMaster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAlwaysStandByHMaster.class);
 
   private static final StartMiniClusterOption OPTION = StartMiniClusterOption.builder()
     .numAlwaysStandByMasters(1).numMasters(1).numRegionServers(1).build();
 
-  @ClassRule
-  public static final MiniClusterRule miniClusterRule =
-    MiniClusterRule.newBuilder().setMiniClusterOption(OPTION).build();
+  @RegisterExtension
+  public static final MiniClusterExtension miniClusterExtension =
+    MiniClusterExtension.newBuilder().setMiniClusterOption(OPTION).build();
 
   /**
    * Tests that the AlwaysStandByHMaster does not transition to active state even if no active
@@ -52,7 +48,7 @@ public class TestAlwaysStandByHMaster {
    */
   @Test
   public void testAlwaysStandBy() throws Exception {
-    HBaseTestingUtility testUtil = miniClusterRule.getTestingUtility();
+    HBaseTestingUtility testUtil = miniClusterExtension.getTestingUtility();
     // Make sure there is an active master.
     assertNotNull(testUtil.getMiniHBaseCluster().getMaster());
     assertEquals(2, testUtil.getMiniHBaseCluster().getMasterThreads().size());

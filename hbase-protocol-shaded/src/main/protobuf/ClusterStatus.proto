@@ -183,6 +183,12 @@ message RegionLoad {
 
   /** Current region cache ratio on this server */
   optional float current_region_cached_ratio = 29;
+
+  /**
+   * Ratio of tiered cold data size to total region size (HFiles) on this server,
+   * in the range [0,1]. See DataTieringManager region cold data tracking.
+   */
+  optional float current_region_cold_data_ratio = 30;
 }
 
 message UserLoad {
@@ -308,14 +314,22 @@ message ServerLoad {
   repeated UserLoad userLoads = 12;
 
   /**
-   * The metrics for region cached on this region server
-   */
-  map<string, uint32> regionCachedInfo = 13;
-
-  /**
    * The active monitored tasks
    */
   repeated ServerTask tasks = 15; /* 15 here to stay in sync with master branch */
+
+  map<string, uint32> regionCachedInfo = 16;
+
+  /**
+* Unallocated block cache capacity on this RegionServer, in bytes.
+* Used by the master for cache-aware load balancing (optional).
+*/
+  optional uint64 cacheFreeSize = 17;
+
+  /**
+ * The metrics for total region cold data size
+ */
+  map<string, uint32> regionColdData = 18;
 }
 
 message LiveServerInfo {

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ClientServiceCallable;
@@ -46,46 +45,41 @@ import org.apache.hadoop.hbase.quotas.policies.DefaultViolationPolicyEnforcement
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestSpaceQuotaOnBulkLoad {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSpaceQuotaOnBulkLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSpaceQuotaOnBulkLoad.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
+  private TestInfo testInfo;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void removeAllQuotas() throws Exception {
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, new AtomicLong(0));
+  @BeforeEach
+  public void removeAllQuotas(TestInfo testInfo) throws Exception {
+    this.testInfo = testInfo;
+    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(),
+      new AtomicLong(0));
     helper.removeAllQuotas();
   }
 
@@ -145,25 +139,24 @@ public class TestSpaceQuotaOnBulkLoad {
     // We would also not have a "real" policy in violation
     ActivePolicyEnforcement activePolicies = spaceQuotaManager.getActiveEnforcements();
     SpaceViolationPolicyEnforcement enforcement = activePolicies.getPolicyEnforcement(tn);
-    assertTrue("Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName(),
-      enforcement instanceof DefaultViolationPolicyEnforcement);
+    assertTrue(enforcement instanceof DefaultViolationPolicyEnforcement,
+      "Expected to find Noop policy, but got " + enforcement.getClass().getSimpleName());
 
     // Should generate two files, each of which is over 25KB each
     ClientServiceCallable<Void> callable = helper.generateFileToLoad(tn, 2, 500);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    FileStatus[] files =
-      fs.listStatus(new Path(fs.getHomeDirectory(), testName.getMethodName() + "_files"));
+    FileStatus[] files = fs.listStatus(
+      new Path(fs.getHomeDirectory(), testInfo.getTestMethod().get().getName() + "_files"));
     for (FileStatus file : files) {
-      assertTrue("Expected the file, " + file.getPath()
-        + ",  length to be larger than 25KB, but was " + file.getLen(),
-        file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE);
+      assertTrue(file.getLen() > 25 * SpaceQuotaHelperForTests.ONE_KILOBYTE, "Expected the file, "
+        + file.getPath() + ",  length to be larger than 25KB, but was " + file.getLen());
       LOG.debug(file.getPath() + " -> " + file.getLen() + "B");
     }
-
     ClusterConnection conn = (ClusterConnection) TEST_UTIL.getConnection();
     RpcRetryingCallerFactory factory =
       new RpcRetryingCallerFactory(TEST_UTIL.getConfiguration(), conn.getConnectionConfiguration());
     RpcRetryingCaller<Void> caller = factory.<Void> newCaller();
+
     try {
       caller.callWithRetries(callable, Integer.MAX_VALUE);
       fail("Expected the bulk load call to fail!");
@@ -176,7 +169,7 @@ public class TestSpaceQuotaOnBulkLoad {
     Table table = TEST_UTIL.getConnection().getTable(tn);
     ResultScanner scanner = table.getScanner(new Scan());
     try {
-      assertNull("Expected no results", scanner.next());
+      assertNull(scanner.next(), "Expected no results");
     } finally {
       scanner.close();
     }

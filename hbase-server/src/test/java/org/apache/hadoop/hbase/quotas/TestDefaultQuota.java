@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.quotas.ThrottleQuotaTestUtil.waitMinuteQuo
 import java.io.IOException;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,24 +33,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDefaultQuota {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultQuota.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf(UUID.randomUUID().toString());
   private static final int REFRESH_TIME = 5000;
   private static final byte[] FAMILY = Bytes.toBytes("cf");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ThrottleQuotaTestUtil.clearQuotaCache(TEST_UTIL);
     EnvironmentEdgeManager.reset();
@@ -59,7 +55,7 @@ public class TestDefaultQuota {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // quotas enabled, using block bytes scanned
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);

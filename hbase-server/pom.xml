@@ -198,6 +198,12 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>com.github.stephenc.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
     </dependency>
@@ -315,12 +321,17 @@
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-inline</artifactId>
       <scope>test</scope>
     </dependency>
+    <!--
+      TODO: The below dependencies are for passing TestCheckTestClasses under JDK8,
+      see HBASE-29925 for more details. Once we finish the migration of JUnit5, which means
+      we do not need TestCheckTestClasses any more, we can remove these dependencies.
+    -->
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-inline</artifactId>
+      <artifactId>mockito-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -1017,6 +1028,69 @@
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-minikdc</artifactId>
           <scope>test</scope>
+        </dependency>
+        <!--
+          TODO: The below apacheds dependencies are for passing TestCheckTestClasses under JDK8,
+          see HBASE-29117 for more details. Once we finish the migration of JUnit5, which means
+          we do not need TestCheckTestClasses any more, we can remove these dependencies.
+		-->
+        <dependency>
+          <groupId>org.apache.directory.server</groupId>
+          <artifactId>apacheds-core</artifactId>
+          <version>${apacheds.version}</version>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.bouncycastle</groupId>
+              <artifactId>bcprov-jdk15on</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.bouncycastle</groupId>
+              <artifactId>bcpkix-jdk15on</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.directory.server</groupId>
+          <artifactId>apacheds-protocol-ldap</artifactId>
+          <version>${apacheds.version}</version>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>org.bouncycastle</groupId>
+              <artifactId>bcprov-jdk15on</artifactId>
+            </exclusion>
+          </exclusions>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.directory.server</groupId>
+          <artifactId>apacheds-ldif-partition</artifactId>
+          <version>${apacheds.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.directory.api</groupId>
+          <artifactId>api-ldap-codec-core</artifactId>
+          <version>${ldap-api.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.directory.api</groupId>
+          <artifactId>api-ldap-model</artifactId>
+          <version>${ldap-api.version}</version>
+          <scope>test</scope>
+        </dependency>
+        <dependency>
+          <groupId>org.apache.directory.server</groupId>
+          <artifactId>apacheds-server-integ</artifactId>
+          <version>${apacheds.version}</version>
+          <scope>test</scope>
+          <exclusions>
+            <exclusion>
+              <groupId>log4j</groupId>
+              <artifactId>log4j</artifactId>
+            </exclusion>
+          </exclusions>
         </dependency>
       </dependencies>
       <build>

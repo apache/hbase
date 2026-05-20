@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.procedure2.store.region;
 
 import static org.hamcrest.CoreMatchers.startsWith;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.Server;
@@ -50,19 +49,15 @@ import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("deprecation")
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(SmallTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestRegionProcedureStoreMigration {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionProcedureStoreMigration.class);
 
   private HBaseCommonTestingUtility htu;
 
@@ -74,7 +69,7 @@ public class TestRegionProcedureStoreMigration {
 
   private WALProcedureStore walStore;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtility();
     Configuration conf = htu.getConfiguration();
@@ -96,7 +91,7 @@ public class TestRegionProcedureStoreMigration {
     region = MasterRegionFactory.create(server);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (store != null) {
       store.stop(true);

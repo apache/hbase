@@ -151,20 +151,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void incrSlowAppend();
 
   /**
-   * Update the split transaction time histogram
-   * @param t time it took, in milliseconds
-   */
-  void updateSplitTime(long t);
-
-  /**
    * Increment number of a requested splits
    */
   void incrSplitRequest();
-
-  /**
-   * Increment number of successful splits
-   */
-  void incrSplitSuccess();
 
   /**
    * Update the flush time histogram
@@ -557,11 +546,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
     + "larger than blockingMemStoreSize";
 
-  String SPLIT_KEY = "splitTime";
   String SPLIT_REQUEST_KEY = "splitRequestCount";
   String SPLIT_REQUEST_DESC = "Number of splits requested";
-  String SPLIT_SUCCESS_KEY = "splitSuccessCount";
-  String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
 
   String FLUSH_TIME = "flushTime";
   String FLUSH_TIME_DESC = "Histogram for the time in millis for memstore flush";
@@ -660,6 +646,11 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Count of scanners which were expired due to scanner lease timeout";
   String CURRENT_REGION_CACHE_RATIO = "currentRegionCacheRatio";
   String CURRENT_REGION_CACHE_RATIO_DESC = "The percentage of caching completed for this region.";
+
+  String CURRENT_REGION_COLD_DATA_RATIO = "currentRegionColdDataRatio";
+
+  String CURRENT_REGION_COLD_DATA_RATIO_DESC = "The percentage of data in this region that "
+    + "is marked as cold by the configured time based priority logic.";
 
   String EXCLUDE_DATA_NODES_COUNT = "excludedDataNodesCount";
   String EXCLUDE_DATA_NODES_COUNT_DESC =

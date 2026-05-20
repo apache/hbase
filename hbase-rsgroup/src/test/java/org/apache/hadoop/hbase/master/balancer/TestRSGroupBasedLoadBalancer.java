@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.commons.lang3.StringUtils;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -42,10 +41,9 @@ import org.apache.hadoop.hbase.rsgroup.RSGroupBasedLoadBalancer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -54,15 +52,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 /**
  * Test RSGroupBasedLoadBalancer with SimpleLoadBalancer as internal balancer
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupBasedLoadBalancer.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestRSGroupBasedLoadBalancer.class);
   private static RSGroupBasedLoadBalancer loadBalancer;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     servers = generateServers(7);
     groupMap = constructGroupInfo(servers, groups);
@@ -121,8 +116,8 @@ public class TestRSGroupBasedLoadBalancer extends RSGroupableBalancerTestBase {
         String groupName = getMockedGroupInfoManager().getRSGroupOfTable(tableName);
         assertTrue(StringUtils.isNotEmpty(groupName));
         RSGroupInfo gInfo = getMockedGroupInfoManager().getRSGroup(groupName);
-        assertTrue("Region is not correctly assigned to group servers.",
-          gInfo.containsServer(sn.getAddress()));
+        assertTrue(gInfo.containsServer(sn.getAddress()),
+          "Region is not correctly assigned to group servers.");
       }
     }
     ArrayListMultimap<String, ServerAndLoad> loadMap = convertToGroupBasedMap(assignments);

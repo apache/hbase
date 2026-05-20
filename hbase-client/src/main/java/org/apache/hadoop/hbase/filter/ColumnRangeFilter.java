@@ -207,6 +207,14 @@ public class ColumnRangeFilter extends FilterBase implements HintingFilter {
   }
 
   @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    if (this.minColumn == null) {
+      return null;
+    }
+    return getNextCellHint(skippedCell);
+  }
+
+  @Override
   public String toString() {
     return this.getClass().getSimpleName() + " " + (this.minColumnInclusive ? "[" : "(")
       + Bytes.toStringBinary(this.minColumn) + ", " + Bytes.toStringBinary(this.maxColumn)

@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -39,21 +38,16 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * To test behavior of filters at server from region side.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestFilterFromRegionSide {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterFromRegionSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static HRegion REGION;
@@ -80,7 +74,7 @@ public class TestFilterFromRegionSide {
 
   private static int NUM_COLS = NUM_FAMILIES * NUM_QUALIFIERS;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     HTableDescriptor htd = new HTableDescriptor(TABLE_NAME);
     for (byte[] family : FAMILIES) {
@@ -114,7 +108,7 @@ public class TestFilterFromRegionSide {
     return puts;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     REGION.close();
   }

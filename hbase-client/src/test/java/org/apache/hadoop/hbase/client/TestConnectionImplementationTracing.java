@@ -19,37 +19,32 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import java.util.Collections;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestConnectionImplementationTracing extends TestTracingBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionImplementationTracing.class);
 
   ConnectionImplementation conn;
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     conn = new ConnectionImplementation(conf, null, UserProvider.instantiate(conf).getCurrent(),
       Collections.emptyMap());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(conn, true);
   }

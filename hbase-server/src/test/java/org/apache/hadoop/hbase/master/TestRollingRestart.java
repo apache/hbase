@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -44,13 +44,11 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,24 +57,30 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 /**
  * Tests the restarting of everything as done during rolling restarts.
  */
-@RunWith(Parameterized.class)
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: splitWALCoordinatedByZK={0}")
 public class TestRollingRestart {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRollingRestart.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRollingRestart.class);
 
   private static HBaseTestingUtility TEST_UTIL;
-  @Rule
-  public TestName name = new TestName();
 
-  @Parameterized.Parameter
-  public boolean splitWALCoordinatedByZK;
+  private String testMethodName;
 
-  @Test
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = (testInfo.getTestMethod().get().getName() + "_" + testInfo.getDisplayName())
+      .replaceAll("[^0-9A-Za-z_]", "_");
+  }
+
+  private final boolean splitWALCoordinatedByZK;
+
+  public TestRollingRestart(boolean splitWALCoordinatedByZK) {
+    this.splitWALCoordinatedByZK = splitWALCoordinatedByZK;
+  }
+
+  @TestTemplate
   public void testBasicRollingRestart() throws Exception {
 
     // Start a cluster with 2 masters and 4 regionservers
@@ -99,8 +103,7 @@ public class TestRollingRestart {
     cluster.waitForActiveAndReadyMaster();
 
     // Create a table with regions
-    final TableName tableName =
-      TableName.valueOf(name.getMethodName().replaceAll("[\\[|\\]]", "-"));
+    final TableName tableName = TableName.valueOf(testMethodName);
     byte[] family = Bytes.toBytes("family");
     log("Creating table with " + NUM_REGIONS_TO_CREATE + " regions");
     Table ht = TEST_UTIL.createMultiRegionTable(tableName, family, NUM_REGIONS_TO_CREATE);
@@ -304,8 +307,7 @@ public class TestRollingRestart {
     return doubled;
   }
 
-  @Parameterized.Parameters
-  public static Collection coordinatedByZK() {
-    return Arrays.asList(false, true);
+  public static Stream<Arguments> parameters() {
+    return Arrays.asList(false, true).stream().map(Arguments::of);
   }
 }

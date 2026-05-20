@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -76,16 +75,13 @@ import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.mapreduce.Mapper.Context;
 import org.apache.hadoop.util.GenericOptionsParser;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -94,12 +90,9 @@ import org.slf4j.LoggerFactory;
 /**
  * Tests the table import and table export MR job functionality
  */
-@Category({ VerySlowMapReduceTests.class, MediumTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCellBasedImportExport2 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellBasedImportExport2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCellBasedImportExport2.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -118,8 +111,9 @@ public class TestCellBasedImportExport2 {
   private static final long now = EnvironmentEdgeManager.currentTime();
   private final TableName EXPORT_TABLE = TableName.valueOf("export_table");
   private final TableName IMPORT_TABLE = TableName.valueOf("import_table");
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Throwable {
     // Up the handlers; this test needs more than usual.
     UTIL.getConfiguration().setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
@@ -128,20 +122,18 @@ public class TestCellBasedImportExport2 {
       new Path(OUTPUT_DIR).makeQualified(FileSystem.get(UTIL.getConfiguration())).toString();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Throwable {
     UTIL.shutdownMiniCluster();
   }
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @Before
-  public void announce() {
-    LOG.info("Running " + name.getMethodName());
+  @BeforeEach
+  public void announce(TestInfo testInfo) throws IOException {
+    methodName = testInfo.getTestMethod().get().getName();
+    LOG.info("Running " + methodName);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Throwable {
     FileSystem fs = FileSystem.get(UTIL.getConfiguration());
     fs.delete(new Path(OUTPUT_DIR), true);
@@ -182,7 +174,7 @@ public class TestCellBasedImportExport2 {
    */
   @Test
   public void testSimpleCase() throws Throwable {
-    try (Table t = UTIL.createTable(TableName.valueOf(name.getMethodName()), FAMILYA, 3);) {
+    try (Table t = UTIL.createTable(TableName.valueOf(methodName), FAMILYA, 3);) {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, QUAL, now, QUAL);
       p.addColumn(FAMILYA, QUAL, now + 1, QUAL);
@@ -203,12 +195,19 @@ public class TestCellBasedImportExport2 {
     String[] args = new String[] {
       // Only export row1 & row2.
       "-D" + TableInputFormat.SCAN_ROW_START + "=\\x32row1",
-      "-D" + TableInputFormat.SCAN_ROW_STOP + "=\\x32row3", name.getMethodName(), FQ_OUTPUT_DIR,
-      "1000", // max number of key versions per key to export
+      "-D" + TableInputFormat.SCAN_ROW_STOP + "=\\x32row3", methodName, FQ_OUTPUT_DIR, "1000", // max
+                                                                                               // number
+                                                                                               // of
+                                                                                               // key
+                                                                                               // versions
+                                                                                               // per
+                                                                                               // key
+                                                                                               // to
+                                                                                               // export
     };
     assertTrue(runExport(args));
 
-    final String IMPORT_TABLE = name.getMethodName() + "import";
+    final String IMPORT_TABLE = methodName + "import";
     try (Table t = UTIL.createTable(TableName.valueOf(IMPORT_TABLE), FAMILYB, 3);) {
       args =
         new String[] { "-D" + Import.CF_RENAME_PROP + "=" + FAMILYA_STRING + ":" + FAMILYB_STRING,
@@ -275,8 +274,7 @@ public class TestCellBasedImportExport2 {
    */
   @Test
   public void testExportScannerBatching() throws Throwable {
-    TableDescriptor desc = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(1).build())
       .build();
     UTIL.getAdmin().createTable(desc);
@@ -294,7 +292,7 @@ public class TestCellBasedImportExport2 {
                                                                                                    // scanner
                                                                                                    // batching
                                                                                                    // arg.
-        name.getMethodName(), FQ_OUTPUT_DIR };
+        methodName, FQ_OUTPUT_DIR };
       assertTrue(runExport(args));
 
       FileSystem fs = FileSystem.get(UTIL.getConfiguration());
@@ -304,11 +302,10 @@ public class TestCellBasedImportExport2 {
 
   @Test
   public void testWithDeletes() throws Throwable {
-    TableDescriptor desc =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5)
-          .setKeepDeletedCells(KeepDeletedCells.TRUE).build())
-        .build();
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(methodName)).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(FAMILYA).setMaxVersions(5).setKeepDeletedCells(KeepDeletedCells.TRUE).build())
+      .build();
     UTIL.getAdmin().createTable(desc);
     try (Table t = UTIL.getConnection().getTable(desc.getTableName());) {
 
@@ -327,12 +324,20 @@ public class TestCellBasedImportExport2 {
       t.delete(d);
     }
 
-    String[] args = new String[] { "-D" + ExportUtils.RAW_SCAN + "=true", name.getMethodName(),
-      FQ_OUTPUT_DIR, "1000", // max number of key versions per key to export
-    };
+    String[] args =
+      new String[] { "-D" + ExportUtils.RAW_SCAN + "=true", methodName, FQ_OUTPUT_DIR, "1000", // max
+                                                                                               // number
+                                                                                               // of
+                                                                                               // key
+                                                                                               // versions
+                                                                                               // per
+                                                                                               // key
+                                                                                               // to
+                                                                                               // export
+      };
     assertTrue(runExport(args));
 
-    final String IMPORT_TABLE = name.getMethodName() + "import";
+    final String IMPORT_TABLE = methodName + "import";
     desc = TableDescriptorBuilder
       .newBuilder(TableName.valueOf(IMPORT_TABLE)).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(FAMILYA).setMaxVersions(5).setKeepDeletedCells(KeepDeletedCells.TRUE).build())
@@ -360,12 +365,11 @@ public class TestCellBasedImportExport2 {
 
   @Test
   public void testWithMultipleDeleteFamilyMarkersOfSameRowSameFamily() throws Throwable {
-    final TableName exportTable = TableName.valueOf(name.getMethodName());
-    TableDescriptor desc =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5)
-          .setKeepDeletedCells(KeepDeletedCells.TRUE).build())
-        .build();
+    final TableName exportTable = TableName.valueOf(methodName);
+    TableDescriptor desc = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(methodName)).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(FAMILYA).setMaxVersions(5).setKeepDeletedCells(KeepDeletedCells.TRUE).build())
+      .build();
     UTIL.getAdmin().createTable(desc);
 
     Table exportT = UTIL.getConnection().getTable(exportTable);
@@ -394,7 +398,7 @@ public class TestCellBasedImportExport2 {
     };
     assertTrue(runExport(args));
 
-    final String importTable = name.getMethodName() + "import";
+    final String importTable = methodName + "import";
     desc = TableDescriptorBuilder
       .newBuilder(TableName.valueOf(importTable)).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(FAMILYA).setMaxVersions(5).setKeepDeletedCells(KeepDeletedCells.TRUE).build())
@@ -431,8 +435,7 @@ public class TestCellBasedImportExport2 {
   @Test
   public void testWithFilter() throws Throwable {
     // Create simple table to export
-    TableDescriptor desc = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5).build())
       .build();
     UTIL.getAdmin().createTable(desc);
@@ -452,11 +455,11 @@ public class TestCellBasedImportExport2 {
     exportTable.put(Arrays.asList(p1, p2));
 
     // Export the simple table
-    String[] args = new String[] { name.getMethodName(), FQ_OUTPUT_DIR, "1000" };
+    String[] args = new String[] { methodName, FQ_OUTPUT_DIR, "1000" };
     assertTrue(runExport(args));
 
     // Import to a new table
-    final String IMPORT_TABLE = name.getMethodName() + "import";
+    final String IMPORT_TABLE = methodName + "import";
     desc = TableDescriptorBuilder.newBuilder(TableName.valueOf(IMPORT_TABLE))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILYA).setMaxVersions(5).build())
       .build();
@@ -472,14 +475,14 @@ public class TestCellBasedImportExport2 {
     PrefixFilter filter = new PrefixFilter(ROW1);
     int count = getCount(exportTable, filter);
 
-    Assert.assertEquals("Unexpected row count between export and import tables", count,
-      getCount(importTable, null));
+    assertEquals(count, getCount(importTable, null),
+      "Unexpected row count between export and import tables");
 
     // and then test that a broken command doesn't bork everything - easier here because we don't
     // need to re-run the export job
 
     args = new String[] { "-D" + Import.FILTER_CLASS_CONF_KEY + "=" + Filter.class.getName(),
-      "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", name.getMethodName(),
+      "-D" + Import.FILTER_ARGS_CONF_KEY + "=" + Bytes.toString(ROW1) + "", methodName,
       FQ_OUTPUT_DIR, "1000" };
     assertFalse(runImport(args));
 
@@ -658,7 +661,7 @@ public class TestCellBasedImportExport2 {
   @Test
   public void testDurability() throws Throwable {
     // Create an export table.
-    String exportTableName = name.getMethodName() + "export";
+    String exportTableName = methodName + "export";
     try (Table exportTable = UTIL.createTable(TableName.valueOf(exportTableName), FAMILYA, 3);) {
 
       // Insert some data
@@ -679,7 +682,7 @@ public class TestCellBasedImportExport2 {
       assertTrue(runExport(args));
 
       // Create the table for import
-      String importTableName = name.getMethodName() + "import1";
+      String importTableName = methodName + "import1";
       Table importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
 
       // Register the wal listener for the import table
@@ -699,7 +702,7 @@ public class TestCellBasedImportExport2 {
       assertTrue(getCount(importTable, null) == 2);
 
       // Run the import with the default durability option
-      importTableName = name.getMethodName() + "import2";
+      importTableName = methodName + "import2";
       importTable = UTIL.createTable(TableName.valueOf(importTableName), FAMILYA, 3);
       region = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
         .getRegions(importTable.getName()).get(0).getRegionInfo();

@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -33,13 +32,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,16 +44,10 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 /**
  * Testcase for HBASE-20792.
  */
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestRegionMoveAndAbandon {
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMoveAndAbandon.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMoveAndAbandon.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private HBaseTestingUtility UTIL;
   private MiniHBaseCluster cluster;
@@ -66,7 +56,7 @@ public class TestRegionMoveAndAbandon {
   private HRegionServer rs2;
   private RegionInfo regionInfo;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     UTIL = new HBaseTestingUtility();
     zkCluster = UTIL.startMiniZKCluster();
@@ -81,7 +71,7 @@ public class TestRegionMoveAndAbandon {
       Iterables.getOnlyElement(cluster.getRegions(TableName.NAMESPACE_TABLE_NAME)).getRegionInfo();
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (cluster != null) {
       cluster.shutdown();

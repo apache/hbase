@@ -159,9 +159,9 @@ public class ProfileServlet extends HttpServlet {
       setResponseHeader(resp);
       resp.getWriter()
         .write("ASYNC_PROFILER_HOME env is not set.\n\n"
-          + "Please ensure the prerequsites for the Profiler Servlet have been installed and the\n"
+          + "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n"
           + "environment is properly configured. For more information please see\n"
-          + "http://hbase.apache.org/book.html#profiler\n");
+          + "https://hbase.apache.org/docs/profiler\n");
       return;
     }
 
@@ -376,7 +376,7 @@ public class ProfileServlet extends HttpServlet {
         .write("The profiler servlet was disabled at startup.\n\n"
           + "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n"
           + "environment is properly configured. For more information please see\n"
-          + "http://hbase.apache.org/book.html#profiler\n");
+          + "https://hbase.apache.org/docs/profiler\n");
       return;
     }
 

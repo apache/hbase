@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -27,10 +27,10 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
@@ -38,8 +38,8 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -56,13 +56,8 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RedundantKVGenerator;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,13 +65,11 @@ import org.slf4j.LoggerFactory;
  * Test all of the data block encoding algorithms for correctness. Most of the class generate data
  * which will test different branches in code.
  */
-@Category({ IOTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(
+    name = "{index}: includesMemstoreTS={0}, includesTags={1}, useOffheapData={2}")
 public class TestDataBlockEncoders {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDataBlockEncoders.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDataBlockEncoders.class);
 
@@ -93,9 +86,8 @@ public class TestDataBlockEncoders {
   private final boolean includesTags;
   private final boolean useOffheapData;
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return HBaseTestingUtility.memStoreTSTagsAndOffheapCombination();
+  public static Stream<Arguments> parameters() {
+    return HBaseTestingUtility.memStoreTSTagsAndOffheapCombination().stream().map(Arguments::of);
   }
 
   public TestDataBlockEncoders(boolean includesMemstoreTS, boolean includesTag,
@@ -121,7 +113,7 @@ public class TestDataBlockEncoders {
   /**
    * Test data block encoding of empty KeyValue. On test failure.
    */
-  @Test
+  @TestTemplate
   public void testEmptyKeyValues() throws IOException {
     List<KeyValue> kvList = new ArrayList<>();
     byte[] row = new byte[0];
@@ -145,7 +137,7 @@ public class TestDataBlockEncoders {
   /**
    * Test KeyValues with negative timestamp. On test failure.
    */
-  @Test
+  @TestTemplate
   public void testNegativeTimestamps() throws IOException {
     List<KeyValue> kvList = new ArrayList<>();
     byte[] row = new byte[0];
@@ -170,7 +162,7 @@ public class TestDataBlockEncoders {
    * Test whether compression -> decompression gives the consistent results on pseudorandom sample.
    * @throws IOException On test failure.
    */
-  @Test
+  @TestTemplate
   public void testExecutionOnSample() throws IOException {
     List<KeyValue> kvList = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
     testEncodersOnDataset(kvList, includesMemstoreTS, includesTags);
@@ -179,7 +171,7 @@ public class TestDataBlockEncoders {
   /**
    * Test seeking while file is encoded.
    */
-  @Test
+  @TestTemplate
   public void testSeekingOnSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
@@ -232,7 +224,7 @@ public class TestDataBlockEncoders {
     LOG.info("Done");
   }
 
-  @Test
+  @TestTemplate
   public void testSeekingToOffHeapKeyValueInSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
@@ -307,7 +299,7 @@ public class TestDataBlockEncoders {
     return ByteBuffer.wrap(encodedData);
   }
 
-  @Test
+  @TestTemplate
   public void testNextOnSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
@@ -349,7 +341,7 @@ public class TestDataBlockEncoders {
   /**
    * Test whether the decompression of first key is implemented correctly.
    */
-  @Test
+  @TestTemplate
   public void testFirstKeyInBlockOnSample() throws IOException {
     List<KeyValue> sampleKv = generator.generateTestKeyValues(NUMBER_OF_KV, includesTags);
 
@@ -369,7 +361,7 @@ public class TestDataBlockEncoders {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRowIndexWithTagsButNoTagsInCell() throws IOException {
     List<KeyValue> kvList = new ArrayList<>();
     byte[] row = new byte[0];
@@ -389,7 +381,7 @@ public class TestDataBlockEncoders {
       encoder.createSeeker(encoder.newDataBlockDecodingContext(conf, meta));
     seeker.setCurrentBuffer(new SingleByteBuff(encodedBuffer));
     Cell cell = seeker.getCell();
-    Assert.assertEquals(expectedKV.getLength(), ((KeyValue) cell).getLength());
+    assertEquals(expectedKV.getLength(), ((KeyValue) cell).getLength());
   }
 
   private void checkSeekingConsistency(List<DataBlockEncoder.EncodedSeeker> encodedSeekers,
@@ -453,7 +445,7 @@ public class TestDataBlockEncoders {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testZeroByte() throws IOException {
     List<KeyValue> kvList = new ArrayList<>();
     byte[] row = Bytes.toBytes("abcd");
@@ -490,8 +482,8 @@ public class TestDataBlockEncoders {
     // this is because in case of prefix tree the decoded stream will not have
     // the
     // mvcc in it.
-    assertEquals("Encoding -> decoding gives different results for " + encoder,
-      Bytes.toStringBinary(unencodedDataBuf), Bytes.toStringBinary(actualDataset));
+    assertEquals(Bytes.toStringBinary(unencodedDataBuf), Bytes.toStringBinary(actualDataset),
+      "Encoding -> decoding gives different results for " + encoder);
   }
 
   private static ByteBufferKeyValue buildOffHeapKeyValue(KeyValue keyValue) throws IOException {

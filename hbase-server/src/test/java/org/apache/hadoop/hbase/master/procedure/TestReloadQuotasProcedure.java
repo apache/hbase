@@ -17,47 +17,34 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.Future;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.assignment.MockMasterServices;
 import org.apache.hadoop.hbase.procedure2.RemoteProcedureDispatcher;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReloadQuotasProcedure {
-  private static final Logger LOG = LoggerFactory.getLogger(TestReloadQuotasProcedure.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReloadQuotasProcedure.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private HBaseTestingUtility util;
   private MockMasterServices master;
   private TestServerRemoteProcedure.MockRSProcedureDispatcher rsDispatcher;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = new HBaseTestingUtility();
     master = new MockMasterServices(util.getConfiguration());
@@ -65,7 +52,7 @@ public class TestReloadQuotasProcedure {
     master.start(2, rsDispatcher);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     master.stop("tearDown");
   }

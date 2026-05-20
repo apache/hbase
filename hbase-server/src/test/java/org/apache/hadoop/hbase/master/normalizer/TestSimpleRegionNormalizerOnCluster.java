@@ -21,10 +21,10 @@ import static org.hamcrest.Matchers.comparesEqualTo;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
 import static org.hamcrest.Matchers.lessThanOrEqualTo;
 import static org.hamcrest.Matchers.not;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MatcherPredicate;
@@ -64,28 +63,23 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
 import org.hamcrest.Matcher;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing {@link SimpleRegionNormalizer} on minicluster.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSimpleRegionNormalizerOnCluster {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSimpleRegionNormalizerOnCluster.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSimpleRegionNormalizerOnCluster.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILY_NAME = Bytes.toBytes("fam");
@@ -93,10 +87,7 @@ public class TestSimpleRegionNormalizerOnCluster {
   private static Admin admin;
   private static HMaster master;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     // we will retry operations when PleaseHoldException is thrown
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 3);
@@ -115,12 +106,12 @@ public class TestSimpleRegionNormalizerOnCluster {
     assertNotNull(master);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     // disable the normalizer ahead of time, let the test enable it when its ready.
     admin.normalizerSwitch(false);
@@ -140,10 +131,10 @@ public class TestSimpleRegionNormalizerOnCluster {
    * and look for change in one and no change in the other.
    */
   @Test
-  public void testHonorsNormalizerTableSetting() throws Exception {
-    final TableName tn1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tn2 = TableName.valueOf(name.getMethodName() + "2");
-    final TableName tn3 = TableName.valueOf(name.getMethodName() + "3");
+  public void testHonorsNormalizerTableSetting(TestInfo testInfo) throws Exception {
+    final TableName tn1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tn2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
+    final TableName tn3 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "3");
 
     try {
       final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
@@ -160,8 +151,8 @@ public class TestSimpleRegionNormalizerOnCluster {
       // 1. split one region to two
       // 2. merge two regions into one
       // and hence, total number of regions for tn3 remains same
-      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
-      assertEquals(tn2 + " should not have split.", tn2RegionCount, getRegionCount(tn2));
+      assertEquals(tn1RegionCount + 1, getRegionCount(tn1), tn1 + " should have split.");
+      assertEquals(tn2RegionCount, getRegionCount(tn2), tn2 + " should not have split.");
       LOG.debug("waiting for t3 to settle...");
       waitForTableRegionCount(tn3, comparesEqualTo(tn3RegionCount));
     } finally {
@@ -172,21 +163,21 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   @Test
-  public void testRegionNormalizationSplitWithoutQuotaLimit() throws Exception {
-    testRegionNormalizationSplit(false);
+  public void testRegionNormalizationSplitWithoutQuotaLimit(TestInfo testInfo) throws Exception {
+    testRegionNormalizationSplit(false, testInfo);
   }
 
   @Test
-  public void testRegionNormalizationSplitWithQuotaLimit() throws Exception {
-    testRegionNormalizationSplit(true);
+  public void testRegionNormalizationSplitWithQuotaLimit(TestInfo testInfo) throws Exception {
+    testRegionNormalizationSplit(true, testInfo);
   }
 
-  void testRegionNormalizationSplit(boolean limitedByQuota) throws Exception {
+  void testRegionNormalizationSplit(boolean limitedByQuota, TestInfo testInfo) throws Exception {
     TableName tableName = null;
     try {
       tableName = limitedByQuota
-        ? buildTableNameForQuotaTest(name.getMethodName())
-        : TableName.valueOf(name.getMethodName());
+        ? buildTableNameForQuotaTest(testInfo.getTestMethod().get().getName())
+        : TableName.valueOf(testInfo.getTestMethod().get().getName());
 
       final int currentRegionCount = createTableBegsSplit(tableName, true, false);
       final long existingSkippedSplitCount =
@@ -195,12 +186,12 @@ public class TestSimpleRegionNormalizerOnCluster {
       assertTrue(admin.normalize());
       if (limitedByQuota) {
         waitForSkippedSplits(master, existingSkippedSplitCount);
-        assertEquals(tableName + " should not have split.", currentRegionCount,
-          getRegionCount(tableName));
+        assertEquals(currentRegionCount, getRegionCount(tableName),
+          tableName + " should not have split.");
       } else {
         waitForTableRegionCount(tableName, greaterThanOrEqualTo(currentRegionCount + 1));
-        assertEquals(tableName + " should have split.", currentRegionCount + 1,
-          getRegionCount(tableName));
+        assertEquals(currentRegionCount + 1, getRegionCount(tableName),
+          tableName + " should have split.");
       }
     } finally {
       dropIfExists(tableName);
@@ -208,25 +199,25 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   @Test
-  public void testRegionNormalizationMerge() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testRegionNormalizationMerge(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try {
       final int currentRegionCount = createTableBegsMerge(tableName);
       assertFalse(admin.normalizerSwitch(true));
       assertTrue(admin.normalize());
       waitForTableRegionCount(tableName, lessThanOrEqualTo(currentRegionCount - 1));
-      assertEquals(tableName + " should have merged.", currentRegionCount - 1,
-        getRegionCount(tableName));
+      assertEquals(currentRegionCount - 1, getRegionCount(tableName),
+        tableName + " should have merged.");
     } finally {
       dropIfExists(tableName);
     }
   }
 
   @Test
-  public void testHonorsNamespaceFilter() throws Exception {
+  public void testHonorsNamespaceFilter(TestInfo testInfo) throws Exception {
     final NamespaceDescriptor namespaceDescriptor = NamespaceDescriptor.create("ns").build();
-    final TableName tn1 = TableName.valueOf("ns", name.getMethodName());
-    final TableName tn2 = TableName.valueOf(name.getMethodName());
+    final TableName tn1 = TableName.valueOf("ns", testInfo.getTestMethod().get().getName());
+    final TableName tn2 = TableName.valueOf(testInfo.getTestMethod().get().getName());
 
     try {
       admin.createNamespace(namespaceDescriptor);
@@ -241,7 +232,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn2RegionCount number of regions because it's not a member of the target namespace.
-      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
+      assertEquals(tn1RegionCount + 1, getRegionCount(tn1), tn1 + " should have split.");
       waitForTableRegionCount(tn2, comparesEqualTo(tn2RegionCount));
     } finally {
       dropIfExists(tn1);
@@ -250,9 +241,9 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   @Test
-  public void testHonorsPatternFilter() throws Exception {
-    final TableName tn1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tn2 = TableName.valueOf(name.getMethodName() + "2");
+  public void testHonorsPatternFilter(TestInfo testInfo) throws Exception {
+    final TableName tn1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tn2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
 
     try {
       final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
@@ -266,7 +257,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn2RegionCount number of regions because it fails filter.
-      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
+      assertEquals(tn1RegionCount + 1, getRegionCount(tn1), tn1 + " should have split.");
       waitForTableRegionCount(tn2, comparesEqualTo(tn2RegionCount));
     } finally {
       dropIfExists(tn1);
@@ -275,9 +266,9 @@ public class TestSimpleRegionNormalizerOnCluster {
   }
 
   @Test
-  public void testHonorsNameFilter() throws Exception {
-    final TableName tn1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tn2 = TableName.valueOf(name.getMethodName() + "2");
+  public void testHonorsNameFilter(TestInfo testInfo) throws Exception {
+    final TableName tn1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    final TableName tn2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
 
     try {
       final int tn1RegionCount = createTableBegsSplit(tn1, true, false);
@@ -291,7 +282,7 @@ public class TestSimpleRegionNormalizerOnCluster {
 
       // confirm that tn1 has (tn1RegionCount + 1) number of regions.
       // tn2 has tn3RegionCount number of regions because it fails filter:
-      assertEquals(tn1 + " should have split.", tn1RegionCount + 1, getRegionCount(tn1));
+      assertEquals(tn1RegionCount + 1, getRegionCount(tn1), tn1 + " should have split.");
       waitForTableRegionCount(tn2, comparesEqualTo(tn2RegionCount));
     } finally {
       dropIfExists(tn1);
@@ -304,8 +295,8 @@ public class TestSimpleRegionNormalizerOnCluster {
    * expected behavior, only that some change is applied to the table.
    */
   @Test
-  public void testTargetOfSplitAndMerge() throws Exception {
-    final TableName tn = TableName.valueOf(name.getMethodName());
+  public void testTargetOfSplitAndMerge(TestInfo testInfo) throws Exception {
+    final TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try {
       final int tnRegionCount = createTableTargetOfSplitAndMerge(tn);
       assertFalse(admin.normalizerSwitch(true));

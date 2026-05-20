@@ -38,7 +38,7 @@ import org.slf4j.LoggerFactory;
 public abstract class BasicReadWriteWithDifferentConnectionRegistriesTestBase {
 
   private static final Logger LOG =
-    LoggerFactory.getLogger(TestBasicReadWriteWithDifferentConnectionRegistries.class);
+    LoggerFactory.getLogger(BasicReadWriteWithDifferentConnectionRegistriesTestBase.class);
 
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 

@@ -19,27 +19,21 @@ package org.apache.hadoop.hbase.snapshot;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the restore/clone operation from a file-system point of view.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobRestoreSnapshotHelper.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
 

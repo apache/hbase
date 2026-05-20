@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -48,13 +47,11 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -68,12 +65,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceLimitR
 /**
  * minicluster tests that validate that quota entries are properly set in the quota table
  */
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestQuotaAdmin {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaAdmin.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestQuotaAdmin.class);
 
@@ -86,7 +80,7 @@ public class TestQuotaAdmin {
   private final static String[] NAMESPACES =
     new String[] { "NAMESPACE01", "NAMESPACE02", "NAMESPACE03" };
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, 2000);
@@ -99,7 +93,7 @@ public class TestQuotaAdmin {
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void clearQuotaTable() throws Exception {
     if (TEST_UTIL.getAdmin().tableExists(QuotaUtil.QUOTA_TABLE_NAME)) {
       TEST_UTIL.getAdmin().disableTable(QuotaUtil.QUOTA_TABLE_NAME);
@@ -107,7 +101,7 @@ public class TestQuotaAdmin {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -337,7 +331,7 @@ public class TestQuotaAdmin {
       try {
         Result r = Iterables.getOnlyElement(scanner);
         CellScanner cells = r.cellScanner();
-        assertTrue("Expected to find a cell", cells.advance());
+        assertTrue(cells.advance(), "Expected to find a cell");
         assertSpaceQuota(sizeLimit, violationPolicy, cells.current());
       } finally {
         scanner.close();
@@ -357,7 +351,7 @@ public class TestQuotaAdmin {
     try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
       ResultScanner rs = quotaTable.getScanner(new Scan());
       try {
-        assertNull("Did not expect to find a quota entry", rs.next());
+        assertNull(rs.next(), "Did not expect to find a quota entry");
       } finally {
         rs.close();
       }
@@ -365,7 +359,7 @@ public class TestQuotaAdmin {
 
     // Verify that we can also not fetch it via the API
     try (QuotaRetriever scanner = new QuotaRetriever(admin.getConnection())) {
-      assertNull("Did not expect to find a quota entry", scanner.next());
+      assertNull(scanner.next(), "Did not expect to find a quota entry");
     }
   }
 
@@ -385,7 +379,7 @@ public class TestQuotaAdmin {
       try {
         Result r = Iterables.getOnlyElement(scanner);
         CellScanner cells = r.cellScanner();
-        assertTrue("Expected to find a cell", cells.advance());
+        assertTrue(cells.advance(), "Expected to find a cell");
         assertSpaceQuota(originalSizeLimit, violationPolicy, cells.current());
       } finally {
         scanner.close();
@@ -410,7 +404,7 @@ public class TestQuotaAdmin {
       try {
         Result r = Iterables.getOnlyElement(scanner);
         CellScanner cells = r.cellScanner();
-        assertTrue("Expected to find a cell", cells.advance());
+        assertTrue(cells.advance(), "Expected to find a cell");
         assertSpaceQuota(newSizeLimit, newViolationPolicy, cells.current());
       } finally {
         scanner.close();
@@ -430,7 +424,7 @@ public class TestQuotaAdmin {
     try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME)) {
       ResultScanner scanner = quotaTable.getScanner(new Scan());
       try {
-        assertNull("Did not expect to find a quota entry", scanner.next());
+        assertNull(scanner.next(), "Did not expect to find a quota entry");
       } finally {
         scanner.close();
       }
@@ -438,7 +432,7 @@ public class TestQuotaAdmin {
 
     // Verify that we can also not fetch it via the API
     try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
-      assertNull("Did not expect to find a quota entry", quotaScanner.next());
+      assertNull(quotaScanner.next(), "Did not expect to find a quota entry");
     }
   }
 
@@ -680,10 +674,10 @@ public class TestQuotaAdmin {
   private void testSwitchRpcThrottle(Admin admin, boolean oldRpcThrottle, boolean newRpcThrottle)
     throws IOException {
     boolean state = admin.switchRpcThrottle(newRpcThrottle);
-    Assert.assertEquals(oldRpcThrottle, state);
-    Assert.assertEquals(newRpcThrottle, admin.isRpcThrottleEnabled());
+    assertEquals(oldRpcThrottle, state);
+    assertEquals(newRpcThrottle, admin.isRpcThrottleEnabled());
     TEST_UTIL.getHBaseCluster().getRegionServerThreads().stream()
-      .forEach(rs -> Assert.assertEquals(newRpcThrottle,
+      .forEach(rs -> assertEquals(newRpcThrottle,
         rs.getRegionServer().getRegionServerRpcQuotaManager().isRpcThrottleEnabled()));
   }
 
@@ -699,7 +693,7 @@ public class TestQuotaAdmin {
       ResultScanner scanner = quotaTable.getScanner(new Scan())) {
       Result r = Iterables.getOnlyElement(scanner);
       CellScanner cells = r.cellScanner();
-      assertTrue("Expected to find a cell", cells.advance());
+      assertTrue(cells.advance(), "Expected to find a cell");
       assertRPCQuota(type, limit, tu, scope, cells.current());
     }
   }
@@ -708,7 +702,7 @@ public class TestQuotaAdmin {
     // Verify that the record doesn't exist in the QuotaTableUtil.QUOTA_TABLE_NAME
     try (Table quotaTable = TEST_UTIL.getConnection().getTable(QuotaTableUtil.QUOTA_TABLE_NAME);
       ResultScanner scanner = quotaTable.getScanner(new Scan())) {
-      assertNull("Did not expect to find a quota entry", scanner.next());
+      assertNull(scanner.next(), "Did not expect to find a quota entry");
     }
   }
 
@@ -723,7 +717,7 @@ public class TestQuotaAdmin {
   private void verifyNotFetchableViaAPI(Admin admin) throws Exception {
     // Verify that we can also not fetch it via the API
     try (QuotaRetriever quotaScanner = new QuotaRetriever(admin.getConnection())) {
-      assertNull("Did not expect to find a quota entry", quotaScanner.next());
+      assertNull(quotaScanner.next(), "Did not expect to find a quota entry");
     }
   }
 
@@ -731,7 +725,7 @@ public class TestQuotaAdmin {
     Cell cell) throws Exception {
     Quotas q = QuotaTableUtil.quotasFromData(cell.getValueArray(), cell.getValueOffset(),
       cell.getValueLength());
-    assertTrue("Quota should have rpc quota defined", q.hasThrottle());
+    assertTrue(q.hasThrottle(), "Quota should have rpc quota defined");
 
     QuotaProtos.Throttle rpcQuota = q.getThrottle();
     QuotaProtos.TimedQuota t = null;
@@ -791,8 +785,9 @@ public class TestQuotaAdmin {
 
   private void assertRPCQuota(ThrottleType type, long limit, TimeUnit tu,
     QuotaSettings actualSettings) throws Exception {
-    assertTrue("The actual QuotaSettings was not an instance of " + ThrottleSettings.class
-      + " but of " + actualSettings.getClass(), actualSettings instanceof ThrottleSettings);
+    assertTrue(actualSettings instanceof ThrottleSettings,
+      "The actual QuotaSettings was not an instance of " + ThrottleSettings.class + " but of "
+        + actualSettings.getClass());
     QuotaProtos.ThrottleRequest throttleRequest = ((ThrottleSettings) actualSettings).getProto();
     assertEquals(limit, throttleRequest.getTimedQuota().getSoftLimit());
     assertEquals(ProtobufUtil.toProtoTimeUnit(tu), throttleRequest.getTimedQuota().getTimeUnit());
@@ -803,7 +798,7 @@ public class TestQuotaAdmin {
     throws Exception {
     Quotas q = QuotaTableUtil.quotasFromData(cell.getValueArray(), cell.getValueOffset(),
       cell.getValueLength());
-    assertTrue("Quota should have space quota defined", q.hasSpace());
+    assertTrue(q.hasSpace(), "Quota should have space quota defined");
     QuotaProtos.SpaceQuota spaceQuota = q.getSpace();
     assertEquals(sizeLimit, spaceQuota.getSoftLimit());
     assertEquals(violationPolicy, ProtobufUtil.toViolationPolicy(spaceQuota.getViolationPolicy()));
@@ -811,8 +806,9 @@ public class TestQuotaAdmin {
 
   private void assertSpaceQuota(long sizeLimit, SpaceViolationPolicy violationPolicy,
     QuotaSettings actualSettings) {
-    assertTrue("The actual QuotaSettings was not an instance of " + SpaceLimitSettings.class
-      + " but of " + actualSettings.getClass(), actualSettings instanceof SpaceLimitSettings);
+    assertTrue(actualSettings instanceof SpaceLimitSettings,
+      "The actual QuotaSettings was not an instance of " + SpaceLimitSettings.class + " but of "
+        + actualSettings.getClass());
     SpaceLimitRequest spaceLimitRequest = ((SpaceLimitSettings) actualSettings).getProto();
     assertEquals(sizeLimit, spaceLimitRequest.getQuota().getSoftLimit());
     assertEquals(violationPolicy,

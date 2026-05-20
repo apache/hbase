@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.util.compaction;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -31,24 +30,17 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMajorCompactorTTL extends TestMajorCompactor {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMajorCompactorTTL.class);
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   @Override
   public void setUp() throws Exception {
     utility = new HBaseTestingUtility();
@@ -57,15 +49,15 @@ public class TestMajorCompactorTTL extends TestMajorCompactor {
     admin = utility.getAdmin();
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     utility.shutdownMiniCluster();
   }
 
   @Test
-  public void testCompactingATable() throws Exception {
-    TableName tableName = createTable(name.getMethodName());
+  public void testCompactingATable(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(testInfo.getTestMethod().get().getName());
 
     // Delay a bit, so we can set the table TTL to 5 seconds
     Thread.sleep(10 * 1000);

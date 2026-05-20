@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -40,22 +39,18 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAssignmentManagerMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAssignmentManagerMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAssignmentManagerMetrics.class);
   private static final MetricsAssertHelper METRICS_HELPER =
@@ -65,11 +60,14 @@ public class TestAssignmentManagerMetrics {
   private static HMaster MASTER;
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final int MSG_INTERVAL = 1000;
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     LOG.info("Starting cluster");
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -104,7 +102,7 @@ public class TestAssignmentManagerMetrics {
     MASTER.getConfiguration().setBoolean(TableDescriptorChecker.TABLE_SANITY_CHECKS, false);
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     LOG.info("AFTER {} <= IS THIS NULL?", TEST_UTIL);
     TEST_UTIL.shutdownMiniCluster();
@@ -112,7 +110,7 @@ public class TestAssignmentManagerMetrics {
 
   @Test
   public void testRITAssignmentManagerMetrics() throws Exception {
-    final TableName TABLENAME = TableName.valueOf(name.getMethodName());
+    final TableName TABLENAME = TableName.valueOf(testMethodName);
     final byte[] FAMILY = Bytes.toBytes("family");
     try (Table table = TEST_UTIL.createTable(TABLENAME, FAMILY)) {
       final byte[] row = Bytes.toBytes("row");

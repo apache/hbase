@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,10 +34,13 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -53,20 +57,17 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestCacheAwareLoadBalancer extends BalancerTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCacheAwareLoadBalancer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheAwareLoadBalancer.class);
 
@@ -125,7 +126,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     return serverMetrics;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     servers = generateServers(3);
     tableDescs = constructTableDesc(false);
@@ -185,6 +186,71 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     }
     // should move 5 regions from server0 to server 1
     assertEquals(5, regionsMovedFromServer0.size());
+    assertEquals(5, targetServers.get(server1).size());
+  }
+
+  /**
+   * Regions on the overloaded RS report low block-cache ratio; no RS reports prefetch/historical
+   * cache for those regions (so {@link CacheAwareLoadBalancer.CacheAwareCandidateGenerator} has no
+   * "old server" to prefer). Another RS has ample free block cache. The balancer should still emit
+   * plans that shed load from the hot RS onto the idle RS with spare cache capacity.
+   */
+  @Test
+  public void testLowCacheRatioNoHistoricalCacheRelocatesWhenTargetHasFreeBlockCache()
+    throws Exception {
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server2 = servers.get(2);
+
+    List<RegionInfo> regionsOnServer0 = randomRegions(10);
+    List<RegionInfo> regionsOnServer1 = randomRegions(0);
+    List<RegionInfo> regionsOnServer2 = randomRegions(5);
+
+    clusterState.put(server0, regionsOnServer0);
+    clusterState.put(server1, regionsOnServer1);
+    clusterState.put(server2, regionsOnServer2);
+
+    // Below LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT (0.35);
+    ServerMetrics sm0 = mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0, 0.1f,
+      new ArrayList<>(), 0, 10);
+    when(sm0.getCacheFreeSize()).thenReturn(0L);
+    ServerMetrics sm1 = mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1, 0.0f,
+      new ArrayList<>(), 0, 10);
+    // Simulates 1GB free cache space on server1
+    when(sm1.getCacheFreeSize()).thenReturn(1024L * 1024 * 1024);
+    ServerMetrics sm2 = mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2, 1.0f,
+      new ArrayList<>(), 0, 10);
+    when(sm2.getCacheFreeSize()).thenReturn(0L);
+
+    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+    serverMetricsMap.put(server0, sm0);
+    serverMetricsMap.put(server1, sm1);
+    serverMetricsMap.put(server2, sm2);
+    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
+    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    loadBalancer.updateClusterMetrics(clusterMetrics);
+
+    assertTrue(loadBalancer.regionCacheRatioOnOldServerMap.isEmpty());
+
+    Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable =
+      (Map) mockClusterServersWithTables(clusterState);
+    List<RegionPlan> plans = loadBalancer.balanceCluster(loadOfAllTable);
+    assertNotNull(plans);
+
+    Set<RegionInfo> regionsMovedFromServer0 = new HashSet<>();
+    Map<ServerName, List<RegionInfo>> targetServers = new HashMap<>();
+    for (RegionPlan plan : plans) {
+      if (plan.getSource().equals(server0)) {
+        regionsMovedFromServer0.add(plan.getRegionInfo());
+        if (!targetServers.containsKey(plan.getDestination())) {
+          targetServers.put(plan.getDestination(), new ArrayList<>());
+        }
+        targetServers.get(plan.getDestination()).add(plan.getRegionInfo());
+      }
+    }
+    assertEquals(5, regionsMovedFromServer0.size());
+    assertNotNull(targetServers.get(server1));
     assertEquals(5, targetServers.get(server1).size());
   }
 
@@ -597,6 +663,154 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       assertNull(plans);
     } catch (NullPointerException npe) {
       fail("NPE should not be thrown");
+    }
+  }
+
+  /**
+   * This test verifies that when loadConf/onConfigurationChange is called on a
+   * CacheAwareLoadBalancer while a balance run is in progress, the configuration update: 1. Does
+   * not block (returns quickly without waiting for balancing to finish) 2. Does not affect the
+   * ongoing balance run (the configuration used during balancing remains the old one) 3. Is applied
+   * correctly after the balance run completes
+   */
+  @Test
+  @Timeout(60)
+  public void testConfigUpdateDuringBalance() throws Exception {
+    Float expectedOldRatioThreshold = 0.8f;
+    Float expectedNewRatioThreshold = 0.95f;
+    long throttleTimeMs = 10000;
+
+    // Actual old ratio threshold used during balance
+    float[] actualOldRatioThresholdDuringBalance = new float[1];
+
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY, "prefetch_file_list");
+    conf.setLong(CacheAwareLoadBalancer.MOVE_THROTTLING, throttleTimeMs);
+    conf.setFloat(CacheAwareLoadBalancer.CACHE_RATIO_THRESHOLD, expectedOldRatioThreshold);
+
+    CacheAwareLoadBalancer balancer = new CacheAwareLoadBalancer();
+    MasterServices services = mock(MasterServices.class);
+    when(services.getConfiguration()).thenReturn(conf);
+    balancer.setMasterServices(services);
+    balancer.loadConf(conf);
+    balancer.initialize();
+
+    Map<ServerName, List<RegionInfo>> clusterState = new HashMap<>();
+    ServerName server0 = servers.get(0);
+    ServerName server1 = servers.get(1);
+    ServerName server2 = servers.get(2);
+
+    // Setup cluster: all 3 regions on server0 (unbalanced)
+    List<RegionInfo> regionsOnServer0 = randomRegions(3);
+    List<RegionInfo> regionsOnServer1 = randomRegions(0);
+    List<RegionInfo> regionsOnServer2 = randomRegions(0);
+
+    clusterState.put(server0, regionsOnServer0);
+    clusterState.put(server1, regionsOnServer1);
+    clusterState.put(server2, regionsOnServer2);
+
+    // Mock metrics: NO cache info for any region = all will be throttled
+    Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
+    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
+      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
+      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
+      0.0f, new ArrayList<>(), 0, 10));
+
+    ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
+    when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
+    balancer.updateClusterMetrics(clusterMetrics);
+
+    final Map<TableName, Map<ServerName, List<RegionInfo>>> loadOfAllTable =
+      (Map) mockClusterServersWithTables(clusterState);
+
+    // Verify initial configuration
+    assertEquals(expectedOldRatioThreshold, balancer.ratioThreshold, 0.001f);
+
+    CountDownLatch balanceStarted = new CountDownLatch(1);
+    CountDownLatch updateConfigInitiated = new CountDownLatch(1);
+
+    long[] configUpdateDuration = new long[1];
+    long[] balanceDuration = new long[1];
+
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+
+    try {
+      // Thread 1 Simulate similar flow to HMaster.balance() which holds synchronized(balancer) for
+      // the duration of balance
+      Future<Long> balanceFuture = executor.submit(() -> {
+        try {
+          long start = EnvironmentEdgeManager.currentTime();
+          synchronized (balancer) {
+            try {
+              // Simulate beginning of HMaster.balance() mark balancing window open
+              balancer.onBalancingStart();
+              balanceStarted.countDown();
+              List<RegionPlan> plans = balancer.balanceCluster(loadOfAllTable);
+
+              LOG.info("Balance generated {} plans, executing with throttling",
+                plans != null ? plans.size() : 0);
+
+              if (plans != null) {
+                for (int i = 0; i < plans.size(); i++) {
+                  RegionPlan plan = plans.get(i);
+                  balancer.throttle(plan);
+                }
+              }
+              // Wait until config update is initiated while balance is still in progress
+              updateConfigInitiated.await();
+
+              // Old config should still be visible during current balance run
+              actualOldRatioThresholdDuringBalance[0] = balancer.ratioThreshold;
+            } finally {
+              balancer.onBalancingComplete();
+            }
+          }
+          return EnvironmentEdgeManager.currentTime() - start;
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      });
+
+      // Thread 2: Simulate update_all_config / onConfigurationChange
+      Future<Long> configUpdateFuture = executor.submit(() -> {
+        try {
+          // Wait for balance to start
+          balanceStarted.await();
+          long startTime = EnvironmentEdgeManager.currentTime();
+
+          // Call onConfigurationChange - should NOT hang
+          Configuration newConf = HBaseConfiguration.create();
+          newConf.set(HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY, "prefetch_file_list");
+          newConf.setLong(CacheAwareLoadBalancer.MOVE_THROTTLING, 10000);
+          newConf.setFloat(CacheAwareLoadBalancer.CACHE_RATIO_THRESHOLD, expectedNewRatioThreshold);
+          balancer.onConfigurationChange(newConf);
+          updateConfigInitiated.countDown();
+
+          return EnvironmentEdgeManager.currentTime() - startTime;
+        } catch (Exception e) {
+          throw new RuntimeException(e);
+        }
+      });
+
+      // Wait for both threads to complete
+      configUpdateDuration[0] = configUpdateFuture.get();
+      balanceDuration[0] = balanceFuture.get();
+      System.out.println("Balance duration (ms): " + balanceDuration[0]);
+      System.out.println("Config update duration (ms): " + configUpdateDuration[0]);
+
+      // Verify that ratio threshold used during balance is stll the old
+      assertEquals(expectedOldRatioThreshold, actualOldRatioThresholdDuringBalance[0], 0.001f);
+
+      // Verify that config updated successfully after balance completed
+      assertEquals(expectedNewRatioThreshold, balancer.ratioThreshold, 0.001f);
+
+      // Verify that config update didn't hang/timeout waiting for balance
+      assertTrue(configUpdateDuration[0] < balanceDuration[0]);
+
+    } finally {
+      executor.shutdownNow();
     }
   }
 }

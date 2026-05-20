@@ -562,7 +562,7 @@ public class TableSnapshotInputFormatImpl {
     return getBestLocations(conf, blockDistribution, 3);
   }
 
-  private static String getSnapshotName(Configuration conf) {
+  public static String getSnapshotName(Configuration conf) {
     String snapshotName = conf.get(SNAPSHOT_NAME_KEY);
     if (snapshotName == null) {
       throw new IllegalArgumentException("Snapshot name must be provided");

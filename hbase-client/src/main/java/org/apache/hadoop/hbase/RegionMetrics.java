@@ -138,4 +138,10 @@ public interface RegionMetrics {
 
   /** Returns current prefetch ratio of this region on this server */
   float getCurrentRegionCachedRatio();
+
+  /**
+   * Returns the ratio of tiered cold data size to total region (HFiles) size on this server, in the
+   * range [0,1].
+   */
+  float getCurrentRegionColdDataRatio();
 }

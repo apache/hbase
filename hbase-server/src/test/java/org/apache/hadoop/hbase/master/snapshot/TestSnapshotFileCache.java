@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -43,12 +42,11 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,12 +58,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 /**
  * Test that we correctly reload the cache, filter directories, etc.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotFileCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotFileCache.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFileCache.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -86,19 +81,19 @@ public class TestSnapshotFileCache {
     conf = UTIL.getConfiguration();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     initCommon();
     workingDir = SnapshotDescriptionUtils.getWorkingSnapshotDir(rootDir, conf);
     workingFs = workingDir.getFileSystem(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopCluster() throws Exception {
     UTIL.shutdownMiniDFSCluster();
   }
 
-  @After
+  @AfterEach
   public void cleanupFiles() throws Exception {
     // cleanup the snapshot directory
     fs.delete(snapshotDir, true);
@@ -229,7 +224,7 @@ public class TestSnapshotFileCache {
       files.addAll(SnapshotReferenceUtil.getHFileNames(conf, workingFs, snapshotDir));
       return files;
     }
-  };
+  }
 
   private SnapshotMock.SnapshotBuilder createAndTestSnapshotV1(final SnapshotFileCache cache,
     final String name, final boolean tmp, final boolean removeOnExit, boolean setFolderTime)
@@ -256,8 +251,8 @@ public class TestSnapshotFileCache {
         if (tmp) {
           // We should be able to find all the files while the snapshot creation is in-progress
           CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
-          assertFalse("Cache didn't find " + filePath,
-            contains(getNonSnapshotFiles(cache, filePath), filePath));
+          assertFalse(contains(getNonSnapshotFiles(cache, filePath), filePath),
+            "Cache didn't find " + filePath);
         }
         files.add(filePath);
       }
@@ -274,7 +269,7 @@ public class TestSnapshotFileCache {
 
     // Make sure that all files are still present
     for (Path path : files) {
-      assertFalse("Cache didn't find " + path, contains(getNonSnapshotFiles(cache, path), path));
+      assertFalse(contains(getNonSnapshotFiles(cache, path), path), "Cache didn't find " + path);
     }
 
     CommonFSUtils.logFileSystemState(fs, rootDir, LOG);
@@ -287,8 +282,8 @@ public class TestSnapshotFileCache {
       cache.triggerCacheRefreshForTesting();
       // and not it shouldn't find those files
       for (Path filePath : files) {
-        assertTrue("Cache found '" + filePath + "', but it shouldn't have.",
-          contains(getNonSnapshotFiles(cache, filePath), filePath));
+        assertTrue(contains(getNonSnapshotFiles(cache, filePath), filePath),
+          "Cache found '" + filePath + "', but it shouldn't have.");
 
       }
     }

@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.tool;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.security.HadoopSecurityEnabledUserProviderForTesting;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -25,31 +24,28 @@ import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
- * Reruns TestSecureLoadIncrementalHFilesSplitRecovery using LoadIncrementalHFiles in secure mode.
- * This suite is unable to verify the security handoff/turnove as miniCluster is running as system
- * user thus has root privileges and delegation tokens don't seem to work on miniDFS.
- * <p>
+ * Reruns TestLoadIncrementalHFilesSplitRecovery using BulkLoadHFiles in secure mode. This suite is
+ * unable to verify the security handoff/turnover as miniCluster is running as system user thus has
+ * root privileges and delegation tokens don't seem to work on miniDFS.
+ * <p/>
  * Thus SecureBulkload can only be completely verified by running integration tests against a secure
  * cluster. This suite is still invaluable as it verifies the other mechanisms that need to be
  * supported as part of a LoadIncrementalFiles call.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSecureLoadIncrementalHFilesSplitRecovery
-  extends TestLoadIncrementalHFilesSplitRecovery {
+  extends BulkLoadHFilesSplitRecoveryTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureLoadIncrementalHFilesSplitRecovery.class);
-
-  // This "overrides" the parent static method
-  // make sure they are in sync
-  @BeforeClass
+  // This "overrides" the parent static method; make sure they are in sync.
+  @BeforeAll
   public static void setupCluster() throws Exception {
     util = new HBaseTestingUtility();
     // set the always on security provider
@@ -64,9 +60,9 @@ public class TestSecureLoadIncrementalHFilesSplitRecovery
     util.waitTableEnabled(PermissionStorage.ACL_TABLE_NAME);
   }
 
-  // Disabling this test as it does not work in secure mode
+  // Disabling this test as it does not work in secure mode.
   @Test
-  @Override
-  public void testBulkLoadPhaseFailure() {
+  @Disabled
+  public void testBulkLoadPhaseFailure(TestInfo testInfo) {
   }
 }

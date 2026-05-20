@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -27,7 +27,6 @@ import java.security.Security;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.bouncycastle.asn1.x500.X500Name;
@@ -36,11 +35,10 @@ import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
@@ -50,15 +48,13 @@ import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
  *      "https://github.com/apache/zookeeper/blob/5820d10d9dc58c8e12d2e25386fdf92acb360359/zookeeper-server/src/test/java/org/apache/zookeeper/common/ZKHostnameVerifierTest.java">Base
  *      revision</a>
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseHostnameVerifier {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseHostnameVerifier.class);
   private static CertificateCreator certificateCreator;
   private HBaseHostnameVerifier impl;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     Security.addProvider(new BouncyCastleProvider());
     X500NameBuilder caNameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
@@ -69,7 +65,7 @@ public class TestHBaseHostnameVerifier {
     certificateCreator = new CertificateCreator(keyPair, caCert);
   }
 
-  @Before
+  @BeforeEach
   public void setup() {
     impl = new HBaseHostnameVerifier();
   }
@@ -242,11 +238,7 @@ public class TestHBaseHostnameVerifier {
 
   private void exceptionPlease(final HBaseHostnameVerifier hv, final String host,
     final X509Certificate x509) {
-    try {
-      hv.verify(host, x509);
-      fail("HostnameVerifier shouldn't allow [" + host + "]");
-    } catch (final SSLException e) {
-      // whew! we're okay!
-    }
+    assertThrows(SSLException.class, () -> hv.verify(host, x509),
+      "HostnameVerifier shouldn't allow [" + host + "]");
   }
 }

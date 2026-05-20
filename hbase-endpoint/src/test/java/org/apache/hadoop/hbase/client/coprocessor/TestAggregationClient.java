@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.client.coprocessor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -35,18 +34,14 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, CoprocessorTests.class })
+@Tag(MediumTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestAggregationClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAggregationClient.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -58,7 +53,7 @@ public class TestAggregationClient {
 
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -69,7 +64,7 @@ public class TestAggregationClient {
     TABLE = CONN.getTable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     CONN.close();
     UTIL.shutdownMiniCluster();

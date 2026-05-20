@@ -399,6 +399,11 @@ public class RegionLoad implements RegionMetrics {
     return metrics.getCurrentRegionCachedRatio();
   }
 
+  @Override
+  public float getCurrentRegionColdDataRatio() {
+    return metrics.getCurrentRegionColdDataRatio();
+  }
+
   /**
    * @see java.lang.Object#toString()
    */

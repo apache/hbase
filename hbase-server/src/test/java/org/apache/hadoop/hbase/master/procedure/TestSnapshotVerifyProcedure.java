@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -44,25 +48,20 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotVerifyProcedure {
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotVerifyProcedure.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotVerifyProcedure.class);
 
   private HBaseTestingUtility TEST_UTIL;
   private final TableName tableName = TableName.valueOf("TestRSSnapshotVerifier");
@@ -72,7 +71,7 @@ public class TestSnapshotVerifyProcedure {
   private SnapshotProtos.SnapshotDescription snapshotProto =
     ProtobufUtil.createHBaseProtosSnapshotDesc(snapshot);
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -113,14 +112,14 @@ public class TestSnapshotVerifyProcedure {
   public void testSimpleVerify() throws Exception {
     Optional<HRegion> regionOpt = TEST_UTIL.getHBaseCluster().getRegions(tableName).stream()
       .filter(r -> !r.getStore(cf).getStorefiles().isEmpty()).findFirst();
-    Assert.assertTrue(regionOpt.isPresent());
+    assertTrue(regionOpt.isPresent());
     HRegion region = regionOpt.get();
     SnapshotVerifyProcedure p1 = new SnapshotVerifyProcedure(snapshotProto, region.getRegionInfo());
     ProcedureExecutor<MasterProcedureEnv> procExec =
       TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
     long procId = procExec.submitProcedure(p1);
     ProcedureTestingUtility.waitProcedure(procExec, procId);
-    Assert.assertTrue(p1.isSuccess());
+    assertTrue(p1.isSuccess());
 
     // delete store file to trigger a CorruptedSnapshotException
     for (HStoreFile file : region.getStore(cf).getStorefiles()) {
@@ -130,7 +129,7 @@ public class TestSnapshotVerifyProcedure {
     SnapshotVerifyProcedure p2 = new SnapshotVerifyProcedure(snapshotProto, region.getRegionInfo());
     long newProcId = procExec.submitProcedure(p2);
     ProcedureTestingUtility.waitProcedure(procExec, newProcId);
-    Assert.assertTrue(p2.isSuccess());
+    assertTrue(p2.isSuccess());
   }
 
   @Test
@@ -153,20 +152,18 @@ public class TestSnapshotVerifyProcedure {
     master = TEST_UTIL.getHBaseCluster().getMaster();
     SnapshotVerifyProcedure svp2 =
       master.getMasterProcedureExecutor().getProcedure(SnapshotVerifyProcedure.class, procId);
-    Assert.assertNotNull(svp2);
-    Assert.assertFalse(svp2.isFinished());
-    Assert.assertNotNull(svp2.getServerName());
-    Assert.assertEquals(worker, svp.getServerName());
-    Assert.assertEquals((int) master.getSnapshotManager().getAvailableWorker(worker),
-      availableWorker);
+    assertNotNull(svp2);
+    assertFalse(svp2.isFinished());
+    assertNotNull(svp2.getServerName());
+    assertEquals(worker, svp.getServerName());
+    assertEquals((int) master.getSnapshotManager().getAvailableWorker(worker), availableWorker);
 
     // release worker
     ProcedureTestingUtility.waitProcedure(master.getMasterProcedureExecutor(), svp2);
-    Assert.assertEquals((int) master.getSnapshotManager().getAvailableWorker(worker),
-      availableWorker + 1);
+    assertEquals((int) master.getSnapshotManager().getAvailableWorker(worker), availableWorker + 1);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

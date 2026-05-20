@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -30,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.SortedSet;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableExistsException;
@@ -49,44 +48,39 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsAdmin1.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsAdmin1.class);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     setUpTestBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
-  @Before
-  public void beforeMethod() throws Exception {
-    setUpBeforeMethod();
+  @BeforeEach
+  public void beforeMethod(TestInfo testInfo) throws Exception {
+    setUpBeforeMethod(testInfo);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     tearDownAfterMethod();
   }
@@ -224,7 +218,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     rsGroupAdmin.moveServers(barGroup.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(barGroup.getName());
 
-    Assert.assertEquals(initNumGroups, rsGroupAdmin.listRSGroups().size());
+    assertEquals(initNumGroups, rsGroupAdmin.listRSGroups().size());
   }
 
   @Test
@@ -263,11 +257,9 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     rsGroupAdmin.moveTables(Sets.newHashSet(tableNameA, tableNameB), newGroup.getName());
 
     // verify group change
-    Assert.assertEquals(newGroup.getName(),
-      rsGroupAdmin.getRSGroupInfoOfTable(tableNameA).getName());
+    assertEquals(newGroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tableNameA).getName());
 
-    Assert.assertEquals(newGroup.getName(),
-      rsGroupAdmin.getRSGroupInfoOfTable(tableNameB).getName());
+    assertEquals(newGroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tableNameB).getName());
 
     // verify tables' not exist in old group
     Set<TableName> DefaultTables =
@@ -308,8 +300,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
 
     // verify group change
-    Assert.assertEquals(newGroup.getName(),
-      rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+    assertEquals(newGroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
 
     TEST_UTIL.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
       @Override
@@ -330,13 +321,12 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     // test truncate
     admin.disableTable(tableName);
     admin.truncateTable(tableName, true);
-    Assert.assertEquals(1, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
-    Assert.assertEquals(tableName,
-      rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().first());
+    assertEquals(1, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
+    assertEquals(tableName, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().first());
 
     // verify removed table is removed from group
     TEST_UTIL.deleteTable(tableName);
-    Assert.assertEquals(0, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
+    assertEquals(0, rsGroupAdmin.getRSGroupInfo(newGroup.getName()).getTables().size());
 
     assertTrue(observer.preMoveTablesCalled);
     assertTrue(observer.postMoveTablesCalled);
@@ -371,8 +361,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     rsGroupAdmin.moveTables(Sets.newHashSet(tableName), newGroup.getName());
 
     // verify group change
-    Assert.assertEquals(newGroup.getName(),
-      rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
+    assertEquals(newGroup.getName(), rsGroupAdmin.getRSGroupInfoOfTable(tableName).getName());
   }
 
   @Test
@@ -427,13 +416,13 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
 
     try {
       admin.createTable(tableDescTwo, Bytes.toBytes("AAA"), Bytes.toBytes("ZZZ"), 6);
-      Assert.fail("Creation table should fail because of quota violation.");
+      fail("Creation table should fail because of quota violation.");
     } catch (Exception exp) {
       assertTrue(exp instanceof IOException);
       constraintViolated = true;
     } finally {
-      assertTrue("Constraint not violated for table " + tableDescTwo.getTableName(),
-        constraintViolated);
+      assertTrue(constraintViolated,
+        "Constraint not violated for table " + tableDescTwo.getTableName());
     }
     List<RSGroupInfo> rsGroupInfoList = rsGroupAdmin.listRSGroups();
     boolean foundTable2 = false;
@@ -446,8 +435,8 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
         foundTable1 = true;
       }
     }
-    assertFalse("Found table2 in rsgroup list.", foundTable2);
-    assertTrue("Did not find table1 in rsgroup list", foundTable1);
+    assertFalse(foundTable2, "Found table2 in rsgroup list.");
+    assertTrue(foundTable1, "Did not find table1 in rsgroup list");
 
     TEST_UTIL.deleteTable(tableDescOne.getTableName());
     admin.deleteNamespace(nspDesc.getName());
@@ -480,7 +469,7 @@ public class TestRSGroupsAdmin1 extends TestRSGroupsBase {
     });
     SortedSet<TableName> tables =
       rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getTables();
-    assertTrue("Table 't1' must be in 'default' rsgroup", tables.contains(tn1));
+    assertTrue(tables.contains(tn1), "Table 't1' must be in 'default' rsgroup");
 
     // Cleanup
     TEST_UTIL.deleteTable(tn1);

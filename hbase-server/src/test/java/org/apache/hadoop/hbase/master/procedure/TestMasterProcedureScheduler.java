@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -30,7 +30,6 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -46,42 +45,40 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.TestProcedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMasterProcedureScheduler {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterProcedureScheduler.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterProcedureScheduler.class);
 
   private MasterProcedureScheduler queue;
 
   private Map<Long, Procedure<?>> procedures;
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     procedures = new HashMap<>();
     queue = new MasterProcedureScheduler(procedures::get);
     queue.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
-    assertEquals("proc-queue expected to be empty", 0, queue.size());
+    assertEquals(0, queue.size(), "proc-queue expected to be empty");
     queue.stop();
     queue.clear();
   }
@@ -135,7 +132,7 @@ public class TestMasterProcedureScheduler {
    */
   @Test
   public void testCreateDeleteTableOperationsWithWriteLock() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     final TestTableProcedure dummyProc =
       new TestTableProcedure(100, tableName, TableProcedureInterface.TableOperationType.DELETE);
@@ -166,7 +163,7 @@ public class TestMasterProcedureScheduler {
    */
   @Test
   public void testCreateDeleteTableOperationsWithReadLock() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final int nitems = 2;
 
     final TestTableProcedure dummyProc =
@@ -210,7 +207,7 @@ public class TestMasterProcedureScheduler {
    */
   @Test
   public void testVerifyRwLocks() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     queue.addBack(
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(
@@ -271,15 +268,15 @@ public class TestMasterProcedureScheduler {
 
     // remove table queue
     assertEquals(0, queue.size());
-    assertTrue("queue should be deleted", queue.markTableAsDeleted(tableName, wrProc));
+    assertTrue(queue.markTableAsDeleted(tableName, wrProc), "queue should be deleted");
   }
 
   @Test
   public void testVerifyNamespaceRwLocks() throws Exception {
     String nsName1 = "ns1";
     String nsName2 = "ns2";
-    TableName tableName1 = TableName.valueOf(nsName1, name.getMethodName());
-    TableName tableName2 = TableName.valueOf(nsName2, name.getMethodName());
+    TableName tableName1 = TableName.valueOf(nsName1, testMethodName);
+    TableName tableName2 = TableName.valueOf(nsName2, testMethodName);
     queue.addBack(
       new TestNamespaceProcedure(1, nsName1, TableProcedureInterface.TableOperationType.EDIT));
     queue.addBack(
@@ -329,7 +326,7 @@ public class TestMasterProcedureScheduler {
   @Test
   public void testVerifyNamespaceXLock() throws Exception {
     String nsName = "ns1";
-    TableName tableName = TableName.valueOf(nsName, name.getMethodName());
+    TableName tableName = TableName.valueOf(nsName, testMethodName);
     queue.addBack(
       new TestNamespaceProcedure(1, nsName, TableProcedureInterface.TableOperationType.CREATE));
     queue.addBack(
@@ -354,7 +351,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testXLockWaitingForExecutingSharedLockToRelease() {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final RegionInfo regionA = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
 
@@ -400,7 +397,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testVerifyRegionLocks() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final RegionInfo regionA = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
     final RegionInfo regionB = RegionInfoBuilder.newBuilder(tableName)
@@ -476,7 +473,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testVerifySubProcRegionLocks() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final RegionInfo regionA = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
     final RegionInfo regionB = RegionInfoBuilder.newBuilder(tableName)
@@ -538,7 +535,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testInheritedRegionXLock() {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final RegionInfo region = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
 
@@ -582,7 +579,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testSuspendedProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     queue.addBack(
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ));
@@ -620,7 +617,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testParentXLockAndChildrenSharedLock() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final RegionInfo[] regions = generateRegionInfo(tableName);
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
@@ -634,7 +631,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testRootXLockAndChildrenSharedLock() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final RegionInfo[] regions = generateRegionInfo(tableName);
     final TestRegionProcedure[] childProcs = new TestRegionProcedure[regions.length];
     for (int i = 0; i < regions.length; ++i) {
@@ -694,7 +691,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testParentXLockAndChildrenXLock() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
       new TestTableProcedure(1, 2, tableName, TableProcedureInterface.TableOperationType.EDIT));
@@ -702,7 +699,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testRootXLockAndChildrenXLock() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     // simulate 3 procedures: 1 (root), (2) child of root, (3) child of proc-2
     testInheritedXLockAndChildrenXLock(tableName,
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT),
@@ -739,7 +736,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testYieldWithXLockHeld() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     queue.addBack(
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.EDIT));
@@ -770,7 +767,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testYieldWithSharedLockHeld() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
 
     queue.addBack(
       new TestTableProcedure(1, tableName, TableProcedureInterface.TableOperationType.READ));
@@ -1148,7 +1145,7 @@ public class TestMasterProcedureScheduler {
 
   @Test
   public void testAcquireSharedLockWhileParentHoldingExclusiveLock() {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(testMethodName);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
 
     TestTableProcedure parentProc = new TestTableProcedure(1, tableName, TableOperationType.EDIT);

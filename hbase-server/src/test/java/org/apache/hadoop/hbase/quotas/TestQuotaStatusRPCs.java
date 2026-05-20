@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -40,36 +39,28 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.policies.MissingSnapshotViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test class for the quota status RPCs in the master and regionserver.
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestQuotaStatusRPCs {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaStatusRPCs.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestQuotaStatusRPCs.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final AtomicLong COUNTER = new AtomicLong(0);
 
-  @Rule
-  public TestName testName = new TestName();
   private SpaceQuotaHelperForTests helper;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Increase the frequency of some of the chores for responsiveness of the test
@@ -77,14 +68,15 @@ public class TestQuotaStatusRPCs {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setupForTest() throws Exception {
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
+  @BeforeEach
+  public void setupForTest(TestInfo testInfo) throws Exception {
+    helper =
+      new SpaceQuotaHelperForTests(TEST_UTIL, testInfo.getTestMethod().get().getName(), COUNTER);
   }
 
   @Test
@@ -110,8 +102,8 @@ public class TestQuotaStatusRPCs {
 
     Map<TableName, Long> sizes = TEST_UTIL.getAdmin().getSpaceQuotaTableSizes();
     Long size = sizes.get(tn);
-    assertNotNull("No reported size for " + tn, size);
-    assertTrue("Reported table size was " + size, size.longValue() >= tableSize);
+    assertNotNull(size, "No reported size for " + tn);
+    assertTrue(size.longValue() >= tableSize, "Reported table size was " + size);
   }
 
   @Test
@@ -146,8 +138,8 @@ public class TestQuotaStatusRPCs {
     Map<TableName, SpaceQuotaSnapshot> snapshots = (Map<TableName, SpaceQuotaSnapshot>) TEST_UTIL
       .getAdmin().getRegionServerSpaceQuotaSnapshots(rs.getServerName());
     SpaceQuotaSnapshot snapshot = snapshots.get(tn);
-    assertNotNull("Did not find snapshot for " + tn, snapshot);
-    assertTrue("Observed table usage was " + snapshot.getUsage(), snapshot.getUsage() >= tableSize);
+    assertNotNull(snapshot, "Did not find snapshot for " + tn);
+    assertTrue(snapshot.getUsage() >= tableSize, "Observed table usage was " + snapshot.getUsage());
     assertEquals(sizeLimit, snapshot.getLimit());
     SpaceQuotaStatus pbStatus = snapshot.getQuotaStatus();
     assertFalse(pbStatus.isInViolation());
@@ -192,7 +184,7 @@ public class TestQuotaStatusRPCs {
     Map<TableName, SpaceQuotaSnapshot> snapshots = (Map<TableName, SpaceQuotaSnapshot>) TEST_UTIL
       .getAdmin().getRegionServerSpaceQuotaSnapshots(rs.getServerName());
     SpaceQuotaSnapshot snapshot = snapshots.get(tn);
-    assertNotNull("Did not find snapshot for " + tn, snapshot);
+    assertNotNull(snapshot, "Did not find snapshot for " + tn);
     assertTrue(snapshot.getQuotaStatus().isInViolation());
     assertEquals(SpaceViolationPolicy.NO_INSERTS, snapshot.getQuotaStatus().getPolicy().get());
   }
@@ -253,8 +245,8 @@ public class TestQuotaStatusRPCs {
     // and force the table to move into violation before we write the second bit of data.
     SpaceQuotaSnapshot snapshot =
       (SpaceQuotaSnapshot) conn.getAdmin().getCurrentSpaceQuotaSnapshot(tn);
-    assertTrue("QuotaSnapshot for " + tn + " should be non-null and not in violation",
-      snapshot != null && !snapshot.getQuotaStatus().isInViolation());
+    assertTrue(snapshot != null && !snapshot.getQuotaStatus().isInViolation(),
+      "QuotaSnapshot for " + tn + " should be non-null and not in violation");
 
     try {
       helper.writeData(tn, tableSize * 2L);

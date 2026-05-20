@@ -18,18 +18,18 @@
 package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,20 +41,15 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDefaultScanLabelGeneratorStack {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultScanLabelGeneratorStack.class);
 
   public static final String CONFIDENTIAL = "confidential";
   private static final String SECRET = "secret";
@@ -69,12 +64,10 @@ public class TestDefaultScanLabelGeneratorStack {
   private final static byte[] value3 = Bytes.toBytes("value3");
   public static Configuration conf;
 
-  @Rule
-  public final TestName TEST_NAME = new TestName();
   public static User SUPERUSER;
   public static User TESTUSER;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // setup configuration
     conf = TEST_UTIL.getConfiguration();
@@ -104,8 +97,9 @@ public class TestDefaultScanLabelGeneratorStack {
   }
 
   @Test
-  public void testDefaultScanLabelGeneratorStack() throws Exception {
-    final TableName tableName = TableName.valueOf(TEST_NAME.getMethodName());
+  public void testDefaultScanLabelGeneratorStack(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
 
     SUPERUSER.runAs(new PrivilegedExceptionAction<Void>() {
       @Override
@@ -258,7 +252,7 @@ public class TestDefaultScanLabelGeneratorStack {
     return next;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

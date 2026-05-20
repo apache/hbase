@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.protobuf.RpcCallback;
 import com.google.protobuf.RpcController;
@@ -27,10 +27,12 @@ import com.google.protobuf.Service;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Collections;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.AsyncAdmin;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.TestAsyncAdminBase;
@@ -43,24 +45,23 @@ import org.apache.hadoop.hbase.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.ipc.protobuf.generated.TestRpcServiceProtos;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
-@RunWith(Parameterized.class)
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncCoprocessorEndpoint.class);
 
   private static final FileNotFoundException WHAT_TO_THROW = new FileNotFoundException("/file.txt");
   private static final String DUMMY_VALUE = "val";
 
-  @BeforeClass
+  public TestAsyncCoprocessorEndpoint(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -73,7 +74,7 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @Test
+  @TestTemplate
   public void testMasterCoprocessorService() throws Exception {
     TestProtos.EchoRequestProto request =
       TestProtos.EchoRequestProto.newBuilder().setMessage("hello").build();
@@ -85,7 +86,7 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     assertEquals("hello", response.getMessage());
   }
 
-  @Test
+  @TestTemplate
   public void testMasterCoprocessorError() throws Exception {
     TestProtos.EmptyRequestProto emptyRequest = TestProtos.EmptyRequestProto.getDefaultInstance();
     try {
@@ -99,7 +100,7 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRegionServerCoprocessorService() throws Exception {
     final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     DummyRegionServerEndpointProtos.DummyRequest request =
@@ -113,7 +114,7 @@ public class TestAsyncCoprocessorEndpoint extends TestAsyncAdminBase {
     assertEquals(DUMMY_VALUE, response.getValue());
   }
 
-  @Test
+  @TestTemplate
   public void testRegionServerCoprocessorServiceError() throws Exception {
     final ServerName serverName = TEST_UTIL.getHBaseCluster().getRegionServer(0).getServerName();
     DummyRegionServerEndpointProtos.DummyRequest request =

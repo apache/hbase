@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.master.janitor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -41,26 +40,17 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCatalogJanitorCluster {
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitorCluster.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogJanitorCluster.class);
-
-  @Rule
-  public final TestName name = new TestName();
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName T1 = TableName.valueOf("t1");
@@ -71,7 +61,7 @@ public class TestCatalogJanitorCluster {
   private static final TableName T6 = TableName.valueOf("t6");
   private static final TableName T7 = TableName.valueOf("t7");
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.createMultiRegionTable(T1, new byte[][] { HConstants.CATALOG_FAMILY });
@@ -91,7 +81,7 @@ public class TestCatalogJanitorCluster {
     TEST_UTIL.createMultiRegionTable(T7, new byte[][] { HConstants.CATALOG_FAMILY });
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -259,11 +249,11 @@ public class TestCatalogJanitorCluster {
     janitor.scan();
     CatalogJanitorReport report = janitor.getLastReport();
     // Verify total number of holes, 2 in t1, t2, t6 each and one in t3
-    assertEquals("Number of holes are not matching", 7, report.getHoles().size());
+    assertEquals(7, report.getHoles().size(), "Number of holes are not matching");
     metaFixer.fix();
     janitor.scan();
     report = janitor.getLastReport();
-    assertEquals("Holes are not fixed", 0, report.getHoles().size());
+    assertEquals(0, report.getHoles().size(), "Holes are not fixed");
   }
 
   private void verifyMiddleHole(CatalogJanitor janitor) throws IOException {

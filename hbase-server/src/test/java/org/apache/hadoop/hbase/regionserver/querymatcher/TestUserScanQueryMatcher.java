@@ -17,19 +17,20 @@
  */
 package org.apache.hadoop.hbase.regionserver.querymatcher;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValue.Type;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.filter.FilterBase;
@@ -38,18 +39,14 @@ import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher.MatchC
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestUserScanQueryMatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestUserScanQueryMatcher.class);
 
@@ -295,6 +292,19 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     }
   }
 
+  private static class FixedSkipHintFilter extends FilterBase {
+    final ExtendedCell hint;
+
+    FixedSkipHintFilter(ExtendedCell hint) {
+      this.hint = hint;
+    }
+
+    @Override
+    public Cell getSkipHint(Cell skippedCell) throws IOException {
+      return hint;
+    }
+  }
+
   /**
    * Here is the unit test for UserScanQueryMatcher#mergeFilterResponse, when the number of cells
    * exceed the versions requested in scan, we should return SEEK_NEXT_COL, but if current match
@@ -396,5 +406,356 @@ public class TestUserScanQueryMatcher extends AbstractTestScanQueryMatcher {
     ExtendedCell lastCell = memstore.get(memstore.size() - 1);
     Cell nextCell = qm.getKeyForNextColumn(lastCell);
     assertArrayEquals(nextCell.getQualifierArray(), col4);
+  }
+
+  /** Verify that getSkipHint is consulted when a cell is newer than the time-range upper bound. */
+  @Test
+  public void testSkipHintConsultedForCellNewerThanTimeRange() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long minTs = now - 2000;
+    long maxTs = now - 1000;
+
+    KeyValue hintCell = new KeyValue(row2, fam2, col1, now - 1500, data);
+    Scan timeRangeScan = new Scan().addFamily(fam2).setTimeRange(minTs, maxTs)
+      .setFilter(new FixedSkipHintFilter(hintCell));
+
+    long now2 = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(timeRangeScan,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, 0, now2, null);
+
+    // ts=now2 >= maxTs, so tsCmp > 0: time-range gate fires before filterCell.
+    KeyValue tooNew = new KeyValue(row1, fam2, col1, now2, data);
+    qm.setToNewRow(tooNew);
+
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooNew));
+    assertEquals(hintCell, qm.getNextKeyHint(tooNew));
+    assertNull(qm.getNextKeyHint(tooNew));
+  }
+
+  /** Verify that getSkipHint is consulted when a cell is older than the time-range lower bound. */
+  @Test
+  public void testSkipHintConsultedForCellOlderThanTimeRange() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long minTs = now - 500;
+    long maxTs = now;
+
+    KeyValue hintCell = new KeyValue(row2, fam2, col1, now - 100, data);
+    Scan timeRangeScan = new Scan().addFamily(fam2).setTimeRange(minTs, maxTs)
+      .setFilter(new FixedSkipHintFilter(hintCell));
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(timeRangeScan,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, 0, now, null);
+
+    // ts = now-1000 < minTs (now-500), so tsCmp < 0: time-range gate fires.
+    KeyValue tooOld = new KeyValue(row1, fam2, col1, now - 1000, data);
+    qm.setToNewRow(tooOld);
+
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooOld));
+    assertEquals(hintCell, qm.getNextKeyHint(tooOld));
+    assertNull(qm.getNextKeyHint(tooOld));
+  }
+
+  /** Verify that a null getSkipHint falls back to the original SKIP match code. */
+  @Test
+  public void testNullSkipHintFallsThroughToOriginalCodeOnTimeRangeGate() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long minTs = now - 2000;
+    long maxTs = now - 1000;
+
+    Scan timeRangeScan =
+      new Scan().addFamily(fam2).setTimeRange(minTs, maxTs).setFilter(new AlwaysIncludeFilter());
+
+    long now2 = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(timeRangeScan,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, 0, now2, null);
+
+    KeyValue tooNew = new KeyValue(row1, fam2, col1, now2, data);
+    qm.setToNewRow(tooNew);
+
+    assertEquals(MatchCode.SKIP, qm.match(tooNew));
+  }
+
+  /** Verify that getSkipHint is consulted when a column is excluded by the scan's column set. */
+  @Test
+  public void testSkipHintConsultedForExcludedColumn() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+
+    // get.getFamilyMap().get(fam2) contains col2, col4, col5; presenting col1 triggers exclusion.
+    KeyValue hintCell = new KeyValue(row1, fam2, col2, 1, data);
+    Scan scanWithFilter = new Scan(scan).setFilter(new FixedSkipHintFilter(hintCell));
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(
+      scanWithFilter, new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE,
+        HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false),
+      get.getFamilyMap().get(fam2), now - ttl, now, null);
+
+    // col1 is not in {col2, col4, col5}: checkColumn returns a non-INCLUDE code.
+    KeyValue excludedCol = new KeyValue(row1, fam2, col1, 1, data);
+    qm.setToNewRow(excludedCol);
+
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(excludedCol));
+    assertEquals(hintCell, qm.getNextKeyHint(excludedCol));
+    assertNull(qm.getNextKeyHint(excludedCol));
+  }
+
+  /** Verify that getSkipHint is consulted when the version limit is exhausted. */
+  @Test
+  public void testSkipHintConsultedOnVersionExhaustion() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+
+    KeyValue hintCell = new KeyValue(row2, fam2, col1, now, data);
+    Scan scanWithFilter = new Scan().addFamily(fam2).setFilter(new FixedSkipHintFilter(hintCell));
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithFilter,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, now - ttl, now, null);
+
+    KeyValue version1 = new KeyValue(row1, fam2, col1, now - 10, data);
+    qm.setToNewRow(version1);
+    assertEquals(MatchCode.INCLUDE, qm.match(version1));
+
+    // Second version: version limit exceeded, checkVersions returns SEEK_NEXT_COL.
+    KeyValue version2 = new KeyValue(row1, fam2, col1, now - 20, data);
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(version2));
+    assertEquals(hintCell, qm.getNextKeyHint(version2));
+    assertNull(qm.getNextKeyHint(version2));
+  }
+
+  /** Verify that pendingSkipHint is cleared when a row transition occurs via setToNewRow. */
+  @Test
+  public void testPendingSkipHintClearedOnRowTransition() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+
+    KeyValue hintCell = new KeyValue(row2, fam2, col1, now, data);
+    Scan scanWithFilter = new Scan().addFamily(fam2).setFilter(new FixedSkipHintFilter(hintCell));
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithFilter,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, now - ttl, now, null);
+
+    // Trigger a structural skip that stores pendingSkipHint.
+    KeyValue version1 = new KeyValue(row1, fam2, col1, now - 10, data);
+    qm.setToNewRow(version1);
+    assertEquals(MatchCode.INCLUDE, qm.match(version1));
+    KeyValue version2 = new KeyValue(row1, fam2, col1, now - 20, data);
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(version2));
+
+    // Do NOT consume the hint via getNextKeyHint. Instead, simulate a row transition.
+    KeyValue newRowCell = new KeyValue(row2, fam2, col1, now - 10, data);
+    qm.setToNewRow(newRowCell);
+
+    // After row transition, pendingSkipHint must be null — getNextKeyHint should delegate
+    // to the filter's getNextCellHint (which returns null for FixedSkipHintFilter).
+    assertNull(qm.getNextKeyHint(newRowCell));
+  }
+
+  /** Verify that the normal filterCell/getNextCellHint path is unaffected by pendingSkipHint. */
+  @Test
+  public void testNormalFilterCellHintPathUnaffectedBySkipHintChange() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+
+    final KeyValue filterHintCell = new KeyValue(row2, fam2, col1, now, data);
+
+    FilterBase seekFilter = new FilterBase() {
+      @Override
+      public ReturnCode filterCell(Cell c) {
+        return ReturnCode.SEEK_NEXT_USING_HINT;
+      }
+
+      @Override
+      public Cell getNextCellHint(Cell currentCell) {
+        return filterHintCell;
+      }
+    };
+
+    Scan scanWithFilter = new Scan().addFamily(fam2).setFilter(seekFilter);
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithFilter,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, now - ttl, now, null);
+
+    KeyValue cell = new KeyValue(row1, fam2, col1, now - 10, data);
+    qm.setToNewRow(cell);
+
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(cell));
+    assertEquals(filterHintCell, qm.getNextKeyHint(cell));
+  }
+
+  /** Verify that getSkipHint works correctly for reversed scans (hint must be smaller). */
+  @Test
+  public void testSkipHintConsultedForReversedScan() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long minTs = now - 2000;
+    long maxTs = now - 1000;
+
+    // For reversed scan, the hint must point backward (smaller key).
+    KeyValue hintCell = new KeyValue(row1, fam2, col1, now - 1500, data);
+    Scan reversedScan = new Scan().addFamily(fam2).setTimeRange(minTs, maxTs).setReversed(true)
+      .setFilter(new FixedSkipHintFilter(hintCell));
+
+    long now2 = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(reversedScan,
+      new ScanInfo(this.conf, fam2, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, 0, now2, null);
+
+    // ts=now2 >= maxTs so tsCmp > 0: time-range gate fires.
+    // row2 > row1 in natural order, so for reversed scan hint (row1) is "forward" (smaller).
+    KeyValue tooNew = new KeyValue(row2, fam2, col1, now2, data);
+    qm.setToNewRow(tooNew);
+
+    assertEquals(MatchCode.SEEK_NEXT_USING_HINT, qm.match(tooNew));
+    assertEquals(hintCell, qm.getNextKeyHint(tooNew));
+    assertNull(qm.getNextKeyHint(tooNew));
+  }
+
+  /**
+   * After enough consecutive range delete markers, the matcher should switch from SKIP to
+   * SEEK_NEXT_COL. Point deletes and KEEP_DELETED_CELLS always SKIP.
+   */
+  @Test
+  public void testSeekOnRangeDelete() throws IOException {
+    int n = NormalUserScanQueryMatcher.SEEK_ON_DELETE_MARKER_THRESHOLD;
+
+    // DeleteColumn: first N-1 SKIP, N-th triggers SEEK_NEXT_COL
+    assertSeekAfterThreshold(KeepDeletedCells.FALSE, Type.DeleteColumn, n);
+
+    // DeleteFamily: same threshold behavior
+    assertSeekAfterThreshold(KeepDeletedCells.FALSE, Type.DeleteFamily, n);
+
+    // Delete (version): always SKIP (point delete, not range)
+    assertAllSkip(KeepDeletedCells.FALSE, Type.Delete, n + 1);
+
+    // KEEP_DELETED_CELLS=TRUE: always SKIP
+    assertAllSkip(KeepDeletedCells.TRUE, Type.DeleteColumn, n + 1);
+  }
+
+  /**
+   * DeleteColumn with empty qualifier must not cause seeking past a subsequent DeleteFamily.
+   * DeleteFamily masks all columns, so it must be tracked by the delete tracker.
+   */
+  @Test
+  public void testDeleteColumnEmptyQualifierDoesNotSkipDeleteFamily() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    byte[] e = HConstants.EMPTY_BYTE_ARRAY;
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1,
+      ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
+      now - ttl, now, null);
+
+    int n = NormalUserScanQueryMatcher.SEEK_ON_DELETE_MARKER_THRESHOLD;
+    // Feed DCs with empty qualifier past the threshold, then a DF.
+    // The DF must NOT be seeked past -- it must be SKIP'd so the tracker picks it up.
+    qm.setToNewRow(new KeyValue(row1, fam1, e, now, Type.DeleteColumn));
+    for (int i = 0; i < n + 1; i++) {
+      // Empty qualifier DCs should never trigger seek, regardless of threshold
+      assertEquals(MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, e, now - i, Type.DeleteColumn)), "DC at i=" + i);
+    }
+    KeyValue df = new KeyValue(row1, fam1, e, now - n - 1, Type.DeleteFamily);
+    KeyValue put = new KeyValue(row1, fam1, col1, now - n - 1, Type.Put, data);
+    // DF must be processed (SKIP), not seeked past
+    assertEquals(MatchCode.SKIP, qm.match(df));
+    // Put in col1 at t=now-3 should be masked by DF@t=now-3
+    MatchCode putCode = qm.match(put);
+    assertEquals(MatchCode.SEEK_NEXT_COL, putCode);
+  }
+
+  /**
+   * DeleteColumn markers for different qualifiers should not accumulate the seek counter. Only
+   * consecutive markers for the same qualifier should trigger seeking.
+   */
+  @Test
+  public void testDeleteColumnDifferentQualifiersDoNotSeek() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1,
+      ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null,
+      now - ttl, now, null);
+
+    // DCs for different qualifiers: counter resets on qualifier change, never seeks
+    qm.setToNewRow(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn));
+    assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col2, now - 1, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col3, now - 2, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col4, now - 3, Type.DeleteColumn)));
+    assertEquals(MatchCode.SKIP,
+      qm.match(new KeyValue(row1, fam1, col5, now - 4, Type.DeleteColumn)));
+  }
+
+  /**
+   * Delete markers outside the scan's time range (includeDeleteMarker=false) should still
+   * accumulate the seek counter and trigger SEEK_NEXT_COL after the threshold.
+   */
+  @Test
+  public void testSeekOnRangeDeleteOutsideTimeRange() throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    long futureTs = now + 1_000_000;
+    Scan scanWithTimeRange = new Scan(scan).setTimeRange(futureTs, Long.MAX_VALUE);
+
+    UserScanQueryMatcher qm = UserScanQueryMatcher.create(scanWithTimeRange,
+      new ScanInfo(this.conf, fam1, 0, 1, ttl, KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE,
+        0, rowComparator, false),
+      null, now - ttl, now, null);
+
+    int n = NormalUserScanQueryMatcher.SEEK_ON_DELETE_MARKER_THRESHOLD;
+    qm.setToNewRow(new KeyValue(row1, fam1, col1, now, Type.DeleteColumn));
+    // All DCs have timestamps below the time range, so includeDeleteMarker is false.
+    // The seek counter should still accumulate.
+    for (int i = 0; i < n - 1; i++) {
+      assertEquals(MatchCode.SKIP,
+        qm.match(new KeyValue(row1, fam1, col1, now - i, Type.DeleteColumn)), "DC at i=" + i);
+    }
+    assertEquals(MatchCode.SEEK_NEXT_COL,
+      qm.match(new KeyValue(row1, fam1, col1, now - n + 1, Type.DeleteColumn)));
+  }
+
+  private UserScanQueryMatcher createDeleteMatcher(KeepDeletedCells keepDeletedCells)
+    throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    return UserScanQueryMatcher.create(scan, new ScanInfo(this.conf, fam1, 0, 1, ttl,
+      keepDeletedCells, HConstants.DEFAULT_BLOCKSIZE, 0, rowComparator, false), null, now - ttl,
+      now, null);
+  }
+
+  /** First n-1 markers SKIP, n-th triggers SEEK_NEXT_COL. */
+  private void assertSeekAfterThreshold(KeepDeletedCells keepDeletedCells, Type type, int n)
+    throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = createDeleteMatcher(keepDeletedCells);
+    boolean familyLevel = type == Type.DeleteFamily || type == Type.DeleteFamilyVersion;
+    byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+    qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
+    for (int i = 0; i < n - 1; i++) {
+      assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, qual, now - i, type)),
+        "Mismatch at index " + i);
+    }
+    assertEquals(MatchCode.SEEK_NEXT_COL,
+      qm.match(new KeyValue(row1, fam1, qual, now - n + 1, type)),
+      "Expected SEEK_NEXT_COL at index " + (n - 1));
+  }
+
+  /** All markers should SKIP regardless of count. */
+  private void assertAllSkip(KeepDeletedCells keepDeletedCells, Type type, int count)
+    throws IOException {
+    long now = EnvironmentEdgeManager.currentTime();
+    UserScanQueryMatcher qm = createDeleteMatcher(keepDeletedCells);
+    boolean familyLevel = type == Type.DeleteFamily || type == Type.DeleteFamilyVersion;
+    byte[] qual = familyLevel ? HConstants.EMPTY_BYTE_ARRAY : col1;
+    qm.setToNewRow(new KeyValue(row1, fam1, qual, now, type));
+    for (int i = 0; i < count; i++) {
+      assertEquals(MatchCode.SKIP, qm.match(new KeyValue(row1, fam1, qual, now - i, type)),
+        "Mismatch at index " + i);
+    }
   }
 }

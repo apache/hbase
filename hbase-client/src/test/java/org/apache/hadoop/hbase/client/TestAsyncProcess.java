@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -51,7 +54,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HConstants;
@@ -74,23 +76,18 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestAsyncProcess {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncProcess.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncProcess.class);
   private static final TableName DUMMY_TABLE = TableName.valueOf("DUMMY_TABLE");
@@ -132,7 +129,7 @@ public class TestAsyncProcess {
   private int RPC_TIMEOUT;
   private int OPERATION_TIMEOUT;
 
-  @Before
+  @BeforeEach
   public void beforeEach() {
     this.CONF = new Configuration();
     CONF.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, NB_RETRIES);
@@ -771,7 +768,7 @@ public class TestAsyncProcess {
     puts.add(createPut(1, true));
 
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-    Assert.assertTrue(puts.isEmpty());
+    assertTrue(puts.isEmpty());
   }
 
   @Test
@@ -790,9 +787,9 @@ public class TestAsyncProcess {
     puts.add(createPut(1, true));
 
     final AsyncRequestFuture ars = ap.submit(null, DUMMY_TABLE, puts, false, cb, false);
-    Assert.assertTrue(puts.isEmpty());
+    assertTrue(puts.isEmpty());
     ars.waitUntilDone();
-    Assert.assertEquals(1, updateCalled.get());
+    assertEquals(1, updateCalled.get());
   }
 
   @Test
@@ -811,11 +808,11 @@ public class TestAsyncProcess {
       ap.incTaskCounters(Collections.singleton(hri1.getRegionName()), sn);
     }
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-    Assert.assertEquals(puts.size(), 1);
+    assertEquals(puts.size(), 1);
 
     ap.decTaskCounters(Collections.singleton(hri1.getRegionName()), sn);
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-    Assert.assertEquals(0, puts.size());
+    assertEquals(0, puts.size());
     if (defaultClazz != null) {
       conn.getConfiguration().set(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY,
         defaultClazz);
@@ -841,12 +838,12 @@ public class TestAsyncProcess {
     puts.add(createPut(2, true)); // <== new region, but the rs is ok
 
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-    Assert.assertEquals(" puts=" + puts, 1, puts.size());
+    assertEquals(1, puts.size(), " puts=" + puts);
 
     controller.taskCounterPerServer.put(sn2,
       new AtomicInteger(controller.maxConcurrentTasksPerServer - 1));
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-    Assert.assertTrue(puts.isEmpty());
+    assertTrue(puts.isEmpty());
     if (defaultClazz != null) {
       conn.getConfiguration().set(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY,
         defaultClazz);
@@ -862,20 +859,20 @@ public class TestAsyncProcess {
     puts.add(p);
 
     AsyncRequestFuture ars = ap.submit(null, DUMMY_TABLE, puts, false, null, true);
-    Assert.assertEquals(0, puts.size());
+    assertEquals(0, puts.size());
     ars.waitUntilDone();
     verifyResult(ars, false);
-    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+    assertEquals(NB_RETRIES + 1, ap.callsCt.get());
 
-    Assert.assertEquals(1, ars.getErrors().exceptions.size());
-    Assert.assertTrue("was: " + ars.getErrors().exceptions.get(0),
-      failure.equals(ars.getErrors().exceptions.get(0)));
-    Assert.assertTrue("was: " + ars.getErrors().exceptions.get(0),
-      failure.equals(ars.getErrors().exceptions.get(0)));
+    assertEquals(1, ars.getErrors().exceptions.size());
+    assertTrue(failure.equals(ars.getErrors().exceptions.get(0)),
+      "was: " + ars.getErrors().exceptions.get(0));
+    assertTrue(failure.equals(ars.getErrors().exceptions.get(0)),
+      "was: " + ars.getErrors().exceptions.get(0));
 
-    Assert.assertEquals(1, ars.getFailedOperations().size());
-    Assert.assertTrue("was: " + ars.getFailedOperations().get(0),
-      p.equals(ars.getFailedOperations().get(0)));
+    assertEquals(1, ars.getFailedOperations().size());
+    assertTrue(p.equals(ars.getFailedOperations().get(0)),
+      "was: " + ars.getFailedOperations().get(0));
   }
 
   @Test
@@ -898,7 +895,7 @@ public class TestAsyncProcess {
       @Override
       public void run() {
         Threads.sleep(1000);
-        Assert.assertFalse(checkPoint.get()); // TODO: this is timing-dependent
+        assertFalse(checkPoint.get()); // TODO: this is timing-dependent
         ai.decrementAndGet();
         controller.tasksInProgress.decrementAndGet();
         checkPoint2.set(true);
@@ -910,12 +907,12 @@ public class TestAsyncProcess {
     puts.add(p);
 
     ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-    Assert.assertFalse(puts.isEmpty());
+    assertFalse(puts.isEmpty());
 
     t.start();
 
     ap.submit(null, DUMMY_TABLE, puts, true, null, false);
-    Assert.assertTrue(puts.isEmpty());
+    assertTrue(puts.isEmpty());
 
     checkPoint.set(true);
     while (!checkPoint2.get()) {
@@ -937,20 +934,20 @@ public class TestAsyncProcess {
     puts.add(createPut(1, true));
 
     AsyncRequestFuture ars = ap.submit(null, DUMMY_TABLE, puts, false, null, true);
-    Assert.assertTrue(puts.isEmpty());
+    assertTrue(puts.isEmpty());
     ars.waitUntilDone();
     verifyResult(ars, false, true, true);
-    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+    assertEquals(NB_RETRIES + 1, ap.callsCt.get());
     ap.callsCt.set(0);
-    Assert.assertEquals(1, ars.getErrors().actions.size());
+    assertEquals(1, ars.getErrors().actions.size());
 
     puts.add(createPut(1, true));
     // Wait for AP to be free. While ars might have the result, ap counters are decreased later.
     ap.waitForMaximumCurrentTasks(0, null);
     ars = ap.submit(null, DUMMY_TABLE, puts, false, null, true);
-    Assert.assertEquals(0, puts.size());
+    assertEquals(0, puts.size());
     ars.waitUntilDone();
-    Assert.assertEquals(1, ap.callsCt.get());
+    assertEquals(1, ap.callsCt.get());
     verifyResult(ars, true);
   }
 
@@ -966,9 +963,9 @@ public class TestAsyncProcess {
     AsyncRequestFuture ars = ap.submit(null, DUMMY_TABLE, puts, false, null, true);
     ars.waitUntilDone();
     verifyResult(ars, false, true, true);
-    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+    assertEquals(NB_RETRIES + 1, ap.callsCt.get());
 
-    Assert.assertEquals(1, ars.getFailedOperations().size());
+    assertEquals(1, ars.getFailedOperations().size());
   }
 
   @Test
@@ -1052,7 +1049,7 @@ public class TestAsyncProcess {
 
     try {
       ap.submit(null, DUMMY_TABLE, puts, false, null, false);
-      Assert.fail("We should have been interrupted.");
+      fail("We should have been interrupted.");
     } catch (InterruptedIOException expected) {
     }
 
@@ -1074,7 +1071,7 @@ public class TestAsyncProcess {
     long end = EnvironmentEdgeManager.currentTime();
 
     // Adds 100 to secure us against approximate timing.
-    Assert.assertTrue(start + 100L + sleepTime > end);
+    assertTrue(start + 100L + sleepTime > end);
     if (defaultClazz != null) {
       conn.getConfiguration().set(RequestControllerFactory.REQUEST_CONTROLLER_IMPL_CONF_KEY,
         defaultClazz);
@@ -1148,12 +1145,11 @@ public class TestAsyncProcess {
 
     Put put = createPut(1, true);
 
-    Assert.assertEquals(conn.getConnectionConfiguration().getWriteBufferSize(),
-      ht.getWriteBufferSize());
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(conn.getConnectionConfiguration().getWriteBufferSize(), ht.getWriteBufferSize());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
     ht.mutate(put);
     ht.flush();
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
   }
 
   @Test
@@ -1177,20 +1173,20 @@ public class TestAsyncProcess {
     // The BufferedMutatorParams does nothing with the value
     bufferParam.setWriteBufferPeriodicFlushTimeoutMs(setTO);
     bufferParam.setWriteBufferPeriodicFlushTimerTickMs(setTT);
-    Assert.assertEquals(setTO, bufferParam.getWriteBufferPeriodicFlushTimeoutMs());
-    Assert.assertEquals(setTT, bufferParam.getWriteBufferPeriodicFlushTimerTickMs());
+    assertEquals(setTO, bufferParam.getWriteBufferPeriodicFlushTimeoutMs());
+    assertEquals(setTT, bufferParam.getWriteBufferPeriodicFlushTimerTickMs());
 
     // The BufferedMutatorImpl corrects illegal values (indirect via BufferedMutatorParams)
     BufferedMutatorImpl ht1 = new BufferedMutatorImpl(conn, bufferParam, ap);
-    Assert.assertEquals(expectTO, ht1.getWriteBufferPeriodicFlushTimeoutMs());
-    Assert.assertEquals(expectTT, ht1.getWriteBufferPeriodicFlushTimerTickMs());
+    assertEquals(expectTO, ht1.getWriteBufferPeriodicFlushTimeoutMs());
+    assertEquals(expectTT, ht1.getWriteBufferPeriodicFlushTimerTickMs());
 
     // The BufferedMutatorImpl corrects illegal values (direct via setter)
     BufferedMutatorImpl ht2 =
       new BufferedMutatorImpl(conn, createBufferedMutatorParams(ap, DUMMY_TABLE), ap);
     ht2.setWriteBufferPeriodicFlush(setTO, setTT);
-    Assert.assertEquals(expectTO, ht2.getWriteBufferPeriodicFlushTimeoutMs());
-    Assert.assertEquals(expectTT, ht2.getWriteBufferPeriodicFlushTimerTickMs());
+    assertEquals(expectTO, ht2.getWriteBufferPeriodicFlushTimeoutMs());
+    assertEquals(expectTT, ht2.getWriteBufferPeriodicFlushTimerTickMs());
 
   }
 
@@ -1207,57 +1203,57 @@ public class TestAsyncProcess {
     BufferedMutatorImpl ht = new BufferedMutatorImpl(conn, bufferParam, ap);
 
     // Verify if BufferedMutator has the right settings.
-    Assert.assertEquals(10000, ht.getWriteBufferSize());
-    Assert.assertEquals(1, ht.getWriteBufferPeriodicFlushTimeoutMs());
-    Assert.assertEquals(BufferedMutator.MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS,
+    assertEquals(10000, ht.getWriteBufferSize());
+    assertEquals(1, ht.getWriteBufferPeriodicFlushTimeoutMs());
+    assertEquals(BufferedMutator.MIN_WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS,
       ht.getWriteBufferPeriodicFlushTimerTickMs());
 
     Put put = createPut(1, true);
 
-    Assert.assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
 
     // ----- Insert, flush immediately, MUST NOT flush automatically
     ht.mutate(put);
     ht.flush();
 
     Thread.sleep(1000);
-    Assert.assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
 
     // ----- Insert, NO flush, MUST flush automatically
     ht.mutate(put);
-    Assert.assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+    assertEquals(0, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertTrue(ht.getCurrentWriteBufferSize() > 0);
 
     // The timerTick should fire every 100ms, so after twice that we must have
     // seen at least 1 tick and we should see an automatic flush
     Thread.sleep(200);
-    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
 
     // Ensure it does not flush twice
     Thread.sleep(200);
-    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
 
     // ----- DISABLE AUTO FLUSH, Insert, NO flush, MUST NOT flush automatically
     ht.disableWriteBufferPeriodicFlush();
     ht.mutate(put);
-    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+    assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertTrue(ht.getCurrentWriteBufferSize() > 0);
 
     // Wait for at least 1 timerTick, we should see NO flushes.
     Thread.sleep(200);
-    Assert.assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertTrue(ht.getCurrentWriteBufferSize() > 0);
+    assertEquals(1, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertTrue(ht.getCurrentWriteBufferSize() > 0);
 
     // Reenable periodic flushing, a flush seems to take about 1 second
     // so we wait for 2 seconds and it should have finished the flush.
     ht.setWriteBufferPeriodicFlush(1, 100);
     Thread.sleep(2000);
-    Assert.assertEquals(2, ht.getExecutedWriteBufferPeriodicFlushes());
-    Assert.assertEquals(0, ht.getCurrentWriteBufferSize());
+    assertEquals(2, ht.getExecutedWriteBufferPeriodicFlushes());
+    assertEquals(0, ht.getCurrentWriteBufferSize());
   }
 
   @Test
@@ -1282,18 +1278,18 @@ public class TestAsyncProcess {
     Put p = createPut(1, false);
     try {
       mutator.mutate(p);
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
     }
     // Let's do all the retries.
     ap.waitForMaximumCurrentTasks(0, null);
-    Assert.assertEquals(0, mutator.size());
+    assertEquals(0, mutator.size());
 
     // There is no global error so the new put should not fail
     mutator.mutate(createPut(1, true));
-    Assert.assertEquals("the put should not been inserted.", 0, mutator.size());
+    assertEquals(0, mutator.size(), "the put should not been inserted.");
   }
 
   @SuppressWarnings("SelfComparison")
@@ -1334,17 +1330,17 @@ public class TestAsyncProcess {
     Object[] res = new Object[puts.size()];
     try {
       ht.batch(puts, res);
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedException expected) {
     }
 
-    Assert.assertEquals(success, res[0]);
-    Assert.assertEquals(success, res[1]);
-    Assert.assertEquals(success, res[2]);
-    Assert.assertEquals(success, res[3]);
-    Assert.assertEquals(failure, res[4]);
-    Assert.assertEquals(success, res[5]);
-    Assert.assertEquals(failure, res[6]);
+    assertEquals(success, res[0]);
+    assertEquals(success, res[1]);
+    assertEquals(success, res[2]);
+    assertEquals(success, res[3]);
+    assertEquals(failure, res[4]);
+    assertEquals(success, res[5]);
+    assertEquals(failure, res[6]);
   }
 
   @Test
@@ -1356,8 +1352,8 @@ public class TestAsyncProcess {
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
     configuration.setBoolean(ConnectionImplementation.RETRIES_BY_SERVER_KEY, true);
 
-    Assert.assertNotNull(ap.createServerErrorTracker());
-    Assert.assertTrue(ap.serverTrackerTimeout > 200L);
+    assertNotNull(ap.createServerErrorTracker());
+    assertTrue(ap.serverTrackerTimeout > 200L);
     ap.serverTrackerTimeout = 1L;
 
     Put p = createPut(1, false);
@@ -1365,13 +1361,13 @@ public class TestAsyncProcess {
 
     try {
       mutator.flush();
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
     }
     // Checking that the ErrorsServers came into play and didn't make us stop immediately
-    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+    assertEquals(NB_RETRIES + 1, ap.callsCt.get());
   }
 
   @Test
@@ -1419,20 +1415,20 @@ public class TestAsyncProcess {
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
-    Assert.assertNotNull(ap.createServerErrorTracker());
+    assertNotNull(ap.createServerErrorTracker());
 
     Put p = createPut(1, true);
     mutator.mutate(p);
 
     try {
       mutator.flush();
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
     }
     // Checking that the ErrorsServers came into play and didn't make us stop immediately
-    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+    assertEquals(NB_RETRIES + 1, ap.callsCt.get());
   }
 
   @Test
@@ -1442,19 +1438,19 @@ public class TestAsyncProcess {
       new AsyncProcessWithFailure(conn, CONF, new CallQueueTooBigException());
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
-    Assert.assertNotNull(ap.createServerErrorTracker());
+    assertNotNull(ap.createServerErrorTracker());
     Put p = createPut(1, true);
     mutator.mutate(p);
 
     try {
       mutator.flush();
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
     }
     // Checking that the ErrorsServers came into play and didn't make us stop immediately
-    Assert.assertEquals(NB_RETRIES + 1, ap.callsCt.get());
+    assertEquals(NB_RETRIES + 1, ap.callsCt.get());
   }
 
   /**
@@ -1482,15 +1478,15 @@ public class TestAsyncProcess {
     ht.multiAp = ap;
     ht.batch(gets, null);
 
-    Assert.assertEquals(NB_REGS, ap.nbActions.get());
-    Assert.assertEquals("1 multi response per server", 2, ap.nbMultiResponse.get());
-    Assert.assertEquals("1 thread per server", 2, con.nbThreads.get());
+    assertEquals(NB_REGS, ap.nbActions.get());
+    assertEquals(2, ap.nbMultiResponse.get(), "1 multi response per server");
+    assertEquals(2, con.nbThreads.get(), "1 thread per server");
 
     int nbReg = 0;
     for (int i = 0; i < NB_REGS; i++) {
       if (con.usedRegions[i]) nbReg++;
     }
-    Assert.assertEquals("nbReg=" + nbReg, NB_REGS, nbReg);
+    assertEquals(NB_REGS, nbReg, "nbReg=" + nbReg);
   }
 
   @Test
@@ -1504,7 +1500,7 @@ public class TestAsyncProcess {
       .setRowAccess(rows).setResults(new Object[3]).setSubmittedRows(SubmittedRows.ALL).build();
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.TRUE, RR.TRUE, RR.FALSE);
-    Assert.assertEquals(2, ap.getReplicaCallCount());
+    assertEquals(2, ap.getReplicaCallCount());
   }
 
   @Test
@@ -1517,7 +1513,7 @@ public class TestAsyncProcess {
       .setRowAccess(rows).setResults(new Object[3]).setSubmittedRows(SubmittedRows.ALL).build();
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.FALSE, RR.FALSE, RR.FALSE);
-    Assert.assertEquals(0, ap.getReplicaCallCount());
+    assertEquals(0, ap.getReplicaCallCount());
   }
 
   @Test
@@ -1531,8 +1527,8 @@ public class TestAsyncProcess {
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.DONT_CARE, RR.DONT_CARE);
     long replicaCalls = ap.getReplicaCallCount();
-    Assert.assertTrue(replicaCalls >= 0);
-    Assert.assertTrue(replicaCalls <= 2);
+    assertTrue(replicaCalls >= 0);
+    assertTrue(replicaCalls <= 2);
   }
 
   @Test
@@ -1548,7 +1544,7 @@ public class TestAsyncProcess {
       .setRowAccess(rows).setResults(new Object[2]).setSubmittedRows(SubmittedRows.ALL).build();
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.FALSE, RR.TRUE);
-    Assert.assertEquals(1, ap.getReplicaCallCount());
+    assertEquals(1, ap.getReplicaCallCount());
   }
 
   @Test
@@ -1564,7 +1560,7 @@ public class TestAsyncProcess {
       .setRowAccess(rows).setResults(new Object[2]).setSubmittedRows(SubmittedRows.ALL).build();
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.FAILED, RR.FAILED);
-    Assert.assertEquals(0, ap.getReplicaCallCount());
+    assertEquals(0, ap.getReplicaCallCount());
   }
 
   @Test
@@ -1579,7 +1575,7 @@ public class TestAsyncProcess {
       .setRowAccess(rows).setResults(new Object[2]).setSubmittedRows(SubmittedRows.ALL).build();
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.TRUE, RR.TRUE);
-    Assert.assertEquals(2, ap.getReplicaCallCount());
+    assertEquals(2, ap.getReplicaCallCount());
   }
 
   @Test
@@ -1595,9 +1591,9 @@ public class TestAsyncProcess {
     AsyncRequestFuture ars = ap.submit(task);
     verifyReplicaResult(ars, RR.FAILED, RR.FALSE);
     // We should get 3 exceptions, for main + 2 replicas for DUMMY_BYTES_1
-    Assert.assertEquals(3, ars.getErrors().getNumExceptions());
+    assertEquals(3, ars.getErrors().getNumExceptions());
     for (int i = 0; i < ars.getErrors().getNumExceptions(); ++i) {
-      Assert.assertArrayEquals(DUMMY_BYTES_1, ars.getErrors().getRow(i).getRow());
+      assertArrayEquals(DUMMY_BYTES_1, ars.getErrors().getRow(i).getRow());
     }
   }
 
@@ -1638,9 +1634,9 @@ public class TestAsyncProcess {
 
   private void verifyResult(AsyncRequestFuture ars, boolean... expected) throws Exception {
     Object[] actual = ars.getResults();
-    Assert.assertEquals(expected.length, actual.length);
+    assertEquals(expected.length, actual.length);
     for (int i = 0; i < expected.length; ++i) {
-      Assert.assertEquals(expected[i], !(actual[i] instanceof Throwable));
+      assertEquals(expected[i], !(actual[i] instanceof Throwable));
     }
   }
 
@@ -1654,13 +1650,13 @@ public class TestAsyncProcess {
 
   private void verifyReplicaResult(AsyncRequestFuture ars, RR... expecteds) throws Exception {
     Object[] actuals = ars.getResults();
-    Assert.assertEquals(expecteds.length, actuals.length);
+    assertEquals(expecteds.length, actuals.length);
     for (int i = 0; i < expecteds.length; ++i) {
       Object actual = actuals[i];
       RR expected = expecteds[i];
-      Assert.assertEquals(actual.toString(), expected == RR.FAILED, actual instanceof Throwable);
+      assertEquals(expected == RR.FAILED, actual instanceof Throwable, actual.toString());
       if (expected != RR.FAILED && expected != RR.DONT_CARE) {
-        Assert.assertEquals(expected == RR.TRUE, ((Result) actual).isStale());
+        assertEquals(expected == RR.TRUE, ((Result) actual).isStale());
       }
     }
   }
@@ -1726,7 +1722,7 @@ public class TestAsyncProcess {
       .setOperationTimeout(OPERATION_TIMEOUT).setTableName(DUMMY_TABLE).setRowAccess(puts)
       .setSubmittedRows(SubmittedRows.NORMAL).build();
     ap.submit(task);
-    Assert.assertTrue(puts.isEmpty());
+    assertTrue(puts.isEmpty());
   }
 
   /**
@@ -1771,7 +1767,7 @@ public class TestAsyncProcess {
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
-    Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
+    assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
 
     Put p = createPut(1, true);
     mutator.mutate(p);
@@ -1779,7 +1775,7 @@ public class TestAsyncProcess {
     long startTime = EnvironmentEdgeManager.currentTime();
     try {
       mutator.flush();
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
@@ -1792,8 +1788,8 @@ public class TestAsyncProcess {
       actualSleep += (long) (expectedPause * 0.01f);
     }
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
-    Assert.assertTrue("Expected to sleep " + expectedSleep + " but actually " + actualSleep + "ms",
-      actualSleep >= expectedSleep);
+    assertTrue(actualSleep >= expectedSleep,
+      "Expected to sleep " + expectedSleep + " but actually " + actualSleep + "ms");
 
     // check and confirm normal IOE will use the normal pause
     final long normalPause =
@@ -1801,12 +1797,12 @@ public class TestAsyncProcess {
     ap = new AsyncProcessWithFailure(conn, testConf, new IOException());
     bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
-    Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
+    assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
     mutator.mutate(p);
     startTime = EnvironmentEdgeManager.currentTime();
     try {
       mutator.flush();
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getRow(0) == p);
@@ -1819,7 +1815,7 @@ public class TestAsyncProcess {
     // plus an additional pause to balance the program execution time
     expectedSleep += normalPause;
     LOG.debug("Expected to sleep " + expectedSleep + "ms, actually slept " + actualSleep + "ms");
-    Assert.assertTrue("Slept for too long: " + actualSleep + "ms", actualSleep <= expectedSleep);
+    assertTrue(actualSleep <= expectedSleep, "Slept for too long: " + actualSleep + "ms");
   }
 
   @Test
@@ -1839,14 +1835,14 @@ public class TestAsyncProcess {
       createBufferedMutatorParams(ap, DUMMY_TABLE).operationTimeout(100);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
-    Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
+    assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
 
     Put p = createPut(1, true);
     mutator.mutate(p);
 
     try {
       mutator.flush();
-      Assert.fail();
+      fail();
     } catch (RetriesExhaustedWithDetailsException expected) {
       assertEquals(1, expected.getNumExceptions());
       assertTrue(expected.getCause(0) instanceof OperationTimeoutExceededException);
@@ -1886,9 +1882,9 @@ public class TestAsyncProcess {
     BufferedMutatorParams bufferParam = createBufferedMutatorParams(ap, DUMMY_TABLE);
     BufferedMutatorImpl mutator = new BufferedMutatorImpl(conn, bufferParam, ap);
 
-    Assert.assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
+    assertNotNull(mutator.getAsyncProcess().createServerErrorTracker());
 
-    Assert.assertEquals(conn.locateRegion(DUMMY_TABLE, DUMMY_BYTES_1, true, true).toString(),
+    assertEquals(conn.locateRegion(DUMMY_TABLE, DUMMY_BYTES_1, true, true).toString(),
       new RegionLocations(loc1).toString());
 
     // simulate updateCachedLocations, by changing the loc for this row to loc3. only loc1 fails,
@@ -1912,7 +1908,7 @@ public class TestAsyncProcess {
     mutator.flush();
 
     // validate that we updated the location, as we expected
-    Assert.assertEquals(conn.locateRegion(DUMMY_TABLE, DUMMY_BYTES_1, true, true).toString(),
+    assertEquals(conn.locateRegion(DUMMY_TABLE, DUMMY_BYTES_1, true, true).toString(),
       new RegionLocations(loc3).toString());
     // this is a given since the location updated, but validate that we called updateCachedLocations
     Mockito.verify(conn, Mockito.atLeastOnce()).updateCachedLocations(Mockito.eq(DUMMY_TABLE),

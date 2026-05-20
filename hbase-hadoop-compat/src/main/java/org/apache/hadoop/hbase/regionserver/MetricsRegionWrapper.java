@@ -81,6 +81,11 @@ public interface MetricsRegionWrapper {
   float getCurrentRegionCacheRatio();
 
   /**
+   * Gets the current cold data % ratio for this region.
+   */
+  float getCurrentRegionColdDataRatio();
+
+  /**
    * Get the total number of read requests that have been issued against this region
    */
   long getReadRequestCount();

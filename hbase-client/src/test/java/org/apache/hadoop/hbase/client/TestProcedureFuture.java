@@ -17,32 +17,27 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetProcedureResultResponse;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestProcedureFuture {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcedureFuture.class);
 
   private static class TestFuture extends HBaseAdmin.ProcedureFuture<Void> {
     private boolean postOperationResultCalled = false;
@@ -108,10 +103,10 @@ public class TestProcedureFuture {
     TestFuture f = new TestFuture(admin, 100L);
     f.get(1, TimeUnit.MINUTES);
 
-    assertTrue("expected getProcedureResult() to be called", f.wasGetProcedureResultCalled());
-    assertTrue("expected convertResult() to be called", f.wasConvertResultCalled());
-    assertFalse("unexpected waitOperationResult() called", f.wasWaitOperationResultCalled());
-    assertTrue("expected postOperationResult() to be called", f.wasPostOperationResultCalled());
+    assertTrue(f.wasGetProcedureResultCalled(), "expected getProcedureResult() to be called");
+    assertTrue(f.wasConvertResultCalled(), "expected convertResult() to be called");
+    assertFalse(f.wasWaitOperationResultCalled(), "unexpected waitOperationResult() called");
+    assertTrue(f.wasPostOperationResultCalled(), "expected postOperationResult() to be called");
   }
 
   /**
@@ -136,9 +131,9 @@ public class TestProcedureFuture {
     f.get(1, TimeUnit.MINUTES);
 
     assertEquals(10, spinCount.get());
-    assertTrue("expected convertResult() to be called", f.wasConvertResultCalled());
-    assertFalse("unexpected waitOperationResult() called", f.wasWaitOperationResultCalled());
-    assertTrue("expected postOperationResult() to be called", f.wasPostOperationResultCalled());
+    assertTrue(f.wasConvertResultCalled(), "expected convertResult() to be called");
+    assertFalse(f.wasWaitOperationResultCalled(), "unexpected waitOperationResult() called");
+    assertTrue(f.wasPostOperationResultCalled(), "expected postOperationResult() to be called");
   }
 
   /**
@@ -150,10 +145,10 @@ public class TestProcedureFuture {
     TestFuture f = new TestFuture(admin, null);
     f.get(1, TimeUnit.MINUTES);
 
-    assertFalse("unexpected getProcedureResult() called", f.wasGetProcedureResultCalled());
-    assertFalse("unexpected convertResult() called", f.wasConvertResultCalled());
-    assertTrue("expected waitOperationResult() to be called", f.wasWaitOperationResultCalled());
-    assertTrue("expected postOperationResult() to be called", f.wasPostOperationResultCalled());
+    assertFalse(f.wasGetProcedureResultCalled(), "unexpected getProcedureResult() called");
+    assertFalse(f.wasConvertResultCalled(), "unexpected convertResult() called");
+    assertTrue(f.wasWaitOperationResultCalled(), "expected waitOperationResult() to be called");
+    assertTrue(f.wasPostOperationResultCalled(), "expected postOperationResult() to be called");
   }
 
   /**
@@ -176,9 +171,9 @@ public class TestProcedureFuture {
     };
     f.get(1, TimeUnit.MINUTES);
 
-    assertTrue("expected getProcedureResult() to be called", f.wasGetProcedureResultCalled());
-    assertFalse("unexpected convertResult() called", f.wasConvertResultCalled());
-    assertTrue("expected waitOperationResult() to be called", f.wasWaitOperationResultCalled());
-    assertTrue("expected postOperationResult() to be called", f.wasPostOperationResultCalled());
+    assertTrue(f.wasGetProcedureResultCalled(), "expected getProcedureResult() to be called");
+    assertFalse(f.wasConvertResultCalled(), "unexpected convertResult() called");
+    assertTrue(f.wasWaitOperationResultCalled(), "expected waitOperationResult() to be called");
+    assertTrue(f.wasPostOperationResultCalled(), "expected postOperationResult() to be called");
   }
 }

@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -43,11 +42,10 @@ import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -55,17 +53,14 @@ import org.slf4j.LoggerFactory;
  * Tests class that validates that "post" observer hook methods are only invoked when the operation
  * was successful.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterObserverPostCalls {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterObserverPostCalls.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterObserverPostCalls.class);
   protected static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
@@ -77,7 +72,7 @@ public class TestMasterObserverPostCalls {
       MasterObserverForTest.class.getName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -162,8 +157,8 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postDeleteNamespace when the operation fails",
-      preCount, postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postDeleteNamespace when the operation fails");
 
     // Disable and delete the table so that we can delete the NS.
     admin.disableTable(tn1);
@@ -173,7 +168,7 @@ public class TestMasterObserverPostCalls {
     preCount = observer.postHookCalls.get();
     admin.deleteNamespace(ns);
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postDeleteNamespace", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postDeleteNamespace");
   }
 
   @Test
@@ -195,15 +190,15 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postModifyNamespace when the operation fails",
-      preCount, postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postModifyNamespace when the operation fails");
 
     // Validate that the postDeletNS hook is invoked
     preCount = observer.postHookCalls.get();
     admin
       .modifyNamespace(NamespaceDescriptor.create(nsDesc).addConfiguration("foo", "bar").build());
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postModifyNamespace", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postModifyNamespace");
   }
 
   @Test
@@ -220,7 +215,7 @@ public class TestMasterObserverPostCalls {
     NamespaceDescriptor nsDesc = NamespaceDescriptor.create(ns).build();
     admin.createNamespace(nsDesc);
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postModifyNamespace", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postModifyNamespace");
 
     // Then, validate that it's not called when the call fails
     preCount = observer.postHookCalls.get();
@@ -231,8 +226,8 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postModifyNamespace when the operation fails",
-      preCount, postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postModifyNamespace when the operation fails");
   }
 
   @Test
@@ -251,7 +246,7 @@ public class TestMasterObserverPostCalls {
     int preCount = observer.postHookCalls.get();
     admin.createTable(td);
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postCreateTable", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postCreateTable");
 
     // Then, validate that it's not called when the call fails
     preCount = observer.postHookCalls.get();
@@ -262,8 +257,8 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postCreateTable when the operation fails", preCount,
-      postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postCreateTable when the operation fails");
   }
 
   @Test
@@ -285,7 +280,7 @@ public class TestMasterObserverPostCalls {
     int preCount = observer.postHookCalls.get();
     admin.modifyTable(td);
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postModifyTable", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postModifyTable");
 
     // Then, validate that it's not called when the call fails
     preCount = observer.postHookCalls.get();
@@ -297,8 +292,8 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postModifyTable when the operation fails", preCount,
-      postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postModifyTable when the operation fails");
   }
 
   @Test
@@ -320,7 +315,7 @@ public class TestMasterObserverPostCalls {
     int preCount = observer.postHookCalls.get();
     admin.disableTable(td.getTableName());
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postDisableTable", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postDisableTable");
 
     // Then, validate that it's not called when the call fails
     preCount = observer.postHookCalls.get();
@@ -331,8 +326,8 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postDisableTable when the operation fails", preCount,
-      postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postDisableTable when the operation fails");
   }
 
   @Test
@@ -355,7 +350,7 @@ public class TestMasterObserverPostCalls {
     int preCount = observer.postHookCalls.get();
     admin.deleteTable(td.getTableName());
     int postCount = observer.postHookCalls.get();
-    assertEquals("Expected 1 invocation of postDeleteTable", preCount + 1, postCount);
+    assertEquals(preCount + 1, postCount, "Expected 1 invocation of postDeleteTable");
 
     // Then, validate that it's not called when the call fails
     preCount = observer.postHookCalls.get();
@@ -366,7 +361,7 @@ public class TestMasterObserverPostCalls {
       // Pass
     }
     postCount = observer.postHookCalls.get();
-    assertEquals("Expected no invocations of postDeleteTable when the operation fails", preCount,
-      postCount);
+    assertEquals(preCount, postCount,
+      "Expected no invocations of postDeleteTable when the operation fails");
   }
 }

@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
@@ -36,11 +35,10 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,15 +49,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 /**
  * Snapshot creation with master lock timeout test.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSnapshotProcedureWithLockTimeout {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSnapshotProcedureWithLockTimeout.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotProcedureWithLockTimeout.class);
 
   private static HBaseTestingUtility TEST_UTIL;
   private HMaster master;
@@ -67,7 +62,7 @@ public class TestSnapshotProcedureWithLockTimeout {
   private byte[] CF;
   private String SNAPSHOT_NAME;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     TEST_UTIL = new HBaseTestingUtility();
     Configuration config = TEST_UTIL.getConfiguration();
@@ -83,7 +78,7 @@ public class TestSnapshotProcedureWithLockTimeout {
     TEST_UTIL.loadTable(table, CF, false);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     if (this.master != null) {
       ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(master.getMasterProcedureExecutor(),
@@ -105,7 +100,7 @@ public class TestSnapshotProcedureWithLockTimeout {
       } catch (Exception e) {
         LOG.error("Error because of faster lock acquisition. retrying....", e);
       }
-      assertNotEquals("Retries exhausted", 9, i);
+      assertNotEquals(9, i, "Retries exhausted");
     }
   }
 

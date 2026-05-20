@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +33,6 @@ import java.util.Random;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -43,21 +42,17 @@ import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestStochasticLoadBalancerHeterogeneousCost extends BalancerTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticLoadBalancerHeterogeneousCost.class);
-
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static String RULES_FILE;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws IOException {
     BalancerTestBase.conf = HTU.getConfiguration();
     BalancerTestBase.conf.setFloat("hbase.master.balancer.stochastic.regionCountCost", 0);

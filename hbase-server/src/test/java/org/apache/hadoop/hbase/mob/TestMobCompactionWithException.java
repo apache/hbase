@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.mob;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtility.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtility.fam1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -60,27 +59,21 @@ import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestMobCompactionWithException {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCompactionWithException.class);
-
-  @Rule
-  public TestName name = new TestName();
   static final Logger LOG = LoggerFactory.getLogger(TestMobCompactionWithException.class.getName());
   private final static HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static Configuration conf = null;
+  private String testMethodName;
 
   private HRegion region = null;
   private TableDescriptor tableDescriptor;
@@ -93,7 +86,7 @@ public class TestMobCompactionWithException {
   private static int rowCount = 100;
   private Table table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf = HTU.getConfiguration();
     conf.set(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
@@ -101,7 +94,12 @@ public class TestMobCompactionWithException {
 
   }
 
-  @After
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @AfterEach
   public void tearDown() throws Exception {
     region.close();
     this.table.close();
@@ -113,9 +111,9 @@ public class TestMobCompactionWithException {
     this.columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(COLUMN_FAMILY).setMobEnabled(true)
         .setMobThreshold(mobThreshold).setMaxVersions(1).setBlocksize(500).build();
-    this.tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(TestMobUtils.getTableName(name)))
-        .setColumnFamily(columnFamilyDescriptor).build();
+    this.tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(TestMobUtils.getTableName(testMethodName)))
+      .setColumnFamily(columnFamilyDescriptor).build();
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     region = HBaseTestingUtility.createRegionAndWAL(regionInfo, HTU.getDataTestDir(), conf,
       tableDescriptor, new MobFileCache(conf));
@@ -168,8 +166,8 @@ public class TestMobCompactionWithException {
 
     // When compaction is failed,the count of StoreFile and MobStoreFile should be the same as
     // before compaction.
-    assertEquals("After compaction: store files", storeFileCountBeforeCompact, countStoreFiles());
-    assertEquals("After compaction: mob file count", mobFileCountBeforeCompact, countMobFiles());
+    assertEquals(storeFileCountBeforeCompact, countStoreFiles(), "After compaction: store files");
+    assertEquals(mobFileCountBeforeCompact, countMobFiles(), "After compaction: mob file count");
   }
 
   private int countStoreFiles() throws IOException {

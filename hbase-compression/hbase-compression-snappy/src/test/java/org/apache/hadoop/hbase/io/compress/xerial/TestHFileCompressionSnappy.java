@@ -17,31 +17,26 @@
  */
 package org.apache.hadoop.hbase.io.compress.xerial;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.HFileTestBase;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileCompressionSnappy extends HFileTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileCompressionSnappy.class);
 
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     assumeTrue(SnappyCodec.isLoaded());
     conf = TEST_UTIL.getConfiguration();
@@ -56,5 +51,4 @@ public class TestHFileCompressionSnappy extends HFileTestBase {
       HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.SNAPPY);
   }
-
 }

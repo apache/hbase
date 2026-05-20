@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -39,33 +38,25 @@ import org.apache.hadoop.hbase.regionserver.StoreFileScanner;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMobFile {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobFile.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration conf = TEST_UTIL.getConfiguration();
   private CacheConfig cacheConf = new CacheConfig(conf);
-  @Rule
-  public TestName testName = new TestName();
 
   @Test
-  public void testReadKeyValue() throws Exception {
+  public void testReadKeyValue(TestInfo testInfo) throws Exception {
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
       .withFileContext(meta).build();
-    String caseName = testName.getMethodName();
+    String caseName = testInfo.getTestMethod().get().getName();
     MobTestUtil.writeStoreFile(writer, caseName);
 
     StoreFileInfo storeFileInfo =
@@ -110,13 +101,13 @@ public class TestMobFile {
   }
 
   @Test
-  public void testGetScanner() throws Exception {
+  public void testGetScanner(TestInfo testInfo) throws Exception {
     Path testDir = TEST_UTIL.getDataTestDir();
     FileSystem fs = testDir.getFileSystem(conf);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
       .withFileContext(meta).build();
-    MobTestUtil.writeStoreFile(writer, testName.getMethodName());
+    MobTestUtil.writeStoreFile(writer, testInfo.getTestMethod().get().getName());
 
     StoreFileInfo storeFileInfo =
       StoreFileInfo.createStoreFileInfoForHFile(conf, fs, writer.getPath(), true);

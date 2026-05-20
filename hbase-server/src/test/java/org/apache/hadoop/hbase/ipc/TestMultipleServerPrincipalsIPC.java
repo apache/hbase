@@ -21,8 +21,8 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
 import java.io.IOException;
@@ -32,10 +32,11 @@ import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import javax.security.sasl.SaslException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -47,17 +48,13 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.ipc.RemoteException;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -74,13 +71,10 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProto
  * <p>
  * Put here just because we need to visit some package private classes under this package.
  */
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcServerImpl={0}, rpcClientImpl={1}")
 public class TestMultipleServerPrincipalsIPC {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultipleServerPrincipalsIPC.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -93,11 +87,8 @@ public class TestMultipleServerPrincipalsIPC {
   private static String SERVER_PRINCIPAL2;
   private static String CLIENT_PRINCIPAL;
 
-  @Parameter(0)
-  public Class<? extends RpcServer> rpcServerImpl;
-
-  @Parameter(1)
-  public Class<? extends RpcClient> rpcClientImpl;
+  private final Class<? extends RpcServer> rpcServerImpl;
+  private final Class<? extends RpcClient> rpcClientImpl;
 
   private Configuration clientConf;
   private Configuration serverConf;
@@ -106,22 +97,27 @@ public class TestMultipleServerPrincipalsIPC {
   private RpcServer rpcServer;
   private RpcClient rpcClient;
 
-  @Parameters(name = "{index}: rpcServerImpl={0}, rpcClientImpl={1}")
-  public static List<Object[]> params() {
-    List<Object[]> params = new ArrayList<>();
+  public TestMultipleServerPrincipalsIPC(Class<? extends RpcServer> rpcServerImpl,
+    Class<? extends RpcClient> rpcClientImpl) {
+    this.rpcServerImpl = rpcServerImpl;
+    this.rpcClientImpl = rpcClientImpl;
+  }
+
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     List<Class<? extends RpcServer>> rpcServerImpls =
       Arrays.asList(NettyRpcServer.class, SimpleRpcServer.class);
     List<Class<? extends RpcClient>> rpcClientImpls =
       Arrays.asList(NettyRpcClient.class, BlockingRpcClient.class);
     for (Class<? extends RpcServer> rpcServerImpl : rpcServerImpls) {
       for (Class<? extends RpcClient> rpcClientImpl : rpcClientImpls) {
-        params.add(new Object[] { rpcServerImpl, rpcClientImpl });
+        params.add(Arguments.of(rpcServerImpl, rpcClientImpl));
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     SERVER_PRINCIPAL = "server/" + HOST;
@@ -140,7 +136,7 @@ public class TestMultipleServerPrincipalsIPC {
     TEST_UTIL.getConfiguration().setInt(RpcClient.FAILED_SERVER_EXPIRY_KEY, 10);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     if (KDC != null) {
       KDC.stop();
@@ -165,7 +161,7 @@ public class TestMultipleServerPrincipalsIPC {
     rpcServer.start();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     clientConf = new Configuration(TEST_UTIL.getConfiguration());
     clientConf.setClass(RpcClientFactory.CUSTOM_RPC_CLIENT_IMPL_CONF_KEY, rpcClientImpl,
@@ -189,7 +185,7 @@ public class TestMultipleServerPrincipalsIPC {
       .createClient(clientConf, HConstants.DEFAULT_CLUSTER_ID.toString()));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     Closeables.close(rpcClient, true);
     rpcServer.stop();
@@ -206,13 +202,13 @@ public class TestMultipleServerPrincipalsIPC {
     });
   }
 
-  @Test
+  @TestTemplate
   public void testEcho() throws Exception {
     String msg = "Hello World";
     assertEquals(msg, echo(msg));
   }
 
-  @Test
+  @TestTemplate
   public void testMaliciousServer() throws Exception {
     // reset the server principals so the principal returned by server does not match
     SecurityInfo securityInfo =
@@ -227,7 +223,7 @@ public class TestMultipleServerPrincipalsIPC {
     assertThat(error.getCause().getCause(), instanceOf(SaslException.class));
   }
 
-  @Test
+  @TestTemplate
   public void testRememberLastSucceededServerPrincipal() throws Exception {
     // after this call we will remember the last succeeded server principal
     assertEquals("a", echo("a"));

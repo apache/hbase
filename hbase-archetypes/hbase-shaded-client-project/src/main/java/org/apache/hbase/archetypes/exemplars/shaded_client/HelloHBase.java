@@ -38,7 +38,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 /**
  * Successful running of this application requires access to an active instance of HBase. For
  * install instructions for a standalone instance of HBase, please refer to
- * https://hbase.apache.org/book.html#quickstart
+ * <a href="https://hbase.apache.org/docs/getting-started#quick-start---standalone-hbase">Quick
+ * Start - Standalone HBase</a>
  */
 public final class HelloHBase {
 

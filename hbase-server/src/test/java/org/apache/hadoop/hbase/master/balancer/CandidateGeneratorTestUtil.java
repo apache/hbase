@@ -224,7 +224,7 @@ public final class CandidateGeneratorTestUtil {
 
   static BalancerClusterState
     createMockBalancerClusterState(Map<ServerName, List<RegionInfo>> serverToRegions) {
-    return new BalancerClusterState(serverToRegions, null, null, null, null);
+    return new BalancerClusterState(serverToRegions, null, null, null, null, null);
   }
 
   /**

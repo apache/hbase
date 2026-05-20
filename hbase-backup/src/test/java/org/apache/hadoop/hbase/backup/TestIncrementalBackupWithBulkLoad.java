@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.BulkLoad;
@@ -43,21 +42,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * This test checks whether backups properly track & manage bulk files loads.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementalBackupWithBulkLoad.class);
 
   private static final String TEST_NAME = TestIncrementalBackupWithBulkLoad.class.getSimpleName();
   private static final int ROWS_IN_BULK_LOAD = 100;
@@ -185,7 +179,7 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
         regionName, columnFamily);
       Path archivedFile1 = new Path(archiveDir, filename1);
       fs.mkdirs(archiveDir);
-      assertTrue("File should be moved to archive", fs.rename(activeFile1, archivedFile1));
+      assertTrue(fs.rename(activeFile1, archivedFile1), "File should be moved to archive");
 
       TestBackupBase.IncrementalTableBackupClientForTest client =
         new TestBackupBase.IncrementalTableBackupClientForTest(TEST_UTIL.getConnection(),
@@ -194,12 +188,12 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
 
       client.updateFileLists(activeFiles, archiveFiles);
 
-      assertEquals("Only one file should remain in active files", 1, activeFiles.size());
-      assertEquals("File2 should still be in active files", activeFile2.toString(),
-        activeFiles.get(0));
-      assertEquals("One file should be added to archive files", 1, archiveFiles.size());
-      assertEquals("Archived file should have correct path", archivedFile1.toString(),
-        archiveFiles.get(0));
+      assertEquals(1, activeFiles.size(), "Only one file should remain in active files");
+      assertEquals(activeFile2.toString(), activeFiles.get(0),
+        "File2 should still be in active files");
+      assertEquals(1, archiveFiles.size(), "One file should be added to archive files");
+      assertEquals(archivedFile1.toString(), archiveFiles.get(0),
+        "Archived file should have correct path");
       systemTable.finishBackupExclusiveOperation();
     }
 

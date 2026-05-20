@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -33,7 +33,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -44,11 +43,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.TestServerHttpUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -57,7 +55,8 @@ import org.slf4j.LoggerFactory;
  * are redacted. A config property name must follow one of the regex patterns specified in
  * hadoop.security.sensitive-config-keys in order to have its value redacted.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDebugDumpRedaction {
   private static final Logger LOG = LoggerFactory.getLogger(TestDebugDumpRedaction.class);
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -100,11 +99,7 @@ public class TestDebugDumpRedaction {
 
   private static LocalHBaseCluster CLUSTER;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDebugDumpRedaction.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
 
@@ -151,7 +146,7 @@ public class TestDebugDumpRedaction {
     CLUSTER.getActiveMaster().waitForMetaOnline();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     if (CLUSTER != null) {
       CLUSTER.shutdown();
@@ -208,8 +203,8 @@ public class TestDebugDumpRedaction {
     // Verify the expected properties had their values redacted.
     for (String property : REDACTED_PROPS) {
       LOG.info("Verifying property has been redacted: {}", property);
-      assertEquals("Expected " + property + " to have its value redacted", REDACTED_TEXT,
-        conf.get(property));
+      assertEquals(REDACTED_TEXT, conf.get(property),
+        "Expected " + property + " to have its value redacted");
     }
 
     // Verify all other props have not had their values redacted.
@@ -218,8 +213,8 @@ public class TestDebugDumpRedaction {
       propertyName = property.getKey();
       if (!REDACTED_PROPS.contains(propertyName)) {
         LOG.info("Verifying {} property has not had its value redacted", propertyName);
-        assertNotEquals("Expected property " + propertyName + " to not have its value redacted",
-          REDACTED_TEXT, conf.get(propertyName));
+        assertNotEquals(REDACTED_TEXT, conf.get(propertyName),
+          "Expected property " + propertyName + " to not have its value redacted");
       }
     }
   }

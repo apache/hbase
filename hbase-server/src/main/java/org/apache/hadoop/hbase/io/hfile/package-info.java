@@ -32,13 +32,15 @@
  * 
  * <h1>Which BlockCache should I use?</h1>
  * By default LruBlockCache is on.  If you would like to cache more, and offheap (offheap
- * usually means less GC headache), try enabling * BucketCache. Fetching will always
+ * usually means less GC headache), try enabling BucketCache. Fetching will always
  * be slower when fetching from BucketCache but latencies tend to be less erratic over time
  * (roughly because GC is less). See Nick Dimiduk's
  * <a href="http://www.n10k.com/blog/blockcache-101/">BlockCache 101</a> for some numbers.
  *
  * <h1>Enabling {@link org.apache.hadoop.hbase.io.hfile.bucket.BucketCache}</h1>
- * See the HBase Reference Guide <a href="http://hbase.apache.org/book.html#enable.bucketcache">Enable BucketCache</a>.
+ * See the HBase Reference Guide <a
+ * href="https://hbase.apache.org/docs/architecture/regionserver#how-to-enable-bucketcache">
+ * Enable BucketCache</a>.
  *
  */
 package org.apache.hadoop.hbase.io.hfile;

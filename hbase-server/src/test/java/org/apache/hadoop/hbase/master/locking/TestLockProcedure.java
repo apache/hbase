@@ -17,9 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.locking;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.CoreMatchers.instanceOf;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.StringStartsWith.startsWith;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -28,7 +32,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -46,18 +49,13 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.hamcrest.core.IsInstanceOf;
-import org.hamcrest.core.StringStartsWith;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,17 +67,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockH
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockResponse;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestLockProcedure {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLockProcedure.class);
-
-  @Rule
-  public final ExpectedException exception = ExpectedException.none();
-  @Rule
-  public TestName testName = new TestName();
   // crank this up if this test turns out to be flaky.
   private static final int HEARTBEAT_TIMEOUT = 2000;
   private static final int LOCAL_LOCKS_TIMEOUT = 4000;
@@ -104,7 +95,7 @@ public class TestLockProcedure {
     conf.setInt(LockProcedure.LOCAL_MASTER_LOCKS_TIMEOUT_MS_CONF, LOCAL_LOCKS_TIMEOUT);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
@@ -121,7 +112,7 @@ public class TestLockProcedure {
     assert tableRegions2.size() > 0;
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -130,13 +121,13 @@ public class TestLockProcedure {
     }
   }
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    testMethodName = testName.getMethodName();
+    testMethodName = testInfo.getTestMethod().get().getName();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
     // Kill all running procedures.
@@ -164,12 +155,13 @@ public class TestLockProcedure {
 
   private void validateLockRequestException(LockRequest lockRequest, String message)
     throws Exception {
-    exception.expect(ServiceException.class);
-    exception.expectCause(IsInstanceOf.instanceOf(DoNotRetryIOException.class));
-    exception
-      .expectMessage(StringStartsWith.startsWith("org.apache.hadoop.hbase.DoNotRetryIOException: "
-        + "java.lang.IllegalArgumentException: " + message));
-    masterRpcService.requestLock(null, lockRequest);
+    ServiceException serviceException =
+      assertThrows(ServiceException.class, () -> masterRpcService.requestLock(null, lockRequest));
+    assertThat(serviceException.getCause(), instanceOf(DoNotRetryIOException.class));
+    assertThat(serviceException.getMessage(),
+      startsWith(
+        "org.apache.hadoop.hbase.DoNotRetryIOException: java.lang.IllegalArgumentException: "
+          + message));
   }
 
   @Test

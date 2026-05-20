@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -53,22 +52,19 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.ClassLoaderTestHelper;
 import org.apache.hadoop.hbase.util.CoprocessorClassLoader;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test coprocessors class loading.
  */
-@Category({ CoprocessorTests.class, LargeTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestClassLoading {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClassLoading.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClassLoading.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -103,7 +99,7 @@ public class TestClassLoading {
     new String[] { regionCoprocessor1.getSimpleName(),
       MultiRowMutationEndpoint.class.getSimpleName(), regionServerCoprocessor.getSimpleName() };
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
 
@@ -122,7 +118,7 @@ public class TestClassLoading {
     cluster = TEST_UTIL.getDFSCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -146,14 +142,14 @@ public class TestClassLoading {
       new Path(fs.getUri().toString() + Path.SEPARATOR));
     String jarFileOnHDFS1 = fs.getUri().toString() + Path.SEPARATOR + jarFile1.getName();
     Path pathOnHDFS1 = new Path(jarFileOnHDFS1);
-    assertTrue("Copy jar file to HDFS failed.", fs.exists(pathOnHDFS1));
+    assertTrue(fs.exists(pathOnHDFS1), "Copy jar file to HDFS failed.");
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS1);
 
     fs.copyFromLocalFile(new Path(jarFile2.getPath()),
       new Path(fs.getUri().toString() + Path.SEPARATOR));
     String jarFileOnHDFS2 = fs.getUri().toString() + Path.SEPARATOR + jarFile2.getName();
     Path pathOnHDFS2 = new Path(jarFileOnHDFS2);
-    assertTrue("Copy jar file to HDFS failed.", fs.exists(pathOnHDFS2));
+    assertTrue(fs.exists(pathOnHDFS2), "Copy jar file to HDFS failed.");
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS2);
 
     // create a table that references the coprocessors
@@ -206,27 +202,27 @@ public class TestClassLoading {
       }
     }
 
-    assertTrue("No region was found for table " + tableName, foundTableRegion);
-    assertTrue("Class " + cpName1 + " was missing on a region", found1);
-    assertTrue("Class " + cpName2 + " was missing on a region", found2);
-    assertTrue("Configuration key 'k1' was missing on a region", found2_k1);
-    assertTrue("Configuration key 'k2' was missing on a region", found2_k2);
-    assertTrue("Configuration key 'k3' was missing on a region", found2_k3);
+    assertTrue(foundTableRegion, "No region was found for table " + tableName);
+    assertTrue(found1, "Class " + cpName1 + " was missing on a region");
+    assertTrue(found2, "Class " + cpName2 + " was missing on a region");
+    assertTrue(found2_k1, "Configuration key 'k1' was missing on a region");
+    assertTrue(found2_k2, "Configuration key 'k2' was missing on a region");
+    assertTrue(found2_k3, "Configuration key 'k3' was missing on a region");
     // check if CP classloaders are cached
-    assertNotNull(jarFileOnHDFS1 + " was not cached",
-      CoprocessorClassLoader.getIfCached(pathOnHDFS1));
-    assertNotNull(jarFileOnHDFS2 + " was not cached",
-      CoprocessorClassLoader.getIfCached(pathOnHDFS2));
+    assertNotNull(CoprocessorClassLoader.getIfCached(pathOnHDFS1),
+      jarFileOnHDFS1 + " was not cached");
+    assertNotNull(CoprocessorClassLoader.getIfCached(pathOnHDFS2),
+      jarFileOnHDFS2 + " was not cached");
     // two external jar used, should be one classloader per jar
-    assertEquals(
-      "The number of cached classloaders should be equal to the number" + " of external jar files",
-      2, CoprocessorClassLoader.getAllCached().size());
+    assertEquals(2, CoprocessorClassLoader.getAllCached().size(),
+      "The number of cached classloaders should be equal to the number" + " of external jar files");
     // check if region active classloaders are shared across all RS regions
     Set<ClassLoader> externalClassLoaders = new HashSet<>(CoprocessorClassLoader.getAllCached());
     for (Map.Entry<Region, Set<ClassLoader>> regionCP : regionsActiveClassLoaders.entrySet()) {
-      assertTrue("Some CP classloaders for region " + regionCP.getKey() + " are not cached."
-        + " ClassLoader Cache:" + externalClassLoaders + " Region ClassLoaders:"
-        + regionCP.getValue(), externalClassLoaders.containsAll(regionCP.getValue()));
+      assertTrue(externalClassLoaders.containsAll(regionCP.getValue()),
+        "Some CP classloaders for region " + regionCP.getKey() + " are not cached."
+          + " ClassLoader Cache:" + externalClassLoaders + " Region ClassLoaders:"
+          + regionCP.getValue());
     }
   }
 
@@ -256,7 +252,7 @@ public class TestClassLoading {
         found = (region.getCoprocessorHost().findCoprocessor(cpName3) != null);
       }
     }
-    assertTrue("Class " + cpName3 + " was missing on a region", found);
+    assertTrue(found, "Class " + cpName3 + " was missing on a region");
   }
 
   @Test
@@ -281,12 +277,12 @@ public class TestClassLoading {
         Coprocessor cp = region.getCoprocessorHost().findCoprocessor(cpName4);
         if (cp != null) {
           found = true;
-          assertEquals("Class " + cpName4 + " was not loaded by CoprocessorClassLoader",
-            cp.getClass().getClassLoader().getClass(), CoprocessorClassLoader.class);
+          assertEquals(CoprocessorClassLoader.class, cp.getClass().getClassLoader().getClass(),
+            "Class " + cpName4 + " was not loaded by CoprocessorClassLoader");
         }
       }
     }
-    assertTrue("Class " + cpName4 + " was missing on a region", found);
+    assertTrue(found, "Class " + cpName4 + " was missing on a region");
   }
 
   @Test
@@ -361,16 +357,16 @@ public class TestClassLoading {
       }
     }
 
-    assertTrue("Class " + cpName1 + " was missing on a region", found_1);
-    assertTrue("Class " + cpName2 + " was missing on a region", found_2);
-    assertTrue("Class SimpleRegionObserver was missing on a region", found_3);
-    assertTrue("Class " + cpName5 + " was missing on a region", found_5);
-    assertTrue("Class " + cpName6 + " was missing on a region", found_6);
+    assertTrue(found_1, "Class " + cpName1 + " was missing on a region");
+    assertTrue(found_2, "Class " + cpName2 + " was missing on a region");
+    assertTrue(found_3, "Class SimpleRegionObserver was missing on a region");
+    assertTrue(found_5, "Class " + cpName5 + " was missing on a region");
+    assertTrue(found_6, "Class " + cpName6 + " was missing on a region");
 
-    assertTrue("Configuration key 'k1' was missing on a region", found6_k1);
-    assertTrue("Configuration key 'k2' was missing on a region", found6_k2);
-    assertTrue("Configuration key 'k3' was missing on a region", found6_k3);
-    assertFalse("Configuration key 'k4' wasn't configured", found6_k4);
+    assertTrue(found6_k1, "Configuration key 'k1' was missing on a region");
+    assertTrue(found6_k2, "Configuration key 'k2' was missing on a region");
+    assertTrue(found6_k3, "Configuration key 'k3' was missing on a region");
+    assertFalse(found6_k4, "Configuration key 'k4' wasn't configured");
   }
 
   @Test
@@ -396,7 +392,7 @@ public class TestClassLoading {
     fs.copyFromLocalFile(new Path(outerJarFile.getPath()),
       new Path(fs.getUri().toString() + Path.SEPARATOR));
     String jarFileOnHDFS = fs.getUri().toString() + Path.SEPARATOR + outerJarFile.getName();
-    assertTrue("Copy jar file to HDFS failed.", fs.exists(new Path(jarFileOnHDFS)));
+    assertTrue(fs.exists(new Path(jarFileOnHDFS)), "Copy jar file to HDFS failed.");
     LOG.info("Copied jar file to HDFS: " + jarFileOnHDFS);
 
     // create a table that references the coprocessors
@@ -438,11 +434,11 @@ public class TestClassLoading {
         }
       }
     }
-    assertTrue("Class " + cpName1 + " was missing on a region", found1);
-    assertTrue("Class " + cpName2 + " was missing on a region", found2);
-    assertTrue("Configuration key 'k1' was missing on a region", found2_k1);
-    assertTrue("Configuration key 'k2' was missing on a region", found2_k2);
-    assertTrue("Configuration key 'k3' was missing on a region", found2_k3);
+    assertTrue(found1, "Class " + cpName1 + " was missing on a region");
+    assertTrue(found2, "Class " + cpName2 + " was missing on a region");
+    assertTrue(found2_k1, "Configuration key 'k1' was missing on a region");
+    assertTrue(found2_k2, "Configuration key 'k2' was missing on a region");
+    assertTrue(found2_k3, "Configuration key 'k3' was missing on a region");
   }
 
   @Test

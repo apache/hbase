@@ -18,14 +18,13 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.assertProcFailed;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -53,31 +52,25 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMergeTableRegionsProcedure {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMergeTableRegionsProcedure.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestMergeTableRegionsProcedure.class);
-  @Rule
-  public final TestName name = new TestName();
+  private String testMethodName;
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -105,19 +98,19 @@ public class TestMergeTableRegionsProcedure {
       RegionServerHostingReplicaSlowOpenCoprocessor.class.getName());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(1);
     admin = UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     resetProcExecutorTestingKillFlag();
     MasterProcedureTestingUtility.generateNonceGroup(UTIL.getHBaseCluster().getMaster());
@@ -133,7 +126,12 @@ public class TestMergeTableRegionsProcedure {
     unassignProcMetrics = am.getAssignmentManagerMetrics().getUnassignProcMetrics();
   }
 
-  @After
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @AfterEach
   public void tearDown() throws Exception {
     resetProcExecutorTestingKillFlag();
     for (TableDescriptor htd : admin.listTableDescriptors()) {
@@ -145,7 +143,7 @@ public class TestMergeTableRegionsProcedure {
   private void resetProcExecutorTestingKillFlag() {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(procExec, false);
-    assertTrue("expected executor to be running", procExec.isRunning());
+    assertTrue(procExec.isRunning(), "expected executor to be running");
   }
 
   private int loadARowPerRegion(final Table t, List<RegionInfo> ris) throws IOException {
@@ -167,7 +165,7 @@ public class TestMergeTableRegionsProcedure {
    */
   @Test
   public void testMergeTwoRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     UTIL.createTable(tableName, new byte[][] { HConstants.CATALOG_FAMILY }, new byte[][] {
       new byte[] { 'b' }, new byte[] { 'c' }, new byte[] { 'd' }, new byte[] { 'e' } });
     testMerge(tableName, 2);
@@ -230,7 +228,7 @@ public class TestMergeTableRegionsProcedure {
    */
   @Test
   public void testMergeTenRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     UTIL.createMultiRegionTable(tableName, HConstants.CATALOG_FAMILY);
     testMerge(tableName, 10);
@@ -394,7 +392,7 @@ public class TestMergeTableRegionsProcedure {
 
   @Test
   public void testMergeDetectsModifyTableProcedure() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     List<RegionInfo> regions = createTable(tableName);

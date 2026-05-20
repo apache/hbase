@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.exceptions.HBaseException;
@@ -31,28 +32,18 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BuilderStyleTest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.PrettyPrinter;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the HColumnDescriptor with appropriate arguments.
  * @deprecated As of release 2.0.0, this will be removed in HBase 3.0.0 together with
  *             {@link HColumnDescriptor}.
  */
-@Category({ MiscTests.class, SmallTests.class })
 @Deprecated
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHColumnDescriptor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHColumnDescriptor.class);
-
-  @Rule
-  public ExpectedException expectedEx = ExpectedException.none();
 
   @Test
   public void testPb() throws DeserializationException {
@@ -104,9 +95,9 @@ public class TestHColumnDescriptor {
    */
   @Test
   public void testHColumnDescriptorShouldThrowIAEWhenFamilyNameEmpty() throws Exception {
-    expectedEx.expect(IllegalArgumentException.class);
-    expectedEx.expectMessage("Column Family name can not be empty");
-    new HColumnDescriptor(Bytes.toBytes(""));
+    IllegalArgumentException exception =
+      assertThrows(IllegalArgumentException.class, () -> new HColumnDescriptor(""));
+    assertEquals("Column Family name can not be empty", exception.getMessage());
   }
 
   /**
@@ -160,30 +151,30 @@ public class TestHColumnDescriptor {
 
     ttl = "50000";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(50000, desc.getTimeToLive());
+    assertEquals(50000, desc.getTimeToLive());
 
     ttl = "50000 seconds";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(50000, desc.getTimeToLive());
+    assertEquals(50000, desc.getTimeToLive());
 
     ttl = "";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(0, desc.getTimeToLive());
+    assertEquals(0, desc.getTimeToLive());
 
     ttl = "FOREVER";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(HConstants.FOREVER, desc.getTimeToLive());
+    assertEquals(HConstants.FOREVER, desc.getTimeToLive());
 
     ttl = "1 HOUR 10 minutes 1 second";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(4201, desc.getTimeToLive());
+    assertEquals(4201, desc.getTimeToLive());
 
     ttl = "500 Days 23 HOURS";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(43282800, desc.getTimeToLive());
+    assertEquals(43282800, desc.getTimeToLive());
 
     ttl = "43282800 SECONDS (500 Days 23 hours)";
     desc.setTimeToLive(ttl);
-    Assert.assertEquals(43282800, desc.getTimeToLive());
+    assertEquals(43282800, desc.getTimeToLive());
   }
 }

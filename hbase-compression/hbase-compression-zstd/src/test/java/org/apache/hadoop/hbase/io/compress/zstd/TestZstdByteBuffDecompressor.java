@@ -17,29 +17,22 @@
  */
 package org.apache.hadoop.hbase.io.compress.zstd;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestZstdByteBuffDecompressor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZstdByteBuffDecompressor.class);
-
   /*
    * "HBase is fun to use and very fast" compressed with zstd, and then prepended with metadata as a
    * BlockCompressorStream would. The phrase is split in three parts and put into the payload in
@@ -58,7 +51,6 @@ public class TestZstdByteBuffDecompressor {
     ByteBuff emptySingleDirectBuff = new SingleByteBuff(ByteBuffer.allocateDirect(0));
     ByteBuff emptyMultiDirectBuff =
       new MultiByteBuff(ByteBuffer.allocateDirect(0), ByteBuffer.allocateDirect(0));
-
     try (ZstdByteBuffDecompressor decompressor = new ZstdByteBuffDecompressor(null)) {
       assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff));
       assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleDirectBuff));
@@ -118,5 +110,4 @@ public class TestZstdByteBuffDecompressor {
         Bytes.toString(output.toBytes(0, decompressedSize)));
     }
   }
-
 }

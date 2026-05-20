@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.security;
 
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.SERVICE;
 import static org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl.newBlockingStub;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,11 +37,12 @@ import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.io.FileChangeWatcher;
 import org.apache.hadoop.hbase.io.crypto.tls.KeyStoreFileType;
@@ -59,20 +60,18 @@ import org.apache.hadoop.hbase.ipc.RpcScheduler;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
 import org.bouncycastle.operator.OperatorCreationException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -82,13 +81,10 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
 
-@RunWith(Parameterized.class)
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: keyType={0}, storeFileType={1}")
 public class TestNettyTLSIPCFileWatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyTLSIPCFileWatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNettyTLSIPCFileWatcher.class);
 
@@ -100,24 +96,26 @@ public class TestNettyTLSIPCFileWatcher {
 
   private X509TestContext x509TestContext;
 
-  @Parameterized.Parameter(0)
-  public X509KeyType keyType;
+  private X509KeyType keyType;
 
-  @Parameterized.Parameter(1)
-  public KeyStoreFileType storeFileType;
+  private KeyStoreFileType storeFileType;
 
-  @Parameterized.Parameters(name = "{index}: keyType={0}, storeFileType={1}")
-  public static List<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (X509KeyType caKeyType : X509KeyType.values()) {
       for (KeyStoreFileType ks : KeyStoreFileType.values()) {
-        params.add(new Object[] { caKeyType, ks });
+        params.add(Arguments.of(caKeyType, ks));
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @BeforeClass
+  public TestNettyTLSIPCFileWatcher(X509KeyType keyType, KeyStoreFileType storeFileType) {
+    this.keyType = keyType;
+    this.storeFileType = storeFileType;
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     Security.addProvider(new BouncyCastleProvider());
     File dir =
@@ -133,14 +131,14 @@ public class TestNettyTLSIPCFileWatcher {
     when(SERVER.getEventLoopGroupConfig()).thenReturn(EVENT_LOOP_GROUP_CONFIG);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws InterruptedException {
     Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
     EVENT_LOOP_GROUP_CONFIG.group().shutdownGracefully().sync();
     UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     x509TestContext = PROVIDER.get(keyType, keyType, "keyPa$$word".toCharArray());
     x509TestContext.setConfigurations(storeFileType, storeFileType);
@@ -150,7 +148,7 @@ public class TestNettyTLSIPCFileWatcher {
     CONF.setLong(X509Util.HBASE_TLS_FILEPOLL_INTERVAL_MILLIS, 10);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     x509TestContext.clearConfigurations();
     x509TestContext.getConf().unset(X509Util.TLS_CONFIG_OCSP);
@@ -163,7 +161,7 @@ public class TestNettyTLSIPCFileWatcher {
     Security.setProperty("com.sun.security.enableCRLDP", Boolean.FALSE.toString());
   }
 
-  @Test
+  @TestTemplate
   public void testReplaceServerKeystore() throws IOException, ServiceException,
     GeneralSecurityException, OperatorCreationException, InterruptedException {
     Configuration clientConf = new Configuration(CONF);
@@ -215,7 +213,7 @@ public class TestNettyTLSIPCFileWatcher {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testReplaceClientAndServerKeystore() throws GeneralSecurityException, IOException,
     OperatorCreationException, ServiceException, InterruptedException {
     Configuration clientConf = new Configuration(CONF);

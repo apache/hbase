@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import com.google.protobuf.RpcController;
 import com.google.protobuf.ServiceException;
@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -54,22 +53,19 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ByteStringer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * TestEndpoint: test cases to verify coprocessor Endpoint
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCoprocessorEndpoint {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorEndpoint.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCoprocessorEndpoint.class);
 
@@ -85,7 +81,7 @@ public class TestCoprocessorEndpoint {
 
   private static HBaseTestingUtility util = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
@@ -111,7 +107,7 @@ public class TestCoprocessorEndpoint {
     table.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -151,7 +147,7 @@ public class TestCoprocessorEndpoint {
     for (long i = 0; i < ROWSIZE; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
 
     results.clear();
 
@@ -166,7 +162,7 @@ public class TestCoprocessorEndpoint {
     for (int i = rowSeperator1; i < ROWSIZE; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
     table.close();
   }
 

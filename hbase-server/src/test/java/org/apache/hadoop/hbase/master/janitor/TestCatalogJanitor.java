@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.master.janitor;
 
 import static org.apache.hadoop.hbase.util.HFileArchiveTestingUtil.assertArchiveEqualToOriginal;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
@@ -40,7 +40,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -70,49 +69,44 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCatalogJanitor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogJanitor.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCatalogJanitor.class);
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
-  @Rule
-  public final TestName name = new TestName();
+  private String currentTestMethod;
 
   private MockMasterServices masterServices;
   private CatalogJanitor janitor;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
-  @Before
-  public void setup() throws Exception {
-    setRootDirAndCleanIt(HTU, this.name.getMethodName());
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    this.currentTestMethod = testInfo.getTestMethod().get().getName();
+    setRootDirAndCleanIt(HTU, this.currentTestMethod);
     this.masterServices = new MockMasterServices(HTU.getConfiguration());
     this.masterServices.start(10, null);
     this.janitor = new CatalogJanitor(masterServices);
   }
 
-  @After
+  @AfterEach
   public void teardown() {
     this.janitor.shutdown(true);
     this.masterServices.stop("DONE");
@@ -276,7 +270,7 @@ public class TestCatalogJanitor {
    */
   @Test
   public void testParentCleanedEvenIfDaughterGoneFirst() throws IOException, InterruptedException {
-    parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(this.name.getMethodName(),
+    parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(this.currentTestMethod,
       Bytes.toBytes("eee"));
   }
 
@@ -287,7 +281,7 @@ public class TestCatalogJanitor {
   @Test
   public void testLastParentCleanedEvenIfDaughterGoneFirst()
     throws IOException, InterruptedException {
-    parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(this.name.getMethodName(), new byte[0]);
+    parentWithSpecifiedEndKeyCleanedEvenIfDaughterGoneFirst(this.currentTestMethod, new byte[0]);
   }
 
   /**
@@ -295,7 +289,7 @@ public class TestCatalogJanitor {
    *         MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME)
    */
   private TableDescriptor createTableDescriptorForCurrentMethod() {
-    return TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
+    return TableDescriptorBuilder.newBuilder(TableName.valueOf(this.currentTestMethod))
       .setColumnFamily(new HColumnDescriptor(MockMasterServices.DEFAULT_COLUMN_FAMILY_NAME))
       .build();
   }
@@ -562,8 +556,8 @@ public class TestCatalogJanitor {
     int index = 0;
     for (FileStatus file : storeFiles) {
       LOG.debug("Have store file:" + file.getPath());
-      assertEquals("Got unexpected store file", mockFiles[index].getPath(),
-        storeFiles[index].getPath());
+      assertEquals(mockFiles[index].getPath(), storeFiles[index].getPath(),
+        "Got unexpected store file");
       index++;
     }
 
@@ -681,7 +675,7 @@ public class TestCatalogJanitor {
     for (int i = 0; i < numberOfThreads; i++) {
       threads[i].join();
     }
-    assertTrue("One janitor.scan() call should have returned -1", gcValues.contains(-1));
+    assertTrue(gcValues.contains(-1), "One janitor.scan() call should have returned -1");
   }
 
   private FileStatus[] addMockStoreFiles(int count, MasterServices services, Path storedir)
@@ -699,7 +693,7 @@ public class TestCatalogJanitor {
     LOG.debug("Adding " + count + " store files to the storedir:" + storedir);
     // make sure the mock store files are there
     FileStatus[] storeFiles = fs.listStatus(storedir);
-    assertEquals("Didn't have expected store files", count, storeFiles.length);
+    assertEquals(count, storeFiles.length, "Didn't have expected store files");
     return storeFiles;
   }
 
@@ -707,7 +701,9 @@ public class TestCatalogJanitor {
     throws IOException {
     Path testdir = htu.getDataTestDir(subdir);
     FileSystem fs = FileSystem.get(htu.getConfiguration());
-    if (fs.exists(testdir)) assertTrue(fs.delete(testdir, true));
+    if (fs.exists(testdir)) {
+      assertTrue(fs.delete(testdir, true));
+    }
     CommonFSUtils.setRootDir(htu.getConfiguration(), testdir);
     return CommonFSUtils.getRootDir(htu.getConfiguration()).toString();
   }
