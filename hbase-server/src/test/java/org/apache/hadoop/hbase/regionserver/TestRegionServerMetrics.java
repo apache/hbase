@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -64,30 +63,22 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionServerMetrics {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerMetrics.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerMetrics.class);
-
-  @Rule
-  public TestName testName = new TestName();
 
   private static MetricsAssertHelper metricsHelper;
   private static MiniHBaseCluster cluster;
@@ -106,7 +97,7 @@ public class TestRegionServerMetrics {
   private static Admin admin;
   private static boolean TABLES_ON_MASTER;
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
     TEST_UTIL = new HBaseTestingUtility();
@@ -138,7 +129,7 @@ public class TestRegionServerMetrics {
     serverSource = metricsRegionServer.getMetricsSource();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     if (TEST_UTIL != null) {
       TEST_UTIL.shutdownMiniCluster();
@@ -148,14 +139,14 @@ public class TestRegionServerMetrics {
   TableName tableName;
   Table table;
 
-  @Before
-  public void beforeTestMethod() throws Exception {
+  @BeforeEach
+  public void beforeTestMethod(TestInfo testInfo) throws Exception {
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
-    tableName = TableName.valueOf(testName.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     table = TEST_UTIL.createTable(tableName, cf);
   }
 
-  @After
+  @AfterEach
   public void afterTestMethod() throws Exception {
     admin.disableTable(tableName);
     admin.deleteTable(tableName);
@@ -570,7 +561,7 @@ public class TestRegionServerMetrics {
   }
 
   @Test
-  @Ignore
+  @Disabled
   public void testRangeCountMetrics() throws Exception {
     final long[] timeranges =
       { 1, 3, 10, 30, 100, 300, 1000, 3000, 10000, 30000, 60000, 120000, 300000, 600000 };
@@ -640,13 +631,13 @@ public class TestRegionServerMetrics {
     TEST_UTIL.getAdmin().flush(tableName);
     metricsRegionServer.getRegionServerWrapper().forceRecompute();
 
-    assertTrue("Total read bytes should be larger than 0",
-      metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0);
-    assertTrue("Total local read bytes should be larger than 0",
-      metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0);
-    assertEquals("Total short circuit read bytes should be equal to 0", 0,
-      metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead());
-    assertEquals("Total zero-byte read bytes should be equal to 0", 0,
-      metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead());
+    assertTrue(metricsRegionServer.getRegionServerWrapper().getTotalBytesRead() > 0,
+      "Total read bytes should be larger than 0");
+    assertTrue(metricsRegionServer.getRegionServerWrapper().getLocalBytesRead() > 0,
+      "Total local read bytes should be larger than 0");
+    assertEquals(0, metricsRegionServer.getRegionServerWrapper().getShortCircuitBytesRead(),
+      "Total short circuit read bytes should be equal to 0");
+    assertEquals(0, metricsRegionServer.getRegionServerWrapper().getZeroCopyBytesRead(),
+      "Total zero-byte read bytes should be equal to 0");
   }
 }

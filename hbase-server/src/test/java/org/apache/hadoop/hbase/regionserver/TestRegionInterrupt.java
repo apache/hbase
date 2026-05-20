@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -27,14 +27,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
@@ -60,22 +58,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionInterrupt {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionInterrupt.class);
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionInterrupt.class);
@@ -84,10 +78,7 @@ public class TestRegionInterrupt {
 
   static long sleepTime;
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
@@ -101,19 +92,19 @@ public class TestRegionInterrupt {
     conf.setLong(HRegion.CLOSE_WAIT_TIME, sleepTime * 2);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testCloseInterruptScanning() throws Exception {
-    final TableName tableName = name.getTableName();
+  public void testCloseInterruptScanning(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     LOG.info("Creating table " + tableName);
     try (Table table = TEST_UTIL.createTable(tableName, FAMILY)) {
       // load some data
@@ -165,15 +156,15 @@ public class TestRegionInterrupt {
       scanner.join();
 
       // When we get here the region has closed and the table is offline
-      assertTrue("Region operations were not interrupted",
-        InterruptInterceptingHRegion.wasInterrupted());
-      assertTrue("Scanner did not catch expected exception", expectedExceptionCaught.get());
+      assertTrue(InterruptInterceptingHRegion.wasInterrupted(),
+        "Region operations were not interrupted");
+      assertTrue(expectedExceptionCaught.get(), "Scanner did not catch expected exception");
     }
   }
 
   @Test
-  public void testCloseInterruptMutation() throws Exception {
-    final TableName tableName = name.getTableName();
+  public void testCloseInterruptMutation(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final Admin admin = TEST_UTIL.getAdmin();
     // Create the test table
     HTableDescriptor htd = new HTableDescriptor(tableName);
@@ -223,9 +214,9 @@ public class TestRegionInterrupt {
     inserter.join();
 
     // When we get here the region has closed and the table is offline
-    assertTrue("Region operations were not interrupted",
-      InterruptInterceptingHRegion.wasInterrupted());
-    assertTrue("Inserter did not catch expected exception", expectedExceptionCaught.get());
+    assertTrue(InterruptInterceptingHRegion.wasInterrupted(),
+      "Region operations were not interrupted");
+    assertTrue(expectedExceptionCaught.get(), "Inserter did not catch expected exception");
 
   }
 
