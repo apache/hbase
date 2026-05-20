@@ -28,8 +28,8 @@ package org.apache.hadoop.hbase.master.balancer;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
 
-import java.text.DecimalFormat;
 import java.math.BigDecimal;
+import java.text.DecimalFormat;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
