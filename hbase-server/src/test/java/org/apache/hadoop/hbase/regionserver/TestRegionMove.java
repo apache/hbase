@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static junit.framework.TestCase.fail;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -35,31 +34,19 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test move fails when table disabled
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestRegionMove {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMove.class);
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
-
-  @Rule
-  public TestName name = new TestName();
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   public static Configuration CONF;
   protected static final String F1 = "f1";
@@ -68,20 +55,20 @@ public class TestRegionMove {
   protected TableName tableName;
   protected String method;
 
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void stopCluster() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
     CONF = TEST_UTIL.getConfiguration();
-    method = name.getMethodName();
+    method = testInfo.getTestMethod().get().getName();
     tableName = TableName.valueOf(method);
   }
 
@@ -110,8 +97,8 @@ public class TestRegionMove {
     HRegionServer rs2 = TEST_UTIL.getOtherRegionServer(rs1);
     List<RegionInfo> regionsOnRS1ForTable = admin.getRegions(rs1.getServerName()).stream()
       .filter((regionInfo) -> regionInfo.getTable().equals(tableName)).collect(Collectors.toList());
-    assertTrue("Expected to find at least one region for " + tableName + " on "
-      + rs1.getServerName() + ", but found none", !regionsOnRS1ForTable.isEmpty());
+    assertTrue(!regionsOnRS1ForTable.isEmpty(), "Expected to find at least one region for "
+      + tableName + " on " + rs1.getServerName() + ", but found none");
     final RegionInfo regionToMove = regionsOnRS1ForTable.get(0);
 
     // Offline the region and then try to move it. Should fail.
