@@ -17,42 +17,39 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.lang.reflect.Field;
 import org.apache.hadoop.hbase.ExecutorStatusChore;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests to validate if HRegionServer default chores are scheduled
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSChoresScheduled {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSChoresScheduled.class);
 
   private static HRegionServer hRegionServer;
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(StartTestingClusterOption.builder().numRegionServers(1).build());
     hRegionServer = UTIL.getMiniHBaseCluster().getRegionServer(0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -67,8 +64,8 @@ public class TestRSChoresScheduled {
     }
 
     private void testIfChoreScheduled(E choreObj) {
-      Assert.assertNotNull(choreObj);
-      Assert.assertTrue(hRegionServer.getChoreService().isChoreScheduled(choreObj));
+      assertNotNull(choreObj);
+      assertTrue(hRegionServer.getChoreService().isChoreScheduled(choreObj));
     }
 
   }
