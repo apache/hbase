@@ -181,8 +181,8 @@ public class TestTableName {
     for (String suffix : invalidSuffixes) {
       Configuration conf = HBaseConfiguration.create();
       conf.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
-      assertThrows("Expected IllegalArgumentException for suffix: " + suffix,
-        IllegalArgumentException.class, () -> TableName.initializeHbaseMetaTableName(conf));
+      assertThrows(IllegalArgumentException.class, () -> TableName.initializeHbaseMetaTableName(conf),
+        "Expected IllegalArgumentException for suffix: " + suffix);
     }
   }
 }
