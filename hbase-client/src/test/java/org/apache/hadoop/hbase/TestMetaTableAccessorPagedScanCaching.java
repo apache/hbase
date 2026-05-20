@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
@@ -31,10 +31,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 /**
@@ -48,12 +47,9 @@ import org.mockito.ArgumentCaptor;
  * The configured {@code hbase.meta.scanner.caching} is set to a value smaller than {@code rowLimit}
  * so the paged-vs-unbounded branches in {@code MetaTableAccessor#getMetaScan} are distinguishable.
  */
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetaTableAccessorPagedScanCaching {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaTableAccessorPagedScanCaching.class);
 
   private static final TableName USER_TABLE = TableName.valueOf("LocatorPaged");
   private static final int META_CACHING = 2;
@@ -64,7 +60,7 @@ public class TestMetaTableAccessorPagedScanCaching {
   private Connection connection;
   private Table metaTable;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     conf.setInt(HConstants.HBASE_META_SCANNER_CACHING, META_CACHING);
