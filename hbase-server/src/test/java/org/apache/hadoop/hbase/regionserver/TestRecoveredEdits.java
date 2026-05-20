@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +29,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -54,32 +53,26 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tests around replay of recovered.edits content.
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestRecoveredEdits {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecoveredEdits.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
 
   private static BlockCache blockCache;
 
-  @Rule
-  public TestName testName = new TestName();
+  private String methodName;
 
   /**
    * Path to a recovered.edits file in hbase-server test resources folder. This is a little fragile
@@ -106,9 +99,14 @@ public class TestRecoveredEdits {
   /**
    * Name of table mentioned edits from recovered.edits
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
+  }
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   /**
@@ -129,9 +127,8 @@ public class TestRecoveredEdits {
     // Set it so we flush every 1M or so. Thats a lot.
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY, String.valueOf(policy).toLowerCase());
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(testName.getMethodName()))
-        .setColumnFamily(RECOVEREDEDITS_CFD).build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf(methodName)).setColumnFamily(RECOVEREDEDITS_CFD).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     final String encodedRegionName = hri.getEncodedName();
     Path hbaseRootDir = TEST_UTIL.getDataTestDir();
@@ -163,9 +160,9 @@ public class TestRecoveredEdits {
     // we flush at 1MB, that there are at least 3 flushed files that are there because of the
     // replay of edits.
     if (policy == MemoryCompactionPolicy.EAGER || policy == MemoryCompactionPolicy.ADAPTIVE) {
-      assertTrue("Files count=" + storeFiles.size(), storeFiles.size() >= 1);
+      assertTrue(storeFiles.size() >= 1, "Files count=" + storeFiles.size());
     } else {
-      assertTrue("Files count=" + storeFiles.size(), storeFiles.size() > 10);
+      assertTrue(storeFiles.size() > 10, "Files count=" + storeFiles.size());
     }
     // Now verify all edits made it into the region.
     int count = verifyAllEditsMadeItIn(fs, conf, RECOVEREDEDITS_PATH, region);
@@ -232,8 +229,8 @@ public class TestRecoveredEdits {
         i++;
       }
     }
-    assertEquals("Only found " + found + " cells in region, but there are " + walCells.size()
-      + " cells in recover edits", found, walCells.size());
+    assertEquals(found, walCells.size(), "Only found " + found + " cells in region, but there are "
+      + walCells.size() + " cells in recover edits");
     return count;
   }
 }

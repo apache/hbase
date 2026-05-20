@@ -17,30 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestRegionServerAccounting {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerAccounting.class);
 
   private final static float DEFAULT_MEMSTORE_SIZE = 0.2f;
 
   private static Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUpConf() {
     conf = HBaseConfiguration.create();
     conf.setFloat(MemorySizeUtil.MEMSTORE_SIZE_KEY, DEFAULT_MEMSTORE_SIZE);

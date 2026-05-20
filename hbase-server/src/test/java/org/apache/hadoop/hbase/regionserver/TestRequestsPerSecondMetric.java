@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -28,35 +29,30 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Validate requestsPerSecond metric.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRequestsPerSecondMetric {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRequestsPerSecondMetric.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static final long METRICS_PERIOD = 2000L;
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = UTIL.getConfiguration();
     conf.setLong(HConstants.REGIONSERVER_METRICS_PERIOD, METRICS_PERIOD);
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -90,6 +86,6 @@ public class TestRequestsPerSecondMetric {
     admin.disableTable(TABLENAME);
     Thread.sleep(METRICS_PERIOD);
     metricsServer.run();
-    Assert.assertTrue(metricsWrapper.getRequestsPerSecond() > -1);
+    assertTrue(metricsWrapper.getRequestsPerSecond() > -1);
   }
 }

@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -28,14 +27,13 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
@@ -51,26 +49,23 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader
 /**
  * Tests that verify certain RPCs get a higher QoS.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestPriorityRpc {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPriorityRpc.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
   private static HRegionServer RS = null;
   private static PriorityFunction PRIORITY = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     RS = UTIL.getHBaseCluster().getRegionServer(0);
     PRIORITY = RS.rpcServices.getPriority();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.shutdownMiniCluster();
   }
@@ -147,7 +142,7 @@ public class TestPriorityRpc {
     // Presume type.
     ((AnnotationReadingPriorityFunction) PRIORITY).setRegionServer(mockRS);
     final int qos = PRIORITY.getPriority(header, scanRequest, createSomeUser());
-    assertEquals(Integer.toString(qos), qos, HConstants.NORMAL_QOS);
+    assertEquals(HConstants.NORMAL_QOS, qos, Integer.toString(qos));
 
     // build a scan request with scannerID
     scanBuilder = ScanRequest.newBuilder();
