@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -38,11 +37,10 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -51,12 +49,8 @@ import org.slf4j.LoggerFactory;
  * add tests for important configurations which will be changed online.
  */
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestRegionServerOnlineConfigChange {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerOnlineConfigChange.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerOnlineConfigChange.class.getName());
@@ -75,8 +69,8 @@ public class TestRegionServerOnlineConfigChange {
   private final static byte[] COLUMN_FAMILY1 = Bytes.toBytes(columnFamily1Str);
   private final static long MAX_FILE_SIZE = 20 * 1024 * 1024L;
 
-  @BeforeClass
-  public static void setUp() throws Exception {
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
     conf = hbaseTestingUtility.getConfiguration();
     hbaseTestingUtility.startMiniCluster();
     t1 = hbaseTestingUtility.createTable(
@@ -92,7 +86,7 @@ public class TestRegionServerOnlineConfigChange {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     hbaseTestingUtility.shutdownMiniCluster();
   }
