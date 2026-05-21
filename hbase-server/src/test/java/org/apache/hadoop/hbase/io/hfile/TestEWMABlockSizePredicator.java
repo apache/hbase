@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestEWMABlockSizePredicator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEWMABlockSizePredicator.class);
 
   private static final int BLOCK_SIZE_64KB = 64 * 1024;
   private static final int BLOCK_SIZE_1MB = 1024 * 1024;
@@ -70,8 +66,8 @@ public class TestEWMABlockSizePredicator {
 
     for (int i = 0; i < 5; i++) {
       predicator.updateLatestBlockSizes(ctx, 60000, 20000); // 3.0:1
-      assertEquals("EWMA should be stable at block " + (i + 1), 3.0, predicator.getEwmaRatio(),
-        0.001);
+      assertEquals(3.0, predicator.getEwmaRatio(), 0.001,
+        "EWMA should be stable at block " + (i + 1));
     }
 
     int expectedAdjusted = (int) (BLOCK_SIZE_64KB * 3.0);
@@ -117,8 +113,11 @@ public class TestEWMABlockSizePredicator {
       lastAdj = adj;
     }
 
-    assertTrue("Swing should decrease as EWMA converges: first pair swing=" + firstPairSwing
-      + " last pair swing=" + lastPairSwing, lastPairSwing < firstPairSwing);
+    final int finalFirstPairSwing = firstPairSwing;
+    final int finalLastPairSwing = lastPairSwing;
+    assertTrue(finalLastPairSwing < finalFirstPairSwing,
+      () -> "Swing should decrease as EWMA converges: first pair swing=" + finalFirstPairSwing
+        + " last pair swing=" + finalLastPairSwing);
 
     // After several alternating blocks, the ratio should be near the mean.
     // With alpha=0.5 the EWMA is biased toward the most recent sample, so the
@@ -134,24 +133,24 @@ public class TestEWMABlockSizePredicator {
   public void testColdStartBehavior() {
     EWMABlockSizePredicator predicator = new EWMABlockSizePredicator();
 
-    assertTrue("Cold start: shouldFinishBlock should return true before initialization",
-      predicator.shouldFinishBlock(BLOCK_SIZE_64KB));
-    assertTrue("Cold start: shouldFinishBlock should return true for any size",
-      predicator.shouldFinishBlock(1));
+    assertTrue(predicator.shouldFinishBlock(BLOCK_SIZE_64KB),
+      "Cold start: shouldFinishBlock should return true before initialization");
+    assertTrue(predicator.shouldFinishBlock(1),
+      "Cold start: shouldFinishBlock should return true for any size");
 
     HFileContext ctx = contextWithBlockSize(BLOCK_SIZE_64KB);
     predicator.updateLatestBlockSizes(ctx, 68000, 20000); // 3.4:1
 
     int adjustedSize = predicator.getAdjustedBlockSize();
 
-    assertFalse("After init: block below configured size should not finish",
-      predicator.shouldFinishBlock(BLOCK_SIZE_64KB - 1));
-    assertFalse("After init: block at configured size should not finish (needs to grow)",
-      predicator.shouldFinishBlock(BLOCK_SIZE_64KB));
-    assertTrue("After init: block at adjusted size should finish",
-      predicator.shouldFinishBlock(adjustedSize));
-    assertTrue("After init: block above adjusted size should finish",
-      predicator.shouldFinishBlock(adjustedSize + 1));
+    assertFalse(predicator.shouldFinishBlock(BLOCK_SIZE_64KB - 1),
+      "After init: block below configured size should not finish");
+    assertFalse(predicator.shouldFinishBlock(BLOCK_SIZE_64KB),
+      "After init: block at configured size should not finish (needs to grow)");
+    assertTrue(predicator.shouldFinishBlock(adjustedSize),
+      "After init: block at adjusted size should finish");
+    assertTrue(predicator.shouldFinishBlock(adjustedSize + 1),
+      "After init: block above adjusted size should finish");
   }
 
   /**
@@ -198,8 +197,8 @@ public class TestEWMABlockSizePredicator {
     fast.updateLatestBlockSizes(ctx, 100000, 20000);
     assertEquals(4.0, fast.getEwmaRatio(), 0.001);
 
-    assertTrue("Lower alpha should dampen the spike more",
-      predicator.getEwmaRatio() < fast.getEwmaRatio());
+    assertTrue(predicator.getEwmaRatio() < fast.getEwmaRatio(),
+      "Lower alpha should dampen the spike more");
   }
 
   /**
@@ -216,6 +215,26 @@ public class TestEWMABlockSizePredicator {
     assertEquals(EWMABlockSizePredicator.DEFAULT_ALPHA, predicator.getAlpha(), 0.0);
   }
 
+  @Test
+  public void testSetConfWithNull() {
+    EWMABlockSizePredicator predicator = new EWMABlockSizePredicator();
+    predicator.setConf(null);
+    assertEquals(EWMABlockSizePredicator.DEFAULT_ALPHA, predicator.getAlpha(), 0.0);
+  }
+
+  @Test
+  public void testInvalidAlphaThrows() {
+    double[] invalid = { 0.0, -0.1, -1.0, 1.0001, 2.0, Double.NaN, Double.POSITIVE_INFINITY,
+      Double.NEGATIVE_INFINITY };
+    for (double bad : invalid) {
+      EWMABlockSizePredicator predicator = new EWMABlockSizePredicator();
+      Configuration conf = new Configuration(false);
+      conf.setDouble(EWMABlockSizePredicator.EWMA_ALPHA_KEY, bad);
+      assertThrows(IllegalArgumentException.class, () -> predicator.setConf(conf),
+        () -> "Invalid alpha=" + bad + " should throw IllegalArgumentException");
+    }
+  }
+
   /**
    * Verify that {@code compressed <= 0} is handled gracefully: the update is skipped and the EWMA
    * state is not corrupted.
@@ -227,8 +246,8 @@ public class TestEWMABlockSizePredicator {
 
     // compressed=0 before initialization — should remain uninitialized
     predicator.updateLatestBlockSizes(ctx, 68000, 0);
-    assertTrue("Should still be in cold-start state after compressed=0",
-      predicator.shouldFinishBlock(BLOCK_SIZE_64KB));
+    assertTrue(predicator.shouldFinishBlock(BLOCK_SIZE_64KB),
+      "Should still be in cold-start state after compressed=0");
 
     // Initialize with a valid block
     predicator.updateLatestBlockSizes(ctx, 68000, 20000);

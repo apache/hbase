@@ -21,6 +21,8 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+
 /**
  * A {@link BlockCompressedSizePredicator} that uses an Exponentially Weighted Moving Average (EWMA)
  * of the compression ratio to predict the uncompressed block size needed to produce compressed
@@ -42,7 +44,15 @@ public class EWMABlockSizePredicator implements BlockCompressedSizePredicator, C
   @Override
   public void setConf(Configuration conf) {
     this.conf = conf;
-    this.alpha = conf.getDouble(EWMA_ALPHA_KEY, DEFAULT_ALPHA);
+    if (conf == null) {
+      this.alpha = DEFAULT_ALPHA;
+      return;
+    }
+    double alpha = conf.getDouble(EWMA_ALPHA_KEY, DEFAULT_ALPHA);
+    Preconditions.checkArgument(
+      !Double.isNaN(alpha) && !Double.isInfinite(alpha) && alpha > 0.0 && alpha <= 1.0,
+      "Invalid %s=%s (must be in (0, 1])", EWMA_ALPHA_KEY, alpha);
+    this.alpha = alpha;
   }
 
   @Override

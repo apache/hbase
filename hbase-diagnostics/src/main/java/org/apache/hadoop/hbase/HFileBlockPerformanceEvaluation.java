@@ -265,7 +265,6 @@ public class HFileBlockPerformanceEvaluation {
               HFile.createReader(fs, hfilePath, CacheConfig.DISABLED, true, conf)) {
               try (HFileScanner scanner = reader.getScanner(conf, false, false)) {
                 scanner.seekTo();
-                HFileBlock prevBlock = null;
                 do {
                   Cell cell = scanner.getCell();
                   if (cell == null) {
@@ -276,16 +275,15 @@ public class HFileBlockPerformanceEvaluation {
               }
 
               // Read block-level info by traversing the data index
-              int dataBlockCount = reader.getTrailer().getDataIndexCount();
               // Use the reader's block iterator to get on-disk sizes
               try (HFileScanner scanner = reader.getScanner(conf, false, false)) {
                 if (scanner.seekTo()) {
-                  HFileBlock block = null;
                   long offset = reader.getTrailer().getFirstDataBlockOffset();
                   long lastOffset = -1;
                   // Read blocks directly
                   while (offset >= 0 && offset != lastOffset) {
                     lastOffset = offset;
+                    HFileBlock block = null;
                     try {
                       block = reader.readBlock(offset, -1, false, false, false, true, null,
                         reader.getDataBlockEncoding());
@@ -293,12 +291,14 @@ public class HFileBlockPerformanceEvaluation {
                         break;
                       }
                       compressedBlockSizes.add(block.getOnDiskSizeWithHeader());
-                      long nextOffset = offset + block.getOnDiskSizeWithHeader();
-                      block.release();
-                      block = null;
-                      offset = nextOffset;
+                      offset += block.getOnDiskSizeWithHeader();
                     } catch (Exception e) {
+                      LOG.warn("Failed to read block at offset {} from {}", offset, hfilePath, e);
                       break;
+                    } finally {
+                      if (block != null) {
+                        block.release();
+                      }
                     }
                   }
                 }
