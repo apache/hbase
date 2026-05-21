@@ -17,21 +17,16 @@
  */
 package org.apache.hadoop.hbase.io.devsim;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestIOBudget {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIOBudget.class);
 
   @Test
   public void testLowRateModeDoesNotDeadlock() {
@@ -43,11 +38,11 @@ public class TestIOBudget {
     long elapsedSecondTokenMs = System.currentTimeMillis() - t1;
 
     // At 2 tokens/sec, second token should require waiting roughly 500ms.
-    assertTrue("Expected low-rate budget to throttle second token, elapsed=" + elapsedSecondTokenMs,
-      elapsedSecondTokenMs >= 300);
-    assertTrue("Unexpectedly long low-rate throttle delay, elapsed=" + elapsedSecondTokenMs,
-      elapsedSecondTokenMs < 3000);
-    assertTrue("Clock sanity check", t1 >= t0);
+    assertTrue(elapsedSecondTokenMs >= 300,
+      "Expected low-rate budget to throttle second token, elapsed=" + elapsedSecondTokenMs);
+    assertTrue(elapsedSecondTokenMs < 3000,
+      "Unexpectedly long low-rate throttle delay, elapsed=" + elapsedSecondTokenMs);
+    assertTrue(t1 >= t0, "Clock sanity check");
   }
 
   @Test
@@ -55,6 +50,6 @@ public class TestIOBudget {
     // 100 tokens/sec with 100ms windows -> 10 tokens/window
     IOBudget budget = new IOBudget(100, 100);
     long elapsedMs = budget.consume(15);
-    assertTrue("Expected consume to sleep when exceeding window budget", elapsedMs > 0);
+    assertTrue(elapsedMs > 0, "Expected consume to sleep when exceeding window budget");
   }
 }

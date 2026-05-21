@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.devsim;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -41,11 +40,10 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +56,9 @@ import org.slf4j.LoggerFactory;
  * device latency disabled. Writes data through HBase, flushes, reads it back via scan and get, and
  * asserts that the device layer metrics reflect the IO.
  */
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestEBSDeviceLayer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEBSDeviceLayer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEBSDeviceLayer.class);
 
@@ -76,7 +71,7 @@ public class TestEBSDeviceLayer {
 
   private static HBaseTestingUtil UTIL;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.HBASE_REGION_SPLIT_POLICY_KEY,
@@ -93,7 +88,7 @@ public class TestEBSDeviceLayer {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     EBSDevice.shutdown();
     if (UTIL != null) {
@@ -103,9 +98,9 @@ public class TestEBSDeviceLayer {
 
   @Test
   public void testDeviceLayerInterceptsIO() throws Exception {
-    assertEquals("Expected 1 DataNode registered with EBSDevice", 1, EBSDevice.getNumDataNodes());
+    assertEquals(1, EBSDevice.getNumDataNodes(), "Expected 1 DataNode registered with EBSDevice");
     EBSDevice.DataNodeContext dnCtx = EBSDevice.getDataNodeContext(0);
-    assertEquals("Expected " + NUM_VOLUMES + " volumes", NUM_VOLUMES, dnCtx.getNumVolumes());
+    assertEquals(NUM_VOLUMES, dnCtx.getNumVolumes(), "Expected " + NUM_VOLUMES + " volumes");
 
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(TABLE_NAME).setColumnFamily(
       ColumnFamilyDescriptorBuilder.newBuilder(FAMILY).setBlocksize(64 * 1024).build()).build();
@@ -132,10 +127,10 @@ public class TestEBSDeviceLayer {
     LOG.info("After write+flush: bytesWritten={}, writeIntercepts={}, deviceWriteOps={}",
       writeBytesAfterFlush, writeInterceptsAfterFlush, EBSDevice.getDeviceWriteOps());
 
-    assertTrue("Expected write intercepts after flush, got " + writeInterceptsAfterFlush,
-      writeInterceptsAfterFlush > 0);
-    assertTrue("Expected bytes written > 0 after flush, got " + writeBytesAfterFlush,
-      writeBytesAfterFlush > 0);
+    assertTrue(writeInterceptsAfterFlush > 0,
+      "Expected write intercepts after flush, got " + writeInterceptsAfterFlush);
+    assertTrue(writeBytesAfterFlush > 0,
+      "Expected bytes written > 0 after flush, got " + writeBytesAfterFlush);
 
     EBSDevice.resetMetrics();
     int rowCount = 0;
@@ -143,12 +138,12 @@ public class TestEBSDeviceLayer {
       try (ResultScanner scanner = table.getScanner(new Scan())) {
         Result result;
         while ((result = scanner.next()) != null) {
-          assertTrue("Row should not be empty", !result.isEmpty());
+          assertTrue(!result.isEmpty(), "Row should not be empty");
           rowCount++;
         }
       }
     }
-    assertEquals("Expected to read back all rows", NUM_ROWS, rowCount);
+    assertEquals(NUM_ROWS, rowCount, "Expected to read back all rows");
 
     long readBytes = EBSDevice.getTotalBytesRead();
     long readIntercepts = EBSDevice.getReadInterceptCount();
@@ -157,28 +152,29 @@ public class TestEBSDeviceLayer {
     LOG.info("After scan: bytesRead={}, readIntercepts={}, appReadOps={}, deviceReadOps={}",
       readBytes, readIntercepts, readOps, deviceReadOps);
 
-    assertTrue("Expected read intercepts after scan, got " + readIntercepts, readIntercepts > 0);
-    assertTrue("Expected bytes read > 0 after scan, got " + readBytes, readBytes > 0);
-    assertTrue("Expected device read ops > 0 (IOPS coalescing should still produce ops), got "
-      + deviceReadOps, deviceReadOps > 0);
+    assertTrue(readIntercepts > 0, "Expected read intercepts after scan, got " + readIntercepts);
+    assertTrue(readBytes > 0, "Expected bytes read > 0 after scan, got " + readBytes);
+    assertTrue(deviceReadOps > 0,
+      "Expected device read ops > 0 (IOPS coalescing should still produce ops), got "
+        + deviceReadOps);
 
     EBSDevice.resetMetrics();
     try (Table table = UTIL.getConnection().getTable(TABLE_NAME)) {
       Result result = table.get(new Get(Bytes.toBytes("row-00050")));
-      assertTrue("Get should return data", !result.isEmpty());
+      assertTrue(!result.isEmpty(), "Get should return data");
     }
     long getReadIntercepts = EBSDevice.getReadInterceptCount();
     LOG.info("After get: readIntercepts={}, bytesRead={}", getReadIntercepts,
       EBSDevice.getTotalBytesRead());
-    assertTrue("Expected read intercepts after get, got " + getReadIntercepts,
-      getReadIntercepts > 0);
+    assertTrue(getReadIntercepts > 0,
+      "Expected read intercepts after get, got " + getReadIntercepts);
 
     long totalIntercepts = EBSDevice.getReadInterceptCount() + EBSDevice.getWriteInterceptCount();
     long unresolved = EBSDevice.getUnresolvedVolumeCount();
     if (totalIntercepts > 0) {
       double unresolvedRatio = (double) unresolved / totalIntercepts;
-      assertTrue("Unresolved volume ratio too high: " + unresolvedRatio + " (unresolved="
-        + unresolved + ", total=" + totalIntercepts + ")", unresolvedRatio <= 0.01);
+      assertTrue(unresolvedRatio <= 0.01, "Unresolved volume ratio too high: " + unresolvedRatio
+        + " (unresolved=" + unresolved + ", total=" + totalIntercepts + ")");
     }
 
     LOG.info("Per-volume stats: {}", EBSDevice.getPerVolumeStats());
