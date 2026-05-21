@@ -44,7 +44,7 @@ public class RegionInTransitionTracker {
   private final List<RegionState.State> ENABLE_TABLE_REGION_STATE =
     Collections.singletonList(RegionState.State.OPEN);
 
-  // DO NOT USE containsKey() on regionInTransition map as MutableRegionInfo.hashCode() considers
+  // DO NOT USE containsKey() on regionInTransition map as MutableRegionInfo.COMPARATOR considers
   // offline/split flags.
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
     new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
