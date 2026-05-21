@@ -111,7 +111,7 @@ public abstract class RpcExecutor {
   protected volatile int currentQueueLimit;
   // While initializing we will use hard limit as the capacity of queue, it will let us dynamically
   // change the queue limit
-  protected int queueHardLimit;
+  protected final int queueHardLimit;
 
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
   private final List<RpcHandler> handlers;
@@ -465,7 +465,7 @@ public abstract class RpcExecutor {
         "Requested soft limit {} exceeds queue hard limit/capacity {}. "
           + "A region server restart is required to grow the underlying queue.",
         newQueueLimit, queueHardLimit);
-      newQueueLimit = DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT;
+      newQueueLimit = currentQueueLimit;
     }
     currentQueueLimit = newQueueLimit;
   }
