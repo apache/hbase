@@ -41,14 +41,12 @@ public class RegionInTransitionTracker {
 
   private final List<RegionState.State> ENABLE_TABLE_REGION_STATE = List.of(RegionState.State.OPEN);
 
+  // DO NOT USE containsKey() on regionInTransition map as MutableRegionInfo.hashCode() considers
+  // offline/split flags.
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
     new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
   private TableStateManager tableStateManager;
-
-  public boolean isRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransition.containsKey(regionInfo);
-  }
 
   /**
    * Handles a region whose hosting RegionServer has crashed. When a RegionServer fails, all regions

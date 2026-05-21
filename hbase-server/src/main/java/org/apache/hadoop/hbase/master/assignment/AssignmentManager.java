@@ -2116,10 +2116,6 @@ public class AssignmentManager {
     return regionInTransitionTracker.getRegionsInTransition();
   }
 
-  public boolean isRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransitionTracker.isRegionInTransition(regionInfo);
-  }
-
   public int getRegionTransitScheduledCount() {
     return regionStates.getRegionTransitScheduledCount();
   }
