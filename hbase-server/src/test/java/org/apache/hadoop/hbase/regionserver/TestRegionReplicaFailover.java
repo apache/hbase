@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -40,25 +40,19 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tests failover of secondary region replicas.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestRegionReplicaFailover {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaFailover.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaFailover.class);
 
@@ -74,13 +68,10 @@ public class TestRegionReplicaFailover {
   protected final byte[] row = Bytes.toBytes("rowA");
   protected final byte[] row2 = Bytes.toBytes("rowB");
 
-  @Rule
-  public TestName name = new TestName();
-
   private HTableDescriptor htd;
 
-  @Before
-  public void before() throws Exception {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws Exception {
     Configuration conf = HTU.getConfiguration();
     // Up the handlers; this test needs more than usual.
     conf.setInt(HConstants.REGION_SERVER_HIGH_PRIORITY_HANDLER_COUNT, 10);
@@ -90,13 +81,13 @@ public class TestRegionReplicaFailover {
     conf.setBoolean("hbase.tests.use.shortcircuit.reads", false);
 
     HTU.startMiniCluster(NB_SERVERS);
-    htd = HTU
-      .createTableDescriptor(name.getMethodName().substring(0, name.getMethodName().length() - 3));
+    String name = testInfo.getTestMethod().get().getName();
+    htd = HTU.createTableDescriptor(TableName.valueOf(name.substring(0, name.length() - 3)));
     htd.setRegionReplication(3);
     HTU.getAdmin().createTable(htd);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     HTU.deleteTableIfAny(htd.getTableName());
     HTU.shutdownMiniCluster();
@@ -295,7 +286,7 @@ public class TestRegionReplicaFailover {
           } catch (Throwable e) {
             ex.compareAndSet(null, e);
           }
-        };
+        }
       };
 
       aborter.start();

@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -29,7 +30,6 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.Locale;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -39,23 +39,19 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tests for the hostname specification by region server
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerHostname {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerHostname.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerHostname.class);
 
@@ -64,13 +60,13 @@ public class TestRegionServerHostname {
   private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 1;
 
-  @Before
+  @BeforeEach
   public void setup() {
     Configuration conf = HBaseConfiguration.create();
     TEST_UTIL = new HBaseTestingUtility(conf);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -83,10 +79,10 @@ public class TestRegionServerHostname {
     try {
       hrs = new HRegionServer(TEST_UTIL.getConfiguration());
     } catch (IllegalArgumentException iae) {
-      assertTrue(iae.getMessage(), iae.getMessage().contains("Failed resolve of " + invalidHostname)
-        || iae.getMessage().contains("Problem binding to " + invalidHostname));
+      assertTrue(iae.getMessage().contains("Failed resolve of " + invalidHostname)
+        || iae.getMessage().contains("Problem binding to " + invalidHostname), iae.getMessage());
     }
-    assertNull("Failed to validate against invalid hostname", hrs);
+    assertNull(hrs, "Failed to validate against invalid hostname");
   }
 
   @Test
@@ -117,8 +113,8 @@ public class TestRegionServerHostname {
           assertTrue(servers.size()
               == NUM_RS + (LoadBalancer.isTablesOnMaster(TEST_UTIL.getConfiguration()) ? 1 : 0));
           for (String server : servers) {
-            assertTrue("From zookeeper: " + server + " hostname: " + hostName,
-              server.startsWith(hostName.toLowerCase(Locale.ROOT) + ","));
+            assertTrue(server.startsWith(hostName.toLowerCase(Locale.ROOT) + ","),
+              "From zookeeper: " + server + " hostname: " + hostName);
           }
           zkw.close();
         } finally {
@@ -182,14 +178,16 @@ public class TestRegionServerHostname {
         } catch (Exception e) {
           Throwable t1 = e.getCause();
           Throwable t2 = t1.getCause();
-          assertTrue(t1.getMessage() + " - " + t2.getMessage(),
-            t2.getMessage().contains(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY
-              + " and " + DNS.UNSAFE_RS_HOSTNAME_KEY + " are mutually exclusive"));
+          assertTrue(
+            t2.getMessage()
+              .contains(HRegionServer.UNSAFE_RS_HOSTNAME_DISABLE_MASTER_REVERSEDNS_KEY + " and "
+                + DNS.UNSAFE_RS_HOSTNAME_KEY + " are mutually exclusive"),
+            t1.getMessage() + " - " + t2.getMessage());
           return;
         } finally {
           TEST_UTIL.shutdownMiniCluster();
         }
-        assertTrue("Failed to validate against conflict hostname configurations", false);
+        fail("Failed to validate against conflict hostname configurations");
       }
     }
   }

@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -32,36 +33,32 @@ import org.apache.hadoop.hbase.client.RowTooBigException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test case to check HRS throws {@link org.apache.hadoop.hbase.client.RowTooBigException} when row
  * size exceeds configured limits.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRowTooBig {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRowTooBig.class);
 
   private final static HBaseTestingUtility HTU = HBaseTestingUtility.createLocalHTU();
   private static Path rootRegionDir;
   private static final HTableDescriptor TEST_HTD =
     new HTableDescriptor(TableName.valueOf(TestRowTooBig.class.getSimpleName()));
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     HTU.startMiniCluster();
     HTU.getConfiguration().setLong(HConstants.TABLE_MAX_ROWSIZE_KEY, 10 * 1024 * 1024L);
     rootRegionDir = HTU.getDataTestDirOnTestFS("TestRowTooBig");
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     HTU.shutdownMiniCluster();
   }
@@ -72,7 +69,7 @@ public class TestRowTooBig {
    * but during seeking, as each StoreFile gets it's own scanner, and each scanner seeks after the
    * first KV.
    */
-  @Test(expected = RowTooBigException.class)
+  @Test
   public void testScannersSeekOnFewLargeCells() throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
@@ -101,7 +98,7 @@ public class TestRowTooBig {
       }
 
       Get get = new Get(row1);
-      region.get(get);
+      assertThrows(RowTooBigException.class, () -> region.get(get));
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(region);
     }
@@ -111,7 +108,7 @@ public class TestRowTooBig {
    * Usecase: - create a row with 1M cells, 10 bytes in each - flush & run major compaction - try to
    * Get whole row. OOME happened in StoreScanner.next(..).
    */
-  @Test(expected = RowTooBigException.class)
+  @Test
   public void testScanAcrossManySmallColumns() throws IOException {
     byte[] row1 = Bytes.toBytes("row1");
     byte[] fam1 = Bytes.toBytes("fam1");
@@ -142,7 +139,7 @@ public class TestRowTooBig {
       region.compact(true);
 
       Get get = new Get(row1);
-      region.get(get);
+      assertThrows(RowTooBigException.class, () -> region.get(get));
     } finally {
       HBaseTestingUtility.closeRegionAndWAL(region);
     }
