@@ -20,16 +20,14 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ipc.QosTestBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRequest;
@@ -38,17 +36,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiReque
  * Basic test that qos function is sort of working; i.e. a change in method naming style over in pb
  * doesn't break it.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSQosFunction extends QosTestBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSQosFunction.class);
 
   private Configuration conf;
   private RSRpcServices rpcServices;
   private RSAnnotationReadingPriorityFunction qosFunction;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     conf = HBaseConfiguration.create();
     rpcServices = Mockito.mock(RSRpcServices.class);
