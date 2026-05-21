@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.ClassRule;
 import org.junit.Test;
@@ -133,15 +134,23 @@ public class TestPrefetchPersistence {
     assertTrue(usedSize != 0);
     assertTrue(bucketCache.fullyCachedFiles.containsKey(storeFile.getName()));
     assertTrue(bucketCache.fullyCachedFiles.containsKey(storeFile2.getName()));
+  }
+
+  @After
+  public void cleanup() {
     TEST_UTIL.cleanupTestDir();
   }
 
   public void readStoreFile(Path storeFilePath) throws Exception {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
-    while (!reader.prefetchComplete()) {
-      // Sleep for a bit
-      Thread.sleep(1000);
+    int retries = 0;
+    while (
+      !reader.prefetchComplete()
+        && !bucketCache.fullyCachedFiles.containsKey(storeFilePath.getName()) && retries < 5
+    ) {
+      Thread.sleep(500);
+      retries++;
     }
   }
 
