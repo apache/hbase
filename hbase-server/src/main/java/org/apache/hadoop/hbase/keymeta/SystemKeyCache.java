@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.keymeta;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -101,5 +102,30 @@ public class SystemKeyCache {
       return null;
     }
     return systemKeys.get(new Bytes(fullIdentity));
+  }
+
+  /**
+   * Look up a system key by its partial identity (digest of key metadata).
+   * <p>
+   * Checks the latest system key first for a fast-path match, then falls back to scanning all
+   * cached keys.
+   * @param partialIdentity partial identity bytes such as from
+   *                        {@link ManagedKeyData#getPartialIdentity()}
+   * @return the cached system key, or null if not found
+   */
+  public ManagedKeyData getSystemKeyByPartialIdentity(byte[] partialIdentity) {
+    if (partialIdentity == null || partialIdentity.length == 0) {
+      return null;
+    }
+    if (latestSystemKey != null
+      && Bytes.equals(latestSystemKey.getPartialIdentity(), partialIdentity)) {
+      return latestSystemKey;
+    }
+    for (ManagedKeyData keyData : systemKeys.values()) {
+      if (Arrays.equals(keyData.getPartialIdentity(), partialIdentity)) {
+        return keyData;
+      }
+    }
+    return null;
   }
 }

@@ -327,6 +327,66 @@ public class TestSystemKeyCache {
   }
 
   @Test
+  public void testGetSystemKeyByPartialIdentityReturnsLatest() throws Exception {
+    // Setup - single key, lookup by partial identity should hit the latest key fast-path
+    List<Path> keyPaths = Collections.singletonList(keyPath1);
+    when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
+    when(mockAccessor.loadSystemKey(keyPath1)).thenReturn(keyData1);
+
+    SystemKeyCache cache = SystemKeyCache.createCache(mockAccessor);
+    assertNotNull(cache);
+
+    // Retrieve by partial identity (a fresh copy, not the same reference)
+    byte[] partialIdentity = keyData1.getPartialIdentity();
+    assertSame(keyData1, cache.getSystemKeyByPartialIdentity(partialIdentity));
+  }
+
+  @Test
+  public void testGetSystemKeyByPartialIdentityReturnsNonLatest() throws Exception {
+    // Setup - multiple keys, lookup by a non-latest key's partial identity
+    List<Path> keyPaths = Arrays.asList(keyPath1, keyPath2, keyPath3);
+    when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
+    when(mockAccessor.loadSystemKey(keyPath1)).thenReturn(keyData1);
+    when(mockAccessor.loadSystemKey(keyPath2)).thenReturn(keyData2);
+    when(mockAccessor.loadSystemKey(keyPath3)).thenReturn(keyData3);
+
+    SystemKeyCache cache = SystemKeyCache.createCache(mockAccessor);
+    assertNotNull(cache);
+
+    // keyData1 is the latest; lookup keyData2 by partial identity hits the scan path
+    byte[] partialIdentity2 = keyData2.getPartialIdentity();
+    assertSame(keyData2, cache.getSystemKeyByPartialIdentity(partialIdentity2));
+
+    byte[] partialIdentity3 = keyData3.getPartialIdentity();
+    assertSame(keyData3, cache.getSystemKeyByPartialIdentity(partialIdentity3));
+  }
+
+  @Test
+  public void testGetSystemKeyByPartialIdentityWithNullAndEmpty() throws Exception {
+    List<Path> keyPaths = Collections.singletonList(keyPath1);
+    when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
+    when(mockAccessor.loadSystemKey(keyPath1)).thenReturn(keyData1);
+
+    SystemKeyCache cache = SystemKeyCache.createCache(mockAccessor);
+    assertNotNull(cache);
+
+    assertNull(cache.getSystemKeyByPartialIdentity(null));
+    assertNull(cache.getSystemKeyByPartialIdentity(new byte[0]));
+  }
+
+  @Test
+  public void testGetSystemKeyByPartialIdentityWithNonExistent() throws Exception {
+    List<Path> keyPaths = Collections.singletonList(keyPath1);
+    when(mockAccessor.getAllSystemKeyFiles()).thenReturn(keyPaths);
+    when(mockAccessor.loadSystemKey(keyPath1)).thenReturn(keyData1);
+
+    SystemKeyCache cache = SystemKeyCache.createCache(mockAccessor);
+    assertNotNull(cache);
+
+    assertNull(cache.getSystemKeyByPartialIdentity(new byte[] { 99, 98, 97 }));
+  }
+
+  @Test
   public void testCreateCacheWithUnexpectedNullKeyData() throws Exception {
     when(mockAccessor.getAllSystemKeyFiles()).thenReturn(Arrays.asList(keyPath1));
     when(mockAccessor.loadSystemKey(keyPath1)).thenThrow(new RuntimeException("Key load error"));
