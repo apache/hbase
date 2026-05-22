@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,7 +26,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,38 +41,29 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, RegionServerTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestRegionOpen {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionOpen.class);
-
-  @SuppressWarnings("unused")
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionOpen.class);
   private static final int NB_SERVERS = 1;
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     HTU.startMiniCluster(NB_SERVERS);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HTU.shutdownMiniCluster();
   }
@@ -101,8 +91,8 @@ public class TestRegionOpen {
   }
 
   @Test
-  public void testNonExistentRegionReplica() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testNonExistentRegionReplica(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final byte[] FAMILYNAME = Bytes.toBytes("fam");
     FileSystem fs = HTU.getTestFileSystem();
     Admin admin = HTU.getAdmin();

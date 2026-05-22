@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -36,25 +35,21 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestRegionLocator extends AbstractTestRegionLocator {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionLocator.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     startClusterAndCreateTable();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -122,11 +117,10 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       for (int i = 0; i < 3; i++) {
         for (int replicaId = 0; replicaId < REGION_REPLICATION; replicaId++) {
           HRegionLocation loc = page.get(i * REGION_REPLICATION + replicaId);
-          assertArrayEquals("region " + i + " replica " + replicaId + " start key",
-            expectedStartKeys[i], loc.getRegion().getStartKey());
-          assertEquals(
-            "region " + i + " replica id at index " + (i * REGION_REPLICATION + replicaId),
-            replicaId, loc.getRegion().getReplicaId());
+          assertArrayEquals(expectedStartKeys[i], loc.getRegion().getStartKey(),
+            "region " + i + " replica " + replicaId + " start key");
+          assertEquals(replicaId, loc.getRegion().getReplicaId(),
+            "region " + i + " replica id at index " + (i * REGION_REPLICATION + replicaId));
         }
       }
     }
@@ -170,8 +164,8 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
     try (RegionLocator locator = UTIL.getConnection().getRegionLocator(TABLE_NAME)) {
       // Use a startKey lexicographically after all split keys: SPLIT_KEYS go "1".."9", so "z".
       List<HRegionLocation> page = locator.getRegionLocationsPage(Bytes.toBytes("z"), 5);
-      assertTrue("expected empty page past the last region; got " + page.size() + " entries",
-        page.isEmpty());
+      assertTrue(page.isEmpty(),
+        "expected empty page past the last region; got " + page.size() + " entries");
     }
   }
 
@@ -185,7 +179,7 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       byte[] expectedCursor = page.get(page.size() - 1).getRegion().getEndKey();
       for (int i = 1; i <= REGION_REPLICATION; i++) {
         byte[] cursor = page.get(page.size() - i).getRegion().getEndKey();
-        assertArrayEquals("replica " + i + " end key disagrees", expectedCursor, cursor);
+        assertArrayEquals(expectedCursor, cursor, "replica " + i + " end key disagrees");
       }
     }
   }
@@ -212,9 +206,8 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       long before = metrics.getUserRegionLockHeldTimer().getCount();
       locator.getRegionLocationsPage(HConstants.EMPTY_START_ROW, 3);
       long after = metrics.getUserRegionLockHeldTimer().getCount();
-      assertEquals(
-        "userRegionLock held-timer should have incremented exactly once for the bulk" + " lookup",
-        before + 1, after);
+      assertEquals(before + 1, after,
+        "userRegionLock held-timer should have incremented exactly once for the bulk" + " lookup");
     }
   }
 
@@ -233,13 +226,14 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
       for (HRegionLocation loc : page) {
         byte[] startKey = loc.getRegion().getStartKey();
         RegionLocations cached = conn.getCachedLocation(TABLE_NAME, startKey);
-        assertNotNull("metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
-          + " — bulk API did not populate the same cache locateRegionInMeta uses", cached);
+        assertNotNull(cached,
+          "metaCache miss for region starting at " + Bytes.toStringBinary(startKey)
+            + " — bulk API did not populate the same cache locateRegionInMeta uses");
         HRegionLocation cachedLoc = cached.getRegionLocation(loc.getRegion().getReplicaId());
-        assertNotNull("metaCache had region but missing replica " + loc.getRegion().getReplicaId(),
-          cachedLoc);
-        assertEquals("cached server differs from server returned by bulk API", loc.getServerName(),
-          cachedLoc.getServerName());
+        assertNotNull(cachedLoc,
+          "metaCache had region but missing replica " + loc.getRegion().getReplicaId());
+        assertEquals(loc.getServerName(), cachedLoc.getServerName(),
+          "cached server differs from server returned by bulk API");
       }
     }
   }
@@ -278,16 +272,16 @@ public class TestRegionLocator extends AbstractTestRegionLocator {
         // EMPTY_START_ROW belongs to the first region; any byte works.
         byte[] probe = startKey.length == 0 ? new byte[] { 0x00 } : startKey;
         HRegionLocation viaCache = locator.getRegionLocation(probe, false);
-        assertEquals("single-region lookup returned a different server than the bulk API for "
-          + Bytes.toStringBinary(startKey), loc.getServerName(), viaCache.getServerName());
+        assertEquals(loc.getServerName(), viaCache.getServerName(),
+          "single-region lookup returned a different server than the bulk API for "
+            + Bytes.toStringBinary(startKey));
       }
 
       long afterPointLookups = metrics.getUserRegionLockHeldTimer().getCount();
-      assertEquals(
+      assertEquals(afterBulk, afterPointLookups,
         "user-region lock held-timer should not have advanced — every point lookup should have"
           + " been a metaCache hit, but " + (afterPointLookups - afterBulk)
-          + " meta RPCs were issued",
-        afterBulk, afterPointLookups);
+          + " meta RPCs were issued");
     }
   }
 }

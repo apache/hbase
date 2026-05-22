@@ -18,12 +18,12 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,6 @@ import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -54,9 +53,8 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,17 +65,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.MergeTable
  * Class to test HBaseAdmin. Spins up the minicluster once at test start and then takes it down
  * afterward. Add any testing of HBaseAdmin functionality here.
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAdmin1 extends TestAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAdmin1.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAdmin1.class);
 
   @Test
   public void testCompactRegionWithTableName() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     try {
       TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
@@ -107,7 +103,7 @@ public class TestAdmin1 extends TestAdminBase {
 
   @Test
   public void testSplitFlushCompactUnknownTable() throws InterruptedException {
-    final TableName unknowntable = TableName.valueOf(name.getMethodName());
+    final TableName unknowntable = TableName.valueOf(methodName);
     Exception exception = null;
     try {
       ADMIN.compact(unknowntable);
@@ -135,7 +131,7 @@ public class TestAdmin1 extends TestAdminBase {
 
   @Test
   public void testCompactATableWithSuperLongTableName() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     try {
@@ -153,7 +149,7 @@ public class TestAdmin1 extends TestAdminBase {
 
   @Test
   public void testCompactionTimestamps() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     ADMIN.createTable(htd);
@@ -204,14 +200,15 @@ public class TestAdmin1 extends TestAdminBase {
     table.close();
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testColumnValidName() {
-    ColumnFamilyDescriptorBuilder.of("\\test\\abc");
+    assertThrows(IllegalArgumentException.class,
+      () -> ColumnFamilyDescriptorBuilder.of("\\test\\abc"));
   }
 
   @Test
   public void testTableExist() throws IOException {
-    final TableName table = TableName.valueOf(name.getMethodName());
+    final TableName table = TableName.valueOf(methodName);
     boolean exist;
     exist = ADMIN.tableExists(table);
     assertEquals(false, exist);
@@ -396,8 +393,8 @@ public class TestAdmin1 extends TestAdminBase {
           for (int index = 0; index < familyNames.length; index++) {
             int delta = Math.abs(rowCounts[index] / 2 - splitKey);
             if (delta < deltaForLargestFamily) {
-              assertTrue("Delta " + delta + " for family " + index + " should be at least "
-                + "deltaForLargestFamily " + deltaForLargestFamily, false);
+              assertTrue(false, "Delta " + delta + " for family " + index + " should be at least "
+                + "deltaForLargestFamily " + deltaForLargestFamily);
             }
           }
         }
@@ -412,7 +409,7 @@ public class TestAdmin1 extends TestAdminBase {
     // are not allowed. The test validates that. Then the test does a valid split/merge of allowed
     // regions.
     // Set up a table with 3 regions and replication set to 3
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     byte[] cf = Bytes.toBytes("f");
     TableDescriptor desc = TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(3)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(cf)).build();
@@ -505,9 +502,10 @@ public class TestAdmin1 extends TestAdminBase {
     assertTrue(gotException);
   }
 
-  @Test(expected = IllegalArgumentException.class)
-  public void testInvalidColumnDescriptor() throws IOException {
-    ColumnFamilyDescriptorBuilder.of("/cfamily/name");
+  @Test
+  public void testInvalidColumnDescriptor() {
+    assertThrows(IllegalArgumentException.class,
+      () -> ColumnFamilyDescriptorBuilder.of("/cfamily/name"));
   }
 
   /**
@@ -516,7 +514,7 @@ public class TestAdmin1 extends TestAdminBase {
    */
   @Test
   public void testHFileReplication() throws Exception {
-    final TableName tableName = TableName.valueOf(this.name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     String fn1 = "rep1";
     String fn = "defaultRep";
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
@@ -544,16 +542,17 @@ public class TestAdmin1 extends TestAdminBase {
         HStore store = r.getStore(Bytes.toBytes(fn));
         for (HStoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn));
-          assertTrue("Column family " + fn + " should have 3 copies",
+          assertTrue(
             CommonFSUtils.getDefaultReplication(TEST_UTIL.getTestFileSystem(), sf.getPath())
-                == (sf.getFileInfo().getFileStatus().getReplication()));
+                == (sf.getFileInfo().getFileStatus().getReplication()),
+            "Column family " + fn + " should have 3 copies");
         }
 
         store = r.getStore(Bytes.toBytes(fn1));
         for (HStoreFile sf : store.getStorefiles()) {
           assertTrue(sf.toString().contains(fn1));
-          assertTrue("Column family " + fn1 + " should have only 1 copy",
-            1 == sf.getFileInfo().getFileStatus().getReplication());
+          assertTrue(1 == sf.getFileInfo().getFileStatus().getReplication(),
+            "Column family " + fn1 + " should have only 1 copy");
         }
       }
     } finally {
@@ -566,7 +565,7 @@ public class TestAdmin1 extends TestAdminBase {
 
   @Test
   public void testMergeRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
     byte[][] splitRows = new byte[2][];
@@ -626,7 +625,7 @@ public class TestAdmin1 extends TestAdminBase {
   @Test
   public void testMergeRegionsInvalidRegionCount()
     throws IOException, InterruptedException, ExecutionException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(methodName);
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("d")).build();
     byte[][] splitRows = new byte[2][];
@@ -660,7 +659,7 @@ public class TestAdmin1 extends TestAdminBase {
 
   @Test
   public void testSplitShouldNotHappenIfSplitIsDisabledForTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setRegionSplitPolicyClassName(DisabledRegionSplitPolicy.class.getName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
@@ -688,7 +687,7 @@ public class TestAdmin1 extends TestAdminBase {
   @Test
   public void testTruncateRegions() throws Exception {
     // Arrange - Create table, insert data, identify region to truncate.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
     String family1 = "f1";
@@ -727,7 +726,7 @@ public class TestAdmin1 extends TestAdminBase {
   @Test
   public void testTruncateReplicaRegionNotAllowed() throws Exception {
     // Arrange - Create table, insert data, identify region to truncate.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
     String family1 = "f1";
@@ -748,10 +747,8 @@ public class TestAdmin1 extends TestAdminBase {
         ADMIN.truncateRegion(regionToBeTruncated.getRegionName());
       } catch (Exception e) {
         // Assert
-        assertEquals("Expected message is different",
-          "Can't truncate replicas directly.Replicas are auto-truncated "
-            + "when their primary is truncated.",
-          e.getMessage());
+        assertEquals("Can't truncate replicas directly.Replicas are auto-truncated "
+          + "when their primary is truncated.", e.getMessage(), "Expected message is different");
       }
     } finally {
       ADMIN.disableTable(tableName);

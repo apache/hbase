@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -36,30 +37,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicasWithRestartScenarios {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicasWithRestartScenarios.class);
-
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionReplicasWithRestartScenarios.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final int NB_SERVERS = 3;
   private Table table;
@@ -68,19 +60,19 @@ public class TestRegionReplicasWithRestartScenarios {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", NB_SERVERS);
     HTU.startMiniCluster(NB_SERVERS);
   }
 
-  @Before
-  public void before() throws IOException {
-    this.tableName = TableName.valueOf(this.name.getMethodName());
+  @BeforeEach
+  public void before(TestInfo testInfo) throws IOException {
+    this.tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     this.table = createTableDirectlyFromHTD(this.tableName);
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException {
     this.table.close();
     HTU.deleteTable(this.tableName);
@@ -100,7 +92,7 @@ public class TestRegionReplicasWithRestartScenarios {
     return split.split(numRegions);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HTU.shutdownMiniCluster();
   }
