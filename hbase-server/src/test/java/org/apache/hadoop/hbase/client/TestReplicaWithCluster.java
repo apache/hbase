@@ -18,6 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -58,23 +60,18 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestReplicaWithCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicaWithCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicaWithCluster.class);
 
@@ -88,9 +85,6 @@ public class TestReplicaWithCluster {
 
   private final static int REFRESH_PERIOD = 1000;
   private final static int META_SCAN_TIMEOUT_IN_MILLISEC = 200;
-
-  @Rule
-  public TestName name = new TestName();
 
   /**
    * This copro is used to synchronize the tests.
@@ -243,7 +237,7 @@ public class TestReplicaWithCluster {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // enable store file refreshing
     HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
@@ -278,16 +272,23 @@ public class TestReplicaWithCluster {
     HTU.getHBaseCluster().startMaster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     if (HTU2 != null) HTU2.shutdownMiniCluster();
     HTU.shutdownMiniCluster();
   }
 
+  private String methodName;
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
   @Test
   public void testCreateDeleteTable() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     Table table = HTU.createTable(hdt, new byte[][] { f }, null);
@@ -298,7 +299,7 @@ public class TestReplicaWithCluster {
 
     Get g = new Get(row);
     Result r = table.get(g);
-    Assert.assertFalse(r.isStale());
+    assertFalse(r.isStale());
 
     try {
       // But if we ask for stale we will get it
@@ -306,7 +307,7 @@ public class TestReplicaWithCluster {
       g = new Get(row);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
       SlowMeCopro.cdl.get().countDown();
     } finally {
       SlowMeCopro.cdl.get().countDown();
@@ -319,7 +320,7 @@ public class TestReplicaWithCluster {
 
   @Test
   public void testChangeTable() throws Exception {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf(methodName))
       .setRegionReplication(NB_SERVERS).setCoprocessor(SlowMeCopro.class.getName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(f)).build();
     HTU.getAdmin().createTable(td);
@@ -331,7 +332,7 @@ public class TestReplicaWithCluster {
 
     Get g = new Get(row);
     Result r = table.get(g);
-    Assert.assertFalse(r.isStale());
+    assertFalse(r.isStale());
 
     // Add a CF, it should work.
     TableDescriptor bHdt = HTU.getAdmin().getDescriptor(td.getTableName());
@@ -341,8 +342,8 @@ public class TestReplicaWithCluster {
     HTU.getAdmin().modifyTable(td);
     HTU.getAdmin().enableTable(td.getTableName());
     TableDescriptor nHdt = HTU.getAdmin().getDescriptor(td.getTableName());
-    Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
-      bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
+    assertEquals(bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount(),
+      "fams=" + Arrays.toString(nHdt.getColumnFamilies()));
 
     p = new Put(row);
     p.addColumn(row, row, row);
@@ -350,14 +351,14 @@ public class TestReplicaWithCluster {
 
     g = new Get(row);
     r = table.get(g);
-    Assert.assertFalse(r.isStale());
+    assertFalse(r.isStale());
 
     try {
       SlowMeCopro.cdl.set(new CountDownLatch(1));
       g = new Get(row);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
     } finally {
       SlowMeCopro.cdl.get().countDown();
       SlowMeCopro.sleepTime.set(0);
@@ -365,8 +366,8 @@ public class TestReplicaWithCluster {
 
     Admin admin = HTU.getAdmin();
     nHdt = admin.getDescriptor(td.getTableName());
-    Assert.assertEquals("fams=" + Arrays.toString(nHdt.getColumnFamilies()),
-      bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount());
+    assertEquals(bHdt.getColumnFamilyCount() + 1, nHdt.getColumnFamilyCount(),
+      "fams=" + Arrays.toString(nHdt.getColumnFamilies()));
 
     admin.disableTable(td.getTableName());
     admin.deleteTable(td.getTableName());
@@ -376,7 +377,7 @@ public class TestReplicaWithCluster {
   @SuppressWarnings("deprecation")
   @Test
   public void testReplicaAndReplication() throws Exception {
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(NB_SERVERS);
 
     HColumnDescriptor fam = new HColumnDescriptor(row);
@@ -420,7 +421,7 @@ public class TestReplicaWithCluster {
           Get g = new Get(row);
           g.setConsistency(Consistency.TIMELINE);
           Result r = table.get(g);
-          Assert.assertTrue(r.isStale());
+          assertTrue(r.isStale());
           return !r.isEmpty();
         } finally {
           SlowMeCopro.cdl.get().countDown();
@@ -440,7 +441,7 @@ public class TestReplicaWithCluster {
           Get g = new Get(row);
           g.setConsistency(Consistency.TIMELINE);
           Result r = table2.get(g);
-          Assert.assertTrue(r.isStale());
+          assertTrue(r.isStale());
           return !r.isEmpty();
         } finally {
           SlowMeCopro.cdl.get().countDown();
@@ -464,14 +465,14 @@ public class TestReplicaWithCluster {
   public void testBulkLoad() throws IOException {
     // Create table then get the single region for our new table.
     LOG.debug("Creating test table");
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
     Table table = HTU.createTable(hdt, new byte[][] { f }, null);
 
     // create hfiles to load.
     LOG.debug("Creating test data");
-    Path dir = HTU.getDataTestDirOnTestFS(name.getMethodName());
+    Path dir = HTU.getDataTestDirOnTestFS(methodName);
     final int numRows = 10;
     final byte[] qual = Bytes.toBytes("qual");
     final byte[] val = Bytes.toBytes("val");
@@ -518,7 +519,7 @@ public class TestReplicaWithCluster {
       byte[] row = TestHRegionServerBulkLoad.rowkey(i);
       Get g = new Get(row);
       Result r = table.get(g);
-      Assert.assertFalse(r.isStale());
+      assertFalse(r.isStale());
     }
 
     // verify we can read them from the replica
@@ -530,7 +531,7 @@ public class TestReplicaWithCluster {
         Get g = new Get(row);
         g.setConsistency(Consistency.TIMELINE);
         Result r = table.get(g);
-        Assert.assertTrue(r.isStale());
+        assertTrue(r.isStale());
       }
       SlowMeCopro.cdl.get().countDown();
     } finally {
@@ -545,7 +546,7 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaGetWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
     try {
@@ -569,7 +570,7 @@ public class TestReplicaWithCluster {
       Get g = new Get(row);
       g.setConsistency(Consistency.TIMELINE);
       Result r = table.get(g);
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
     } finally {
       HTU.getAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
@@ -579,7 +580,7 @@ public class TestReplicaWithCluster {
   @Test
   public void testReplicaScanWithPrimaryDown() throws IOException {
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(RegionServerStoppedCopro.class.getName());
 
@@ -613,7 +614,7 @@ public class TestReplicaWithCluster {
 
       Result r = scanner.next();
 
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
     } finally {
       HTU.getAdmin().disableTable(hdt.getTableName());
       HTU.deleteTable(hdt.getTableName());
@@ -626,7 +627,7 @@ public class TestReplicaWithCluster {
     HTU.getConfiguration().set("hbase.rpc.client.impl",
       "org.apache.hadoop.hbase.ipc.AsyncRpcClient");
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(NB_SERVERS);
     hdt.addCoprocessor(SlowMeCopro.class.getName());
 
@@ -657,7 +658,7 @@ public class TestReplicaWithCluster {
         Get g = new Get(row);
         g.setConsistency(Consistency.TIMELINE);
         Result r = t.get(g);
-        Assert.assertTrue(r.isStale());
+        assertTrue(r.isStale());
         SlowMeCopro.cdl.get().countDown();
       } finally {
         SlowMeCopro.cdl.get().countDown();
@@ -683,7 +684,7 @@ public class TestReplicaWithCluster {
     Connection conn = ConnectionFactory.createConnection(conf);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(2);
     try {
 
@@ -716,12 +717,12 @@ public class TestReplicaWithCluster {
     Connection conn = ConnectionFactory.createConnection(conf);
 
     // Create table then get the single region for our new table.
-    HTableDescriptor hdt = HTU.createTableDescriptor(name.getMethodName());
+    HTableDescriptor hdt = HTU.createTableDescriptor(methodName);
     hdt.setRegionReplication(2);
     try {
 
       HTU.createTable(hdt, new byte[][] { f }, null);
-      Table table = conn.getTable(TableName.valueOf(name.getMethodName()));
+      Table table = conn.getTable(TableName.valueOf(methodName));
 
       // Get Meta location
       RegionLocations mrl = ((ClusterConnection) conn).locateRegion(TableName.META_TABLE_NAME,
@@ -791,11 +792,11 @@ public class TestReplicaWithCluster {
       Get g = new Get(row);
       g.setConsistency(Consistency.TIMELINE);
       Result r = table.get(g);
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
 
       // The second Get will succeed as well
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
     } finally {
       RegionServerHostingPrimayMetaRegionSlowOrStopCopro.throwException = false;
       HTU.getAdmin().setBalancerRunning(true, true);

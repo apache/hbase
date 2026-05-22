@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -63,27 +62,21 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@Category({ LargeTests.class, ClientTests.class })
-@SuppressWarnings("deprecation")
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestBlockEvictionFromClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockEvictionFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBlockEvictionFromClient.class);
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -104,11 +97,17 @@ public class TestBlockEvictionFromClient {
   private static CountDownLatch getLatch;
   private static CountDownLatch compactionLatch;
   private static CountDownLatch exceptionLatch;
+  private String methodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.methodName = testInfo.getTestMethod().get().getName();
+    CustomInnerRegionObserver.waitForGets.set(false);
+    CustomInnerRegionObserver.countOfNext.set(0);
+    CustomInnerRegionObserver.countOfGets.set(0);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     ROWS[0] = ROW;
     ROWS[1] = ROW1;
@@ -126,19 +125,19 @@ public class TestBlockEvictionFromClient {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     CustomInnerRegionObserver.waitForGets.set(false);
     CustomInnerRegionObserver.countOfNext.set(0);
     CustomInnerRegionObserver.countOfGets.set(0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     if (latch != null) {
       while (latch.getCount() > 0) {
@@ -174,7 +173,7 @@ public class TestBlockEvictionFromClient {
     Table table = null;
     try {
       latch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
         CustomInnerRegionObserver.class.getName());
@@ -228,12 +227,12 @@ public class TestBlockEvictionFromClient {
       iterator = cache.iterator();
       iterateBlockCache(cache, iterator);
       // flush, one new block
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       region.flush(true);
       iterator = cache.iterator();
       iterateBlockCache(cache, iterator);
       // compact, net minus two blocks, two hits, no misses
-      System.out.println("Compacting");
+      LOG.info("Compacting");
       assertEquals(2, store.getStorefilesCount());
       store.triggerMajorCompaction();
       region.compact(true);
@@ -262,7 +261,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -279,7 +278,7 @@ public class TestBlockEvictionFromClient {
 
       insertData(table);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       region.flush(true);
       // Create three sets of scan
@@ -301,7 +300,7 @@ public class TestBlockEvictionFromClient {
       for (ScanThread thread : scanThreads) {
         thread.join();
       }
-      System.out.println("Scans should have returned the bloks");
+      LOG.info("Scans should have returned the bloks");
       // Check with either true or false
       CustomInnerRegionObserver.waitForGets.set(false);
       // The scan should also have released the blocks by now
@@ -320,7 +319,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -349,7 +348,7 @@ public class TestBlockEvictionFromClient {
       table.put(put);
       region.flush(true);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       CustomInnerRegionObserver.waitForGets.set(true);
       // Create three sets of gets
@@ -364,7 +363,7 @@ public class TestBlockEvictionFromClient {
       // giving some time for the block to be decremented
       checkForBlockEviction(cache, true, false);
       getLatch.countDown();
-      System.out.println("Gets should have returned the bloks");
+      LOG.info("Gets should have returned the bloks");
     } finally {
       if (table != null) {
         table.close();
@@ -381,7 +380,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -413,7 +412,7 @@ public class TestBlockEvictionFromClient {
       table.put(put);
       region.flush(true);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       CustomInnerRegionObserver.waitForGets.set(true);
       // Create three sets of gets
@@ -435,7 +434,7 @@ public class TestBlockEvictionFromClient {
         }
         if (refCount != 0) {
           // Blocks will be with count 3
-          System.out.println("The refCount is " + refCount);
+          LOG.info("The refCount is " + refCount);
           assertEquals(NO_OF_THREADS, refCount);
           usedBlocksFound = true;
           noOfBlocksWithRef++;
@@ -453,7 +452,7 @@ public class TestBlockEvictionFromClient {
       // giving some time for the block to be decremented
       checkForBlockEviction(cache, true, false);
       getLatch.countDown();
-      System.out.println("Gets should have returned the bloks");
+      LOG.info("Gets should have returned the bloks");
     } finally {
       if (table != null) {
         table.close();
@@ -468,7 +467,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       byte[][] fams = new byte[10][];
@@ -507,7 +506,7 @@ public class TestBlockEvictionFromClient {
       table.put(put);
       region.flush(true);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       CustomInnerRegionObserver.waitForGets.set(true);
       // Create three sets of gets
@@ -529,7 +528,7 @@ public class TestBlockEvictionFromClient {
         }
         if (refCount != 0) {
           // Blocks will be with count 3
-          System.out.println("The refCount is " + refCount);
+          LOG.info("The refCount is " + refCount);
           assertEquals(NO_OF_THREADS, refCount);
           usedBlocksFound = true;
           noOfBlocksWithRef++;
@@ -547,7 +546,7 @@ public class TestBlockEvictionFromClient {
       // giving some time for the block to be decremented
       checkForBlockEviction(cache, true, false);
       getLatch.countDown();
-      System.out.println("Gets should have returned the bloks");
+      LOG.info("Gets should have returned the bloks");
     } finally {
       if (table != null) {
         table.close();
@@ -559,7 +558,7 @@ public class TestBlockEvictionFromClient {
   public void testBlockRefCountAfterSplits() throws IOException, InterruptedException {
     Table table = null;
     try {
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       HTableDescriptor desc = TEST_UTIL.createTableDescriptor(tableName);
       // This test expects rpc refcount of cached data blocks to be 0 after split. After split,
       // two daughter regions are opened and a compaction is scheduled to get rid of reference
@@ -623,7 +622,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -652,7 +651,7 @@ public class TestBlockEvictionFromClient {
       table.put(put);
       region.flush(true);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       CustomInnerRegionObserver.waitForGets.set(true);
       // Create three sets of gets
@@ -676,7 +675,7 @@ public class TestBlockEvictionFromClient {
           foundNonZeroBlock = true;
         }
       }
-      assertTrue("Should have found nonzero ref count block", foundNonZeroBlock);
+      assertTrue(foundNonZeroBlock, "Should have found nonzero ref count block");
       CustomInnerRegionObserver.getCdl().get().countDown();
       CustomInnerRegionObserver.getCdl().get().countDown();
       for (MultiGetThread thread : getThreads) {
@@ -687,7 +686,7 @@ public class TestBlockEvictionFromClient {
       // giving some time for the block to be decremented
       iterateBlockCache(cache, iterator);
       getLatch.countDown();
-      System.out.println("Gets should have returned the bloks");
+      LOG.info("Gets should have returned the bloks");
     } finally {
       if (table != null) {
         table.close();
@@ -701,7 +700,7 @@ public class TestBlockEvictionFromClient {
     try {
       latch = new CountDownLatch(1);
       // Check if get() returns blocks on its close() itself
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       byte[][] fams = new byte[10][];
@@ -740,7 +739,7 @@ public class TestBlockEvictionFromClient {
       table.put(put);
       region.flush(true);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       // Create three sets of gets
       ScanThread[] scanThreads = initiateScan(table, true);
@@ -761,7 +760,7 @@ public class TestBlockEvictionFromClient {
         }
         if (refCount != 0) {
           // Blocks will be with count 3
-          System.out.println("The refCount is " + refCount);
+          LOG.info("The refCount is " + refCount);
           assertEquals(NO_OF_THREADS, refCount);
           usedBlocksFound = true;
           noOfBlocksWithRef++;
@@ -805,7 +804,7 @@ public class TestBlockEvictionFromClient {
       latch = new CountDownLatch(2);
       // Check if get() returns blocks on its close() itself
       getLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -823,7 +822,7 @@ public class TestBlockEvictionFromClient {
       // insert data. 2 Rows are added
       insertData(table);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       region.flush(true);
       // CustomInnerRegionObserver.sleepTime.set(5000);
@@ -857,12 +856,12 @@ public class TestBlockEvictionFromClient {
 
   @Test
   public void testScanWithCompaction() throws IOException, InterruptedException {
-    testScanWithCompactionInternals(name.getMethodName(), false);
+    testScanWithCompactionInternals(methodName, false);
   }
 
   @Test
   public void testReverseScanWithCompaction() throws IOException, InterruptedException {
-    testScanWithCompactionInternals(name.getMethodName(), true);
+    testScanWithCompactionInternals(methodName, true);
   }
 
   private void testScanWithCompactionInternals(String tableNameStr, boolean reversed)
@@ -905,7 +904,7 @@ public class TestBlockEvictionFromClient {
       put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       // flush, one new block
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       region.flush(true);
       Iterator<CachedBlock> iterator = cache.iterator();
       iterateBlockCache(cache, iterator);
@@ -930,9 +929,9 @@ public class TestBlockEvictionFromClient {
           usedBlocksFound = true;
         }
       }
-      assertTrue("Blocks with non zero ref count should be found ", usedBlocksFound);
+      assertTrue(usedBlocksFound, "Blocks with non zero ref count should be found ");
       usedBlocksFound = false;
-      System.out.println("Compacting");
+      LOG.info("Compacting");
       assertEquals(2, store.getStorefilesCount());
       store.triggerMajorCompaction();
       region.compact(true);
@@ -957,7 +956,7 @@ public class TestBlockEvictionFromClient {
           usedBlocksFound = true;
         }
       }
-      assertTrue("Blocks with non zero ref count should be found ", usedBlocksFound);
+      assertTrue(usedBlocksFound, "Blocks with non zero ref count should be found ");
       // Should not throw exception
       compactionLatch.countDown();
       latch.countDown();
@@ -988,7 +987,7 @@ public class TestBlockEvictionFromClient {
     try {
       latch = new CountDownLatch(1);
       compactionLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
         CustomInnerRegionObserverWrapper.class.getName());
@@ -1022,7 +1021,7 @@ public class TestBlockEvictionFromClient {
       put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       // flush, one new block
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       region.flush(true);
       Iterator<CachedBlock> iterator = cache.iterator();
       iterateBlockCache(cache, iterator);
@@ -1054,11 +1053,11 @@ public class TestBlockEvictionFromClient {
       put.addColumn(FAMILY, QUALIFIER2, data2);
       table.put(put);
       // flush, one new block
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       region.flush(true);
-      assertTrue("Blocks with non zero ref count should be found ", usedBlocksFound);
+      assertTrue(usedBlocksFound, "Blocks with non zero ref count should be found ");
       usedBlocksFound = false;
-      System.out.println("Compacting");
+      LOG.info("Compacting");
       assertEquals(3, store.getStorefilesCount());
       store.triggerMajorCompaction();
       region.compact(true);
@@ -1083,7 +1082,7 @@ public class TestBlockEvictionFromClient {
           usedBlocksFound = true;
         }
       }
-      assertTrue("Blocks with non zero ref count should be found ", usedBlocksFound);
+      assertTrue(usedBlocksFound, "Blocks with non zero ref count should be found ");
       // Should not throw exception
       compactionLatch.countDown();
       latch.countDown();
@@ -1115,7 +1114,7 @@ public class TestBlockEvictionFromClient {
     try {
       latch = new CountDownLatch(1);
       exceptionLatch = new CountDownLatch(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(methodName);
       // Create KV that will give you two blocks
       // Create a table with block size as 1024
       table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
@@ -1132,7 +1131,7 @@ public class TestBlockEvictionFromClient {
       // insert data. 2 Rows are added
       insertData(table);
       // flush the data
-      System.out.println("Flushing cache");
+      LOG.info("Flushing cache");
       // Should create one Hfile with 2 blocks
       region.flush(true);
       // CustomInnerRegionObserver.sleepTime.set(5000);
@@ -1290,7 +1289,7 @@ public class TestBlockEvictionFromClient {
       } else {
         continue;
       }
-      System.out.println(" the refcount is " + refCount + " block is " + cacheKey);
+      LOG.info(" the refcount is " + refCount + " block is " + cacheKey);
       if (CustomInnerRegionObserver.waitForGets.get()) {
         if (expectOnlyZero) {
           assertTrue(refCount == 0);
@@ -1388,7 +1387,7 @@ public class TestBlockEvictionFromClient {
       }
       CustomInnerRegionObserver.getCdl().set(latch);
       Result r = table.get(get);
-      System.out.println(r);
+      LOG.info("" + r);
       if (!tracker) {
         assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
         assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
@@ -1441,7 +1440,7 @@ public class TestBlockEvictionFromClient {
       boolean resultFound = false;
       for (Result result : resScanner) {
         resultFound = true;
-        System.out.println(result);
+        LOG.info("" + result);
         if (!reverse) {
           assertTrue(Bytes.equals(result.getRow(), ROWS[i]));
           i++;
@@ -1462,7 +1461,7 @@ public class TestBlockEvictionFromClient {
     ) {
       Thread.sleep(100);
     }
-    System.out.println("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() + ", cur="
+    LOG.info("start=" + start + ", now=" + EnvironmentEdgeManager.currentTime() + ", cur="
       + store.getStorefilesCount());
     assertEquals(count, store.getStorefilesCount());
   }
@@ -1601,7 +1600,7 @@ public class TestBlockEvictionFromClient {
       boolean isGet) {
       CountDownLatch latch = getCdl().get();
       try {
-        System.out.println(latch.getCount() + " is the count " + isGet);
+        LOG.info(latch.getCount() + " is the count " + isGet);
         if (latch.getCount() > 0) {
           if (isGet) {
             countOfGets.incrementAndGet();

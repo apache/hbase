@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionServer;
@@ -31,21 +34,17 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestHTableQueryMetrics {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHTableQueryMetrics.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -63,7 +62,7 @@ public class TestHTableQueryMetrics {
 
   private static Connection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(3);
     // Create 3 rows in the table, with rowkeys starting with "zzz*" so that
@@ -76,7 +75,7 @@ public class TestHTableQueryMetrics {
     CONN.getAdmin().flush(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
@@ -91,8 +90,8 @@ public class TestHTableQueryMetrics {
     long bbs = getClusterBlockBytesScanned();
     Result result = CONN.getTable(TABLE_NAME).get(g1);
     bbs += result.getMetrics().getBlockBytesScanned();
-    Assert.assertNotNull(result.getMetrics());
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs);
+    assertNotNull(result.getMetrics());
+    assertEquals(getClusterBlockBytesScanned(), bbs);
 
     // Test multigets
     Get g2 = new Get(ROW_2);
@@ -104,11 +103,11 @@ public class TestHTableQueryMetrics {
     Result[] results = CONN.getTable(TABLE_NAME).get(ImmutableList.of(g1, g2, g3));
 
     for (Result r : results) {
-      Assert.assertNotNull(r.getMetrics());
+      assertNotNull(r.getMetrics());
       bbs += r.getMetrics().getBlockBytesScanned();
     }
 
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs);
+    assertEquals(getClusterBlockBytesScanned(), bbs);
   }
 
   @Test
@@ -117,14 +116,14 @@ public class TestHTableQueryMetrics {
     Get g1 = new Get(ROW_1);
 
     Result result = CONN.getTable(TABLE_NAME).get(g1);
-    Assert.assertNull(result.getMetrics());
+    assertNull(result.getMetrics());
 
     // Test multigets
     Get g2 = new Get(ROW_2);
     Get g3 = new Get(ROW_3);
     Result[] results = CONN.getTable(TABLE_NAME).get(ImmutableList.of(g1, g2, g3));
     for (Result r : results) {
-      Assert.assertNull(r.getMetrics());
+      assertNull(r.getMetrics());
     }
 
   }
@@ -137,9 +136,9 @@ public class TestHTableQueryMetrics {
     long bbs = getClusterBlockBytesScanned();
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(scan)) {
       for (Result result : scanner) {
-        Assert.assertNotNull(result.getMetrics());
+        assertNotNull(result.getMetrics());
         bbs += result.getMetrics().getBlockBytesScanned();
-        Assert.assertEquals(getClusterBlockBytesScanned(), bbs);
+        assertEquals(getClusterBlockBytesScanned(), bbs);
       }
     }
   }
@@ -150,7 +149,7 @@ public class TestHTableQueryMetrics {
 
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(scan)) {
       for (Result result : scanner) {
-        Assert.assertNull(result.getMetrics());
+        assertNull(result.getMetrics());
       }
     }
   }
@@ -164,8 +163,8 @@ public class TestHTableQueryMetrics {
     CheckAndMutateResult result = CONN.getTable(TABLE_NAME).checkAndMutate(cam);
     QueryMetrics metrics = result.getMetrics();
 
-    Assert.assertNotNull(metrics);
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + metrics.getBlockBytesScanned());
+    assertNotNull(metrics);
+    assertEquals(getClusterBlockBytesScanned(), bbs + metrics.getBlockBytesScanned());
 
     cam = CheckAndMutate.newBuilder(ROW_1).ifEquals(CF, CQ, VALUE).queryMetricsEnabled(true)
       .build(new RowMutations(ROW_1).add((Mutation) new Put(ROW_1).addColumn(CF, CQ, VALUE)));
@@ -174,8 +173,8 @@ public class TestHTableQueryMetrics {
     result = CONN.getTable(TABLE_NAME).checkAndMutate(cam);
     metrics = result.getMetrics();
 
-    Assert.assertNotNull(metrics);
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + metrics.getBlockBytesScanned());
+    assertNotNull(metrics);
+    assertEquals(getClusterBlockBytesScanned(), bbs + metrics.getBlockBytesScanned());
 
     bbs = getClusterBlockBytesScanned();
     List<CheckAndMutate> batch = new ArrayList<>();
@@ -190,10 +189,10 @@ public class TestHTableQueryMetrics {
     long totalBbs = 0;
     for (Object r : results) {
       CheckAndMutateResult camResult = (CheckAndMutateResult) r;
-      Assert.assertNotNull(camResult.getMetrics());
+      assertNotNull(camResult.getMetrics());
       totalBbs += camResult.getMetrics().getBlockBytesScanned();
     }
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
+    assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
 
     bbs = getClusterBlockBytesScanned();
 
@@ -205,10 +204,10 @@ public class TestHTableQueryMetrics {
     totalBbs = 0;
     for (Object r : results) {
       CheckAndMutateResult camResult = (CheckAndMutateResult) r;
-      Assert.assertNotNull(camResult.getMetrics());
+      assertNotNull(camResult.getMetrics());
       totalBbs += camResult.getMetrics().getBlockBytesScanned();
     }
-    Assert.assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
+    assertEquals(getClusterBlockBytesScanned(), bbs + totalBbs);
   }
 
   @Test
@@ -219,14 +218,14 @@ public class TestHTableQueryMetrics {
     CheckAndMutateResult result = CONN.getTable(TABLE_NAME).checkAndMutate(cam);
     QueryMetrics metrics = result.getMetrics();
 
-    Assert.assertNull(metrics);
+    assertNull(metrics);
 
     cam = CheckAndMutate.newBuilder(ROW_1).ifEquals(CF, CQ, VALUE)
       .build(new RowMutations(ROW_1).add((Mutation) new Put(ROW_1).addColumn(CF, CQ, VALUE)));
 
     result = CONN.getTable(TABLE_NAME).checkAndMutate(cam);
     metrics = result.getMetrics();
-    Assert.assertNull(metrics);
+    assertNull(metrics);
 
     List<CheckAndMutate> batch = new ArrayList<>();
     batch.add(cam);
@@ -238,7 +237,7 @@ public class TestHTableQueryMetrics {
     Object[] results = new Object[batch.size()];
     CONN.getTable(TABLE_NAME).batch(batch, results);
     for (Object r : results) {
-      Assert.assertNull(((CheckAndMutateResult) r).getMetrics());
+      assertNull(((CheckAndMutateResult) r).getMetrics());
     }
 
     // flush to force fetch from disk
@@ -247,7 +246,7 @@ public class TestHTableQueryMetrics {
     CONN.getTable(TABLE_NAME).batch(batch, results);
 
     for (Object r : results) {
-      Assert.assertNull(((CheckAndMutateResult) r).getMetrics());
+      assertNull(((CheckAndMutateResult) r).getMetrics());
     }
   }
 
