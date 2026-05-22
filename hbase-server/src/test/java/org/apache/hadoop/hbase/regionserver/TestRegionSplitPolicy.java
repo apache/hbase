@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -42,24 +41,20 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegionSplitPolicy {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionSplitPolicy.class);
 
   private Configuration conf;
   private HRegion mockRegion;
   private List<HStore> stores;
   private static final TableName TABLENAME = TableName.valueOf("t");
 
-  @Before
+  @BeforeEach
   public void setupMocks() {
     conf = HBaseConfiguration.create();
     RegionInfo hri = RegionInfoBuilder.newBuilder(TABLENAME).build();
@@ -281,9 +276,9 @@ public class TestRegionSplitPolicy {
   }
 
   private void assertWithinJitter(long maxSplitSize, long sizeToCheck) {
-    assertTrue("Size greater than lower bound of jitter",
-      (long) (maxSplitSize * 0.75) <= sizeToCheck);
-    assertTrue("Size less than upper bound of jitter", (long) (maxSplitSize * 1.25) >= sizeToCheck);
+    assertTrue((long) (maxSplitSize * 0.75) <= sizeToCheck,
+      "Size greater than lower bound of jitter");
+    assertTrue((long) (maxSplitSize * 1.25) >= sizeToCheck, "Size less than upper bound of jitter");
   }
 
   @Test

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +28,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -49,25 +48,20 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test TestRowPrefixBloomFilter
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRowPrefixBloomFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRowPrefixBloomFilter.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRowPrefixBloomFilter.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -88,12 +82,11 @@ public class TestRowPrefixBloomFilter {
   private static final int suffixRowCount = 10;
   private static final int fixedLengthExpKeys = prefixRowCount;
   private static final BloomType bt = BloomType.ROWPREFIX_FIXED_LENGTH;
+  private String methodName;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
     conf = TEST_UTIL.getConfiguration();
     conf.setFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, err);
     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
@@ -119,7 +112,7 @@ public class TestRowPrefixBloomFilter {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       if (localfs) {
@@ -180,7 +173,7 @@ public class TestRowPrefixBloomFilter {
     float expErr = 2 * prefixRowCount * suffixRowCount * err;
     int expKeys = fixedLengthExpKeys;
     // write the file
-    Path f = new Path(testDir, name.getMethodName());
+    Path f = new Path(testDir, methodName);
     writeStoreFile(f, bt, expKeys);
 
     // read the file
@@ -240,10 +233,10 @@ public class TestRowPrefixBloomFilter {
     }
     reader.close(true); // evict because we are about to delete the file
     fs.delete(f, true);
-    assertEquals("False negatives: " + falseNeg, 0, falseNeg);
+    assertEquals(0, falseNeg, "False negatives: " + falseNeg);
     int maxFalsePos = (int) (2 * expErr);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
-      + maxFalsePos + ")", falsePos <= maxFalsePos);
+    assertTrue(falsePos <= maxFalsePos, "Too many false positives: " + falsePos + " (err=" + err
+      + ", expected no more than " + maxFalsePos + ")");
   }
 
   @Test
@@ -251,7 +244,7 @@ public class TestRowPrefixBloomFilter {
     FileSystem fs = FileSystem.getLocal(conf);
     int expKeys = fixedLengthExpKeys;
     // write the file
-    Path f = new Path(testDir, name.getMethodName());
+    Path f = new Path(testDir, methodName);
     writeStoreFile(f, bt, expKeys);
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
@@ -304,7 +297,7 @@ public class TestRowPrefixBloomFilter {
     FileSystem fs = FileSystem.getLocal(conf);
     int expKeys = fixedLengthExpKeys;
     // write the file
-    Path f = new Path(testDir, name.getMethodName());
+    Path f = new Path(testDir, methodName);
     writeStoreFile(f, bt, expKeys);
 
     ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();

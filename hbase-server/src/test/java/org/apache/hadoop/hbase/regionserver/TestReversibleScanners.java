@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -58,12 +57,10 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -72,12 +69,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Test cases against ReversibleKeyValueScanner
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReversibleScanners {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReversibleScanners.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReversibleScanners.class);
   HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -95,10 +89,7 @@ public class TestReversibleScanners {
   private static final int VALUESIZE = 3;
   private static byte[][] VALUES = makeN(VALUE, VALUESIZE);
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
@@ -308,10 +299,11 @@ public class TestReversibleScanners {
   }
 
   @Test
-  public void testReversibleRegionScanner() throws IOException {
+  public void testReversibleRegionScanner(TestInfo testInfo) throws IOException {
     byte[] FAMILYNAME2 = Bytes.toBytes("testCf2");
-    HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()))
-      .addFamily(new HColumnDescriptor(FAMILYNAME)).addFamily(new HColumnDescriptor(FAMILYNAME2));
+    HTableDescriptor htd =
+      new HTableDescriptor(TableName.valueOf(testInfo.getTestMethod().get().getName()))
+        .addFamily(new HColumnDescriptor(FAMILYNAME)).addFamily(new HColumnDescriptor(FAMILYNAME2));
     HRegion region = TEST_UTIL.createLocalHRegion(htd, null, null);
     loadDataToRegion(region, FAMILYNAME2);
 
@@ -432,8 +424,8 @@ public class TestReversibleScanners {
         kvCount += kvList.size();
         if (lastResult != null) {
           Result curResult = Result.create(kvList);
-          assertEquals("LastResult:" + lastResult + "CurResult:" + curResult, forward,
-            Bytes.compareTo(curResult.getRow(), lastResult.getRow()) > 0);
+          assertEquals(forward, Bytes.compareTo(curResult.getRow(), lastResult.getRow()) > 0,
+            "LastResult:" + lastResult + "CurResult:" + curResult);
         }
         lastResult = Result.create(kvList);
         kvList.clear();
