@@ -17,20 +17,21 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -44,23 +45,18 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
  * Unit testing of ReplicationAdmin with clusters
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestReplicationAdminWithClusters extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationAdminWithClusters.class);
 
   static Connection connection1;
   static Connection connection2;
@@ -68,12 +64,11 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
   static Admin admin2;
   static ReplicationAdmin adminExt;
 
-  @Rule
-  public TestName name = new TestName();
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TestReplicationBase.setUpBeforeClass();
     connection1 = ConnectionFactory.createConnection(CONF1);
     connection2 = ConnectionFactory.createConnection(CONF2);
     admin1 = connection1.getAdmin();
@@ -81,7 +76,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     adminExt = new ReplicationAdmin(CONF1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     admin1.close();
     admin2.close();
@@ -184,7 +179,7 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
 
   @Test
   public void testEnableReplicationForTableWithRegionReplica() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+    TableName tn = tableNameExt.getTableName();
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tn).setRegionReplication(5)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(noRepfamName).build()).build();
 
@@ -202,24 +197,26 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     }
   }
 
-  @Test(expected = TableNotFoundException.class)
+  @Test
   public void testDisableReplicationForNonExistingTable() throws Exception {
-    admin1.disableTableReplication(TableName.valueOf(name.getMethodName()));
+    assertThrows(TableNotFoundException.class,
+      () -> admin1.disableTableReplication(tableNameExt.getTableName()));
   }
 
-  @Test(expected = TableNotFoundException.class)
+  @Test
   public void testEnableReplicationForNonExistingTable() throws Exception {
-    admin1.enableTableReplication(TableName.valueOf(name.getMethodName()));
+    assertThrows(TableNotFoundException.class,
+      () -> admin1.enableTableReplication(tableNameExt.getTableName()));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testDisableReplicationWhenTableNameAsNull() throws Exception {
-    admin1.disableTableReplication(null);
+    assertThrows(IllegalArgumentException.class, () -> admin1.disableTableReplication(null));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testEnableReplicationWhenTableNameAsNull() throws Exception {
-    admin1.enableTableReplication(null);
+    assertThrows(IllegalArgumentException.class, () -> admin1.enableTableReplication(null));
   }
 
   /*
@@ -228,14 +225,14 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
    */
   @Test
   public void testEnableReplicationForExplicitSetTableCfs() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
     String peerId = "2";
     if (admin2.isTableAvailable(TestReplicationBase.tableName)) {
       admin2.disableTable(TestReplicationBase.tableName);
       admin2.deleteTable(TestReplicationBase.tableName);
     }
-    assertFalse("Table should not exists in the peer cluster",
-      admin2.isTableAvailable(TestReplicationBase.tableName));
+    assertFalse(admin2.isTableAvailable(TestReplicationBase.tableName),
+      "Table should not exists in the peer cluster");
 
     // update peer config
     ReplicationPeerConfig rpc = admin1.getReplicationPeerConfig(peerId);
@@ -247,17 +244,15 @@ public class TestReplicationAdminWithClusters extends TestReplicationBase {
     try {
       adminExt.setPeerTableCFs(peerId, tableCfs);
       admin1.enableTableReplication(TestReplicationBase.tableName);
-      assertFalse(
+      assertFalse(admin2.isTableAvailable(TestReplicationBase.tableName),
         "Table should not be created if user has set table cfs explicitly for the "
-          + "peer and this is not part of that collection",
-        admin2.isTableAvailable(TestReplicationBase.tableName));
+          + "peer and this is not part of that collection");
 
       tableCfs.put(TestReplicationBase.tableName, null);
       adminExt.setPeerTableCFs(peerId, tableCfs);
       admin1.enableTableReplication(TestReplicationBase.tableName);
-      assertTrue(
-        "Table should be created if user has explicitly added table into table cfs collection",
-        admin2.isTableAvailable(TestReplicationBase.tableName));
+      assertTrue(admin2.isTableAvailable(TestReplicationBase.tableName),
+        "Table should be created if user has explicitly added table into table cfs collection");
     } finally {
       adminExt.removePeerTableCFs(peerId, adminExt.getPeerTableCFs(peerId));
       admin1.disableTableReplication(TestReplicationBase.tableName);

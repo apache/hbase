@@ -17,11 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -45,7 +50,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallDroppedException;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseServerException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -53,6 +57,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
@@ -65,6 +70,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -72,16 +78,13 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,12 +96,9 @@ import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector.Level;
 /**
  * This class is for testing HBaseConnectionManager features
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestConnectionImplementation {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionImplementation.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestConnectionImplementation.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -111,10 +111,10 @@ public class TestConnectionImplementation {
   private static final byte[] ROW_X = Bytes.toBytes("xxx");
   private static final int RPC_RETRY = 5;
 
-  @Rule
-  public TestName name = new TestName();
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     ResourceLeakDetector.setLevel(Level.PARANOID);
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
@@ -126,12 +126,12 @@ public class TestConnectionImplementation {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     TEST_UTIL.getAdmin().balancerSwitch(true, true);
   }
@@ -147,7 +147,7 @@ public class TestConnectionImplementation {
     // make sure the internally created ExecutorService is the one passed
     assertTrue(otherPool == ((ConnectionImplementation) con2).getCurrentBatchPool());
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     Table table = con1.getTable(tableName, otherPool);
 
@@ -156,8 +156,8 @@ public class TestConnectionImplementation {
     if (table instanceof HTable) {
       HTable t = (HTable) table;
       // make sure passing a pool to the getTable does not trigger creation of an internal pool
-      assertNull("Internal Thread pool should be null",
-        ((ConnectionImplementation) con1).getCurrentBatchPool());
+      assertNull(((ConnectionImplementation) con1).getCurrentBatchPool(),
+        "Internal Thread pool should be null");
       // table should use the pool passed
       assertTrue(otherPool == t.getPool());
       t.close();
@@ -180,9 +180,9 @@ public class TestConnectionImplementation {
       t = (HTable) con1.getTable(tableName);
       pool = ((ConnectionImplementation) con1).getCurrentBatchPool();
       // make sure an internal pool was created
-      assertNotNull("An internal Thread pool should have been created", pool);
+      assertNotNull(pool, "An internal Thread pool should have been created");
       // and that the table is using it
-      assertTrue(t.getPool() == pool);
+      assertSame(t.getPool(), pool);
       t.close();
 
       t = (HTable) con1.getTable(tableName);
@@ -221,13 +221,13 @@ public class TestConnectionImplementation {
 
   // Fails too often! Needs work. HBASE-12558
   // May only fail on non-linux machines? E.g. macosx.
-  @Ignore
-  @Test(expected = RegionServerStoppedException.class)
+  @Disabled
+  @Test
   // Depends on mulitcast messaging facility that seems broken in hbase2
   // See HBASE-19261 "ClusterStatusPublisher where Master could optionally broadcast notice of
   // dead servers is broke"
   public void testClusterStatus() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
     byte[] cf = "cf".getBytes();
     byte[] rk = "rk1".getBytes();
 
@@ -247,7 +247,7 @@ public class TestConnectionImplementation {
         TEST_UTIL.waitUntilNoRegionsInTransition();
         hci.clearRegionCache(tableName);
       }
-      Assert.assertNotNull(hci.clusterStatusListener);
+      assertNotNull(hci.clusterStatusListener);
       TEST_UTIL.assertRegionOnServer(l.getRegionLocation(rk).getRegionInfo(), sn, 20000);
     }
 
@@ -274,7 +274,8 @@ public class TestConnectionImplementation {
     });
 
     t.close();
-    hci.getClient(sn); // will throw an exception: RegionServerStoppedException
+    // will throw an exception: RegionServerStoppedException
+    assertThrows(RegionServerStoppedException.class, () -> hci.getClient(sn));
   }
 
   /**
@@ -373,7 +374,7 @@ public class TestConnectionImplementation {
     });
     table.close();
     connection.close();
-    Assert.assertTrue("Unexpected exception is " + failed.get(), failed.get() == null);
+    assertNull(failed.get(), "Unexpected exception is " + failed.get());
   }
 
   /**
@@ -381,7 +382,7 @@ public class TestConnectionImplementation {
    */
   @Test
   public void testConnectionIdle() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     int idleTime = 20000;
     boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
@@ -441,7 +442,7 @@ public class TestConnectionImplementation {
    */
   @Test
   public void testConnectionCut() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
 
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     boolean previousBalance = TEST_UTIL.getAdmin().setBalancerRunning(false, true);
@@ -468,7 +469,7 @@ public class TestConnectionImplementation {
     }
 
     Get get = new Get(FAM_NAM);
-    Assert.assertNotNull(table.get(get));
+    assertNotNull(table.get(get));
 
     get = new Get(FAM_NAM);
     get.setFilter(new BlockingFilter());
@@ -491,11 +492,11 @@ public class TestConnectionImplementation {
     t.start();
     try {
       table.get(get);
-      Assert.fail();
+      fail();
     } catch (IOException expected) {
       LOG.debug("Received: " + expected);
-      Assert.assertFalse(expected instanceof SocketTimeoutException);
-      Assert.assertFalse(syncBlockingFilter.get());
+      assertFalse(expected instanceof SocketTimeoutException);
+      assertFalse(syncBlockingFilter.get());
     } finally {
       syncBlockingFilter.set(true);
       t.join();
@@ -560,17 +561,16 @@ public class TestConnectionImplementation {
     conn.updateCachedLocation(loc.getRegionInfo(), loc.getServerName(),
       ServerName.valueOf("127.0.0.1", nextPort, HConstants.LATEST_TIMESTAMP),
       HConstants.LATEST_TIMESTAMP);
-    Assert.assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort(),
-      nextPort);
+    assertEquals(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort(), nextPort);
 
     conn.clearRegionCache(TABLE_NAME, ROW.clone());
     RegionLocations rl = conn.getCachedLocation(TABLE_NAME, ROW);
-    assertNull("What is this location?? " + rl, rl);
+    assertNull(rl, "What is this location?? " + rl);
 
     // We're now going to move the region and check that it works for the client
     // First a new put to add the location in the cache
     conn.clearRegionCache(TABLE_NAME);
-    Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME));
+    assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME));
     Put put2 = new Put(ROW);
     put2.addColumn(FAM_NAM, ROW, ROW);
     table.put(put2);
@@ -598,12 +598,12 @@ public class TestConnectionImplementation {
     ServerName destServerName = destServer.getServerName();
 
     // Check that we are in the expected state
-    Assert.assertTrue(curServer != destServer);
-    Assert.assertFalse(curServer.getServerName().equals(destServer.getServerName()));
-    Assert.assertFalse(toMove.getPort() == destServerName.getPort());
-    Assert.assertNotNull(curServer.getOnlineRegion(regionName));
-    Assert.assertNull(destServer.getOnlineRegion(regionName));
-    Assert.assertFalse(
+    assertTrue(curServer != destServer);
+    assertFalse(curServer.getServerName().equals(destServer.getServerName()));
+    assertFalse(toMove.getPort() == destServerName.getPort());
+    assertNotNull(curServer.getOnlineRegion(regionName));
+    assertNull(destServer.getOnlineRegion(regionName));
+    assertFalse(
       TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager().hasRegionsInTransition());
 
     // Moving. It's possible that we don't have all the regions online at this point, so
@@ -624,13 +624,13 @@ public class TestConnectionImplementation {
     LOG.info("Move finished for region=" + toMove.getRegionInfo().getRegionNameAsString());
 
     // Check our new state.
-    Assert.assertNull(curServer.getOnlineRegion(regionName));
-    Assert.assertNotNull(destServer.getOnlineRegion(regionName));
-    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
-    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    assertNull(curServer.getOnlineRegion(regionName));
+    assertNotNull(destServer.getOnlineRegion(regionName));
+    assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
 
     // Cache was NOT updated and points to the wrong server
-    Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort()
+    assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort()
         == destServerName.getPort());
 
     // This part relies on a number of tries equals to 1.
@@ -640,32 +640,32 @@ public class TestConnectionImplementation {
     put3.addColumn(FAM_NAM, ROW, ROW);
     try {
       table.put(put3);
-      Assert.fail("Unreachable point");
+      fail("Unreachable point");
     } catch (RetriesExhaustedWithDetailsException e) {
       LOG.info("Put done, exception caught: " + e.getClass());
-      Assert.assertEquals(1, e.getNumExceptions());
-      Assert.assertEquals(1, e.getCauses().size());
-      Assert.assertArrayEquals(ROW, e.getRow(0).getRow());
+      assertEquals(1, e.getNumExceptions());
+      assertEquals(1, e.getCauses().size());
+      assertArrayEquals(ROW, e.getRow(0).getRow());
 
       // Check that we unserialized the exception as expected
       Throwable cause = ClientExceptionsUtil.findException(e.getCause(0));
-      Assert.assertNotNull(cause);
-      Assert.assertTrue(cause instanceof RegionMovedException);
+      assertNotNull(cause);
+      assertTrue(cause instanceof RegionMovedException);
     } catch (RetriesExhaustedException ree) {
       // hbase2 throws RetriesExhaustedException instead of RetriesExhaustedWithDetailsException
       // as hbase1 used to do. Keep an eye on this to see if this changed behavior is an issue.
       LOG.info("Put done, exception caught: " + ree.getClass());
       Throwable cause = ClientExceptionsUtil.findException(ree.getCause());
-      Assert.assertNotNull(cause);
-      Assert.assertTrue(cause instanceof RegionMovedException);
+      assertNotNull(cause);
+      assertTrue(cause instanceof RegionMovedException);
     }
-    Assert.assertNotNull("Cached connection is null", conn.getCachedLocation(TABLE_NAME, ROW));
-    Assert.assertEquals("Previous server was " + curServer.getServerName().getAddress(),
-      destServerName.getPort(),
-      conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
+    assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW), "Cached connection is null");
+    assertEquals(destServerName.getPort(),
+      conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort(),
+      "Previous server was " + curServer.getServerName().getAddress());
 
-    Assert.assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
-    Assert.assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+    assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
 
     // We move it back to do another test with a scan
     LOG.info("Move starting region=" + toMove.getRegionInfo().getRegionNameAsString());
@@ -683,12 +683,12 @@ public class TestConnectionImplementation {
     }
 
     // Check our new state.
-    Assert.assertNotNull(curServer.getOnlineRegion(regionName));
-    Assert.assertNull(destServer.getOnlineRegion(regionName));
+    assertNotNull(curServer.getOnlineRegion(regionName));
+    assertNull(destServer.getOnlineRegion(regionName));
     LOG.info("Move finished for region=" + toMove.getRegionInfo().getRegionNameAsString());
 
     // Cache was NOT updated and points to the wrong server
-    Assert.assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort()
+    assertFalse(conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort()
         == curServer.getServerName().getPort());
 
     Scan sc = new Scan();
@@ -703,16 +703,16 @@ public class TestConnectionImplementation {
       ResultScanner rs = table.getScanner(sc);
       while (rs.next() != null) {
       }
-      Assert.fail("Unreachable point");
+      fail("Unreachable point");
     } catch (RetriesExhaustedException e) {
       LOG.info("Scan done, expected exception caught: " + e.getClass());
     }
 
     // Cache is updated with the right value.
-    Assert.assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
-    Assert.assertEquals("Previous server was " + destServer.getServerName().getAddress(),
-      curServer.getServerName().getPort(),
-      conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort());
+    assertNotNull(conn.getCachedLocation(TABLE_NAME, ROW));
+    assertEquals(curServer.getServerName().getPort(),
+      conn.getCachedLocation(TABLE_NAME, ROW).getRegionLocation().getPort(),
+      "Previous server was " + destServer.getServerName().getAddress());
 
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, RPC_RETRY);
     table.close();
@@ -765,28 +765,28 @@ public class TestConnectionImplementation {
     conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
       ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
-    Assert.assertEquals(nextPort, location.getPort());
+    assertEquals(nextPort, location.getPort());
 
     // No source specified - same.
     nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), location.getServerName(),
       ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
-    Assert.assertEquals(nextPort, location.getPort());
+    assertEquals(nextPort, location.getPort());
 
     // Higher seqNum - overwrites lower seqNum.
     nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), anySource,
       ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() + 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
-    Assert.assertEquals(nextPort, location.getPort());
+    assertEquals(nextPort, location.getPort());
 
     // Lower seqNum - does not overwrite higher seqNum.
     nextPort = location.getPort() + 1;
     conn.updateCachedLocation(location.getRegionInfo(), anySource,
       ServerName.valueOf("127.0.0.1", nextPort, 0), location.getSeqNum() - 1);
     location = conn.getCachedLocation(TABLE_NAME2, ROW).getRegionLocation();
-    Assert.assertEquals(nextPort - 1, location.getPort());
+    assertEquals(nextPort - 1, location.getPort());
     table.close();
   }
 
@@ -869,7 +869,7 @@ public class TestConnectionImplementation {
       // We're now going to move the region and check that it works for the client
       // First a new put to add the location in the cache
       conn.clearRegionCache(TABLE_NAME3);
-      Assert.assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
+      assertEquals(0, conn.getNumberOfCachedRegionLocations(TABLE_NAME3));
 
       TEST_UTIL.getAdmin().setBalancerRunning(false, false);
       HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
@@ -916,12 +916,12 @@ public class TestConnectionImplementation {
       table.put(put2); // cache put2's location
 
       // Check that we are in the expected state
-      Assert.assertTrue(curServer != destServer);
-      Assert.assertNotEquals(curServer.getServerName(), destServer.getServerName());
-      Assert.assertNotEquals(toMove.getPort(), destServerName.getPort());
-      Assert.assertNotNull(curServer.getOnlineRegion(regionName));
-      Assert.assertNull(destServer.getOnlineRegion(regionName));
-      Assert.assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
+      assertTrue(curServer != destServer);
+      assertNotEquals(curServer.getServerName(), destServer.getServerName());
+      assertNotEquals(toMove.getPort(), destServerName.getPort());
+      assertNotNull(curServer.getOnlineRegion(regionName));
+      assertNull(destServer.getOnlineRegion(regionName));
+      assertFalse(TEST_UTIL.getMiniHBaseCluster().getMaster().getAssignmentManager()
         .hasRegionsInTransition());
 
       // Moving. It's possible that we don't have all the regions online at this point, so
@@ -942,15 +942,13 @@ public class TestConnectionImplementation {
       LOG.info("Move finished for region=" + toMove.getRegionInfo().getRegionNameAsString());
 
       // Check our new state.
-      Assert.assertNull(curServer.getOnlineRegion(regionName));
-      Assert.assertNotNull(destServer.getOnlineRegion(regionName));
-      Assert
-        .assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
-      Assert
-        .assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+      assertNull(curServer.getOnlineRegion(regionName));
+      assertNotNull(destServer.getOnlineRegion(regionName));
+      assertFalse(destServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
+      assertFalse(curServer.getRegionsInTransitionInRS().containsKey(encodedRegionNameBytes));
 
       // Cache was NOT updated and points to the wrong server
-      Assert.assertFalse(conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation().getPort()
+      assertFalse(conn.getCachedLocation(TABLE_NAME3, ROW_X).getRegionLocation().getPort()
           == destServerName.getPort());
 
       // Hijack the number of retry to fail after 2 tries
@@ -1018,8 +1016,8 @@ public class TestConnectionImplementation {
   }
 
   private static void assertEqualsWithJitter(long expected, long actual, long jitterBase) {
-    assertTrue("Value not within jitter: " + expected + " vs " + actual,
-      Math.abs(actual - expected) <= (0.01f * jitterBase));
+    assertTrue(Math.abs(actual - expected) <= (0.01f * jitterBase),
+      "Value not within jitter: " + expected + " vs " + actual);
   }
 
   @Test
@@ -1029,7 +1027,7 @@ public class TestConnectionImplementation {
     config.set(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
       HConstants.ZK_CONNECTION_REGISTRY_CLASS);
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
     TEST_UTIL.createTable(tableName, new byte[][] { FAM_NAM }).close();
 
     Connection connection = ConnectionFactory.createConnection(config);
@@ -1052,7 +1050,7 @@ public class TestConnectionImplementation {
   public void testLocateRegionsWithRegionReplicas() throws IOException {
     int regionReplication = 3;
     byte[] family = Bytes.toBytes("cf");
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = tableNameExt.getTableName();
 
     // Create a table with region replicas
     TableDescriptorBuilder builder =
@@ -1094,7 +1092,7 @@ public class TestConnectionImplementation {
 
     int regionReplication = 3;
     byte[] family = Bytes.toBytes("cf");
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = tableNameExt.getTableName();
 
     // Create a table with region replicas
     TableDescriptorBuilder builder =
@@ -1179,7 +1177,7 @@ public class TestConnectionImplementation {
 
   @Test
   public void testMetaLookupThreadPoolCreated() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = tableNameExt.getTableName();
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("foo") };
     if (TEST_UTIL.getAdmin().tableExists(tableName)) {
       TEST_UTIL.getAdmin().disableTable(tableName);
@@ -1198,7 +1196,7 @@ public class TestConnectionImplementation {
   // There is no assertion, but you need to confirm that there is no resource leak output from netty
   @Test
   public void testCancelConnectionMemoryLeak() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = tableNameExt.getTableName();
     TEST_UTIL.createTable(tableName, FAM_NAM).close();
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
     try (Connection connection = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());

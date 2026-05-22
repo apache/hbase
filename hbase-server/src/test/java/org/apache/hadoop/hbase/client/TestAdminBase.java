@@ -17,18 +17,18 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 public class TestAdminBase {
 
@@ -36,10 +36,14 @@ public class TestAdminBase {
   protected final static int NB_SERVERS = 3;
   protected static Admin ADMIN;
 
-  @Rule
-  public TestName name = new TestName();
+  protected String methodName;
 
-  @BeforeClass
+  @BeforeEach
+  public void setUpMethodName(TestInfo info) {
+    this.methodName = info.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
@@ -52,12 +56,12 @@ public class TestAdminBase {
     ADMIN = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (TableDescriptor htd : ADMIN.listTableDescriptors()) {
       TEST_UTIL.deleteTable(htd.getTableName());

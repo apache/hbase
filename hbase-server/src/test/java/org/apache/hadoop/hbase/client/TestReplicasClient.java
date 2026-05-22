@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.codahale.metrics.Counter;
 import java.io.IOException;
@@ -38,7 +39,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -61,14 +61,12 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,12 +78,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole cluster.
  * See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestReplicasClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicasClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicasClient.class);
 
@@ -208,7 +203,7 @@ public class TestReplicasClient {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // enable store file refreshing
     HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
@@ -241,16 +236,16 @@ public class TestReplicasClient {
     LOG.info("Master has stopped");
 
     rsServerName = HTU.getHBaseCluster().getRegionServer(0).getServerName();
-    Assert.assertNotNull(rsServerName);
+    assertNotNull(rsServerName);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     HTU.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     try {
       openRegion(hriPrimary);
@@ -281,7 +276,7 @@ public class TestReplicasClient {
     SlowMeCopro.countOfNext.set(0);
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException, KeeperException {
     SlowMeCopro.getPrimaryCdl().get().countDown();
     SlowMeCopro.getSecondaryCdl().get().countDown();
@@ -503,7 +498,7 @@ public class TestReplicasClient {
     g.setConsistency(Consistency.TIMELINE);
     r = table.get(g);
     assertTrue(r.isStale());
-    assertFalse("The secondary has stale data", r.getExists());
+    assertFalse(r.getExists(), "The secondary has stale data");
     SlowMeCopro.getPrimaryCdl().get().countDown();
     LOG.info("exists stale before flush done");
 
@@ -770,9 +765,9 @@ public class TestReplicasClient {
         countOfStale++;
       }
     }
-    assertTrue("Count of rows " + rowCount + " num rows expected " + numRows, rowCount == numRows);
-    assertTrue("Count of cells: " + cellCount + " cells expected: " + numRows * numCols,
-      cellCount == (numRows * numCols));
+    assertTrue(rowCount == numRows, "Count of rows " + rowCount + " num rows expected " + numRows);
+    assertTrue(cellCount == (numRows * numCols),
+      "Count of cells: " + cellCount + " cells expected: " + numRows * numCols);
 
     if (slowNext) {
       LOG.debug("Count of Stale " + countOfStale);
@@ -835,24 +830,23 @@ public class TestReplicasClient {
     throws IOException {
     try (ResultScanner rs = table.getScanner(scan);) {
       for (Result r : rs) {
-        Assert.assertEquals(isStale, r.isStale());
-        Assert.assertFalse(r.isEmpty());
+        assertEquals(isStale, r.isStale());
+        assertFalse(r.isEmpty());
       }
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
         rs.getScanMetrics().collectMetricsByRegion(false);
       if (isStale) {
-        Assert.assertTrue(scanMetricsByRegion.isEmpty());
+        assertTrue(scanMetricsByRegion.isEmpty());
       } else {
-        Assert.assertEquals(1, scanMetricsByRegion.size());
+        assertEquals(1, scanMetricsByRegion.size());
         for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
           .entrySet()) {
           ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
           Map<String, Long> metrics = entry.getValue();
-          Assert.assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
-          Assert.assertEquals(regionInfo.getEncodedName(),
-            scanMetricsRegionInfo.getEncodedRegionName());
-          Assert.assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
-          Assert.assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+          assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
+          assertEquals(regionInfo.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());
+          assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
+          assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
         }
       }
     }

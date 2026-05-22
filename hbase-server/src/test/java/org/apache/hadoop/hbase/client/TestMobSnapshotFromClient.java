@@ -18,39 +18,41 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.mob.MobConstants;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test create/using/deleting snapshots from the client
  * <p>
  * This is an end-to-end test for the snapshot utility
  */
-@Category({ LargeTests.class, ClientTests.class })
-public class TestMobSnapshotFromClient extends TestSnapshotFromClient {
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: tracker={0}")
+public class TestMobSnapshotFromClient extends SnapshotFromClientTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobSnapshotFromClient.class);
+  public TestMobSnapshotFromClient(StoreFileTrackerFactory.Trackers trackerImpl) {
+    super(trackerImpl);
+  }
 
   /**
    * Setup the config for the cluster
    * @throws Exception on failure
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
   }
 
   protected static void setupConf(Configuration conf) {
-    TestSnapshotFromClient.setupConf(conf);
+    SnapshotFromClientTestBase.setupConf(conf);
     conf.setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doReturn;
@@ -30,42 +30,36 @@ import com.google.protobuf.ServiceException;
 import java.io.IOException;
 import java.util.ArrayList;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.MasterNotRunningException;
 import org.apache.hadoop.hbase.PleaseHoldException;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestHBaseAdminNoCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseAdminNoCluster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseAdminNoCluster.class);
 
-  @Rule
-  public TestName name = new TestName();
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
   /**
    * Verify that PleaseHoldException gets retried. HBASE-8764
@@ -73,7 +67,7 @@ public class TestHBaseAdminNoCluster {
   // TODO: Clean up, with Procedure V2 and nonce to prevent the same procedure to call mulitple
   // time, this test is invalid anymore. Just keep the test around for some time before
   // fully removing it.
-  @Ignore
+  @Disabled
   @Test
   public void testMasterMonitorCallableRetries()
     throws MasterNotRunningException, ZooKeeperConnectionException, IOException,
@@ -94,7 +88,7 @@ public class TestHBaseAdminNoCluster {
     when(connection.getMaster()).thenReturn(masterAdmin);
     Admin admin = new HBaseAdmin(connection);
     try {
-      HTableDescriptor htd = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+      HTableDescriptor htd = new HTableDescriptor(tableNameExt.getTableName());
       // Pass any old htable descriptor; not important
       try {
         admin.createTable(htd, HBaseTestingUtility.KEYS_FOR_HBA_CREATE_TABLE);
@@ -112,7 +106,6 @@ public class TestHBaseAdminNoCluster {
 
   @Test
   public void testMasterOperationsRetries() throws Exception {
-
     // Admin.listTables()
     testMasterOperationIsRetried(new MethodCaller() {
       @Override
@@ -143,7 +136,7 @@ public class TestHBaseAdminNoCluster {
     testMasterOperationIsRetried(new MethodCaller() {
       @Override
       public void call(Admin admin) throws Exception {
-        admin.getTableDescriptor(TableName.valueOf(name.getMethodName()));
+        admin.getTableDescriptor(tableNameExt.getTableName());
       }
 
       @Override
