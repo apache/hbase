@@ -226,15 +226,14 @@ public final class X509Util {
    */
   private static boolean configureOpenSslIfAvailable(SslContextBuilder sslContextBuilder,
     Configuration conf) {
-    if (OpenSsl.isAvailable() && conf.getBoolean(TLS_USE_OPENSSL, true)) {
+    boolean openSslEnabled = conf.getBoolean(TLS_USE_OPENSSL, true);
+    if (openSslEnabled && OpenSsl.isAvailable()) {
       LOG.debug("Using netty-tcnative to accelerate SSL handling");
       sslContextBuilder.sslProvider(SslProvider.OPENSSL);
       return true;
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
-          OpenSsl.isAvailable() ? "enabled" : "available");
-      }
+      LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
+        openSslEnabled ? "available" : "enabled");
       sslContextBuilder.sslProvider(SslProvider.JDK);
       return false;
     }
