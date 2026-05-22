@@ -660,21 +660,21 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
   private void checkRegionIndexValid(int idx, List<Pair<byte[], byte[]>> startEndKeys,
     TableName tableName) throws IOException {
     if (idx < 0) {
-      throw new IOException("The first region info for table " + tableName
-        + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+      throw new IOException("The first region info for table " + tableName + " can't be found in "
+        + TableName.META_TABLE_NAME + ". Please use hbck tool to fix it" + " first.");
     } else if (
       (idx == startEndKeys.size() - 1)
         && !Bytes.equals(startEndKeys.get(idx).getSecond(), HConstants.EMPTY_BYTE_ARRAY)
     ) {
-      throw new IOException("The last region info for table " + tableName
-        + " can't be found in hbase:meta.Please use hbck tool to fix it first.");
+      throw new IOException("The last region info for table " + tableName + " can't be found in "
+        + TableName.META_TABLE_NAME + ". Please use hbck tool to fix it" + " first.");
     } else if (
       idx + 1 < startEndKeys.size() && !(Bytes.compareTo(startEndKeys.get(idx).getSecond(),
         startEndKeys.get(idx + 1).getFirst()) == 0)
     ) {
       throw new IOException("The endkey of one region for table " + tableName
-        + " is not equal to the startkey of the next region in hbase:meta."
-        + "Please use hbck tool to fix it first.");
+        + " is not equal to the startkey of the next region in " + TableName.META_TABLE_NAME + "."
+        + " Please use hbck tool to fix it first.");
     }
   }
 

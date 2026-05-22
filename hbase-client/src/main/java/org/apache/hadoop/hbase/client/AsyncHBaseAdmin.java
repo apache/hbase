@@ -1022,6 +1022,26 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Long> refreshMeta() {
+    return wrap(rawAdmin.refreshMeta());
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final TableName tableName) {
+    return wrap(rawAdmin.refreshHFiles(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final String namespace) {
+    return wrap(rawAdmin.refreshHFiles(namespace));
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles() {
+    return wrap(rawAdmin.refreshHFiles());
+  }
+
+  @Override
   public CompletableFuture<Void> restoreBackupSystemTable(String snapshotName) {
     return wrap(rawAdmin.restoreBackupSystemTable(snapshotName));
   }

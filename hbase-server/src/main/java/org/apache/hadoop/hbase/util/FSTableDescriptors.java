@@ -153,14 +153,14 @@ public class FSTableDescriptors implements TableDescriptors {
     }
     TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
     TableDescriptor td = StoreFileTrackerFactory.updateWithTrackerConfigs(conf, builder.build());
-    LOG.info("Creating new hbase:meta table descriptor {}", td);
+    LOG.info("Creating new {} table descriptor {}", TableName.META_TABLE_NAME, td);
     TableName tableName = td.getTableName();
     Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, null);
     if (p == null) {
-      throw new IOException("Failed update hbase:meta table descriptor");
+      throw new IOException("Failed update " + TableName.META_TABLE_NAME + " table descriptor");
     }
-    LOG.info("Updated hbase:meta table descriptor to {}", p);
+    LOG.info("Updated {} table descriptor to {}", TableName.META_TABLE_NAME, p);
     return td;
   }
 
@@ -236,7 +236,7 @@ public class FSTableDescriptors implements TableDescriptors {
         cachehits++;
         return cachedtdm;
       }
-      // we do not need to go to fs any more
+      // we do not need to go to the fs anymore
       if (fsvisited) {
         return null;
       }
@@ -270,7 +270,8 @@ public class FSTableDescriptors implements TableDescriptors {
       LOG.info("Fetching table descriptors from the filesystem.");
       final long startTime = EnvironmentEdgeManager.currentTime();
       AtomicBoolean allvisited = new AtomicBoolean(usecache);
-      List<Path> tableDirs = FSUtils.getTableDirs(fs, rootdir);
+      List<Path> tableDirs =
+        FSUtils.getTableDirs(fs, rootdir).stream().filter(FSUtils::isLocalMetaTable).toList();
       if (!tableDescriptorParallelLoadEnable) {
         for (Path dir : tableDirs) {
           internalGet(dir, tds, allvisited);
@@ -668,8 +669,8 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param htd           description of the table to write
    * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
    *                      be overwritten
-   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
-   *         already exists and we weren't forcing the descriptor creation.
+   * @return <tt>true</tt> if we successfully created the file, <tt>false</tt> if the file already
+   *         exists, and we weren't forcing the descriptor creation.
    * @throws IOException if a filesystem error occurs
    */
   public boolean createTableDescriptorForTableDirectory(Path tableDir, TableDescriptor htd,
@@ -688,8 +689,8 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param htd           description of the table to write
    * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
    *                      be overwritten
-   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
-   *         already exists and we weren't forcing the descriptor creation.
+   * @return <tt>true</tt> if we successfully created the file, <tt>false</tt> if the file already
+   *         exists, and we weren't forcing the descriptor creation.
    * @throws IOException if a filesystem error occurs
    */
   public static boolean createTableDescriptorForTableDirectory(FileSystem fs, Path tableDir,
@@ -705,5 +706,15 @@ public class FSTableDescriptors implements TableDescriptors {
       }
     }
     return writeTableDescriptor(fs, htd, tableDir, opt.map(Pair::getFirst).orElse(null)) != null;
+  }
+
+  /**
+   * Invalidates the table descriptor cache.
+   */
+  @Override
+  public void invalidateTableDescriptorCache() {
+    LOG.info("Invalidating table descriptor cache.");
+    this.fsvisited = false;
+    this.cache.clear();
   }
 }
