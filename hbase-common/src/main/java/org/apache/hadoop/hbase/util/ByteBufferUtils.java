@@ -918,7 +918,7 @@ public final class ByteBufferUtils {
   }
 
   public static int putInt(ByteBuffer buffer, int index, int val) {
-    BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    BYTE_BUFFER_INT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, index, val);
     return index + Integer.BYTES;
   }
 
@@ -961,7 +961,7 @@ public final class ByteBufferUtils {
   }
 
   public static int putShort(ByteBuffer buffer, int index, short val) {
-    BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, index), val);
     return index + Short.BYTES;
   }
 
@@ -984,7 +984,7 @@ public final class ByteBufferUtils {
   }
 
   public static int putLong(ByteBuffer buffer, int index, long val) {
-    BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, buffer.position(), val);
+    BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, index, val);
     return index + Long.BYTES;
   }
 
