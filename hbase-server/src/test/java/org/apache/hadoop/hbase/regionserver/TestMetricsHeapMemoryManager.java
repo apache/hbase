@@ -17,27 +17,22 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Unit test version of rs metrics tests.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsHeapMemoryManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsHeapMemoryManager.class);
 
   public static MetricsAssertHelper HELPER =
     CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
@@ -45,7 +40,7 @@ public class TestMetricsHeapMemoryManager {
   private MetricsHeapMemoryManager hmm;
   private MetricsHeapMemoryManagerSource source;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     hmm = new MetricsHeapMemoryManager();
     source = hmm.getMetricsSource();
@@ -53,7 +48,7 @@ public class TestMetricsHeapMemoryManager {
 
   @Test
   public void testConstuctor() {
-    assertNotNull("There should be a hadoop1/hadoop2 metrics source", source);
+    assertNotNull(source, "There should be a hadoop1/hadoop2 metrics source");
   }
 
   @Test
