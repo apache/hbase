@@ -26,6 +26,10 @@ object storage.
 This is a multi-module Maven project. Modules live in arbitrarily nested
 folders; enumerate them by searching for `pom.xml` files (excluding `target/`
 directories). The root `pom.xml` defines the full reactor and build order.
+Note that some directories from removed or merged modules (e.g.,
+`hbase-hadoop2-compat/`, `hbase-protocol/`, `hbase-rsgroup/`) may still exist
+as empty shells with only `target/` remnants. If a directory has no `pom.xml`,
+it is not part of the active build.
 
 ### Client and Server
 
@@ -53,12 +57,12 @@ you are on.
 
 **Coprocessors** are HBase's server-side extension framework. They allow custom
 code to run inside RegionServer and Master processes, with the same privileges
-as the host process. Coprocessor interfaces (observers, endpoints) are defined
-in `hbase-client` and `hbase-server` under the `coprocessor` package; endpoint
-implementations live in `hbase-endpoint`. The built-in `AccessController`
-coprocessor enforces ACLs; `VisibilityController` enforces cell-level
-visibility labels. Third-party coprocessors are loaded via configuration or
-table schema.
+as the host process. The base `Coprocessor` interface lives in `hbase-client`;
+observer and endpoint interfaces (`RegionObserver`, `MasterObserver`, etc.) live
+in `hbase-server`. Endpoint implementations live in `hbase-endpoint`. The
+built-in `AccessController` coprocessor enforces ACLs; `VisibilityController`
+enforces cell-level visibility labels. Third-party coprocessors are loaded via
+configuration or table schema.
 
 **Server subsystems** (separated from hbase-server for modularity):
 `hbase-balancer`, `hbase-procedure`, `hbase-replication`, `hbase-asyncfs`,
@@ -67,6 +71,9 @@ table schema.
 **Shared libraries:**
 `hbase-common`, `hbase-metrics` + `hbase-metrics-api`, `hbase-logging`,
 `hbase-hadoop-compat`
+
+**Extensions:**
+`hbase-extensions` (currently `hbase-openssl` for native TLS support)
 
 **Storage codecs:**
 `hbase-compression/*` (pluggable algorithms), `hbase-external-blockcache`
