@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.URI;
@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -52,20 +51,16 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.util.Progressable;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestHRegionFileSystem {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionFileSystem.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionFileSystem.class);
@@ -74,9 +69,12 @@ public class TestHRegionFileSystem {
   private static final byte[][] FAMILIES =
     { Bytes.add(FAMILY_NAME, Bytes.toBytes("-A")), Bytes.add(FAMILY_NAME, Bytes.toBytes("-B")) };
   private static final TableName TABLE_NAME = TableName.valueOf("TestTable");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testBlockStoragePolicy() throws Exception {
@@ -84,7 +82,7 @@ public class TestHRegionFileSystem {
     Configuration conf = TEST_UTIL.getConfiguration();
     TEST_UTIL.startMiniCluster();
     Table table = TEST_UTIL.createTable(TABLE_NAME, FAMILIES);
-    assertEquals("Should start with empty table", 0, TEST_UTIL.countRows(table));
+    assertEquals(0, TEST_UTIL.countRows(table), "Should start with empty table");
     HRegionFileSystem regionFs = getHRegionFS(TEST_UTIL.getConnection(), table, conf);
     // the original block storage policy would be HOT
     String spA = regionFs.getStoragePolicyName(Bytes.toString(FAMILIES[0]));
@@ -200,18 +198,18 @@ public class TestHRegionFileSystem {
 
   @Test
   public void testOnDiskRegionCreation() throws IOException {
-    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS(name.getMethodName());
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS(name);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Create a Region
-    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
       CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
 
     // Verify if the region is on disk
     Path regionDir = regionFs.getRegionDir();
-    assertTrue("The region folder should be created", fs.exists(regionDir));
+    assertTrue(fs.exists(regionDir), "The region folder should be created");
 
     // Verify the .regioninfo
     RegionInfo hriVerify = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir);
@@ -225,33 +223,33 @@ public class TestHRegionFileSystem {
     // Delete the region
     HRegionFileSystem.deleteRegionFromFileSystem(conf, fs,
       CommonFSUtils.getTableDir(rootDir, hri.getTable()), hri);
-    assertFalse("The region folder should be removed", fs.exists(regionDir));
+    assertFalse(fs.exists(regionDir), "The region folder should be removed");
 
     fs.delete(rootDir, true);
   }
 
   @Test
   public void testNonIdempotentOpsWithRetries() throws IOException {
-    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS(name.getMethodName());
+    Path rootDir = TEST_UTIL.getDataTestDirOnTestFS(name);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     Configuration conf = TEST_UTIL.getConfiguration();
 
     // Create a Region
-    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
     assertTrue(fs.exists(regionFs.getRegionDir()));
 
     regionFs = new HRegionFileSystem(conf, new MockFileSystemForCreate(), rootDir, hri);
     boolean result = regionFs.createDir(new Path("/foo/bar"));
-    assertTrue("Couldn't create the directory", result);
+    assertTrue(result, "Couldn't create the directory");
 
     regionFs = new HRegionFileSystem(conf, new MockFileSystem(), rootDir, hri);
     result = regionFs.rename(new Path("/foo/bar"), new Path("/foo/bar2"));
-    assertTrue("Couldn't rename the directory", result);
+    assertTrue(result, "Couldn't rename the directory");
 
     regionFs = new HRegionFileSystem(conf, new MockFileSystem(), rootDir, hri);
     result = regionFs.deleteDir(new Path("/foo/bar"));
-    assertTrue("Couldn't delete the directory", result);
+    assertTrue(result, "Couldn't delete the directory");
     fs.delete(rootDir, true);
   }
 
@@ -359,7 +357,7 @@ public class TestHRegionFileSystem {
     // Create a Region
     String familyName = "cf";
 
-    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name)).build();
     HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs, rootDir, hri);
     StoreContext storeContext = StoreContext.getBuilder()
       .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(familyName))

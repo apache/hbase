@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Durability;
@@ -30,20 +29,16 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * A test similar to TestHRegion, but with in-memory flush families. Also checks wal truncation
  * after in-memory compaction.
  */
-@Category({ VerySlowRegionServerTests.class, LargeTests.class })
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestHRegionWithInMemoryFlush extends TestHRegion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionWithInMemoryFlush.class);
 
   /**
    * @return A region on which you must call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
