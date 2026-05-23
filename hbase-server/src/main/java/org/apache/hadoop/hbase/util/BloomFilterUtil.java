@@ -48,6 +48,7 @@ public final class BloomFilterUtil {
   private static Random randomGeneratorForTest;
 
   public static final String PREFIX_LENGTH_KEY = "RowPrefixBloomFilter.prefix_length";
+  public static final String PREFIX_START_OFFSET_KEY = "RowPrefixBloomFilter.prefix_start_offset";
 
   /** Bit-value lookup array to prevent doing the same work over and over */
   public static final byte[] bitvals = { (byte) 0x01, (byte) 0x02, (byte) 0x04, (byte) 0x08,
@@ -264,9 +265,8 @@ public final class BloomFilterUtil {
       int prefixLength;
       try {
         prefixLength = Integer.parseInt(prefixLengthString);
-        if (prefixLength <= 0 || prefixLength > HConstants.MAX_ROW_LENGTH) {
-          message +=
-            "the value of " + PREFIX_LENGTH_KEY + " must >=0 and < " + HConstants.MAX_ROW_LENGTH;
+        if (prefixLength <= 0) {
+          message += "the value of " + PREFIX_LENGTH_KEY + " must be > 0";
           throw new IllegalArgumentException(message);
         }
       } catch (NumberFormatException nfe) {
@@ -274,7 +274,16 @@ public final class BloomFilterUtil {
           + bloomFilterType.toString() + ":" + prefixLengthString;
         throw new IllegalArgumentException(message, nfe);
       }
-      bloomParam = Bytes.toBytes(prefixLength);
+      int startOffset = conf.getInt(PREFIX_START_OFFSET_KEY, 0);
+      if (startOffset < 0) {
+        throw new IllegalArgumentException(
+          message + "the value of " + PREFIX_START_OFFSET_KEY + " must be >= 0");
+      }
+      if ((long) startOffset + prefixLength > HConstants.MAX_ROW_LENGTH) {
+        throw new IllegalArgumentException(message + "the sum of " + PREFIX_START_OFFSET_KEY
+          + " and " + PREFIX_LENGTH_KEY + " must be <= " + HConstants.MAX_ROW_LENGTH);
+      }
+      bloomParam = Bytes.add(Bytes.toBytes(prefixLength), Bytes.toBytes(startOffset));
     }
     return bloomParam;
   }

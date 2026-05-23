@@ -423,8 +423,12 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
         BloomType bloomType = bloomTypeMap.get(tableAndFamily);
         bloomType = bloomType == null ? BloomType.NONE : bloomType;
         String bloomParam = bloomParamMap.get(tableAndFamily);
-        if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
-          conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY, bloomParam);
+        if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH && bloomParam != null) {
+          String[] parts = bloomParam.split(":");
+          conf.set(BloomFilterUtil.PREFIX_LENGTH_KEY, parts[0]);
+          if (parts.length > 1) {
+            conf.set(BloomFilterUtil.PREFIX_START_OFFSET_KEY, parts[1]);
+          }
         }
         Integer blockSize = blockSizeMap.get(tableAndFamily);
         blockSize = blockSize == null ? HConstants.DEFAULT_BLOCKSIZE : blockSize;
@@ -1018,7 +1022,15 @@ public class HFileOutputFormat2 extends FileOutputFormat<ImmutableBytesWritable,
     BloomType bloomType = familyDescriptor.getBloomFilterType();
     String bloomParam = "";
     if (bloomType == BloomType.ROWPREFIX_FIXED_LENGTH) {
-      bloomParam = familyDescriptor.getConfigurationValue(BloomFilterUtil.PREFIX_LENGTH_KEY);
+      String prefixLength =
+        familyDescriptor.getConfigurationValue(BloomFilterUtil.PREFIX_LENGTH_KEY);
+      String startOffset =
+        familyDescriptor.getConfigurationValue(BloomFilterUtil.PREFIX_START_OFFSET_KEY);
+      if (startOffset != null && Integer.parseInt(startOffset) > 0) {
+        bloomParam = prefixLength + ":" + startOffset;
+      } else {
+        bloomParam = prefixLength;
+      }
     }
     return bloomParam;
   };
