@@ -1,7 +1,7 @@
 Overview
 ========
 hbase-metrics and hbase-metrics-api are two modules that define and implement the "new" metric
-system used internally within HBase. These two modules (and some other code in hbase-hadoop2-compat)
+system used internally within HBase. These two modules (and some other code in hbase-hadoop-compat)
 module are referred as "HBase metrics framework".
 
 HBase-metrics-api Module
@@ -64,15 +64,15 @@ classes. See HBASE-9774 [4] for more context.
 hbase-metrics module right now only deals with metrics tracking and collection. It does not do JMX
 reporting or reporting to console, ganglia, opentsdb, etc. We use Hadoop's Metrics2 for reporting
 metrics to different sinks or exporting via JMX. However, this is contained within the
-hbase-hadoop2-compat module completely, so that rest of the code does not know anything about the
+hbase-hadoop-compat module completely, so that rest of the code does not know anything about the
 Metrics2 dependency. HBaseMetrics2HadoopMetricsAdapter is the adapter that can collect metrics
 in a MetricRegistry using the metric2 MetricsCollector / MetricRecordBuilder interfaces.
-GlobalMetricRegistriesSource is the global Metrics2 Source that collects all of the metrics in all
+GlobalMetricRegistriesAdapter is the global Metrics2 Source that collects all of the metrics in all
 of the metric registries in the MetricRegistries.global() instance.
 
 
 References
 1. https://hbase.apache.org/docs/upgrading/version-number
 2. http://metrics.dropwizard.io/
-3. https://hadoop.apache.org/docs/r2.7.2/api/org/apache/hadoop/metrics2/package-summary.html
+3. https://hadoop.apache.org/docs/r3.4.3/api/org/apache/hadoop/metrics2/package-summary.html
 4. https://issues.apache.org/jira/browse/HBASE-9774

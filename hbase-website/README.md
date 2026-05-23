@@ -46,7 +46,7 @@ Legacy documentation is preserved for those users who have old bookmarked links 
 
 **Examples:**
 
-- `app/pages/_landing/team/content.md` - Markdown content for team page
+- `app/pages/_landing/downloads/content.md` - Markdown content for downloads page
 - `app/pages/_landing/powered-by-hbase/companies.json` - JSON data for companies
 - `app/pages/_landing/news/events.json` - JSON data for news/events
 - `app/pages/_docs/docs/_mdx/(multi-page)/...` - MDX content for documentation
@@ -61,7 +61,7 @@ Before you begin, ensure you have the following installed:
 
 - **Node.js version 22** - JavaScript runtime (like the JVM for Java)
   - Download from [nodejs.org](https://nodejs.org/)
-  - Verify installation: `node --version` (should show v20.19+ or v22.12+)
+  - Verify installation: `node --version` (should show v22.12+)
 
 - **NPM** - Node Package Manager (like Maven for Java)
   - Comes bundled with Node.js
@@ -270,7 +270,7 @@ This downloads all required packages from npm (similar to Maven Central).
 npm run extract-developers
 ```
 
-This extracts the developer information from the parent `pom.xml` file and creates `app/pages/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes. The output json is ignored by git, and this command also runs at a build time, so there is no need to `git commit` the generated file.
+This extracts the developer information from the parent `pom.xml` file and creates `app/pages/_landing/team/developers.json`, which is required for the Team page to work properly. Re-run this command whenever the developers section in `pom.xml` changes. The output json is ignored by git, and this command also runs at a build time, so there is no need to `git commit` the generated file.
 
 **Important:** Generate the HBase configuration markdown before starting the development server:
 
@@ -388,7 +388,7 @@ npm run test:e2e:ui
 
 **Writing new tests:**
 
-Use the `renderWithProviders` utility in `test/utils.tsx` to ensure components have access to routing and theme context:
+Use the `renderWithProviders` utility in `unit-tests/utils.tsx` to ensure components have access to routing and theme context:
 
 ```typescript
 import { renderWithProviders, screen } from './utils'
@@ -462,7 +462,7 @@ When you run `mvn site`, the website module automatically:
    - Installs to `node_modules/`
 
 4. **Extracts developers data** from the parent `pom.xml`
-   - Creates `app/pages/team/developers.json`
+   - Creates `app/pages/_landing/team/developers.json`
    - Required for the Team page
 
 5. **Runs a website CI command**:
