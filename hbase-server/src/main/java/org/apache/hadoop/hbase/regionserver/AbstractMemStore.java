@@ -118,35 +118,13 @@ public abstract class AbstractMemStore implements MemStore {
 
   @Override
   public void add(ExtendedCell cell, MemStoreSizing memstoreSizing) {
-    doAddOrUpsert(cell, 0, memstoreSizing, true);
-  }
-
-  /*
-   * Inserts the specified Cell into MemStore and deletes any existing versions of the same
-   * row/family/qualifier as the specified Cell. <p> First, the specified Cell is inserted into the
-   * Memstore. <p> If there are any existing Cell in this MemStore with the same row, family, and
-   * qualifier, they are removed. <p> Callers must hold the read lock.
-   * @param cell the cell to be updated
-   * @param readpoint readpoint below which we can safely remove duplicate KVs
-   * @param memstoreSizing object to accumulate changed size
-   */
-  private void upsert(ExtendedCell cell, long readpoint, MemStoreSizing memstoreSizing) {
-    doAddOrUpsert(cell, readpoint, memstoreSizing, false);
-  }
-
-  private void doAddOrUpsert(ExtendedCell cell, long readpoint, MemStoreSizing memstoreSizing,
-    boolean doAdd) {
     MutableSegment currentActive;
     boolean succ = false;
     while (!succ) {
       currentActive = getActive();
       succ = preUpdate(currentActive, cell, memstoreSizing);
       if (succ) {
-        if (doAdd) {
-          doAdd(currentActive, cell, memstoreSizing);
-        } else {
-          doUpsert(currentActive, cell, readpoint, memstoreSizing);
-        }
+        doAdd(currentActive, cell, memstoreSizing);
         postUpdate(currentActive);
       }
     }
@@ -171,23 +149,6 @@ public abstract class AbstractMemStore implements MemStore {
     internalAdd(currentActive, toAdd, mslabUsed, memstoreSizing);
   }
 
-  private void doUpsert(MutableSegment currentActive, ExtendedCell cell, long readpoint,
-    MemStoreSizing memstoreSizing) {
-    // Add the Cell to the MemStore
-    // Use the internalAdd method here since we
-    // (a) already have a lock and
-    // (b) cannot safely use the MSLAB here without potentially hitting OOME
-    // - see TestMemStore.testUpsertMSLAB for a test that triggers the pathological case if we don't
-    // avoid MSLAB here.
-    // This cell data is backed by the same byte[] where we read request in RPC(See
-    // HBASE-15180). We must do below deep copy. Or else we will keep referring to the bigger
-    // chunk of memory and prevent it from getting GCed.
-    cell = deepCopyIfNeeded(cell);
-    boolean sizeAddedPreOperation = sizeAddedPreOperation();
-    currentActive.upsert(cell, readpoint, memstoreSizing, sizeAddedPreOperation);
-    setOldestEditTimeToNow();
-  }
-
   /**
    * Issue any synchronization and test needed before applying the update
    * @param currentActive  the segment to be updated
@@ -206,13 +167,6 @@ public abstract class AbstractMemStore implements MemStore {
 
   private static ExtendedCell deepCopyIfNeeded(ExtendedCell cell) {
     return cell.deepClone();
-  }
-
-  @Override
-  public void upsert(Iterable<ExtendedCell> cells, long readpoint, MemStoreSizing memstoreSizing) {
-    for (ExtendedCell cell : cells) {
-      upsert(cell, readpoint, memstoreSizing);
-    }
   }
 
   /** Returns Oldest timestamp of all the Cells in the MemStore */
