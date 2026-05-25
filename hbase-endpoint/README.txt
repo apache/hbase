@@ -1,13 +1,14 @@
-ON PROTOBUFS
-This maven module has protobuf definition files ('.protos') used by hbase
-Coprocessor Endpoints that ship with hbase core (including tests). Coprocessor
-Endpoints are meant to be standalone, independent code not reliant on hbase
-internals. They define their Service using protobuf. The protobuf version
-they use can be distinct from that used by HBase internally since HBase started
-shading its protobuf references. Endpoints have no access to the shaded protobuf
-hbase uses. They do have access to the content of hbase-protocol -- the
-.protos found in this module -- but avoid using as much of this as you can as it is
-liable to change.
+This module contains coprocessor endpoint implementations that ship with
+HBase core. Coprocessor endpoints are standalone RPC services deployed on
+region servers (or master) via the coprocessor framework.
 
-Generation of java files from protobuf .proto files included here is done as
-part of the build.
+Included endpoints:
+  - AggregateImplementation -- server-side aggregation (sum, min, max, avg, etc.)
+  - Export -- server-side table export to HDFS
+
+Client helpers for invoking these endpoints are in the
+org.apache.hadoop.hbase.client.coprocessor package (AggregationClient,
+AsyncAggregationClient).
+
+The protobuf service definitions used by these endpoints live in
+hbase-protocol-shaded, not in this module.

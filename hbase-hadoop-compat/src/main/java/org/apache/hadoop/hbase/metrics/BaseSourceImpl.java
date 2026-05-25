@@ -32,9 +32,9 @@ import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Hadoop 2 implementation of BaseSource (using metrics2 framework). It handles registration to
+ * Hadoop implementation of BaseSource (using metrics2 framework). It handles registration to
  * DefaultMetricsSystem and creation of the metrics registry. All MetricsSource's in
- * hbase-hadoop2-compat should derive from this class.
+ * hbase-hadoop-compat should derive from this class.
  */
 @InterfaceAudience.Private
 public class BaseSourceImpl implements BaseSource, MetricsSource {
@@ -53,9 +53,9 @@ public class BaseSourceImpl implements BaseSource, MetricsSource {
       inited = true;
       DefaultMetricsSystem.initialize(HBASE_METRICS_SYSTEM_NAME);
       JvmMetrics.initSingleton(name, "");
-      // initialize hbase-metrics module based metric system as well. GlobalMetricRegistriesSource
+      // initialize hbase-metrics module based metric system as well. GlobalMetricRegistriesAdapter
       // initialization depends on the metric system being already initialized, that is why we are
-      // doing it here. Once BaseSourceSourceImpl is removed, we should do the initialization of
+      // doing it here. Once BaseSourceImpl is removed, we should do the initialization of
       // these elsewhere.
       GlobalMetricRegistriesAdapter.init();
     }
