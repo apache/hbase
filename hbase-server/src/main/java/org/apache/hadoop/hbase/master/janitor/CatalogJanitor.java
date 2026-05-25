@@ -213,9 +213,10 @@ public class CatalogJanitor extends ScheduledChore {
         } else {
           // We could not clean the parent, so it's daughters should not be
           // cleaned either (HBASE-6160)
-          PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(e.getValue());
-          parentNotCleaned.add(daughters.getFirst().getEncodedName());
-          parentNotCleaned.add(daughters.getSecond().getEncodedName());
+          List<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(e.getValue());
+          for(RegionInfo daughter : daughters) {
+            parentNotCleaned.add(daughter.getEncodedName());
+          }
         }
       }
       return gcs;
@@ -332,19 +333,26 @@ public class CatalogJanitor extends ScheduledChore {
       return false;
     }
     // Run checks on each daughter split.
-    PairOfSameType<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
-    Pair<Boolean, Boolean> a =
-      checkRegionReferences(services, parent.getTable(), daughters.getFirst());
-    Pair<Boolean, Boolean> b =
-      checkRegionReferences(services, parent.getTable(), daughters.getSecond());
-    if (hasNoReferences(a) && hasNoReferences(b)) {
-      String daughterA =
-        daughters.getFirst() != null ? daughters.getFirst().getShortNameToLog() : "null";
-      String daughterB =
-        daughters.getSecond() != null ? daughters.getSecond().getShortNameToLog() : "null";
+    List<RegionInfo> daughters = MetaTableAccessor.getDaughterRegions(rowContent);
+    boolean hasReferencesToParent = false;
+    for(RegionInfo daughter : daughters) {
+      Pair<Boolean, Boolean> daughterRegionReference = checkRegionReferences(services, parent.getTable(), daughter);
+      // TODO - rename and logic of method to hasReferences
+      if (!hasNoReferences(daughterRegionReference)) {
+        if(LOG.isDebugEnabled()) {
+          LOG.debug("Deferring removal of region {} because daughter {} still has references",
+            parent, daughter);
+        }
+        hasReferencesToParent = true;
+        break;
+      }
+    }
+
+    if(!hasReferencesToParent) {
       if (LOG.isDebugEnabled()) {
-        LOG.debug("Deleting region " + parent.getShortNameToLog() + " because daughters -- "
-          + daughterA + ", " + daughterB + " -- no longer hold references");
+        LOG.debug(
+          "Deleting region " + parent.getShortNameToLog() + " because daughters -- " + daughters.stream().map(daughter -> daughter.getShortNameToLog()).collect(
+            Collectors.joining()) + " -- no longer hold references");
       }
       ProcedureExecutor<MasterProcedureEnv> pe = services.getMasterProcedureExecutor();
       GCRegionProcedure gcRegionProcedure = new GCRegionProcedure(pe.getEnvironment(), parent);
@@ -353,17 +361,6 @@ public class CatalogJanitor extends ScheduledChore {
         LOG.debug("Submitted procedure {} for split parent {}", gcRegionProcedure, parent);
       }
       return true;
-    } else {
-      if (LOG.isDebugEnabled()) {
-        if (!hasNoReferences(a)) {
-          LOG.debug("Deferring removal of region {} because daughter {} still has references",
-            parent, daughters.getFirst());
-        }
-        if (!hasNoReferences(b)) {
-          LOG.debug("Deferring removal of region {} because daughter {} still has references",
-            parent, daughters.getSecond());
-        }
-      }
     }
     return false;
   }
