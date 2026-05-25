@@ -17,39 +17,35 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.net.SocketTimeoutException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcControllerFactory;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCISleep extends AbstractTestCITimeout {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCISleep.class);
 
   private static Logger LOG = LoggerFactory.getLogger(TestCISleep.class);
 
   private TableName tableName;
 
-  @Before
+  @BeforeEach
   public void setUp() {
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = name.getTableName();
   }
 
   /**
@@ -87,10 +83,10 @@ public class TestCISleep extends AbstractTestCITimeout {
   }
 
   @Test
-  public void testCallableSleep() throws Exception {
+  public void testCallableSleep(TestInfo testInfo) throws Exception {
     long pauseTime;
     long baseTime = 100;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createTable(tableName, FAM_NAM);
     ClientServiceCallable<Object> regionServerCallable =
       new ClientServiceCallable<Object>(TEST_UTIL.getConnection(), tableName, FAM_NAM,

@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -25,7 +29,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -38,13 +41,12 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -65,12 +67,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * specified for scan related operations such as openScanner(), next(). If that times out
  * {@link RetriesExhaustedException} will be thrown.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClientOperationTimeout {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientOperationTimeout.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -92,7 +91,7 @@ public class TestClientOperationTimeout {
   private static Connection CONN;
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     // Set RegionServer class and use default values for other options.
     StartMiniClusterOption option =
@@ -110,7 +109,7 @@ public class TestClientOperationTimeout {
     TABLE = CONN.getTable(TABLE_NAME);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     DELAY_GET = 0;
     DELAY_SCAN = 0;
@@ -120,7 +119,7 @@ public class TestClientOperationTimeout {
     FAIL_BATCH = false;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(TABLE, true);
     Closeables.close(CONN, true);
@@ -136,9 +135,9 @@ public class TestClientOperationTimeout {
     DELAY_GET = 600;
     try {
       TABLE.get(new Get(ROW));
-      Assert.fail("should not reach here");
+      fail("should not reach here");
     } catch (Exception e) {
-      Assert.assertTrue(
+      assertTrue(
         e instanceof SocketTimeoutException && e.getCause() instanceof CallTimeoutException);
     }
   }
@@ -154,9 +153,9 @@ public class TestClientOperationTimeout {
     put.addColumn(FAMILY, QUALIFIER, VALUE);
     try {
       TABLE.put(put);
-      Assert.fail("should not reach here");
+      fail("should not reach here");
     } catch (Exception e) {
-      Assert.assertTrue(
+      assertTrue(
         e instanceof SocketTimeoutException && e.getCause() instanceof CallTimeoutException);
     }
   }
@@ -175,12 +174,7 @@ public class TestClientOperationTimeout {
     List<Put> puts = new ArrayList<>();
     puts.add(put1);
     puts.add(put2);
-    try {
-      TABLE.batch(puts, new Object[2]);
-      Assert.fail("should not reach here");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof SocketTimeoutException);
-    }
+    assertMultiException(() -> TABLE.batch(puts, new Object[2]));
 
     Get get1 = new Get(ROW);
     get1.addColumn(FAMILY, QUALIFIER);
@@ -190,11 +184,28 @@ public class TestClientOperationTimeout {
     List<Get> gets = new ArrayList<>();
     gets.add(get1);
     gets.add(get2);
-    try {
-      TABLE.batch(gets, new Object[2]);
-      Assert.fail("should not reach here");
-    } catch (Exception e) {
-      Assert.assertTrue(e instanceof SocketTimeoutException);
+    assertMultiException(() -> TABLE.batch(gets, new Object[2]));
+  }
+
+  /**
+   * AsyncProcess has an overall waitUntilDone with a timeout, and if all callables dont finish by
+   * then it throws a SocketTimeoutException. The callables themselves also try to honor the
+   * operation timeout and result in OperationTimeoutExceededException (wrapped in
+   * RetriesExhausted). The latter is the more user-friendly exception because it contains details
+   * about which server has issues, etc. For now we need to account for both because it's sort of a
+   * race to see which timeout exceeds first. Maybe we can replace the waitUntilDone behavior with
+   * an interrupt in the future so we can further unify.
+   */
+  private void assertMultiException(Executable runnable) {
+    IOException e = assertThrows(IOException.class, runnable);
+    if (e instanceof SocketTimeoutException) {
+      return;
+    }
+    assertTrue(e instanceof RetriesExhaustedWithDetailsException,
+      "Expected SocketTimeoutException or RetriesExhaustedWithDetailsException" + " but was "
+        + e.getClass());
+    for (Throwable cause : ((RetriesExhaustedWithDetailsException) e).getCauses()) {
+      assertEquals(OperationTimeoutExceededException.class, cause.getClass());
     }
   }
 
@@ -231,20 +242,20 @@ public class TestClientOperationTimeout {
       }
       try {
         specialTable.get(gets);
-        Assert.fail("should not reach here");
+        fail("should not reach here");
       } catch (Exception e) {
         RetriesExhaustedWithDetailsException expected = (RetriesExhaustedWithDetailsException) e;
-        Assert.assertEquals(100, expected.getNumExceptions());
+        assertEquals(100, expected.getNumExceptions());
 
         // verify we do not clear the cache in this situation otherwise we will create pathological
         // feedback loop with multigets See: HBASE-27487
         long metaCacheNumClearServerPostFailure = metrics.getMetaCacheNumClearServer().getCount();
-        Assert.assertEquals(metaCacheNumClearServerPreFailure, metaCacheNumClearServerPostFailure);
+        assertEquals(metaCacheNumClearServerPreFailure, metaCacheNumClearServerPostFailure);
 
         for (Throwable cause : expected.getCauses()) {
-          Assert.assertTrue(cause instanceof OperationTimeoutExceededException);
+          assertTrue(cause instanceof OperationTimeoutExceededException);
           // Check that this is the timeout thrown by AsyncRequestFutureImpl during region lookup
-          Assert.assertTrue(cause.getMessage().contains("Operation timeout exceeded during"));
+          assertTrue(cause.getMessage().contains("Operation timeout exceeded during"));
         }
       }
     }
@@ -287,21 +298,20 @@ public class TestClientOperationTimeout {
 
       try {
         specialTable.batch(gets, new Object[1]);
-        Assert.fail("should not reach here");
+        fail("should not reach here");
       } catch (Exception e) {
         RetriesExhaustedWithDetailsException expected = (RetriesExhaustedWithDetailsException) e;
-        Assert.assertEquals(1, expected.getNumExceptions());
+        assertEquals(1, expected.getNumExceptions());
 
         // We expect that the error caused by FAIL_BATCH would clear the meta cache but
         // the OperationTimeoutExceededException should not. So only allow new cache clear here
         long metaCacheNumClearServerPostFailure = metrics.getMetaCacheNumClearRegion().getCount();
-        Assert.assertEquals(metaCacheNumClearServerPreFailure + 1,
-          metaCacheNumClearServerPostFailure);
+        assertEquals(metaCacheNumClearServerPreFailure + 1, metaCacheNumClearServerPostFailure);
 
         for (Throwable cause : expected.getCauses()) {
-          Assert.assertTrue(cause instanceof OperationTimeoutExceededException);
+          assertTrue(cause instanceof OperationTimeoutExceededException);
           // Check that this is the timeout thrown by CancellableRegionServerCallable
-          Assert.assertTrue(cause.getMessage().contains("Timeout exceeded before call began"));
+          assertTrue(cause.getMessage().contains("Timeout exceeded before call began"));
         }
       }
     } catch (IOException e) {
@@ -344,31 +354,31 @@ public class TestClientOperationTimeout {
       List<Get> gets = Arrays.asList(firstAction, secondAction, thirdAction);
       try {
         specialTable.batch(gets, new Object[3]);
-        Assert.fail("Should not reach here");
+        fail("Should not reach here");
       } catch (RetriesExhaustedWithDetailsException exception) {
         byte[] firstExceptionRow = exception.getRow(0).getRow();
-        Assert.assertEquals(firstAction.getRow(), firstExceptionRow);
+        assertEquals(firstAction.getRow(), firstExceptionRow);
 
         // CallTimeout comes from the scan timeout to meta table in locateRegionInMeta
         Throwable firstActionCause = exception.getCause(0);
-        Assert.assertTrue(firstActionCause instanceof RetriesExhaustedException);
-        Assert.assertTrue(firstActionCause.getCause() instanceof CallTimeoutException);
+        assertTrue(firstActionCause instanceof RetriesExhaustedException);
+        assertTrue(firstActionCause.getCause() instanceof CallTimeoutException);
 
         byte[] secondExceptionRow = exception.getRow(1).getRow();
-        Assert.assertEquals(secondAction.getRow(), secondExceptionRow);
+        assertEquals(secondAction.getRow(), secondExceptionRow);
 
         Throwable secondActionCause = exception.getCause(1);
-        Assert.assertTrue(secondActionCause instanceof OperationTimeoutExceededException);
+        assertTrue(secondActionCause instanceof OperationTimeoutExceededException);
 
         byte[] thirdExceptionRow = exception.getRow(2).getRow();
-        Assert.assertEquals(thirdAction.getRow(), thirdExceptionRow);
+        assertEquals(thirdAction.getRow(), thirdExceptionRow);
 
         Throwable thirdActionCause = exception.getCause(2);
-        Assert.assertTrue(thirdActionCause instanceof OperationTimeoutExceededException);
+        assertTrue(thirdActionCause instanceof OperationTimeoutExceededException);
       }
     } catch (SocketTimeoutException ste) {
       if (ste.getMessage().contains("time out before the actionsInProgress changed to zero")) {
-        Assert.fail("Not all actions had action counter decremented: " + ste);
+        fail("Not all actions had action counter decremented: " + ste);
       }
       throw ste;
     }
@@ -384,9 +394,9 @@ public class TestClientOperationTimeout {
     try {
       ResultScanner scanner = TABLE.getScanner(new Scan());
       scanner.next();
-      Assert.fail("should not reach here");
+      fail("should not reach here");
     } catch (Exception e) {
-      Assert.assertTrue(
+      assertTrue(
         e instanceof RetriesExhaustedException && e.getCause() instanceof SocketTimeoutException);
     }
   }

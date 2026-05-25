@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static junit.framework.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -32,7 +32,6 @@ import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -50,13 +49,11 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.function.ThrowingRunnable;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.function.Executable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -67,12 +64,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.GetResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestMetaCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaCache.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final TableName TABLE_NAME = TableName.valueOf("test_table");
@@ -81,10 +75,7 @@ public class TestMetaCache {
   private static HRegionServer badRS;
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaCache.class);
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(HConstants.REGION_SERVER_IMPL, RegionServerWithFakeRpcServices.class.getName());
@@ -100,10 +91,7 @@ public class TestMetaCache {
     TEST_UTIL.createTable(table, null);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -149,14 +137,14 @@ public class TestMetaCache {
       conn.getRegionLocator(tableName).getAllRegionLocations();
       asyncConn.getRegionLocator(tableName).getAllRegionLocations().get();
 
-      Assert.assertEquals(3, TEST_UTIL.getAdmin().getRegions(tableName).size());
+      assertEquals(3, TEST_UTIL.getAdmin().getRegions(tableName).size());
 
       // Merge the 3 regions into one
       TEST_UTIL.getAdmin().mergeRegionsAsync(
         new byte[][] { regionA.getRegionName(), regionB.getRegionName(), regionC.getRegionName() },
         false).get(30, TimeUnit.SECONDS);
 
-      Assert.assertEquals(1, TEST_UTIL.getAdmin().getRegions(tableName).size());
+      assertEquals(1, TEST_UTIL.getAdmin().getRegions(tableName).size());
 
       Table table = conn.getTable(tableName);
       AsyncTable<?> asyncTable = asyncConn.getTable(tableName);
@@ -178,10 +166,10 @@ public class TestMetaCache {
     }
   }
 
-  private long executeAndGetNewMisses(ThrowingRunnable runnable, MetricsConnection metrics)
+  private long executeAndGetNewMisses(Executable runnable, MetricsConnection metrics)
     throws Throwable {
     long lastVal = metrics.getMetaCacheMisses();
-    runnable.run();
+    runnable.execute();
     long curVal = metrics.getMetaCacheMisses();
     return curVal - lastVal;
   }
@@ -592,24 +580,24 @@ public class TestMetaCache {
       // obtain the client metrics
       MetricsConnection metrics = conn.getConnectionMetrics();
       long queueCount = metrics.getUserRegionLockQueue().getCount();
-      assertEquals("Queue of userRegionLock should be updated twice. queueCount: " + queueCount, 2,
-        queueCount);
+      assertEquals(2, queueCount,
+        "Queue of userRegionLock should be updated twice. queueCount: " + queueCount);
 
       long timeoutCount = metrics.getUserRegionLockTimeout().getCount();
-      assertEquals("Timeout of userRegionLock should happen once. timeoutCount: " + timeoutCount, 1,
-        timeoutCount);
+      assertEquals(1, timeoutCount,
+        "Timeout of userRegionLock should happen once. timeoutCount: " + timeoutCount);
 
       long waitingTimerCount = metrics.getUserRegionLockWaitingTimer().getCount();
-      assertEquals("userRegionLock should be grabbed successfully once. waitingTimerCount: "
-        + waitingTimerCount, 1, waitingTimerCount);
+      assertEquals(1, waitingTimerCount,
+        "userRegionLock should be grabbed successfully once. waitingTimerCount: "
+          + waitingTimerCount);
 
       long heldTimerCount = metrics.getUserRegionLockHeldTimer().getCount();
-      assertEquals(
-        "userRegionLock should be held successfully once. heldTimerCount: " + heldTimerCount, 1,
-        heldTimerCount);
+      assertEquals(1, heldTimerCount,
+        "userRegionLock should be held successfully once. heldTimerCount: " + heldTimerCount);
       double heldTime = metrics.getUserRegionLockHeldTimer().getSnapshot().getMax();
-      assertTrue("Max held time should be greater than 2 seconds. heldTime: " + heldTime,
-        heldTime >= 2E9);
+      assertTrue(heldTime >= 2E9,
+        "Max held time should be greater than 2 seconds. heldTime: " + heldTime);
     }
   }
 

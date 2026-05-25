@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,7 +34,6 @@ import java.util.concurrent.TimeoutException;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -49,13 +48,11 @@ import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.zookeeper.KeeperException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,29 +61,23 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestZKConnectionRegistry {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKConnectionRegistry.class);
-
-  @Rule
-  public final TestName name = new TestName();
 
   static final Logger LOG = LoggerFactory.getLogger(TestZKConnectionRegistry.class);
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   private static ZKConnectionRegistry REGISTRY;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     HBaseTestingUtility.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(REGISTRY, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -97,8 +88,8 @@ public class TestZKConnectionRegistry {
     LOG.info("STARTED TEST");
     String clusterId = REGISTRY.getClusterId().get();
     String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
-    assertEquals("Expected " + expectedClusterId + ", found=" + clusterId, expectedClusterId,
-      clusterId);
+    assertEquals(expectedClusterId, clusterId,
+      "Expected " + expectedClusterId + ", found=" + clusterId);
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getActiveMaster().get());
     RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
@@ -106,7 +97,7 @@ public class TestZKConnectionRegistry {
     assertEquals(3, locs.getRegionLocations().length);
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
-      assertNotNull("Replica " + i + " doesn't have location", loc);
+      assertNotNull(loc, "Replica " + i + " doesn't have location");
       assertEquals(TableName.META_TABLE_NAME, loc.getRegion().getTable());
       assertEquals(i, loc.getRegion().getReplicaId());
     });
@@ -119,11 +110,10 @@ public class TestZKConnectionRegistry {
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, MiniZooKeeperCluster.HOST);
       try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
-        assertNotSame("Using a different configuration / quorum should result in "
-          + "different backing zk connection.", zk1, zk2);
-        assertNotEquals(
-          "Using a different configrution / quorum should be reflected in the zk connection.",
-          zk1.getConnectString(), zk2.getConnectString());
+        assertNotSame(zk1, zk2, "Using a different configuration / quorum should result in "
+          + "different backing zk connection.");
+        assertNotEquals(zk1.getConnectString(), zk2.getConnectString(),
+          "Using a different configrution / quorum should be reflected in the zk connection.");
       }
     } finally {
       LOG.info("DONE!");
@@ -149,18 +139,19 @@ public class TestZKConnectionRegistry {
    * to throw ArrayOutOfBoundsException. See HBASE-25280.
    */
   @Test
-  public void testDiscontinuousLocations() throws ExecutionException, InterruptedException,
-    IOException, KeeperException, TimeoutException {
+  public void testDiscontinuousLocations(TestInfo testInfo) throws ExecutionException,
+    InterruptedException, IOException, KeeperException, TimeoutException {
+    String methodName = testInfo.getTestMethod().get().getName();
     // Write discontinuous meta replica locations to a zk namespace particular to this test to
     // avoid polluting other tests.
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + this.name.getMethodName());
+    conf.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/" + methodName);
     ZooKeeperProtos.MetaRegionServer pbrsr = ZooKeeperProtos.MetaRegionServer.newBuilder()
       .setServer(ProtobufUtil.toServerName(ServerName.valueOf("example.org,1,1")))
       .setRpcVersion(HConstants.RPC_CURRENT_VERSION).setState(RegionState.State.OPEN.convert())
       .build();
     byte[] data = ProtobufUtil.prependPBMagic(pbrsr.toByteArray());
-    try (ZKWatcher zkw = new ZKWatcher(conf, this.name.getMethodName(), new Abortable() {
+    try (ZKWatcher zkw = new ZKWatcher(conf, methodName, new Abortable() {
       @Override
       public void abort(String why, Throwable e) {
       }

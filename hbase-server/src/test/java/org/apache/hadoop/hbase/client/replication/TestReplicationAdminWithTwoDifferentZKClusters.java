@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -31,18 +30,14 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestReplicationAdminWithTwoDifferentZKClusters {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationAdminWithTwoDifferentZKClusters.class);
 
   private static Configuration conf1 = HBaseConfiguration.create();
   private static Configuration conf2;
@@ -55,7 +50,7 @@ public class TestReplicationAdminWithTwoDifferentZKClusters {
   private static final byte[] famName = Bytes.toBytes("f");
   private static final String peerId = "peer1";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniCluster();
@@ -81,7 +76,7 @@ public class TestReplicationAdminWithTwoDifferentZKClusters {
     utility1.waitUntilAllRegionsAssigned(tableName);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     admin.removePeer(peerId);
     admin.close();
