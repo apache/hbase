@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.in
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
@@ -168,8 +169,8 @@ public class TestRegionSplit {
 
     assertNotNull(regions, "not able to find a splittable region");
     assertEquals(1, regions.length, "not able to find a splittable region");
-    assertEquals(0,
-      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransitionCount());
+    assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
 
     ServerName targetRS = UTIL.getHBaseCluster().getMaster().getAssignmentManager()
       .getRegionStates().getRegionServerOfRegion(regions[0]);
@@ -181,22 +182,25 @@ public class TestRegionSplit {
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
     assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(), "not able to split table");
-    assertEquals(0,
-      UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionsInTransitionCount());
+    assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
     // As there are only 3 RS, start one more RS before expiring one
     UTIL.getHBaseCluster().startRegionServer();
 
-    // stop RS holding split parent
+    // We don't want SCP to complete so kill PR it after store update
+    ProcedureTestingUtility
+      .toggleKillAfterStoreUpdate(UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor());
+    // stop RS holding split parent to create SCP and add RS into deadServerList
     UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(targetRS);
 
     // stop master
     UTIL.getHBaseCluster().stopMaster(0);
     UTIL.getHBaseCluster().waitOnMaster(0);
-    Thread.sleep(500);
 
     // restart master
-    JVMClusterUtil.MasterThread t = UTIL.getHBaseCluster().startMaster();
-    UTIL.getHBaseCluster().waitForActiveAndReadyMaster(10000);
+    UTIL.getHBaseCluster().startMaster();
+    assertTrue(UTIL.getHBaseCluster().waitForActiveAndReadyMaster(30000),
+      "Master failed to initialize in in 30 seconds");
     UTIL.invalidateConnection();
 
     assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],

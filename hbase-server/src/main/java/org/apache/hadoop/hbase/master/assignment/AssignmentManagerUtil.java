@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -307,5 +308,17 @@ final class AssignmentManagerUtil {
       throw new IOException("Recovered.edits are found in Region: " + regionInfo
         + ", abort split/merge to prevent data loss");
     }
+  }
+
+  /**
+   * For splitting, need to test both region info and state, and will return true if either of the
+   * test returns true. Please see the comments in
+   * {@link AssignmentManager#markRegionAsSplit(RegionInfo, ServerName, RegionInfo, RegionInfo)} for
+   * more details on why we need to test two conditions.
+   */
+  static boolean isSplitOrMerged(RegionStateNode regionStateNode) {
+    return regionStateNode.getState() == RegionState.State.SPLIT
+      || regionStateNode.getRegionInfo().isSplit()
+      || regionStateNode.getState() == RegionState.State.MERGED;
   }
 }
