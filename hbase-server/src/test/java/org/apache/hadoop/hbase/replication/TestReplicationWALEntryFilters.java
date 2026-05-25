@@ -29,6 +29,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
+import java.util.UUID;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -425,6 +426,58 @@ public class TestReplicationWALEntryFilters {
     userEntry = createEntry(null, a, b, c);
     filter = new ChainWALEntryFilter(new NamespaceTableCfWALEntryFilter(peer));
     assertEquals(null, filter.filter(userEntry));
+  }
+
+  @Test
+  public void testClusterMarkingEntryFilter() {
+    // Setup cluster IDs
+    UUID clusterId = UUID.randomUUID();
+    UUID peerClusterId = UUID.randomUUID();
+
+    // Mock ReplicationEndpoint
+    ReplicationEndpoint endpoint = mock(ReplicationEndpoint.class);
+    when(endpoint.canReplicateToSameCluster()).thenReturn(false);
+
+    ClusterMarkingEntryFilter filter =
+      new ClusterMarkingEntryFilter(clusterId, peerClusterId, endpoint);
+
+    // 1. Entry without any cluster IDs - should pass and be marked with clusterId
+    List<UUID> emptyIds = new ArrayList<>();
+    WALKeyImpl key1 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
+      EnvironmentEdgeManager.currentTime(), emptyIds, null, null, null);
+    WALEdit edit1 = new WALEdit();
+    edit1.add(new KeyValue(a, a, a));
+    Entry entry1 = new Entry(key1, edit1);
+
+    Entry filtered1 = filter.filter(entry1);
+    Assert.assertNotNull(filtered1);
+    Assert.assertTrue(filtered1.getKey().getClusterIds().contains(clusterId));
+
+    // 2. Entry with peerClusterId - should be filtered out (prevent circular replication)
+    List<UUID> peerIds = new ArrayList<>();
+    peerIds.add(peerClusterId);
+    WALKeyImpl key2 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
+      EnvironmentEdgeManager.currentTime(), peerIds, null, null, null);
+    WALEdit edit2 = new WALEdit();
+    edit2.add(new KeyValue(a, a, a));
+    Entry entry2 = new Entry(key2, edit2);
+
+    Assert.assertNull(filter.filter(entry2));
+
+    // 3. Entry with empty WALEdit - should be filtered out
+    WALKeyImpl key3 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
+      EnvironmentEdgeManager.currentTime(), new ArrayList<>(), null, null, null);
+    WALEdit edit3 = new WALEdit();
+    Entry entry3 = new Entry(key3, edit3);
+
+    Assert.assertNull(filter.filter(entry3));
+
+    // 4. Entry with null WALEdit - should be filtered out
+    WALKeyImpl key4 = new WALKeyImpl(new byte[0], TableName.valueOf("foo"),
+      EnvironmentEdgeManager.currentTime(), new ArrayList<>(), null, null, null);
+    Entry entry4 = new Entry(key4, null);
+
+    Assert.assertNull(filter.filter(entry4));
   }
 
   private Entry createEntry(TreeMap<byte[], Integer> scopes, byte[]... kvs) {
