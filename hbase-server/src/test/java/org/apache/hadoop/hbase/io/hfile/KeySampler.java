@@ -40,8 +40,6 @@ class KeySampler {
     int lastLen = keyPrefixToInt(last);
     min = Math.min(firstLen, lastLen);
     max = Math.max(firstLen, lastLen);
-    System.out.println(min);
-    System.out.println(max);
     this.keyLenRNG = keyLenRNG;
   }
 
@@ -54,13 +52,13 @@ class KeySampler {
 
   public void next(BytesWritable key) {
     key.setSize(Math.max(MIN_KEY_LEN, keyLenRNG.nextInt()));
-    random.nextBytes(key.get());
+    random.nextBytes(key.getBytes());
     int rnd = 0;
     if (max != min) {
       rnd = random.nextInt(max - min);
     }
     int n = rnd + min;
-    byte[] b = key.get();
+    byte[] b = key.getBytes();
     b[0] = (byte) (n >> 24);
     b[1] = (byte) (n >> 16);
     b[2] = (byte) (n >> 8);
