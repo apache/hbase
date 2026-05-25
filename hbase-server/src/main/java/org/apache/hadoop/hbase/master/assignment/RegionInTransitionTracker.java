@@ -41,8 +41,10 @@ public class RegionInTransitionTracker {
 
   private final List<RegionState.State> ENABLE_TABLE_REGION_STATE = List.of(RegionState.State.OPEN);
 
-  // DO NOT USE containsKey() on regionInTransition map as MutableRegionInfo.COMPARATOR considers
-  // offline/split flags.
+  // DO NOT USE containsKey()/remove() on regionInTransition with a different RegionInfo instance:
+  // this map is ordered by RegionInfo.COMPARATOR, and that comparator includes the offline flag.
+  // Lookups can therefore fail if the RegionInfo used as the key has a different offline value,
+  // even when it refers to the same region. Offline value changes with splitting.
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
     new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
@@ -54,7 +56,7 @@ public class RegionInTransitionTracker {
    * other servers.
    */
   public void regionCrashed(RegionStateNode regionStateNode) {
-    if (isReplica(regionStateNode) || isSplitOrMerged(regionStateNode)) {
+    if (isReplica(regionStateNode)) {
       return;
     }
 
@@ -84,7 +86,7 @@ public class RegionInTransitionTracker {
       tableEnabled ? ENABLE_TABLE_REGION_STATE : DISABLE_TABLE_REGION_STATE;
 
     // if region is merged or split it should not be in RIT list
-    if (isSplitOrMerged(regionStateNode)) {
+    if (AssignmentManagerUtil.isSplitOrMerged(regionStateNode)) {
       if (removeRegionInTransition(regionStateNode.getRegionInfo())) {
         LOG.debug("Removed {} from RIT list as it is split or merged",
           regionStateNode.getRegionInfo().getEncodedName());
@@ -100,12 +102,6 @@ public class RegionInTransitionTracker {
           regionStateNode.getRegionInfo().getEncodedName(), currentState);
       }
     }
-  }
-
-  private static boolean isSplitOrMerged(RegionStateNode regionStateNode) {
-    return regionStateNode.getState() == RegionState.State.SPLIT
-      || regionStateNode.getState() == RegionState.State.MERGED
-      || regionStateNode.getRegionInfo().isSplit();
   }
 
   private boolean isTableEnabled(TableName tableName) {
