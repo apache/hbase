@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.io.encoding;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -39,28 +38,21 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ IOTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "dataEncoding={0}")
 public class TestSeekToBlockWithEncoders {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeekToBlockWithEncoders.class);
 
   static final byte[] HFILEBLOCK_DUMMY_HEADER = new byte[HConstants.HFILEBLOCK_HEADER_SIZE];
   private final boolean useOffheapData;
   private final Configuration conf = HBaseConfiguration.create();
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtility.BOOLEAN_PARAMETERIZED;
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
   public TestSeekToBlockWithEncoders(boolean useOffheapData) {
@@ -70,7 +62,7 @@ public class TestSeekToBlockWithEncoders {
   /**
    * Test seeking while file is encoded.
    */
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithNonMatchingSeekKey() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -96,7 +88,7 @@ public class TestSeekToBlockWithEncoders {
   /**
    * Test seeking while file is encoded.
    */
-  @Test
+  @TestTemplate
   public void testSeekingToBlockWithBiggerNonLength1() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -122,7 +114,7 @@ public class TestSeekToBlockWithEncoders {
   /**
    * Test seeking while file is encoded.
    */
-  @Test
+  @TestTemplate
   public void testSeekingToBlockToANotAvailableKey() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -148,7 +140,7 @@ public class TestSeekToBlockWithEncoders {
   /**
    * Test seeking while file is encoded.
    */
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithDecreasingCommonPrefix() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("row10aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -167,7 +159,7 @@ public class TestSeekToBlockWithEncoders {
     seekToTheKey(kv3, sampleKv, toSeek);
   }
 
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithDiffQualifer() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -187,7 +179,7 @@ public class TestSeekToBlockWithEncoders {
     seekToTheKey(kv5, sampleKv, toSeek);
   }
 
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithDiffQualiferOnSameRow() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -210,7 +202,7 @@ public class TestSeekToBlockWithEncoders {
     seekToTheKey(kv6, sampleKv, toSeek);
   }
 
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithDiffQualiferOnSameRow1() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("q1"),
@@ -233,7 +225,7 @@ public class TestSeekToBlockWithEncoders {
     seekToTheKey(kv5, sampleKv, toSeek);
   }
 
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithDiffQualiferOnSameRowButDescendingInSize() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("f1"), Bytes.toBytes("qual1"),
@@ -256,7 +248,7 @@ public class TestSeekToBlockWithEncoders {
     seekToTheKey(kv6, sampleKv, toSeek);
   }
 
-  @Test
+  @TestTemplate
   public void testSeekToBlockWithDiffFamilyAndQualifer() throws IOException {
     List<KeyValue> sampleKv = new ArrayList<>();
     KeyValue kv1 = new KeyValue(Bytes.toBytes("aaa"), Bytes.toBytes("fam1"), Bytes.toBytes("q1"),

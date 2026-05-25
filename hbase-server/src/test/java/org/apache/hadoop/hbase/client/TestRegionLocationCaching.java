@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -35,22 +34,17 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionLocationCaching {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionLocationCaching.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static int SLAVES = 1;
@@ -59,24 +53,22 @@ public class TestRegionLocationCaching {
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
   private static byte[] QUALIFIER = Bytes.toBytes("testQualifier");
 
-  @Rule
-  public final TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
     TEST_UTIL.createTable(TABLE_NAME, new byte[][] { FAMILY });
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testDoNotCacheLocationWithNullServerNameWhenGetAllLocations() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testDoNotCacheLocationWithNullServerNameWhenGetAllLocations(TestInfo testInfo)
+    throws Exception {
+    TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createTable(tableName, new byte[][] { FAMILY });
     TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
 
@@ -130,7 +122,7 @@ public class TestRegionLocationCaching {
 
     Put put = new Put(row);
     put.addColumn(FAMILY, QUALIFIER, value);
-    assertTrue("Put request not accepted by multiplexer queue", multiplexer.put(TABLE_NAME, put));
+    assertTrue(multiplexer.put(TABLE_NAME, put), "Put request not accepted by multiplexer queue");
 
     checkRegionLocationIsCached(TABLE_NAME, multiplexer.getConnection());
     checkExistence(TABLE_NAME, row, FAMILY, QUALIFIER);
@@ -152,7 +144,7 @@ public class TestRegionLocationCaching {
     }
 
     List<Put> failedPuts = multiplexer.put(TABLE_NAME, multiput);
-    assertNull("All put requests were not accepted by multiplexer queue", failedPuts);
+    assertNull(failedPuts, "All put requests were not accepted by multiplexer queue");
 
     checkRegionLocationIsCached(TABLE_NAME, multiplexer.getConnection());
     for (int i = 0; i < 10; i++) {
@@ -207,7 +199,7 @@ public class TestRegionLocationCaching {
     throws InterruptedException, IOException {
     for (int count = 0; count < 50; count++) {
       int number = ((ConnectionImplementation) conn).getNumberOfCachedRegionLocations(tableName);
-      assertNotEquals("Expected non-zero number of cached region locations", 0, number);
+      assertNotEquals(0, number, "Expected non-zero number of cached region locations");
       Thread.sleep(100);
     }
   }
@@ -224,7 +216,7 @@ public class TestRegionLocationCaching {
     int nbTry = 0;
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       do {
-        assertTrue("Failed to get row after " + nbTry + " tries", nbTry < 50);
+        assertTrue(nbTry < 50, "Failed to get row after " + nbTry + " tries");
         nbTry++;
         Thread.sleep(100);
         r = table.get(get);
