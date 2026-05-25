@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
  * {@code shouldSubmitSCP(null)} then dereferenced the null and crashed.
  */
 @Tag(MasterTests.TAG)
-@Tag(MediumTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRecoverUnknownWithNullRegionLocation {
 
   private static HBaseTestingUtil UTIL;
@@ -94,19 +94,17 @@ public class TestRecoverUnknownWithNullRegionLocation {
       node.lock();
       try {
         am.regionClosedAbnormally(node).get();
+        assertTrue(node.isInState(RegionState.State.ABNORMALLY_CLOSED),
+          "regionClosedAbnormally must move state to ABNORMALLY_CLOSED");
+        assertNull(node.getRegionLocation(), "regionClosedAbnormally must null out the location");
+        MasterProtos.ScheduleSCPsForUnknownServersResponse response =
+          master.getMasterRpcServices().scheduleSCPsForUnknownServers(null,
+            MasterProtos.ScheduleSCPsForUnknownServersRequest.newBuilder().build());
+        assertEquals(0, response.getPidCount(),
+          "no SCPs should be scheduled for an ABNORMALLY_CLOSED region with null location");
       } finally {
         node.unlock();
       }
-
-      assertTrue(node.isInState(RegionState.State.ABNORMALLY_CLOSED),
-        "regionClosedAbnormally must move state to ABNORMALLY_CLOSED");
-      assertNull(node.getRegionLocation(), "regionClosedAbnormally must null out the location");
-
-      MasterProtos.ScheduleSCPsForUnknownServersResponse response =
-        master.getMasterRpcServices().scheduleSCPsForUnknownServers(null,
-          MasterProtos.ScheduleSCPsForUnknownServersRequest.newBuilder().build());
-      assertEquals(0, response.getPidCount(),
-        "no SCPs should be scheduled for an ABNORMALLY_CLOSED region with null location");
     }
   }
 }
