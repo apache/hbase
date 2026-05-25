@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -37,24 +36,19 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestHTableNoncedRetry {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHTableNoncedRetry.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -71,9 +65,6 @@ public class TestHTableNoncedRetry {
   private static final byte[] VALUE = Bytes.toBytes("value");
 
   private static Connection CONN;
-
-  @Rule
-  public TestName testName = new TestName();
 
   private byte[] row;
 
@@ -105,7 +96,7 @@ public class TestHTableNoncedRetry {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.getAdmin()
@@ -116,22 +107,22 @@ public class TestHTableNoncedRetry {
     CONN = ConnectionFactory.createConnection(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws IOException, InterruptedException {
-    row = Bytes.toBytes(testName.getMethodName().replaceAll("[^0-9A-Za-z]", "_"));
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException, InterruptedException {
+    row = Bytes.toBytes(testInfo.getTestMethod().get().getName());
     CALLED.set(0);
 
     table = CONN.getTable(TABLE_NAME);
     table.setRpcTimeout(RPC_TIMEOUT);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     table.close();
   }

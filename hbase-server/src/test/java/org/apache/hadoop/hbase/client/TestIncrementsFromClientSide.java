@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.RPC_CODEC_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RpcClient.DEFAULT_CODEC_CLASS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -47,15 +46,14 @@ import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.codec.KeyValueCodecWithTags;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,12 +64,9 @@ import org.slf4j.LoggerFactory;
  * should be faster than starting/stopping a cluster per test. Test takes a long time because spin
  * up a cluster between each run -- ugh.
  */
-@Category(LargeTests.class)
+@org.junit.jupiter.api.Tag(LargeTests.TAG)
+@org.junit.jupiter.api.Tag(ClientTests.TAG)
 public class TestIncrementsFromClientSide {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementsFromClientSide.class);
 
   final Logger LOG = LoggerFactory.getLogger(getClass());
   protected final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -81,10 +76,14 @@ public class TestIncrementsFromClientSide {
   // This test depends on there being only one slave running at at a time. See the @Before
   // method where we do rolling restart.
   protected static int SLAVES = 1;
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
@@ -93,10 +92,7 @@ public class TestIncrementsFromClientSide {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -106,7 +102,7 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testDuplicateIncrement() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(methodName));
     Map<String, String> kvs = new HashMap<>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
@@ -117,30 +113,21 @@ public class TestIncrementsFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    Connection connection = ConnectionFactory.createConnection(c);
-    Table t = connection.getTable(TableName.valueOf(name.getMethodName()));
-    if (t instanceof HTable) {
-      HTable table = (HTable) t;
-      table.setOperationTimeout(3 * 1000);
+    try (Connection connection = ConnectionFactory.createConnection(c); Table table = connection
+      .getTableBuilder(TableName.valueOf(methodName), null).setOperationTimeout(3 * 1000).build()) {
+      Increment inc = new Increment(ROW);
+      inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
+      Result result = table.increment(inc);
 
-      try {
-        Increment inc = new Increment(ROW);
-        inc.addColumn(TEST_UTIL.fam1, QUALIFIER, 1);
-        Result result = table.increment(inc);
+      Cell[] cells = result.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
 
-        Cell[] cells = result.rawCells();
-        assertEquals(1, cells.length);
-        assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
-
-        // Verify expected result
-        Result readResult = table.get(new Get(ROW));
-        cells = readResult.rawCells();
-        assertEquals(1, cells.length);
-        assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
-      } finally {
-        table.close();
-        connection.close();
-      }
+      // Verify expected result
+      Result readResult = table.get(new Get(ROW));
+      cells = readResult.rawCells();
+      assertEquals(1, cells.length);
+      assertIncrementKey(cells[0], ROW, TEST_UTIL.fam1, QUALIFIER, 1);
     }
   }
 
@@ -149,7 +136,7 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testDuplicateBatchIncrement() throws Exception {
-    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()));
+    HTableDescriptor hdt = TEST_UTIL.createTableDescriptor(TableName.valueOf(methodName));
     Map<String, String> kvs = new HashMap<>();
     kvs.put(HConnectionTestingUtility.SleepAtFirstRpcCall.SLEEP_TIME_CONF_KEY, "2000");
     hdt.addCoprocessor(HConnectionTestingUtility.SleepAtFirstRpcCall.class.getName(), null, 1, kvs);
@@ -160,9 +147,8 @@ public class TestIncrementsFromClientSide {
     // Client will retry beacuse rpc timeout is small than the sleep time of first rpc call
     c.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 1500);
 
-    try (Connection connection = ConnectionFactory.createConnection(c);
-      Table table = connection.getTableBuilder(TableName.valueOf(name.getMethodName()), null)
-        .setOperationTimeout(3 * 1000).build()) {
+    try (Connection connection = ConnectionFactory.createConnection(c); Table table = connection
+      .getTableBuilder(TableName.valueOf(methodName), null).setOperationTimeout(3 * 1000).build()) {
       Increment inc = new Increment(ROW);
       inc.addColumn(HBaseTestingUtility.fam1, QUALIFIER, 1);
 
@@ -184,9 +170,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementWithDeletes() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName TABLENAME = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
 
@@ -206,9 +191,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementingInvalidValue() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName TABLENAME = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
     Put p = new Put(ROW);
@@ -234,7 +218,7 @@ public class TestIncrementsFromClientSide {
   @Test
   public void testBatchIncrementsWithReturnResultFalse() throws Exception {
     LOG.info("Starting testBatchIncrementsWithReturnResultFalse");
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     Table table = TEST_UTIL.createTable(tableName, FAMILY);
     Increment inc1 = new Increment(Bytes.toBytes("row2"));
     inc1.setReturnResults(false);
@@ -257,9 +241,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementInvalidArguments() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName TABLENAME = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
     try {
@@ -298,9 +281,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementOutOfOrder() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName TABLENAME = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     byte[][] QUALIFIERS =
@@ -339,8 +321,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementOnSameColumn() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final byte[] TABLENAME = Bytes.toBytes(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final byte[] TABLENAME = Bytes.toBytes(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TableName.valueOf(TABLENAME), FAMILY);
 
     byte[][] QUALIFIERS =
@@ -383,9 +365,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementIncrZeroAtFirst() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName TABLENAME = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     byte[] col1 = Bytes.toBytes("col1");
@@ -426,9 +407,8 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrement() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName TABLENAME =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName TABLENAME = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(TABLENAME, FAMILY);
 
     byte[][] ROWS = new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c"),
@@ -510,7 +490,7 @@ public class TestIncrementsFromClientSide {
 
   @Test
   public void testIncrementWithCustomTimestamp() throws IOException {
-    TableName TABLENAME = TableName.valueOf(name.getMethodName());
+    TableName TABLENAME = TableName.valueOf(methodName);
     Table table = TEST_UTIL.createTable(TABLENAME, FAMILY);
     long timestamp = 999;
     Increment increment = new Increment(ROW);
@@ -547,9 +527,8 @@ public class TestIncrementsFromClientSide {
    */
   @Test
   public void testIncrementWithTtlTags() throws Exception {
-    LOG.info("Starting " + this.name.getMethodName());
-    final TableName tableName =
-      TableName.valueOf(filterStringSoTableNameSafe(this.name.getMethodName()));
+    LOG.info("Starting " + methodName);
+    final TableName tableName = TableName.valueOf(filterStringSoTableNameSafe(methodName));
     Table ht = TEST_UTIL.createTable(tableName, FAMILY);
     final byte[] COLUMN = Bytes.toBytes("column");
 

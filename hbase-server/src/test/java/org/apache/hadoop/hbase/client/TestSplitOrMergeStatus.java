@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.List;
@@ -28,7 +28,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -44,47 +43,36 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestSplitOrMergeStatus {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitOrMergeStatus.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo info) throws Exception {
+    methodName = info.getTestMethod().get().getName();
     TEST_UTIL.startMiniCluster(2);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testSplitSwitch() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
 
@@ -113,10 +101,10 @@ public class TestSplitOrMergeStatus {
     admin.close();
   }
 
-  @Ignore
+  @Disabled
   @Test
   public void testMergeSwitch() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     Table t = TEST_UTIL.createTable(tableName, FAMILY);
     TEST_UTIL.loadTable(t, FAMILY, false);
 
@@ -129,8 +117,8 @@ public class TestSplitOrMergeStatus {
       Threads.sleep(1);
       ;
     }
-    assertTrue("originalCount=" + originalCount + ", newCount=" + postSplitCount,
-      originalCount != postSplitCount);
+    assertTrue(originalCount != postSplitCount,
+      "originalCount=" + originalCount + ", newCount=" + postSplitCount);
 
     // Merge switch is off so merge should NOT succeed.
     boolean[] results = admin.setSplitOrMergeEnabled(false, false, MasterSwitchType.MERGE);
@@ -147,7 +135,7 @@ public class TestSplitOrMergeStatus {
       // Expected.
     }
     int count = admin.getTableRegions(tableName).size();
-    assertTrue("newCount=" + postSplitCount + ", count=" + count, postSplitCount == count);
+    assertTrue(postSplitCount == count, "newCount=" + postSplitCount + ", count=" + count);
 
     results = admin.setSplitOrMergeEnabled(true, false, MasterSwitchType.MERGE);
     regions = admin.getTableRegions(t.getName());
@@ -178,7 +166,7 @@ public class TestSplitOrMergeStatus {
   public void testSplitRegionReplicaRitRecovery() throws Exception {
     int startRowNum = 11;
     int rowCount = 60;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setRegionReplication(2).build());

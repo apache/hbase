@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.List;
@@ -32,6 +33,7 @@ import org.apache.hadoop.hbase.HBaseCommonTestingUtility;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.security.User;
@@ -43,15 +45,18 @@ import org.apache.hadoop.hbase.security.access.SecureTestUtil;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
 
-  private TableName TEST_TABLE = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
+  @RegisterExtension
+  protected TableNameTestExtension name = new TableNameTestExtension();
+
+  private TableName TEST_TABLE = TableName.valueOf(HBaseTestingUtility.getRandomUUID().toString());
 
   private static final int ROW_COUNT = 30000;
 
@@ -109,7 +114,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Enable security
@@ -133,7 +138,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     USER_NONE = User.createUserForTesting(conf, "usernone", new String[0]);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.createTable(TableDescriptorBuilder.newBuilder(TEST_TABLE)
       .setColumnFamily(
@@ -160,7 +165,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -172,7 +177,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
       int rowCount = 0;
       while ((result = scanner.next()) != null) {
         byte[] value = result.getValue(TEST_FAMILY, TEST_QUALIFIER);
-        Assert.assertArrayEquals(value, Bytes.toBytes(rowCount++));
+        assertArrayEquals(value, Bytes.toBytes(rowCount++));
       }
       assertEquals(ROW_COUNT, rowCount);
     }
@@ -196,11 +201,11 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     loadData();
     verifyRows(TEST_TABLE);
 
-    String snapshotName1 = TEST_UTIL.getRandomUUID().toString();
+    String snapshotName1 = HBaseTestingUtility.getRandomUUID().toString();
     snapshot(snapshotName1, TEST_TABLE);
 
     // clone snapshot with restoreAcl true.
-    TableName tableName1 = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
+    TableName tableName1 = TableName.valueOf(HBaseTestingUtility.getRandomUUID().toString());
     cloneSnapshot(snapshotName1, tableName1, true);
     verifyRows(tableName1);
     verifyAllowed(new AccessReadAction(tableName1), USER_OWNER, USER_RO, USER_RW);
@@ -209,7 +214,7 @@ public abstract class SnapshotWithAclTestBase extends SecureTestUtil {
     verifyDenied(new AccessWriteAction(tableName1), USER_RO, USER_NONE);
 
     // clone snapshot with restoreAcl false.
-    TableName tableName2 = TableName.valueOf(TEST_UTIL.getRandomUUID().toString());
+    TableName tableName2 = TableName.valueOf(HBaseTestingUtility.getRandomUUID().toString());
     cloneSnapshot(snapshotName1, tableName2, false);
     verifyRows(tableName2);
     verifyAllowed(new AccessReadAction(tableName2), USER_OWNER);

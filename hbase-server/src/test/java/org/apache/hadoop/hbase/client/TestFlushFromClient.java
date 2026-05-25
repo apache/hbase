@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -34,26 +33,21 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestFlushFromClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFlushFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFlushFromClient.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -64,26 +58,24 @@ public class TestFlushFromClient {
   private static final byte[] FAMILY_1 = Bytes.toBytes("f1");
   private static final byte[] FAMILY_2 = Bytes.toBytes("f2");
   public static final byte[][] FAMILIES = { FAMILY_1, FAMILY_2 };
-  @Rule
-  public TestName name = new TestName();
 
   public TableName tableName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(ROWS.size());
     asyncConn = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(asyncConn, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try (Table t = TEST_UTIL.createTable(tableName, FAMILIES, SPLITS)) {
       List<Put> puts = ROWS.stream().map(r -> new Put(r)).collect(Collectors.toList());
       for (int i = 0; i != 20; ++i) {
@@ -99,7 +91,7 @@ public class TestFlushFromClient {
     assertTrue(getRegionInfo().stream().allMatch(r -> r.getMemStoreDataSize() != 0));
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());

@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
@@ -32,22 +31,17 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestHTableMultiplexerFlushCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHTableMultiplexerFlushCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHTableMultiplexerFlushCache.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -59,21 +53,12 @@ public class TestHTableMultiplexerFlushCache {
   private static int SLAVES = 3;
   private static int PER_REGIONSERVER_QUEUE_SIZE = 100000;
 
-  @Rule
-  public TestName name = new TestName();
-
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(SLAVES);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -95,8 +80,8 @@ public class TestHTableMultiplexerFlushCache {
   }
 
   @Test
-  public void testOnRegionChange() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testOnRegionChange(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final int NUM_REGIONS = 10;
     Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
@@ -107,10 +92,10 @@ public class TestHTableMultiplexerFlushCache {
     try (RegionLocator r = TEST_UTIL.getConnection().getRegionLocator(tableName)) {
       byte[][] startRows = r.getStartKeys();
       byte[] row = startRows[1];
-      assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
+      assertTrue(row != null && row.length > 0, "2nd region should not start with empty row");
 
       Put put = new Put(row).addColumn(FAMILY, QUALIFIER1, VALUE1);
-      assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
+      assertTrue(multiplexer.put(tableName, put), "multiplexer.put returns");
 
       checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);
 
@@ -122,19 +107,19 @@ public class TestHTableMultiplexerFlushCache {
 
       // put with multiplexer.
       put = new Put(row).addColumn(FAMILY, QUALIFIER2, VALUE2);
-      assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
+      assertTrue(multiplexer.put(tableName, put), "multiplexer.put returns");
 
       checkExistence(htable, row, FAMILY, QUALIFIER2, VALUE2);
     }
   }
 
   @Test
-  public void testOnRegionMove() throws Exception {
+  public void testOnRegionMove(TestInfo testInfo) throws Exception {
     // This test is doing near exactly the same thing that testOnRegionChange but avoiding the
     // potential to get a ConnectionClosingException. By moving the region, we can be certain that
     // the connection is still valid and that the implementation is correctly handling an invalid
     // Region cache (and not just tearing down the entire connection).
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     final int NUM_REGIONS = 10;
     Table htable = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 3,
       Bytes.toBytes("aaaaa"), Bytes.toBytes("zzzzz"), NUM_REGIONS);
@@ -145,10 +130,10 @@ public class TestHTableMultiplexerFlushCache {
     final RegionLocator regionLocator = TEST_UTIL.getConnection().getRegionLocator(tableName);
     Pair<byte[][], byte[][]> startEndRows = regionLocator.getStartEndKeys();
     byte[] row = startEndRows.getFirst()[1];
-    assertTrue("2nd region should not start with empty row", row != null && row.length > 0);
+    assertTrue(row != null && row.length > 0, "2nd region should not start with empty row");
 
     Put put = new Put(row).addColumn(FAMILY, QUALIFIER1, VALUE1);
-    assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
+    assertTrue(multiplexer.put(tableName, put), "multiplexer.put returns");
 
     checkExistence(htable, row, FAMILY, QUALIFIER1, VALUE1);
 
@@ -165,7 +150,7 @@ public class TestHTableMultiplexerFlushCache {
         break;
       }
     }
-    assertNotNull("Did not find a new RegionServer to use", newServer);
+    assertNotNull(newServer, "Did not find a new RegionServer to use");
 
     // Move the region
     LOG.info("Moving " + loc.getRegionInfo().getEncodedName() + " from " + originalServer + " to "
@@ -177,7 +162,7 @@ public class TestHTableMultiplexerFlushCache {
 
     // Send a new Put
     put = new Put(row).addColumn(FAMILY, QUALIFIER2, VALUE2);
-    assertTrue("multiplexer.put returns", multiplexer.put(tableName, put));
+    assertTrue(multiplexer.put(tableName, put), "multiplexer.put returns");
 
     // We should see the update make it to the new server eventually
     checkExistence(htable, row, FAMILY, QUALIFIER2, VALUE2);
