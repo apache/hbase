@@ -49,7 +49,7 @@ import org.junit.jupiter.params.provider.Arguments;
 @HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestVerifyBucketCacheFile {
 
-  public static Stream<Arguments> parameter() {
+  public static Stream<Arguments> parameters() {
     return Stream.of(Arguments.of(8192, null),
       Arguments.of(16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,

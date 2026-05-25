@@ -83,7 +83,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 @HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestBucketCache {
 
-  public static Stream<Arguments> parameter() {
+  public static Stream<Arguments> parameters() {
     // TODO: why is 8k the default blocksize for these tests?
     return Stream.of(Arguments.of(8192, null),
       Arguments.of(16 * 1024,
