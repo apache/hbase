@@ -463,10 +463,10 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
       replicateCount.incrementAndGet();
       lastEntries = new ArrayList<>(replicateContext.entries);
-      return true;
+      return ReplicationResult.COMMITTED;
     }
 
     @Override
@@ -526,12 +526,12 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
-    public boolean replicate(ReplicateContext context) {
+    public ReplicationResult replicate(ReplicateContext context) {
       try {
         Thread.sleep(duration);
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
-        return false;
+        return ReplicationResult.FAILED;
       }
       return super.replicate(context);
     }
@@ -548,9 +548,9 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     }
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
-      boolean success = super.replicate(replicateContext);
-      if (success) {
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
+      ReplicationResult success = super.replicate(replicateContext);
+      if (success == ReplicationResult.COMMITTED) {
         replicateCount.addAndGet(replicateContext.entries.size());
       }
       return success;
@@ -577,7 +577,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     static AtomicBoolean replicated = new AtomicBoolean(false);
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
       try {
         // check row
         doAssert(row);
@@ -589,7 +589,7 @@ public class TestReplicationEndpoint extends TestReplicationBase {
       LOG.info("Replicated " + Bytes.toString(row) + ", count=" + replicateCount.get());
 
       replicated.set(replicateCount.get() > COUNT); // first 10 times, we return false
-      return replicated.get();
+      return replicated.get() ? ReplicationResult.COMMITTED : ReplicationResult.FAILED;
     }
   }
 
@@ -598,14 +598,14 @@ public class TestReplicationEndpoint extends TestReplicationBase {
     static AtomicReference<Exception> ex = new AtomicReference<>(null);
 
     @Override
-    public boolean replicate(ReplicateContext replicateContext) {
+    public ReplicationResult replicate(ReplicateContext replicateContext) {
       try {
         super.replicate(replicateContext);
         doAssert(row);
       } catch (Exception e) {
         ex.set(e);
       }
-      return true;
+      return ReplicationResult.COMMITTED;
     }
 
     @Override
