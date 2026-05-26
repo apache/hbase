@@ -50,7 +50,8 @@ public interface TableProcedureInterface {
     REGION_UNASSIGN,
     REGION_GC,
     MERGED_REGIONS_GC/* region operations */,
-    REGION_TRUNCATE
+    REGION_TRUNCATE,
+    REFRESH_HFILES,
   }
 
   /** Returns the name of the table the procedure is operating on */

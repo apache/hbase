@@ -65,7 +65,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.ClusterId;
+import org.apache.hadoop.hbase.ClusterIdFile;
+import org.apache.hadoop.hbase.ClusterIdFileParser;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.TableName;
@@ -541,15 +542,15 @@ public final class FSUtils {
    * @return <code>true</code> if the file exists, otherwise <code>false</code>
    * @throws IOException if checking the FileSystem fails
    */
-  public static boolean checkClusterIdExists(FileSystem fs, Path rootdir, long wait)
-    throws IOException {
+  public static boolean checkFileExistsInHbaseRootDir(FileSystem fs, Path rootdir, String file,
+    long wait) throws IOException {
     while (true) {
       try {
-        Path filePath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+        Path filePath = new Path(rootdir, file);
         return fs.exists(filePath);
       } catch (IOException ioe) {
         if (wait > 0L) {
-          LOG.warn("Unable to check cluster ID file in {}, retrying in {}ms", rootdir, wait, ioe);
+          LOG.warn("Unable to check file {} in {}, retrying in {}ms", file, rootdir, wait, ioe);
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
@@ -564,15 +565,13 @@ public final class FSUtils {
   }
 
   /**
-   * Returns the value of the unique cluster ID stored for this HBase instance.
-   * @param fs      the root directory FileSystem
-   * @param rootdir the path to the HBase root directory
-   * @return the unique cluster identifier
-   * @throws IOException if reading the cluster ID file fails
+   * Use the given parser object to read and parse contents of Cluster Id file. e.g. Cluster Id or
+   * Active read-replica Cluster Id
    */
-  public static ClusterId getClusterId(FileSystem fs, Path rootdir) throws IOException {
-    Path idPath = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
-    ClusterId clusterId = null;
+  public static <T extends ClusterIdFile> T getClusterIdFile(FileSystem fs, Path rootdir,
+    ClusterIdFileParser<T> parser) throws IOException {
+    Path idPath = new Path(rootdir, parser.getFileName());
+    T cs = null;
     FileStatus status = fs.exists(idPath) ? fs.getFileStatus(idPath) : null;
     if (status != null) {
       int len = Ints.checkedCast(status.getLen());
@@ -581,12 +580,12 @@ public final class FSUtils {
       try {
         in.readFully(content);
       } catch (EOFException eof) {
-        LOG.warn("Cluster ID file {} is empty", idPath);
+        LOG.warn("Cluster file {} is empty", idPath);
       } finally {
         in.close();
       }
       try {
-        clusterId = ClusterId.parseFrom(content);
+        cs = parser.parseFrom(content);
       } catch (DeserializationException e) {
         throw new IOException("content=" + Bytes.toString(content), e);
       }
@@ -596,73 +595,81 @@ public final class FSUtils {
         in = fs.open(idPath);
         try {
           cid = in.readUTF();
-          clusterId = new ClusterId(cid);
+          cs = parser.readString(cid);
         } catch (EOFException eof) {
-          LOG.warn("Cluster ID file {} is empty", idPath);
+          LOG.warn("Cluster file {} is empty", idPath);
         } finally {
           in.close();
         }
-        rewriteAsPb(fs, rootdir, idPath, clusterId);
+        rewriteAsPb(fs, rootdir, idPath, parser.getFileName(), cs);
       }
-      return clusterId;
+      return cs;
     } else {
-      LOG.warn("Cluster ID file does not exist at {}", idPath);
+      LOG.warn("Cluster file does not exist at {}", idPath);
     }
-    return clusterId;
+    return cs;
   }
 
-  /**
-   *   */
-  private static void rewriteAsPb(final FileSystem fs, final Path rootdir, final Path p,
-    final ClusterId cid) throws IOException {
+  private static <T extends ClusterIdFile> void rewriteAsPb(final FileSystem fs, final Path rootdir,
+    final Path p, final String fileName, final T cs) throws IOException {
     // Rewrite the file as pb. Move aside the old one first, write new
     // then delete the moved-aside file.
     Path movedAsideName = new Path(p + "." + EnvironmentEdgeManager.currentTime());
     if (!fs.rename(p, movedAsideName)) throw new IOException("Failed rename of " + p);
-    setClusterId(fs, rootdir, cid, 100);
+    setClusterIdFile(fs, rootdir, fileName, cs, 100);
     if (!fs.delete(movedAsideName, false)) {
       throw new IOException("Failed delete of " + movedAsideName);
     }
-    LOG.debug("Rewrote the hbase.id file as pb");
+    LOG.debug("Rewrote the {} file as pb", fileName);
   }
 
   /**
-   * Writes a new unique identifier for this cluster to the "hbase.id" file in the HBase root
-   * directory. If any operations on the ID file fails, and {@code wait} is a positive value, the
-   * method will retry to produce the ID file until the thread is forcibly interrupted.
-   * @param fs        the root directory FileSystem
-   * @param rootdir   the path to the HBase root directory
-   * @param clusterId the unique identifier to store
-   * @param wait      how long (in milliseconds) to wait between retries
+   * Writes a new unique identifier for this cluster to the Cluster Id ("hbase.id" or
+   * "active.cluster.suffix.id") file in the HBase root directory. If any operations on the ID file
+   * fails, and {@code wait} is a positive value, the method will retry to produce the ID file until
+   * the thread is forcibly interrupted.
+   * @param fs       the root directory FileSystem
+   * @param rootdir  the path to the HBase root directory
+   * @param fileName name of the file to be written
+   * @param cs       the object to be written
+   * @param wait     how long (in milliseconds) to wait between retries
    * @throws IOException if writing to the FileSystem fails and no wait value
    */
-  public static void setClusterId(final FileSystem fs, final Path rootdir,
-    final ClusterId clusterId, final long wait) throws IOException {
-
-    final Path idFile = new Path(rootdir, HConstants.CLUSTER_ID_FILE_NAME);
+  public static <T extends ClusterIdFile> void setClusterIdFile(final FileSystem fs,
+    final Path rootdir, final String fileName, final T cs, final long wait) throws IOException {
+    final Path idFile = new Path(rootdir, fileName);
     final Path tempDir = new Path(rootdir, HConstants.HBASE_TEMP_DIRECTORY);
-    final Path tempIdFile = new Path(tempDir, HConstants.CLUSTER_ID_FILE_NAME);
+    final Path tempIdFile = new Path(tempDir, fileName);
 
-    LOG.debug("Create cluster ID file [{}] with ID: {}", idFile, clusterId);
+    LOG.debug("Cluster file [{}] is present and contains cluster id: {}", idFile, cs);
+    writeClusterInfo(fs, rootdir, idFile, tempIdFile, cs.toByteArray(), wait);
+  }
 
+  /**
+   * Writes information about this cluster to the specified file. For ex, it is used for writing
+   * cluster id in "hbase.id" file in the HBase root directory. Also, used for writing active
+   * cluster suffix in "active_cluster_suffix.id" file. If any operations on the ID file fails, and
+   * {@code wait} is a positive value, the method will retry to produce the ID file until the thread
+   * is forcibly interrupted.
+   */
+  private static void writeClusterInfo(final FileSystem fs, final Path rootdir, final Path idFile,
+    final Path tempIdFile, byte[] fileData, final long wait) throws IOException {
     while (true) {
       Optional<IOException> failure = Optional.empty();
 
-      LOG.debug("Write the cluster ID file to a temporary location: {}", tempIdFile);
+      LOG.debug("Write the file to a temporary location: {}", tempIdFile);
       try (FSDataOutputStream s = fs.create(tempIdFile)) {
-        s.write(clusterId.toByteArray());
+        s.write(fileData);
       } catch (IOException ioe) {
         failure = Optional.of(ioe);
       }
 
       if (!failure.isPresent()) {
         try {
-          LOG.debug("Move the temporary cluster ID file to its target location [{}]:[{}]",
-            tempIdFile, idFile);
+          LOG.debug("Move the temporary file to its target location [{}]:[{}]", tempIdFile, idFile);
 
           if (!fs.rename(tempIdFile, idFile)) {
-            failure =
-              Optional.of(new IOException("Unable to move temp cluster ID file to " + idFile));
+            failure = Optional.of(new IOException("Unable to move temp file to " + idFile));
           }
         } catch (IOException ioe) {
           failure = Optional.of(ioe);
@@ -672,8 +679,7 @@ public final class FSUtils {
       if (failure.isPresent()) {
         final IOException cause = failure.get();
         if (wait > 0L) {
-          LOG.warn("Unable to create cluster ID file in {}, retrying in {}ms", rootdir, wait,
-            cause);
+          LOG.warn("Unable to create file in {}, retrying in {}ms", rootdir, wait, cause);
           try {
             Thread.sleep(wait);
           } catch (InterruptedException e) {
@@ -1003,6 +1009,25 @@ public final class FSUtils {
       tabledirs.add(dir.getPath());
     }
     return tabledirs;
+  }
+
+  /**
+   * A filter to exclude meta tables belonging to foreign clusters. This is essential in a
+   * read-replica setup where multiple clusters share the same fs.
+   * @param tablePath The Path to the table directory.
+   * @return {@code true} if the path is a regular table or the cluster's own meta table.
+   *         {@code false} if it is a meta table belonging to a different cluster.
+   */
+  public static boolean isLocalMetaTable(Path tablePath) {
+    if (tablePath == null) {
+      return false;
+    }
+    String dirName = tablePath.getName();
+    if (dirName.startsWith(TableName.META_TABLE_NAME.getQualifierAsString())) {
+      return TableName.valueOf(TableName.META_TABLE_NAME.getNamespaceAsString(), dirName)
+        .equals(TableName.META_TABLE_NAME);
+    }
+    return true;
   }
 
   /**
