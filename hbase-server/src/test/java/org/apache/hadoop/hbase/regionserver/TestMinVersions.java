@@ -590,13 +590,13 @@ public class TestMinVersions {
     get.readAllVersions();
     get.setTimestamp(ts - 3);
     result = region.get(get);
-    assertEquals(result.getColumnCells(c0, c0).size(), 0);
+    assertEquals(0, result.getColumnCells(c0, c0).size());
 
     get = new Get(T1);
     get.readAllVersions();
     get.setTimeRange(0, ts - 2);
     result = region.get(get);
-    assertEquals(result.getColumnCells(c0, c0).size(), 0);
+    assertEquals(0, result.getColumnCells(c0, c0).size());
   }
 
   private void verifyBeforeCompaction(HRegion region, long ts) throws IOException {
@@ -652,7 +652,7 @@ public class TestMinVersions {
   private void checkResult(Result r, byte[] col, byte[]... vals) {
     assertEquals(vals.length, r.size());
     List<Cell> kvs = r.getColumnCells(col, col);
-    assertEquals(kvs.size(), vals.length);
+    assertEquals(vals.length, kvs.size());
     for (int i = 0; i < vals.length; i++) {
       String expected = Bytes.toString(vals[i]);
       String actual = Bytes.toString(CellUtil.cloneValue(kvs.get(i)));
