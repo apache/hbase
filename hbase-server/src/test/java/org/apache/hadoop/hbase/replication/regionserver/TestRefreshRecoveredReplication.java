@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -40,16 +40,13 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,25 +55,15 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 /**
  * Testcase for HBASE-24871.
  */
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRefreshRecoveredReplication extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRefreshRecoveredReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRefreshRecoveredReplication.class);
 
   private static final int BATCH = 50;
 
-  @Rule
-  public TestName name = new TestName();
-
-  private TableName tablename;
-  private Table table1;
-  private Table table2;
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // NUM_SLAVES1 is presumed 2 in below.
     NUM_SLAVES1 = 2;
@@ -86,16 +73,23 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
     TestReplicationBase.setUpBeforeClass();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TestReplicationBase.tearDownAfterClass();
   }
 
-  @Before
-  public void setup() throws Exception {
+  private String testName;
+
+  private TableName tablename;
+  private Table table1;
+  private Table table2;
+
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     setUpBase();
 
-    tablename = TableName.valueOf(name.getMethodName());
+    tablename = TableName.valueOf(testName);
     TableDescriptor table =
       TableDescriptorBuilder.newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(famName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
@@ -108,7 +102,7 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
     table2 = UTIL2.getConnection().getTable(tablename);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     tearDownBase();
 
@@ -130,7 +124,7 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
     Optional<RegionServerThread> server = rss.stream()
       .filter(rst -> CollectionUtils.isNotEmpty(rst.getRegionServer().getRegions(tablename)))
       .findAny();
-    Assert.assertTrue(server.isPresent());
+    assertTrue(server.isPresent());
     HRegionServer otherServer = rss.get(0).getRegionServer() == server.get().getRegionServer()
       ? rss.get(1).getRegionServer()
       : rss.get(0).getRegionServer();

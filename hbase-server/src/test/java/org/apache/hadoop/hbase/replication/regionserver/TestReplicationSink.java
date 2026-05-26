@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,7 +37,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -63,13 +63,11 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,12 +79,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestReplicationSink {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSink.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSink.class);
   private static final int BATCH_SIZE = 10;
@@ -126,7 +121,7 @@ public class TestReplicationSink {
   /**
    * @throws java.lang.Exception
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
@@ -145,7 +140,7 @@ public class TestReplicationSink {
   /**
    * @throws java.lang.Exception
    */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     STOPPABLE.stop("Shutting down");
     TEST_UTIL.shutdownMiniCluster();
@@ -154,7 +149,7 @@ public class TestReplicationSink {
   /**
    * @throws java.lang.Exception
    */
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     table1 = TEST_UTIL.deleteTableData(TABLE_NAME1);
     table2 = TEST_UTIL.deleteTableData(TABLE_NAME2);
@@ -320,7 +315,7 @@ public class TestReplicationSink {
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
         replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-      Assert.fail("Should re-throw TableNotFoundException.");
+      fail("Should re-throw TableNotFoundException.");
     } catch (TableNotFoundException e) {
     }
     entries.clear();
@@ -335,7 +330,7 @@ public class TestReplicationSink {
           SINK.replicateEntries(entries,
             PrivateCellUtil.createExtendedCellScanner(cells.iterator()), replicationClusterId,
             baseNamespaceDir, hfileArchiveDir);
-          Assert.fail("Should re-throw RetriesExhaustedWithDetailsException.");
+          fail("Should re-throw RetriesExhaustedWithDetailsException.");
         } catch (RetriesExhaustedException e) {
         } finally {
           admin.enableTable(TABLE_NAME1);
@@ -441,7 +436,7 @@ public class TestReplicationSink {
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
         replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-      Assert.fail("Should re-throw ArrayIndexOutOfBoundsException.");
+      fail("Should re-throw ArrayIndexOutOfBoundsException.");
     } catch (ArrayIndexOutOfBoundsException e) {
       errorCount++;
       assertEquals(initialFailedBatches + errorCount, SINK.getSinkMetrics().getFailedBatches());
@@ -456,7 +451,7 @@ public class TestReplicationSink {
     try {
       SINK.replicateEntries(entries, PrivateCellUtil.createExtendedCellScanner(cells.iterator()),
         replicationClusterId, baseNamespaceDir, hfileArchiveDir);
-      Assert.fail("Should re-throw TableNotFoundException.");
+      fail("Should re-throw TableNotFoundException.");
     } catch (TableNotFoundException e) {
       errorCount++;
       assertEquals(initialFailedBatches + errorCount, SINK.getSinkMetrics().getFailedBatches());
@@ -475,7 +470,7 @@ public class TestReplicationSink {
           SINK.replicateEntries(entries,
             PrivateCellUtil.createExtendedCellScanner(cells.iterator()), replicationClusterId,
             baseNamespaceDir, hfileArchiveDir);
-          Assert.fail("Should re-throw IOException.");
+          fail("Should re-throw IOException.");
         } catch (IOException e) {
           errorCount++;
           assertEquals(initialFailedBatches + errorCount, SINK.getSinkMetrics().getFailedBatches());
