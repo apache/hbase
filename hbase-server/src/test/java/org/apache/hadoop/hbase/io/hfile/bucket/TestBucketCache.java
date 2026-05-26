@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.when;
 
 import java.io.File;
@@ -37,10 +38,11 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -62,14 +64,11 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -79,29 +78,23 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
  * <p>
  * Tests will ensure that blocks' data correctness under several threads concurrency
  */
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, LargeTests.class })
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestBucketCache {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBucketCache.class);
-
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 8192, null }, // TODO: why is 8k the default blocksize
-                                                          // for these tests?
-      { 16 * 1024,
+  public static Stream<Arguments> parameters() {
+    // TODO: why is 8k the default blocksize for these tests?
+    return Stream.of(Arguments.of(8192, null),
+      Arguments.of(16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-          128 * 1024 + 1024 } } });
+          128 * 1024 + 1024 }));
   }
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
+  private int constructedBlockSize;
 
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  private int[] constructedBlockSizes;
 
   BucketCache cache;
   final int CACHE_SIZE = 1000000;
@@ -137,13 +130,18 @@ public class TestBucketCache {
     }
   }
 
-  @Before
+  public TestBucketCache(int constructedBlockSize, int[] constructedBlockSizes) {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+  }
+
+  @BeforeEach
   public void setup() throws IOException {
     cache = new MockedBucketCache(ioEngineName, capacitySize, constructedBlockSize,
       constructedBlockSizes, writeThreads, writerQLen, persistencePath);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     cache.shutdown();
   }
@@ -166,7 +164,7 @@ public class TestBucketCache {
     return a.get(ThreadLocalRandom.current().nextInt(a.size()));
   }
 
-  @Test
+  @TestTemplate
   public void testBucketAllocator() throws BucketAllocatorException {
     BucketAllocator mAllocator = cache.getAllocator();
     /*
@@ -193,7 +191,7 @@ public class TestBucketCache {
     for (Integer blockSize : BLOCKSIZES) {
       BucketSizeInfo bucketSizeInfo = mAllocator.roundUpToBucketSizeInfo(blockSize);
       IndexStatistics indexStatistics = bucketSizeInfo.statistics();
-      assertEquals("unexpected freeCount for " + bucketSizeInfo, 0, indexStatistics.freeCount());
+      assertEquals(0, indexStatistics.freeCount(), "unexpected freeCount for " + bucketSizeInfo);
 
       // we know the block sizes above are multiples of 1024, but default bucket sizes give an
       // additional 1024 on top of that so this counts towards fragmentation in our test
@@ -211,17 +209,17 @@ public class TestBucketCache {
     assertEquals(0, mAllocator.getUsedSize());
   }
 
-  @Test
+  @TestTemplate
   public void testCacheSimple() throws Exception {
     CacheTestUtils.testCacheSimple(cache, BLOCK_SIZE, NUM_QUERIES);
   }
 
-  @Test
+  @TestTemplate
   public void testCacheMultiThreadedSingleKey() throws Exception {
     CacheTestUtils.hammerSingleKey(cache, 2 * NUM_THREADS, 2 * NUM_QUERIES);
   }
 
-  @Test
+  @TestTemplate
   public void testHeapSizeChanges() throws Exception {
     cache.stopWriterThreads();
     CacheTestUtils.testHeapSizeChanges(cache, BLOCK_SIZE);
@@ -250,7 +248,7 @@ public class TestBucketCache {
     waitUntilFlushedToBucket(cache, cacheKey);
   }
 
-  @Test
+  @TestTemplate
   public void testMemoryLeak() throws Exception {
     final BlockCacheKey cacheKey = new BlockCacheKey("dummy", 1L);
     cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
@@ -292,10 +290,10 @@ public class TestBucketCache {
      */
     assertEquals(1L, cache.getBlockCount());
     assertTrue(cache.getCurrentSize() > 0L);
-    assertTrue("We should have a block!", cache.iterator().hasNext());
+    assertTrue(cache.iterator().hasNext(), "We should have a block!");
   }
 
-  @Test
+  @TestTemplate
   public void testRetrieveFromFile() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -344,7 +342,7 @@ public class TestBucketCache {
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testBucketAllocatorLargeBuckets() throws BucketAllocatorException {
     long availableSpace = 20 * 1024L * 1024 * 1024;
     int[] bucketSizes = new int[] { 1024, 1024 * 1024, 1024 * 1024 * 1024 };
@@ -352,7 +350,7 @@ public class TestBucketCache {
     assertTrue(allocator.getBuckets().length > 0);
   }
 
-  @Test
+  @TestTemplate
   public void testGetPartitionSize() throws IOException {
     // Test default values
     validateGetPartitionSize(cache, BucketCache.DEFAULT_SINGLE_FACTOR,
@@ -372,7 +370,7 @@ public class TestBucketCache {
     validateGetPartitionSize(cache, 0.2f, 0.5f);
   }
 
-  @Test
+  @TestTemplate
   public void testValidBucketCacheConfigs() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     conf.setFloat(BucketCache.ACCEPT_FACTOR_CONFIG_NAME, 0.9f);
@@ -385,21 +383,21 @@ public class TestBucketCache {
     BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
       constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
 
-    assertEquals(BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.", 0.9f,
-      cache.getAcceptableFactor(), 0);
-    assertEquals(BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
-      cache.getMinFactor(), 0);
-    assertEquals(BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.5f,
-      cache.getExtraFreeFactor(), 0);
-    assertEquals(BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.", 0.1f,
-      cache.getSingleFactor(), 0);
-    assertEquals(BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.", 0.7f,
-      cache.getMultiFactor(), 0);
-    assertEquals(BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.", 0.2f,
-      cache.getMemoryFactor(), 0);
+    assertEquals(0.9f, cache.getAcceptableFactor(), 0,
+      BucketCache.ACCEPT_FACTOR_CONFIG_NAME + " failed to propagate.");
+    assertEquals(0.5f, cache.getMinFactor(), 0,
+      BucketCache.MIN_FACTOR_CONFIG_NAME + " failed to propagate.");
+    assertEquals(0.5f, cache.getExtraFreeFactor(), 0,
+      BucketCache.EXTRA_FREE_FACTOR_CONFIG_NAME + " failed to propagate.");
+    assertEquals(0.1f, cache.getSingleFactor(), 0,
+      BucketCache.SINGLE_FACTOR_CONFIG_NAME + " failed to propagate.");
+    assertEquals(0.7f, cache.getMultiFactor(), 0,
+      BucketCache.MULTI_FACTOR_CONFIG_NAME + " failed to propagate.");
+    assertEquals(0.2f, cache.getMemoryFactor(), 0,
+      BucketCache.MEMORY_FACTOR_CONFIG_NAME + " failed to propagate.");
   }
 
-  @Test
+  @TestTemplate
   public void testInvalidAcceptFactorConfig() throws IOException {
     float[] configValues = { -1f, 0.2f, 0.86f, 1.05f };
     boolean[] expectedOutcomes = { false, false, true, false };
@@ -409,7 +407,7 @@ public class TestBucketCache {
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
-  @Test
+  @TestTemplate
   public void testInvalidMinFactorConfig() throws IOException {
     float[] configValues = { -1f, 0f, 0.96f, 1.05f };
     // throws due to <0, in expected range, minFactor > acceptableFactor, > 1.0
@@ -420,7 +418,7 @@ public class TestBucketCache {
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
-  @Test
+  @TestTemplate
   public void testInvalidExtraFreeFactorConfig() throws IOException {
     float[] configValues = { -1f, 0f, 0.2f, 1.05f };
     // throws due to <0, in expected range, in expected range, config can be > 1.0
@@ -431,7 +429,7 @@ public class TestBucketCache {
     checkConfigValues(conf, configMappings, expectedOutcomes);
   }
 
-  @Test
+  @TestTemplate
   public void testInvalidCacheSplitFactorConfig() throws IOException {
     float[] singleFactorConfigValues = { 0.2f, 0f, -0.2f, 1f };
     float[] multiFactorConfigValues = { 0.4f, 0f, 1f, .05f };
@@ -457,11 +455,11 @@ public class TestBucketCache {
         }
         BucketCache cache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
           constructedBlockSizes, writeThreads, writerQLen, persistencePath, 100, conf);
-        assertTrue("Created BucketCache and expected it to succeed: " + expectSuccess[i]
-          + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+        assertTrue(expectSuccess[i], "Created BucketCache and expected it to succeed: "
+          + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i]);
       } catch (IllegalArgumentException e) {
-        assertFalse("Created BucketCache and expected it to succeed: " + expectSuccess[i]
-          + ", but it actually was: " + !expectSuccess[i], expectSuccess[i]);
+        assertFalse(expectSuccess[i], "Created BucketCache and expected it to succeed: "
+          + expectSuccess[i] + ", but it actually was: " + !expectSuccess[i]);
       }
     }
   }
@@ -473,7 +471,7 @@ public class TestBucketCache {
     assertEquals(expectedOutput, bucketCache.getPartitionSize(partitionFactor));
   }
 
-  @Test
+  @TestTemplate
   public void testOffsetProducesPositiveOutput() {
     // This number is picked because it produces negative output if the values isn't ensured to be
     // positive. See HBASE-18757 for more information.
@@ -484,7 +482,7 @@ public class TestBucketCache {
     assertEquals(testValue, bucketEntry.offset());
   }
 
-  @Test
+  @TestTemplate
   public void testEvictionCount() throws InterruptedException {
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
@@ -534,7 +532,7 @@ public class TestBucketCache {
     assertEquals(1, cache.getStats().getEvictionCount());
   }
 
-  @Test
+  @TestTemplate
   public void testCacheBlockNextBlockMetadataMissing() throws Exception {
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
@@ -592,7 +590,7 @@ public class TestBucketCache {
     assertEquals(1, blockWithoutNextBlockMetadata.getBufferReadOnly().refCnt());
   }
 
-  @Test
+  @TestTemplate
   public void testRAMCache() {
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;
@@ -631,7 +629,7 @@ public class TestBucketCache {
     assertEquals(1, ((HFileBlock) re2.getData()).getBufferReadOnly().refCnt());
   }
 
-  @Test
+  @TestTemplate
   public void testFreeBlockWhenIOEngineWriteFailure() throws IOException {
     // initialize an block.
     int size = 100, offset = 20;
@@ -657,14 +655,14 @@ public class TestBucketCache {
     BlockCacheKey key = new BlockCacheKey("dummy", 1L);
     RAMQueueEntry re = new RAMQueueEntry(key, block, 1, true);
 
-    Assert.assertEquals(0, allocator.getUsedSize());
+    assertEquals(0, allocator.getUsedSize());
     try {
       re.writeToCache(ioEngine, allocator, null, null,
         ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE));
-      Assert.fail();
+      fail();
     } catch (Exception e) {
     }
-    Assert.assertEquals(0, allocator.getUsedSize());
+    assertEquals(0, allocator.getUsedSize());
   }
 
   /**
@@ -672,7 +670,7 @@ public class TestBucketCache {
    * could not be freed even if corresponding {@link HFileBlock} is evicted from
    * {@link BucketCache}.
    */
-  @Test
+  @TestTemplate
   public void testFreeBucketEntryRestoredFromFile() throws Exception {
     try {
       final Path dataTestDir = createAndGetTestDir();
@@ -719,7 +717,7 @@ public class TestBucketCache {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testBlockAdditionWaitWhenCache() throws Exception {
     try {
       final Path dataTestDir = createAndGetTestDir();
@@ -774,7 +772,7 @@ public class TestBucketCache {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testIOTimePerHitReturnsZeroWhenNoHits()
     throws NoSuchFieldException, IllegalAccessException {
     CacheStats cacheStats = cache.getStats();

@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -31,7 +32,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -40,20 +40,16 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that FileLink switches between alternate locations when the current location moves or gets
  * deleted.
  */
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFileLink {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFileLink.class);
 
   @Test
   public void testEquals() {
@@ -160,7 +156,7 @@ public class TestFileLink {
     }
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @Test
   public void testLinkReadWithMissingFile() throws Exception {
     HBaseTestingUtility testUtil = new HBaseTestingUtility();
     FileSystem fs = new MyDistributedFileSystem();
@@ -173,7 +169,9 @@ public class TestFileLink {
     files.add(archivedPath);
 
     FileLink link = new FileLink(files);
-    link.open(fs);
+    assertThrows(FileNotFoundException.class, () -> {
+      link.open(fs);
+    });
   }
 
   /**

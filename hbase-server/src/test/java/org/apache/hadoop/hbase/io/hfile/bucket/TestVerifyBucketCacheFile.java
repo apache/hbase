@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.FileOutputStream;
@@ -28,48 +28,47 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.apache.hadoop.hbase.testclassification.IOTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
  */
-@RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Tag(IOTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestVerifyBucketCacheFile {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyBucketCacheFile.class);
 
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 8192, null },
-      { 16 * 1024,
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(8192, null),
+      Arguments.of(16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-          128 * 1024 + 1024 } } });
+          128 * 1024 + 1024 }));
   }
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
+  private int constructedBlockSize;
 
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  private int[] constructedBlockSizes;
 
   final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
   final int writerQLen = BucketCache.DEFAULT_WRITER_QUEUE_ITEMS;
+
+  public TestVerifyBucketCacheFile(int constructedBlockSize, int[] constructedBlockSizes) {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+  }
 
   /**
    * Test cache file or persistence file does not exist whether BucketCache starts normally (1)
@@ -81,7 +80,7 @@ public class TestVerifyBucketCacheFile {
    * cache file and persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testRetrieveFromFile() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -150,7 +149,7 @@ public class TestVerifyBucketCacheFile {
    * persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileData() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -197,7 +196,7 @@ public class TestVerifyBucketCacheFile {
    * BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileTime() throws Exception {
     HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
     Path testDir = TEST_UTIL.getDataTestDir();
