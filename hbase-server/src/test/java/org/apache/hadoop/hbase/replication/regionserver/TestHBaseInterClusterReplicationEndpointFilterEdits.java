@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +27,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValue.Type;
@@ -43,11 +42,10 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -55,12 +53,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * Tests {@link HBaseInterClusterReplicationEndpoint#filterNotExistColumnFamilyEdits(List)} and
  * {@link HBaseInterClusterReplicationEndpoint#filterNotExistTableEdits(List)}
  */
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseInterClusterReplicationEndpointFilterEdits {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseInterClusterReplicationEndpointFilterEdits.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -75,7 +70,7 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
   private static final byte[] ROW = Bytes.toBytes("r");
   private static final byte[] VALUE = Bytes.toBytes("v");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster();
     ReplicationPeer replicationPeer = mock(ReplicationPeer.class);
@@ -91,7 +86,7 @@ public class TestHBaseInterClusterReplicationEndpointFilterEdits {
     UTIL.createTable(TABLE1, FAMILY);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
