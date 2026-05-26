@@ -590,7 +590,7 @@ public class TestMinVersions {
     get.readAllVersions();
     get.setTimestamp(ts - 3);
     result = region.get(get);
-    assertEquals(result.getColumnCells(c0, c0).size(), 0);
+    assertEquals(0, result.getColumnCells(c0, c0).size());
 
     get = new Get(T1);
     get.readAllVersions();
