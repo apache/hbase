@@ -217,16 +217,16 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     Thread.sleep(1);
     addRows(this.memstore);
     Cell closestToEmpty = ((CompactingMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
-    assertTrue(CellComparator.getInstance().compareRows(closestToEmpty,
-      new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
+    assertEquals(0, CellComparator.getInstance().compareRows(closestToEmpty,
+      new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())));
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((CompactingMemStore) this.memstore)
         .getNextRow(new KeyValue(Bytes.toBytes(i), EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
-        assertTrue(CellComparator.getInstance().compareRows(nr,
-          new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
+        assertEquals(0, CellComparator.getInstance().compareRows(nr,
+          new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())));
       }
     }
     // starting from each row, validate results should contain the starting row
@@ -243,7 +243,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
           int rowId = startRowId + i;
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
-          assertTrue(CellComparator.getInstance().compareRows(left, row1, 0, row1.length) == 0,
+          assertEquals(0, CellComparator.getInstance().compareRows(left, row1, 0, row1.length),
             "Row name");
           assertEquals(QUALIFIER_COUNT, results.size(), "Count of columns");
           List<Cell> row = new ArrayList<>();
@@ -346,7 +346,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       // test the case that the timeOfOldestEdit is updated after a KV add
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"), null);
       t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
+      assertEquals(1234, t);
       // The method will also assert
       // the value is reset to Long.MAX_VALUE
       t = runSnapshot(memstore, true);
@@ -354,7 +354,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       // test the case that the timeOfOldestEdit is updated after a KV delete
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, KeyValue.Type.Delete, "v"), null);
       t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
+      assertEquals(1234, t);
       t = runSnapshot(memstore, true);
 
       // test the case that the timeOfOldestEdit is updated after a KV upsert
@@ -364,7 +364,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       l.add(kv1);
       memstore.upsert(l, 1000, null);
       t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
+      assertEquals(1234, t);
     } finally {
       EnvironmentEdgeManager.reset();
     }
@@ -381,11 +381,11 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
       // Make some assertions about what just happened.
       assertTrue(oldHistorySize < snapshot.getDataSize(), "History size has not increased");
       long t = hmc.timeOfOldestEdit();
-      assertTrue(t == Long.MAX_VALUE, "Time of oldest edit is not Long.MAX_VALUE");
+      assertEquals(Long.MAX_VALUE, t, "Time of oldest edit is not Long.MAX_VALUE");
       hmc.clearSnapshot(snapshot.getId());
     } else {
       long t = hmc.timeOfOldestEdit();
-      assertTrue(t == prevTimeStamp, "Time of oldest edit didn't remain the same");
+      assertEquals(t, prevTimeStamp, "Time of oldest edit didn't remain the same");
     }
     return prevTimeStamp;
   }
@@ -477,7 +477,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     }
     memstore.clearSnapshot(snapshot.getId());
 
-    assertTrue(chunkCreator.getPoolSize() == 0);
+    assertEquals(0, chunkCreator.getPoolSize());
 
     // Chunks will be put back to pool after close scanners;
     for (KeyValueScanner scanner : scanners) {
@@ -558,7 +558,7 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
     memstore.add(new KeyValue(row, fam, qf1, 3, val), null);
     assertEquals(3, memstore.getActive().getCellsCount());
 
-    assertTrue(chunkCreator.getPoolSize() == 0);
+    assertEquals(0, chunkCreator.getPoolSize());
 
     // Chunks will be put back to pool after close scanners;
     for (KeyValueScanner scanner : scanners) {

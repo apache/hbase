@@ -88,11 +88,11 @@ public class TestCompactorMemLeak {
   private void assertMajorCompactionOK(TableName tableName) {
     List<HRegion> regions = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer()
       .getRegions(tableName);
-    assertEquals(regions.size(), 1);
+    assertEquals(1, regions.size());
     HRegion region = regions.get(0);
-    assertEquals(region.getStores().size(), 1);
+    assertEquals(1, region.getStores().size());
     HStore store = region.getStore(FAMILY);
-    assertEquals(store.getStorefilesCount(), 1);
+    assertEquals(1, store.getStorefilesCount());
   }
 
   @Test
@@ -135,5 +135,4 @@ public class TestCompactorMemLeak {
       return super.commitWriter(writer, fd, request);
     }
   }
-
 }

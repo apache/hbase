@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -320,8 +321,8 @@ public class TestDefaultMemStore {
     scanner0.seek(KeyValueUtil.createFirstOnRow(HConstants.EMPTY_START_ROW));
     Cell n0 = scanner0.next();
     Cell n1 = scanner0.next();
-    assertTrue(kv1.equals(n0));
-    assertTrue(kv2.equals(n1));
+    assertEquals(kv1, n0);
+    assertEquals(kv2, n1);
     assertNull(scanner0.next());
   }
 
@@ -622,7 +623,7 @@ public class TestDefaultMemStore {
     m.add(key1, null);
     m.add(key2, null);
 
-    assertTrue(m.getActive().getCellsCount() == 3,
+    assertEquals(3, m.getActive().getCellsCount(),
       "Expected memstore to hold 3 values, actually has " + m.getActive().getCellsCount());
   }
 
@@ -640,16 +641,16 @@ public class TestDefaultMemStore {
     Thread.sleep(1);
     addRows(this.memstore);
     Cell closestToEmpty = ((DefaultMemStore) this.memstore).getNextRow(KeyValue.LOWESTKEY);
-    assertTrue(CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
-      new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())) == 0);
+    assertEquals(0, CellComparatorImpl.COMPARATOR.compareRows(closestToEmpty,
+      new KeyValue(Bytes.toBytes(0), EnvironmentEdgeManager.currentTime())));
     for (int i = 0; i < ROW_COUNT; i++) {
       Cell nr = ((DefaultMemStore) this.memstore)
         .getNextRow(new KeyValue(Bytes.toBytes(i), EnvironmentEdgeManager.currentTime()));
       if (i + 1 == ROW_COUNT) {
         assertNull(nr);
       } else {
-        assertTrue(CellComparatorImpl.COMPARATOR.compareRows(nr,
-          new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())) == 0);
+        assertEquals(0, CellComparatorImpl.COMPARATOR.compareRows(nr,
+          new KeyValue(Bytes.toBytes(i + 1), EnvironmentEdgeManager.currentTime())));
       }
     }
     // starting from each row, validate results should contain the starting row
@@ -666,7 +667,7 @@ public class TestDefaultMemStore {
           int rowId = startRowId + i;
           Cell left = results.get(0);
           byte[] row1 = Bytes.toBytes(rowId);
-          assertTrue(CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length) == 0,
+          assertEquals(0, CellComparatorImpl.COMPARATOR.compareRows(left, row1, 0, row1.length),
             "Row name");
           assertEquals(QUALIFIER_COUNT, results.size(), "Count of columns");
           List<Cell> row = new ArrayList<>();
@@ -939,7 +940,7 @@ public class TestDefaultMemStore {
       // test the case that the timeOfOldestEdit is updated after a KV add
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, "v"), null);
       t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
+      assertEquals(1234, t);
       // snapshot() will reset timeOfOldestEdit. The method will also assert the
       // value is reset to Long.MAX_VALUE
       t = runSnapshot(memstore);
@@ -947,7 +948,7 @@ public class TestDefaultMemStore {
       // test the case that the timeOfOldestEdit is updated after a KV delete
       memstore.add(KeyValueTestUtil.create("r", "f", "q", 100, KeyValue.Type.Delete, "v"), null);
       t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
+      assertEquals(1234, t);
       t = runSnapshot(memstore);
 
       // test the case that the timeOfOldestEdit is updated after a KV upsert
@@ -957,7 +958,7 @@ public class TestDefaultMemStore {
       l.add(kv1);
       memstore.upsert(l, 1000, null);
       t = memstore.timeOfOldestEdit();
-      assertTrue(t == 1234);
+      assertEquals(1234, t);
     } finally {
       EnvironmentEdgeManager.reset();
     }
@@ -993,9 +994,9 @@ public class TestDefaultMemStore {
       region.put(p);
       edge.setCurrentTimeMillis(1234 + 100);
       StringBuilder sb = new StringBuilder();
-      assertTrue(!region.shouldFlush(sb));
+      assertFalse(region.shouldFlush(sb));
       edge.setCurrentTimeMillis(1234 + 10000);
-      assertTrue(region.shouldFlush(sb) == expected);
+      assertEquals(expected, region.shouldFlush(sb));
     } finally {
       EnvironmentEdgeManager.reset();
     }
@@ -1026,9 +1027,9 @@ public class TestDefaultMemStore {
     addRegionToMETA(meta, r);
     edge.setCurrentTimeMillis(1234 + 100);
     StringBuilder sb = new StringBuilder();
-    assertTrue(meta.shouldFlush(sb) == false);
+    assertFalse(meta.shouldFlush(sb));
     edge.setCurrentTimeMillis(edge.currentTime() + HRegion.SYSTEM_CACHE_FLUSH_INTERVAL + 1);
-    assertTrue(meta.shouldFlush(sb) == true);
+    assertTrue(meta.shouldFlush(sb));
   }
 
   /**

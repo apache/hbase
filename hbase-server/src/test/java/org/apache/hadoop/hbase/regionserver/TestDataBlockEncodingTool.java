@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
@@ -33,14 +34,13 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
  * Test DataBlockEncodingTool.
  */
-@Tag(MiscTests.TAG)
-@Tag(SmallTests.TAG)
+@org.junit.jupiter.api.Tag(MiscTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestDataBlockEncodingTool {
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -82,17 +82,15 @@ public class TestDataBlockEncodingTool {
           if (useTags) {
             if (allTags) {
               // Write cells with tags to HFile.
-              org.apache.hadoop.hbase.Tag[] tags =
-                new org.apache.hadoop.hbase.Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
-                  new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
+              Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
+                new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
               kv = new KeyValue(b, FAMILY, QUALIFIER, now, b, tags);
             } else {
               // Write half cells with tags and half without tags to HFile.
               if ((e - 'a') % 2 == 0) {
                 kv = new KeyValue(b, FAMILY, QUALIFIER, now, b);
               } else {
-                org.apache.hadoop.hbase.Tag[] tags = new org.apache.hadoop.hbase.Tag[] {
-                  new ArrayBackedTag((byte) 0, Bytes.toString(b)),
+                Tag[] tags = new Tag[] { new ArrayBackedTag((byte) 0, Bytes.toString(b)),
                   new ArrayBackedTag((byte) 0, Bytes.toString(b)) };
                 kv = new KeyValue(b, FAMILY, QUALIFIER, now, b, tags);
               }
