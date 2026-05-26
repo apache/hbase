@@ -596,7 +596,7 @@ public class TestMinVersions {
     get.readAllVersions();
     get.setTimeRange(0, ts - 2);
     result = region.get(get);
-    assertEquals(result.getColumnCells(c0, c0).size(), 0);
+    assertEquals(0, result.getColumnCells(c0, c0).size());
   }
 
   private void verifyBeforeCompaction(HRegion region, long ts) throws IOException {

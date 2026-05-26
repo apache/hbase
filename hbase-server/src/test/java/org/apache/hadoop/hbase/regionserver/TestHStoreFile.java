@@ -811,7 +811,7 @@ public class TestHStoreFile {
     StoreFileScanner s = getStoreFileScanner(reader, false, false);
     s.reseek(k);
 
-    assertNotNull(s.peek(), "Intial reseek should position at the beginning of the file");
+    assertNotNull(s.peek(), "Initial reseek should position at the beginning of the file");
   }
 
   @Test

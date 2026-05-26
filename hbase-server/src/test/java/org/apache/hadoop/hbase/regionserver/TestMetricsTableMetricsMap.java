@@ -63,7 +63,8 @@ public class TestMetricsTableMetricsMap {
     rsm.updateCompaction(tableName, true, 100, 200, 300, 400, 500);
 
     int metricsMapSize = agg.getMetricsRegistry().getMetricsMap().size();
-    assertTrue(metricsMapSize > 0, "table metrics added then metricsMapSize should larger than 0");
+    assertTrue(metricsMapSize > 0,
+      "table metrics added then metricsMapSize should be larger than 0");
 
     // just for metrics update
     Thread.sleep(1000);
