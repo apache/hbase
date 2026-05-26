@@ -98,6 +98,17 @@ public class TestDefaultMemStore {
     createMemStore();
   }
 
+  @AfterEach
+  public void tearDown() throws Exception {
+    internalTearDown();
+    this.memstore.close();
+  }
+
+  @AfterAll
+  public static void tearDownClass() {
+    ChunkCreator.getInstance().clearChunkIds();
+  }
+
   protected String getTestName(TestInfo testInfo) {
     String methodName = testInfo.getTestMethod().get().getName();
     String displayName = testInfo.getDisplayName();
@@ -122,18 +133,11 @@ public class TestDefaultMemStore {
     this.memstore = new DefaultMemStore();
   }
 
-  @AfterEach
-  public void tearDown() throws Exception {
-    this.memstore.close();
-  }
-
-  @AfterAll
-  public static void tearDownClass() throws Exception {
-    ChunkCreator.getInstance().clearChunkIds();
-  }
-
   protected void internalSetUp() throws Exception {
     this.mvcc = new MultiVersionConcurrencyControl();
+  }
+
+  protected void internalTearDown() throws Exception {
   }
 
   @Test

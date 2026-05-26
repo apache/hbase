@@ -58,7 +58,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
@@ -79,10 +78,9 @@ public class TestCompactingMemStore extends TestDefaultMemStore {
   protected HStore store;
   private Configuration conf;
 
-  @AfterEach
-  public void tearDown() throws Exception {
+  @Override
+  protected void internalTearDown() throws Exception {
     chunkCreator.clearChunksInPool();
-    super.tearDown();
   }
 
   @Override
