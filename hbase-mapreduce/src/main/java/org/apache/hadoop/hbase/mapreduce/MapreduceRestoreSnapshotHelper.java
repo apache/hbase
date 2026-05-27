@@ -36,13 +36,9 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
-import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -59,10 +55,6 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
-import org.apache.hadoop.hbase.security.access.AccessControlClient;
-import org.apache.hadoop.hbase.security.access.Permission;
-import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
-import org.apache.hadoop.hbase.security.access.TablePermission;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -73,10 +65,10 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -147,12 +139,6 @@ public final class MapreduceRestoreSnapshotHelper {
 
   public MapreduceRestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
     final SnapshotManifest manifest, final TableDescriptor tableDescriptor, final Path rootDir,
-    final ForeignExceptionDispatcher monitor, final MonitoredTask status) {
-    this(conf, fs, manifest, tableDescriptor, rootDir, monitor, status, true);
-  }
-
-  public MapreduceRestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
-    final SnapshotManifest manifest, final TableDescriptor tableDescriptor, final Path rootDir,
     final ForeignExceptionDispatcher monitor, final MonitoredTask status,
     final boolean createBackRefs) {
     this.fs = fs;
@@ -182,11 +168,11 @@ public final class MapreduceRestoreSnapshotHelper {
   }
 
   private MapreduceRestoreSnapshotHelper.RestoreMetaChanges restoreHdfsRegions(final ThreadPoolExecutor exec) throws IOException {
-    LOG.info("starting restore table regions using snapshot=" + snapshotDesc);
+    LOG.info("starting restore table regions using snapshot={}", snapshotDesc);
 
     Map<String, SnapshotProtos.SnapshotRegionManifest> regionManifests = snapshotManifest.getRegionManifestsMap();
     if (regionManifests == null) {
-      LOG.warn("Nothing to restore. Snapshot " + snapshotDesc + " looks empty");
+      LOG.warn("Nothing to restore. Snapshot {} looks empty", snapshotDesc);
       return null;
     }
 
@@ -229,12 +215,12 @@ public final class MapreduceRestoreSnapshotHelper {
       for (RegionInfo regionInfo : tableRegions) {
         String regionName = regionInfo.getEncodedName();
         if (regionNames.contains(regionName)) {
-          LOG.info("region to restore: " + regionName);
+          LOG.info("region to restore: {}", regionName);
           regionNames.remove(regionName);
           metaChanges.addRegionToRestore(
             ProtobufUtil.toRegionInfo(regionManifests.get(regionName).getRegionInfo()));
         } else {
-          LOG.info("region to remove: " + regionName);
+          LOG.info("region to remove: {}", regionName);
           metaChanges.addRegionToRemove(regionInfo);
         }
       }
@@ -242,10 +228,10 @@ public final class MapreduceRestoreSnapshotHelper {
 
     // Regions to Add: present in the snapshot but not in the current table
     List<RegionInfo> regionsToAdd = new ArrayList<>(regionNames.size());
-    if (regionNames.size() > 0) {
+    if (!regionNames.isEmpty()) {
       monitor.rethrowException();
       for (String regionName : regionNames) {
-        LOG.info("region to add: " + regionName);
+        LOG.info("region to add: {}", regionName);
         regionsToAdd
           .add(ProtobufUtil.toRegionInfo(regionManifests.get(regionName).getRegionInfo()));
       }
@@ -272,7 +258,7 @@ public final class MapreduceRestoreSnapshotHelper {
     removeHdfsRegions(exec, metaChanges.getRegionsToRemove());
     status.setStatus("Finished deleting excess regions from table.");
 
-    LOG.info("finishing restore table regions using snapshot=" + snapshotDesc);
+    LOG.info("finishing restore table regions using snapshot={}", snapshotDesc);
 
     return metaChanges;
   }
@@ -280,7 +266,7 @@ public final class MapreduceRestoreSnapshotHelper {
   /**
    * Describe the set of operations needed to update hbase:meta after restore.
    */
-  public static class RestoreMetaChanges {
+  private static class RestoreMetaChanges {
     private final Map<String, Pair<String, String>> parentsMap;
     private final TableDescriptor htd;
 
@@ -293,37 +279,6 @@ public final class MapreduceRestoreSnapshotHelper {
       this.htd = htd;
     }
 
-    public TableDescriptor getTableDescriptor() {
-      return htd;
-    }
-
-    /**
-     * Returns the map of parent-children_pair.
-     * @return the map
-     */
-    public Map<String, Pair<String, String>> getParentToChildrenPairMap() {
-      return this.parentsMap;
-    }
-
-    /** Returns true if there're new regions */
-    public boolean hasRegionsToAdd() {
-      return this.regionsToAdd != null && this.regionsToAdd.size() > 0;
-    }
-
-    /**
-     * Returns the list of new regions added during the on-disk restore. The caller is responsible
-     * to add the regions to META. e.g MetaTableAccessor.addRegionsToMeta(...)
-     * @return the list of regions to add to META
-     */
-    public List<RegionInfo> getRegionsToAdd() {
-      return this.regionsToAdd;
-    }
-
-    /** Returns true if there're regions to restore */
-    public boolean hasRegionsToRestore() {
-      return this.regionsToRestore != null && this.regionsToRestore.size() > 0;
-    }
-
     /**
      * Returns the list of 'restored regions' during the on-disk restore. The caller is responsible
      * to add the regions to hbase:meta if not present.
@@ -331,11 +286,6 @@ public final class MapreduceRestoreSnapshotHelper {
      */
     public List<RegionInfo> getRegionsToRestore() {
       return this.regionsToRestore;
-    }
-
-    /** Returns true if there're regions to remove */
-    public boolean hasRegionsToRemove() {
-      return this.regionsToRemove != null && this.regionsToRemove.size() > 0;
     }
 
     /**
@@ -368,42 +318,6 @@ public final class MapreduceRestoreSnapshotHelper {
       }
       regionsToRestore.add(hri);
     }
-
-    public void updateMetaParentRegions(Connection connection, final List<RegionInfo> regionInfos)
-      throws IOException {
-      if (regionInfos == null || parentsMap.isEmpty()) return;
-
-      // Extract region names and offlined regions
-      Map<String, RegionInfo> regionsByName = new HashMap<>(regionInfos.size());
-      List<RegionInfo> parentRegions = new LinkedList<>();
-      for (RegionInfo regionInfo : regionInfos) {
-        if (regionInfo.isSplitParent()) {
-          parentRegions.add(regionInfo);
-        } else {
-          regionsByName.put(regionInfo.getEncodedName(), regionInfo);
-        }
-      }
-
-      // Update Offline parents
-      for (RegionInfo regionInfo : parentRegions) {
-        Pair<String, String> daughters = parentsMap.get(regionInfo.getEncodedName());
-        if (daughters == null) {
-          // The snapshot contains an unreferenced region.
-          // It will be removed by the CatalogJanitor.
-          LOG.warn("Skip update of unreferenced offline parent: " + regionInfo);
-          continue;
-        }
-
-        // One side of the split is already compacted
-        if (daughters.getSecond() == null) {
-          daughters.setSecond(daughters.getFirst());
-        }
-
-        LOG.debug("Update splits parent " + regionInfo.getEncodedName() + " -> " + daughters);
-        MetaTableAccessor.addSplitsToParent(connection, regionInfo,
-          regionsByName.get(daughters.getFirst()), regionsByName.get(daughters.getSecond()));
-      }
-    }
   }
 
   /**
@@ -412,12 +326,8 @@ public final class MapreduceRestoreSnapshotHelper {
   private void removeHdfsRegions(final ThreadPoolExecutor exec, final List<RegionInfo> regions)
     throws IOException {
     if (regions == null || regions.isEmpty()) return;
-    ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
-      @Override
-      public void editRegion(final RegionInfo hri) throws IOException {
-        HFileArchiver.archiveRegion(conf, fs, hri, rootDir, tableDir);
-      }
-    });
+    ModifyRegionUtils.editRegions(exec, regions,
+      (ModifyRegionUtils.RegionEditTask) hri -> MapreduceHFileArchiver.archiveRegion(conf, fs, hri, rootDir, tableDir));
   }
 
   /**
@@ -427,12 +337,8 @@ public final class MapreduceRestoreSnapshotHelper {
     final Map<String, SnapshotProtos.SnapshotRegionManifest> regionManifests, final List<RegionInfo> regions)
     throws IOException {
     if (regions == null || regions.isEmpty()) return;
-    ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
-      @Override
-      public void editRegion(final RegionInfo hri) throws IOException {
-        restoreRegion(hri, regionManifests.get(hri.getEncodedName()));
-      }
-    });
+    ModifyRegionUtils.editRegions(exec, regions,
+      (ModifyRegionUtils.RegionEditTask) hri -> restoreRegion(hri, regionManifests.get(hri.getEncodedName())));
   }
 
   /**
@@ -442,12 +348,8 @@ public final class MapreduceRestoreSnapshotHelper {
     final Map<String, SnapshotProtos.SnapshotRegionManifest> regionManifests, final List<RegionInfo> regions)
     throws IOException {
     if (regions == null || regions.isEmpty()) return;
-    ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
-      @Override
-      public void editRegion(final RegionInfo hri) throws IOException {
-        restoreMobRegion(hri, regionManifests.get(hri.getEncodedName()));
-      }
-    });
+    ModifyRegionUtils.editRegions(exec, regions,
+      (ModifyRegionUtils.RegionEditTask) hri -> restoreMobRegion(hri, regionManifests.get(hri.getEncodedName())));
   }
 
   private Map<String, List<SnapshotProtos.SnapshotRegionManifest.StoreFile>>
@@ -535,28 +437,28 @@ public final class MapreduceRestoreSnapshotHelper {
             if (hfileName.equals(storeFileInfo.getPath().getName())) {
               tracker.removeStoreFiles(
                 StoreUtils.toHStoreFile(Collections.singletonList(storeFileInfo), null, null));
-              LOG.trace("Removing HFile=" + hfileName + " not present in snapshot=" + snapshotName
-                + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
+              LOG.trace("Removing HFile={} not present in snapshot={} from region={} table={}",
+                hfileName, snapshotName, regionInfo.getEncodedName(), tableName);
             }
           }
         }
 
         // Restore Missing files
         for (SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile : hfilesToAdd) {
-          LOG.debug("Restoring missing HFileLink " + storeFile.getName() + " of snapshot="
-            + snapshotName + " to region=" + regionInfo.getEncodedName() + " table=" + tableName);
+          LOG.debug("Restoring missing HFileLink {} of snapshot={} to region={} table={}",
+            storeFile.getName(), snapshotName, regionInfo.getEncodedName(), tableName);
           StoreFileInfo storeFileInfo =
             restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs, tracker);
           // mark the reference file to be added to tracker
           filesToTrack.add(storeFileInfo);
         }
       } else {
-        // Family doesn't exists in the snapshot
-        LOG.trace("Removing family=" + Bytes.toString(family) + " in snapshot=" + snapshotName
-          + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-        LOG.debug("Removing family=" + Bytes.toString(family) + " in snapshot=" + snapshotName
-          + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-        HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
+        // Family doesn't exist in the snapshot
+        LOG.trace("Removing family={} in snapshot={} from region={} table={}",
+          Bytes.toString(family), snapshotName, regionInfo.getEncodedName(), tableName);
+        LOG.debug("Removing family={} in snapshot={} from region={} table={}",
+          Bytes.toString(family), snapshotName, regionInfo.getEncodedName(), tableName);
+        MapreduceHFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
 
@@ -578,8 +480,8 @@ public final class MapreduceRestoreSnapshotHelper {
       }
 
       for (SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile : familyEntry.getValue()) {
-        LOG.trace("Adding HFileLink (Not present in the table) " + storeFile.getName()
-          + " of snapshot " + snapshotName + " to table=" + tableName);
+        LOG.trace("Adding HFileLink (Not present in the table) {} of snapshot {} to table={}",
+          storeFile.getName(), snapshotName, tableName);
         StoreFileInfo storeFileInfo =
           restoreStoreFile(familyDir, regionInfo, storeFile, createBackRefs, tracker);
         files.add(storeFileInfo);
@@ -611,8 +513,8 @@ public final class MapreduceRestoreSnapshotHelper {
       String snapshotRegionName = snapshotRegionInfo.getEncodedName();
       String clonedRegionName = clonedRegionsInfo[i].getEncodedName();
       regionsMap.put(Bytes.toBytes(snapshotRegionName), Bytes.toBytes(clonedRegionName));
-      LOG.info("clone region=" + snapshotRegionName + " as " + clonedRegionName + " in snapshot "
-        + snapshotName);
+      LOG.info("clone region={} as {} in snapshot {}", snapshotRegionName, clonedRegionName,
+        snapshotName);
 
       // Add mapping between cloned region name and snapshot region info
       snapshotRegions.put(clonedRegionName, snapshotRegionInfo);
@@ -620,12 +522,9 @@ public final class MapreduceRestoreSnapshotHelper {
 
     // create the regions on disk
     ModifyRegionUtils.createRegions(exec, conf, rootDir, tableDesc, clonedRegionsInfo,
-      new ModifyRegionUtils.RegionFillTask() {
-        @Override
-        public void fillRegion(final HRegion region) throws IOException {
-          RegionInfo snapshotHri = snapshotRegions.get(region.getRegionInfo().getEncodedName());
-          cloneRegion(region, snapshotHri, regionManifests.get(snapshotHri.getEncodedName()));
-        }
+      (ModifyRegionUtils.RegionFillTask) region -> {
+        RegionInfo snapshotHri = snapshotRegions.get(region.getRegionInfo().getEncodedName());
+        cloneRegion(region, snapshotHri, regionManifests.get(snapshotHri.getEncodedName()));
       });
 
     return clonedRegionsInfo;
@@ -673,8 +572,8 @@ public final class MapreduceRestoreSnapshotHelper {
               .build());
       tracker.load();
       for (SnapshotProtos.SnapshotRegionManifest.StoreFile storeFile : familyFiles.getStoreFilesList()) {
-        LOG.info("Adding HFileLink " + storeFile.getName() + " from cloned region " + "in snapshot "
-          + snapshotName + " to table=" + tableName);
+        LOG.info("Adding HFileLink {} from cloned region in snapshot {} to table={}",
+          storeFile.getName(), snapshotName, tableName);
         if (MobUtils.isMobRegionInfo(newRegionInfo)) {
           String mobFileName =
             HFileLink.createHFileLinkName(snapshotRegionInfo, storeFile.getName());
@@ -826,7 +725,7 @@ public final class MapreduceRestoreSnapshotHelper {
     if (regionName == null) {
       regionName = regionInfo.getEncodedName();
     }
-    LOG.debug("Restore reference " + regionName + " to " + clonedRegionName);
+    LOG.debug("Restore reference {} to {}", regionName, clonedRegionName);
     synchronized (parentsMap) {
       Pair<String, String> daughters = parentsMap.get(clonedRegionName);
       if (daughters == null) {
@@ -860,7 +759,7 @@ public final class MapreduceRestoreSnapshotHelper {
 
   /** Returns the set of the regions contained in the table */
   private List<RegionInfo> getTableRegions() throws IOException {
-    LOG.debug("get table regions: " + tableDir);
+    LOG.debug("get table regions: {}", tableDir);
     FileStatus[] regionDirs =
       CommonFSUtils.listStatus(fs, tableDir, new FSUtils.RegionDirFilter(fs));
     if (regionDirs == null) {
@@ -868,12 +767,12 @@ public final class MapreduceRestoreSnapshotHelper {
     }
 
     List<RegionInfo> regions = new ArrayList<>(regionDirs.length);
-    for (int i = 0; i < regionDirs.length; ++i) {
-      RegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDirs[i].getPath());
+    for (FileStatus regionDir : regionDirs) {
+      RegionInfo hri = HRegionFileSystem.loadRegionInfoFileContent(fs, regionDir.getPath());
       regions.add(hri);
     }
-    LOG.debug("found " + regions.size() + " regions for table="
-      + tableDesc.getTableName().getNameAsString());
+    LOG.debug("found {} regions for table={}", regions.size(),
+      tableDesc.getTableName().getNameAsString());
     return regions;
   }
 
@@ -924,29 +823,9 @@ public final class MapreduceRestoreSnapshotHelper {
     MapreduceRestoreSnapshotHelper.RestoreMetaChanges metaChanges = helper.restoreHdfsRegions(); // TODO: parallelize.
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Restored table dir:" + restoreDir);
+      LOG.debug("Restored table dir:{}", restoreDir);
       CommonFSUtils.logFileSystemState(fs, restoreDir, LOG);
     }
     return metaChanges;
-  }
-
-  public static void restoreSnapshotAcl(SnapshotDescription snapshot, TableName newTableName,
-    Configuration conf) throws IOException {
-    if (snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null) {
-      LOG.info("Restore snapshot acl to table. snapshot: " + snapshot + ", table: " + newTableName);
-      ListMultimap<String, Permission> perms =
-        ShadedAccessControlUtil.toUserTablePermissions(snapshot.getUsersAndPermissions());
-      try (Connection conn = ConnectionFactory.createConnection(conf)) {
-        for (Map.Entry<String, Permission> e : perms.entries()) {
-          String user = e.getKey();
-          TablePermission tablePerm = (TablePermission) e.getValue();
-          AccessControlClient.grant(conn, newTableName, user, tablePerm.getFamily(),
-            tablePerm.getQualifier(), tablePerm.getActions());
-        }
-      } catch (Throwable e) {
-        throw new IOException("Grant acl into newly creatd table failed. snapshot: " + snapshot
-          + ", table: " + newTableName, e);
-      }
-    }
   }
 }
