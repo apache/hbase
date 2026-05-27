@@ -198,4 +198,5 @@ public interface CacheTopology {
    * @return read-only topology view
    */
   CacheTopologyView getView();
+
 }

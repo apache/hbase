@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile.cache;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -296,5 +297,12 @@ public class BlockCacheBackedCacheAccessService implements CacheAccessService {
   public void onConfigurationChange(Configuration config) {
     Objects.requireNonNull(config, "config must not be null");
     blockCache.onConfigurationChange(config);
+  }
+
+  @Override
+  public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
+    Objects.requireNonNull(fileName, "fileName must not be null");
+    blockCache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
   }
 }

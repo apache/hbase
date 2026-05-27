@@ -24,6 +24,8 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -176,6 +178,8 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   // Local reference to the block cache
   private final BlockCache blockCache;
 
+  private final CacheAccessService cacheAccessService;
+
   private final ByteBuffAllocator byteBuffAllocator;
 
   private double heapUsageThreshold;
@@ -231,6 +235,9 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     }
     this.blockCache = blockCache;
     this.byteBuffAllocator = byteBuffAllocator;
+    this.cacheAccessService = blockCache != null
+      ? CacheAccessServices.fromBlockCache(blockCache)
+      : CacheAccessServices.disabled();
   }
 
   /**
@@ -252,6 +259,9 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     this.blockCache = cacheConf.blockCache;
     this.byteBuffAllocator = cacheConf.byteBuffAllocator;
     this.heapUsageThreshold = cacheConf.heapUsageThreshold;
+    this.cacheAccessService = blockCache != null
+      ? CacheAccessServices.fromBlockCache(blockCache)
+      : CacheAccessServices.disabled();
   }
 
   private CacheConfig() {
@@ -270,6 +280,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     this.blockCache = null;
     this.byteBuffAllocator = ByteBuffAllocator.HEAP;
     this.heapUsageThreshold = DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD;
+    this.cacheAccessService = CacheAccessServices.disabled();
   }
 
   /**
@@ -467,6 +478,20 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    */
   public Optional<BlockCache> getBlockCache() {
     return Optional.ofNullable(this.blockCache);
+  }
+
+  /**
+   * Returns the cache access service used by HFile read/write path callers.
+   * <p>
+   * This service is the migration-facing cache abstraction. For now it is backed by the existing
+   * {@link BlockCache} when block cache is configured, or by a disabled no-op implementation when
+   * block cache is unavailable. This keeps cache construction unchanged while allowing callers such
+   * as {@code HFileReaderImpl} to depend on {@link CacheAccessService}.
+   * </p>
+   * @return cache access service
+   */
+  public CacheAccessService getCacheAccessService() {
+    return cacheAccessService;
   }
 
   public boolean isCombinedBlockCache() {

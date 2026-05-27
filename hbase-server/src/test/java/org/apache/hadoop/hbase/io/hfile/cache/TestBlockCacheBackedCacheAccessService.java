@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import static org.junit.Assert.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
@@ -29,6 +30,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -217,5 +219,28 @@ public class TestBlockCacheBackedCacheAccessService {
     assertFalse(service.waitForCacheInitialization(1L));
     service.onConfigurationChange(new Configuration(false));
     service.shutdown();
+  }
+
+  @Test
+  void testNotifyFileCachingCompletedDelegatesToBlockCache() {
+    BlockCache blockCache = mock(BlockCache.class);
+    CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
+    Path fileName = new Path("/hbase/table/region/family/file");
+    int totalBlockCount = 10;
+    int dataBlockCount = 8;
+    long size = 1024L;
+
+    service.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+
+    verify(blockCache).notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+  }
+
+  @Test
+  void testNotifyFileCachingCompletedRejectsNullPath() {
+    BlockCache blockCache = mock(BlockCache.class);
+    CacheAccessService service = new BlockCacheBackedCacheAccessService(blockCache);
+
+    assertThrows(NullPointerException.class,
+      () -> service.notifyFileCachingCompleted(null, 10, 8, 1024L));
   }
 }
