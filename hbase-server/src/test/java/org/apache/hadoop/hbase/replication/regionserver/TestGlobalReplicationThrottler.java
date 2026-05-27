@@ -47,8 +47,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
@@ -56,7 +54,6 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 @Tag(LargeTests.TAG)
 public class TestGlobalReplicationThrottler {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestGlobalReplicationThrottler.class);
   private static final int REPLICATION_SOURCE_QUOTA = 200;
   private static int numOfPeer = 0;
   private static Configuration conf1;

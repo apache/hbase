@@ -33,8 +33,6 @@ import org.apache.hadoop.hbase.replication.ReplicationPeer.PeerState;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -47,16 +45,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.P
 @Tag(MasterTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestRefreshPeerWhileRegionServerRestarts extends TestReplicationBase {
-
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    TestReplicationBase.tearDownAfterClass();
-  }
 
   private static CountDownLatch ARRIVE;
 

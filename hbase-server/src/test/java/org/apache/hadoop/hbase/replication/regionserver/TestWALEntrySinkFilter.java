@@ -65,7 +65,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 @Tag(SmallTests.TAG)
 public class TestWALEntrySinkFilter {
 
-  private String testName;
   static final int BOUNDARY = 5;
   static final AtomicInteger UNFILTERED = new AtomicInteger();
   static final AtomicInteger FILTERED = new AtomicInteger();
@@ -78,7 +77,7 @@ public class TestWALEntrySinkFilter {
    */
   @Test
   public void testWALEntryFilter(TestInfo testInfo) throws IOException {
-    testName = testInfo.getTestMethod().get().getName();
+    String testName = testInfo.getTestMethod().get().getName();
     Configuration conf = HBaseConfiguration.create();
     // Make it so our filter is instantiated on construction of ReplicationSink.
     conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,

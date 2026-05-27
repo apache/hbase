@@ -35,7 +35,7 @@ import org.mockito.Mockito;
 @Tag(ReplicationTests.TAG)
 public class TestReplicationSourceLogQueue {
 
-  /*
+  /**
    * Testing enqueue and dequeuing of wal and check age of oldest wal.
    */
   @Test

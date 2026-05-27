@@ -26,7 +26,9 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.replication.TestReplicationBase;
+import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -35,8 +37,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+@Tag(ReplicationTests.TAG)
 @Tag(MediumTests.TAG)
-public class TestReplicationCompressedWAL extends TestReplicationBase {
+public class TestReplicationCompressedWAL extends TestReplicationBaseNoBeforeAll {
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicationCompressedWAL.class);
   static final int NUM_BATCHES = 20;
@@ -44,8 +47,9 @@ public class TestReplicationCompressedWAL extends TestReplicationBase {
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
+    configureClusters(UTIL1, UTIL2);
     CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TestReplicationBase.setUpBeforeClass();
+    startClusters();
   }
 
   @AfterAll

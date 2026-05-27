@@ -57,6 +57,8 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.ipc.RemoteException;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
@@ -102,6 +104,7 @@ public class SyncReplicationTestBase {
     conf.setBoolean("replication.source.eof.autorecovery", true);
   }
 
+  @BeforeAll
   @BeforeClass
   public static void setUp() throws Exception {
     ZK_UTIL.startMiniZKCluster();
@@ -154,6 +157,7 @@ public class SyncReplicationTestBase {
     util.shutdownMiniCluster();
   }
 
+  @AfterAll
   @AfterClass
   public static void tearDown() throws Exception {
     shutdown(UTIL1);

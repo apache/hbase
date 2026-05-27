@@ -118,9 +118,6 @@ public class TestReplicationSink {
   protected static String hfileArchiveDir;
   protected static String replicationClusterId;
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set("hbase.replication.source.fs.conf.provider",
@@ -137,18 +134,12 @@ public class TestReplicationSink {
     replicationClusterId = "12345";
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
     STOPPABLE.stop("Shutting down");
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @BeforeEach
   public void setUp() throws Exception {
     table1 = TEST_UTIL.deleteTableData(TABLE_NAME1);

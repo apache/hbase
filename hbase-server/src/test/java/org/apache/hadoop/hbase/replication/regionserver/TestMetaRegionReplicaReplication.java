@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.junit.jupiter.api.AfterEach;
@@ -66,6 +67,7 @@ import org.slf4j.LoggerFactory;
  * replication replays the edits to the secondary region in various scenarios.
  * @see TestRegionReplicaReplication
  */
+@Tag(ReplicationTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestMetaRegionReplicaReplication {
 
@@ -367,14 +369,6 @@ public class TestMetaRegionReplicaReplication {
     for (byte[] key : keys) {
       Result r = table.get(new Get(key));
       assertArrayEquals(VALUE, r.getValue(HConstants.CATALOG_FAMILY, HConstants.CATALOG_FAMILY));
-    }
-  }
-
-  private void primaryNoChangeReplicaIncrease(final long[] before, final long[] after) {
-    assertEquals(before[RegionInfo.DEFAULT_REPLICA_ID], after[RegionInfo.DEFAULT_REPLICA_ID]);
-
-    for (int i = 1; i < after.length; i++) {
-      assertTrue(after[i] > before[i]);
     }
   }
 

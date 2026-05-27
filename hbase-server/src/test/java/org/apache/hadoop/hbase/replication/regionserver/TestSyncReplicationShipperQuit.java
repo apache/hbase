@@ -29,8 +29,6 @@ import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -40,16 +38,6 @@ import org.junit.jupiter.api.Test;
 @Tag(ReplicationTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestSyncReplicationShipperQuit extends SyncReplicationTestBase {
-
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
-    SyncReplicationTestBase.setUp();
-  }
-
-  @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    SyncReplicationTestBase.tearDown();
-  }
 
   @Test
   public void testShipperQuitWhenDA() throws Exception {

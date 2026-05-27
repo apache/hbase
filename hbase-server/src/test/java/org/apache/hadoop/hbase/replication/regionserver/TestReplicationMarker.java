@@ -107,12 +107,12 @@ public class TestReplicationMarker {
     ReplicationSourceManager manager = utility1.getHBaseCluster().getRegionServer(0)
       .getReplicationSourceService().getReplicationManager();
     // Wait until the peer gets established.
-    Waiter.waitFor(conf1, 10000, (Waiter.Predicate) () -> manager.getSources().size() == 1);
+    Waiter.waitFor(conf1, 10000, () -> manager.getSources().size() == 1);
   }
 
   private static void waitForReplicationTrackerTableCreation() {
-    Waiter.waitFor(conf2, 10000, (Waiter.Predicate) () -> utility2.getAdmin()
-      .tableExists(REPLICATION_SINK_TRACKER_TABLE_NAME));
+    Waiter.waitFor(conf2, 10000,
+      () -> utility2.getAdmin().tableExists(REPLICATION_SINK_TRACKER_TABLE_NAME));
   }
 
   @AfterAll
@@ -127,14 +127,14 @@ public class TestReplicationMarker {
     // create enough sentinel rows.
     Thread.sleep(5000);
     WAL wal1 = utility1.getHBaseCluster().getRegionServer(0).getWAL(null);
-    String walName1ForCluster1 = ((AbstractFSWAL) wal1).getCurrentFileName().getName();
+    String walName1ForCluster1 = ((AbstractFSWAL<?>) wal1).getCurrentFileName().getName();
     String rs1Name = utility1.getHBaseCluster().getRegionServer(0).getServerName().getHostname();
     // Since we sync the marker edits while appending to wal, all the edits should be visible
     // to Replication threads immediately.
     assertTrue(getReplicatedEntries() >= 5);
     // Force log roll.
     wal1.rollWriter(true);
-    String walName2ForCluster1 = ((AbstractFSWAL) wal1).getCurrentFileName().getName();
+    String walName2ForCluster1 = ((AbstractFSWAL<?>) wal1).getCurrentFileName().getName();
     Connection connection2 = utility2.getMiniHBaseCluster().getRegionServer(0).getConnection();
     // Sleep for 5 more seconds to get marker rows with new wal name.
     Thread.sleep(5000);

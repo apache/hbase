@@ -77,7 +77,7 @@ public class TestRaceWhenCreatingReplicationSource {
 
   public static final class LocalReplicationEndpoint extends BaseReplicationEndpoint {
 
-    private static final UUID PEER_UUID = UTIL.getRandomUUID();
+    private static final UUID PEER_UUID = HBaseTestingUtil.getRandomUUID();
 
     @Override
     public UUID getPeerUUID() {

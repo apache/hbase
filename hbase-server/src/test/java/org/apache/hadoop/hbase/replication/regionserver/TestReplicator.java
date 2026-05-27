@@ -31,11 +31,11 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.TestReplicationBase;
+import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -44,22 +44,19 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
+@Tag(ReplicationTests.TAG)
 @Tag(MediumTests.TAG)
-public class TestReplicator extends TestReplicationBase {
+public class TestReplicator extends TestReplicationBaseNoBeforeAll {
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
+    configureClusters(UTIL1, UTIL2);
     // Set RPC size limit to 10kb (will be applied to both source and sink clusters)
     CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 1024 * 10);
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    TestReplicationBase.tearDownAfterClass();
+    startClusters();
   }
 
   @Test
@@ -105,7 +102,8 @@ public class TestReplicator extends TestReplicationBase {
 
       assertEquals(NUM_ROWS, ReplicationEndpointForTest.getBatchCount(),
         "We sent an incorrect number of batches");
-      assertEquals(NUM_ROWS, UTIL2.countRows(htable2), "We did not replicate enough rows");
+      assertEquals(NUM_ROWS, HBaseTestingUtil.countRows(htable2),
+        "We did not replicate enough rows");
     } finally {
       hbaseAdmin.removeReplicationPeer("testReplicatorBatching");
     }
@@ -153,7 +151,8 @@ public class TestReplicator extends TestReplicationBase {
         }
       });
 
-      assertEquals(NUM_ROWS, UTIL2.countRows(htable2), "We did not replicate enough rows");
+      assertEquals(NUM_ROWS, HBaseTestingUtil.countRows(htable2),
+        "We did not replicate enough rows");
     } finally {
       hbaseAdmin.removeReplicationPeer("testReplicatorWithErrors");
     }

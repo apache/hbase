@@ -30,11 +30,12 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.replication.TestReplicationBase;
+import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
+import org.junit.BeforeClass;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -42,20 +43,20 @@ import org.junit.jupiter.api.TestInfo;
 
 @Tag(ReplicationTests.TAG)
 @Tag(MediumTests.TAG)
-public class TestReplicationSourceManagerJoin extends TestReplicationBase {
+public class TestReplicationSourceManagerJoin extends TestReplicationBaseNoBeforeAll {
 
   @BeforeAll
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // NUM_SLAVES1 is presumed 2 in below.
     NUM_SLAVES1 = 2;
-    TestReplicationBase.setUpBeforeClass();
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
   }
-
-  private String testName;
 
   @Test
   public void testReplicationSourcesTerminate(TestInfo testInfo) throws Exception {
-    testName = testInfo.getTestMethod().get().getName();
+    String testName = testInfo.getTestMethod().get().getName();
     // Create table in source cluster only, let TableNotFoundException block peer to avoid
     // recovered source end.
     TableName tableName = TableName.valueOf(testName);

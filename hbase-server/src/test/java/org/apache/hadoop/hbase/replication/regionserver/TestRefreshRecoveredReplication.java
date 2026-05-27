@@ -23,24 +23,21 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.replication.TestReplicationBase;
+import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -57,7 +54,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
  */
 @Tag(ReplicationTests.TAG)
 @Tag(MediumTests.TAG)
-public class TestRefreshRecoveredReplication extends TestReplicationBase {
+public class TestRefreshRecoveredReplication extends TestReplicationBaseNoBeforeAll {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRefreshRecoveredReplication.class);
 
@@ -67,15 +64,10 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
   public static void setUpBeforeClass() throws Exception {
     // NUM_SLAVES1 is presumed 2 in below.
     NUM_SLAVES1 = 2;
+    configureClusters(UTIL1, UTIL2);
     // replicate slowly
-    Configuration conf1 = UTIL1.getConfiguration();
-    conf1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, 100);
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    TestReplicationBase.tearDownAfterClass();
+    CONF1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, 100);
+    startClusters();
   }
 
   private String testName;
@@ -153,9 +145,10 @@ public class TestRefreshRecoveredReplication extends TestReplicationBase {
 
   private int checkReplicationData() throws IOException {
     int count = 0;
-    ResultScanner results = table2.getScanner(new Scan().setCaching(BATCH));
-    for (Result r : results) {
-      count++;
+    try (ResultScanner results = table2.getScanner(new Scan().setCaching(BATCH))) {
+      while (results.next() != null) {
+        count++;
+      }
     }
     return count;
   }
