@@ -223,21 +223,24 @@ public class TestReplicationBaseNoBeforeAll {
   protected static void restartSourceCluster(int numSlaves) throws Exception {
     Closeables.close(hbaseAdmin, true);
     Closeables.close(htable1, true);
+    Closeables.close(connection1, true);
     UTIL1.shutdownMiniHBaseCluster();
     UTIL1.restartHBaseCluster(numSlaves);
     // Invalidate the cached connection state.
     CONF1 = UTIL1.getConfiguration();
-    hbaseAdmin = UTIL1.getAdmin();
-    Connection connection1 = UTIL1.getConnection();
+    connection1 = ConnectionFactory.createConnection(CONF1);
+    hbaseAdmin = connection1.getAdmin();
     htable1 = connection1.getTable(tableName);
   }
 
   static void restartTargetHBaseCluster(int numSlaves) throws Exception {
     Closeables.close(htable2, true);
+    Closeables.close(connection2, true);
     UTIL2.restartHBaseCluster(numSlaves);
     // Invalidate the cached connection state
     CONF2 = UTIL2.getConfiguration();
-    htable2 = UTIL2.getConnection().getTable(tableName);
+    connection2 = ConnectionFactory.createConnection(CONF2);
+    htable2 = connection2.getTable(tableName);
   }
 
   protected static void createTable(TableName tableName) throws IOException {
@@ -279,7 +282,7 @@ public class TestReplicationBaseNoBeforeAll {
       .anyMatch(p -> peerId.equals(p.getPeerId()));
   }
 
-  // can be override in tests, in case you need to use zk based uri, or the old style uri
+  // can be overridden in tests, in case you need to use zk based uri, or the old style uri
   protected String getClusterKey(HBaseTestingUtil util) throws Exception {
     return util.getRpcConnnectionURI();
   }

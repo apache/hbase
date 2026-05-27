@@ -25,12 +25,10 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -50,11 +48,6 @@ public class TestReplicationCompressedWAL extends TestReplicationBaseNoBeforeAll
     configureClusters(UTIL1, UTIL2);
     CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
     startClusters();
-  }
-
-  @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    TestReplicationBase.tearDownAfterClass();
   }
 
   @Test
