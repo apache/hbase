@@ -168,8 +168,34 @@ public final class ClientMetaTableAccessor {
    */
   public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
     AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName) {
+    return toHRegionLocations(getTableRegionsAndLocations(metaTable, tableName, true));
+  }
+
+  /**
+   * Used to get a single-RPC, paginated slice of region locations for the specific table, starting
+   * at the meta row derived from {@code startKey} and capped at {@code rowLimit} regions.
+   * {@code startKey} must be a region start-key boundary (e.g. the end key of the previously
+   * visited region), or {@code null}/empty to start at the first region.
+   * @param metaTable scanner over meta table
+   * @param tableName table we're looking for
+   * @param startKey  region start-key to begin scanning from (inclusive); {@code null} or empty
+   *                  starts from the first region
+   * @param rowLimit  maximum number of meta rows to return; if {@code <= 0}, the underlying scan is
+   *                  unbounded
+   * @return the list of region locations. The return value will be wrapped by a
+   *         {@link CompletableFuture}.
+   */
+  public static CompletableFuture<List<HRegionLocation>> getTableHRegionLocations(
+    AsyncTable<AdvancedScanResultConsumer> metaTable, TableName tableName, byte[] startKey,
+    int rowLimit) {
+    return toHRegionLocations(
+      getTableRegionsAndLocations(metaTable, tableName, true, startKey, rowLimit));
+  }
+
+  private static CompletableFuture<List<HRegionLocation>>
+    toHRegionLocations(CompletableFuture<List<Pair<RegionInfo, ServerName>>> source) {
     CompletableFuture<List<HRegionLocation>> future = new CompletableFuture<>();
-    addListener(getTableRegionsAndLocations(metaTable, tableName, true), (locations, err) -> {
+    addListener(source, (locations, err) -> {
       if (err != null) {
         future.completeExceptionally(err);
       } else if (locations == null || locations.isEmpty()) {
@@ -216,6 +242,39 @@ public final class ClientMetaTableAccessor {
   }
 
   /**
+   * Variant of {@link #getTableRegionsAndLocations} that scans a bounded slice of meta starting at
+   * the row derived from {@code startKey} and stopping after at most {@code rowLimit} rows.
+   */
+  private static CompletableFuture<List<Pair<RegionInfo, ServerName>>> getTableRegionsAndLocations(
+    final AsyncTable<AdvancedScanResultConsumer> metaTable, final TableName tableName,
+    final boolean excludeOfflinedSplitParents, final byte[] startKey, final int rowLimit) {
+    CompletableFuture<List<Pair<RegionInfo, ServerName>>> future = new CompletableFuture<>();
+    if (TableName.META_TABLE_NAME.equals(tableName)) {
+      future.completeExceptionally(new IOException(
+        "This method can't be used to locate meta regions;" + " use MetaTableLocator instead"));
+      return future;
+    }
+
+    CollectRegionLocationsVisitor visitor =
+      new CollectRegionLocationsVisitor(excludeOfflinedSplitParents);
+
+    byte[] metaStart = (startKey == null || startKey.length == 0)
+      ? getTableStartRowForMeta(tableName, QueryType.REGION)
+      : RegionInfo.createRegionName(tableName, startKey, HConstants.ZEROES, false);
+    byte[] metaStop = getTableStopRowForMeta(tableName, QueryType.REGION);
+
+    addListener(scanMeta(metaTable, metaStart, metaStop, QueryType.REGION, rowLimit, true, visitor),
+      (v, error) -> {
+        if (error != null) {
+          future.completeExceptionally(error);
+          return;
+        }
+        future.complete(visitor.getResults());
+      });
+    return future;
+  }
+
+  /**
    * Performs a scan of META table for given table.
    * @param metaTable scanner over meta table
    * @param tableName table within we scan
@@ -225,22 +284,26 @@ public final class ClientMetaTableAccessor {
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
     TableName tableName, QueryType type, final Visitor visitor) {
     return scanMeta(metaTable, getTableStartRowForMeta(tableName, type),
-      getTableStopRowForMeta(tableName, type), type, Integer.MAX_VALUE, visitor);
+      getTableStopRowForMeta(tableName, type), type, Integer.MAX_VALUE, false, visitor);
   }
 
   /**
    * Performs a scan of META table for given table.
-   * @param metaTable scanner over meta table
-   * @param startRow  Where to start the scan
-   * @param stopRow   Where to stop the scan
-   * @param type      scanned part of meta
-   * @param maxRows   maximum rows to return
-   * @param visitor   Visitor invoked against each row
+   * @param metaTable   scanner over meta table
+   * @param startRow    Where to start the scan
+   * @param stopRow     Where to stop the scan
+   * @param type        scanned part of meta
+   * @param maxRows     maximum rows to return
+   * @param isPagedScan when {@code true}, the scan is sized so the whole slice (up to
+   *                    {@code maxRows}) returns in a single ScannerNext RPC. When {@code false},
+   *                    uses the configured {@code hbase.meta.scanner.caching}.
+   * @param visitor     Visitor invoked against each row
    */
   private static CompletableFuture<Void> scanMeta(AsyncTable<AdvancedScanResultConsumer> metaTable,
-    byte[] startRow, byte[] stopRow, QueryType type, int maxRows, final Visitor visitor) {
+    byte[] startRow, byte[] stopRow, QueryType type, int maxRows, boolean isPagedScan,
+    final Visitor visitor) {
     int rowUpperLimit = maxRows > 0 ? maxRows : Integer.MAX_VALUE;
-    Scan scan = getMetaScan(metaTable, rowUpperLimit);
+    Scan scan = getMetaScan(metaTable, rowUpperLimit, isPagedScan);
     for (byte[] family : type.getFamilies()) {
       scan.addFamily(family);
     }
@@ -437,7 +500,7 @@ public final class ClientMetaTableAccessor {
     }
   }
 
-  private static Scan getMetaScan(AsyncTable<?> metaTable, int rowUpperLimit) {
+  private static Scan getMetaScan(AsyncTable<?> metaTable, int rowUpperLimit, boolean isPagedScan) {
     Scan scan = new Scan();
     int scannerCaching = metaTable.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
@@ -447,11 +510,18 @@ public final class ClientMetaTableAccessor {
     ) {
       scan.setConsistency(Consistency.TIMELINE);
     }
-    if (rowUpperLimit <= scannerCaching) {
+    if (isPagedScan) {
+      // Caller is doing a bounded paged scan and expects the whole slice back in one ScannerNext
+      // RPC. Size caching to the slice. Trade-off: a single larger response uses more RegionServer
+      // heap, fine for meta rows (small).
       scan.setLimit(rowUpperLimit);
+      scan.setCaching(rowUpperLimit);
+    } else {
+      if (rowUpperLimit <= scannerCaching) {
+        scan.setLimit(rowUpperLimit);
+      }
+      scan.setCaching(Math.min(rowUpperLimit, scannerCaching));
     }
-    int rows = Math.min(rowUpperLimit, scannerCaching);
-    scan.setCaching(rows);
     return scan;
   }
 
