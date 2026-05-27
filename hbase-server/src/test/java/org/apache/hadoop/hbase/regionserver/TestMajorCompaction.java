@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,10 +32,11 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
@@ -60,39 +61,33 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test major compactions
  */
-@Category({ RegionServerTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: compType={0}")
 public class TestMajorCompaction {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMajorCompaction.class);
-
-  @Parameterized.Parameters
-  public static Object[] data() {
-    return new Object[] { "NONE", "BASIC", "EAGER" };
+  public static Stream<Arguments> parameters() {
+    return Stream.of("NONE", "BASIC", "EAGER").map(Arguments::of);
   }
 
-  @Rule
-  public TestName name;
   private static final Logger LOG = LoggerFactory.getLogger(TestMajorCompaction.class.getName());
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   protected Configuration conf = UTIL.getConfiguration();
+
+  private String name;
+  private final String compType;
 
   private HRegion r = null;
   private TableDescriptor htd = null;
@@ -106,7 +101,7 @@ public class TestMajorCompaction {
   /** constructor */
   public TestMajorCompaction(String compType) {
     super();
-    name = new TestName();
+    this.compType = compType;
     // Set cache flush size to 1MB
     conf.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
     conf.setInt(HConstants.HREGION_MEMSTORE_BLOCK_MULTIPLIER, 100);
@@ -121,16 +116,17 @@ public class TestMajorCompaction {
       (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     this.htd = UTIL.createTableDescriptor(
-      TableName.valueOf(name.getMethodName().replace('[', 'i').replace(']', 'i')),
+      TableName.valueOf((name + "-" + compType).replace('[', 'i').replace(']', 'i')),
       ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
       ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     WAL wal = ((HRegion) r).getWAL();
     ((HRegion) r).close();
@@ -143,7 +139,7 @@ public class TestMajorCompaction {
    * basically works.
    * @throws IOException exception encountered
    */
-  @Test
+  @TestTemplate
   public void testMajorCompactingToNoOutput() throws IOException {
     testMajorCompactingWithDeletes(KeepDeletedCells.FALSE);
   }
@@ -152,7 +148,7 @@ public class TestMajorCompaction {
    * Test that on a major compaction,Deleted cells are retained if keep deleted cells is set to true
    * @throws IOException exception encountered
    */
-  @Test
+  @TestTemplate
   public void testMajorCompactingWithKeepDeletedCells() throws IOException {
     testMajorCompactingWithDeletes(KeepDeletedCells.TRUE);
   }
@@ -160,17 +156,17 @@ public class TestMajorCompaction {
   /**
    * Run compaction and flushing memstore Assert deletes get cleaned up.
    */
-  @Test
+  @TestTemplate
   public void testMajorCompaction() throws Exception {
     majorCompaction();
   }
 
-  @Test
+  @TestTemplate
   public void testDataBlockEncodingInCacheOnly() throws Exception {
     majorCompactionWithDataBlockEncoding(true);
   }
 
-  @Test
+  @TestTemplate
   public void testDataBlockEncodingEverywhere() throws Exception {
     majorCompactionWithDataBlockEncoding(false);
   }
@@ -220,8 +216,8 @@ public class TestMajorCompaction {
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
     LOG.debug(
       "Row " + Bytes.toStringBinary(secondRowBytes) + " after " + "initial compaction: " + result);
-    assertEquals("Invalid number of versions of row " + Bytes.toStringBinary(secondRowBytes) + ".",
-      compactionThreshold, result.size());
+    assertEquals(compactionThreshold, result.size(),
+      "Invalid number of versions of row " + Bytes.toStringBinary(secondRowBytes) + ".");
 
     // Now add deletes to memstore and then flush it.
     // That will put us over
@@ -236,26 +232,26 @@ public class TestMajorCompaction {
 
     // Assert deleted.
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
-    assertTrue("Second row should have been deleted", result.isEmpty());
+    assertTrue(result.isEmpty(), "Second row should have been deleted");
 
     r.flush(true);
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
-    assertTrue("Second row should have been deleted", result.isEmpty());
+    assertTrue(result.isEmpty(), "Second row should have been deleted");
 
     // Add a bit of data and flush. Start adding at 'bbb'.
     createSmallerStoreFile(this.r);
     r.flush(true);
     // Assert that the second row is still deleted.
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
-    assertTrue("Second row should still be deleted", result.isEmpty());
+    assertTrue(result.isEmpty(), "Second row should still be deleted");
 
     // Force major compaction.
     r.compact(true);
     assertEquals(1, r.getStore(COLUMN_FAMILY_TEXT).getStorefiles().size());
 
     result = r.get(new Get(secondRowBytes).addFamily(COLUMN_FAMILY_TEXT).readVersions(100));
-    assertTrue("Second row should still be deleted", result.isEmpty());
+    assertTrue(result.isEmpty(), "Second row should still be deleted");
 
     // Make sure the store files do have some 'aaa' keys in them -- exactly 3.
     // Also, that compacted store files do not have any secondRowBytes because
@@ -274,10 +270,10 @@ public class TestMajorCompaction {
 
     r.compact(true);
     int count = count();
-    assertEquals("Should not see anything after TTL has expired", 0, count);
+    assertEquals(0, count, "Should not see anything after TTL has expired");
   }
 
-  @Test
+  @TestTemplate
   public void testTimeBasedMajorCompaction() throws Exception {
     // create 2 storefiles and force a major compaction to reset the time
     int delay = 10 * 1000; // 10 sec
@@ -383,7 +379,7 @@ public class TestMajorCompaction {
   /**
    * Test for HBASE-5920 - Test user requested major compactions always occurring
    */
-  @Test
+  @TestTemplate
   public void testNonUserMajorCompactionRequest() throws Exception {
     HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
@@ -393,16 +389,15 @@ public class TestMajorCompaction {
     store.triggerMajorCompaction();
 
     CompactionRequestImpl request = store.requestCompaction().get().getRequest();
-    assertNotNull("Expected to receive a compaction request", request);
-    assertEquals(
-      "System-requested major compaction should not occur if there are too many store files", false,
-      request.isMajor());
+    assertNotNull(request, "Expected to receive a compaction request");
+    assertEquals(false, request.isMajor(),
+      "System-requested major compaction should not occur if there are too many store files");
   }
 
   /**
    * Test for HBASE-5920
    */
-  @Test
+  @TestTemplate
   public void testUserMajorCompactionRequest() throws IOException {
     HStore store = r.getStore(COLUMN_FAMILY);
     createStoreFile(r);
@@ -412,10 +407,9 @@ public class TestMajorCompaction {
     store.triggerMajorCompaction();
     CompactionRequestImpl request = store
       .requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get().getRequest();
-    assertNotNull("Expected to receive a compaction request", request);
-    assertEquals(
-      "User-requested major compaction should always occur, even if there are too many store files",
-      true, request.isMajor());
+    assertNotNull(request, "Expected to receive a compaction request");
+    assertEquals(true, request.isMajor(),
+      "User-requested major compaction should always occur, even if there are too many store files");
   }
 
   /**
@@ -423,7 +417,7 @@ public class TestMajorCompaction {
    * product. Make sure scanner over region returns right answer in this case - and that it just
    * basically works.
    */
-  @Test
+  @TestTemplate
   public void testMajorCompactingToNoOutputWithReverseScan() throws IOException {
     createStoreFile(r);
     for (int i = 0; i < compactionThreshold; i++) {

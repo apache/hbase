@@ -24,12 +24,12 @@ import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_CACHE_DATA_ON
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.DEFAULT_EVICT_ON_CLOSE;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.EVICT_BLOCKS_ON_CLOSE_KEY;
 import static org.apache.hadoop.hbase.regionserver.DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
@@ -83,7 +83,6 @@ import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -137,14 +136,13 @@ import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.util.Progressable;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -154,15 +152,12 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Test class for the HStore
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHStore {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestHStore.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestHStore.class);
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   HRegion region;
   HStore store;
@@ -189,8 +184,9 @@ public class TestHStore {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestStore").toString();
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
     qualifiers.clear();
     qualifiers.add(qf1);
     qualifiers.add(qf3);
@@ -269,13 +265,14 @@ public class TestHStore {
   /**
    * Test we do not lose data if we fail a flush and then close. Part of HBase-10466
    */
+
   @Test
   public void testFlushSizeSizing() throws Exception {
-    LOG.info("Setting up a faulty file system that cannot write in " + this.name.getMethodName());
+    LOG.info("Setting up a faulty file system that cannot write in " + name);
     final Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     // Only retry once.
     conf.setInt("hbase.hstore.flush.retries.number", 1);
-    User user = User.createUserForTesting(conf, this.name.getMethodName(), new String[] { "foo" });
+    User user = User.createUserForTesting(conf, name, new String[] { "foo" });
     // Inject our faulty LocalFileSystem
     conf.setClass("fs.file.impl", FaultyFileSystem.class, FileSystem.class);
     user.runAs(new PrivilegedExceptionAction<Object>() {
@@ -287,7 +284,7 @@ public class TestHStore {
         FaultyFileSystem ffs = (FaultyFileSystem) fs;
 
         // Initialize region
-        init(name.getMethodName(), conf);
+        init(name, conf);
 
         MemStoreSize mss = store.memstore.getFlushableSize();
         assertEquals(0, mss.getDataSize());
@@ -386,7 +383,7 @@ public class TestHStore {
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setCompressionType(Compression.Algorithm.GZ).setBloomFilterType(bloomType)
       .setConfiguration(BloomFilterUtil.PREFIX_LENGTH_KEY, "3").build();
-    init(name.getMethodName(), conf, hcd);
+    init(name, conf, hcd);
 
     for (int i = 1; i <= numStoreFiles; i++) {
       byte[] row = Bytes.toBytes("row" + i);
@@ -423,7 +420,7 @@ public class TestHStore {
     ColumnFamilyDescriptor hcd =
       ColumnFamilyDescriptorBuilder.newBuilder(family).setCompressionType(Compression.Algorithm.GZ)
         .setDataBlockEncoding(DataBlockEncoding.DIFF).build();
-    init(name.getMethodName(), conf, hcd);
+    init(name, conf, hcd);
 
     // Test createWriter
     StoreFileWriter writer = store.getStoreEngine()
@@ -465,8 +462,8 @@ public class TestHStore {
     // Set the compaction threshold higher to avoid normal compactions.
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 5);
 
-    init(name.getMethodName() + "-" + minVersions, conf, ColumnFamilyDescriptorBuilder
-      .newBuilder(family).setMinVersions(minVersions).setTimeToLive(ttl).build());
+    init(name + "-" + minVersions, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setMinVersions(minVersions).setTimeToLive(ttl).build());
 
     long storeTtl = this.store.getScanInfo().getTtl();
     long sleepTime = storeTtl / storeFileNum;
@@ -525,7 +522,7 @@ public class TestHStore {
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     // Initialize region
-    init(name.getMethodName(), conf);
+    init(name, conf);
 
     int storeFileNum = 4;
     for (int i = 1; i <= storeFileNum; i++) {
@@ -581,7 +578,7 @@ public class TestHStore {
    */
   @Test
   public void testEmptyStoreFile() throws IOException {
-    init(this.name.getMethodName());
+    init(name);
     // Write a store file.
     this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
     this.store.add(new KeyValue(row, family, qf2, 1, (byte[]) null), null);
@@ -613,7 +610,7 @@ public class TestHStore {
    */
   @Test
   public void testGet_FromMemStoreOnly() throws IOException {
-    init(this.name.getMethodName());
+    init(name);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
@@ -638,7 +635,7 @@ public class TestHStore {
   }
 
   private void testTimeRangeIfSomeCellsAreDroppedInFlush(int maxVersion) throws IOException {
-    init(this.name.getMethodName(), TEST_UTIL.getConfiguration(),
+    init(name, TEST_UTIL.getConfiguration(),
       ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(maxVersion).build());
     long currentTs = 100;
     long minTs = currentTs;
@@ -666,7 +663,7 @@ public class TestHStore {
    */
   @Test
   public void testGet_FromFilesOnly() throws IOException {
-    init(this.name.getMethodName());
+    init(name);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
@@ -702,7 +699,7 @@ public class TestHStore {
    */
   @Test
   public void testGet_FromMemStoreAndFiles() throws IOException {
-    init(this.name.getMethodName());
+    init(name);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
@@ -743,7 +740,7 @@ public class TestHStore {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     if (store != null) {
@@ -759,7 +756,7 @@ public class TestHStore {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws IOException {
     TEST_UTIL.cleanupTestDir();
   }
@@ -780,7 +777,7 @@ public class TestHStore {
         assertEquals(FaultyFileSystem.class, fs.getClass());
 
         // Initialize region
-        init(name.getMethodName(), conf);
+        init(name, conf);
 
         LOG.info("Adding some data");
         store.add(new KeyValue(row, family, qf1, 1, (byte[]) null), null);
@@ -906,7 +903,7 @@ public class TestHStore {
     long[] timestamps1 = new long[] { 1, 5, 10, 20 };
     long[] timestamps2 = new long[] { 30, 80 };
 
-    init(this.name.getMethodName());
+    init(name);
 
     List<ExtendedCell> kvList1 = getKeyValueSet(timestamps1, numRows, qf1, family);
     for (ExtendedCell kv : kvList1) {
@@ -955,7 +952,7 @@ public class TestHStore {
    */
   @Test
   public void testSplitWithEmptyColFam() throws IOException {
-    init(this.name.getMethodName());
+    init(name);
     assertFalse(store.getSplitPoint().isPresent());
   }
 
@@ -969,22 +966,20 @@ public class TestHStore {
     // a number we pass in is higher than some config value, inside compactionPolicy.
     Configuration conf = HBaseConfiguration.create();
     conf.setLong(CONFIG_KEY, anyValue);
-    init(name.getMethodName() + "-xml", conf);
+    init(name + "-xml", conf);
     assertTrue(store.throttleCompaction(anyValue + 1));
     assertFalse(store.throttleCompaction(anyValue));
 
     // HTD overrides XML.
     --anyValue;
-    init(
-      name.getMethodName() + "-htd", conf, TableDescriptorBuilder
-        .newBuilder(TableName.valueOf(table)).setValue(CONFIG_KEY, Long.toString(anyValue)),
-      ColumnFamilyDescriptorBuilder.of(family));
+    init(name + "-htd", conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table))
+      .setValue(CONFIG_KEY, Long.toString(anyValue)), ColumnFamilyDescriptorBuilder.of(family));
     assertTrue(store.throttleCompaction(anyValue + 1));
     assertFalse(store.throttleCompaction(anyValue));
 
     // HCD overrides them both.
     --anyValue;
-    init(name.getMethodName() + "-hcd", conf,
+    init(name + "-hcd", conf,
       TableDescriptorBuilder.newBuilder(TableName.valueOf(table)).setValue(CONFIG_KEY,
         Long.toString(anyValue)),
       ColumnFamilyDescriptorBuilder.newBuilder(family).setValue(CONFIG_KEY, Long.toString(anyValue))
@@ -1008,7 +1003,7 @@ public class TestHStore {
   public void testStoreUsesSearchEngineOverride() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(StoreEngine.STORE_ENGINE_CLASS_KEY, DummyStoreEngine.class.getName());
-    init(this.name.getMethodName(), conf);
+    init(name, conf);
     assertEquals(DummyStoreEngine.lastCreatedCompactor, this.store.storeEngine.getCompactor());
   }
 
@@ -1054,7 +1049,7 @@ public class TestHStore {
 
   @Test
   public void testRefreshStoreFiles() throws Exception {
-    init(name.getMethodName());
+    init(name);
 
     assertEquals(0, this.store.getStorefilesCount());
 
@@ -1105,7 +1100,7 @@ public class TestHStore {
 
   @Test
   public void testRefreshStoreFilesNotChanged() throws IOException {
-    init(name.getMethodName());
+    init(name);
 
     assertEquals(0, this.store.getStorefilesCount());
 
@@ -1134,7 +1129,7 @@ public class TestHStore {
   public void testScanWithCompactionAfterFlush() throws Exception {
     TEST_UTIL.getConfiguration().set(DEFAULT_COMPACTION_POLICY_CLASS_KEY,
       EverythingPolicy.class.getName());
-    init(name.getMethodName());
+    init(name);
 
     assertEquals(0, this.store.getStorefilesCount());
 
@@ -1226,7 +1221,7 @@ public class TestHStore {
 
   private void testNumberOfMemStoreScannersAfterFlush(List<ExtendedCell> inputCellsBeforeSnapshot,
     List<ExtendedCell> inputCellsAfterSnapshot) throws IOException {
-    init(this.name.getMethodName() + "-" + inputCellsBeforeSnapshot.size());
+    init(name + "-" + inputCellsBeforeSnapshot.size());
     TreeSet<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     long seqId = Long.MIN_VALUE;
     for (ExtendedCell c : inputCellsBeforeSnapshot) {
@@ -1257,10 +1252,9 @@ public class TestHStore {
         cellCount += cells.size();
         assertEquals(more ? numberOfMemScannersAfterFlush : 0, countMemStoreScanner(s));
       } while (more);
-      assertEquals(
+      assertEquals(inputCellsBeforeSnapshot.size() + inputCellsAfterSnapshot.size(), cellCount,
         "The number of cells added before snapshot is " + inputCellsBeforeSnapshot.size()
-          + ", The number of cells added after snapshot is " + inputCellsAfterSnapshot.size(),
-        inputCellsBeforeSnapshot.size() + inputCellsAfterSnapshot.size(), cellCount);
+          + ", The number of cells added after snapshot is " + inputCellsAfterSnapshot.size());
       // the current scanners is cleared
       assertEquals(0, countMemStoreScanner(s));
     }
@@ -1384,7 +1378,7 @@ public class TestHStore {
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = EnvironmentEdgeManager.currentTime();
     long seqId = 100;
-    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+    init(name, conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
       ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(1).build(),
       new MyStoreHook() {
         @Override
@@ -1413,8 +1407,8 @@ public class TestHStore {
       assertEquals(expectedSize, myList.size());
       for (Cell c : myList) {
         byte[] actualValue = CellUtil.cloneValue(c);
-        assertTrue("expected:" + Bytes.toStringBinary(value1) + ", actual:"
-          + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value1));
+        assertTrue(Bytes.equals(actualValue, value1), "expected:" + Bytes.toStringBinary(value1)
+          + ", actual:" + Bytes.toStringBinary(actualValue));
       }
       List<Cell> normalList = new ArrayList<>(3);
       // r2
@@ -1422,8 +1416,8 @@ public class TestHStore {
       assertEquals(3, normalList.size());
       for (Cell c : normalList) {
         byte[] actualValue = CellUtil.cloneValue(c);
-        assertTrue("expected:" + Bytes.toStringBinary(value2) + ", actual:"
-          + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value2));
+        assertTrue(Bytes.equals(actualValue, value2), "expected:" + Bytes.toStringBinary(value2)
+          + ", actual:" + Bytes.toStringBinary(actualValue));
       }
     }
   }
@@ -1442,7 +1436,7 @@ public class TestHStore {
     final long ts = EnvironmentEdgeManager.currentTime();
     final long seqId = 100;
 
-    init(name.getMethodName(), conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
+    init(name, conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)),
       ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(1).build(),
       new MyStoreHook() {
         @Override
@@ -1500,7 +1494,7 @@ public class TestHStore {
   public void testCreateScannerAndSnapshotConcurrently() throws IOException, InterruptedException {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore.class.getName());
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("value");
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
@@ -1537,8 +1531,8 @@ public class TestHStore {
         assertEquals(3, results.size());
         for (Cell c : results) {
           byte[] actualValue = CellUtil.cloneValue(c);
-          assertTrue("expected:" + Bytes.toStringBinary(value) + ", actual:"
-            + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value));
+          assertTrue(Bytes.equals(actualValue, value), "expected:" + Bytes.toStringBinary(value)
+            + ", actual:" + Bytes.toStringBinary(actualValue));
         }
       } finally {
         scanner.close();
@@ -1554,7 +1548,7 @@ public class TestHStore {
   public void testScanWithDoubleFlush() throws IOException {
     Configuration conf = HBaseConfiguration.create();
     // Initialize region
-    MyStore myStore = initMyStore(name.getMethodName(), conf, new MyStoreHook() {
+    MyStore myStore = initMyStore(name, conf, new MyStoreHook() {
       @Override
       public void getScanners(MyStore store) throws IOException {
         final long tmpId = id++;
@@ -1612,8 +1606,8 @@ public class TestHStore {
       assertEquals(3, results.size());
       for (Cell c : results) {
         byte[] actualValue = CellUtil.cloneValue(c);
-        assertTrue("expected:" + Bytes.toStringBinary(currentValue) + ", actual:"
-          + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, currentValue));
+        assertTrue(Bytes.equals(actualValue, currentValue), "expected:"
+          + Bytes.toStringBinary(currentValue) + ", actual:" + Bytes.toStringBinary(actualValue));
       }
     }
   }
@@ -1634,7 +1628,7 @@ public class TestHStore {
     final CyclicBarrier cyclicBarrier = new CyclicBarrier(2);
     final AtomicBoolean shouldWaitRef = new AtomicBoolean(false);
     // Initialize region
-    final MyStore myStore = initMyStore(name.getMethodName(), conf, new MyStoreHook() {
+    final MyStore myStore = initMyStore(name, conf, new MyStoreHook() {
       @Override
       public void getScanners(MyStore store) throws IOException {
         try {
@@ -1767,8 +1761,8 @@ public class TestHStore {
       assertEquals(3, results.size());
       for (Cell c : results) {
         byte[] actualValue = CellUtil.cloneValue(c);
-        assertTrue("expected:" + Bytes.toStringBinary(value) + ", actual:"
-          + Bytes.toStringBinary(actualValue), Bytes.equals(actualValue, value));
+        assertTrue(Bytes.equals(actualValue, value), "expected:" + Bytes.toStringBinary(value)
+          + ", actual:" + Bytes.toStringBinary(actualValue));
       }
     }
   }
@@ -1789,7 +1783,7 @@ public class TestHStore {
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushSize));
     // Set the lower threshold to invoke the "MERGE" policy
     conf.set(MemStoreCompactionStrategy.COMPACTING_MEMSTORE_THRESHOLD_KEY, String.valueOf(0));
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
     byte[] value = Bytes.toBytes("thisisavarylargevalue");
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
@@ -1833,8 +1827,8 @@ public class TestHStore {
     EnvironmentEdgeManager.injectEdge(edge);
     Configuration conf = TEST_UTIL.getConfiguration();
     ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.of(family);
-    initHRegion(name.getMethodName(), conf,
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(table)), hcd, null, false);
+    initHRegion(name, conf, TableDescriptorBuilder.newBuilder(TableName.valueOf(table)), hcd, null,
+      false);
     HStore store = new HStore(region, hcd, conf, false) {
 
       @Override
@@ -1913,7 +1907,7 @@ public class TestHStore {
     conf.set("hbase.hstore.engine.class", DummyStoreEngine.class.getName());
     conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 0);
     // Set the lower threshold to invoke the "MERGE" policy
-    MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {
+    MyStore store = initMyStore(name, conf, new MyStoreHook() {
     });
     MemStoreSizing memStoreSizing = new NonThreadSafeMemStoreSizing();
     long ts = EnvironmentEdgeManager.currentTime();
@@ -1979,7 +1973,7 @@ public class TestHStore {
     conf.set("hbase.hstore.engine.class", DummyStoreEngine.class.getName());
     // Set 'hbase.storescanner.pread.max.bytes' < 0, so that StoreScanner will be a STREAM type.
     conf.setLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, -1);
-    MyStore store = initMyStore(name.getMethodName(), conf, new MyStoreHook() {
+    MyStore store = initMyStore(name, conf, new MyStoreHook() {
     });
     Scan scan = new Scan();
     scan.addFamily(family);
@@ -1994,7 +1988,7 @@ public class TestHStore {
   public void testInMemoryCompactionTypeWithLowerCase() throws IOException, InterruptedException {
     Configuration conf = HBaseConfiguration.create();
     conf.set("hbase.systemtables.compacting.memstore.type", "eager");
-    init(name.getMethodName(), conf,
+    init(name, conf,
       TableDescriptorBuilder.newBuilder(
         TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME, "meta".getBytes())),
       ColumnFamilyDescriptorBuilder.newBuilder(family)
@@ -2005,8 +1999,8 @@ public class TestHStore {
 
   @Test
   public void testSpaceQuotaChangeAfterReplacement() throws IOException {
-    final TableName tn = TableName.valueOf(name.getMethodName());
-    init(name.getMethodName());
+    final TableName tn = TableName.valueOf(name);
+    init(name);
 
     RegionSizeStoreImpl sizeStore = new RegionSizeStoreImpl();
 
@@ -2046,7 +2040,7 @@ public class TestHStore {
 
   @Test
   public void testHFileContextSetWithCFAndTable() throws Exception {
-    init(this.name.getMethodName());
+    init(name);
     StoreFileWriter writer = store.getStoreEngine()
       .createWriter(CreateStoreFileWriterParams.create().maxKeyCount(10000L)
         .compression(Compression.Algorithm.NONE).isCompaction(true).includeMVCCReadpoint(true)
@@ -2078,7 +2072,7 @@ public class TestHStore {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
 
     MyCompactingMemStore2 myCompactingMemStore = ((MyCompactingMemStore2) store.memstore);
@@ -2127,12 +2121,13 @@ public class TestHStore {
 
   // This test is for HBASE-26210, HBase Write be stuck when there is cell which size exceeds
   // InmemoryFlushSize
-  @Test(timeout = 60000)
+  @Test
+  @Timeout(value = 60000, unit = TimeUnit.MILLISECONDS)
   public void testCompactingMemStoreCellExceedInmemoryFlushSize() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyCompactingMemStore6.class.getName());
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
 
     MyCompactingMemStore6 myCompactingMemStore = ((MyCompactingMemStore6) store.memstore);
@@ -2184,7 +2179,7 @@ public class TestHStore {
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
     // Use {@link MemoryCompactionPolicy#EAGER} for always compacting.
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.EAGER).build());
 
     MyCompactingMemStore6 myCompactingMemStore = ((MyCompactingMemStore6) store.memstore);
@@ -2290,7 +2285,7 @@ public class TestHStore {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
 
     MyCompactingMemStore3 myCompactingMemStore = ((MyCompactingMemStore3) store.memstore);
@@ -2419,7 +2414,7 @@ public class TestHStore {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
 
     MyCompactingMemStore4 myCompactingMemStore = ((MyCompactingMemStore4) store.memstore);
@@ -2522,7 +2517,7 @@ public class TestHStore {
     conf.setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, 0.005);
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
 
     final MyCompactingMemStore5 myCompactingMemStore = ((MyCompactingMemStore5) store.memstore);
@@ -2621,7 +2616,7 @@ public class TestHStore {
     conf.set(HStore.MEMSTORE_CLASS_NAME, MyDefaultMemStore.class.getName());
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
     MyDefaultMemStore myDefaultMemStore = (MyDefaultMemStore) (store.memstore);
     myDefaultMemStore.store = store;
 
@@ -2710,7 +2705,7 @@ public class TestHStore {
       .setConfiguration(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
         String.valueOf(STORE_MAX_FILES_TO_COMPACT))
       .build();
-    init(this.name.getMethodName(), conf, hcd);
+    init(name, conf, hcd);
 
     // After updating common configuration, the conf in HStore itself must not be changed.
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY,
@@ -2739,12 +2734,12 @@ public class TestHStore {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
     assertTrue(this.store.memstore.getClass() == DefaultMemStore.class);
     tearDown();
 
     conf.set(HStore.MEMSTORE_CLASS_NAME, CustomDefaultMemStore.class.getName());
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
     assertTrue(this.store.memstore.getClass() == CustomDefaultMemStore.class);
   }
 
@@ -2779,7 +2774,7 @@ public class TestHStore {
     conf.set(DefaultStoreEngine.DEFAULT_STORE_FLUSHER_CLASS_KEY,
       MyDefaultStoreFlusher.class.getName());
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family).build());
     MyDefaultMemStore1 myDefaultMemStore = (MyDefaultMemStore1) (store.memstore);
     assertTrue((store.storeEngine.getStoreFlusher()) instanceof MyDefaultStoreFlusher);
 
@@ -2894,7 +2889,7 @@ public class TestHStore {
     conf.set(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, String.valueOf(flushByteSize * 200));
     conf.setBoolean(WALFactory.WAL_ENABLED, false);
 
-    init(name.getMethodName(), conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
+    init(name, conf, ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setInMemoryCompaction(MemoryCompactionPolicy.BASIC).build());
 
     final CompactingMemStore myCompactingMemStore = ((CompactingMemStore) store.memstore);
