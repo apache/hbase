@@ -117,7 +117,7 @@ public class TestHRegionServerBulkLoad {
     }
   }
 
-  public static final Stream<Arguments> parameters() {
+  public static Stream<Arguments> parameters() {
     int[] sleepDurations = new int[] { 0, 30000 };
     List<Arguments> configurations = new ArrayList<>();
     for (int i : sleepDurations) {
