@@ -194,7 +194,7 @@ public class TestChangeStoreFileTracker {
 
   @Test
   public void testModifyError9() throws IOException {
-    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName.getTableName())
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("family")).build();
     UTIL.getAdmin().createTable(td);
     UTIL.getAdmin().disableTable(td.getTableName());
