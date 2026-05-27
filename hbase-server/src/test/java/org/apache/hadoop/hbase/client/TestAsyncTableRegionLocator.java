@@ -22,6 +22,7 @@ import static org.apache.hadoop.hbase.util.FutureUtils.get;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.HRegionLocation;
+import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -89,6 +90,18 @@ public class TestAsyncTableRegionLocator extends AbstractTestRegionLocator {
   @Override
   protected List<HRegionLocation> getAllRegionLocations(TableName tableName) throws IOException {
     return get(CONN.getRegionLocator(tableName).getAllRegionLocations());
+  }
+
+  @Override
+  protected List<HRegionLocation> getRegionLocationsPage(TableName tableName, byte[] startKey,
+    int limit) throws IOException {
+    return get(CONN.getRegionLocator(tableName).getRegionLocationsPage(startKey, limit));
+  }
+
+  @Override
+  protected RegionLocations getCachedLocation(TableName tableName, byte[] startKey) {
+    return ((AsyncConnectionImpl) CONN).getLocator().getNonMetaRegionLocator()
+      .getCachedLocation(tableName, startKey);
   }
 
   @Override
