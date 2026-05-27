@@ -24,6 +24,7 @@ import static org.apache.hadoop.hbase.HBaseTestingUtil.fam3;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -45,6 +46,7 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
+import java.lang.reflect.Field;
 import java.math.BigDecimal;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
@@ -82,6 +84,7 @@ import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
+import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.ExtendedCell;
@@ -159,11 +162,13 @@ import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -7891,9 +7896,9 @@ public class TestHRegion {
       NoOpRegionCoprocessor.class.getName());
     // trigger configuration change
     region.onConfigurationChange(newConf);
-    assertTrue(region.getCoprocessorHost() != null);
+    assertNotNull(region.getCoprocessorHost());
     Set<String> coprocessors = region.getCoprocessorHost().getCoprocessors();
-    assertTrue(coprocessors.size() == 2);
+    assertEquals(2, coprocessors.size());
     assertTrue(region.getCoprocessorHost().getCoprocessors()
       .contains(MetaTableMetrics.class.getSimpleName()));
     assertTrue(region.getCoprocessorHost().getCoprocessors()
@@ -7902,9 +7907,9 @@ public class TestHRegion {
     // remove region coprocessor and keep only user region coprocessor
     newConf.unset(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
     region.onConfigurationChange(newConf);
-    assertTrue(region.getCoprocessorHost() != null);
+    assertNotNull(region.getCoprocessorHost());
     coprocessors = region.getCoprocessorHost().getCoprocessors();
-    assertTrue(coprocessors.size() == 1);
+    assertEquals(1, coprocessors.size());
     assertTrue(region.getCoprocessorHost().getCoprocessors()
       .contains(NoOpRegionCoprocessor.class.getSimpleName()));
   }
@@ -8005,5 +8010,67 @@ public class TestHRegion {
       }
       TEST_UTIL.cleanupTestDir();
     }
+  }
+
+  /**
+   * A region can miss read-only coprocessors after repeated toggles if
+   * {@code maybeUpdateCoprocessors} syncs to the server configuration instead of the region's
+   * {@link org.apache.hadoop.hbase.CompoundConfiguration}.
+   */
+  @Test
+  public void testRegionOnConfigurationChangeLoadsReadOnlyCoprocessorsAfterRepeatedToggle()
+    throws IOException {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    Configuration serverConf = new Configuration(CONF);
+    serverConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
+
+    region = initHRegion(tableName, method, serverConf, new byte[][] { cf1 });
+    region.setCoprocessorHost(new RegionCoprocessorHost(region, null, region.getConfiguration()));
+
+    String regionCpKey = CoprocessorHost.REGION_COPROCESSOR_CONF_KEY;
+    boolean[] toggleSequence = new boolean[] { true, false, true, true, false, false };
+
+    for (boolean readOnlyEnabled : toggleSequence) {
+      Configuration newConf = new Configuration(serverConf);
+      newConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, readOnlyEnabled);
+      region.onConfigurationChange(newConf);
+
+      if (readOnlyEnabled) {
+        assertNotNull(
+          region.getCoprocessorHost().findCoprocessor(RegionReadOnlyController.class.getName()));
+      } else {
+        assertNull(
+          region.getCoprocessorHost().findCoprocessor(RegionReadOnlyController.class.getName()));
+      }
+      assertEquals(readOnlyEnabled, CoprocessorConfigurationUtil
+        .areReadOnlyCoprocessorsLoaded(region.getConfiguration(), regionCpKey));
+    }
+  }
+
+  /**
+   * Verifies the new RegionCoprocessorHost object created in HRegion.onConfigurationChange() uses a
+   * CompoundConfiguration in its constructor rather than a Configuration object.
+   */
+  @Test
+  public void testRegionCoprocessorHostUsesCompoundConfigurationAfterConfigChange()
+    throws Exception {
+    byte[] cf1 = Bytes.toBytes("CF1");
+    Configuration serverConf = new Configuration(CONF);
+    serverConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
+
+    region = initHRegion(tableName, method, serverConf, new byte[][] { cf1 });
+    region.setCoprocessorHost(new RegionCoprocessorHost(region, null, region.getConfiguration()));
+
+    // Enable read-only mode to trigger coprocessor reload and new RegionCoprocessorHost creation
+    Configuration newConf = new Configuration(serverConf);
+    newConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+    region.onConfigurationChange(newConf);
+
+    // Use reflection to access the protected conf field on CoprocessorHost, which holds the
+    // Configuration passed to the RegionCoprocessorHost constructor
+    Field confField = CoprocessorHost.class.getDeclaredField("conf");
+    confField.setAccessible(true);
+    Configuration hostConf = (Configuration) confField.get(region.getCoprocessorHost());
+    assertInstanceOf(CompoundConfiguration.class, hostConf);
   }
 }
