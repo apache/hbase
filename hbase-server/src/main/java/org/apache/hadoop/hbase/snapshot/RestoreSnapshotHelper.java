@@ -32,7 +32,6 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -40,7 +39,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -509,13 +507,16 @@ public class RestoreSnapshotHelper {
       List<SnapshotRegionManifest.StoreFile> snapshotFamilyFiles =
         snapshotFiles.remove(familyDir.getName());
       if (snapshotFamilyFiles != null) {
-        // Family exists in the snapshot, create tracker with merged table descriptor config
-        // so that table-level settings are picked up.
+        // Family exists in the snapshot. Create tracker using tableDesc (recovered from the
+        // snapshot manifest) merged with the base conf, so that table-level SFT settings are
+        // picked up. Note: if the live table's SFT config differs from the snapshot's, it
+        // will be overwritten with the snapshot's config as part of the restore.
         Configuration sftConf =
           StoreUtils.createStoreConfiguration(conf, tableDesc, tableDesc.getColumnFamily(family));
         StoreFileTracker tracker = StoreFileTrackerFactory.create(sftConf, true,
           StoreContext.getBuilder().withColumnFamilyDescriptor(tableDesc.getColumnFamily(family))
             .withFamilyStoreDirectoryPath(familyDir).withRegionFileSystem(regionFS).build());
+        List<StoreFileInfo> storeFileInfos = tracker.load();
         List<StoreFileInfo> filesToTrack = new ArrayList<>();
         List<SnapshotRegionManifest.StoreFile> hfilesToAdd = new ArrayList<>();
         for (SnapshotRegionManifest.StoreFile storeFile : snapshotFamilyFiles) {
@@ -591,6 +592,21 @@ public class RestoreSnapshotHelper {
       }
       tracker.set(files);
     }
+  }
+
+  private Set<String> getTableRegionFamilyFiles(final Path familyDir) throws IOException {
+    FileStatus[] hfiles = CommonFSUtils.listStatus(fs, familyDir);
+    if (hfiles == null) {
+      return Collections.emptySet();
+    }
+
+    Set<String> familyFiles = new HashSet<>(hfiles.length);
+    for (int i = 0; i < hfiles.length; ++i) {
+      String hfileName = hfiles[i].getPath().getName();
+      familyFiles.add(hfileName);
+    }
+
+    return familyFiles;
   }
 
   /**
