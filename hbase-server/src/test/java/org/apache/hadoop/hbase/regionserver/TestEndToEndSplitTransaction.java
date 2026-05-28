@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
 import org.apache.hadoop.hbase.ChoreService;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -63,13 +62,12 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.StoppableImplementation;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -77,27 +75,26 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestEndToEndSplitTransaction {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEndToEndSplitTransaction.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestEndToEndSplitTransaction.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration CONF = TEST_UTIL.getConfiguration();
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 5);
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -138,8 +135,8 @@ public class TestEndToEndSplitTransaction {
             LOG.info("Got reference to file = " + sf.getPath() + ",for region = "
               + r.getRegionInfo().getEncodedName());
           }));
-      assertTrue("Regions did not split properly", regions.size() > 1);
-      assertTrue("Could not get reference any of the store file", scanner.size() > 1);
+      assertTrue(regions.size() > 1, "Regions did not split properly");
+      assertTrue(scanner.size() > 1, "Could not get reference any of the store file");
       compactSplit.setCompactionsEnabled(true);
       for (HRegion region : regions) {
         region.compact(true);
@@ -147,8 +144,8 @@ public class TestEndToEndSplitTransaction {
 
       regions.stream()
         .filter(region -> scanner.containsKey(region.getRegionInfo().getEncodedName()))
-        .forEach(r -> assertFalse("Contains an open file reference which can be split",
-          r.getStores().get(0).canSplit()));
+        .forEach(r -> assertFalse(r.getStores().get(0).canSplit(),
+          "Contains an open file reference which can be split"));
     } finally {
       scanner.values().forEach(s -> {
         try {
@@ -172,7 +169,7 @@ public class TestEndToEndSplitTransaction {
   @Test
   public void testFromClientSideWhileSplitting() throws Throwable {
     LOG.info("Starting testFromClientSideWhileSplitting");
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     final byte[] FAMILY = Bytes.toBytes("family");
 
     // SplitTransaction will update the meta table by offlining the parent region, and adding info
@@ -345,22 +342,21 @@ public class TestEndToEndSplitTransaction {
       byte[][] startKeys = keys.getFirst();
       byte[][] endKeys = keys.getSecond();
       assertEquals(startKeys.length, endKeys.length);
-      assertTrue("Found 0 regions for the table", startKeys.length > 0);
+      assertTrue(startKeys.length > 0, "Found 0 regions for the table");
 
-      assertArrayEquals("Start key for the first region is not byte[0]", HConstants.EMPTY_START_ROW,
-        startKeys[0]);
+      assertArrayEquals(HConstants.EMPTY_START_ROW, startKeys[0],
+        "Start key for the first region is not byte[0]");
       byte[] prevEndKey = HConstants.EMPTY_START_ROW;
 
       // ensure that we do not have any gaps
       for (int i = 0; i < startKeys.length; i++) {
-        assertArrayEquals(
+        assertArrayEquals(prevEndKey, startKeys[i],
           "Hole in hbase:meta is detected. prevEndKey=" + Bytes.toStringBinary(prevEndKey)
-            + " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]),
-          prevEndKey, startKeys[i]);
+            + " ,regionStartKey=" + Bytes.toStringBinary(startKeys[i]));
         prevEndKey = endKeys[i];
       }
-      assertArrayEquals("End key for the last region is not byte[0]", HConstants.EMPTY_END_ROW,
-        endKeys[endKeys.length - 1]);
+      assertArrayEquals(HConstants.EMPTY_END_ROW, endKeys[endKeys.length - 1],
+        "End key for the last region is not byte[0]");
     }
 
     @Override

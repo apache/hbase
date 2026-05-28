@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,7 +33,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -53,22 +52,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.BloomFilterFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Tests writing Bloom filter blocks in the same part of the file as data blocks.
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCompoundBloomFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompoundBloomFilter.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -130,7 +125,7 @@ public class TestCompoundBloomFilter {
 
   private BlockCache blockCache;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
 
@@ -210,8 +205,8 @@ public class TestCompoundBloomFilter {
       for (KeyValue kv : kvs) {
         byte[] row = CellUtil.cloneRow(kv);
         boolean present = isInBloom(scanner, row, CellUtil.cloneQualifier(kv));
-        assertTrue(testIdMsg + " Bloom filter false negative on row " + Bytes.toStringBinary(row)
-          + " after " + numChecked + " successful checks", present);
+        assertTrue(present, testIdMsg + " Bloom filter false negative on row "
+          + Bytes.toStringBinary(row) + " after " + numChecked + " successful checks");
         ++numChecked;
       }
     }
@@ -241,8 +236,8 @@ public class TestCompoundBloomFilter {
           nTrials, falsePosRate) + fakeLookupModeStr);
 
         // Check for obvious Bloom filter crashes.
-        assertTrue("False positive is too high: " + falsePosRate + " (greater " + "than "
-          + TOO_HIGH_ERROR_RATE + ")" + fakeLookupModeStr, falsePosRate < TOO_HIGH_ERROR_RATE);
+        assertTrue(falsePosRate < TOO_HIGH_ERROR_RATE, "False positive is too high: " + falsePosRate
+          + " (greater " + "than " + TOO_HIGH_ERROR_RATE + ")" + fakeLookupModeStr);
 
         // Now a more precise check to see if the false positive rate is not
         // too high. The reason we use a relaxed restriction for the real-world

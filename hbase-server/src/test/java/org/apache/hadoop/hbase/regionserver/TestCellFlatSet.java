@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
@@ -28,11 +28,12 @@ import java.util.Iterator;
 import java.util.NavigableMap;
 import java.util.NavigableSet;
 import java.util.SortedSet;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -43,24 +44,19 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@Category({ RegionServerTests.class, SmallTests.class })
-@RunWith(Parameterized.class)
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: chunkType={0}")
 public class TestCellFlatSet {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellFlatSet.class);
-
-  @Parameterized.Parameters
-  public static Object[] data() {
-    return new Object[] { "SMALL_CHUNKS", "NORMAL_CHUNKS" }; // test with different chunk sizes
+  public static Stream<Arguments> parameters() {
+    // test with different chunk sizes
+    return Stream.of(Arguments.of("SMALL_CHUNKS"), Arguments.of("NORMAL_CHUNKS"));
   }
 
   private static final int NUM_OF_CELLS = 4;
@@ -101,7 +97,7 @@ public class TestCellFlatSet {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // create array of Cells to bass to the CellFlatMap under CellSet
     final byte[] one = Bytes.toBytes(15);
@@ -141,7 +137,7 @@ public class TestCellFlatSet {
   }
 
   /* Create and test ascending CellSet based on CellArrayMap */
-  @Test
+  @TestTemplate
   public void testCellArrayMapAsc() throws Exception {
     CellSet<ExtendedCell> cs = new CellSet<>(ascCbOnHeap);
     testCellBlocks(cs);
@@ -149,7 +145,7 @@ public class TestCellFlatSet {
   }
 
   /* Create and test ascending and descending CellSet based on CellChunkMap */
-  @Test
+  @TestTemplate
   public void testCellChunkMap() throws Exception {
     CellSet<ExtendedCell> cs = new CellSet<>(ascCCM);
     testCellBlocks(cs);
@@ -164,14 +160,14 @@ public class TestCellFlatSet {
     // testSubSet(cs);
   }
 
-  @Test
+  @TestTemplate
   public void testAsc() throws Exception {
     CellSet<ExtendedCell> ascCs = new CellSet<>(ascCbOnHeap);
     assertEquals(NUM_OF_CELLS, ascCs.size());
     testSubSet(ascCs);
   }
 
-  @Test
+  @TestTemplate
   public void testDesc() throws Exception {
     CellSet<ExtendedCell> descCs = new CellSet<>(descCbOnHeap);
     assertEquals(NUM_OF_CELLS, descCs.size());
@@ -265,13 +261,12 @@ public class TestCellFlatSet {
     // Assert that we have NUM_OF_CELLS values and that they are in order
     int count = 0;
     for (Cell kv : cs) {
-      assertEquals(
+      assertEquals(ascCells[count], kv,
         "\n\n-------------------------------------------------------------------\n"
           + "Comparing iteration number " + (count + 1) + " the returned cell: " + kv
           + ", the first Cell in the CellBlocksMap: " + ascCells[count]
           + ", and the same transformed to String: " + ascCells[count].toString()
-          + "\n-------------------------------------------------------------------\n",
-        ascCells[count], kv);
+          + "\n-------------------------------------------------------------------\n");
       count++;
     }
     assertEquals(NUM_OF_CELLS, count);

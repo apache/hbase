@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static java.util.Arrays.asList;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.verify;
@@ -30,33 +31,29 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
  * This class attempts to unit test bulk HLog loading.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestBulkLoad extends TestBulkloadBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoad.class);
 
   public TestBulkLoad(boolean useFileBasedSFT) {
     super(useFileBasedSFT);
   }
 
-  @Test
+  @TestTemplate
   public void verifyBulkLoadEvent() throws IOException {
     TableName tableName = TableName.valueOf("test", "test");
     List<Pair<byte[], String>> familyPaths = withFamilyPathsFor(family1);
@@ -84,12 +81,12 @@ public class TestBulkLoad extends TestBulkloadBase {
     verify(log).sync(anyLong());
   }
 
-  @Test
+  @TestTemplate
   public void bulkHLogShouldThrowNoErrorAndWriteMarkerWithBlankInput() throws IOException {
     testRegionWithFamilies(family1).bulkLoadHFiles(new ArrayList<>(), false, null);
   }
 
-  @Test
+  @TestTemplate
   public void shouldBulkLoadSingleFamilyHLog() throws IOException {
     when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
       .thenAnswer(new Answer() {
@@ -108,7 +105,7 @@ public class TestBulkLoad extends TestBulkloadBase {
     verify(log).sync(anyLong());
   }
 
-  @Test
+  @TestTemplate
   public void shouldBulkLoadManyFamilyHLog() throws IOException {
     when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
       .thenAnswer(new Answer() {
@@ -120,7 +117,7 @@ public class TestBulkLoad extends TestBulkloadBase {
             MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
             walKey.setWriteEntry(we);
           }
-          return 01L;
+          return 1L;
         }
       });
     testRegionWithFamilies(family1, family2).bulkLoadHFiles(withFamilyPathsFor(family1, family2),
@@ -128,7 +125,7 @@ public class TestBulkLoad extends TestBulkloadBase {
     verify(log).sync(anyLong());
   }
 
-  @Test
+  @TestTemplate
   public void shouldBulkLoadManyFamilyHLogEvenWhenTableNameNamespaceSpecified() throws IOException {
     when(log.appendMarker(any(), any(), argThat(bulkLogWalEditType(WALEdit.BULK_LOAD))))
       .thenAnswer(new Answer() {
@@ -140,7 +137,7 @@ public class TestBulkLoad extends TestBulkloadBase {
             MultiVersionConcurrencyControl.WriteEntry we = mvcc.begin();
             walKey.setWriteEntry(we);
           }
-          return 01L;
+          return 1L;
         }
       });
     TableName tableName = TableName.valueOf("test", "test");
@@ -149,43 +146,46 @@ public class TestBulkLoad extends TestBulkloadBase {
     verify(log).sync(anyLong());
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @TestTemplate
   public void shouldCrashIfBulkLoadFamiliesNotInTable() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2), false,
-      null);
+    assertThrows(DoNotRetryIOException.class, () -> testRegionWithFamilies(family1)
+      .bulkLoadHFiles(withFamilyPathsFor(family1, family2), false, null));
   }
 
   // after HBASE-24021 will throw DoNotRetryIOException, not MultipleIOException
-  @Test(expected = DoNotRetryIOException.class)
+  @TestTemplate
   public void shouldCrashIfBulkLoadMultiFamiliesNotInTable() throws IOException {
-    testRegionWithFamilies(family1).bulkLoadHFiles(withFamilyPathsFor(family1, family2, family3),
-      false, null);
+    assertThrows(DoNotRetryIOException.class, () -> testRegionWithFamilies(family1)
+      .bulkLoadHFiles(withFamilyPathsFor(family1, family2, family3), false, null));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @TestTemplate
   public void bulkHLogShouldThrowErrorWhenFamilySpecifiedAndHFileExistsButNotInTableDescriptor()
     throws IOException {
-    testRegionWithFamilies().bulkLoadHFiles(withFamilyPathsFor(family1), false, null);
+    assertThrows(DoNotRetryIOException.class,
+      () -> testRegionWithFamilies().bulkLoadHFiles(withFamilyPathsFor(family1), false, null));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @TestTemplate
   public void shouldThrowErrorIfBadFamilySpecifiedAsFamilyPath() throws IOException {
-    testRegionWithFamilies()
-      .bulkLoadHFiles(asList(withInvalidColumnFamilyButProperHFileLocation(family1)), false, null);
+    assertThrows(DoNotRetryIOException.class, () -> testRegionWithFamilies()
+      .bulkLoadHFiles(asList(withInvalidColumnFamilyButProperHFileLocation(family1)), false, null));
   }
 
-  @Test(expected = FileNotFoundException.class)
+  @TestTemplate
   public void shouldThrowErrorIfHFileDoesNotExist() throws IOException {
     List<Pair<byte[], String>> list = asList(withMissingHFileForFamily(family1));
-    testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null);
+    assertThrows(FileNotFoundException.class,
+      () -> testRegionWithFamilies(family1).bulkLoadHFiles(list, false, null));
   }
 
   // after HBASE-24021 will throw FileNotFoundException, not MultipleIOException
-  @Test(expected = FileNotFoundException.class)
+  @TestTemplate
   public void shouldThrowErrorIfMultiHFileDoesNotExist() throws IOException {
     List<Pair<byte[], String>> list = new ArrayList<>();
     list.addAll(asList(withMissingHFileForFamily(family1)));
     list.addAll(asList(withMissingHFileForFamily(family2)));
-    testRegionWithFamilies(family1, family2).bulkLoadHFiles(list, false, null);
+    assertThrows(FileNotFoundException.class,
+      () -> testRegionWithFamilies(family1, family2).bulkLoadHFiles(list, false, null));
   }
 }
