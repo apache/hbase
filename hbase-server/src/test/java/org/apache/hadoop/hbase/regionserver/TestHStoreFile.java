@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -44,7 +44,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -83,13 +82,11 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -101,12 +98,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 /**
  * Test HStoreFile
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHStoreFile {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHStoreFile.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHStoreFile.class);
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -117,22 +111,21 @@ public class TestHStoreFile {
   private static String TEST_FAMILY = "cf";
   private static final char FIRST_CHAR = 'a';
   private static final char LAST_CHAR = 'z';
-
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private Configuration conf;
   private Path testDir;
   private FileSystem fs;
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
     conf = TEST_UTIL.getConfiguration();
-    testDir = TEST_UTIL.getDataTestDir(name.getMethodName());
+    testDir = TEST_UTIL.getDataTestDir(name);
     fs = testDir.getFileSystem(conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     TEST_UTIL.cleanupTestDir();
   }
@@ -141,6 +134,7 @@ public class TestHStoreFile {
    * Write a file and then assert that we can read from top and bottom halves using two
    * HalfMapFiles.
    */
+
   @Test
   public void testBasicHalfAndHFileLinkMapFile() throws Exception {
     final HRegionInfo hri = new HRegionInfo(TableName.valueOf("testBasicHalfAndHFileLinkMapFile"));
@@ -161,8 +155,7 @@ public class TestHStoreFile {
   }
 
   private void writeStoreFile(final StoreFileWriter writer) throws IOException {
-    writeStoreFile(writer, Bytes.toBytes(name.getMethodName()),
-      Bytes.toBytes(name.getMethodName()));
+    writeStoreFile(writer, Bytes.toBytes(name), Bytes.toBytes(name));
   }
 
   // pick an split point (roughly halfway)
@@ -258,10 +251,10 @@ public class TestHStoreFile {
       new StoreFileScanner(r, mock(HFileScanner.class), false, false, 0, 0, false);
 
     // Verify after instantiating scanner refCount is increased
-    assertTrue("Verify file is being referenced", file.isReferencedInReads());
+    assertTrue(file.isReferencedInReads(), "Verify file is being referenced");
     scanner.close();
     // Verify after closing scanner refCount is decreased
-    assertFalse("Verify file is not being referenced", file.isReferencedInReads());
+    assertFalse(file.isReferencedInReads(), "Verify file is not being referenced");
   }
 
   @Test
@@ -525,16 +518,15 @@ public class TestHStoreFile {
           LOG.info("First bottom when key > top: " + keyKV);
           tmp = Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength());
           for (int i = 0; i < tmp.length(); i++) {
-            assertTrue(tmp.charAt(i) == 'a');
+            assertEquals('a', tmp.charAt(i));
           }
         }
       }
       keyKV = KeyValueUtil.createKeyValueFromKey(key);
       LOG.info("Last bottom when key > top: " + keyKV);
       for (int i = 0; i < tmp.length(); i++) {
-        assertTrue(
-          Bytes.toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength()).charAt(i)
-              == 'z');
+        assertEquals('z', Bytes
+          .toString(keyKV.getRowArray(), keyKV.getRowOffset(), keyKV.getRowLength()).charAt(i));
       }
     } finally {
       if (top != null) {
@@ -601,10 +593,10 @@ public class TestHStoreFile {
     }
     reader.close(true); // evict because we are about to delete the file
     fs.delete(f, true);
-    assertEquals("False negatives: " + falseNeg, 0, falseNeg);
+    assertEquals(0, falseNeg, "False negatives: " + falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
-      + maxFalsePos + ")", falsePos <= maxFalsePos);
+    assertTrue(falsePos <= maxFalsePos, "Too many false positives: " + falsePos + " (err=" + err
+      + ", expected no more than " + maxFalsePos + ")");
   }
 
   private static final int BLOCKSIZE_SMALL = 8192;
@@ -615,7 +607,7 @@ public class TestHStoreFile {
     conf.setBoolean(BloomFilterFactory.IO_STOREFILE_BLOOM_ENABLED, true);
 
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    Path f = new Path(ROOT_DIR, name);
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
       .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
     // Make a store file and write data to it.
@@ -631,7 +623,7 @@ public class TestHStoreFile {
     float err = conf.getFloat(BloomFilterFactory.IO_STOREFILE_BLOOM_ERROR_RATE, 0);
 
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    Path f = new Path(ROOT_DIR, name);
 
     HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
       .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
@@ -677,10 +669,10 @@ public class TestHStoreFile {
     assertEquals(1000, reader.getDeleteFamilyCnt());
     reader.close(true); // evict because we are about to delete the file
     fs.delete(f, true);
-    assertEquals("False negatives: " + falseNeg, 0, falseNeg);
+    assertEquals(0, falseNeg, "False negatives: " + falseNeg);
     int maxFalsePos = (int) (2 * 2000 * err);
-    assertTrue("Too many false positives: " + falsePos + " (err=" + err + ", expected no more than "
-      + maxFalsePos, falsePos <= maxFalsePos);
+    assertTrue(falsePos <= maxFalsePos, "Too many false positives: " + falsePos + " (err=" + err
+      + ", expected no more than " + maxFalsePos);
   }
 
   /**
@@ -689,7 +681,7 @@ public class TestHStoreFile {
   @Test
   public void testReseek() throws Exception {
     // write the file
-    Path f = new Path(ROOT_DIR, name.getMethodName());
+    Path f = new Path(ROOT_DIR, name);
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     // Make a store file and write data to it.
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs).withFilePath(f)
@@ -710,7 +702,7 @@ public class TestHStoreFile {
     StoreFileScanner s = getStoreFileScanner(reader, false, false);
     s.reseek(k);
 
-    assertNotNull("Intial reseek should position at the beginning of the file", s.peek());
+    assertNotNull(s.peek(), "Initial reseek should position at the beginning of the file");
   }
 
   @Test
@@ -735,7 +727,7 @@ public class TestHStoreFile {
 
     for (int x : new int[] { 0, 1 }) {
       // write the file
-      Path f = new Path(ROOT_DIR, name.getMethodName() + x);
+      Path f = new Path(ROOT_DIR, name + x);
       HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
         .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
       // Make a store file and write data to it.
@@ -1011,7 +1003,7 @@ public class TestHStoreFile {
     Cell kv2 = null;
     while ((kv1 = scannerOne.next()) != null) {
       kv2 = scannerTwo.next();
-      assertTrue(kv1.equals(kv2));
+      assertEquals(kv1, kv2);
       KeyValue keyv1 = KeyValueUtil.ensureKeyValue(kv1);
       KeyValue keyv2 = KeyValueUtil.ensureKeyValue(kv2);
       assertTrue(Bytes.compareTo(keyv1.getBuffer(), keyv1.getKeyOffset(), keyv1.getKeyLength(),

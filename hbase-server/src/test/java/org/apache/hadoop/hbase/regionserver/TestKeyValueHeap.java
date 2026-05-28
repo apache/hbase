@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,22 +27,17 @@ import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestKeyValueHeap {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyValueHeap.class);
 
   private byte[] row1 = Bytes.toBytes("row1");
   private byte[] fam1 = Bytes.toBytes("fam1");
@@ -126,8 +121,8 @@ public class TestKeyValueHeap {
 
       List<Cell> actual = Arrays.asList(kvh.peek());
 
-      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = "
-        + Arrays.toString(actual.toArray()), expected, actual);
+      assertEquals(expected, actual, "Expected = " + Arrays.toString(expected.toArray())
+        + "\n Actual = " + Arrays.toString(actual.toArray()));
     }
   }
 
