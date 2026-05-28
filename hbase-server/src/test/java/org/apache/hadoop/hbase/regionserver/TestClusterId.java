@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,32 +34,28 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test metrics incremented on region server operations.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClusterId {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClusterId.class);
 
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private JVMClusterUtil.RegionServerThread rst;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(ShutdownHook.RUN_SHUTDOWN_HOOK, false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     if (rst != null && rst.getRegionServer() != null) {

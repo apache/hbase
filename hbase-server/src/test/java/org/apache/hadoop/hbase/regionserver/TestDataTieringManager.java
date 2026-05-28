@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -39,7 +39,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -71,10 +70,9 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -97,12 +95,9 @@ import org.slf4j.LoggerFactory;
  * @formatter:on
  */
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDataTieringManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDataTieringManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDataTieringManager.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -124,7 +119,7 @@ public class TestDataTieringManager {
    */
   private static String rowKeyString;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
@@ -195,7 +190,7 @@ public class TestDataTieringManager {
     testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
     Path hFilePath = file.getPath();
     BlockCacheKey key = new BlockCacheKey(hFilePath, 0, true, BlockType.DATA);
-    assertTrue("File should be hot due to grace period", dataTieringManager.isHotData(key));
+    assertTrue(dataTieringManager.isHotData(key), "File should be hot due to grace period");
   }
 
   @Test
@@ -221,7 +216,7 @@ public class TestDataTieringManager {
 
     Path hFilePath = file.getPath();
     BlockCacheKey key = new BlockCacheKey(hFilePath, 0, true, BlockType.DATA);
-    assertFalse("File should be cold without grace period", dataTieringManager.isHotData(key));
+    assertFalse(dataTieringManager.isHotData(key), "File should be cold without grace period");
   }
 
   @Test
@@ -238,9 +233,9 @@ public class TestDataTieringManager {
 
     // Since we have one cold file among four files, only three should get prefetched.
     Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
-    assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
+    assertTrue(fullyCachedFiles.isPresent(), "We should get the fully cached files from the cache");
     Waiter.waitFor(defaultConf, 10000, () -> fullyCachedFiles.get().size() == 3);
-    assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
+    assertEquals(3, fullyCachedFiles.get().size(), "Number of fully cached files are incorrect");
   }
 
   private void setPrefetchBlocksOnOpen() {
@@ -363,8 +358,8 @@ public class TestDataTieringManager {
 
     HStoreFile coldFile = hStoreFiles.get(3);
     String region = coldFile.getPath().getParent().getParent().getName();
-    assertFalse("fixture file should be cold for TIME_RANGE tiering", dataTieringManager
-      .isHotData(coldFile.getFileInfo().getHFileInfo(), coldFile.getFileInfo().getConf()));
+    assertFalse(dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf()), "fixture file should be cold for TIME_RANGE tiering");
 
     Map<String, Pair<List<String>, Long>> coldByRegion = dataTieringManager.getRegionColdDataSize();
     assertTrue(coldByRegion.containsKey(region));
@@ -450,8 +445,9 @@ public class TestDataTieringManager {
 
     Pair<List<String>, Long> after = dataTieringManager.getRegionColdDataSize().get(regionName);
     assertNotNull(after);
-    assertTrue("Cold compacted file should be removed from tracking",
-      after.getFirst().isEmpty() || !after.getFirst().contains(coldFile.getPath().getName()));
+    assertTrue(
+      after.getFirst().isEmpty() || !after.getFirst().contains(coldFile.getPath().getName()),
+      "Cold compacted file should be removed from tracking");
     assertEquals(0L, (long) after.getSecond());
   }
 
@@ -480,16 +476,16 @@ public class TestDataTieringManager {
     newFile.initReader();
     hStore.refreshStoreFiles();
 
-    assertFalse("new store file must be cold for this scenario", dataTieringManager
-      .isHotData(newFile.getFileInfo().getHFileInfo(), newFile.getFileInfo().getConf()));
+    assertFalse(dataTieringManager.isHotData(newFile.getFileInfo().getHFileInfo(),
+      newFile.getFileInfo().getConf()), "new store file must be cold for this scenario");
 
     dataTieringManager.updateRegionColdDataSize(regionName, Collections.singletonList(coldFile),
       Collections.singletonList(newFile));
 
     Pair<List<String>, Long> after = dataTieringManager.getRegionColdDataSize().get(regionName);
     assertNotNull(after);
-    assertFalse("compacted cold file should no longer be tracked",
-      after.getFirst().contains(coldFile.getPath().getName()));
+    assertFalse(after.getFirst().contains(coldFile.getPath().getName()),
+      "compacted cold file should no longer be tracked");
     assertEquals(1, after.getFirst().size());
     assertTrue(after.getFirst().contains(newFile.getPath().getName()));
     long expectedNew = Bytes.toLong(newFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));

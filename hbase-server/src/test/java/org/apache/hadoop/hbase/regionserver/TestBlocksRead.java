@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static junit.framework.TestCase.assertTrue;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -47,26 +46,26 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBlocksRead {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlocksRead.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestBlocksRead.class);
-  @Rule
-  public TestName testName = new TestName();
+  private String testName;
+
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.testName = testInfo.getTestMethod().get().getName();
+  }
 
   static final BloomType[] BLOOM_TYPE =
     new BloomType[] { BloomType.ROWCOL, BloomType.ROW, BloomType.NONE };
@@ -76,13 +75,13 @@ public class TestBlocksRead {
   private final String DIR = TEST_UTIL.getDataTestDir("TestBlocksRead").toString();
   private Configuration conf = TEST_UTIL.getConfiguration();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // disable compactions in this test.
     TEST_UTIL.getConfiguration().setInt("hbase.hstore.compactionThreshold", 10000);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
   }
@@ -164,8 +163,8 @@ public class TestBlocksRead {
       kvs = region.get(get).rawCells();
       long blocksEnd = getBlkAccessCount(cf);
       if (expBlocks[i] != -1) {
-        assertEquals("Blocks Read Check for Bloom: " + bloomType, expBlocks[i],
-          blocksEnd - blocksStart);
+        assertEquals(expBlocks[i], blocksEnd - blocksStart,
+          "Blocks Read Check for Bloom: " + bloomType);
       }
       System.out.println("Blocks Read for Bloom: " + bloomType + " = " + (blocksEnd - blocksStart)
         + "Expected = " + expBlocks[i]);
@@ -194,11 +193,11 @@ public class TestBlocksRead {
 
   private static void verifyData(Cell kv, String expectedRow, String expectedCol,
     long expectedVersion) {
-    assertTrue("RowCheck", CellUtil.matchingRows(kv, Bytes.toBytes(expectedRow)));
-    assertTrue("ColumnCheck", CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)));
-    assertEquals("TSCheck", expectedVersion, kv.getTimestamp());
-    assertTrue("ValueCheck",
-      CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)));
+    assertTrue(CellUtil.matchingRows(kv, Bytes.toBytes(expectedRow)), "RowCheck");
+    assertTrue(CellUtil.matchingQualifier(kv, Bytes.toBytes(expectedCol)), "ColumnCheck");
+    assertEquals(expectedVersion, kv.getTimestamp(), "TSCheck");
+    assertTrue(CellUtil.matchingValue(kv, genValue(expectedRow, expectedCol, expectedVersion)),
+      "ValueCheck");
   }
 
   private static long getBlkAccessCount(byte[] cf) {
@@ -213,7 +212,7 @@ public class TestBlocksRead {
     byte[] TABLE = Bytes.toBytes("testBlocksRead");
     String FAMILY = "cf1";
     Cell[] kvs;
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName, conf, FAMILY);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -267,7 +266,7 @@ public class TestBlocksRead {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksRead");
     String FAMILY = "cf1";
     Cell[] kvs;
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName, conf, FAMILY);
 
     try {
       // File 1
@@ -373,7 +372,7 @@ public class TestBlocksRead {
     String FAMILY = "cf1";
 
     BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY, blockCache);
+    this.region = initHRegion(TABLE, testName, conf, FAMILY, blockCache);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -417,7 +416,7 @@ public class TestBlocksRead {
     byte[] TABLE = Bytes.toBytes("testLazySeekBlocksReadWithDelete");
     String FAMILY = "cf1";
     Cell[] kvs;
-    this.region = initHRegion(TABLE, testName.getMethodName(), conf, FAMILY);
+    this.region = initHRegion(TABLE, testName, conf, FAMILY);
     try {
       deleteFamily(FAMILY, "row", 200);
       for (int i = 0; i < 100; i++) {

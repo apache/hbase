@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -46,42 +45,37 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
 /**
  * Tests a race condition between archiving of compacted files in CompactedHFilesDischarger chore
  * and HRegion.close();
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCompactionArchiveConcurrentClose {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionArchiveConcurrentClose.class);
 
   private HBaseTestingUtil testUtil;
 
   private Path testDir;
   private AtomicBoolean archived = new AtomicBoolean();
 
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     testUtil = new HBaseTestingUtil();
     testDir = testUtil.getDataTestDir("TestStoreFileRefresherChore");
     CommonFSUtils.setRootDir(testUtil.getConfiguration(), testDir);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testUtil.cleanupTestDir();
   }
@@ -92,7 +86,7 @@ public class TestCompactionArchiveConcurrentClose {
     byte[] col = Bytes.toBytes("c");
     byte[] val = Bytes.toBytes("val");
 
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(name);
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
