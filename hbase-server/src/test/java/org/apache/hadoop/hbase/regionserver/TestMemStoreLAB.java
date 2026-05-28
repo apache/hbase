@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.CHUNK_SIZE_KEY;
 import static org.apache.hadoop.hbase.regionserver.MemStoreLAB.MAX_ALLOC_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
@@ -37,7 +37,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MultithreadedTestUtil;
@@ -48,23 +47,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.primitives.Ints;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMemStoreLAB {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemStoreLAB.class);
 
   private final static Configuration conf = new Configuration();
 
@@ -72,13 +67,13 @@ public class TestMemStoreLAB {
   private static final byte[] cf = Bytes.toBytes("f");
   private static final byte[] q = Bytes.toBytes("q");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     ChunkCreator.initialize(1 * 1024, false, 50 * 1024000L, 0.2f,
       MemStoreLAB.POOL_INITIAL_SIZE_DEFAULT, null, MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     long globalMemStoreLimit =
       (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax()
@@ -111,12 +106,12 @@ public class TestMemStoreLAB {
         expectedOff = Bytes.SIZEOF_INT;
         lastBuffer = newKv.getBuffer();
         int chunkId = newKv.getBuffer().getInt(0);
-        assertTrue("chunkid should be different", chunkId != lastChunkId);
+        assertTrue(chunkId != lastChunkId, "chunkid should be different");
         lastChunkId = chunkId;
       }
       assertEquals(expectedOff, newKv.getOffset());
-      assertTrue("Allocation overruns buffer",
-        newKv.getOffset() + size <= newKv.getBuffer().capacity());
+      assertTrue(newKv.getOffset() + size <= newKv.getBuffer().capacity(),
+        "Allocation overruns buffer");
       expectedOff += size;
     }
   }
@@ -126,7 +121,7 @@ public class TestMemStoreLAB {
     MemStoreLAB mslab = new MemStoreLABImpl();
     KeyValue kv = new KeyValue(rk, cf, q, new byte[2 * 1024 * 1024]);
     Cell newCell = mslab.copyCellInto(kv);
-    assertNull("2MB allocation shouldn't be satisfied by LAB.", newCell);
+    assertNull(newCell, "2MB allocation shouldn't be satisfied by LAB.");
   }
 
   /**
@@ -181,9 +176,9 @@ public class TestMemStoreLAB {
         mapsByChunk.put(rec.alloc, mapForThisByteArray);
       }
       AllocRecord oldVal = mapForThisByteArray.put(rec.offset, rec);
-      assertNull("Already had an entry " + oldVal + " for allocation " + rec, oldVal);
+      assertNull(oldVal, "Already had an entry " + oldVal + " for allocation " + rec);
     }
-    assertEquals("Sanity check test", sizeCounted, totalAllocated.get());
+    assertEquals(sizeCounted, totalAllocated.get(), "Sanity check test");
 
     // Now check each byte array to make sure allocations don't overlap
     for (Map<Integer, AllocRecord> allocsInChunk : mapsByChunk.values()) {
@@ -192,8 +187,8 @@ public class TestMemStoreLAB {
       int expectedOff = Bytes.SIZEOF_INT;
       for (AllocRecord alloc : allocsInChunk.values()) {
         assertEquals(expectedOff, alloc.offset);
-        assertTrue("Allocation overruns buffer",
-          alloc.offset + alloc.size <= alloc.alloc.capacity());
+        assertTrue(alloc.offset + alloc.size <= alloc.alloc.capacity(),
+          "Allocation overruns buffer");
         expectedOff += alloc.size;
       }
     }
@@ -257,18 +252,17 @@ public class TestMemStoreLAB {
         }
       }
       // none of the chunkIds would have been returned back
-      assertTrue("All the chunks must have been cleared",
-        ChunkCreator.instance.numberOfMappedChunks() != 0);
+      assertTrue(ChunkCreator.instance.numberOfMappedChunks() != 0,
+        "All the chunks must have been cleared");
       Set<Integer> chunkIds = new HashSet<Integer>(mslab.chunks);
       int pooledChunksNum = mslab.getPooledChunks().size();
       // close the mslab
       mslab.close();
       // make sure all chunks where reclaimed back to pool
       int queueLength = mslab.getNumOfChunksReturnedToPool(chunkIds);
-      assertTrue(
+      assertTrue(pooledChunksNum - queueLength == 0,
         "All chunks in chunk queue should be reclaimed or removed"
-          + " after mslab closed but actually: " + (pooledChunksNum - queueLength),
-        pooledChunksNum - queueLength == 0);
+          + " after mslab closed but actually: " + (pooledChunksNum - queueLength));
     } finally {
       ChunkCreator.instance = oldInstance;
     }

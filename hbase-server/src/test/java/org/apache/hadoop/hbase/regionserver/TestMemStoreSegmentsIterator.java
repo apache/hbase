@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -27,7 +27,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -40,22 +39,18 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test the {@link MemStoreCompactorSegmentsIterator} and {@link MemStoreMergerSegmentsIterator}
  * class, Test for bug : HBASE-22324
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMemStoreSegmentsIterator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemStoreSegmentsIterator.class);
 
   private static String TABLE = "test_mscsi";
   private static String FAMILY = "f";
@@ -69,7 +64,7 @@ public class TestMemStoreSegmentsIterator {
   private HRegion region;
   private HStore store;
 
-  @Before
+  @BeforeEach
   public void setup() throws IOException {
     Configuration conf = new Configuration();
     HBaseTestingUtility hbaseUtility = HBaseTestingUtility.createLocalHTU(conf);
@@ -138,7 +133,7 @@ public class TestMemStoreSegmentsIterator {
     assertEquals(GREATER_THAN_INTEGER_MAX_VALUE_SEQ_ID, secondCell.getSequenceId());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     if (region != null) {

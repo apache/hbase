@@ -18,6 +18,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.Store.PRIORITY_USER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.Key;
@@ -42,7 +47,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
@@ -75,27 +79,18 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(MediumTests.class)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestHMobStore {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHMobStore.class);
-
   public static final Logger LOG = LoggerFactory.getLogger(TestHMobStore.class);
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   private HMobStore store;
   private HRegion region;
@@ -127,8 +122,9 @@ public class TestHMobStore {
   /**
    * Setup
    */
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     qualifiers.add(qf1);
     qualifiers.add(qf3);
     qualifiers.add(qf5);
@@ -214,7 +210,7 @@ public class TestHMobStore {
   @Test
   public void testGetFromMemStore() throws IOException {
     final Configuration conf = HBaseConfiguration.create();
-    init(name.getMethodName(), conf, false);
+    init(name, conf, false);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -234,10 +230,10 @@ public class TestHMobStore {
     scanner.close();
 
     // Compare
-    Assert.assertEquals(expected.size(), results.size());
+    assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
       // Verify the values
-      Assert.assertEquals(expected.get(i), results.get(i));
+      assertEquals(expected.get(i), results.get(i));
     }
   }
 
@@ -247,7 +243,7 @@ public class TestHMobStore {
   @Test
   public void testGetFromFiles() throws IOException {
     final Configuration conf = TEST_UTIL.getConfiguration();
-    init(name.getMethodName(), conf, false);
+    init(name, conf, false);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -277,9 +273,9 @@ public class TestHMobStore {
     scanner.close();
 
     // Compare
-    Assert.assertEquals(expected.size(), results.size());
+    assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Assert.assertEquals(expected.get(i), results.get(i));
+      assertEquals(expected.get(i), results.get(i));
     }
   }
 
@@ -289,7 +285,7 @@ public class TestHMobStore {
   @Test
   public void testGetReferencesFromFiles() throws IOException {
     final Configuration conf = HBaseConfiguration.create();
-    init(name.getMethodName(), conf, false);
+    init(name, conf, false);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -320,10 +316,10 @@ public class TestHMobStore {
     scanner.close();
 
     // Compare
-    Assert.assertEquals(expected.size(), results.size());
+    assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
       Cell cell = results.get(i);
-      Assert.assertTrue(MobUtils.isMobReferenceCell(cell));
+      assertTrue(MobUtils.isMobReferenceCell(cell));
     }
   }
 
@@ -335,7 +331,7 @@ public class TestHMobStore {
 
     final Configuration conf = HBaseConfiguration.create();
 
-    init(name.getMethodName(), conf, false);
+    init(name, conf, false);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -363,9 +359,9 @@ public class TestHMobStore {
     scanner.close();
 
     // Compare
-    Assert.assertEquals(expected.size(), results.size());
+    assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Assert.assertEquals(expected.get(i), results.get(i));
+      assertEquals(expected.get(i), results.get(i));
     }
   }
 
@@ -377,7 +373,7 @@ public class TestHMobStore {
     final Configuration conf = HBaseConfiguration.create();
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(family)
       .setMobEnabled(true).setMobThreshold(100).setMaxVersions(4).build();
-    init(name.getMethodName(), conf, cfd, false);
+    init(name, conf, cfd, false);
 
     // Put data in memstore
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
@@ -408,34 +404,34 @@ public class TestHMobStore {
     scanner.close();
 
     // Compare
-    Assert.assertEquals(expected.size(), results.size());
+    assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
       Cell cell = results.get(i);
       // this is not mob reference cell.
-      Assert.assertFalse(MobUtils.isMobReferenceCell(cell));
-      Assert.assertEquals(expected.get(i), results.get(i));
-      Assert.assertEquals(100, store.getColumnFamilyDescriptor().getMobThreshold());
+      assertFalse(MobUtils.isMobReferenceCell(cell));
+      assertEquals(expected.get(i), results.get(i));
+      assertEquals(100, store.getColumnFamilyDescriptor().getMobThreshold());
     }
   }
 
   @Test
   public void testCommitFile() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    init(name.getMethodName(), conf, true);
+    init(name, conf, true);
     String targetPathName = MobUtils.formatDate(new Date());
     Path targetPath =
       new Path(store.getPath(), (targetPathName + Path.SEPARATOR + mobFilePath.getName()));
     fs.delete(targetPath, true);
-    Assert.assertFalse(fs.exists(targetPath));
+    assertFalse(fs.exists(targetPath));
     // commit file
     store.commitFile(mobFilePath, targetPath);
-    Assert.assertTrue(fs.exists(targetPath));
+    assertTrue(fs.exists(targetPath));
   }
 
   @Test
   public void testResolve() throws Exception {
     final Configuration conf = HBaseConfiguration.create();
-    init(name.getMethodName(), conf, true);
+    init(name, conf, true);
     String targetPathName = MobUtils.formatDate(currentDate);
     Path targetPath = new Path(store.getPath(), targetPathName);
     store.commitFile(mobFilePath, targetPath);
@@ -444,9 +440,9 @@ public class TestHMobStore {
     Cell resultCell2 = store.resolve(seekKey2, false).getCell();
     Cell resultCell3 = store.resolve(seekKey3, false).getCell();
     // compare
-    Assert.assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell1)));
-    Assert.assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell2)));
-    Assert.assertEquals(Bytes.toString(value2), Bytes.toString(CellUtil.cloneValue(resultCell3)));
+    assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell1)));
+    assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell2)));
+    assertEquals(Bytes.toString(value2), Bytes.toString(CellUtil.cloneValue(resultCell3)));
   }
 
   @Test
@@ -466,9 +462,9 @@ public class TestHMobStore {
   private void doTestMobStoreScannerGetFilesRead(boolean reversed) throws IOException {
     // Setup: conf, root dir, and MOB store init (mob threshold causes large values to go to MOB).
     final Configuration conf = HBaseConfiguration.create();
-    Path basedir = new Path(DIR + name.getMethodName());
+    Path basedir = new Path(DIR + name);
     CommonFSUtils.setRootDir(conf, basedir);
-    init(name.getMethodName(), conf, false);
+    init(name, conf, false);
 
     // Add values above MOB threshold and flush so DefaultMobStoreFlusher creates mob file and refs.
     byte[] valueAboveThreshold = Bytes.toBytes("value"); // threshold in setup is 3 bytes
@@ -493,8 +489,8 @@ public class TestHMobStore {
         }
       }
     }
-    Assert.assertTrue("Should have at least one store file and one mob file",
-      expectedFilePaths.size() >= 2);
+    assertTrue(expectedFilePaths.size() >= 2,
+      "Should have at least one store file and one mob file");
 
     // Build scan (optionally reversed) and target columns; get store scanner and verify type.
     Scan scan = new Scan();
@@ -511,18 +507,17 @@ public class TestHMobStore {
 
     KeyValueScanner kvScanner = store.getScanner(scan, targetCols, 0);
     if (reversed) {
-      Assert.assertTrue("Store scanner should be ReversedMobStoreScanner",
-        kvScanner instanceof ReversedMobStoreScanner);
+      assertInstanceOf(ReversedMobStoreScanner.class, kvScanner,
+        "Store scanner should be ReversedMobStoreScanner");
     } else {
-      Assert.assertTrue("Store scanner should be MobStoreScanner",
-        kvScanner instanceof MobStoreScanner);
+      assertInstanceOf(MobStoreScanner.class, kvScanner, "Store scanner should be MobStoreScanner");
     }
 
     // Before close: getFilesRead must be empty; then drain scanner to resolve MOB refs.
     try {
       Set<Path> filesReadBeforeClose = kvScanner.getFilesRead();
-      Assert.assertTrue("Should return empty set before closing", filesReadBeforeClose.isEmpty());
-      Assert.assertEquals("Should have 0 files before closing", 0, filesReadBeforeClose.size());
+      assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing");
+      assertEquals(0, filesReadBeforeClose.size(), "Should have 0 files before closing");
 
       List<Cell> results = new ArrayList<>();
       InternalScanner storeScanner = (InternalScanner) kvScanner;
@@ -532,18 +527,17 @@ public class TestHMobStore {
 
       // Still before close: set must remain empty until scanner is closed.
       filesReadBeforeClose = kvScanner.getFilesRead();
-      Assert.assertTrue("Should return empty set before closing even after reading",
-        filesReadBeforeClose.isEmpty());
+      assertTrue(filesReadBeforeClose.isEmpty(),
+        "Should return empty set before closing even after reading");
     } finally {
       kvScanner.close();
     }
 
     // After close: set must contain exactly the expected store + MOB file paths.
     Set<Path> filesReadAfterClose = kvScanner.getFilesRead();
-    Assert.assertEquals("Should have exact file count after closing", expectedFilePaths.size(),
-      filesReadAfterClose.size());
-    Assert.assertEquals("Should contain all expected file paths", expectedFilePaths,
-      filesReadAfterClose);
+    assertEquals(expectedFilePaths.size(), filesReadAfterClose.size(),
+      "Should have exact file count after closing");
+    assertEquals(expectedFilePaths, filesReadAfterClose, "Should contain all expected file paths");
   }
 
   /**
@@ -551,8 +545,8 @@ public class TestHMobStore {
    */
   private void flush(int storeFilesSize) throws IOException {
     flushStore(store, id++);
-    Assert.assertEquals(storeFilesSize, this.store.getStorefiles().size());
-    Assert.assertEquals(0, ((AbstractMemStore) this.store.memstore).getActive().getCellsCount());
+    assertEquals(storeFilesSize, this.store.getStorefiles().size());
+    assertEquals(0, ((AbstractMemStore) this.store.memstore).getActive().getCellsCount());
   }
 
   /**
@@ -582,7 +576,7 @@ public class TestHMobStore {
         conf.get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
         cfKey))
       .build();
-    init(name.getMethodName(), conf, cfd, false);
+    init(name, conf, cfd, false);
 
     this.store.add(new KeyValue(row, family, qf1, 1, value), null);
     this.store.add(new KeyValue(row, family, qf2, 1, value), null);
@@ -606,9 +600,9 @@ public class TestHMobStore {
     scanner.next(results);
     Collections.sort(results, CellComparatorImpl.COMPARATOR);
     scanner.close();
-    Assert.assertEquals(expected.size(), results.size());
+    assertEquals(expected.size(), results.size());
     for (int i = 0; i < results.size(); i++) {
-      Assert.assertEquals(expected.get(i), results.get(i));
+      assertEquals(expected.get(i), results.get(i));
     }
 
     // Trigger major compaction
@@ -616,7 +610,7 @@ public class TestHMobStore {
     Optional<CompactionContext> requestCompaction =
       this.store.requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null);
     this.store.compact(requestCompaction.get(), NoLimitThroughputController.INSTANCE, null);
-    Assert.assertEquals(1, this.store.getStorefiles().size());
+    assertEquals(1, this.store.getStorefiles().size());
 
     // Check encryption after compaction
     checkMobHFileEncrytption(this.store.getStorefiles());
@@ -626,9 +620,8 @@ public class TestHMobStore {
     HStoreFile storeFile = storefiles.iterator().next();
     HFile.Reader reader = storeFile.getReader().getHFileReader();
     byte[] encryptionKey = reader.getTrailer().getEncryptionKey();
-    Assert.assertTrue(null != encryptionKey);
-    Assert.assertTrue(reader.getFileContext().getEncryptionContext().getCipher().getName()
-      .equals(HConstants.CIPHER_AES));
+    assertNotNull(encryptionKey);
+    assertEquals(HConstants.CIPHER_AES,
+      reader.getFileContext().getEncryptionContext().getCipher().getName());
   }
-
 }
