@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -287,6 +288,18 @@ public interface CacheEngine {
    * @param config new configuration
    */
   default void onConfigurationChange(Configuration config) {
+    // noop
+  }
+
+  /**
+   * Notifies the cache service that cache population for an HFile has completed.
+   * @param fileName        path of the HFile whose cache population completed
+   * @param totalBlockCount total number of cached blocks for the file
+   * @param dataBlockCount  number of cached data blocks for the file
+   * @param size            total cached size for the file, in bytes
+   */
+  default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
     // noop
   }
 }

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.hfile.cache;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -282,5 +283,11 @@ public final class NoOpCacheAccessService implements CacheAccessService {
   @Override
   public void onConfigurationChange(Configuration config) {
     Objects.requireNonNull(config, "config must not be null");
+  }
+
+  @Override
+  public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
+    Objects.requireNonNull(fileName, "fileName must not be null");
   }
 }

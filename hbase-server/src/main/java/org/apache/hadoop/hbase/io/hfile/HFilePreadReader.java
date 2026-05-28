@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -65,7 +66,7 @@ public class HFilePreadReader extends HFileReaderImpl {
             // Don't use BlockIterator here, because it's designed to read load-on-open section.
             long onDiskSizeOfNextBlock = -1;
             // if we are here, block cache is present anyways
-            BlockCache cache = cacheConf.getBlockCache().get();
+            CacheAccessService cacheAccessService = cacheConf.getCacheAccessService();
             boolean interrupted = false;
             int blockCount = 0;
             int dataBlockCount = 0;
@@ -78,10 +79,10 @@ public class HFilePreadReader extends HFileReaderImpl {
               // update the offset and move on to the next block without actually going read all
               // the way to the cache.
               BlockCacheKey cacheKey = new BlockCacheKey(name, offset);
-              if (cache.isAlreadyCached(cacheKey).orElse(false)) {
+              if (cacheAccessService.isAlreadyCached(cacheKey).orElse(false)) {
                 // Right now, isAlreadyCached is only supported by BucketCache, which should
                 // always cache data blocks.
-                int size = cache.getBlockSize(cacheKey).orElse(0);
+                int size = cacheAccessService.getBlockSize(cacheKey).orElse(0);
                 if (size > 0) {
                   offset += size;
                   LOG.debug("Found block of size {} for cache key {}. "
@@ -108,11 +109,12 @@ public class HFilePreadReader extends HFileReaderImpl {
                 /* cacheBlock= */true, /* pread= */false, false, false, null, null, true);
               try {
                 if (!cacheConf.isInMemory()) {
-                  if (!cache.blockFitsIntoTheCache(block).orElse(true)) {
+                  if (!cacheAccessService.blockFitsIntoTheCache(block).orElse(true)) {
                     LOG.warn(
                       "Interrupting prefetch for file {} because block {} of size {} "
                         + "doesn't fit in the available cache space. isCacheEnabled: {}",
-                      path, cacheKey, block.getOnDiskSizeWithHeader(), cache.isCacheEnabled());
+                      path, cacheKey, block.getOnDiskSizeWithHeader(),
+                      cacheAccessService.isCacheEnabled());
                     interrupted = true;
                     break;
                   }
@@ -139,8 +141,8 @@ public class HFilePreadReader extends HFileReaderImpl {
               }
             }
             if (!interrupted) {
-              cacheConf.getBlockCache().get().notifyFileCachingCompleted(path, blockCount,
-                dataBlockCount, offset);
+              cacheAccessService.notifyFileCachingCompleted(path, blockCount, dataBlockCount,
+                offset);
             }
           } catch (IOException e) {
             // IOExceptions are probably due to region closes (relocation, etc.)

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -418,6 +419,29 @@ public interface CacheAccessService {
    * @param config new configuration
    */
   default void onConfigurationChange(Configuration config) {
+    // noop
+  }
+
+  /**
+   * Notifies the cache service that cache population for an HFile has completed.
+   * <p>
+   * This callback is used for file-level cache lifecycle notifications. Some cache implementations
+   * may use it to finalize file-scoped metadata, update fully-cached-file tracking, publish cache
+   * population statistics, or trigger implementation-specific bookkeeping after a writer/prefetcher
+   * has finished caching blocks for an HFile.
+   * </p>
+   * <p>
+   * The default implementation is a no-op because not all cache implementations need
+   * file-completion notifications. Callers may invoke this method unconditionally after file-level
+   * cache population completes.
+   * </p>
+   * @param fileName        path of the HFile whose cache population completed
+   * @param totalBlockCount total number of cached blocks for the file
+   * @param dataBlockCount  number of cached data blocks for the file
+   * @param size            total cached size for the file, in bytes
+   */
+  default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
+    long size) {
     // noop
   }
 }

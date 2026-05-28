@@ -17,8 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -37,6 +39,9 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -362,8 +367,9 @@ public class TestCacheConfig {
       }
     });
     // The eviction thread in lrublockcache needs to run.
-    while (initialL1BlockCount != lbc.getBlockCount())
+    while (initialL1BlockCount != lbc.getBlockCount()) {
       Threads.sleep(10);
+    }
     assertEquals(initialL1BlockCount, lbc.getBlockCount());
   }
 
@@ -416,5 +422,29 @@ public class TestCacheConfig {
     copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, fixedSize);
     onHeapCacheSize = MemorySizeUtil.getOnHeapCacheSize(copyConf);
     assertEquals(fixedSize, onHeapCacheSize);
+  }
+
+  @Test
+  void testCacheAccessServiceBackedByBlockCacheWhenBlockCacheIsConfigured() {
+    Configuration conf = this.conf;
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
+    CacheConfig cacheConfig = new CacheConfig(conf, blockCache);
+
+    CacheAccessService service = cacheConfig.getCacheAccessService();
+
+    assertInstanceOf(BlockCacheBackedCacheAccessService.class, service);
+    assertSame(blockCache, ((BlockCacheBackedCacheAccessService) service).getBlockCache());
+  }
+
+  @Test
+  void testCacheAccessServiceIsNoOpWhenBlockCacheIsNull() {
+    Configuration conf = this.conf;
+
+    CacheConfig cacheConfig = new CacheConfig(conf, null);
+
+    CacheAccessService service = cacheConfig.getCacheAccessService();
+
+    assertInstanceOf(NoOpCacheAccessService.class, service);
+    assertFalse(service.isCacheEnabled());
   }
 }
