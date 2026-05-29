@@ -29,7 +29,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
+import org.apache.hadoop.hbase.replication.SyncReplicationTestBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.junit.jupiter.api.BeforeAll;
@@ -38,12 +38,13 @@ import org.junit.jupiter.api.Test;
 
 @Tag(MasterTests.TAG)
 @Tag(LargeTests.TAG)
-public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncReplicationTestBase {
+public class TestTransitPeerSyncReplicationStateProcedureRetry
+  extends SyncReplicationTestBaseNoBeforeAll {
 
   @BeforeAll
   public static void setUp() throws Exception {
     UTIL2.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-    SyncReplicationTestBase.setUp();
+    startClusters();
   }
 
   @Test
