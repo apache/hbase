@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +28,7 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -42,33 +43,37 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
 /**
  * Tests for DumpReplicationQueues tool
  */
-@Tag(ReplicationTests.TAG)
-@Tag(SmallTests.TAG)
+@Category({ ReplicationTests.class, SmallTests.class })
 public class TestDumpReplicationQueues {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestDumpReplicationQueues.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration CONF;
   private static FileSystem FS = null;
   private Path root;
   private Path logDir;
+  @Rule
+  public final TestName name = new TestName();
 
-  private String testName;
-
-  @BeforeEach
-  public void setup(TestInfo testInfo) throws Exception {
-    testName = testInfo.getTestMethod().get().getName();
+  @Before
+  public void setup() throws Exception {
     UTIL.startMiniCluster(3);
     CONF = UTIL.getConfiguration();
-    TableName tableName = TableName.valueOf("replication_" + testName);
+    TableName tableName = TableName.valueOf("replication_" + name.getMethodName());
     UTIL.getAdmin()
       .createTable(ReplicationStorageFactory.createReplicationQueueTableDescriptor(tableName));
     CONF.set(ReplicationStorageFactory.REPLICATION_QUEUE_TABLE_NAME, tableName.getNameAsString());
@@ -114,17 +119,14 @@ public class TestDumpReplicationQueues {
     assertTrue(dump.indexOf("Number of WALs in replication queue: 4") > 0);
     // test for 'Returns wal sorted'
     String[] parsedDump = dump.split("Replication position for");
-    assertTrue(parsedDump[1].indexOf("rs1%2C12345%2C123.10: 123") >= 0,
-      "First wal should be rs1%2C12345%2C123.10: 123, but got: " + parsedDump[1]);
-    assertTrue(
-      parsedDump[2].indexOf("rs1%2C12345%2C123.11: 0 (not started or nothing to replicate)") >= 0,
-      "Second wal should be rs1%2C12345%2C123.11: 0, but got: " + parsedDump[2]);
-    assertTrue(
-      parsedDump[3].indexOf("rs1%2C12345%2C123.12: 0 (not started or nothing to replicate)") >= 0,
-      "Third wal should be rs1%2C12345%2C123.12: 0, but got: " + parsedDump[3]);
-    assertTrue(
-      parsedDump[4].indexOf("rs1%2C12345%2C123.15: 0 (not started or nothing to replicate)") >= 0,
-      "Fourth wal should be rs1%2C12345%2C123.15: 0, but got: " + parsedDump[4]);
+    assertTrue("First wal should be rs1%2C12345%2C123.10: 123, but got: " + parsedDump[1],
+      parsedDump[1].indexOf("rs1%2C12345%2C123.10: 123") >= 0);
+    assertTrue("Second wal should be rs1%2C12345%2C123.11: 0, but got: " + parsedDump[2],
+      parsedDump[2].indexOf("rs1%2C12345%2C123.11: 0 (not started or nothing to replicate)") >= 0);
+    assertTrue("Third wal should be rs1%2C12345%2C123.12: 0, but got: " + parsedDump[3],
+      parsedDump[3].indexOf("rs1%2C12345%2C123.12: 0 (not started or nothing to replicate)") >= 0);
+    assertTrue("Fourth wal should be rs1%2C12345%2C123.15: 0, but got: " + parsedDump[4],
+      parsedDump[4].indexOf("rs1%2C12345%2C123.15: 0 (not started or nothing to replicate)") >= 0);
 
     Path file1 = new Path("testHFile1");
     Path file2 = new Path("testHFile2");
@@ -150,7 +152,7 @@ public class TestDumpReplicationQueues {
     UTIL.getAdmin().addReplicationPeer(peerId, builder.build(), true);
   }
 
-  @AfterEach
+  @After
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }

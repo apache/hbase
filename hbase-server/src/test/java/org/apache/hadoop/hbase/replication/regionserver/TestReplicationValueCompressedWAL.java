@@ -17,29 +17,38 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
-import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
+import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Tag(ReplicationTests.TAG)
-@Tag(MediumTests.TAG)
-public class TestReplicationValueCompressedWAL extends TestReplicationBaseNoBeforeAll {
+@Category(MediumTests.class)
+public class TestReplicationValueCompressedWAL extends TestReplicationBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestReplicationValueCompressedWAL.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicationValueCompressedWAL.class);
 
-  @BeforeAll
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    configureClusters(UTIL1, UTIL2);
     CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
     CONF1.setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
-    startClusters();
+    TestReplicationBase.setUpBeforeClass();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TestReplicationBase.tearDownAfterClass();
   }
 
   @Test

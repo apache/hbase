@@ -17,33 +17,39 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
+import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.After;
+import org.junit.AfterClass;
+import org.junit.Assert;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,36 +58,44 @@ import org.apache.hbase.thirdparty.org.apache.commons.collections4.CollectionUti
 /**
  * Testcase for HBASE-24871.
  */
-@Tag(ReplicationTests.TAG)
-@Tag(MediumTests.TAG)
-public class TestRefreshRecoveredReplication extends TestReplicationBaseNoBeforeAll {
+@Category({ ReplicationTests.class, MediumTests.class })
+public class TestRefreshRecoveredReplication extends TestReplicationBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRefreshRecoveredReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRefreshRecoveredReplication.class);
 
   private static final int BATCH = 50;
 
-  @BeforeAll
-  public static void setUpBeforeClass() throws Exception {
-    // NUM_SLAVES1 is presumed 2 in below.
-    NUM_SLAVES1 = 2;
-    configureClusters(UTIL1, UTIL2);
-    // replicate slowly
-    CONF1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, 100);
-    startClusters();
-  }
-
-  private String testName;
+  @Rule
+  public TestName name = new TestName();
 
   private TableName tablename;
   private Table table1;
   private Table table2;
 
-  @BeforeEach
-  public void setup(TestInfo testInfo) throws Exception {
-    testName = testInfo.getTestMethod().get().getName();
+  @BeforeClass
+  public static void setUpBeforeClass() throws Exception {
+    // NUM_SLAVES1 is presumed 2 in below.
+    NUM_SLAVES1 = 2;
+    // replicate slowly
+    Configuration conf1 = UTIL1.getConfiguration();
+    conf1.setInt(HConstants.REPLICATION_SOURCE_TOTAL_BUFFER_KEY, 100);
+    TestReplicationBase.setUpBeforeClass();
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TestReplicationBase.tearDownAfterClass();
+  }
+
+  @Before
+  public void setup() throws Exception {
     setUpBase();
 
-    tablename = TableName.valueOf(testName);
+    tablename = TableName.valueOf(name.getMethodName());
     TableDescriptor table =
       TableDescriptorBuilder.newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(famName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
@@ -94,7 +108,7 @@ public class TestRefreshRecoveredReplication extends TestReplicationBaseNoBefore
     table2 = UTIL2.getConnection().getTable(tablename);
   }
 
-  @AfterEach
+  @After
   public void teardown() throws Exception {
     tearDownBase();
 
@@ -116,7 +130,7 @@ public class TestRefreshRecoveredReplication extends TestReplicationBaseNoBefore
     Optional<RegionServerThread> server = rss.stream()
       .filter(rst -> CollectionUtils.isNotEmpty(rst.getRegionServer().getRegions(tablename)))
       .findAny();
-    assertTrue(server.isPresent());
+    Assert.assertTrue(server.isPresent());
     HRegionServer otherServer = rss.get(0).getRegionServer() == server.get().getRegionServer()
       ? rss.get(1).getRegionServer()
       : rss.get(0).getRegionServer();
@@ -145,10 +159,9 @@ public class TestRefreshRecoveredReplication extends TestReplicationBaseNoBefore
 
   private int checkReplicationData() throws IOException {
     int count = 0;
-    try (ResultScanner results = table2.getScanner(new Scan().setCaching(BATCH))) {
-      while (results.next() != null) {
-        count++;
-      }
+    ResultScanner results = table2.getScanner(new Scan().setCaching(BATCH));
+    for (Result r : results) {
+      count++;
     }
     return count;
   }

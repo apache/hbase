@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -31,32 +32,35 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
+import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
-@Tag(ReplicationTests.TAG)
-@Tag(MediumTests.TAG)
-public class TestReplicator extends TestReplicationBaseNoBeforeAll {
+@Category(MediumTests.class)
+public class TestReplicator extends TestReplicationBase {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestReplicator.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestReplicator.class);
   static final int NUM_ROWS = 10;
 
-  @BeforeAll
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
-    configureClusters(UTIL1, UTIL2);
     // Set RPC size limit to 10kb (will be applied to both source and sink clusters)
     CONF1.setInt(RpcServer.MAX_REQUEST_SIZE, 1024 * 10);
-    startClusters();
+    TestReplicationBase.setUpBeforeClass();
   }
 
   @Test
@@ -100,10 +104,9 @@ public class TestReplicator extends TestReplicationBaseNoBeforeAll {
         }
       });
 
-      assertEquals(NUM_ROWS, ReplicationEndpointForTest.getBatchCount(),
-        "We sent an incorrect number of batches");
-      assertEquals(NUM_ROWS, HBaseTestingUtil.countRows(htable2),
-        "We did not replicate enough rows");
+      assertEquals("We sent an incorrect number of batches", NUM_ROWS,
+        ReplicationEndpointForTest.getBatchCount());
+      assertEquals("We did not replicate enough rows", NUM_ROWS, UTIL2.countRows(htable2));
     } finally {
       hbaseAdmin.removeReplicationPeer("testReplicatorBatching");
     }
@@ -151,11 +154,15 @@ public class TestReplicator extends TestReplicationBaseNoBeforeAll {
         }
       });
 
-      assertEquals(NUM_ROWS, HBaseTestingUtil.countRows(htable2),
-        "We did not replicate enough rows");
+      assertEquals("We did not replicate enough rows", NUM_ROWS, UTIL2.countRows(htable2));
     } finally {
       hbaseAdmin.removeReplicationPeer("testReplicatorWithErrors");
     }
+  }
+
+  @AfterClass
+  public static void tearDownAfterClass() throws Exception {
+    TestReplicationBase.tearDownAfterClass();
   }
 
   private void truncateTable(HBaseTestingUtil util, TableName tablename) throws IOException {

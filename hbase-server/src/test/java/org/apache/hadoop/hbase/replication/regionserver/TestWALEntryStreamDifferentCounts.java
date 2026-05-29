@@ -17,38 +17,53 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.replication.regionserver.WALEntryStream.HasNext;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestTemplate;
+import org.junit.Before;
+import org.junit.Test;
+import org.junit.runners.Parameterized.Parameter;
+import org.junit.runners.Parameterized.Parameters;
 
 /**
  * Try out different combinations of row count and KeyValue count
  */
 public abstract class TestWALEntryStreamDifferentCounts extends WALEntryStreamTestBase {
 
-  protected int nbRows;
-  protected int walEditKVs;
-  protected boolean isCompressionEnabled;
+  @Parameter(0)
+  public int nbRows;
 
-  protected TestWALEntryStreamDifferentCounts(int nbRows, int walEditKVs,
-    boolean isCompressionEnabled) {
-    this.nbRows = nbRows;
-    this.walEditKVs = walEditKVs;
-    this.isCompressionEnabled = isCompressionEnabled;
+  @Parameter(1)
+  public int walEditKVs;
+
+  @Parameter(2)
+  public boolean isCompressionEnabled;
+
+  @Parameters(name = "{index}: nbRows={0}, walEditKVs={1}, isCompressionEnabled={2}")
+  public static Iterable<Object[]> data() {
+    List<Object[]> params = new ArrayList<>();
+    for (int nbRows : new int[] { 1500, 60000 }) {
+      for (int walEditKVs : new int[] { 1, 100 }) {
+        for (boolean isCompressionEnabled : new boolean[] { false, true }) {
+          params.add(new Object[] { nbRows, walEditKVs, isCompressionEnabled });
+        }
+      }
+    }
+    return params;
   }
 
-  @BeforeEach
+  @Before
   public void setUp() throws IOException {
     CONF.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, isCompressionEnabled);
     initWAL();
   }
 
-  @TestTemplate
+  @Test
   public void testDifferentCounts() throws Exception {
     mvcc.advanceTo(1);
 

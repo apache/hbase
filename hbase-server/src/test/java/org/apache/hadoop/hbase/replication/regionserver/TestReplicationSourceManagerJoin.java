@@ -17,11 +17,12 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
 
 import java.util.Optional;
 import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -30,34 +31,40 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll;
+import org.apache.hadoop.hbase.replication.TestReplicationBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
 
-@Tag(ReplicationTests.TAG)
-@Tag(MediumTests.TAG)
-public class TestReplicationSourceManagerJoin extends TestReplicationBaseNoBeforeAll {
+@Category({ ReplicationTests.class, MediumTests.class })
+public class TestReplicationSourceManagerJoin extends TestReplicationBase {
 
-  @BeforeAll
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestReplicationSourceManagerJoin.class);
+
+  @Rule
+  public TestName testName = new TestName();
+
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // NUM_SLAVES1 is presumed 2 in below.
     NUM_SLAVES1 = 2;
-    configureClusters(UTIL1, UTIL2);
-    startClusters();
+    TestReplicationBase.setUpBeforeClass();
   }
 
   @Test
-  public void testReplicationSourcesTerminate(TestInfo testInfo) throws Exception {
-    String testName = testInfo.getTestMethod().get().getName();
+  public void testReplicationSourcesTerminate() throws Exception {
     // Create table in source cluster only, let TableNotFoundException block peer to avoid
     // recovered source end.
-    TableName tableName = TableName.valueOf(testName);
+    TableName tableName = TableName.valueOf(testName.getMethodName());
     TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(famName)
         .setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build())

@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.Assert.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -42,18 +43,26 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.TestInfo;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
+import org.junit.rules.TestName;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@Tag(ReplicationTests.TAG)
-@Tag(LargeTests.TAG)
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestGlobalReplicationThrottler {
 
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestGlobalReplicationThrottler.class);
+
+  private static final Logger LOG = LoggerFactory.getLogger(TestGlobalReplicationThrottler.class);
   private static final int REPLICATION_SOURCE_QUOTA = 200;
   private static int numOfPeer = 0;
   private static Configuration conf1;
@@ -67,9 +76,10 @@ public class TestGlobalReplicationThrottler {
   private static final byte[] ROW = Bytes.toBytes("r");
   private static final byte[][] ROWS = HTestConst.makeNAscii(ROW, 100);
 
-  private String testName;
+  @Rule
+  public TestName name = new TestName();
 
-  @BeforeAll
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     conf1 = HBaseConfiguration.create();
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
@@ -105,7 +115,7 @@ public class TestGlobalReplicationThrottler {
     }
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDownAfterClass() throws Exception {
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
@@ -115,9 +125,8 @@ public class TestGlobalReplicationThrottler {
   private volatile boolean testQuotaNonZero = false;
 
   @Test
-  public void testQuota(TestInfo testInfo) throws Exception {
-    testName = testInfo.getTestMethod().get().getName();
-    final TableName tableName = TableName.valueOf(testName);
+  public void testQuota() throws Exception {
+    final TableName tableName = TableName.valueOf(name.getMethodName());
     TableDescriptor tableDescriptor =
       TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(famName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();

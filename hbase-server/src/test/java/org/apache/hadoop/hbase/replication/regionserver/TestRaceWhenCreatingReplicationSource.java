@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.Assert.assertArrayEquals;
+import static org.junit.Assert.assertEquals;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -27,6 +27,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -45,17 +46,21 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
 /**
  * Testcase for HBASE-20624.
  */
-@Tag(ReplicationTests.TAG)
-@Tag(MediumTests.TAG)
+@Category({ ReplicationTests.class, MediumTests.class })
 public class TestRaceWhenCreatingReplicationSource {
+
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestRaceWhenCreatingReplicationSource.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -77,7 +82,7 @@ public class TestRaceWhenCreatingReplicationSource {
 
   public static final class LocalReplicationEndpoint extends BaseReplicationEndpoint {
 
-    private static final UUID PEER_UUID = HBaseTestingUtil.getRandomUUID();
+    private static final UUID PEER_UUID = UTIL.getRandomUUID();
 
     @Override
     public UUID getPeerUUID() {
@@ -129,7 +134,7 @@ public class TestRaceWhenCreatingReplicationSource {
     }
   }
 
-  @BeforeAll
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "multiwal");
     // make sure that we will create a new group for the table
@@ -145,7 +150,7 @@ public class TestRaceWhenCreatingReplicationSource {
       true);
   }
 
-  @AfterAll
+  @AfterClass
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }

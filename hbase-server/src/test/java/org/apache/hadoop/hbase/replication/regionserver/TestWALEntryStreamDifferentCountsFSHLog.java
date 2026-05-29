@@ -17,43 +17,27 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.stream.Stream;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.params.provider.Arguments;
+import org.junit.BeforeClass;
+import org.junit.ClassRule;
+import org.junit.experimental.categories.Category;
+import org.junit.runner.RunWith;
+import org.junit.runners.Parameterized;
 
-@Tag(ReplicationTests.TAG)
-@Tag(LargeTests.TAG)
-@HBaseParameterizedTestTemplate(
-    name = "{index}: nbRows={0}, walEditKVs={1}, isCompressionEnabled={2}")
+@RunWith(Parameterized.class)
+@Category({ ReplicationTests.class, LargeTests.class })
 public class TestWALEntryStreamDifferentCountsFSHLog extends TestWALEntryStreamDifferentCounts {
 
-  public TestWALEntryStreamDifferentCountsFSHLog(int nbRows, int walEditKVs,
-    boolean isCompressionEnabled) {
-    super(nbRows, walEditKVs, isCompressionEnabled);
-  }
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestWALEntryStreamDifferentCountsFSHLog.class);
 
-  public static Stream<Arguments> parameters() {
-    List<Arguments> params = new ArrayList<>();
-    for (int nbRows : new int[] { 1500, 60000 }) {
-      for (int walEditKVs : new int[] { 1, 100 }) {
-        for (boolean isCompressionEnabled : new boolean[] { false, true }) {
-          params.add(Arguments.of(nbRows, walEditKVs, isCompressionEnabled));
-        }
-      }
-    }
-    return params.stream();
-  }
-
-  @BeforeAll
+  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setClass(WALFactory.WAL_PROVIDER, FSHLogProvider.class,
       AbstractFSWALProvider.class);
