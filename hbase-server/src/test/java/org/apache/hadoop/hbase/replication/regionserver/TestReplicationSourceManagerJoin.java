@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.BeforeClass;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -46,7 +45,6 @@ import org.junit.jupiter.api.TestInfo;
 public class TestReplicationSourceManagerJoin extends TestReplicationBaseNoBeforeAll {
 
   @BeforeAll
-  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     // NUM_SLAVES1 is presumed 2 in below.
     NUM_SLAVES1 = 2;
