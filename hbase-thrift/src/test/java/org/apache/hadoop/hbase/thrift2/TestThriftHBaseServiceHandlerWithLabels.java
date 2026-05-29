@@ -71,8 +71,6 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
@@ -80,8 +78,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.
 @Tag(MediumTests.TAG)
 public class TestThriftHBaseServiceHandlerWithLabels {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestThriftHBaseServiceHandlerWithLabels.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   // Static names for tables, columns, rows, and values

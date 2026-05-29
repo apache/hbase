@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
 import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
+import org.apache.hadoop.hbase.rest.model.ScannerModel;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.access.AccessControlClient;
 import org.apache.hadoop.hbase.security.access.AccessControlConstants;
@@ -70,7 +71,9 @@ import org.apache.http.client.AuthCache;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.client.config.AuthSchemes;
 import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpDelete;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.protocol.HttpClientContext;
 import org.apache.http.config.Registry;
@@ -110,6 +113,7 @@ public class TestSecureRESTServer {
 
   private static final String HOSTNAME = "localhost";
   private static final String CLIENT_PRINCIPAL = "client";
+  private static final String CLIENT_PRINCIPAL2 = "client2";
   private static final String WHEEL_PRINCIPAL = "wheel";
   // The principal for accepting SPNEGO authn'ed requests (*must* be HTTP/fqdn)
   private static final String SPNEGO_SERVICE_PRINCIPAL = "HTTP/" + HOSTNAME;
@@ -156,7 +160,7 @@ public class TestSecureRESTServer {
      * Start KDC
      */
     KDC = TEST_UTIL.setupMiniKdc(serviceKeytab);
-    KDC.createPrincipal(clientKeytab, CLIENT_PRINCIPAL);
+    KDC.createPrincipal(clientKeytab, CLIENT_PRINCIPAL, CLIENT_PRINCIPAL2);
     KDC.createPrincipal(wheelKeytab, WHEEL_PRINCIPAL);
     KDC.createPrincipal(serviceKeytab, SERVICE_PRINCIPAL);
     // REST server's keytab contains keys for both principals REST uses
@@ -189,7 +193,7 @@ public class TestSecureRESTServer {
     updateKerberosConfiguration(conf, REST_SERVER_PRINCIPAL, SPNEGO_SERVICE_PRINCIPAL,
       restServerKeytab);
 
-    // Start HDFS
+    // Start HBase
     TEST_UTIL.startMiniCluster(StartTestingClusterOption.builder().numMasters(1).numRegionServers(1)
       .numZkServers(1).build());
 
@@ -330,10 +334,10 @@ public class TestSecureRESTServer {
     });
   }
 
-  public void testProxy(String extraArgs, String PRINCIPAL, File keytab, int responseCode)
+  private void testProxy(String extraArgs, String PRINCIPAL, File keytab, int responseCode)
     throws Exception {
-    UserGroupInformation superuser = UserGroupInformation
-      .loginUserFromKeytabAndReturnUGI(SERVICE_PRINCIPAL, serviceKeytab.getAbsolutePath());
+    UserGroupInformation.loginUserFromKeytabAndReturnUGI(SERVICE_PRINCIPAL,
+      serviceKeytab.getAbsolutePath());
     final TableName table = TableName.valueOf("publicTable");
 
     // Read that row as the client
@@ -415,6 +419,80 @@ public class TestSecureRESTServer {
         return null;
       }
     });
+  }
+
+  @Test
+  public void testScanWithDifferentClients() throws Exception {
+    Pair<CloseableHttpClient, HttpClientContext> pair = getClient();
+    CloseableHttpClient client = pair.getFirst();
+    HttpClientContext context = pair.getSecond();
+
+    UserGroupInformation ugi = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(CLIENT_PRINCIPAL, clientKeytab.getAbsolutePath());
+
+    ObjectMapper mapper = new JacksonJaxbJsonProvider().locateMapper(ScannerModel.class,
+      MediaType.APPLICATION_JSON_TYPE);
+    TableName table = TableName.valueOf("publicTable");
+    ScannerModel model = new ScannerModel();
+    StringEntity entity =
+      new StringEntity(mapper.writeValueAsString(model), ContentType.APPLICATION_JSON);
+    HttpPost post =
+      new HttpPost("http://localhost:" + REST_TEST.getServletPort() + "/" + table + "/scanner");
+    post.setEntity(entity);
+    String scannerURI = ugi.doAs(new PrivilegedExceptionAction<String>() {
+
+      @Override
+      public String run() throws Exception {
+        try (CloseableHttpResponse response = client.execute(post, context)) {
+          final int statusCode = response.getStatusLine().getStatusCode();
+          assertEquals(HttpURLConnection.HTTP_CREATED, statusCode);
+          return response.getFirstHeader("Location").getValue();
+        }
+      }
+    });
+
+    Pair<CloseableHttpClient, HttpClientContext> pair2 = getClient();
+    CloseableHttpClient client2 = pair2.getFirst();
+    HttpClientContext context2 = pair2.getSecond();
+
+    UserGroupInformation ugi2 = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(CLIENT_PRINCIPAL2, clientKeytab.getAbsolutePath());
+    ugi2.doAs(new PrivilegedExceptionAction<Void>() {
+
+      @Override
+      public Void run() throws Exception {
+        HttpGet get = new HttpGet(scannerURI + "?n=1");
+        try (CloseableHttpResponse response = client2.execute(get, context2)) {
+          final int statusCode = response.getStatusLine().getStatusCode();
+          assertEquals(HttpURLConnection.HTTP_FORBIDDEN, statusCode);
+        }
+        HttpDelete delete = new HttpDelete(scannerURI);
+        try (CloseableHttpResponse response = client2.execute(delete, context2)) {
+          final int statusCode = response.getStatusLine().getStatusCode();
+          assertEquals(HttpURLConnection.HTTP_FORBIDDEN, statusCode);
+        }
+        return null;
+      }
+    });
+
+    ugi.doAs(new PrivilegedExceptionAction<Void>() {
+
+      @Override
+      public Void run() throws Exception {
+        HttpGet get = new HttpGet(scannerURI + "?n=1");
+        try (CloseableHttpResponse response = client.execute(get, context)) {
+          final int statusCode = response.getStatusLine().getStatusCode();
+          assertEquals(HttpURLConnection.HTTP_OK, statusCode);
+        }
+        HttpDelete delete = new HttpDelete(scannerURI);
+        try (CloseableHttpResponse response = client.execute(delete, context)) {
+          final int statusCode = response.getStatusLine().getStatusCode();
+          assertEquals(HttpURLConnection.HTTP_OK, statusCode);
+        }
+        return null;
+      }
+    });
+
   }
 
   private Pair<CloseableHttpClient, HttpClientContext> getClient() {

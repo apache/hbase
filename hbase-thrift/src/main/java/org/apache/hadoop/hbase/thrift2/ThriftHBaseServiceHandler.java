@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift2;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_READONLY_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.thrift2.ThriftUtilities.appendFromThrift;
@@ -52,8 +50,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -101,10 +97,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
-import org.apache.hbase.thirdparty.com.google.common.cache.RemovalListener;
-
 /**
  * This class is a glue object that connects Thrift RPC calls to the HBase client API primarily
  * defined in the Table interface.
@@ -115,10 +107,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
 
   // TODO: Size of pool configuraple
   private static final Logger LOG = LoggerFactory.getLogger(ThriftHBaseServiceHandler.class);
-
-  // nextScannerId and scannerMap are used to manage scanner state
-  private final AtomicInteger nextScannerId = new AtomicInteger(0);
-  private final Cache<Integer, ResultScanner> scannerMap;
 
   private static final IOException ioe =
     new DoNotRetryIOException("Thrift Server is in Read-only mode.");
@@ -161,13 +149,7 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   public ThriftHBaseServiceHandler(final Configuration conf, final UserProvider userProvider)
     throws IOException {
     super(conf, userProvider);
-    long cacheTimeout = conf.getLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
-      DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
     isReadOnly = conf.getBoolean(THRIFT_READONLY_ENABLED, THRIFT_READONLY_ENABLED_DEFAULT);
-    scannerMap = CacheBuilder.newBuilder().expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS)
-      .removalListener((RemovalListener<Integer,
-        ResultScanner>) removalNotification -> removalNotification.getValue().close())
-      .build();
   }
 
   @Override
@@ -200,34 +182,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     err.setCanRetry(!(e instanceof DoNotRetryIOException));
     err.setMessage(e.getMessage());
     return err;
-  }
-
-  /**
-   * Assigns a unique ID to the scanner and adds the mapping to an internal HashMap.
-   * @param scanner to add
-   * @return Id for this Scanner
-   */
-  private int addScanner(ResultScanner scanner) {
-    int id = nextScannerId.getAndIncrement();
-    scannerMap.put(id, scanner);
-    return id;
-  }
-
-  /**
-   * Returns the Scanner associated with the specified Id.
-   * @param id of the Scanner to get
-   * @return a Scanner, or null if the Id is invalid
-   */
-  private ResultScanner getScanner(int id) {
-    return scannerMap.getIfPresent(id);
-  }
-
-  /**
-   * Removes the scanner associated with the specified ID from the internal HashMap.
-   * @param id of the Scanner to remove
-   */
-  protected void removeScanner(int id) {
-    scannerMap.invalidate(id);
   }
 
   @Override
@@ -432,23 +386,30 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
     } finally {
       closeTable(htable);
     }
-    return addScanner(resultScanner);
+    return addScanner(resultScanner, false);
   }
 
   @Override
   public List<TResult> getScannerRows(int scannerId, int numRows)
     throws TIOError, TIllegalArgument, TException {
-    ResultScanner scanner = getScanner(scannerId);
-    if (scanner == null) {
+    ResultScannerWrapper wrapper;
+    try {
+      wrapper = removeScanner(scannerId);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+    if (wrapper == null) {
       TIllegalArgument ex = new TIllegalArgument();
       ex.setMessage("Invalid scanner Id");
       throw ex;
     }
     try {
       connectionCache.updateConnectionAccessTime();
-      return resultsFromHBase(scanner.next(numRows));
+      return resultsFromHBase(wrapper.scanner.next(numRows));
     } catch (IOException e) {
       throw getTIOError(e);
+    } finally {
+      addScannerBack(scannerId, wrapper);
     }
   }
 
@@ -475,15 +436,19 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements TH
   @Override
   public void closeScanner(int scannerId) throws TIOError, TIllegalArgument, TException {
     LOG.debug("scannerClose: id=" + scannerId);
-    ResultScanner scanner = getScanner(scannerId);
-    if (scanner == null) {
+    ResultScannerWrapper wrapper;
+    try {
+      wrapper = removeScanner(scannerId);
+    } catch (IOException e) {
+      throw getTIOError(e);
+    }
+    if (wrapper == null) {
       LOG.warn("scanner ID: " + scannerId + "is invalid");
       // While the scanner could be already expired,
       // we should not throw exception here. Just log and return.
       return;
     }
-    scanner.close();
-    removeScanner(scannerId);
+    wrapper.scanner.close();
   }
 
   @Override
