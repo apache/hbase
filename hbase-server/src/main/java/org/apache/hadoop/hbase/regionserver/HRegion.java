@@ -2027,7 +2027,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
 
     RowCache rowCache = regionServer.getRSRpcServices().getServer().getRowCache();
-    rowCache.evictRowsByRegion(this);
+    rowCache.evictRowsByRegion(getRegionInfo().getEncodedName());
   }
 
   /** Wait for all current flushes and compactions of the region to complete */

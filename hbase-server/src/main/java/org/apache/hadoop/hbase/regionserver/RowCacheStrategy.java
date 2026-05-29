@@ -48,9 +48,9 @@ public interface RowCacheStrategy {
   /**
    * Evict all rows belonging to the specified region. This is heavy operation as it iterates the
    * entire RowCache key set.
-   * @param region the region whose rows should be evicted
+   * @param encodedRegionName the encoded name of the region whose rows should be evicted
    */
-  void evictRowsByRegion(HRegion region);
+  void evictRowsByRegion(String encodedRegionName);
 
   /**
    * Get the number of rows in the cache.

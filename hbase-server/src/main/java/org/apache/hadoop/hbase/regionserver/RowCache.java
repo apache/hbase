@@ -165,8 +165,8 @@ public class RowCache {
     rowCacheStrategy.evictRow(key);
   }
 
-  void evictRowsByRegion(HRegion region) {
-    rowCacheStrategy.evictRowsByRegion(region);
+  void evictRowsByRegion(String encodedRegionName) {
+    rowCacheStrategy.evictRowsByRegion(encodedRegionName);
   }
 
   // @formatter:off

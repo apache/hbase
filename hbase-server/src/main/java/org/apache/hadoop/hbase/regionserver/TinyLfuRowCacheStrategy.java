@@ -72,8 +72,8 @@ public class TinyLfuRowCacheStrategy implements RowCacheStrategy {
   }
 
   @Override
-  public void evictRowsByRegion(HRegion region) {
-    cache.asMap().keySet().removeIf(key -> key.isSameRegion(region));
+  public void evictRowsByRegion(String encodedRegionName) {
+    cache.asMap().keySet().removeIf(key -> key.isSameRegion(encodedRegionName));
   }
 
   @Override
