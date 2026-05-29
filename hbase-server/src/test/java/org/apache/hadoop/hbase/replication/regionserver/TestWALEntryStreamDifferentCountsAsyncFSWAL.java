@@ -17,27 +17,43 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.AsyncFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(
+    name = "{index}: nbRows={0}, walEditKVs={1}, isCompressionEnabled={2}")
 public class TestWALEntryStreamDifferentCountsAsyncFSWAL extends TestWALEntryStreamDifferentCounts {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALEntryStreamDifferentCountsAsyncFSWAL.class);
+  public TestWALEntryStreamDifferentCountsAsyncFSWAL(int nbRows, int walEditKVs,
+    boolean isCompressionEnabled) {
+    super(nbRows, walEditKVs, isCompressionEnabled);
+  }
 
-  @BeforeClass
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
+    for (int nbRows : new int[] { 1500, 60000 }) {
+      for (int walEditKVs : new int[] { 1, 100 }) {
+        for (boolean isCompressionEnabled : new boolean[] { false, true }) {
+          params.add(Arguments.of(nbRows, walEditKVs, isCompressionEnabled));
+        }
+      }
+    }
+    return params.stream();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setClass(WALFactory.WAL_PROVIDER, AsyncFSWALProvider.class,
       AbstractFSWALProvider.class);

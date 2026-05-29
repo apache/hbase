@@ -28,11 +28,10 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
+import org.apache.hadoop.hbase.replication.SyncReplicationTestBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -42,7 +41,7 @@ import org.junit.jupiter.api.Test;
  */
 @Tag(MasterTests.TAG)
 @Tag(LargeTests.TAG)
-public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBase {
+public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBaseNoBeforeAll {
 
   private static volatile boolean FAIL = false;
 
@@ -67,12 +66,7 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
   @BeforeAll
   public static void setUp() throws Exception {
     UTIL2.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
-    SyncReplicationTestBase.setUp();
-  }
-
-  @AfterAll
-  public static void tearDown() throws Exception {
-    SyncReplicationTestBase.tearDown();
+    startClusters();
   }
 
   @Test
