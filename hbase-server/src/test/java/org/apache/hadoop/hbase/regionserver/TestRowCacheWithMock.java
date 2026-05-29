@@ -111,6 +111,7 @@ public class TestRowCacheWithMock {
     Mockito.when(region.getScannerWithResults(get, scan, results, context)).thenCallRealMethod();
 
     RowCacheKey key = new RowCacheKey(region, rowKey);
+    String encodedRegionName = region.getRegionInfo().getEncodedName();
     results.add(KeyValueTestUtil.create("row", "CF", "q1", 1, "v1"));
 
     // Verify that row cache populated before creating a row level barrier
@@ -137,23 +138,23 @@ public class TestRowCacheWithMock {
     // Verify that row cache populated before creating a table level barrier
     region.getScannerWithResults(get, scan, results, context);
     assertNotNull(rowCache.getRow(key));
-    assertNull(rowCache.getRegionLevelBarrier(region));
+    assertNull(rowCache.getRegionLevelBarrier(encodedRegionName));
 
     // Evict the row cache
     rowCache.evictRow(key);
     assertNull(rowCache.getRow(key));
 
     // Create a table level barrier for the row key
-    rowCache.createRegionLevelBarrier(region);
-    assertEquals(1, rowCache.getRegionLevelBarrier(region).get());
+    rowCache.createRegionLevelBarrier(encodedRegionName);
+    assertEquals(1, rowCache.getRegionLevelBarrier(encodedRegionName).get());
 
     // Verify that no row cache populated after creating a table level barrier
     region.getScannerWithResults(get, scan, results, context);
     assertNull(rowCache.getRow(key));
 
     // Remove the table level barrier
-    rowCache.removeRegionLevelBarrier(region);
-    assertNull(rowCache.getRegionLevelBarrier(region));
+    rowCache.removeRegionLevelBarrier(encodedRegionName);
+    assertNull(rowCache.getRegionLevelBarrier(encodedRegionName));
   }
 
   @Test

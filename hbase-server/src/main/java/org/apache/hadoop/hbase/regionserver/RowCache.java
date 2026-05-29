@@ -263,9 +263,8 @@ public class RowCache {
     });
   }
 
-  void createRegionLevelBarrier(HRegion region) {
-    regionLevelBarrierMap
-      .computeIfAbsent(region.getRegionInfo().getEncodedName(), k -> new AtomicInteger(0))
+  void createRegionLevelBarrier(String encodedRegionName) {
+    regionLevelBarrierMap.computeIfAbsent(encodedRegionName, k -> new AtomicInteger(0))
       .incrementAndGet();
   }
 
@@ -273,12 +272,11 @@ public class RowCache {
     region.increaseRowCacheSeqNum();
   }
 
-  void removeRegionLevelBarrier(HRegion region) {
-    regionLevelBarrierMap.computeIfPresent(region.getRegionInfo().getEncodedName(),
-      (k, counter) -> {
-        int remaining = counter.decrementAndGet();
-        return (remaining <= 0) ? null : counter;
-      });
+  void removeRegionLevelBarrier(String encodedRegionName) {
+    regionLevelBarrierMap.computeIfPresent(encodedRegionName, (k, counter) -> {
+      int remaining = counter.decrementAndGet();
+      return (remaining <= 0) ? null : counter;
+    });
   }
 
   long getHitCount() {
@@ -307,7 +305,7 @@ public class RowCache {
   }
 
   // For testing only
-  AtomicInteger getRegionLevelBarrier(HRegion region) {
-    return regionLevelBarrierMap.get(region.getRegionInfo().getEncodedName());
+  AtomicInteger getRegionLevelBarrier(String encodedRegionName) {
+    return regionLevelBarrierMap.get(encodedRegionName);
   }
 }

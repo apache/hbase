@@ -2348,10 +2348,11 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     }
 
     RowCache rowCache = region.getRegionServerServices().getRowCache();
+    String encodedRegionName = region.getRegionInfo().getEncodedName();
 
     // Since bulkload modifies the store files, the row cache should be disabled until the bulkload
     // is finished.
-    rowCache.createRegionLevelBarrier(region);
+    rowCache.createRegionLevelBarrier(encodedRegionName);
     try {
       // We do not invalidate the entire row cache directly, as it contains a large number of
       // entries and takes a long time. Instead, we increment rowCacheSeqNum, which is used when
@@ -2360,7 +2361,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       return bulkLoadHFileInternal(request);
     } finally {
       // The row cache for the region has been enabled again
-      rowCache.removeRegionLevelBarrier(region);
+      rowCache.removeRegionLevelBarrier(encodedRegionName);
     }
   }
 
