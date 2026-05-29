@@ -17,24 +17,21 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillSlaveRSWithSeparateOldWALs extends TestReplicationKillSlaveRS {
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestReplicationKillSlaveRSWithSeparateOldWALs extends ReplicationKillSlaveRSTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationKillSlaveRSWithSeparateOldWALs.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
+    NUM_SLAVES2 = 2;
     CONF1.setBoolean(AbstractFSWALProvider.SEPARATE_OLDLOGDIR, true);
-    TestReplicationKillSlaveRS.setUpBeforeClass();
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
   }
 }

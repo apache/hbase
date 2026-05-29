@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.UnknownScannerException;
@@ -31,9 +31,9 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class TestReplicationKillRS extends TestReplicationBase {
+public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBeforeAll {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationKillRS.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationKillRSTestBase.class);
 
   /**
    * Load up 1 tables over 2 region servers and kill a source during the upload. The failover
