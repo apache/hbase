@@ -99,6 +99,7 @@ public class TestBytesReadServerSideScanMetrics {
 
   @BeforeEach
   public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     UTIL = new HBaseTestingUtility();
     conf = UTIL.getConfiguration();
     conf.setInt(HRegion.MEMSTORE_PERIODIC_FLUSH_INTERVAL, 0);
