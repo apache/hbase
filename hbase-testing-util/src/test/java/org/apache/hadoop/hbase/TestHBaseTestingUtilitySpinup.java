@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import java.util.List;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;

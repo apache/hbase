@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.testing;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.ServerName;
@@ -41,6 +42,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 @Tag(MiscTests.TAG)

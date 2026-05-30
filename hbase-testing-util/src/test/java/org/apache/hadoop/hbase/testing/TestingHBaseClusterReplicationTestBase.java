@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.testing;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,6 +38,7 @@ import org.apache.hadoop.hbase.zookeeper.ZKConfig;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.testing;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
