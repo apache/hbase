@@ -17,33 +17,28 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSinkManager.SinkPeer;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReplicationSinkManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSinkManager.class);
 
   private static final String PEER_CLUSTER_ID = "PEER_CLUSTER_ID";
 
@@ -74,7 +69,7 @@ public class TestReplicationSinkManager {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     this.replicationEndpoint = new SetServersHBaseReplicationEndpoint();
     sinkManager = new ReplicationSinkManager(mock(ClusterConnection.class), PEER_CLUSTER_ID,
