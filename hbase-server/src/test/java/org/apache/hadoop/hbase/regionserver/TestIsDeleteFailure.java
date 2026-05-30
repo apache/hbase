@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -37,30 +36,26 @@ import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test failure in ScanDeleteTracker.isDeleted when ROWCOL bloom filter is used during a scan with a
  * filter.
  */
-@Category({ RegionServerTests.class, FilterTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestIsDeleteFailure {
+
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private String name;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIsDeleteFailure.class);
-
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.msginterval", 100);
     TEST_UTIL.getConfiguration().setInt("hbase.client.pause", 250);
@@ -69,14 +64,19 @@ public class TestIsDeleteFailure {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
+
   @Test
   public void testIsDeleteFailure() throws Exception {
-    final HTableDescriptor table = new HTableDescriptor(TableName.valueOf(name.getMethodName()));
+    final HTableDescriptor table = new HTableDescriptor(TableName.valueOf(name));
     final byte[] family = Bytes.toBytes("0");
     final byte[] c1 = Bytes.toBytes("C01");
     final byte[] c2 = Bytes.toBytes("C02");
