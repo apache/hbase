@@ -138,7 +138,7 @@ public class TestMetricsRegionServer {
   public void testConstuctor() {
     assertNotNull(rsm.getMetricsSource(), "There should be a hadoop1/hadoop2 metrics source");
     assertNotNull(rsm.getRegionServerWrapper(),
-      "The RegionServerMetricsWrapper should be accessable");
+      "The RegionServerMetricsWrapper should be accessible");
   }
 
   @Test
