@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -56,15 +55,14 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.replication.ReplicationPeerImpl;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,11 +71,10 @@ import org.slf4j.LoggerFactory;
  * verifying async wal replication replays the edits to the secondary region in various scenarios.
  * @see TestRegionReplicaReplicationEndpoint
  */
-@Category({ LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMetaRegionReplicaReplicationEndpoint {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaRegionReplicaReplicationEndpoint.class);
+
   private static final Logger LOG =
     LoggerFactory.getLogger(TestMetaRegionReplicaReplicationEndpoint.class);
   private static final int NB_SERVERS = 4;
@@ -85,11 +82,10 @@ public class TestMetaRegionReplicaReplicationEndpoint {
   private int numOfMetaReplica = NB_SERVERS - 1;
   private static byte[] VALUE = Bytes.toBytes("value");
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @Before
-  public void before() throws Exception {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws Exception {
     Configuration conf = HTU.getConfiguration();
     conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
     conf.setInt("replication.source.size.capacity", 10240);
@@ -112,9 +108,10 @@ public class TestMetaRegionReplicaReplicationEndpoint {
 
     HTU.waitFor(30000, () -> HTU.getMiniHBaseCluster().getRegions(TableName.META_TABLE_NAME).size()
         >= numOfMetaReplica);
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     HTU.shutdownMiniCluster();
   }
@@ -169,8 +166,8 @@ public class TestMetaRegionReplicaReplicationEndpoint {
    */
   private void testHBaseMetaReplicatesOneRow(int i) throws Exception {
     waitForMetaReplicasToOnline();
-    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_" + i),
-      HConstants.CATALOG_FAMILY)) {
+    try (Table table =
+      HTU.createTable(TableName.valueOf(methodName + "_" + i), HConstants.CATALOG_FAMILY)) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
     }
   }
@@ -187,14 +184,14 @@ public class TestMetaRegionReplicaReplicationEndpoint {
    */
   @Test
   public void testHBaseMetaReplicates() throws Exception {
-    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_0"),
-      HConstants.CATALOG_FAMILY,
-      Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
+    try (
+      Table table = HTU.createTable(TableName.valueOf(methodName + "_0"), HConstants.CATALOG_FAMILY,
+        Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
     }
-    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_1"),
-      HConstants.CATALOG_FAMILY,
-      Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
+    try (
+      Table table = HTU.createTable(TableName.valueOf(methodName + "_1"), HConstants.CATALOG_FAMILY,
+        Arrays.copyOfRange(HBaseTestingUtility.KEYS, 1, HBaseTestingUtility.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
@@ -575,8 +572,7 @@ public class TestMetaRegionReplicaReplicationEndpoint {
 
   @Test
   public void testHBaseMetaReplicaGets() throws Exception {
-
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+    TableName tn = TableName.valueOf(methodName);
     final Region[] metaRegions = getAllRegions(TableName.META_TABLE_NAME, numOfMetaReplica);
     long[] readReqsForMetaReplicas = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGet = new long[numOfMetaReplica];

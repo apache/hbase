@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -66,16 +67,15 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 
 public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     initWAL();
   }
@@ -247,7 +247,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     WALKeyImpl key =
       new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, EnvironmentEdgeManager.currentTime(),
         new ArrayList<UUID>(), 0L, 0L, mvcc, scopes, attributes);
-    Assert.assertEquals(attributes, key.getExtendedAttributes());
+    assertEquals(attributes, key.getExtendedAttributes());
 
     WALProtos.WALKey.Builder builder = key.getBuilder(WALCellCodec.getNoneCompressor());
     WALProtos.WALKey serializedKey = builder.build();
@@ -256,14 +256,14 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     deserializedKey.readFieldsFromPb(serializedKey, WALCellCodec.getNoneUncompressor());
 
     // equals() only checks region name, sequence id and write time
-    Assert.assertEquals(key, deserializedKey);
+    assertEquals(key, deserializedKey);
     // can't use Map.equals() because byte arrays use reference equality
-    Assert.assertEquals(key.getExtendedAttributes().keySet(),
+    assertEquals(key.getExtendedAttributes().keySet(),
       deserializedKey.getExtendedAttributes().keySet());
     for (Map.Entry<String, byte[]> entry : deserializedKey.getExtendedAttributes().entrySet()) {
-      Assert.assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
+      assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
     }
-    Assert.assertEquals(key.getReplicationScopes(), deserializedKey.getReplicationScopes());
+    assertEquals(key.getReplicationScopes(), deserializedKey.getReplicationScopes());
   }
 
   private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf) {
@@ -430,8 +430,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals(walPath, entryBatch.getLastWalPath());
 
     long walLength = fs.getFileStatus(walPath).getLen();
-    assertTrue("Position " + entryBatch.getLastWalPosition() + " is out of range, file length is "
-      + walLength, entryBatch.getLastWalPosition() <= walLength);
+    assertTrue(entryBatch.getLastWalPosition() <= walLength, "Position "
+      + entryBatch.getLastWalPosition() + " is out of range, file length is " + walLength);
     assertEquals(1, entryBatch.getNbEntries());
     assertTrue(entryBatch.isEndOfFile());
 
@@ -656,14 +656,14 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     // Create a reader thread.
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(fs, conf, localLogQueue, 0,
       getDummyFilter(), source, fakeWalGroupId);
-    assertEquals("Initial log queue size is not correct", 2,
-      localLogQueue.getQueueSize(fakeWalGroupId));
+    assertEquals(2, localLogQueue.getQueueSize(fakeWalGroupId),
+      "Initial log queue size is not correct");
     reader.start();
     reader.join();
 
     // remove empty log from logQueue.
     assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
-    assertEquals("Log queue should be empty", 0, localLogQueue.getQueueSize(fakeWalGroupId));
+    assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId), "Log queue should be empty");
   }
 
   private PriorityBlockingQueue<Path> getQueue() {

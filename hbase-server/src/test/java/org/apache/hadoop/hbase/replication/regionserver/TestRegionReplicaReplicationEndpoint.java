@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -37,7 +37,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -67,13 +66,12 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -84,12 +82,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterrupt
  * Tests RegionReplicaReplicationEndpoint class by setting up region replicas and verifying async
  * wal replication replays the edits to the secondary region in various scenarios.
  */
-@Category({ FlakeyTests.class, LargeTests.class })
+@Tag(FlakeyTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionReplicaReplicationEndpoint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaReplicationEndpoint.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionReplicaReplicationEndpoint.class);
@@ -98,10 +93,9 @@ public class TestRegionReplicaReplicationEndpoint {
 
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HTU.getConfiguration();
     conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
@@ -121,9 +115,14 @@ public class TestRegionReplicaReplicationEndpoint {
     HTU.startMiniCluster(NB_SERVERS);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HTU.shutdownMiniCluster();
+  }
+
+  @BeforeEach
+  public void before(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   @Test
@@ -319,7 +318,7 @@ public class TestRegionReplicaReplicationEndpoint {
   @Test
   public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
     int regionReplication = 3;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     htd.setRegionMemstoreReplication(false);
@@ -355,7 +354,7 @@ public class TestRegionReplicaReplicationEndpoint {
     // does not test whether the replicas actually pick up flushed files and apply compaction
     // to their stores
     int regionReplication = 3;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     htd.setRegionReplication(regionReplication);
     createOrEnableTableWithRetries(htd, true);
@@ -402,8 +401,8 @@ public class TestRegionReplicaReplicationEndpoint {
     // tests having edits from a disabled or dropped table is handled correctly by skipping those
     // entries and further edits after the edits from dropped/disabled table can be replicated
     // without problems.
-    final TableName tableName = TableName.valueOf(
-      name.getMethodName() + "_drop_" + dropTable + "_disabledReplication_" + disableReplication);
+    final TableName tableName = TableName
+      .valueOf(methodName + "_drop_" + dropTable + "_disabledReplication_" + disableReplication);
     HTableDescriptor htd = HTU.createTableDescriptor(tableName);
     int regionReplication = 3;
     htd.setRegionReplication(regionReplication);
