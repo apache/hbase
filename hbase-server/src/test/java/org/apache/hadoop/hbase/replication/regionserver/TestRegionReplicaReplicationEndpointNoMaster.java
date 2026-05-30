@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.openRegion;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -29,7 +30,6 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -62,14 +62,11 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -79,12 +76,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWA
  * Tests RegionReplicaReplicationEndpoint. Unlike TestRegionReplicaReplicationEndpoint this class
  * contains lower level tests using callables.
  */
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicaReplicationEndpointNoMaster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaReplicationEndpointNoMaster.class);
 
   private static final int NB_SERVERS = 2;
   private static TableName tableName =
@@ -101,7 +95,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
   private static final HBaseTestingUtility HTU = new HBaseTestingUtility();
   private static final byte[] f = HConstants.CATALOG_FAMILY;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HTU.getConfiguration();
     conf.setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY, true);
@@ -137,20 +131,16 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     rs1 = HTU.getMiniHBaseCluster().getRegionServer(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     table.close();
     HTU.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     entries.clear();
-  }
-
-  @After
-  public void after() throws Exception {
   }
 
   static ConcurrentLinkedQueue<Entry> entries = new ConcurrentLinkedQueue<>();
@@ -186,7 +176,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
-    Assert.assertEquals(1000, entries.size());
+    assertEquals(1000, entries.size());
     // replay the edits to the secondary using replay callable
     replicateUsingCallable(connection, entries);
 
@@ -226,7 +216,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
-    Assert.assertEquals(1000, entries.size());
+    assertEquals(1000, entries.size());
     // replay the edits to the secondary using replay callable
     replicateUsingCallable(connection, entries);
 
@@ -269,7 +259,7 @@ public class TestRegionReplicaReplicationEndpointNoMaster {
     // load some data to primary
     HTU.loadNumericRows(table, f, 0, 1000);
 
-    Assert.assertEquals(1000, entries.size());
+    assertEquals(1000, entries.size());
     // replay the edits to the secondary using replay callable
     final String fakeWalGroupId = "fakeWALGroup";
     replicator.replicate(

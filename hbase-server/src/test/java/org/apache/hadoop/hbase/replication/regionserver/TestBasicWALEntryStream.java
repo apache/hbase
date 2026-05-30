@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -32,7 +33,6 @@ import static org.mockito.Mockito.when;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.NavigableMap;
@@ -71,11 +71,8 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
 import org.mockito.Mockito;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
@@ -83,15 +80,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALHeader;
 
 public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
 
-  @Parameter
-  public boolean isCompressionEnabled;
+  protected boolean isCompressionEnabled;
 
-  @Parameters(name = "{index}: isCompressionEnabled={0}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[] { false }, new Object[] { true });
+  protected TestBasicWALEntryStream(boolean isCompressionEnabled) {
+    this.isCompressionEnabled = isCompressionEnabled;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     CONF.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, isCompressionEnabled);
     initWAL();
@@ -105,7 +100,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   /**
    * Tests basic reading of log appends
    */
-  @Test
+  @TestTemplate
   public void testAppendsWithRolls() throws Exception {
     appendToLogAndSync();
     long oldPos;
@@ -160,7 +155,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * Tests that if after a stream is opened, more entries come in and then the log is rolled, we
    * don't mistakenly dequeue the current log thinking we're done with it
    */
-  @Test
+  @TestTemplate
   public void testLogRollWhileStreaming() throws Exception {
     appendToLog("1");
     // 2
@@ -197,7 +192,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * Tests that if writes come in while we have a stream open, we shouldn't miss them
    */
 
-  @Test
+  @TestTemplate
   public void testNewEntriesWhileStreaming() throws Exception {
     appendToLog("1");
     try (WALEntryStream entryStream =
@@ -219,7 +214,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testResumeStreamingFromPosition() throws Exception {
     long lastPosition = 0;
     appendToLog("1");
@@ -244,7 +239,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * Tests that if we stop before hitting the end of a stream, we can continue where we left off
    * using the last position
    */
-  @Test
+  @TestTemplate
   public void testPosition() throws Exception {
     long lastPosition = 0;
     appendEntriesToLogAndSync(3);
@@ -263,7 +258,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testEmptyStream() throws Exception {
     try (WALEntryStream entryStream =
       new WALEntryStream(logQueue, fs, CONF, 0, log, new MetricsSource("1"), fakeWalGroupId)) {
@@ -271,7 +266,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testWALKeySerialization() throws Exception {
     Map<String, byte[]> attributes = new HashMap<String, byte[]>();
     attributes.put("foo", Bytes.toBytes("foo-value"));
@@ -279,7 +274,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     WALKeyImpl key =
       new WALKeyImpl(info.getEncodedNameAsBytes(), tableName, EnvironmentEdgeManager.currentTime(),
         new ArrayList<UUID>(), 0L, 0L, mvcc, scopes, attributes);
-    Assert.assertEquals(attributes, key.getExtendedAttributes());
+    assertEquals(attributes, key.getExtendedAttributes());
 
     WALProtos.WALKey.Builder builder = key.getBuilder(WALCellCodec.getNoneCompressor());
     WALProtos.WALKey serializedKey = builder.build();
@@ -288,14 +283,14 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     deserializedKey.readFieldsFromPb(serializedKey, WALCellCodec.getNoneUncompressor());
 
     // equals() only checks region name, sequence id and write time
-    Assert.assertEquals(key, deserializedKey);
+    assertEquals(key, deserializedKey);
     // can't use Map.equals() because byte arrays use reference equality
-    Assert.assertEquals(key.getExtendedAttributes().keySet(),
+    assertEquals(key.getExtendedAttributes().keySet(),
       deserializedKey.getExtendedAttributes().keySet());
     for (Map.Entry<String, byte[]> entry : deserializedKey.getExtendedAttributes().entrySet()) {
-      Assert.assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
+      assertArrayEquals(key.getExtendedAttribute(entry.getKey()), entry.getValue());
     }
-    Assert.assertEquals(key.getReplicationScopes(), deserializedKey.getReplicationScopes());
+    assertEquals(key.getReplicationScopes(), deserializedKey.getReplicationScopes());
   }
 
   private ReplicationSource mockReplicationSource(boolean recovered, Configuration conf)
@@ -345,7 +340,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     return reader;
   }
 
-  @Test
+  @TestTemplate
   public void testReplicationSourceWALReader() throws Exception {
     appendEntriesToLogAndSync(3);
     // get ending position
@@ -376,7 +371,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals("foo", getRow(entryBatch.getWalEntries().get(0)));
   }
 
-  @Test
+  @TestTemplate
   public void testReplicationSourceWALReaderWithFailingFilter() throws Exception {
     appendEntriesToLogAndSync(3);
     // get ending position
@@ -405,7 +400,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals(3, entryBatch.getNbRowKeys());
   }
 
-  @Test
+  @TestTemplate
   public void testReplicationSourceWALReaderRecovered() throws Exception {
     appendEntriesToLogAndSync(10);
     Path walPath = getQueue().peek();
@@ -438,7 +433,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   }
 
   // Testcase for HBASE-20206
-  @Test
+  @TestTemplate
   public void testReplicationSourceWALReaderWrongPosition() throws Exception {
     appendEntriesToLogAndSync(1);
     Path walPath = getQueue().peek();
@@ -465,8 +460,8 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals(walPath, entryBatch.getLastWalPath());
 
     long walLength = fs.getFileStatus(walPath).getLen();
-    assertTrue("Position " + entryBatch.getLastWalPosition() + " is out of range, file length is "
-      + walLength, entryBatch.getLastWalPosition() <= walLength);
+    assertTrue(entryBatch.getLastWalPosition() <= walLength, "Position "
+      + entryBatch.getLastWalPosition() + " is out of range, file length is " + walLength);
     assertEquals(1, entryBatch.getNbEntries());
     assertTrue(entryBatch.isEndOfFile());
 
@@ -490,7 +485,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertFalse(entryBatch.isEndOfFile());
   }
 
-  @Test
+  @TestTemplate
   public void testReplicationSourceWALReaderDisabled()
     throws IOException, InterruptedException, ExecutionException {
     appendEntriesToLogAndSync(3);
@@ -598,7 +593,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testReadBeyondCommittedLength() throws IOException, InterruptedException {
     appendToLog("1");
     appendToLog("2");
@@ -625,7 +620,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * Test removal of 0 length log from logQueue if the source is a recovered source and size of
    * logQueue is only 1.
    */
-  @Test
+  @TestTemplate
   public void testEOFExceptionForRecoveredQueue() throws Exception {
     // Create a 0 length log.
     Path emptyLog = new Path("emptyLog");
@@ -656,7 +651,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
   }
 
-  @Test
+  @TestTemplate
   public void testEOFExceptionForRecoveredQueueWithMultipleLogs() throws Exception {
     Configuration conf = new Configuration(CONF);
     MetricsSource metrics = mock(MetricsSource.class);
@@ -681,14 +676,14 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     // Create a reader thread.
     ReplicationSourceWALReader reader = new ReplicationSourceWALReader(fs, conf, localLogQueue, 0,
       getDummyFilter(), source, fakeWalGroupId);
-    assertEquals("Initial log queue size is not correct", 2,
-      localLogQueue.getQueueSize(fakeWalGroupId));
+    assertEquals(2, localLogQueue.getQueueSize(fakeWalGroupId),
+      "Initial log queue size is not correct");
     reader.start();
     reader.join();
 
     // remove empty log from logQueue.
     assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId));
-    assertEquals("Log queue should be empty", 0, localLogQueue.getQueueSize(fakeWalGroupId));
+    assertEquals(0, localLogQueue.getQueueSize(fakeWalGroupId), "Log queue should be empty");
   }
 
   private PriorityBlockingQueue<Path> getQueue() {
@@ -713,7 +708,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   /***
    * Tests size of log queue is incremented and decremented properly.
    */
-  @Test
+  @TestTemplate
   public void testSizeOfLogQueue() throws Exception {
     // There should be always 1 log which is current wal.
     assertEquals(1, logQueue.getMetrics().getSizeOfLogQueue());
@@ -744,7 +739,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * Tests that wals are closed cleanly and we read the trailer when we remove wal from
    * WALEntryStream.
    */
-  @Test
+  @TestTemplate
   public void testCleanClosedWALs() throws Exception {
     try (WALEntryStream entryStream = new WALEntryStreamWithRetries(logQueue, fs, CONF, 0, log,
       logQueue.getMetrics(), fakeWalGroupId)) {
@@ -761,7 +756,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   /**
    * Tests that we handle EOFException properly if the wal has moved to oldWALs directory.
    */
-  @Test
+  @TestTemplate
   public void testEOFExceptionInOldWALsDirectory() throws Exception {
     assertEquals(1, logQueue.getQueueSize(fakeWalGroupId));
     AbstractFSWAL<?> abstractWAL = (AbstractFSWAL<?>) log;
@@ -805,7 +800,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * decreased because {@link WALEntryBatch} is not put to
    * {@link ReplicationSourceWALReader#entryBatchQueue}.
    */
-  @Test
+  @TestTemplate
   public void testReplicationSourceWALReaderWithPartialWALEntryFailingFilter() throws Exception {
     appendEntriesToLogAndSync(3);
     // get ending position
@@ -844,7 +839,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
   }
 
   // testcase for HBASE-28748
-  @Test
+  @TestTemplate
   public void testWALEntryStreamEOFRightAfterHeader() throws Exception {
     assertEquals(1, logQueue.getQueueSize(fakeWalGroupId));
     AbstractFSWAL<?> abstractWAL = (AbstractFSWAL<?>) log;
@@ -887,7 +882,7 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
    * WALEntryFilterRetryableException does not cause the new file to be opened at the old file's
    * position.
    */
-  @Test
+  @TestTemplate
   public void testPositionResetOnFileSwitchWithRetryableFilter() throws Exception {
     appendEntriesToLogAndSync(3);
     log.rollWriter();
@@ -922,15 +917,15 @@ public abstract class TestBasicWALEntryStream extends WALEntryStreamTestBase {
     long deadline = System.currentTimeMillis() + 30000;
     while (totalEntries < 6) {
       long remaining = deadline - System.currentTimeMillis();
-      assertTrue("Reader appears stuck - likely position corruption. Only got " + totalEntries
-        + " of 6 entries", remaining > 0);
+      assertTrue(remaining > 0, "Reader appears stuck - likely position corruption. Only got "
+        + totalEntries + " of 6 entries");
       WALEntryBatch batch = reader.poll(1);
       if (batch != null && batch != WALEntryBatch.NO_MORE_DATA) {
         totalEntries += batch.getNbEntries();
       }
     }
     assertEquals(6, totalEntries);
-    assertTrue("Filter should have thrown at least once", threwOnce.get());
+    assertTrue(threwOnce.get(), "Filter should have thrown at least once");
   }
 
   private static class PartialWALEntryFailingWALEntryFilter implements WALEntryFilter {
