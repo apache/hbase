@@ -17,70 +17,70 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * compacted memstore test case
  */
-@Category({ RegionServerTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@ParameterizedClass(name = "{index}: type={0}")
+@MethodSource("parameters")
 public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactingToCellFlatMapMemStore.class);
-
-  @Parameterized.Parameters
-  public static Object[] data() {
-    return new Object[] { "CHUNK_MAP", "ARRAY_MAP" }; // test different immutable indexes
-  }
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestCompactingToCellFlatMapMemStore.class);
+
+  public static Stream<Arguments> parameters() {
+    // test different immutable indexes
+    return Stream.of(Arguments.of("CHUNK_MAP"), Arguments.of("ARRAY_MAP"));
+  }
+
   public final boolean toCellChunkMap;
+  private final String type;
   Configuration conf;
 
   //////////////////////////////////////////////////////////////////////////////
   // Helpers
   //////////////////////////////////////////////////////////////////////////////
   public TestCompactingToCellFlatMapMemStore(String type) {
+    this.type = type;
     toCellChunkMap = "CHUNK_MAP".equals(type);
   }
 
   @Override
-  public void tearDown() throws Exception {
-    chunkCreator.clearChunksInPool();
-    super.tearDown();
+  protected String getParameterizedTestNameSuffix() {
+    return "_" + type;
   }
 
   @Override
-  public void setUp() throws Exception {
-    compactingSetUp();
+  protected void createMemStore() throws IOException {
     this.conf = HBaseConfiguration.create();
 
     // set memstore to do data compaction
@@ -95,6 +95,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   // Compaction tests
   //////////////////////////////////////////////////////////////////////////////
   @Override
+  @Test
   public void testCompaction1Bucket() throws IOException {
     int counter = 0;
     String[] keys1 = { "A", "A", "B", "C" }; // A1, A2, B3, C4
@@ -142,6 +143,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   }
 
   @Override
+  @Test
   public void testCompaction2Buckets() throws IOException {
     if (toCellChunkMap) {
       // set memstore to flat into CellChunkMap
@@ -205,6 +207,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
   }
 
   @Override
+  @Test
   public void testCompaction3Buckets() throws IOException {
     if (toCellChunkMap) {
       // set memstore to flat into CellChunkMap
@@ -462,7 +465,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         count++;
       }
     }
-    assertEquals("the count should be ", 150, count);
+    assertEquals(150, count, "the count should be ");
     for (int i = 0; i < scanners.size(); i++) {
       scanners.get(i).close();
     }
@@ -489,7 +492,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
     } finally {
       itr.close();
     }
-    assertEquals("the count should be ", 150, cnt);
+    assertEquals(150, cnt, "the count should be ");
   }
 
   private void addRowsByKeysWith50Cols(AbstractMemStore hmc, String[] keys) {
@@ -830,7 +833,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
    * testForceCopyOfBigCellIntoImmutableSegment checks that the ImmutableMemStoreLAB's
    * forceCopyOfBigCellInto does what it's supposed to do.
    */
-  @org.junit.Ignore
+  @Disabled
   @Test // Flakey. Disabled by HBASE-24128. HBASE-24129 is for reenable.
   // TestCompactingToCellFlatMapMemStore.testForceCopyOfBigCellIntoImmutableSegment:902 i=1
   // expected:<8389924> but was:<8389992>
@@ -893,7 +896,7 @@ public class TestCompactingToCellFlatMapMemStore extends TestCompactingMemStore 
         totalHeapSize -= (4 * CellChunkImmutableSegment.DEEP_OVERHEAD_CCM);
         totalHeapSize = ClassSize.align(totalHeapSize);
       }
-      assertEquals("i=" + i, totalHeapSize, ((CompactingMemStore) memstore).heapSize());
+      assertEquals(totalHeapSize, ((CompactingMemStore) memstore).heapSize(), "i=" + i);
     }
   }
 
