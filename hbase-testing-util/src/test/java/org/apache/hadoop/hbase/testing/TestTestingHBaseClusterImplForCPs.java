@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.testing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import java.io.IOException;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -39,20 +37,15 @@ import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTestingHBaseClusterImplForCPs {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTestingHBaseClusterImplForCPs.class);
 
   private static TestingHBaseCluster CLUSTER;
 
@@ -64,7 +57,7 @@ public class TestTestingHBaseClusterImplForCPs {
 
   private static Admin ADMIN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     CLUSTER = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().numMasters(2)
       .numRegionServers(3).numDataNodes(3).build());
@@ -76,7 +69,7 @@ public class TestTestingHBaseClusterImplForCPs {
     ADMIN.balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(ADMIN, true);
     Closeables.close(CONN, true);
