@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -38,41 +37,40 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestDirectStoreSplitsMerges {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDirectStoreSplitsMerges.class);
 
   private static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testSplitStoreDir() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // first put some data in order to have a store file created
     putThreeRowsAndFlush(table);
@@ -95,7 +93,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testMergeStoreFile() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
@@ -127,7 +125,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testCommitDaughterRegionNoFiles() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
     HRegionFileSystem regionFS = region.getStores().get(0).getRegionFileSystem();
@@ -145,7 +143,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testCommitDaughterRegionWithFiles() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // first put some data in order to have a store file created
     putThreeRowsAndFlush(table);
@@ -178,7 +176,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testCommitMergedRegion() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
