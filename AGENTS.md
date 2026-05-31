@@ -183,10 +183,15 @@ LLM context ingestion.
 
 ## Security Model
 
-The project's security model is documented at
-`hbase-website/app/pages/_landing/security-model/content.md`
-(published at https://hbase.apache.org/security-model).
-Read that document for the full security model including trust boundaries,
+The project's security model is the entry point for any security analysis
+of this codebase. The canonical chain for discovering it is:
+
+  AGENTS.md  ->  SECURITY.md  ->  https://hbase.apache.org/security-model/
+
+`SECURITY.md` at the repo root is a short pointer to the published model
+and the `security@apache.org` reporting flow. The full model (source at
+`hbase-website/app/pages/_landing/security-model/content.md`, published
+at <https://hbase.apache.org/security-model/>) details trust boundaries,
 what constitutes a valid vulnerability, and what does not.
 
 When performing security analysis of this codebase, use the navigation
