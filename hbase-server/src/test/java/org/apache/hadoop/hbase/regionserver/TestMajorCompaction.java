@@ -405,8 +405,8 @@ public class TestMajorCompaction {
     CompactionRequestImpl request = store
       .requestCompaction(PRIORITY_USER, CompactionLifeCycleTracker.DUMMY, null).get().getRequest();
     assertNotNull(request, "Expected to receive a compaction request");
-    assertTrue(request.isMajor(),
-      "User-requested major compaction should always occur, even if there are too many store files");
+    assertTrue(request.isMajor(), "User-requested major compaction should always occur, "
+      + "even if there are too many store files");
   }
 
   /**
