@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HTableDescriptor;
@@ -38,20 +37,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestNewVersionBehaviorFromClientSide {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNewVersionBehaviorFromClientSide.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -62,22 +57,20 @@ public class TestNewVersionBehaviorFromClientSide {
   private static final byte[] col1 = Bytes.toBytes("col1");
   private static final byte[] col2 = Bytes.toBytes("col2");
   private static final byte[] col3 = Bytes.toBytes("col3");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void setDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   private Table createTable() throws IOException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(name);
     HTableDescriptor table = new HTableDescriptor(tableName);
     HColumnDescriptor fam = new HColumnDescriptor(FAMILY);
     fam.setNewVersionBehavior(true);
@@ -85,6 +78,11 @@ public class TestNewVersionBehaviorFromClientSide {
     table.addFamily(fam);
     TEST_UTIL.getHBaseAdmin().createTable(table);
     return TEST_UTIL.getConnection().getTable(tableName);
+  }
+
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
   }
 
   @Test
@@ -311,7 +309,7 @@ public class TestNewVersionBehaviorFromClientSide {
   }
 
   @Test
-  public void testgetColumnHint() throws IOException {
+  public void testGetColumnHint() throws IOException {
     try (Table t = createTable()) {
       t.setOperationTimeout(10000);
       t.setRpcTimeout(10000);

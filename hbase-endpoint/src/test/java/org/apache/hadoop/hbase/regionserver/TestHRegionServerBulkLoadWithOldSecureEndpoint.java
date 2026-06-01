@@ -23,7 +23,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.RepeatingTestThread;
 import org.apache.hadoop.hbase.MultithreadedTestUtil.TestContext;
@@ -39,12 +39,9 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,22 +55,20 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
  * Tests bulk loading of HFiles with old secure Endpoint client for backward compatibility. Will be
  * removed when old non-secure client for backward compatibility is not supported.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
-@Ignore // BROKEN. FIX OR REMOVE.
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: duration={0}")
+@Disabled // BROKEN. FIX OR REMOVE.
 public class TestHRegionServerBulkLoadWithOldSecureEndpoint extends TestHRegionServerBulkLoad {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
+
+  private static final Logger LOG =
+    LoggerFactory.getLogger(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
 
   public TestHRegionServerBulkLoadWithOldSecureEndpoint(int duration) {
     super(duration);
   }
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(TestHRegionServerBulkLoadWithOldSecureEndpoint.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws IOException {
     conf.setInt("hbase.rpc.timeout", 10 * 1000);
     conf.set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,

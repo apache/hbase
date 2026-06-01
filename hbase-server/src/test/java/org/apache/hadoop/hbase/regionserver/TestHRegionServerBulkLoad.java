@@ -24,17 +24,17 @@ import static org.hamcrest.core.Is.is;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
@@ -78,13 +78,10 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -98,13 +95,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.CompactRegi
  * Tests bulk loading of HFiles and shows the atomicity or lack of atomicity of the region server's
  * bullkLoad functionality.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: duration={0}")
 public class TestHRegionServerBulkLoad {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegionServerBulkLoad.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionServerBulkLoad.class);
   protected static HBaseTestingUtility UTIL = new HBaseTestingUtility();
@@ -122,21 +116,20 @@ public class TestHRegionServerBulkLoad {
     }
   }
 
-  @Parameters
-  public static final Collection<Object[]> parameters() {
+  public static Stream<Arguments> parameters() {
     int[] sleepDurations = new int[] { 0, 30000 };
-    List<Object[]> configurations = new ArrayList<>();
+    List<Arguments> configurations = new ArrayList<>();
     for (int i : sleepDurations) {
-      configurations.add(new Object[] { i });
+      configurations.add(Arguments.of(i));
     }
-    return configurations;
+    return configurations.stream();
   }
 
   public TestHRegionServerBulkLoad(int duration) {
     this.sleepDuration = duration;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf.setInt("hbase.rpc.timeout", 10 * 1000);
   }
@@ -359,7 +352,7 @@ public class TestHRegionServerBulkLoad {
   /**
    * Atomic bulk load.
    */
-  @Test
+  @TestTemplate
   public void testAtomicBulkLoad() throws Exception {
     TableName TABLE_NAME = TableName.valueOf("atomicBulkLoad");
 
