@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -42,23 +41,24 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestColumnSeeking {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnSeeking.class);
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
+
   private final static HBaseTestingUtility TEST_UTIL = HBaseTestingUtility.createLocalHTU();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnSeeking.class);
@@ -68,7 +68,7 @@ public class TestColumnSeeking {
   public void testDuplicateVersions() throws IOException {
     String family = "Family";
     byte[] familyBytes = Bytes.toBytes("Family");
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
 
     HColumnDescriptor hcd = new HColumnDescriptor(familyBytes).setMaxVersions(1000);
     hcd.setMaxVersions(3);
@@ -178,7 +178,7 @@ public class TestColumnSeeking {
   public void testReseeking() throws IOException {
     String family = "Family";
     byte[] familyBytes = Bytes.toBytes("Family");
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
 
     HTableDescriptor htd = new HTableDescriptor(table);
     HColumnDescriptor hcd = new HColumnDescriptor(family);
