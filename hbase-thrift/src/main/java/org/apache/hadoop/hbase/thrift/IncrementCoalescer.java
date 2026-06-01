@@ -108,9 +108,16 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
 
     @Override
     public boolean equals(Object obj) {
-      if (this == obj) return true;
-      if (obj == null) return false;
-      if (getClass() != obj.getClass()) return false;
+      if (this == obj) {
+        return true;
+      }
+      if (obj == null) {
+        return false;
+      }
+      if (getClass() != obj.getClass()) {
+        return false;
+      }
+
       FullyQualifiedRow other = (FullyQualifiedRow) obj;
 
       if (!Arrays.equals(family, other.family)) {
@@ -166,13 +173,16 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
     for (TIncrement tinc : incs) {
       internalQueueTincrement(tinc);
     }
-    return true;
 
+    return true;
   }
 
   private boolean internalQueueTincrement(TIncrement inc) {
     byte[][] famAndQf = CellUtil.parseColumn(inc.getColumn());
-    if (famAndQf.length != 2) return false;
+
+    if (famAndQf.length != 2) {
+      return false;
+    }
 
     return internalQueueIncrement(inc.getTable(), inc.getRow(), famAndQf[0], famAndQf[1],
       inc.getAmmount());
@@ -263,6 +273,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
   /**
    * This method samples the incoming requests and, if selected, will check if the corePoolSize
    * should be changed.
+   * @param countersMapSize the size of the counters map
    */
   private void dynamicallySetCoreSize(int countersMapSize) {
     // Here we are using countersMapSize as a random number, meaning this
@@ -271,9 +282,10 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
       return;
     }
     double currentRatio = (double) countersMapSize / (double) maxQueueSize;
-    int newValue = 1;
+    int newValue;
+
     if (currentRatio < 0.1) {
-      // it's 1
+      newValue = 1;
     } else if (currentRatio < 0.3) {
       newValue = 2;
     } else if (currentRatio < 0.5) {
@@ -285,6 +297,7 @@ public class IncrementCoalescer implements IncrementCoalescerMBean {
     } else {
       newValue = 22;
     }
+
     if (pool.getCorePoolSize() != newValue) {
       pool.setCorePoolSize(newValue);
     }

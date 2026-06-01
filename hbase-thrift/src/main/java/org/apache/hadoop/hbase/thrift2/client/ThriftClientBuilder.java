@@ -20,8 +20,9 @@ package org.apache.hadoop.hbase.thrift2.client;
 import java.io.IOException;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.thrift.transport.TTransport;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TTransport;
 
 @InterfaceAudience.Private
 public abstract class ThriftClientBuilder {
