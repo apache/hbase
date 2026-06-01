@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +27,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -35,19 +34,17 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.ClassRule;
-import org.junit.Test;
 import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for DumpReplicationQueues tool
  */
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 @Category({ ReplicationTests.class, SmallTests.class })
 public class TestDumpReplicationQueues {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDumpReplicationQueues.class);
 
   /**
    * Makes sure dumpQueues returns wals znodes ordered chronologically.
@@ -82,16 +79,13 @@ public class TestDumpReplicationQueues {
     dumpQueues.setConf(config);
     String dump = dumpQueues.dumpQueues(zkWatcherMock, peerIds, false);
     String[] parsedDump = dump.split("Replication position for");
-    assertEquals("Parsed dump should have 4 parts.", 4, parsedDump.length);
-    assertTrue(
-      "First wal should be rs1%2C60964%2C1549394085556.1549394101426, but got: " + parsedDump[1],
-      parsedDump[1].indexOf("rs1%2C60964%2C1549394085556.1549394101426") >= 0);
-    assertTrue(
-      "Second wal should be rs1%2C60964%2C1549394085556.1549394101427, but got: " + parsedDump[2],
-      parsedDump[2].indexOf("rs1%2C60964%2C1549394085556.1549394101427") >= 0);
-    assertTrue(
-      "Third wal should be rs1%2C60964%2C1549394085556.1549394101428, but got: " + parsedDump[3],
-      parsedDump[3].indexOf("rs1%2C60964%2C1549394085556.1549394101428") >= 0);
+    assertEquals(4, parsedDump.length, "Parsed dump should have 4 parts.");
+    assertTrue(parsedDump[1].indexOf("rs1%2C60964%2C1549394085556.1549394101426") >= 0,
+      "First wal should be rs1%2C60964%2C1549394085556.1549394101426, but got: " + parsedDump[1]);
+    assertTrue(parsedDump[2].indexOf("rs1%2C60964%2C1549394085556.1549394101427") >= 0,
+      "Second wal should be rs1%2C60964%2C1549394085556.1549394101427, but got: " + parsedDump[2]);
+    assertTrue(parsedDump[3].indexOf("rs1%2C60964%2C1549394085556.1549394101428") >= 0,
+      "Third wal should be rs1%2C60964%2C1549394085556.1549394101428, but got: " + parsedDump[3]);
   }
 
 }
