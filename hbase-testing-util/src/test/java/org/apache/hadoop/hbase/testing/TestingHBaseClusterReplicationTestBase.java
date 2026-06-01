@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.testing;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HConstants;
@@ -35,9 +35,9 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -64,7 +64,7 @@ public abstract class TestingHBaseClusterReplicationTestBase {
     return ZKConfig.getZooKeeperClusterKey(peerCluster.getConf());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     startClusters();
     sourceConn = ConnectionFactory.createConnection(sourceCluster.getConf());
@@ -82,7 +82,7 @@ public abstract class TestingHBaseClusterReplicationTestBase {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(sourceConn, true);
     Closeables.close(peerConn, true);

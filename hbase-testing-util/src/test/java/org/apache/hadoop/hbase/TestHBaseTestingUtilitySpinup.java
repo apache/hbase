@@ -17,30 +17,26 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.util.List;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Make sure we can spin up a HBTU without a hbase-site.xml
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestHBaseTestingUtilitySpinup {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseTestingUtilitySpinup.class);
 
   private final static HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();
     if (!UTIL.getHBaseCluster().waitForActiveAndReadyMaster(30000)) {
@@ -48,7 +44,7 @@ public class TestHBaseTestingUtilitySpinup {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -56,7 +52,7 @@ public class TestHBaseTestingUtilitySpinup {
   @Test
   public void testGetMetaTableRows() throws Exception {
     List<byte[]> results = UTIL.getMetaTableRows();
-    assertFalse("results should have some entries and is empty.", results.isEmpty());
+    assertFalse(results.isEmpty(), "results should have some entries and is empty.");
   }
 
 }

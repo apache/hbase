@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.testing;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -33,23 +32,19 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.DNS.ServerType;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTestingHBaseCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTestingHBaseCluster.class);
 
   private static TestingHBaseCluster CLUSTER;
 
@@ -57,20 +52,20 @@ public class TestTestingHBaseCluster {
 
   private Admin admin;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     CLUSTER = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().numMasters(2)
       .numRegionServers(3).numDataNodes(3).build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (CLUSTER.isClusterRunning()) {
       CLUSTER.stop();
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     if (!CLUSTER.isClusterRunning()) {
       CLUSTER.start();
@@ -82,7 +77,7 @@ public class TestTestingHBaseCluster {
     admin = conn.getAdmin();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(admin, true);
     Closeables.close(conn, true);
