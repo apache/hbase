@@ -1886,6 +1886,10 @@
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>samples</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
