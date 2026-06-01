@@ -1289,7 +1289,11 @@ public class ColumnFamilyDescriptorBuilder {
 
     @Override
     public String getConfigurationValue(String key) {
-      return configuration.get(key);
+      // Fall back to the values map (where the shell writes settings since HBASE-20819) so a
+      // single-key read sees a setting regardless of which map it landed in. Values win on
+      // collision.
+      String value = getValue(key);
+      return value != null ? value : configuration.get(key);
     }
 
     @Override
