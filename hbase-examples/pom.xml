@@ -110,9 +110,14 @@
       <artifactId>hbase-testing-util</artifactId>
       <scope>test</scope>
     </dependency>
+    <!--
+      Thrift runtime classes come from the relocated/shaded artifact in hbase-thirdparty
+      (org.apache.hbase.thirdparty.org.apache.thrift.*) instead of upstream libthrift. See
+      HBASE-30194 and hbase-thirdparty/hbase-shaded-thrift.
+    -->
     <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>libthrift</artifactId>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-thrift</artifactId>
     </dependency>
     <dependency>
       <groupId>commons-io</groupId>
