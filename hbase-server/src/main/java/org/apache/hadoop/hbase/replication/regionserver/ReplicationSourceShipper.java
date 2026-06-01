@@ -166,11 +166,17 @@ public class ReplicationSourceShipper extends Thread {
         }
       }
     } finally {
-      // Flush buffered offsets before worker exits
+      // Persist any buffered offset when the worker exits normally
+      // (peer disable, peer removal, source termination, etc).
+      // Skip when we are restarting because the next shipper will continue
+      // from the last persisted offset.
       if (!isFinished() && !abortingForRestart) {
         try {
           persistLogPosition();
         } catch (IOException e) {
+          // Failure to persist here is non-fatal because replication will resume
+          // from the last successfully persisted position after source recovery
+          // or peer re-enable, since Worker is already exiting.
           LOG.warn("Failed persisting final offset during shutdown for walGroupId={}", walGroupId,
             e);
         }
@@ -185,15 +191,11 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  private void noMoreData() {
-    try {
-      // Flush any delayed offset before finishing queue
-      persistLogPosition();
-    } catch (IOException e) {
-      LOG.error("Failed to persist final replication offset for walGroupId={}", walGroupId, e);
-      abortAndRestart(e);
-      return;
-    }
+  private void noMoreData() throws IOException {
+    // Flush any outstanding replication offset before marking the queue finished.
+    // Offset persistence may be delayed by size/time thresholds, so ensure the
+    // latest replicated position is stored before transitioning to FINISHED state.
+    persistLogPosition();
 
     if (source.isRecovered()) {
       LOG.debug("Finished recovering queue for group {} of peer {}", walGroupId,
@@ -298,7 +300,7 @@ public class ReplicationSourceShipper extends Thread {
     }
   }
 
-  boolean shouldPersistLogPosition() {
+  private boolean shouldPersistLogPosition() {
     if (lastShippedBatch == null) {
       return false;
     }
@@ -317,7 +319,7 @@ public class ReplicationSourceShipper extends Thread {
     }
 
     if (!source.isSourceActive() || isInterrupted()) {
-      LOG.info("Skip persistLogPosition for inactive/stopping source");
+      LOG.debug("Skip persistLogPosition for inactive/stopping source");
       return;
     }
 
@@ -466,6 +468,7 @@ public class ReplicationSourceShipper extends Thread {
 
   // Restart from last persisted offset
   void abortAndRestart(Throwable cause) {
+    LOG.warn("Restarting shipper for walGroupId={}", walGroupId, cause);
     if (!source.isSourceActive() || !source.isPeerEnabled() || isInterrupted()) {
       LOG.warn("abortAndRestart SKIPPED walGroupId={}, thread={}", walGroupId,
         Thread.currentThread().getName());

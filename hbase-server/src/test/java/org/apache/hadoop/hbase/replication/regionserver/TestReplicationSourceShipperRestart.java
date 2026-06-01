@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
@@ -44,12 +45,14 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.mockito.InOrder;
 
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReplicationSourceShipperRestart {
 
   private ReplicationSource source;
@@ -59,7 +62,7 @@ public class TestReplicationSourceShipperRestart {
 
   private static final Path PATH = new Path("/test");
 
-  @Before
+  @BeforeEach
   public void setup() {
     source = mock(ReplicationSource.class);
     reader = mock(ReplicationSourceWALReader.class);
@@ -220,7 +223,7 @@ public class TestReplicationSourceShipperRestart {
     ReplicationSourceShipper s = spy(lightShipper(conf));
 
     s.shipEdits(batch(10));
-    Thread.sleep(2);
+    Thread.sleep(20);
     s.shipEdits(batch(10));
 
     verify(s, atLeastOnce()).persistLogPosition();
@@ -259,12 +262,14 @@ public class TestReplicationSourceShipperRestart {
   // Persist failure
   // ------------------------------------------------------------------------
 
-  @Test(expected = IOException.class)
+  @Test
   public void testPersistFailureThrows() throws Exception {
     doThrow(new IOException()).when(endpoint).beforePersistingReplicationOffset();
 
-    new ReplicationSourceShipper(new Configuration(), "group", source, reader)
-      .shipEdits(emptyBatch());
+    ReplicationSourceShipper shipper =
+      new ReplicationSourceShipper(new Configuration(), "group", source, reader);
+
+    assertThrows(IOException.class, () -> shipper.shipEdits(emptyBatch()));
   }
 
   // ------------------------------------------------------------------------
@@ -272,6 +277,7 @@ public class TestReplicationSourceShipperRestart {
   // ------------------------------------------------------------------------
 
   @Test
+  @Timeout(30)
   public void testPersistFailureTriggersRestart() throws Exception {
 
     WALEntryBatch batch = emptyBatch();
@@ -301,6 +307,7 @@ public class TestReplicationSourceShipperRestart {
   // ------------------------------------------------------------------------
 
   @Test
+  @Timeout(30)
   public void testRunNormalFlow() throws Exception {
 
     WALEntryBatch batch = emptyBatch();
