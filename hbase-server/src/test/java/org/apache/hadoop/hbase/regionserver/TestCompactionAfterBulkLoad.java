@@ -18,20 +18,21 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.regionserver.HRegion.COMPACTION_AFTER_BULKLOAD_ENABLE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 import static org.mockito.hamcrest.MockitoHamcrest.argThat;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -44,18 +45,14 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionAfterBulkLoad.class);
 
   private final RegionServerServices regionServerServices = mock(RegionServerServices.class);
   public static AtomicInteger called = new AtomicInteger(0);
@@ -76,12 +73,13 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
     ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
     // TODO We need a way to do this without creating files
-    return HRegion.createHRegion(hRegionInfo, new Path(testFolder.newFolder().toURI()), conf,
-      builder.build(), log, true, regionServerServices);
+    return HRegion.createHRegion(hRegionInfo,
+      new Path(new File(testFolder, generateUniqueName(null)).toURI()), conf, builder.build(), log,
+      true, regionServerServices);
 
   }
 
-  @Test
+  @TestTemplate
   public void shouldRequestCompactAllStoresAfterBulkLoad() throws IOException {
     final CompactSplit compactSplit = new TestCompactSplit(HBaseConfiguration.create());
     called.set(0);
@@ -116,7 +114,7 @@ public class TestCompactionAfterBulkLoad extends TestBulkloadBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testAvoidRepeatedlyRequestCompactAfterBulkLoad() throws IOException {
     final CompactSplit compactSplit = new TestFamily1UnderCompact(HBaseConfiguration.create());
     called.set(0);

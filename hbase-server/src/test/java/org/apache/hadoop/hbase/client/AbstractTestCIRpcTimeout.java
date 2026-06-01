@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,9 +37,9 @@ public abstract class AbstractTestCIRpcTimeout extends AbstractTestCITimeout {
 
   private TableName tableName;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
-    tableName = TableName.valueOf(name.getMethodName());
+    tableName = name.getTableName();
     TableDescriptor htd =
       TableDescriptorBuilder.newBuilder(tableName).setCoprocessor(SleepCoprocessor.class.getName())
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAM_NAM)).build();

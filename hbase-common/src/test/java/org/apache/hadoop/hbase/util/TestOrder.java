@@ -19,22 +19,18 @@ package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.util.Order.ASCENDING;
 import static org.apache.hadoop.hbase.util.Order.DESCENDING;
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.util.Arrays;
 import java.util.Collections;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOrder {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestOrder.class);
 
   byte[][] VALS = { Bytes.toBytes("foo"), Bytes.toBytes("bar"), Bytes.toBytes("baz") };
 

@@ -17,23 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Make sure compaction tests still pass with the preFlush and preCompact overridden to implement
  * the default behavior
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCompactionWithCoprocessor extends TestCompaction {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionWithCoprocessor.class);
 
   /** constructor */
   public TestCompactionWithCoprocessor() throws Exception {

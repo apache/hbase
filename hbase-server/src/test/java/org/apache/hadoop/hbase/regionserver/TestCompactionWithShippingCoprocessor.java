@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -41,37 +40,36 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.Matchers;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class, CoprocessorTests.class })
+@Tag(MediumTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestCompactionWithShippingCoprocessor {
 
   private static final AtomicInteger SHIPPED_COUNT = new AtomicInteger();
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionWithShippingCoprocessor.class);
-
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 0);// do not retry
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -83,7 +81,7 @@ public class TestCompactionWithShippingCoprocessor {
   @Test
   public void testCoprocScannersExtendingShipperGetShipped() throws Exception {
     int shippedCountBefore = SHIPPED_COUNT.get();
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     // Create a table with block size as 1024
     final Table table = TEST_UTIL.createTable(tableName, new byte[][] { FAMILY }, 1, 1024,
       CompactionObserver.class.getName());

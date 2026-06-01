@@ -1154,6 +1154,26 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public long refreshMeta() throws IOException {
+    return get(admin.refreshMeta());
+  }
+
+  @Override
+  public long refreshHFiles(final TableName tableName) throws IOException {
+    return get(admin.refreshHFiles(tableName));
+  }
+
+  @Override
+  public long refreshHFiles(final String namespace) throws IOException {
+    return get(admin.refreshHFiles(namespace));
+  }
+
+  @Override
+  public long refreshHFiles() throws IOException {
+    return get(admin.refreshHFiles());
+  }
+
+  @Override
   public void restoreBackupSystemTable(String snapshotName) throws IOException {
     get(admin.restoreBackupSystemTable(snapshotName));
   }

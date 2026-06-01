@@ -19,17 +19,16 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR;
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ForkJoinPool;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.function.Supplier;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
@@ -40,34 +39,27 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestAsyncAdminBuilder {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminBuilder.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestAsyncAdminBuilder.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static AsyncConnection ASYNC_CONN;
 
-  @Parameter
-  public Supplier<AsyncAdminBuilder> getAdminBuilder;
+  private final Supplier<AsyncAdminBuilder> getAdminBuilder;
+
+  public TestAsyncAdminBuilder(Supplier<AsyncAdminBuilder> getAdminBuilder) {
+    this.getAdminBuilder = getAdminBuilder;
+  }
 
   private static AsyncAdminBuilder getRawAsyncAdminBuilder() {
     return ASYNC_CONN.getAdminBuilder();
@@ -77,17 +69,17 @@ public class TestAsyncAdminBuilder {
     return ASYNC_CONN.getAdminBuilder(ForkJoinPool.commonPool());
   }
 
-  @Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(new Supplier<?>[] { TestAsyncAdminBuilder::getRawAsyncAdminBuilder },
-      new Supplier<?>[] { TestAsyncAdminBuilder::getAsyncAdminBuilder });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(
+      Arguments.of((Supplier<AsyncAdminBuilder>) TestAsyncAdminBuilder::getRawAsyncAdminBuilder),
+      Arguments.of((Supplier<AsyncAdminBuilder>) TestAsyncAdminBuilder::getAsyncAdminBuilder));
   }
 
   private static final int DEFAULT_RPC_TIMEOUT = 10000;
   private static final int DEFAULT_OPERATION_TIMEOUT = 30000;
   private static final int DEFAULT_RETRIES_NUMBER = 2;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, DEFAULT_RPC_TIMEOUT);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
@@ -97,13 +89,13 @@ public class TestAsyncAdminBuilder {
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testRpcTimeout() throws Exception {
     TEST_UTIL.getConfiguration().set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       TestRpcTimeoutCoprocessor.class.getName());
@@ -126,7 +118,7 @@ public class TestAsyncAdminBuilder {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testOperationTimeout() throws Exception {
     // set retry number to 100 to make sure that this test only be affected by operation timeout
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 100);
@@ -153,7 +145,7 @@ public class TestAsyncAdminBuilder {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testMaxRetries() throws Exception {
     // set operation timeout to 300s to make sure that this test only be affected by retry number
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 300000);

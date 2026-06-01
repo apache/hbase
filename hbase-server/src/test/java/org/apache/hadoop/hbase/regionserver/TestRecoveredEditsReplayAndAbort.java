@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -45,14 +47,11 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -61,20 +60,15 @@ import org.slf4j.LoggerFactory;
  * HBASE-21031 If replay edits fails, we need to make sure memstore is rollbacked And if MSLAB is
  * used, all chunk is released too.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRecoveredEditsReplayAndAbort {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecoveredEditsReplayAndAbort.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEditsReplayAndAbort.class);
 
   protected final byte[] row = Bytes.toBytes("rowA");
 
   protected final static byte[] fam1 = Bytes.toBytes("colfamily11");
-
-  @Rule
-  public TestName name = new TestName();
 
   // Test names
   protected TableName tableName;
@@ -84,15 +78,15 @@ public class TestRecoveredEditsReplayAndAbort {
   public static Configuration CONF;
   private HRegion region = null;
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
     TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
-    method = name.getMethodName();
+    method = testInfo.getTestMethod().get().getName();
     tableName = TableName.valueOf(method);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     LOG.info("Cleaning test directory: " + TEST_UTIL.getDataTestDir());
     TEST_UTIL.cleanupTestDir();
@@ -167,27 +161,25 @@ public class TestRecoveredEditsReplayAndAbort {
             replayedEdits++;
             // during replay, rsAccounting should align with global memstore, because
             // there is only one memstore here
-            Assert.assertEquals(rsAccounting.getGlobalMemStoreDataSize(),
-              region.getMemStoreDataSize());
-            Assert.assertEquals(rsAccounting.getGlobalMemStoreHeapSize(),
-              region.getMemStoreHeapSize());
-            Assert.assertEquals(rsAccounting.getGlobalMemStoreOffHeapSize(),
+            assertEquals(rsAccounting.getGlobalMemStoreDataSize(), region.getMemStoreDataSize());
+            assertEquals(rsAccounting.getGlobalMemStoreHeapSize(), region.getMemStoreHeapSize());
+            assertEquals(rsAccounting.getGlobalMemStoreOffHeapSize(),
               region.getMemStoreOffHeapSize());
             // abort the replay before finishing, leaving some edits in the memory
             return replayedEdits < totalEdits - 10;
           }
         });
-        Assert.fail("Should not reach here");
+        fail("Should not reach here");
       } catch (IOException t) {
         LOG.info("Current memstore: " + region.getMemStoreDataSize() + ", "
           + region.getMemStoreHeapSize() + ", " + region.getMemStoreOffHeapSize());
       }
       // After aborting replay, there should be no data in the memory
-      Assert.assertEquals(0, rsAccounting.getGlobalMemStoreDataSize());
-      Assert.assertEquals(0, region.getMemStoreDataSize());
+      assertEquals(0, rsAccounting.getGlobalMemStoreDataSize());
+      assertEquals(0, region.getMemStoreDataSize());
       // All the chunk in the MSLAB should be recycled, otherwise, there might be
       // a memory leak.
-      Assert.assertEquals(0, ChunkCreator.getInstance().numberOfMappedChunks());
+      assertEquals(0, ChunkCreator.getInstance().numberOfMappedChunks());
     } finally {
       HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;

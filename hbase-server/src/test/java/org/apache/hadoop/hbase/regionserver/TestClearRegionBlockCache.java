@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -38,23 +39,17 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
-@RunWith(Parameterized.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: {0}")
 public class TestClearRegionBlockCache {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClearRegionBlockCache.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClearRegionBlockCache.class);
   private static final TableName TABLE_NAME = TableName.valueOf("testClearRegionBlockCache");
@@ -69,15 +64,17 @@ public class TestClearRegionBlockCache {
   private HRegionServer rs1, rs2;
   private SingleProcessHBaseCluster cluster;
 
-  @Parameterized.Parameter
-  public String cacheType;
+  private final String cacheType;
 
-  @Parameterized.Parameters(name = "{index}: {0}")
-  public static Object[] data() {
-    return new Object[] { "lru", "bucket" };
+  public TestClearRegionBlockCache(String cacheType) {
+    this.cacheType = cacheType;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("lru"), Arguments.of("bucket"));
+  }
+
+  @BeforeEach
   public void setup() throws Exception {
     if (cacheType.equals("bucket")) {
       CONF.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
@@ -95,12 +92,12 @@ public class TestClearRegionBlockCache {
     HTU.flush(TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     HTU.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testClearBlockCache() throws Exception {
     BlockCache blockCache1 = rs1.getBlockCache().get();
     BlockCache blockCache2 = rs2.getBlockCache().get();
@@ -119,11 +116,11 @@ public class TestClearRegionBlockCache {
       HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
     clearRegionBlockCache(rs2);
 
-    assertEquals("" + blockCache1.getBlockCount(), initialBlockCount1, blockCache1.getBlockCount());
-    assertEquals("" + blockCache2.getBlockCount(), initialBlockCount2, blockCache2.getBlockCount());
+    assertEquals(initialBlockCount1, blockCache1.getBlockCount(), "" + blockCache1.getBlockCount());
+    assertEquals(initialBlockCount2, blockCache2.getBlockCount(), "" + blockCache2.getBlockCount());
   }
 
-  @Test
+  @TestTemplate
   public void testClearBlockCacheFromAdmin() throws Exception {
     Admin admin = HTU.getAdmin();
 
@@ -147,7 +144,7 @@ public class TestClearRegionBlockCache {
     assertEquals(initialBlockCount2, blockCache2.getBlockCount());
   }
 
-  @Test
+  @TestTemplate
   public void testClearBlockCacheFromAsyncAdmin() throws Exception {
     try (AsyncConnection conn =
       ConnectionFactory.createAsyncConnection(HTU.getConfiguration()).get()) {

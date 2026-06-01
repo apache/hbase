@@ -20,11 +20,11 @@ package org.apache.hadoop.hbase.io;
 import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.endsWith;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.File;
 import java.io.IOException;
@@ -155,7 +155,7 @@ public class TestFileChangeWatcher {
     watcher.start();
     awaitWatcherThreadInitialized();
     await().during(Duration.ofSeconds(2)).atMost(Duration.ofSeconds(3))
-      .untilAsserted(() -> assertEquals("Should not have been notified", 0, notifiedPaths.size()));
+      .untilAsserted(() -> assertEquals(0, notifiedPaths.size(), "Should not have been notified"));
   }
 
   @Test
@@ -173,7 +173,7 @@ public class TestFileChangeWatcher {
       FileUtils.writeStringToFile(tempFile, "Hello world " + index + "\n", StandardCharsets.UTF_8,
         true);
       await().atMost(Duration.ofSeconds(2)).untilAsserted(
-        () -> assertEquals("Wrong number of notifications", index + 1, notifiedPaths.size()));
+        () -> assertEquals(index + 1, notifiedPaths.size(), "Wrong number of notifications"));
       Path path = notifiedPaths.get(index);
       assertEquals(tempFile.getPath(), path.toString());
     }

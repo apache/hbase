@@ -200,6 +200,11 @@ public class MobFileCleanerChore extends ScheduledChore implements Configuration
     }
   }
 
+  @Override
+  protected void cleanup() {
+    executor.shutdownNow();
+  }
+
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
   public ThreadPoolExecutor getExecutor() {

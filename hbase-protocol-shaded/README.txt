@@ -7,12 +7,10 @@ Hbase 3 and later versions.
 
 proto files layout:
 protobuf/client - client to server messages, client rpc service and protos, used in hbase-client exclusively;
-protobuf/rest - hbase-rest messages;
 protobuf/rpc - rpc and post-rpc tracing messages;
 protobuf/server/coprocessor - coprocessor rpc services;
-protobuf/server/coprocessor/example - coprocessors rpc services examples from hbase-examples;
 protobuf/server/io - filesystem and hbase-server/io protos;
-protobuf/server/maser - master rpc services and messages;
+protobuf/server/master - master rpc services and messages;
 protobuf/server/region - region rpc services and messages (except client rpc service, which is in Client.proto);
 protobuf/server/rsgroup - rsgroup protos;
 protobuf/server/zookeeper - protos for zookeeper and ones used exclusively in hbase-zookeeper module;

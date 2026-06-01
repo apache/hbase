@@ -22,7 +22,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
@@ -34,20 +33,15 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test DataBlockEncodingTool.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@org.junit.jupiter.api.Tag(MiscTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestDataBlockEncodingTool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDataBlockEncodingTool.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String ROOT_DIR =
@@ -56,7 +50,7 @@ public class TestDataBlockEncodingTool {
   private static FileSystem fs;
   private static StoreFileWriter sfw;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fs = TEST_UTIL.getTestFileSystem();
   }

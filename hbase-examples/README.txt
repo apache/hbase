@@ -38,7 +38,7 @@ Example code.
       <server-principal> should only be specified when the client connects to a secure cluster. It's default value is "hbase".
       4. Here is a lazy example that just pulls in all hbase dependency jars and that goes against default location on localhost.
       It should work with a standalone hbase instance started by doing ./bin/start-hbase.sh:
-      {java -cp ./hbase-examples/target/hbase-examples-2.0.0-SNAPSHOT.jar:`./bin/hbase classpath` org.apache.hadoop.hbase.thrift.DemoClient localhost 9090}
+      {java -cp ./hbase-examples/target/hbase-examples-4.0.0-alpha-1-SNAPSHOT.jar:`./bin/hbase classpath` org.apache.hadoop.hbase.thrift.DemoClient localhost 9090}
 
     * Ruby: hbase-examples/src/main/ruby/DemoClient.rb
       1. Modify the import path in the file to point to {$THRIFT_HOME}/lib/rb/lib.
@@ -64,7 +64,7 @@ Example code.
 
     * CPP: hbase-examples/src/main/cpp/DemoClient.cpp
       1. Make sure you have Thrift C++ libraries; modify Makefile if necessary.
-        The recent (0.14.1 as of this writing) version of Thrift can be downloaded from http://thrift.apache.org/download/.
+        The recent (0.14.1 as of this writing) version of Thrift can be downloaded from https://thrift.apache.org/download/.
       2. Execute {make}.
       3. Execute {./DemoClient <host> <port>}.
 

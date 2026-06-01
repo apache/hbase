@@ -17,26 +17,22 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTerminatedWrapper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTerminatedWrapper.class);
 
   static final String[] VALUES_STRINGS = new String[] { "", "1", "22", "333", "4444", "55555",
     "666666", "7777777", "88888888", "999999999", };
@@ -50,22 +46,25 @@ public class TestTerminatedWrapper {
 
   static final byte[][] TERMINATORS = new byte[][] { new byte[] { -2 }, Bytes.toBytes("foo") };
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testEmptyDelimiter() {
-    new TerminatedWrapper<>(new RawBytes(Order.ASCENDING), "");
+    assertThrows(IllegalArgumentException.class,
+      () -> new TerminatedWrapper<>(new RawBytes(Order.ASCENDING), ""));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNullDelimiter() {
-    new RawBytesTerminated((byte[]) null);
+    assertThrows(IllegalArgumentException.class, () -> new RawBytesTerminated((byte[]) null));
     // new TerminatedWrapper<byte[]>(new RawBytes(), (byte[]) null);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testEncodedValueContainsTerm() {
     final DataType<byte[]> type = new TerminatedWrapper<>(new RawBytes(Order.ASCENDING), "foo");
     final PositionedByteRange buff = new SimplePositionedMutableByteRange(16);
-    type.encode(buff, Bytes.toBytes("hello foobar!"));
+    assertThrows(IllegalArgumentException.class, () -> {
+      type.encode(buff, Bytes.toBytes("hello foobar!"));
+    });
   }
 
   @Test
@@ -139,11 +138,13 @@ public class TestTerminatedWrapper {
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInvalidSkip() {
     final PositionedByteRange buff = new SimplePositionedMutableByteRange(Bytes.toBytes("foo"));
     final DataType<byte[]> type =
       new TerminatedWrapper<>(new RawBytes(Order.ASCENDING), new byte[] { 0x00 });
-    type.skip(buff);
+    assertThrows(IllegalArgumentException.class, () -> {
+      type.skip(buff);
+    });
   }
 }

@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -40,18 +39,14 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestEncryptionRandomKeying {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEncryptionRandomKeying.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Configuration conf = TEST_UTIL.getConfiguration();
@@ -75,7 +70,7 @@ public class TestEncryptionRandomKeying {
       HFile.createReader(TEST_UTIL.getTestFileSystem(), path, new CacheConfig(conf), true, conf);
     try {
       Encryption.Context cryptoContext = reader.getFileContext().getEncryptionContext();
-      assertNotNull("Reader has a null crypto context", cryptoContext);
+      assertNotNull(cryptoContext, "Reader has a null crypto context");
       Key key = cryptoContext.getKey();
       if (key == null) {
         return null;
@@ -86,7 +81,7 @@ public class TestEncryptionRandomKeying {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     conf.setInt("hfile.format.version", 3);
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
@@ -121,7 +116,7 @@ public class TestEncryptionRandomKeying {
     TEST_UTIL.getAdmin().flush(tdb.build().getTableName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -132,7 +127,7 @@ public class TestEncryptionRandomKeying {
     final List<Path> initialPaths = findStorefilePaths(tdb.build().getTableName());
     assertTrue(initialPaths.size() > 0);
     for (Path path : initialPaths) {
-      assertNotNull("Store file " + path + " is not encrypted", extractHFileKey(path));
+      assertNotNull(extractHFileKey(path), "Store file " + path + " is not encrypted");
     }
   }
 

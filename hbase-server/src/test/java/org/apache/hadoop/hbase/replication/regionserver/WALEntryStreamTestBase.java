@@ -42,10 +42,10 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -125,10 +125,13 @@ public abstract class WALEntryStreamTestBase {
   protected WAL log;
   protected ReplicationSourceLogQueue logQueue;
   protected PathWatcher pathWatcher;
-
-  @Rule
-  public TestName tn = new TestName();
+  protected String testName;
   protected final MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testName = testInfo.getTestMethod().get().getName();
+  }
 
   protected static void startCluster() throws Exception {
     CONF = TEST_UTIL.getConfiguration();
@@ -139,7 +142,7 @@ public abstract class WALEntryStreamTestBase {
     fs = cluster.getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -151,12 +154,12 @@ public abstract class WALEntryStreamTestBase {
     metricsSource.clear();
     logQueue = new ReplicationSourceLogQueue(CONF, metricsSource, source);
     pathWatcher = new PathWatcher();
-    final WALFactory wals = new WALFactory(CONF, tn.getMethodName().replaceAll("[\\[:]", "_"));
+    final WALFactory wals = new WALFactory(CONF, testName.replaceAll("[\\[:]", "_"));
     wals.getWALProvider().addWALActionsListener(pathWatcher);
     log = wals.getWAL(info);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(log, true);
   }

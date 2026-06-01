@@ -578,6 +578,11 @@ class AsyncNonMetaRegionLocator {
     getTableCache(loc.getRegion().getTable()).regionLocationCache.add(createRegionLocations(loc));
   }
 
+  RegionLocations getCachedLocation(TableName tableName, byte[] startKey) {
+    TableCache tableCache = cache.get(tableName);
+    return tableCache == null ? null : tableCache.regionLocationCache.get(startKey);
+  }
+
   private HRegionLocation getCachedLocation(HRegionLocation loc) {
     TableCache tableCache = cache.get(loc.getRegion().getTable());
     if (tableCache == null) {

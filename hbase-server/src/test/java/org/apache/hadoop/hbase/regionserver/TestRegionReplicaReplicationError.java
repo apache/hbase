@@ -22,7 +22,6 @@ import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NotServingRegionException;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -41,11 +40,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ConcurrentMapUtils;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -63,13 +61,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
  * when secondary replica is online, which will always make the data of the two regions in sync. So
  * here we need to simulate request errors.
  */
-@Category({ FlakeyTests.class, LargeTests.class })
+@Tag(FlakeyTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionReplicaReplicationError {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaReplicationError.class);
-
   public static final class ErrorReplayRSRpcServices extends RSRpcServices {
 
     private final ConcurrentHashMap<HRegion, AtomicInteger> regionToCounter =
@@ -126,7 +120,7 @@ public class TestRegionReplicaReplicationError {
 
   private static byte[] CQ = Bytes.toBytes("cq");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     HTU.getConfiguration().setBoolean(ServerRegionReplicaUtil.REGION_REPLICA_REPLICATION_CONF_KEY,
       true);
@@ -134,7 +128,7 @@ public class TestRegionReplicaReplicationError {
       StartTestingClusterOption.builder().rsClass(RSForTest.class).numRegionServers(3).build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     HTU.shutdownMiniCluster();
   }

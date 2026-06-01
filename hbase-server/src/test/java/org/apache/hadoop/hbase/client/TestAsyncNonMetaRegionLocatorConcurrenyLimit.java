@@ -22,8 +22,8 @@ import static org.apache.hadoop.hbase.client.AsyncNonMetaRegionLocator.MAX_CONCU
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStartRow;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.REGION_COPROCESSOR_CONF_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -33,7 +33,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
@@ -48,20 +47,16 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncNonMetaRegionLocatorConcurrenyLimit.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -117,7 +112,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(REGION_COPROCESSOR_CONF_KEY, CountingRegionObserver.class.getName());
@@ -135,7 +130,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -169,7 +164,7 @@ public class TestAsyncNonMetaRegionLocatorConcurrenyLimit {
               RegionReplicaUtil.DEFAULT_REPLICA_ID, RegionLocateType.CURRENT, false))
             .collect(toList());
     assertLocs(futures);
-    assertTrue("max allowed is " + MAX_ALLOWED + " but actual is " + MAX_CONCURRENCY.get(),
-      MAX_CONCURRENCY.get() <= MAX_ALLOWED);
+    assertTrue(MAX_CONCURRENCY.get() <= MAX_ALLOWED,
+      "max allowed is " + MAX_ALLOWED + " but actual is " + MAX_CONCURRENCY.get());
   }
 }

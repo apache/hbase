@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.security.PrivilegedAction;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
@@ -33,18 +32,14 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMetricsUserAggregate {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsUserAggregate.class);
 
   private static MetricsAssertHelper HELPER =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -54,12 +49,12 @@ public class TestMetricsUserAggregate {
   private MetricsUserAggregate userAgg;
   private TableName tableName = TableName.valueOf("testUserAggregateMetrics");
 
-  @BeforeClass
+  @BeforeAll
   public static void classSetUp() {
     HELPER.init();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     wrapper = new MetricsRegionServerWrapperStub();
     Configuration conf = HBaseConfiguration.create();

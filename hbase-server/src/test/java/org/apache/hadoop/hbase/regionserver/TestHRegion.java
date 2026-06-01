@@ -21,14 +21,14 @@ import static org.apache.hadoop.hbase.HBaseTestingUtil.COLUMNS;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam3;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -86,7 +86,6 @@ import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -183,16 +182,12 @@ import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentCaptor;
 import org.mockito.ArgumentMatcher;
 import org.mockito.invocation.InvocationOnMock;
@@ -218,22 +213,15 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
  * Basic stand-alone testing of HRegion. No clusters! A lot of the meta information for an HRegion
  * now lives inside other HRegions or in the HBaseMaster, so only basic testing is possible.
  */
-@Category({ VerySlowRegionServerTests.class, LargeTests.class })
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestHRegion {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHRegion.class);
 
   // Do not spin up clusters in here. If you need to spin up a cluster, do it
   // over in TestHRegionOnCluster.
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegion.class);
-  @Rule
-  public TestName name = new TestName();
-  @Rule
-  public final ExpectedException thrown = ExpectedException.none();
-
+  private String name;
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
   private static final EventLoopGroup GROUP = new NioEventLoopGroup();
@@ -261,19 +249,20 @@ public class TestHRegion {
   protected final MetricsAssertHelper metricsAssertHelper =
     CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    this.name = testInfo.getTestMethod().get().getName();
     TEST_UTIL = new HBaseTestingUtil();
     CONF = TEST_UTIL.getConfiguration();
     NettyAsyncFSWALConfigHelper.setEventLoopConfig(CONF, GROUP, NioSocketChannel.class);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
-    method = name.getMethodName();
+    method = name;
     tableName = TableName.valueOf(method);
     CONF.set(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY, String.valueOf(0.09));
     CONF.setLong(AbstractFSWAL.WAL_SYNC_TIMEOUT_MS, 10000);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // Region may have been closed, but it is still no harm if we close it again here using HTU.
     HBaseTestingUtil.closeRegionAndWAL(region);
@@ -285,6 +274,7 @@ public class TestHRegion {
   /**
    * Test that I can use the max flushed sequence id after the close.
    */
+
   @Test
   public void testSequenceId() throws IOException {
     region = initHRegion(tableName, method, CONF, COLUMN_FAMILY_BYTES);
@@ -393,10 +383,10 @@ public class TestHRegion {
     } catch (IOException ioe) {
       threwIOE = true;
     } finally {
-      assertTrue("The regionserver should have thrown an exception", threwIOE);
+      assertTrue(threwIOE, "The regionserver should have thrown an exception");
     }
     MemStoreSize mss = store.getFlushableSize();
-    assertTrue("flushable size should be zero, but it is " + mss, mss.getDataSize() == 0);
+    assertTrue(mss.getDataSize() == 0, "flushable size should be zero, but it is " + mss);
   }
 
   /**
@@ -446,9 +436,9 @@ public class TestHRegion {
     } catch (IOException expected) {
     }
     long expectedSize = onePutSize * 2;
-    assertEquals("memstoreSize should be incremented", expectedSize, region.getMemStoreDataSize());
-    assertEquals("flushable size should be incremented", expectedSize,
-      store.getFlushableSize().getDataSize());
+    assertEquals(expectedSize, region.getMemStoreDataSize(), "memstoreSize should be incremented");
+    assertEquals(expectedSize, store.getFlushableSize().getDataSize(),
+      "flushable size should be incremented");
 
     region.setCoprocessorHost(null);
   }
@@ -502,7 +492,7 @@ public class TestHRegion {
       public Object run() throws Exception {
         // Make sure it worked (above is sensitive to caching details in hadoop core)
         FileSystem fs = FileSystem.get(conf);
-        Assert.assertEquals(FaultyFileSystem.class, fs.getClass());
+        assertEquals(FaultyFileSystem.class, fs.getClass());
         FaultyFileSystem ffs = (FaultyFileSystem) fs;
         HRegion region = null;
         try {
@@ -510,7 +500,7 @@ public class TestHRegion {
           region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, wal,
             COLUMN_FAMILY_BYTES);
           long size = region.getMemStoreDataSize();
-          Assert.assertEquals(0, size);
+          assertEquals(0, size);
           // Put one item into memstore. Measure the size of one item in memstore.
           Put p1 = new Put(row);
           p1.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual1, 1, (byte[]) null));
@@ -520,7 +510,7 @@ public class TestHRegion {
           try {
             LOG.info("Flushing");
             region.flush(true);
-            Assert.fail("Didn't bubble up IOE!");
+            fail("Didn't bubble up IOE!");
           } catch (DroppedSnapshotException dse) {
             // What we are expecting
             region.closing.set(false); // this is needed for the rest of the test to work
@@ -528,7 +518,7 @@ public class TestHRegion {
           // Make it so all writes succeed from here on out
           ffs.fault.set(false);
           // Check sizes. Should still be the one entry.
-          Assert.assertEquals(sizeOfOnePut, region.getMemStoreDataSize());
+          assertEquals(sizeOfOnePut, region.getMemStoreDataSize());
           // Now add two entries so that on this next flush that fails, we can see if we
           // subtract the right amount, the snapshot size only.
           Put p2 = new Put(row);
@@ -536,13 +526,13 @@ public class TestHRegion {
           p2.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual3, 3, (byte[]) null));
           region.put(p2);
           long expectedSize = sizeOfOnePut * 3;
-          Assert.assertEquals(expectedSize, region.getMemStoreDataSize());
+          assertEquals(expectedSize, region.getMemStoreDataSize());
           // Do a successful flush. It will clear the snapshot only. Thats how flushes work.
           // If already a snapshot, we clear it else we move the memstore to be snapshot and flush
           // it
           region.flush(true);
           // Make sure our memory accounting is right.
-          Assert.assertEquals(sizeOfOnePut * 2, region.getMemStoreDataSize());
+          assertEquals(sizeOfOnePut * 2, region.getMemStoreDataSize());
         } finally {
           HBaseTestingUtil.closeRegionAndWAL(region);
         }
@@ -566,7 +556,7 @@ public class TestHRegion {
       public Object run() throws Exception {
         // Make sure it worked (above is sensitive to caching details in hadoop core)
         FileSystem fs = FileSystem.get(conf);
-        Assert.assertEquals(FaultyFileSystem.class, fs.getClass());
+        assertEquals(FaultyFileSystem.class, fs.getClass());
         FaultyFileSystem ffs = (FaultyFileSystem) fs;
         HRegion region = null;
         try {
@@ -574,7 +564,7 @@ public class TestHRegion {
           region = initHRegion(tableName, null, null, CONF, false, Durability.SYNC_WAL, wal,
             COLUMN_FAMILY_BYTES);
           long size = region.getMemStoreDataSize();
-          Assert.assertEquals(0, size);
+          assertEquals(0, size);
           // Put one item into memstore. Measure the size of one item in memstore.
           Put p1 = new Put(row);
           p1.add(new KeyValue(row, COLUMN_FAMILY_BYTES, qual1, 1, (byte[]) null));
@@ -978,8 +968,8 @@ public class TestHRegion {
       FileStatus[] files = CommonFSUtils.listStatus(fs, tmpDir);
       String errorMsg = "Expected to find 1 file in the region temp directory "
         + "from the compaction, could not find any";
-      assertNotNull(errorMsg, files);
-      assertEquals(errorMsg, 1, files.length);
+      assertNotNull(files, errorMsg);
+      assertEquals(1, files.length, errorMsg);
       // move the file inside region dir
       Path newFile =
         region.getRegionFileSystem().commitStoreFile(Bytes.toString(family), files[0].getPath());
@@ -1031,7 +1021,7 @@ public class TestHRegion {
         assertEquals(1, region.getStore(family).getStorefilesCount());
       }
       files = CommonFSUtils.listStatus(fs, tmpDir);
-      assertTrue("Expected to find 0 files inside " + tmpDir, files == null || files.length == 0);
+      assertTrue(files == null || files.length == 0, "Expected to find 0 files inside " + tmpDir);
 
       for (long i = minSeqId; i < maxSeqId; i++) {
         Get get = new Get(Bytes.toBytes(i));
@@ -1365,7 +1355,7 @@ public class TestHRegion {
       }
       if (t.e != null) {
         LOG.info("Exception=" + t.e);
-        assertFalse("Found a NPE in " + t.getName(), t.e instanceof NullPointerException);
+        assertFalse(t.e instanceof NullPointerException, "Found a NPE in " + t.getName());
       }
     }
   }
@@ -1407,7 +1397,7 @@ public class TestHRegion {
    */
   @Test
   public void testWeirdCacheBehaviour() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     byte[][] FAMILIES = new byte[][] { Bytes.toBytes("trans-blob"), Bytes.toBytes("trans-type"),
       Bytes.toBytes("trans-date"), Bytes.toBytes("trans-tags"), Bytes.toBytes("trans-group") };
     this.region = initHRegion(tableName, method, CONF, FAMILIES);
@@ -1423,29 +1413,29 @@ public class TestHRegion {
     putRows(this.region, 3, value2, keyPrefix2);
     putRows(this.region, 3, value2, keyPrefix3);
     System.out.println("Checking values for key: " + keyPrefix1);
-    assertEquals("Got back incorrect number of rows from scan", 3,
-      getNumberOfRows(keyPrefix1, value2, this.region));
+    assertEquals(3, getNumberOfRows(keyPrefix1, value2, this.region),
+      "Got back incorrect number of rows from scan");
     System.out.println("Checking values for key: " + keyPrefix2);
-    assertEquals("Got back incorrect number of rows from scan", 3,
-      getNumberOfRows(keyPrefix2, value2, this.region));
+    assertEquals(3, getNumberOfRows(keyPrefix2, value2, this.region),
+      "Got back incorrect number of rows from scan");
     System.out.println("Checking values for key: " + keyPrefix3);
-    assertEquals("Got back incorrect number of rows from scan", 3,
-      getNumberOfRows(keyPrefix3, value2, this.region));
+    assertEquals(3, getNumberOfRows(keyPrefix3, value2, this.region),
+      "Got back incorrect number of rows from scan");
     deleteColumns(this.region, value2, keyPrefix1);
     deleteColumns(this.region, value2, keyPrefix2);
     deleteColumns(this.region, value2, keyPrefix3);
     System.out.println("Starting important checks.....");
-    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix1, 0,
-      getNumberOfRows(keyPrefix1, value2, this.region));
-    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix2, 0,
-      getNumberOfRows(keyPrefix2, value2, this.region));
-    assertEquals("Got back incorrect number of rows from scan: " + keyPrefix3, 0,
-      getNumberOfRows(keyPrefix3, value2, this.region));
+    assertEquals(0, getNumberOfRows(keyPrefix1, value2, this.region),
+      "Got back incorrect number of rows from scan: " + keyPrefix1);
+    assertEquals(0, getNumberOfRows(keyPrefix2, value2, this.region),
+      "Got back incorrect number of rows from scan: " + keyPrefix2);
+    assertEquals(0, getNumberOfRows(keyPrefix3, value2, this.region),
+      "Got back incorrect number of rows from scan: " + keyPrefix3);
   }
 
   @Test
   public void testAppendWithReadOnlyTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     this.region = initHRegion(tableName, method, CONF, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Append append = new Append(Bytes.toBytes("somerow"));
@@ -1462,7 +1452,7 @@ public class TestHRegion {
 
   @Test
   public void testIncrWithReadOnlyTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     this.region = initHRegion(tableName, method, CONF, true, Bytes.toBytes("somefamily"));
     boolean exceptionCaught = false;
     Increment inc = new Increment(Bytes.toBytes("somerow"));
@@ -1494,7 +1484,7 @@ public class TestHRegion {
         results.clear();
       } while (more);
     }
-    assertEquals("Did not perform correct number of deletes", 3, count);
+    assertEquals(3, count, "Did not perform correct number of deletes");
   }
 
   private int getNumberOfRows(String keyPrefix, String value, HRegion r) throws Exception {
@@ -1734,8 +1724,7 @@ public class TestHRegion {
     // 3. Exception thrown in validation
     LOG.info("Next a batch put with one invalid family");
     puts[5].addColumn(Bytes.toBytes("BAD_CF"), qual, value);
-    thrown.expect(NoSuchColumnFamilyException.class);
-    this.region.batchMutate(puts, true);
+    assertThrows(NoSuchColumnFamilyException.class, () -> this.region.batchMutate(puts, true));
   }
 
   @Test
@@ -1913,14 +1902,14 @@ public class TestHRegion {
     // checkAndPut with correct value
     boolean res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL,
       new BinaryComparator(val1), put);
-    assertEquals("First", true, res);
+    assertEquals(true, res, "First");
 
     // checkAndDelete with correct value
     Delete delete = new Delete(row1, now + 1);
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL, new BinaryComparator(val1),
       delete);
-    assertEquals("Delete", true, res);
+    assertEquals(true, res, "Delete");
 
     // Putting data in key
     put = new Put(row1);
@@ -1930,14 +1919,14 @@ public class TestHRegion {
     // checkAndPut with correct value
     res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL,
       new BigDecimalComparator(bd1), put);
-    assertEquals("Second put", true, res);
+    assertEquals(true, res, "Second put");
 
     // checkAndDelete with correct value
     delete = new Delete(row1, now + 3);
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(row1, fam1, qf1, CompareOperator.EQUAL,
       new BigDecimalComparator(bd1), delete);
-    assertEquals("Second delete", true, res);
+    assertEquals(true, res, "Second delete");
   }
 
   @Test
@@ -2499,14 +2488,14 @@ public class TestHRegion {
     // checkAndPut with correct value
     CheckAndMutateResult res = region.checkAndMutate(
       CheckAndMutate.newBuilder(row1).ifMatches(fam1, qf1, CompareOperator.EQUAL, val1).build(put));
-    assertTrue("First", res.isSuccess());
+    assertTrue(res.isSuccess(), "First");
 
     // checkAndDelete with correct value
     Delete delete = new Delete(row1, now + 1);
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, val1).build(delete));
-    assertTrue("Delete", res.isSuccess());
+    assertTrue(res.isSuccess(), "Delete");
     assertNull(res.getResult());
 
     // Putting data in key
@@ -2517,7 +2506,7 @@ public class TestHRegion {
     // checkAndPut with correct value
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, Bytes.toBytes(bd1)).build(put));
-    assertTrue("Second put", res.isSuccess());
+    assertTrue(res.isSuccess(), "Second put");
     assertNull(res.getResult());
 
     // checkAndDelete with correct value
@@ -2525,7 +2514,7 @@ public class TestHRegion {
     delete.addColumn(fam1, qf1);
     res = region.checkAndMutate(CheckAndMutate.newBuilder(row1)
       .ifMatches(fam1, qf1, CompareOperator.EQUAL, Bytes.toBytes(bd1)).build(delete));
-    assertTrue("Second delete", res.isSuccess());
+    assertTrue(res.isSuccess(), "Second delete");
     assertNull(res.getResult());
   }
 
@@ -3148,9 +3137,9 @@ public class TestHRegion {
     // testing non existing family
     NavigableMap<byte[], List<Cell>> deleteMap2 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     deleteMap2.put(fam4, kvs);
-    assertThrows("Family " + Bytes.toString(fam4) + " does exist",
-      NoSuchColumnFamilyException.class,
-      () -> region.delete(new Delete(forUnitTestsOnly, HConstants.LATEST_TIMESTAMP, deleteMap2)));
+    assertThrows(NoSuchColumnFamilyException.class,
+      () -> region.delete(new Delete(forUnitTestsOnly, HConstants.LATEST_TIMESTAMP, deleteMap2)),
+      "Family " + Bytes.toString(fam4) + " does exist");
   }
 
   @Test
@@ -3271,8 +3260,8 @@ public class TestHRegion {
     assertEquals(1, result.size());
     Cell kv = result.rawCells()[0];
     LOG.info("Got: " + kv);
-    assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
-      kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
+    assertTrue(kv.getTimestamp() != HConstants.LATEST_TIMESTAMP,
+      "LATEST_TIMESTAMP was not replaced with real timestamp");
 
     // Check same with WAL enabled (historically these took different
     // code paths, so check both)
@@ -3287,8 +3276,8 @@ public class TestHRegion {
     assertEquals(1, result.size());
     kv = result.rawCells()[0];
     LOG.info("Got: " + kv);
-    assertTrue("LATEST_TIMESTAMP was not replaced with real timestamp",
-      kv.getTimestamp() != HConstants.LATEST_TIMESTAMP);
+    assertTrue(kv.getTimestamp() != HConstants.LATEST_TIMESTAMP,
+      "LATEST_TIMESTAMP was not replaced with real timestamp");
   }
 
   /**
@@ -3315,7 +3304,7 @@ public class TestHRegion {
       LOG.debug("Received expected exception", ioe);
       caughtExcep = true;
     }
-    assertTrue("Should catch FailedSanityCheckException", caughtExcep);
+    assertTrue(caughtExcep, "Should catch FailedSanityCheckException");
   }
 
   @Test
@@ -3434,8 +3423,8 @@ public class TestHRegion {
     region.put(originalPut);
     region.setCoprocessorHost(normalCPHost);
     final long finalSize = region.getDataInMemoryWithoutWAL();
-    assertEquals("finalSize:" + finalSize + ", initSize:" + initSize + ", delta:" + delta,
-      finalSize, initSize + delta);
+    assertEquals(finalSize, initSize + delta,
+      "finalSize:" + finalSize + ", initSize:" + initSize + ", delta:" + delta);
   }
 
   @Test
@@ -3779,13 +3768,13 @@ public class TestHRegion {
         expectedFilePaths.add(fs.makeQualified(storeFile.getPath()));
       }
     }
-    assertTrue("Should have at least one store file after flush", expectedFilePaths.size() >= 1);
+    assertTrue(expectedFilePaths.size() >= 1, "Should have at least one store file after flush");
 
     // Get region scanner; before close getFilesRead must be empty.
     RegionScannerImpl scanner = region.getScanner(new Scan());
 
     Set<Path> filesReadBeforeClose = scanner.getFilesRead();
-    assertTrue("Should return empty set before closing", filesReadBeforeClose.isEmpty());
+    assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing");
 
     // Drain scanner (next up to two rows) to exercise store heap reads.
     List<Cell> cells = new ArrayList<>();
@@ -3800,15 +3789,15 @@ public class TestHRegion {
 
     // Still before close: set must remain empty until scanner is closed.
     filesReadBeforeClose = scanner.getFilesRead();
-    assertTrue("Should return empty set before closing even after scanning",
-      filesReadBeforeClose.isEmpty());
+    assertTrue(filesReadBeforeClose.isEmpty(),
+      "Should return empty set before closing even after scanning");
     scanner.close();
 
     // After close: set must contain exactly the expected store file paths.
     Set<Path> filesReadAfterClose = scanner.getFilesRead();
-    assertEquals("Should have exact file count after closing", expectedFilePaths.size(),
-      filesReadAfterClose.size());
-    assertEquals("Should contain all expected file paths", expectedFilePaths, filesReadAfterClose);
+    assertEquals(expectedFilePaths.size(), filesReadAfterClose.size(),
+      "Should have exact file count after closing");
+    assertEquals(expectedFilePaths, filesReadAfterClose, "Should contain all expected file paths");
   }
 
   @Test
@@ -4336,9 +4325,9 @@ public class TestHRegion {
 
       assertTrue(s.next(results));
       assertEquals(3, results.size());
-      assertTrue("orderCheck", CellUtil.matchingFamily(results.get(0), cf_alpha));
-      assertTrue("orderCheck", CellUtil.matchingFamily(results.get(1), cf_essential));
-      assertTrue("orderCheck", CellUtil.matchingFamily(results.get(2), cf_joined));
+      assertTrue(CellUtil.matchingFamily(results.get(0), cf_alpha), "orderCheck");
+      assertTrue(CellUtil.matchingFamily(results.get(1), cf_essential), "orderCheck");
+      assertTrue(CellUtil.matchingFamily(results.get(2), cf_joined), "orderCheck");
       results.clear();
 
       assertFalse(s.next(results));
@@ -4530,9 +4519,8 @@ public class TestHRegion {
           if (!toggle) {
             flushThread.flush();
           }
-          assertEquals(
-            "toggle=" + toggle + "i=" + i + " ts=" + EnvironmentEdgeManager.currentTime(),
-            expectedCount, res.size());
+          assertEquals(expectedCount, res.size(),
+            "toggle=" + toggle + "i=" + i + " ts=" + EnvironmentEdgeManager.currentTime());
           toggle = !toggle;
         }
       }
@@ -4678,10 +4666,10 @@ public class TestHRegion {
           } while (moreRows);
         }
         if (!res.isEmpty() || !previousEmpty || i > compactInterval) {
-          assertEquals("i=" + i, expectedCount, res.size());
+          assertEquals(expectedCount, res.size(), "i=" + i);
           long timestamp = res.get(0).getTimestamp();
-          assertTrue("Timestamps were broke: " + timestamp + " prev: " + prevTimestamp,
-            timestamp >= prevTimestamp);
+          assertTrue(timestamp >= prevTimestamp,
+            "Timestamps were broke: " + timestamp + " prev: " + prevTimestamp);
           prevTimestamp = timestamp;
         }
       }
@@ -4888,7 +4876,7 @@ public class TestHRegion {
         boolean previousEmpty = result == null || result.isEmpty();
         result = region.get(get);
         if (!result.isEmpty() || !previousEmpty || i > compactInterval) {
-          assertEquals("i=" + i, expectedCount, result.size());
+          assertEquals(expectedCount, result.size(), "i=" + i);
           // TODO this was removed, now what dangit?!
           // search looking for the qualifier in question?
           long timestamp = 0;
@@ -5047,7 +5035,7 @@ public class TestHRegion {
 
   @Test
   public void testAllColumnsWithBloomFilter() throws IOException {
-    byte[] TABLE = Bytes.toBytes(name.getMethodName());
+    byte[] TABLE = Bytes.toBytes(name);
     byte[] FAMILY = Bytes.toBytes("family");
 
     // Create table
@@ -5174,7 +5162,7 @@ public class TestHRegion {
       String msg = "uniqueBlocksWeight=" + uniqueBlocksWeight1 + ", topHostWeight=" + topHostWeight
         + ", topHost=" + topHost + "; " + sb.toString();
       LOG.info(msg);
-      assertTrue(msg, uniqueBlocksWeight1 == topHostWeight);
+      assertTrue(uniqueBlocksWeight1 == topHostWeight, msg);
 
       // use the static method to compute the value, it should be the same.
       // static method is used by load balancer or other components
@@ -5219,8 +5207,8 @@ public class TestHRegion {
           !(monitoredTask instanceof MonitoredRPCHandler)
             && monitoredTask.getDescription().contains(region.toString())
         ) {
-          assertTrue("Region state should be ABORTED.",
-            monitoredTask.getState().equals(MonitoredTask.State.ABORTED));
+          assertTrue(monitoredTask.getState().equals(MonitoredTask.State.ABORTED),
+            "Region state should be ABORTED.");
           break;
         }
       }
@@ -5236,7 +5224,7 @@ public class TestHRegion {
     Path rootDir = new Path(dir + "testRegionInfoFileCreation");
 
     TableDescriptorBuilder tableDescriptorBuilder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("cf")).build();
     tableDescriptorBuilder.setColumnFamily(columnFamilyDescriptor);
@@ -5253,8 +5241,8 @@ public class TestHRegion {
     Path regionInfoFile = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
 
     // Verify that the .regioninfo file is present
-    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
-      fs.exists(regionInfoFile));
+    assertTrue(fs.exists(regionInfoFile),
+      HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir");
 
     // Try to open the region
     region = HRegion.openHRegion(rootDir, hri, tableDescriptor, null, CONF);
@@ -5262,13 +5250,13 @@ public class TestHRegion {
     HBaseTestingUtil.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
-    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
-      fs.exists(regionInfoFile));
+    assertTrue(fs.exists(regionInfoFile),
+      HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir");
 
     // Remove the .regioninfo file and verify is recreated on region open
     fs.delete(regionInfoFile, true);
-    assertFalse(HRegionFileSystem.REGION_INFO_FILE + " should be removed from the region dir",
-      fs.exists(regionInfoFile));
+    assertFalse(fs.exists(regionInfoFile),
+      HRegionFileSystem.REGION_INFO_FILE + " should be removed from the region dir");
 
     region = HRegion.openHRegion(rootDir, hri, tableDescriptor, null, CONF);
     // region = TEST_UTIL.openHRegion(hri, htd);
@@ -5276,8 +5264,8 @@ public class TestHRegion {
     HBaseTestingUtil.closeRegionAndWAL(region);
 
     // Verify that the .regioninfo file is still there
-    assertTrue(HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir",
-      fs.exists(new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE)));
+    assertTrue(fs.exists(new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE)),
+      HRegionFileSystem.REGION_INFO_FILE + " should be present in the region dir");
 
     region = null;
   }
@@ -5523,7 +5511,7 @@ public class TestHRegion {
    * not work for {@link FSHLog} also.
    */
   @Test
-  @Ignore
+  @Disabled
   public void testDurability() throws Exception {
     // there are 5 x 5 cases:
     // table durability(SYNC,FSYNC,ASYC,SKIP,USE_DEFAULT) x mutation
@@ -5630,14 +5618,13 @@ public class TestHRegion {
   public void testRegionReplicaSecondary() throws IOException {
     // create a primary region, load some data and flush
     // create a secondary region, and do a get against that
-    Path rootDir = new Path(dir + name.getMethodName());
+    Path rootDir = new Path(dir + name);
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families =
       new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
     byte[] cq = Bytes.toBytes("cq");
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
@@ -5678,14 +5665,13 @@ public class TestHRegion {
   public void testRegionReplicaSecondaryIsReadOnly() throws IOException {
     // create a primary region, load some data and flush
     // create a secondary region, and do a put against that
-    Path rootDir = new Path(dir + name.getMethodName());
+    Path rootDir = new Path(dir + name);
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families =
       new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
     byte[] cq = Bytes.toBytes("cq");
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
@@ -5735,14 +5721,13 @@ public class TestHRegion {
 
   @Test
   public void testCompactionFromPrimary() throws IOException {
-    Path rootDir = new Path(dir + name.getMethodName());
+    Path rootDir = new Path(dir + name);
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     byte[][] families =
       new byte[][] { Bytes.toBytes("cf1"), Bytes.toBytes("cf2"), Bytes.toBytes("cf3") };
     byte[] cq = Bytes.toBytes("cq");
-    TableDescriptorBuilder builder =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()));
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(name));
     for (byte[] family : families) {
       builder.setColumnFamily(ColumnFamilyDescriptorBuilder.of(family));
     }
@@ -5779,7 +5764,7 @@ public class TestHRegion {
           .withRegionFileSystem(regionFs).build());
       sft.removeStoreFiles(storeFiles.stream().collect(Collectors.toList()));
       Collection<StoreFileInfo> storeFileInfos = sft.load();
-      Assert.assertTrue(storeFileInfos == null || storeFileInfos.isEmpty());
+      assertTrue(storeFileInfos == null || storeFileInfos.isEmpty());
 
       verifyData(secondaryRegion, 0, 1000, cq, families);
     } finally {
@@ -5968,15 +5953,15 @@ public class TestHRegion {
    */
   private void checkOneCell(Cell kv, byte[] cf, int rowIdx, int colIdx, long ts) {
     String ctx = "rowIdx=" + rowIdx + "; colIdx=" + colIdx + "; ts=" + ts;
-    assertEquals("Row mismatch which checking: " + ctx, "row:" + rowIdx,
-      Bytes.toString(CellUtil.cloneRow(kv)));
-    assertEquals("ColumnFamily mismatch while checking: " + ctx, Bytes.toString(cf),
-      Bytes.toString(CellUtil.cloneFamily(kv)));
-    assertEquals("Column qualifier mismatch while checking: " + ctx, "column:" + colIdx,
-      Bytes.toString(CellUtil.cloneQualifier(kv)));
-    assertEquals("Timestamp mismatch while checking: " + ctx, ts, kv.getTimestamp());
-    assertEquals("Value mismatch while checking: " + ctx, "value-version-" + ts,
-      Bytes.toString(CellUtil.cloneValue(kv)));
+    assertEquals("row:" + rowIdx, Bytes.toString(CellUtil.cloneRow(kv)),
+      "Row mismatch which checking: " + ctx);
+    assertEquals(Bytes.toString(cf), Bytes.toString(CellUtil.cloneFamily(kv)),
+      "ColumnFamily mismatch while checking: " + ctx);
+    assertEquals("column:" + colIdx, Bytes.toString(CellUtil.cloneQualifier(kv)),
+      "Column qualifier mismatch while checking: " + ctx);
+    assertEquals(ts, kv.getTimestamp(), "Timestamp mismatch while checking: " + ctx);
+    assertEquals("value-version-" + ts, Bytes.toString(CellUtil.cloneValue(kv)),
+      "Value mismatch while checking: " + ctx);
   }
 
   @Test
@@ -6592,8 +6577,8 @@ public class TestHRegion {
         if (!assertDone) {
           StoreScanner current = (StoreScanner) (scanner.storeHeap).getCurrentForTesting();
           List<KeyValueScanner> scanners = current.getAllScannersForTesting();
-          assertEquals("There should be only one scanner the store file scanner", 1,
-            scanners.size());
+          assertEquals(1, scanners.size(),
+            "There should be only one scanner the store file scanner");
           assertDone = true;
         }
       } while (hasNext);
@@ -6650,29 +6635,29 @@ public class TestHRegion {
     byte[][] families = { fam };
     this.region = initHRegion(tableName, method, CONF, families);
 
-    Assert.assertEquals(0L, region.getWriteRequestsCount());
+    assertEquals(0L, region.getWriteRequestsCount());
 
     Put put = new Put(row);
     put.addColumn(fam, fam, fam);
 
-    Assert.assertEquals(0L, region.getWriteRequestsCount());
+    assertEquals(0L, region.getWriteRequestsCount());
     region.put(put);
-    Assert.assertEquals(1L, region.getWriteRequestsCount());
+    assertEquals(1L, region.getWriteRequestsCount());
     region.put(put);
-    Assert.assertEquals(2L, region.getWriteRequestsCount());
+    assertEquals(2L, region.getWriteRequestsCount());
     region.put(put);
-    Assert.assertEquals(3L, region.getWriteRequestsCount());
+    assertEquals(3L, region.getWriteRequestsCount());
 
     region.delete(new Delete(row));
-    Assert.assertEquals(4L, region.getWriteRequestsCount());
+    assertEquals(4L, region.getWriteRequestsCount());
   }
 
   @Test
   public void testOpenRegionWrittenToWAL() throws Exception {
-    final ServerName serverName = ServerName.valueOf(name.getMethodName(), 100, 42);
+    final ServerName serverName = ServerName.valueOf(name, 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam2)).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
@@ -6744,7 +6729,7 @@ public class TestHRegion {
 
   @Test
   public void testFlushedFileWithNoTags() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
@@ -6758,8 +6743,8 @@ public class TestHRegion {
     HStore store = region.getStore(fam1);
     Collection<HStoreFile> storefiles = store.getStorefiles();
     for (HStoreFile sf : storefiles) {
-      assertFalse("Tags should not be present ",
-        sf.getReader().getHFileReader().getFileContext().isIncludesTags());
+      assertFalse(sf.getReader().getHFileReader().getFileContext().isIncludesTags(),
+        "Tags should not be present ");
     }
   }
 
@@ -6796,13 +6781,13 @@ public class TestHRegion {
 
   @Test
   public void testCloseRegionWrittenToWAL() throws Exception {
-    Path rootDir = new Path(dir + name.getMethodName());
+    Path rootDir = new Path(dir + name);
     CommonFSUtils.setRootDir(TEST_UTIL.getConfiguration(), rootDir);
 
     final ServerName serverName = ServerName.valueOf("testCloseRegionWrittenToWAL", 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam2)).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
@@ -6915,10 +6900,9 @@ public class TestHRegion {
     final byte[] q4 = Bytes.toBytes("q4");
 
     // 10 seconds
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).setTimeToLive(10).build())
-        .build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(fam1).setTimeToLive(10).build())
+      .build();
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MIN_FORMAT_VERSION_WITH_TAGS);
@@ -7044,7 +7028,7 @@ public class TestHRegion {
     // 10 seconds
     int ttlSecs = 10;
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setColumnFamily(
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(name)).setColumnFamily(
         ColumnFamilyDescriptorBuilder.newBuilder(fam1).setTimeToLive(ttlSecs).build()).build();
 
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
@@ -7577,18 +7561,17 @@ public class TestHRegion {
     long wrcBeforeMutate = this.region.writeRequestsCount.longValue();
     this.region.mutateRow(rm);
     long wrcAfterMutate = this.region.writeRequestsCount.longValue();
-    Assert.assertEquals(wrcBeforeMutate + rm.getMutations().size(), wrcAfterMutate);
+    assertEquals(wrcBeforeMutate + rm.getMutations().size(), wrcAfterMutate);
   }
 
   @Test
   public void testBulkLoadReplicationEnabled() throws IOException {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
-    final ServerName serverName = ServerName.valueOf(name.getMethodName(), 100, 42);
+    final ServerName serverName = ServerName.valueOf(name, 100, 42);
     final RegionServerServices rss = spy(TEST_UTIL.createMockRegionServerService(serverName));
 
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam1)).build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableDescriptor.getTableName()).build();
     TEST_UTIL.createRegionDir(hri);
     region = HRegion.openHRegion(hri, tableDescriptor, rss.getWAL(hri),
@@ -7721,7 +7704,7 @@ public class TestHRegion {
     region = null;
     holder.join();
 
-    assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
+    assertFalse(holderInterrupted.get(), "Region lock holder should not have been interrupted");
   }
 
   @Test
@@ -7770,7 +7753,7 @@ public class TestHRegion {
     region = null;
     holder.join();
 
-    assertTrue("Region lock holder was not interrupted", holderInterrupted.get());
+    assertTrue(holderInterrupted.get(), "Region lock holder was not interrupted");
   }
 
   @Test
@@ -7889,7 +7872,7 @@ public class TestHRegion {
     region = null;
     holder.join();
 
-    assertFalse("Region lock holder should not have been interrupted", holderInterrupted.get());
+    assertFalse(holderInterrupted.get(), "Region lock holder should not have been interrupted");
   }
 
   @Test
@@ -7987,14 +7970,14 @@ public class TestHRegion {
 
       // Verify region directory exists
       Path regionDir = new Path(tableDir, regionInfo.getEncodedName());
-      assertTrue("Region directory should exist after creation", fs.exists(regionDir));
+      assertTrue(fs.exists(regionDir), "Region directory should exist after creation");
 
       Path regionInfoFile = new Path(regionDir, HRegionFileSystem.REGION_INFO_FILE);
-      assertTrue("Region info file should exist after creation", fs.exists(regionInfoFile));
+      assertTrue(fs.exists(regionInfoFile), "Region info file should exist after creation");
 
       // Delete the region directory (simulating external deletion or corruption)
       assertTrue(fs.delete(regionDir, true));
-      assertFalse("Region directory should not exist after deletion", fs.exists(regionDir));
+      assertFalse(fs.exists(regionDir), "Region directory should not exist after deletion");
 
       // Try to open/initialize the region again - this should fail
       LOG.info("Attempting to re-initialize region with deleted directory - should fail");
@@ -8010,11 +7993,11 @@ public class TestHRegion {
       }
 
       // Verify the exception is related to missing parent directory
-      assertNotNull("Exception should be thrown", regionInitializeException);
+      assertNotNull(regionInitializeException, "Exception should be thrown");
       String exceptionMessage = regionInitializeException.getMessage().toLowerCase();
       assertTrue(exceptionMessage.contains("region directory does not exist"));
-      assertFalse("Region directory should still not exist after failed initialization",
-        fs.exists(regionDir));
+      assertFalse(fs.exists(regionDir),
+        "Region directory should still not exist after failed initialization");
 
     } finally {
       if (wal != null) {

@@ -45,7 +45,7 @@ exemplar Maven project containing:
 For example, the components of the hbase-client-project consist of (a) sample
 code `./src/main/.../HelloHBase.java` and `./src/test/.../TestHelloHBase.java`,
 (b) a `pom.xml` file establishing dependency upon hbase-client and test-scope
-dependency upon hbase-testing-util, and (c) a `log4j.properties` resource file.
+dependency upon hbase-testing-util, and (c) a `log4j2.properties` resource file.
 
 #### How archetypes are created during the hbase install process
 During the `mvn install` process, all standalone exemplar projects in the
@@ -108,19 +108,19 @@ to choose from for generation of a new Maven project.
 
 ## Footnotes:
 <b id="f1">1</b> -- [Maven Archetype
-](http://maven.apache.org/archetype/index.html) ("About" page).
+](https://maven.apache.org/archetype/index.html) ("About" page).
 -- [↩](#a1)
 
 <b id="f2">2</b> -- [Maven Archetype Catalog
-](http://repo1.maven.org/maven2/archetype-catalog.xml) (4MB+ xml file).
+](https://repo1.maven.org/maven2/archetype-catalog.xml) (4MB+ xml file).
 -- [↩](#a2)
 
-<b id="f3">3</b> -- [Maven Central Repository](http://search.maven.org/)
+<b id="f3">3</b> -- [Maven Central Repository](https://search.maven.org/)
 (search engine).
 -- [↩](#a3)
 
 <b id="f4">4</b> -- [Maven Archetype Plugin - archetype:generate
-](http://maven.apache.org/archetype/maven-archetype-plugin/generate-mojo.html).
+](https://maven.apache.org/archetype/maven-archetype-plugin/generate-mojo.html).
 -- [↩](#a4)
 
 <b id="f5">5</b> -- Prior to archetype creation, each exemplar project's
