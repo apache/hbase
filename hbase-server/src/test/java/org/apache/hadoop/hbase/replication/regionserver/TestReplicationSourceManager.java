@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -46,7 +46,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
@@ -72,8 +71,6 @@ import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
 import org.apache.hadoop.hbase.replication.ReplicationSourceDummy;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -86,14 +83,11 @@ import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.zookeeper.ZKClusterId;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,12 +102,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescr
  * An abstract class that tests ReplicationSourceManager. Classes that extend this class should set
  * up the proper config for this class and initialize the proper cluster using HBaseTestingUtility.
  */
-@Category({ ReplicationTests.class, MediumTests.class })
 public abstract class TestReplicationSourceManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSourceManager.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestReplicationSourceManager.class);
 
@@ -219,7 +208,7 @@ public abstract class TestReplicationSourceManager {
       .map(Replication::getReplicationManager).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (manager != null) {
       manager.join();
@@ -227,23 +216,20 @@ public abstract class TestReplicationSourceManager {
     utility.shutdownMiniCluster();
   }
 
-  @Rule
-  public TestName testName = new TestName();
-
   private void cleanLogDir() throws IOException {
     fs.delete(logDir, true);
     fs.delete(oldLogDir, true);
   }
 
-  @Before
-  public void setUp() throws Exception {
-    LOG.info("Start " + testName.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    LOG.info("Start " + testInfo.getTestMethod().get().getName());
     cleanLogDir();
   }
 
-  @After
-  public void tearDown() throws Exception {
-    LOG.info("End " + testName.getMethodName());
+  @AfterEach
+  public void tearDown(TestInfo testInfo) throws Exception {
+    LOG.info("End " + testInfo.getTestMethod().get().getName());
     cleanLogDir();
     List<String> ids = manager.getSources().stream().map(ReplicationSourceInterface::getPeerId)
       .collect(Collectors.toList());
@@ -432,8 +418,8 @@ public abstract class TestReplicationSourceManager {
     ReplicationSourceWALActionListener.scopeWALEdits(logKey, logEdit, conf);
 
     // 4. Assert that no bulk load entry scopes are added if bulk load hfile replication is disabled
-    assertNull("No bulk load entries scope should be added if bulk load replication is disabled.",
-      logKey.getReplicationScopes());
+    assertNull(logKey.getReplicationScopes(),
+      "No bulk load entries scope should be added if bulk load replication is disabled.");
   }
 
   @Test
@@ -452,11 +438,11 @@ public abstract class TestReplicationSourceManager {
 
     NavigableMap<byte[], Integer> scopes = logKey.getReplicationScopes();
     // Assert family with replication scope global is present in the key scopes
-    assertTrue("This family scope is set to global, should be part of replication key scopes.",
-      scopes.containsKey(f1));
+    assertTrue(scopes.containsKey(f1),
+      "This family scope is set to global, should be part of replication key scopes.");
     // Assert family with replication scope local is not present in the key scopes
-    assertFalse("This family scope is set to local, should not be part of replication key scopes",
-      scopes.containsKey(f2));
+    assertFalse(scopes.containsKey(f2),
+      "This family scope is set to local, should not be part of replication key scopes");
   }
 
   /**

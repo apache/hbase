@@ -17,22 +17,23 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import java.io.IOException;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.HTestConst;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -42,25 +43,20 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestGlobalReplicationThrottler {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGlobalReplicationThrottler.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestGlobalReplicationThrottler.class);
+
   private static final int REPLICATION_SOURCE_QUOTA = 200;
   private static int numOfPeer = 0;
   private static Configuration conf1;
@@ -74,10 +70,9 @@ public class TestGlobalReplicationThrottler {
   private static final byte[] ROW = Bytes.toBytes("r");
   private static final byte[][] ROWS = HTestConst.makeNAscii(ROW, 100);
 
-  @Rule
-  public TestName name = new TestName();
+  private String testName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf1 = HBaseConfiguration.create();
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
@@ -111,7 +106,7 @@ public class TestGlobalReplicationThrottler {
     numOfPeer = admin1.getPeersCount();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     utility2.shutdownMiniCluster();
     utility1.shutdownMiniCluster();
@@ -121,14 +116,14 @@ public class TestGlobalReplicationThrottler {
   volatile private boolean testQuotaNonZero = false;
 
   @Test
-  public void testQuota() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
-    HTableDescriptor table = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    utility1.getAdmin().createTable(table);
-    utility2.getAdmin().createTable(table);
+  public void testQuota(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
+    final TableName tableName = TableName.valueOf(testName);
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+        .newBuilder(famName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
+    utility1.getAdmin().createTable(tableDescriptor);
+    utility2.getAdmin().createTable(tableDescriptor);
 
     Thread watcher = new Thread(() -> {
       Replication replication = (Replication) utility1.getMiniHBaseCluster().getRegionServer(0)
@@ -183,8 +178,8 @@ public class TestGlobalReplicationThrottler {
     }
 
     watcher.interrupt();
-    Assert.assertTrue(testQuotaPass);
-    Assert.assertTrue(testQuotaNonZero);
+    assertTrue(testQuotaPass);
+    assertTrue(testQuotaNonZero);
   }
 
 }
