@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -28,7 +28,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionInfo;
@@ -48,11 +47,10 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,15 +59,10 @@ import org.slf4j.LoggerFactory;
  * test a method since removed, getClosestAtOrBefore but the test is retained because it runs some
  * interesting exercises.
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestGetClosestAtOrBefore {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestGetClosestAtOrBefore.class);
-
-  @Rule
-  public TestName testName = new TestName();
   private static final Logger LOG = LoggerFactory.getLogger(TestGetClosestAtOrBefore.class);
 
   private static final byte[] T00 = Bytes.toBytes("000");
@@ -84,6 +77,12 @@ public class TestGetClosestAtOrBefore {
 
   private static HBaseTestingUtility UTIL = new HBaseTestingUtility();
   private static Configuration conf = UTIL.getConfiguration();
+  private String testName;
+
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.testName = testInfo.getTestMethod().get().getName();
+  }
 
   @Test
   public void testUsingMetaAndBinary() throws IOException {
@@ -160,7 +159,7 @@ public class TestGetClosestAtOrBefore {
     }
   }
 
-  /*
+  /**
    * @param answer Pass -1 if we're not to find anything.
    * @return Row found.
    */
@@ -200,7 +199,7 @@ public class TestGetClosestAtOrBefore {
     byte[] c0 = UTIL.COLUMNS[0];
     byte[] c1 = UTIL.COLUMNS[1];
     try {
-      TableName tn = TableName.valueOf(testName.getMethodName());
+      TableName tn = TableName.valueOf(testName);
       HTableDescriptor htd = UTIL.createTableDescriptor(tn);
       region = UTIL.createLocalHRegion(htd, null, null);
 
@@ -310,7 +309,7 @@ public class TestGetClosestAtOrBefore {
     HRegion region = null;
     byte[] c0 = UTIL.COLUMNS[0];
     try {
-      TableName tn = TableName.valueOf(testName.getMethodName());
+      TableName tn = TableName.valueOf(testName);
       HTableDescriptor htd = UTIL.createTableDescriptor(tn);
       region = UTIL.createLocalHRegion(htd, null, null);
 

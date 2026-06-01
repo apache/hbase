@@ -17,47 +17,40 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Iterator;
 import java.util.SortedSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCellSkipListSet {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCellSkipListSet.class);
-
   private final CellSet csls = new CellSet(CellComparatorImpl.COMPARATOR);
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     this.csls.clear();
   }
 
   @Test
   public void testAdd() throws Exception {
-    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] bytes = Bytes.toBytes(name);
     KeyValue kv = new KeyValue(bytes, bytes, bytes, bytes);
     this.csls.add(kv);
     assertTrue(this.csls.contains(kv));
@@ -80,7 +73,7 @@ public class TestCellSkipListSet {
 
   @Test
   public void testIterator() throws Exception {
-    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] bytes = Bytes.toBytes(name);
     byte[] value1 = Bytes.toBytes("1");
     byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
@@ -116,7 +109,7 @@ public class TestCellSkipListSet {
 
   @Test
   public void testDescendingIterator() throws Exception {
-    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] bytes = Bytes.toBytes(name);
     byte[] value1 = Bytes.toBytes("1");
     byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
@@ -154,7 +147,7 @@ public class TestCellSkipListSet {
 
   @Test
   public void testHeadTail() throws Exception {
-    byte[] bytes = Bytes.toBytes(name.getMethodName());
+    byte[] bytes = Bytes.toBytes(name);
     byte[] value1 = Bytes.toBytes("1");
     byte[] value2 = Bytes.toBytes("2");
     final int total = 3;
