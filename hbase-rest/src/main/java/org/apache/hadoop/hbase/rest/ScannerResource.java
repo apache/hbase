@@ -114,8 +114,8 @@ public class ScannerResource extends ResourceBase {
         new ScannerResultGenerator(tableName, spec, filter, model.getCaching(),
           model.getCacheBlocks(), model.isIncludeStartRow(), model.isIncludeStopRow());
       String id = gen.getID();
-      ScannerInstanceResource instance =
-        new ScannerInstanceResource(tableName, id, gen, model.getBatch());
+      ScannerInstanceResource instance = new ScannerInstanceResource(id,
+        RESTServlet.getInstance().getConnectionCache().getEffectiveUser(), gen, model.getBatch());
       scanners.put(id, instance);
       if (LOG.isTraceEnabled()) {
         LOG.trace("new scanner: " + id);
