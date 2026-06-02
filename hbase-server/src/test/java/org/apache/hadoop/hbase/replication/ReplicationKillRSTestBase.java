@@ -62,7 +62,7 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
             break;
           } catch (Exception ex) {
             LOG.info("Cluster wasn't ready yet, restarting scanner");
-            Thread.sleep(5000);
+            Thread.sleep(SLEEP_TIME * 2);
           }
         }
       }
@@ -88,6 +88,10 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
           Result[] res2;
           try (ResultScanner scanner = table.getScanner(new Scan())) {
             res2 = scanner.next(initialCount * 2);
+          } catch (Exception e) {
+            LOG.warn("Cluster wasn't ready yet, sleep and retry later");
+            Thread.sleep(SLEEP_TIME * 2);
+            continue;
           }
           if (res2.length < initialCount) {
             if (lastCount < res2.length) {
