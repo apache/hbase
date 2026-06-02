@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.EnumSet;
 import java.util.List;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
@@ -37,19 +36,16 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationStatus extends TestReplicationBase {
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationStatus.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStatus.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationStatus.class);
 
   static void insertRowsOnSource() throws IOException {
     final byte[] qualName = Bytes.toBytes("q");
@@ -91,21 +87,21 @@ public class TestReplicationStatus extends TestReplicationBase {
     for (JVMClusterUtil.RegionServerThread thread : UTIL1.getHBaseCluster()
       .getRegionServerThreads()) {
       ServerName server = thread.getRegionServer().getServerName();
-      assertTrue("" + server, metrics.getLiveServerMetrics().containsKey(server));
+      assertTrue(metrics.getLiveServerMetrics().containsKey(server), "" + server);
       ServerMetrics sm = metrics.getLiveServerMetrics().get(server);
       List<ReplicationLoadSource> rLoadSourceList = sm.getReplicationLoadSourceList();
       ReplicationLoadSink rLoadSink = sm.getReplicationLoadSink();
 
       // check SourceList only has one entry, because only has one peer
-      assertEquals("Failed to get ReplicationLoadSourceList " + rLoadSourceList + ", " + server, 1,
-        rLoadSourceList.size());
+      assertEquals(1, rLoadSourceList.size(),
+        "Failed to get ReplicationLoadSourceList " + rLoadSourceList + ", " + server);
       assertEquals(PEER_ID2, rLoadSourceList.get(0).getPeerID());
 
       // check Sink exist only as it is difficult to verify the value on the fly
-      assertTrue("failed to get ReplicationLoadSink.AgeOfLastShippedOp ",
-        (rLoadSink.getAgeOfLastAppliedOp() >= 0));
-      assertTrue("failed to get ReplicationLoadSink.TimeStampsOfLastAppliedOp ",
-        (rLoadSink.getTimestampsOfLastAppliedOp() >= 0));
+      assertTrue(rLoadSink.getAgeOfLastAppliedOp() >= 0,
+        "failed to get ReplicationLoadSink.AgeOfLastShippedOp");
+      assertTrue(rLoadSink.getTimestampsOfLastAppliedOp() >= 0,
+        "failed to get ReplicationLoadSink.TimeStampsOfLastAppliedOp");
     }
 
     // Stop rs1, then the queue of rs1 will be transfered to rs0
@@ -122,7 +118,7 @@ public class TestReplicationStatus extends TestReplicationBase {
     List<ReplicationLoadSource> rLoadSourceList = waitOnMetricsReport(1, server);
     // The remaining server should now have two queues -- the original and then the one that was
     // added because of failover. The original should still be PEER_ID2 though.
-    assertEquals("Failed ReplicationLoadSourceList " + rLoadSourceList, 2, rLoadSourceList.size());
+    assertEquals(2, rLoadSourceList.size(), "Failed ReplicationLoadSourceList " + rLoadSourceList);
     assertEquals(PEER_ID2, rLoadSourceList.get(0).getPeerID());
   }
 

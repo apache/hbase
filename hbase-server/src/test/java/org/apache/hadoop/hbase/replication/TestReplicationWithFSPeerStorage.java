@@ -17,33 +17,29 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationWithFSPeerStorage extends TestReplicationBase {
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestReplicationWithFSPeerStorage extends TestReplicationBaseNoBeforeAll {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationWithFSPeerStorage.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // enable file system based peer storage
     UTIL1.getConfiguration().set(ReplicationStorageFactory.REPLICATION_PEER_STORAGE_IMPL,
       ReplicationPeerStorageType.FILESYSTEM.name().toLowerCase());
     UTIL2.getConfiguration().set(ReplicationStorageFactory.REPLICATION_PEER_STORAGE_IMPL,
       ReplicationPeerStorageType.FILESYSTEM.name().toLowerCase());
-    TestReplicationBase.setUpBeforeClass();
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cleanUp();
   }

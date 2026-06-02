@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -61,22 +60,17 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@org.junit.jupiter.api.Tag(ReplicationTests.TAG)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestReplicationWithTags {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationWithTags.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationWithTags.class);
   private static final byte TAG_TYPE = 1;
@@ -100,7 +94,7 @@ public class TestReplicationWithTags {
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("row");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf1.setInt("hfile.format.version", 3);
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
@@ -164,7 +158,7 @@ public class TestReplicationWithTags {
     htable2 = utility2.getConnection().getTable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(replicationAdmin, true);
     Closeables.close(connection1, true);

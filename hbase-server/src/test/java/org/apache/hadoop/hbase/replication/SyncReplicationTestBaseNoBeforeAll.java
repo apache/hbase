@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.AfterClass;
 import org.junit.jupiter.api.AfterAll;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
@@ -155,7 +154,6 @@ public class SyncReplicationTestBaseNoBeforeAll {
   }
 
   @AfterAll
-  @AfterClass
   public static void tearDown() throws Exception {
     shutdown(UTIL1);
     shutdown(UTIL2);

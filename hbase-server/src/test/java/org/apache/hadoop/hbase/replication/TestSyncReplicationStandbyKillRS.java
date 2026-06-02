@@ -17,28 +17,27 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSyncReplicationStandbyKillRS.class);
@@ -46,10 +45,6 @@ public class TestSyncReplicationStandbyKillRS extends SyncReplicationTestBase {
   private final long SLEEP_TIME = 1000;
 
   private final int COUNT = 1000;
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationStandbyKillRS.class);
 
   @Test
   public void testStandbyKillRegionServer() throws Exception {
