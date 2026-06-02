@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -61,8 +60,9 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
           try (ResultScanner scanner = table.getScanner(new Scan())) {
             res = scanner.next(initialCount);
             break;
-          } catch (UnknownScannerException ex) {
+          } catch (Exception ex) {
             LOG.info("Cluster wasn't ready yet, restarting scanner");
+            Thread.sleep(5000);
           }
         }
       }
