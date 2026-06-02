@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.thrift;
 
-import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
-import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD;
 import static org.apache.hadoop.hbase.thrift.Constants.COALESCE_INC_KEY;
 import static org.apache.hadoop.hbase.util.Bytes.getBytes;
 
@@ -30,7 +28,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
-import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
@@ -86,8 +83,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
-import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
-import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 
 /**
  * The HBaseServiceHandler is a glue object that connects Thrift RPC calls to the HBase client API
@@ -100,9 +95,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
 
   public static final int HREGION_VERSION = 1;
 
-  // nextScannerId and scannerMap are used to manage scanner state
-  private int nextScannerId = 0;
-  private Cache<Integer, ResultScannerWrapper> scannerMap;
   IncrementCoalescer coalescer;
 
   /**
@@ -118,44 +110,9 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
     return columns;
   }
 
-  /**
-   * Assigns a unique ID to the scanner and adds the mapping to an internal hash-map.
-   * @param scanner the {@link ResultScanner} to add
-   * @return integer scanner id
-   */
-  protected synchronized int addScanner(ResultScanner scanner, boolean sortColumns) {
-    int id = nextScannerId++;
-    ResultScannerWrapper resultScannerWrapper = new ResultScannerWrapper(scanner, sortColumns);
-    scannerMap.put(id, resultScannerWrapper);
-    return id;
-  }
-
-  /**
-   * Returns the scanner associated with the specified ID.
-   * @param id the ID of the scanner to get
-   * @return a Scanner, or null if ID was invalid.
-   */
-  private synchronized ResultScannerWrapper getScanner(int id) {
-    return scannerMap.getIfPresent(id);
-  }
-
-  /**
-   * Removes the scanner associated with the specified ID from the internal id-&gt;scanner hash-map.
-   * @param id the ID of the scanner to remove
-   */
-  private synchronized void removeScanner(int id) {
-    scannerMap.invalidate(id);
-  }
-
   protected ThriftHBaseServiceHandler(final Configuration c, final UserProvider userProvider)
     throws IOException {
     super(c, userProvider);
-    long cacheTimeout =
-      c.getLong(HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD)
-        * 2;
-
-    scannerMap =
-      CacheBuilder.newBuilder().expireAfterAccess(cacheTimeout, TimeUnit.MILLISECONDS).build();
 
     this.coalescer = new IncrementCoalescer(this);
   }
@@ -790,40 +747,50 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public void scannerClose(int id) throws IOError, IllegalArgument {
     LOG.debug("scannerClose: id={}", id);
-    ResultScannerWrapper resultScannerWrapper = getScanner(id);
+    ResultScannerWrapper resultScannerWrapper;
+    try {
+      resultScannerWrapper = removeScanner(id);
+    } catch (IOException e) {
+      LOG.warn(e.getMessage(), e);
+      throw getIOError(e);
+    }
     if (resultScannerWrapper == null) {
       LOG.warn("scanner ID is invalid");
       throw new IllegalArgument("scanner ID is invalid");
     }
-    resultScannerWrapper.getScanner().close();
-    removeScanner(id);
+    resultScannerWrapper.scanner.close();
   }
 
   @Override
   public List<TRowResult> scannerGetList(int id, int nbRows) throws IllegalArgument, IOError {
     LOG.debug("scannerGetList: id={}", id);
-    ResultScannerWrapper resultScannerWrapper = getScanner(id);
+    ResultScannerWrapper resultScannerWrapper;
+    try {
+      resultScannerWrapper = removeScanner(id);
+    } catch (IOException e) {
+      LOG.warn(e.getMessage(), e);
+      throw getIOError(e);
+    }
     if (null == resultScannerWrapper) {
       String message = "scanner ID is invalid";
       LOG.warn(message);
       throw new IllegalArgument("scanner ID is invalid");
     }
-
-    Result[] results;
     try {
-      results = resultScannerWrapper.getScanner().next(nbRows);
-      if (null == results) {
-        return new ArrayList<>();
+      Result[] results;
+      try {
+        results = resultScannerWrapper.scanner.next(nbRows);
+        if (null == results) {
+          return new ArrayList<>();
+        }
+      } catch (IOException e) {
+        LOG.warn(e.getMessage(), e);
+        throw getIOError(e);
       }
-    } catch (IOException e) {
-      LOG.warn(e.getMessage(), e);
-      throw getIOError(e);
+      return ThriftUtilities.rowResultFromHBase(results, resultScannerWrapper.sortColumns);
     } finally {
-      // Add scanner back to scannerMap; protects against case
-      // where scanner expired during processing of request.
-      scannerMap.put(id, resultScannerWrapper);
+      addScannerBack(id, resultScannerWrapper);
     }
-    return ThriftUtilities.rowResultFromHBase(results, resultScannerWrapper.isColumnSorted());
   }
 
   @Override
@@ -834,7 +801,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public int scannerOpenWithScan(ByteBuffer tableName, TScan tScan,
     Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-
     Table table = null;
     try {
       table = getTable(tableName);
@@ -887,7 +853,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public int scannerOpen(ByteBuffer tableName, ByteBuffer startRow, List<ByteBuffer> columns,
     Map<ByteBuffer, ByteBuffer> attributes) throws IOError {
-
     Table table = null;
     try {
       table = getTable(tableName);
@@ -915,7 +880,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public int scannerOpenWithStop(ByteBuffer tableName, ByteBuffer startRow, ByteBuffer stopRow,
     List<ByteBuffer> columns, Map<ByteBuffer, ByteBuffer> attributes) throws IOError, TException {
-
     Table table = null;
     try {
       table = getTable(tableName);
@@ -943,7 +907,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public int scannerOpenWithPrefix(ByteBuffer tableName, ByteBuffer startAndPrefix,
     List<ByteBuffer> columns, Map<ByteBuffer, ByteBuffer> attributes) throws IOError, TException {
-
     Table table = null;
     try {
       table = getTable(tableName);
@@ -973,7 +936,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   @Override
   public int scannerOpenTs(ByteBuffer tableName, ByteBuffer startRow, List<ByteBuffer> columns,
     long timestamp, Map<ByteBuffer, ByteBuffer> attributes) throws IOError, TException {
-
     Table table = null;
     try {
       table = getTable(tableName);
@@ -1003,7 +965,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
   public int scannerOpenWithStopTs(ByteBuffer tableName, ByteBuffer startRow, ByteBuffer stopRow,
     List<ByteBuffer> columns, long timestamp, Map<ByteBuffer, ByteBuffer> attributes)
     throws IOError, TException {
-
     Table table = null;
     try {
       table = getTable(tableName);
@@ -1241,25 +1202,6 @@ public class ThriftHBaseServiceHandler extends HBaseServiceHandler implements Hb
       String name = Bytes.toStringBinary(getBytes(entry.getKey()));
       byte[] value = getBytes(entry.getValue());
       op.setAttribute(name, value);
-    }
-  }
-
-  protected static class ResultScannerWrapper {
-
-    private final ResultScanner scanner;
-    private final boolean sortColumns;
-
-    public ResultScannerWrapper(ResultScanner resultScanner, boolean sortResultColumns) {
-      scanner = resultScanner;
-      sortColumns = sortResultColumns;
-    }
-
-    public ResultScanner getScanner() {
-      return scanner;
-    }
-
-    public boolean isColumnSorted() {
-      return sortColumns;
     }
   }
 
