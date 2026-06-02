@@ -101,14 +101,14 @@ public class TestThriftServer {
   }
 
   // Static names for tables, columns, rows, and values
-  private static ByteBuffer tableAname = asByteBuffer("tableA");
+  public static ByteBuffer tableAname = asByteBuffer("tableA");
   private static ByteBuffer tableBname = asByteBuffer("tableB");
   private static ByteBuffer columnAname = asByteBuffer("columnA:");
-  private static ByteBuffer columnAAname = asByteBuffer("columnA:A");
+  public static ByteBuffer columnAAname = asByteBuffer("columnA:A");
   private static ByteBuffer columnBname = asByteBuffer("columnB:");
-  private static ByteBuffer rowAname = asByteBuffer("rowA");
+  public static ByteBuffer rowAname = asByteBuffer("rowA");
   private static ByteBuffer rowBname = asByteBuffer("rowB");
-  private static ByteBuffer valueAname = asByteBuffer("valueA");
+  public static ByteBuffer valueAname = asByteBuffer("valueA");
   private static ByteBuffer valueBname = asByteBuffer("valueB");
   private static ByteBuffer valueCname = asByteBuffer("valueC");
   private static ByteBuffer valueDname = asByteBuffer("valueD");
