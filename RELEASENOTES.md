@@ -16,6 +16,19 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.5.15 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-30132](https://issues.apache.org/jira/browse/HBASE-30132) | *Minor* | **Expose per column family storeFileSize JMX metric**
+
+Adds a per-column-family storeFileSize gauge under the RegionServer Tables MBean, exposed as Namespace\_\<namespace\>\_table\_\<tableName\>\_columnfamily\_\<columnfamilyName\>\_metric\_storeFileSize.
+
+
+
 # HBASE  2.5.14 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
