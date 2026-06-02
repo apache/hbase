@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.thrift;
 
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
@@ -28,6 +30,8 @@ import java.nio.ByteBuffer;
 import java.nio.file.Paths;
 import java.security.Principal;
 import java.security.PrivilegedExceptionAction;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Supplier;
@@ -40,6 +44,8 @@ import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.thrift.generated.Hbase;
+import org.apache.hadoop.hbase.thrift.generated.IOError;
+import org.apache.hadoop.hbase.thrift.generated.Mutation;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.SimpleKdcServerUtil;
 import org.apache.hadoop.security.authentication.util.KerberosName;
@@ -87,6 +93,7 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServerBase {
   private static File clientKeytab;
 
   private static String clientPrincipal;
+  private static String clientPrincipal2;
   private static String serverPrincipal;
   private static String spnegoServerPrincipal;
 
@@ -116,8 +123,9 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServerBase {
     assertTrue(keytabDir.mkdirs());
 
     clientPrincipal = "client@" + kdc.getKdcConfig().getKdcRealm();
+    clientPrincipal2 = "client2@" + kdc.getKdcConfig().getKdcRealm();
     clientKeytab = new File(keytabDir, clientPrincipal + ".keytab");
-    kdc.createAndExportPrincipals(clientKeytab, clientPrincipal);
+    kdc.createAndExportPrincipals(clientKeytab, clientPrincipal, clientPrincipal2);
 
     String hostname = InetAddress.getLoopbackAddress().getHostName();
     serverPrincipal = "hbase/" + hostname + "@" + kdc.getKdcConfig().getKdcRealm();
@@ -167,11 +175,32 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServerBase {
     super.testRunThriftServerWithHeaderBufferLength();
   }
 
+  private void testScanWithDifferentClients(Hbase.Client client, Hbase.Client client2)
+    throws Exception {
+    List<Mutation> mutations = new ArrayList<>(1);
+    mutations
+      .add(new Mutation(false, TestThriftServer.columnAAname, TestThriftServer.valueAname, true));
+    client.mutateRow(TestThriftServer.tableAname, TestThriftServer.rowAname, mutations,
+      Collections.emptyMap());
+
+    int id = client.scannerOpen(TestThriftServer.tableAname, ByteBuffer.allocate(0),
+      Collections.emptyList(), Collections.emptyMap());
+
+    assertThrows(IOError.class, () -> client2.scannerGet(id)).printStackTrace();
+    assertThrows(IOError.class, () -> client2.scannerClose(id)).printStackTrace();
+
+    assertEquals(1, client.scannerGet(id).size());
+    assertEquals(0, client.scannerGet(id).size());
+    client.scannerClose(id);
+  }
+
   @Override
   protected void talkToThriftServer(String url, int customHeaderSize) throws Exception {
     // Close httpClient and THttpClient automatically on any failures
-    try (CloseableHttpClient httpClient = createHttpClient();
-      THttpClient tHttpClient = new THttpClient(url, httpClient)) {
+    try (CloseableHttpClient httpClient = createHttpClient(clientPrincipal);
+      THttpClient tHttpClient = new THttpClient(url, httpClient);
+      CloseableHttpClient httpClient2 = createHttpClient(clientPrincipal2);
+      THttpClient tHttpClient2 = new THttpClient(url, httpClient2)) {
       tHttpClient.open();
       if (customHeaderSize > 0) {
         StringBuilder sb = new StringBuilder();
@@ -194,11 +223,16 @@ public class TestThriftSpnegoHttpServer extends TestThriftHttpServerBase {
       }
       TestThriftServer.createTestTables(client);
       TestThriftServer.checkTableList(client);
+
+      TProtocol prop2 = new TBinaryProtocol(tHttpClient2);
+      Hbase.Client client2 = new Hbase.Client(prop2);
+      testScanWithDifferentClients(client, client2);
+
       TestThriftServer.dropTestTables(client);
     }
   }
 
-  private CloseableHttpClient createHttpClient() throws Exception {
+  private CloseableHttpClient createHttpClient(String clientPrincipal) throws Exception {
     final Subject clientSubject = JaasKrbUtil.loginUsingKeytab(clientPrincipal, clientKeytab);
     final Set<Principal> clientPrincipals = clientSubject.getPrincipals();
     // Make sure the subject has a principal
