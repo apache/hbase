@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.hbase.HBaseTestingUtility;
-import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -28,12 +27,13 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-public abstract class TestReplicationKillRS extends TestReplicationBase {
+public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBeforeAll {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestReplicationKillRS.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ReplicationKillRSTestBase.class);
 
   /**
    * Load up 1 tables over 2 region servers and kill a source during the upload. The failover
@@ -60,8 +60,9 @@ public abstract class TestReplicationKillRS extends TestReplicationBase {
           try (ResultScanner scanner = table.getScanner(new Scan())) {
             res = scanner.next(initialCount);
             break;
-          } catch (UnknownScannerException ex) {
+          } catch (Exception ex) {
             LOG.info("Cluster wasn't ready yet, restarting scanner");
+            Thread.sleep(SLEEP_TIME * 2);
           }
         }
       }
@@ -87,6 +88,10 @@ public abstract class TestReplicationKillRS extends TestReplicationBase {
           Result[] res2;
           try (ResultScanner scanner = table.getScanner(new Scan())) {
             res2 = scanner.next(initialCount * 2);
+          } catch (Exception e) {
+            LOG.warn("Cluster wasn't ready yet, sleep and retry later");
+            Thread.sleep(SLEEP_TIME * 2);
+            continue;
           }
           if (res2.length < initialCount) {
             if (lastCount < res2.length) {
@@ -111,12 +116,8 @@ public abstract class TestReplicationKillRS extends TestReplicationBase {
     Thread killer = new Thread() {
       @Override
       public void run() {
-        try {
-          Thread.sleep(timeout);
-          utility.getHBaseCluster().getRegionServer(rs).stop("Stopping as part of the test");
-        } catch (Exception e) {
-          LOG.error("Couldn't kill a region server", e);
-        }
+        Threads.sleepWithoutInterrupt(timeout);
+        utility.getHBaseCluster().getRegionServer(rs).abort("Stopping as part of the test");
       }
     };
     killer.setDaemon(true);
