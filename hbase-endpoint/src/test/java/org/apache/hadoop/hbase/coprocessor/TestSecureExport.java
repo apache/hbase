@@ -70,6 +70,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -304,7 +305,7 @@ public class TestSecureExport {
   }
 
   @Test
-  @org.junit.Ignore // See HBASE-23990
+  @Disabled // See HBASE-23990
   public void testVisibilityLabels() throws IOException, Throwable {
     final String exportTable = methodName + "_export";
     final String importTable = methodName + "_import";
