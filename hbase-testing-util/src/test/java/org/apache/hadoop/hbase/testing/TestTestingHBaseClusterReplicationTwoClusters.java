@@ -17,19 +17,14 @@
  */
 package org.apache.hadoop.hbase.testing;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTestingHBaseClusterReplicationTwoClusters
   extends TestingHBaseClusterReplicationTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTestingHBaseClusterReplicationTwoClusters.class);
 
   @Override
   protected void startClusters() throws Exception {
