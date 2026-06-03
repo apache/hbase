@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.FutureUtils.get;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Method;
@@ -26,7 +26,6 @@ import java.lang.reflect.Proxy;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -35,11 +34,10 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -52,12 +50,9 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  * Cluster runs with {@code hbase.meta.scanner.caching = 2} so the {@code limit > caching} branch is
  * exercised cheaply with a small table (5 user regions).
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestRegionLocatorPagedScanRpcCount {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionLocatorPagedScanRpcCount.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("LocatorPaged");
@@ -69,7 +64,7 @@ public class TestRegionLocatorPagedScanRpcCount {
 
   private static AsyncConnection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_META_SCANNER_CACHING, META_CACHING);
     UTIL.startMiniCluster(1);
@@ -85,7 +80,7 @@ public class TestRegionLocatorPagedScanRpcCount {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
@@ -95,7 +90,7 @@ public class TestRegionLocatorPagedScanRpcCount {
   public void testSingleRpcWhenLimitWithinCaching() throws Exception {
     // limit (2) <= caching (2): trivially one ScannerNext. Baseline.
     int rpcs = runPagedScanAndCountRpcs(2);
-    assertEquals("expected exactly one ScannerNext RPC for limit <= caching", 1, rpcs);
+    assertEquals(1, rpcs, "expected exactly one ScannerNext RPC for limit <= caching");
   }
 
   @Test
@@ -103,8 +98,8 @@ public class TestRegionLocatorPagedScanRpcCount {
     // limit (5) > caching (2): without the isPagedScan fix this would be ceil(5/2) = 3
     // ScannerNext RPCs. With the fix, getMetaScan sizes caching to limit -> 1 RPC.
     int rpcs = runPagedScanAndCountRpcs(NUM_REGIONS);
-    assertEquals("expected exactly one ScannerNext RPC for paged scan even when limit > caching", 1,
-      rpcs);
+    assertEquals(1, rpcs,
+      "expected exactly one ScannerNext RPC for paged scan even when limit > caching");
   }
 
   @Test
@@ -120,10 +115,9 @@ public class TestRegionLocatorPagedScanRpcCount {
       get(ClientMetaTableAccessor.getTableHRegionLocations(metaTable, TABLE_NAME));
     assertEquals(NUM_REGIONS, all.size());
     int rpcs = onNextCalls.get();
-    assertEquals(
+    assertEquals((int) Math.ceil((double) NUM_REGIONS / META_CACHING), rpcs,
       "unbounded scan should still split across "
-        + "ceil(NUM_REGIONS / caching) ScannerNext batches; got " + rpcs,
-      (int) Math.ceil((double) NUM_REGIONS / META_CACHING), rpcs);
+        + "ceil(NUM_REGIONS / caching) ScannerNext batches; got " + rpcs);
   }
 
   private int runPagedScanAndCountRpcs(int limit) throws Exception {
@@ -131,7 +125,7 @@ public class TestRegionLocatorPagedScanRpcCount {
     AsyncTable<AdvancedScanResultConsumer> metaTable = wrapMetaTable(onNextCalls);
     List<HRegionLocation> page =
       get(ClientMetaTableAccessor.getTableHRegionLocations(metaTable, TABLE_NAME, null, limit));
-    assertEquals("paged call returned wrong number of regions", limit, page.size());
+    assertEquals(limit, page.size(), "paged call returned wrong number of regions");
     return onNextCalls.get();
   }
 

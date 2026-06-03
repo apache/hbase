@@ -18,14 +18,20 @@
 package org.apache.hadoop.hbase;
 
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.Set;
 import java.util.regex.Pattern;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.AbstractHBaseTool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.internal.TextListener;
-import org.junit.runner.JUnitCore;
-import org.junit.runner.Result;
+import org.junit.platform.engine.DiscoverySelector;
+import org.junit.platform.engine.discovery.DiscoverySelectors;
+import org.junit.platform.launcher.Launcher;
+import org.junit.platform.launcher.LauncherDiscoveryRequest;
+import org.junit.platform.launcher.core.LauncherDiscoveryRequestBuilder;
+import org.junit.platform.launcher.core.LauncherFactory;
+import org.junit.platform.launcher.listeners.SummaryGeneratingListener;
+import org.junit.platform.launcher.listeners.TestExecutionSummary;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,6 +101,23 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     return classes.toArray(new Class<?>[classes.size()]);
   }
 
+  private static int runTests(Class<?>[] classes) {
+    DiscoverySelector[] selectors = new DiscoverySelector[classes.length];
+    for (int i = 0; i < classes.length; i++) {
+      selectors[i] = DiscoverySelectors.selectClass(classes[i]);
+    }
+    LauncherDiscoveryRequest request =
+      LauncherDiscoveryRequestBuilder.request().selectors(selectors).build();
+    Launcher launcher = LauncherFactory.create();
+    SummaryGeneratingListener listener = new SummaryGeneratingListener();
+    launcher.registerTestExecutionListeners(listener);
+    launcher.execute(request);
+
+    TestExecutionSummary summary = listener.getSummary();
+    summary.printTo(new PrintWriter(System.out));
+    return summary.getTotalFailureCount() > 0 ? 1 : 0;
+  }
+
   @Override
   protected int doWork() throws Exception {
     // this is called from the command line, so we should set to use the distributed cluster
@@ -104,10 +127,6 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
     for (Class<?> aClass : classes) {
       LOG.info("  " + aClass);
     }
-    JUnitCore junit = new JUnitCore();
-    junit.addListener(new TextListener(System.out));
-    Result result = junit.run(classes);
-
-    return result.wasSuccessful() ? 0 : 1;
+    return runTests(classes);
   }
 }
