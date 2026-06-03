@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_RETRIES;
-import static org.apache.hadoop.hbase.replication.TestReplicationBase.SLEEP_TIME;
-import static org.apache.hadoop.hbase.replication.TestReplicationBase.row;
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll.NB_RETRIES;
+import static org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll.SLEEP_TIME;
+import static org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll.row;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -45,18 +44,14 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplicationSyncUpToolBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSyncUpToolWithBulkLoadedData.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestReplicationSyncUpToolWithBulkLoadedData.class);
@@ -122,12 +117,12 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     loadAndReplicateHFiles(false, randomHFileRangeListIterator);
 
     int rowCount_ht1Source = UTIL1.countRows(ht1Source);
-    assertEquals("t1_syncup has 206 rows on source, after bulk load of another 103 hfiles", 206,
-      rowCount_ht1Source);
+    assertEquals(206, rowCount_ht1Source,
+      "t1_syncup has 206 rows on source, after bulk load of another 103 hfiles");
 
     int rowCount_ht2Source = UTIL1.countRows(ht2Source);
-    assertEquals("t2_syncup has 406 rows on source, after bulk load of another 203 hfiles", 406,
-      rowCount_ht2Source);
+    assertEquals(406, rowCount_ht2Source,
+      "t2_syncup has 406 rows on source, after bulk load of another 203 hfiles");
 
     shutDownSourceHBaseCluster();
     restartTargetHBaseCluster(1);
@@ -137,8 +132,8 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     // Before sync up
     int rowCountHt1TargetAtPeer1 = UTIL2.countRows(ht1TargetAtPeer1);
     int rowCountHt2TargetAtPeer1 = UTIL2.countRows(ht2TargetAtPeer1);
-    assertEquals("@Peer1 t1_syncup should still have 100 rows", 100, rowCountHt1TargetAtPeer1);
-    assertEquals("@Peer1 t2_syncup should still have 200 rows", 200, rowCountHt2TargetAtPeer1);
+    assertEquals(100, rowCountHt1TargetAtPeer1, "@Peer1 t1_syncup should still have 100 rows");
+    assertEquals(200, rowCountHt2TargetAtPeer1, "@Peer1 t2_syncup should still have 200 rows");
 
     // Run sync up tool
     syncUp(UTIL1);
@@ -157,10 +152,10 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
           rowCount_ht2Source = UTIL1.countRows(ht2Source);
           LOG.debug("t2_syncup should have 406 rows at source, and it is " + rowCount_ht2Source);
         }
-        assertEquals("@Peer1 t1_syncup should be sync up and have 200 rows", 200,
-          rowCountHt1TargetAtPeer1);
-        assertEquals("@Peer1 t2_syncup should be sync up and have 400 rows", 400,
-          rowCountHt2TargetAtPeer1);
+        assertEquals(200, rowCountHt1TargetAtPeer1,
+          "@Peer1 t1_syncup should be sync up and have 200 rows");
+        assertEquals(400, rowCountHt2TargetAtPeer1,
+          "@Peer1 t2_syncup should be sync up and have 400 rows");
       }
       if (rowCountHt1TargetAtPeer1 == 200 && rowCountHt2TargetAtPeer1 == 400) {
         LOG.info("SyncUpAfterBulkLoad succeeded at retry = " + i);
@@ -228,7 +223,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
     Path dir = UTIL1.getDataTestDirOnTestFS(testName);
     FileSystem fs = UTIL1.getTestFileSystem();
-    dir = dir.makeQualified(fs);
+    dir = dir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     Path familyDir = new Path(dir, Bytes.toString(fam));
 
     int hfileIdx = 0;
@@ -248,7 +243,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     Table source, byte[][][] hfileRanges, int numOfRows) throws Exception {
     Path dir = UTIL2.getDataTestDirOnTestFS(testName);
     FileSystem fs = UTIL2.getTestFileSystem();
-    dir = dir.makeQualified(fs);
+    dir = dir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
     Path familyDir = new Path(dir, Bytes.toString(fam));
 
     int hfileIdx = 0;
@@ -269,7 +264,7 @@ public class TestReplicationSyncUpToolWithBulkLoadedData extends TestReplication
     for (int i = 0; i < NB_RETRIES; i++) {
       int rowCountHt2TargetAtPeer1 = UTIL2.countRows(target);
       if (i == NB_RETRIES - 1) {
-        assertEquals(msg, expectedCount, rowCountHt2TargetAtPeer1);
+        assertEquals(expectedCount, rowCountHt2TargetAtPeer1, msg);
       }
       if (expectedCount == rowCountHt2TargetAtPeer1) {
         break;

@@ -17,31 +17,26 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_RETRIES;
-import static org.apache.hadoop.hbase.replication.TestReplicationBase.NB_ROWS_IN_BATCH;
-import static org.apache.hadoop.hbase.replication.TestReplicationBase.SLEEP_TIME;
-import static org.junit.Assert.assertEquals;
+import static org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll.NB_RETRIES;
+import static org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll.NB_ROWS_IN_BATCH;
+import static org.apache.hadoop.hbase.replication.TestReplicationBaseNoBeforeAll.SLEEP_TIME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSyncUpTool.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSyncUpTool.class);
 
@@ -118,8 +113,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     for (int i = 0; i < NB_RETRIES; i++) {
       int rowCountHt1TargetAtPeer1 = UTIL2.countRows(ht1TargetAtPeer1);
       if (i == NB_RETRIES - 1) {
-        assertEquals("t1_syncup has 101 rows on source, and 100 on slave1", rowCountHt1Source - 1,
-          rowCountHt1TargetAtPeer1);
+        assertEquals(rowCountHt1Source - 1, rowCountHt1TargetAtPeer1,
+          "t1_syncup has 101 rows on source, and 100 on slave1");
       }
       if (rowCountHt1Source - 1 == rowCountHt1TargetAtPeer1) {
         break;
@@ -131,8 +126,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     for (int i = 0; i < NB_RETRIES; i++) {
       int rowCountHt2TargetAtPeer1 = UTIL2.countRows(ht2TargetAtPeer1);
       if (i == NB_RETRIES - 1) {
-        assertEquals("t2_syncup has 201 rows on source, and 200 on slave1", rowCountHt2Source - 1,
-          rowCountHt2TargetAtPeer1);
+        assertEquals(rowCountHt2Source - 1, rowCountHt2TargetAtPeer1,
+          "t2_syncup has 201 rows on source, and 200 on slave1");
       }
       if (rowCountHt2Source - 1 == rowCountHt2TargetAtPeer1) {
         break;
@@ -162,12 +157,12 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     ht2Source.delete(list);
 
     int rowCount_ht1Source = UTIL1.countRows(ht1Source);
-    assertEquals("t1_syncup has 51 rows on source, after remove 50 of the replicated colfam", 51,
-      rowCount_ht1Source);
+    assertEquals(51, rowCount_ht1Source,
+      "t1_syncup has 51 rows on source, after remove 50 of the replicated colfam");
 
     int rowCount_ht2Source = UTIL1.countRows(ht2Source);
-    assertEquals("t2_syncup has 101 rows on source, after remove 100 of the replicated colfam", 101,
-      rowCount_ht2Source);
+    assertEquals(101, rowCount_ht2Source,
+      "t2_syncup has 101 rows on source, after remove 100 of the replicated colfam");
 
     shutDownSourceHBaseCluster();
     restartTargetHBaseCluster(1);
@@ -177,8 +172,8 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     // before sync up
     int rowCountHt1TargetAtPeer1 = UTIL2.countRows(ht1TargetAtPeer1);
     int rowCountHt2TargetAtPeer1 = UTIL2.countRows(ht2TargetAtPeer1);
-    assertEquals("@Peer1 t1_syncup should still have 100 rows", 100, rowCountHt1TargetAtPeer1);
-    assertEquals("@Peer1 t2_syncup should still have 200 rows", 200, rowCountHt2TargetAtPeer1);
+    assertEquals(100, rowCountHt1TargetAtPeer1, "@Peer1 t1_syncup should still have 100 rows");
+    assertEquals(200, rowCountHt2TargetAtPeer1, "@Peer1 t2_syncup should still have 200 rows");
 
     // After sync up
     for (int i = 0; i < NB_RETRIES; i++) {
@@ -194,10 +189,10 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
           rowCount_ht2Source = UTIL1.countRows(ht2Source);
           LOG.debug("t2_syncup should have 101 rows at source, and it is " + rowCount_ht2Source);
         }
-        assertEquals("@Peer1 t1_syncup should be sync up and have 50 rows", 50,
-          rowCountHt1TargetAtPeer1);
-        assertEquals("@Peer1 t2_syncup should be sync up and have 100 rows", 100,
-          rowCountHt2TargetAtPeer1);
+        assertEquals(50, rowCountHt1TargetAtPeer1,
+          "@Peer1 t1_syncup should be sync up and have 50 rows");
+        assertEquals(100, rowCountHt2TargetAtPeer1,
+          "@Peer1 t2_syncup should be sync up and have 100 rows");
       }
       if (rowCountHt1TargetAtPeer1 == 50 && rowCountHt2TargetAtPeer1 == 100) {
         LOG.info("SyncUpAfterDelete succeeded at retry = " + i);
@@ -240,9 +235,9 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     ht2Source.put(p);
 
     int rowCount_ht1Source = UTIL1.countRows(ht1Source);
-    assertEquals("t1_syncup has 102 rows on source", 102, rowCount_ht1Source);
+    assertEquals(102, rowCount_ht1Source, "t1_syncup has 102 rows on source");
     int rowCount_ht2Source = UTIL1.countRows(ht2Source);
-    assertEquals("t2_syncup has 202 rows on source", 202, rowCount_ht2Source);
+    assertEquals(202, rowCount_ht2Source, "t2_syncup has 202 rows on source");
 
     shutDownSourceHBaseCluster();
     restartTargetHBaseCluster(1);
@@ -252,10 +247,10 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
     // before sync up
     int rowCountHt1TargetAtPeer1 = UTIL2.countRows(ht1TargetAtPeer1);
     int rowCountHt2TargetAtPeer1 = UTIL2.countRows(ht2TargetAtPeer1);
-    assertEquals("@Peer1 t1_syncup should be NOT sync up and have 50 rows", 50,
-      rowCountHt1TargetAtPeer1);
-    assertEquals("@Peer1 t2_syncup should be NOT sync up and have 100 rows", 100,
-      rowCountHt2TargetAtPeer1);
+    assertEquals(50, rowCountHt1TargetAtPeer1,
+      "@Peer1 t1_syncup should be NOT sync up and have 50 rows");
+    assertEquals(100, rowCountHt2TargetAtPeer1,
+      "@Peer1 t2_syncup should be NOT sync up and have 100 rows");
 
     // after syun up
     for (int i = 0; i < NB_RETRIES; i++) {
@@ -271,10 +266,10 @@ public class TestReplicationSyncUpTool extends TestReplicationSyncUpToolBase {
           rowCount_ht2Source = UTIL1.countRows(ht2Source);
           LOG.debug("t2_syncup should have 202 rows at source, and it is " + rowCount_ht2Source);
         }
-        assertEquals("@Peer1 t1_syncup should be sync up and have 100 rows", 100,
-          rowCountHt1TargetAtPeer1);
-        assertEquals("@Peer1 t2_syncup should be sync up and have 200 rows", 200,
-          rowCountHt2TargetAtPeer1);
+        assertEquals(100, rowCountHt1TargetAtPeer1,
+          "@Peer1 t1_syncup should be sync up and have 100 rows");
+        assertEquals(200, rowCountHt2TargetAtPeer1,
+          "@Peer1 t2_syncup should be sync up and have 200 rows");
       }
       if (rowCountHt1TargetAtPeer1 == 100 && rowCountHt2TargetAtPeer1 == 200) {
         LOG.info("SyncUpAfterPut succeeded at retry = " + i);
