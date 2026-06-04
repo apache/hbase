@@ -942,6 +942,7 @@ public class TestSimpleRpcScheduler {
       await().atMost(2, TimeUnit.SECONDS).until(
         () -> scheduler.getGeneralQueueLength() == 0 && scheduler.getActiveRpcHandlerCount() == 0);
 
+      long pastNumLifoModeSwitches = scheduler.getNumLifoModeSwitches();
       // Send new calls - should process in FIFO order
       completedCalls.clear();
       for (int i = 100; i < 105; i++) {
@@ -959,25 +960,11 @@ public class TestSimpleRpcScheduler {
       // Wait for these calls to complete
       await().atMost(2, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 2);
 
-      // Verify FIFO behavior: calls should complete in order (100, 101, 102..)
-      assertTrue(completedCalls.size() >= 2,
-        "Should have completed test calls, but count of completed calls: " + completedCalls.size());
-      // Check that calls completed roughly in order (allowing some variance due to threading with 2
-      // handlers)
-      // With 2 handlers, we expect general FIFO order but some interleaving is possible
-      // Just verify the general trend is increasing
-      int violations = 0;
-      for (int i = 0; i < completedCalls.size() - 1; i++) {
-        int current = completedCalls.get(i);
-        int next = completedCalls.get(i + 1);
-        if (next < current) {
-          violations++;
-        }
-      }
+      long newLifoSwitch = scheduler.getNumLifoModeSwitches() - pastNumLifoModeSwitches;
       // Allow at most 1 violation due to concurrent execution by 2 handlers
-      assertTrue(violations <= 1, "Calls should complete in approximate FIFO order, violations: "
-        + violations + ", order: " + completedCalls);
-
+      assertEquals(0, newLifoSwitch,
+        "Queue should not switch to LIFO last 5 calls but number of LIFO switch are : "
+          + newLifoSwitch);
     } finally {
       scheduler.stop();
     }
