@@ -31,7 +31,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
  * {@code shouldSubmitSCP(null)} then dereferenced the null and crashed.
  */
 @Tag(MasterTests.TAG)
-@Tag(SmallTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRecoverUnknownWithNullRegionLocation {
 
   private static HBaseTestingUtil UTIL;
