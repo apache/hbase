@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.replication;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.UnknownScannerException;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Result;
@@ -60,7 +59,7 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
           try (ResultScanner scanner = table.getScanner(new Scan())) {
             res = scanner.next(initialCount);
             break;
-          } catch (UnknownScannerException ex) {
+          } catch (Exception ex) {
             LOG.info("Cluster wasn't ready yet, restarting scanner");
           }
         }
@@ -87,6 +86,10 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
           Result[] res2;
           try (ResultScanner scanner = table.getScanner(new Scan())) {
             res2 = scanner.next(initialCount * 2);
+          } catch (Exception e) {
+            LOG.warn("Cluster wasn't ready yet, sleep and retry later");
+            Thread.sleep(SLEEP_TIME * 2);
+            continue;
           }
           if (res2.length < initialCount) {
             if (lastCount < res2.length) {
@@ -113,7 +116,7 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
       public void run() {
         try {
           Thread.sleep(timeout);
-          utility.getHBaseCluster().getRegionServer(rs).stop("Stopping as part of the test");
+          utility.getHBaseCluster().getRegionServer(rs).abort("Stopping as part of the test");
         } catch (Exception e) {
           LOG.error("Couldn't kill a region server", e);
         }

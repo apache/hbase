@@ -19,9 +19,10 @@ package org.apache.hadoop.hbase.replication;
 
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -41,12 +42,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.NoEOFWALStreamReader;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, LargeTests.class })
-public class SyncReplicationActiveTestBase extends SyncReplicationTestBase {
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class SyncReplicationActiveTestBase extends SyncReplicationTestBaseNoBeforeAll {
 
   @Test
   public void testActive() throws Exception {
@@ -115,14 +116,14 @@ public class SyncReplicationActiveTestBase extends SyncReplicationTestBase {
     throws Exception {
     FileSystem fs2 = utility.getTestFileSystem();
     FileStatus[] files = fs2.listStatus(new Path(remoteDir, peerId));
-    Assert.assertTrue(files.length > 0);
+    assertTrue(files.length > 0);
     for (FileStatus file : files) {
       try (WALStreamReader reader =
         NoEOFWALStreamReader.create(fs2, file.getPath(), utility.getConfiguration())) {
         Entry entry = reader.next();
-        Assert.assertTrue(entry != null);
+        assertTrue(entry != null);
         while (entry != null) {
-          Assert.assertEquals(entry.getKey().getClusterIds().size(), 0);
+          assertEquals(entry.getKey().getClusterIds().size(), 0);
           entry = reader.next();
         }
       }
