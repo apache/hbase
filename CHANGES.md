@@ -18,6 +18,114 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.15 - 2026-06-08
+
+
+
+### NEW FEATURES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29267](https://issues.apache.org/jira/browse/HBASE-29267) | Support shaded clients in Exception deserialization by prefixing shaded package in IPCUtil |  Minor | . |
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29947](https://issues.apache.org/jira/browse/HBASE-29947) | Improve CopyTable usage instructions for copying between secure and non-secure clusters |  Minor | documentation, mapreduce, Replication |
+| [HBASE-30191](https://issues.apache.org/jira/browse/HBASE-30191) | Upgrade hbase-testing-util to use junit5 |  Major | test |
+| [HBASE-26962](https://issues.apache.org/jira/browse/HBASE-26962) | Add mob info in web UI |  Minor | UI |
+| [HBASE-30079](https://issues.apache.org/jira/browse/HBASE-30079) | Upgrade hbase-compression to use junit5 |  Major | compression, test |
+| [HBASE-30036](https://issues.apache.org/jira/browse/HBASE-30036) | Delete marker consolidation on memstore flush |  Major | Performance |
+| [HBASE-29039](https://issues.apache.org/jira/browse/HBASE-29039) | Optimize read performance for accumulated delete markers on the same row or cell |  Major | Performance, Scanners |
+| [HBASE-30056](https://issues.apache.org/jira/browse/HBASE-30056) | Fix markdown in hbase-archetypes README.md |  Trivial | documentation |
+| [HBASE-30052](https://issues.apache.org/jira/browse/HBASE-30052) | Fix copied Javadoc in MultipleColumnPrefixFilter |  Trivial | documentation |
+| [HBASE-29968](https://issues.apache.org/jira/browse/HBASE-29968) | Upgrade hbase-mapreduce to use junit5 |  Major | mapreduce, test |
+| [HBASE-29970](https://issues.apache.org/jira/browse/HBASE-29970) | SplitSuccess and SplitTime metrics are no longer used at RegionServer and Table level |  Major | metrics |
+| [HBASE-29770](https://issues.apache.org/jira/browse/HBASE-29770) | Exclude commons-logging from HBase |  Major | logging |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30198](https://issues.apache.org/jira/browse/HBASE-30198) | Javadoc build failures in branch-2/2.5/2.6 |  Major | build |
+| [HBASE-30155](https://issues.apache.org/jira/browse/HBASE-30155) | MobFileCleanerChore does not shut down its internal executor on cleanup |  Major | mob |
+| [HBASE-30156](https://issues.apache.org/jira/browse/HBASE-30156) | TestSecureWAL is broken |  Major | test, wal |
+| [HBASE-30147](https://issues.apache.org/jira/browse/HBASE-30147) | Bump gitpython from 3.1.47 to 3.1.50 in /dev-support/flaky-tests |  Major | dependabot, jenkins, scripts, security |
+| [HBASE-30128](https://issues.apache.org/jira/browse/HBASE-30128) | Fix WALCellCodec off-heap KV tags compression test mismatch |  Major | test |
+| [HBASE-30101](https://issues.apache.org/jira/browse/HBASE-30101) | Stray TGT Renewer from RpcServer accessing UGI before Kerberos login |  Minor | . |
+| [HBASE-30126](https://issues.apache.org/jira/browse/HBASE-30126) | Fix mismatched LoggerFactory class references |  Major | . |
+| [HBASE-30120](https://issues.apache.org/jira/browse/HBASE-30120) | Bump gitpython from 3.1.41 to 3.1.47 in /dev-support/flaky-tests |  Major | dependabot, jenkins, scripts, security |
+| [HBASE-30103](https://issues.apache.org/jira/browse/HBASE-30103) | Error in TestZstdDictionarySplitMerge |  Minor | test |
+| [HBASE-30033](https://issues.apache.org/jira/browse/HBASE-30033) | Scan.setBatch() validation can be bypassed by calling setBatch() before setFilter() |  Minor | Client |
+| [HBASE-28660](https://issues.apache.org/jira/browse/HBASE-28660) | list\_namespace not working after an incorrect user input |  Major | shell |
+| [HBASE-30055](https://issues.apache.org/jira/browse/HBASE-30055) | Correct the configuration in MobFileCompactionChore log |  Major | . |
+| [HBASE-30007](https://issues.apache.org/jira/browse/HBASE-30007) | Multiget with timestamp incorrectly returns 404 not found |  Critical | REST |
+| [HBASE-30000](https://issues.apache.org/jira/browse/HBASE-30000) | testCompactionWithCorruptBlock fails on branch-2.5 |  Major | test |
+
+
+### TESTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30042](https://issues.apache.org/jira/browse/HBASE-30042) | AuthUtil.loginClient fails when another Kerberos user is already logged in |  Minor | test |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30119](https://issues.apache.org/jira/browse/HBASE-30119) | Stop JmxCacheBuster in HBTU |  Major | metrics, test |
+| [HBASE-30188](https://issues.apache.org/jira/browse/HBASE-30188) | Upgrade hbase-server to use junit5 Part20 |  Major | Replication, test |
+| [HBASE-30138](https://issues.apache.org/jira/browse/HBASE-30138) | Upgrade hbase-server to use junit5 Part16 |  Major | regionserver, test |
+| [HBASE-30175](https://issues.apache.org/jira/browse/HBASE-30175) | Upgrade hbase-server to use junit5 Part19 |  Major | test |
+| [HBASE-30136](https://issues.apache.org/jira/browse/HBASE-30136) | Upgrade hbase-server to use junit5 Part15 |  Major | . |
+| [HBASE-30123](https://issues.apache.org/jira/browse/HBASE-30123) | Upgrade hbase-server to use junit5 Part13 |  Major | test |
+| [HBASE-30082](https://issues.apache.org/jira/browse/HBASE-30082) | Upgrade hbase-server to use junit5 Part12 |  Major | test |
+| [HBASE-30145](https://issues.apache.org/jira/browse/HBASE-30145) | Upgrade hbase-server to use junit5 Part17 |  Major | test |
+| [HBASE-30146](https://issues.apache.org/jira/browse/HBASE-30146) | Upgrade hbase-server to use junit5 Part18 |  Major | test |
+| [HBASE-30131](https://issues.apache.org/jira/browse/HBASE-30131) | Rewrite TestAsyncMetaRegionLocator |  Major | test |
+| [HBASE-30124](https://issues.apache.org/jira/browse/HBASE-30124) | Upgrade hbase-server to use junit5 Part14 |  Major | regionserver, test |
+| [HBASE-30141](https://issues.apache.org/jira/browse/HBASE-30141) | Split TestFromClientSide5 |  Major | Client, test |
+| [HBASE-30140](https://issues.apache.org/jira/browse/HBASE-30140) | Rewrite TestScannersFromClientSide |  Major | test |
+| [HBASE-30125](https://issues.apache.org/jira/browse/HBASE-30125) | Rewrite TestHFileBlockHeaderCorruption |  Major | test |
+| [HBASE-30129](https://issues.apache.org/jira/browse/HBASE-30129) | Split TestFromClientSide3 |  Major | test |
+| [HBASE-30086](https://issues.apache.org/jira/browse/HBASE-30086) | Rewrite TestFromClientSide related tests |  Major | test |
+| [HBASE-30089](https://issues.apache.org/jira/browse/HBASE-30089) | Rewrite AbstractTestAsyncTableScan and related sub classes |  Major | test |
+| [HBASE-30098](https://issues.apache.org/jira/browse/HBASE-30098) | Rewrite RestoreSnapshotFromClientTestBase and its sub classes |  Major | test |
+| [HBASE-30066](https://issues.apache.org/jira/browse/HBASE-30066) | Upgrade hbase-server to use junit5 Part9 |  Major | test |
+| [HBASE-30063](https://issues.apache.org/jira/browse/HBASE-30063) | Upgrade hbase-server to use junit5 Part7 |  Major | master, test |
+| [HBASE-30067](https://issues.apache.org/jira/browse/HBASE-30067) | Upgrade hbase-server to use junit5 Part10 |  Major | test |
+| [HBASE-30064](https://issues.apache.org/jira/browse/HBASE-30064) | Upgrade hbase-server to use junit5 Part8 |  Major | master, test |
+| [HBASE-30059](https://issues.apache.org/jira/browse/HBASE-30059) | Upgrade hbase-server to use junit5 Part6 |  Major | master, test |
+| [HBASE-30091](https://issues.apache.org/jira/browse/HBASE-30091) | Rewrite CloneSnapshotFromClientTestBase and its sub classes |  Major | test |
+| [HBASE-30012](https://issues.apache.org/jira/browse/HBASE-30012) | Upgrade hbase-server to use junit5 Part2 |  Major | test |
+| [HBASE-30011](https://issues.apache.org/jira/browse/HBASE-30011) | Upgrade hbase-server to use junit5 Part1 |  Major | test |
+| [HBASE-30071](https://issues.apache.org/jira/browse/HBASE-30071) | Upgrade hbase-server to use junit5 Part11 |  Major | test |
+| [HBASE-30041](https://issues.apache.org/jira/browse/HBASE-30041) | Upgrade hbase-server to use junit5 Part4 |  Major | test |
+| [HBASE-30039](https://issues.apache.org/jira/browse/HBASE-30039) | Upgrade hbase-server to use junit5 Part3 |  Major | test |
+| [HBASE-30057](https://issues.apache.org/jira/browse/HBASE-30057) | Upgrade hbase-server to use junit5 Part5 |  Major | test |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30183](https://issues.apache.org/jira/browse/HBASE-30183) | Refactoring scanner related code in hbase-thrift and hbase-rest |  Major | REST, Thrift |
+| [HBASE-30193](https://issues.apache.org/jira/browse/HBASE-30193) | Exclude transitive jakarta.mail dependency (CVE-2025-7962) |  Major | . |
+| [HBASE-30153](https://issues.apache.org/jira/browse/HBASE-30153) | Upgrade hbase-common to junit5 |  Major | test |
+| [HBASE-30133](https://issues.apache.org/jira/browse/HBASE-30133) | Add opt-in yetus prerelease testing to GitHub Actions precommit |  Major | build |
+| [HBASE-30132](https://issues.apache.org/jira/browse/HBASE-30132) | Expose per column family storeFileSize JMX metric |  Minor | metrics |
+| [HBASE-30088](https://issues.apache.org/jira/browse/HBASE-30088) | Bump org.bouncycastle:bcpkix-jdk18on from 1.81 to 1.84 |  Major | dependabot, dependencies, security |
+| [HBASE-30013](https://issues.apache.org/jira/browse/HBASE-30013) | Update documentation links to point to new docs |  Major | documentation, UI |
+| [HBASE-30083](https://issues.apache.org/jira/browse/HBASE-30083) | Bump org.apache.logging.log4j:log4j-1.2-api from 2.25.3 to 2.25.4 |  Major | dependabot, dependencies, logging, pom |
+| [HBASE-30029](https://issues.apache.org/jira/browse/HBASE-30029) | Bump requests from 2.32.4 to 2.33.0 in /dev-support/flaky-tests |  Major | dependabot, jenkins, scripts |
+| [HBASE-30028](https://issues.apache.org/jira/browse/HBASE-30028) | Bump io.opentelemetry.javaagent:opentelemetry-javaagent from 2.15.0 to 2.26.1 |  Major | dependabot, security, tracing |
+| [HBASE-29990](https://issues.apache.org/jira/browse/HBASE-29990) | Upgrade deprecated GitHub Actions versions |  Major | build |
+
+
 ## Release 2.5.14 - 2026-03-20
 
 
