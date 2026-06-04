@@ -33,7 +33,7 @@ import org.junit.jupiter.api.TestInfo;
 
 @Tag(SmallTests.TAG)
 @Tag(ClientTests.TAG)
-public class TestBufferedMutator {
+public class TestBufferedMutatorNoServer {
 
   /**
    * My BufferedMutator. Just to prove that I can insert a BM other than default.
