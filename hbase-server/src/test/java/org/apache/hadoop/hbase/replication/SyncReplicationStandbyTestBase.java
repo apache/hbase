@@ -21,9 +21,9 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.containsString;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -40,10 +40,9 @@ import org.apache.hadoop.hbase.client.RowMutations;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
 
-public class SyncReplicationStandbyTestBase extends SyncReplicationTestBase {
+public class SyncReplicationStandbyTestBase extends SyncReplicationTestBaseNoBeforeAll {
 
   @FunctionalInterface
   private interface TableAction {
@@ -88,12 +87,12 @@ public class SyncReplicationStandbyTestBase extends SyncReplicationTestBase {
 
     // Remove the peers in ACTIVE & STANDBY cluster.
     FileSystem fs2 = REMOTE_WAL_DIR2.getFileSystem(UTIL2.getConfiguration());
-    Assert.assertTrue(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
+    assertTrue(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
 
     UTIL2.getAdmin().transitReplicationPeerSyncReplicationState(PEER_ID,
       SyncReplicationState.DOWNGRADE_ACTIVE);
-    Assert.assertFalse(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
-    Assert.assertFalse(fs2.exists(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID)));
+    assertFalse(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
+    assertFalse(fs2.exists(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID)));
 
     UTIL1.getAdmin().removeReplicationPeer(PEER_ID);
     verifyRemovedPeer(PEER_ID, REMOTE_WAL_DIR1, UTIL1);
@@ -103,8 +102,8 @@ public class SyncReplicationStandbyTestBase extends SyncReplicationTestBase {
     // whether the removeReplicationPeer would remove the remoteWAL dir.
     fs2.create(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID));
     fs2.create(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID));
-    Assert.assertTrue(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
-    Assert.assertTrue(fs2.exists(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID)));
+    assertTrue(fs2.exists(getRemoteWALDir(REMOTE_WAL_DIR2, PEER_ID)));
+    assertTrue(fs2.exists(getReplayRemoteWALs(REMOTE_WAL_DIR2, PEER_ID)));
     UTIL2.getAdmin().removeReplicationPeer(PEER_ID);
     verifyRemovedPeer(PEER_ID, REMOTE_WAL_DIR2, UTIL2);
   }

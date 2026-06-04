@@ -80,7 +80,6 @@ public abstract class VerifyReplicationTestBase extends TestReplicationBase {
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-
     TableDescriptor peerTable =
       TableDescriptorBuilder.newBuilder(peerTableName)
         .setColumnFamily(
