@@ -233,6 +233,38 @@ public class CopyTable extends Configured implements Tool {
     System.err.println(" To copy data from 'sourceTableSnapshot' and bulk load to 'destTable': ");
     System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
       + "--new.name=destTable --snapshot --bulkload sourceTableSnapshot");
+    System.err.println();
+    System.err.println(
+      " To copy the data of 'TestTable' from the secured local cluster to a non-secured peer"
+        + " cluster (cluster-b)");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+      + "-Dhbase.mapred.output.hbase.security.authentication=simple "
+      + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+      + "2181:/cluster-b" + " TestTable");
+    System.err.println();
+    System.err.println(
+      " To copy the data of 'TestTable' from the local secured cluster to a peer secured cluster "
+        + "in a different Kerberos realm.");
+    System.err.println(" Assume cluster-b uses a different Kerberos principal "
+      + "(cluster-b/_HOST@EXAMPLE.COM) for its master and regionserver.");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+      + "-Dhbase.mapred.output.hbase.regionserver.kerberos.principal="
+      + "cluster-b/_HOST@EXAMPLE.COM "
+      + "-Dhbase.mapred.output.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM "
+      + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+      + "2181:/cluster-b" + " TestTable");
+    System.err.println();
+    System.err.println(
+      " To copy the data of 'TestTable' from a non-secured local cluster to a secured peer cluster"
+        + " (cluster-b)");
+    System.err.println(" $ hbase org.apache.hadoop.hbase.mapreduce.CopyTable "
+      + "-Dhbase.mapred.output.hbase.security.authentication=kerberos "
+      + "-Dhbase.mapred.output.hbase.regionserver.kerberos.principal="
+      + "cluster-b/_HOST@EXAMPLE.COM "
+      + "-Dhbase.mapred.output.hbase.master.kerberos.principal=cluster-b/_HOST@EXAMPLE.COM "
+      + "--peer.adr=cluster-b-1.example.com,cluster-b-2.example.com,cluster-b-3.example.com:"
+      + "2181:/cluster-b" + " TestTable");
+    System.err.println();
     System.err.println("For performance consider the following general option:\n"
       + "  It is recommended that you set the following to >=100. A higher value uses more memory but\n"
       + "  decreases the round trip time to the server and may increase performance.\n"
