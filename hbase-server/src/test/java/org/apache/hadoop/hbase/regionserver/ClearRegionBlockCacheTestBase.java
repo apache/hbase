@@ -127,8 +127,9 @@ public abstract class ClearRegionBlockCacheTestBase {
       htu.getNumHFilesForRS(rs2, tableName, FAMILY));
 
     CacheEvictionStats stats = admin.clearBlockCache(tableName);
-    assertEquals(htu.getNumHFilesForRS(rs1, tableName, FAMILY)
-      + htu.getNumHFilesForRS(rs2, tableName, FAMILY), stats.getEvictedBlocks());
+    assertEquals(
+      htu.getNumHFilesForRS(rs1, tableName, FAMILY) + htu.getNumHFilesForRS(rs2, tableName, FAMILY),
+      stats.getEvictedBlocks());
     assertEquals(initialBlockCount1, blockCache1.getBlockCount());
     assertEquals(initialBlockCount2, blockCache2.getBlockCount());
   }
