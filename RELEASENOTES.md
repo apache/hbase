@@ -16,57 +16,6 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
-# HBASE  2.6.6 Release Notes
-
-These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
-
-
----
-
-* [HBASE-30135](https://issues.apache.org/jira/browse/HBASE-30135) | *Major* | **Improve CacheAwareLoadBalancer to simulate low cache ratio regions as cached in candidate servers with enough cache space**
-
-If an imbalance is found following the changes in the CacheAwareCostFunction introduced by HBASE-30134, these changes the generate logic in the CacheAwareCandidateGenerator as follows:
-1) For regions with no cache on other servers, if the cache ratio is below the hbase.master.balancer.cacheaware.lowCacheRatioThreshold value (defaults 0.35), it will suggest a move plan for a server with enough cache space available to accommodate the region's hot data size (as determined by DataTieringManager) times the “hbase.master.balancer.cacheaware.minFreeCacheSpaceFactor” value (defaults to 1).
-2) If there's no server with cache space available for the region, no plan is suggested for that specific region.
-
-This also changes CacheAwareCostFunction.regionMoved method, which is called once StochasticLoadBalancer obtains the plan and verifies if it decreases the overall cost, by simply calculating the individual cache ratio for the region in the new server, either using the already cached data, or potential cache due to free space. Then it takes a diff of this from the cache ratio on current server, normalizing it by the best ever possible overall ratio and increment this value to the current overall cache ratio, which is ultimately used for calculating the cost.
-
-
----
-
-* [HBASE-30134](https://issues.apache.org/jira/browse/HBASE-30134) | *Major* | **Improve CacheAwareLoadBalancer to consider low cache ratio when calculating imbalance**
-
-This modified CacheAwareLoadBalancer in order to exclude region data labeled "cold" by BucketCache Time Based Priority setting when calculation region's cache ratio to define imbalance.
-
-It also changes CacheAwareLoadBalancer.CacheAwareCostFunction to  optimistically consider that moves of low cache ratio regions to servers with available cache space succeed in bringing up cache ratio for the given region, reducing the imbalance.
-
-Low cache ratio for regions to be eligible to move to servers with available cache space is defined by a configurable, float threshold: hbase.master.balancer.cacheaware.lowCacheRatioThreshold (defaults to 0.35).
-
-The cost of moving such low cache ratios regions to servers with available cache space will be calculating assuming the cache ratio for these regions in the target server would be region hot data size times a configurable float factor: hbase.master.balancer.cacheaware.potentialCacheRatioAfterMove (defaults to 0.95);
-
-The available cache space to be considered for the "hypothetical" cache ratio on target server from moved low cached region is also defined by a configurable float factor: hbase.master.balancer.cacheaware.minFreeCacheSpaceFactor (defaults to 1.0f);
-
-For example, considering a cluster with total regions hot data size 100TB, total cache capacity 120TB, but having several regions with low cache ratio on their current servers, such that total cached hot data size is only 90TB and all regions are evenly distributed, so that there's no region skewness. Prior to these changes, if no region has cached data on servers other than the current server the regions are hosted on, CacheAwareCostFunction.cost for this setup would be 0 and no imbalance is seen.
-
-With HBASE-30134 default configurations, the initial cache ratio for this deployment would be (9/10) and the CacheAwareCost value ~ (1 -(9/10)).
-
-The imbalance is then defined by:
-
-((CacheAwareCost.cost \* CacheAwareCost.multiplier) + (CacheAwareRegionSkewness.cost \* CacheAwareRegionSkewness.multiplier)) /  (CacheAwareCost.multiplier + CacheAwareRegionSkewness.multiplier)
-
-In the example: (0.1 \* 20) + (0\*20) / (20 + 20) = 0.05
-
-Balancer would be triggered, as the current imbalance is above the default hbase.master.balancer.stochastic.minCostNeedBalance value of 0.025.
-
-
----
-
-* [HBASE-30132](https://issues.apache.org/jira/browse/HBASE-30132) | *Minor* | **Expose per column family storeFileSize JMX metric**
-
-Adds a per-column-family storeFileSize gauge under the RegionServer Tables MBean, exposed as Namespace\_\<namespace\>\_table\_\<tableName\>\_columnfamily\_\<columnfamilyName\>\_metric\_storeFileSize.
-
-
-
 # HBASE  2.6.5 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
