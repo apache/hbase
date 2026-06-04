@@ -60,32 +60,23 @@ public abstract class ClearRegionBlockCacheTestBase {
   private static void setUpCluster(TableName testTableName, boolean bucketCache) throws Exception {
     tableName = testTableName;
     htu = new HBaseTestingUtil();
-    try {
-      if (bucketCache) {
-        htu.getConfiguration().set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-        htu.getConfiguration().setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 30);
-      }
-      htu.startMiniCluster(NUM_RS);
-      rs1 = htu.getMiniHBaseCluster().getRegionServer(0);
-      rs2 = htu.getMiniHBaseCluster().getRegionServer(1);
+    if (bucketCache) {
+      htu.getConfiguration().set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
+      htu.getConfiguration().setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 30);
+    }
+    htu.startMiniCluster(NUM_RS);
+    rs1 = htu.getMiniHBaseCluster().getRegionServer(0);
+    rs2 = htu.getMiniHBaseCluster().getRegionServer(1);
 
-      try (Table table = htu.createTable(testTableName, FAMILY, SPLIT_KEY)) {
-        htu.loadNumericRows(table, FAMILY, 1, 10);
-        htu.flush(testTableName);
-      }
-    } catch (Exception e) {
-      tearDownCluster();
-      throw e;
+    try (Table table = htu.createTable(testTableName, FAMILY, SPLIT_KEY)) {
+      htu.loadNumericRows(table, FAMILY, 1, 10);
+      htu.flush(testTableName);
     }
   }
 
   protected static void tearDownCluster() throws Exception {
     if (htu != null) {
       htu.shutdownMiniCluster();
-      htu = null;
-      rs1 = null;
-      rs2 = null;
-      tableName = null;
     }
   }
 
@@ -162,8 +153,8 @@ public abstract class ClearRegionBlockCacheTestBase {
         htu.getNumHFilesForRS(rs2, tableName, FAMILY));
 
       CacheEvictionStats stats = admin.clearBlockCache(tableName).get();
-      assertEquals(stats.getEvictedBlocks(), htu.getNumHFilesForRS(rs1, tableName, FAMILY)
-        + htu.getNumHFilesForRS(rs2, tableName, FAMILY));
+      assertEquals(htu.getNumHFilesForRS(rs1, tableName, FAMILY)
+        + htu.getNumHFilesForRS(rs2, tableName, FAMILY), stats.getEvictedBlocks());
       assertEquals(initialBlockCount1, blockCache1.getBlockCount());
       assertEquals(initialBlockCount2, blockCache2.getBlockCount());
     }
