@@ -45,7 +45,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -117,7 +117,7 @@ public class TestBoundedRegionGroupingStrategy {
   /**
    * Write to a log file with three concurrent threads and verifying all data is written.
    */
-  @Test
+  @TestTemplate
   public void testConcurrentWrites() throws Exception {
     // Run the WPE tool with three threads writing 3000 edits each concurrently.
     // When done, verify that all edits were written.
@@ -129,7 +129,7 @@ public class TestBoundedRegionGroupingStrategy {
   /**
    * Make sure we can successfully run with more regions then our bound.
    */
-  @Test
+  @TestTemplate
   public void testMoreRegionsThanBound() throws Exception {
     final String parallelism = Integer.toString(DEFAULT_NUM_REGION_GROUPS * 2);
     int errCode =
@@ -138,7 +138,7 @@ public class TestBoundedRegionGroupingStrategy {
     assertEquals(0, errCode);
   }
 
-  @Test
+  @TestTemplate
   public void testBoundsGreaterThanDefault() throws Exception {
     final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
     try {
@@ -153,7 +153,7 @@ public class TestBoundedRegionGroupingStrategy {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testMoreRegionsThanBoundWithBoundsGreaterThanDefault() throws Exception {
     final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
     try {
@@ -171,7 +171,7 @@ public class TestBoundedRegionGroupingStrategy {
   /**
    * Ensure that we can use Set.add to deduplicate WALs
    */
-  @Test
+  @TestTemplate
   public void setMembershipDedups() throws IOException {
     final int temp = CONF.getInt(NUM_REGION_GROUPS, DEFAULT_NUM_REGION_GROUPS);
     WALFactory wals = null;
