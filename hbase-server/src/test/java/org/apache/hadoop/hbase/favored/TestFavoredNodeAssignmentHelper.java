@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.favored;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 
@@ -33,10 +33,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.SortedMap;
 import java.util.TreeMap;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -45,23 +45,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Triple;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFavoredNodeAssignmentHelper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFavoredNodeAssignmentHelper.class);
 
   private static List<ServerName> servers = new ArrayList<>();
   private static Map<String, List<ServerName>> rackToServers = new HashMap<>();
@@ -70,8 +65,8 @@ public class TestFavoredNodeAssignmentHelper {
   // Some tests have randomness, so we run them multiple times
   private static final int MAX_ATTEMPTS = 100;
 
-  @Rule
-  public TestName name = new TestName();
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
   private static String getRack(int index) {
     if (index < 10) {
@@ -85,7 +80,7 @@ public class TestFavoredNodeAssignmentHelper {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // Set up some server -> rack mappings
     // Have three racks in the cluster with 10 hosts each.
@@ -301,7 +296,7 @@ public class TestFavoredNodeAssignmentHelper {
     // create regions
     List<RegionInfo> regions = new ArrayList<>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      regions.add(RegionInfoBuilder.newBuilder(tableNameExt.getTableName())
         .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
     // place the regions
@@ -366,12 +361,15 @@ public class TestFavoredNodeAssignmentHelper {
     regionMap.put(regionsOnRack1, 1);
     regionMap.put(regionsOnRack2, 2);
     regionMap.put(regionsOnRack3, 3);
-    assertEquals(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-      regionsOnRack2, regionsOnRack3), rackMap.get(firstRackSize), regionMap.get(regionsOnRack1));
-    assertEquals(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-      regionsOnRack2, regionsOnRack3), rackMap.get(secondRackSize), regionMap.get(regionsOnRack2));
-    assertEquals(printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1,
-      regionsOnRack2, regionsOnRack3), rackMap.get(thirdRackSize), regionMap.get(regionsOnRack3));
+    assertEquals(rackMap.get(firstRackSize), regionMap.get(regionsOnRack1),
+      printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+        regionsOnRack3));
+    assertEquals(rackMap.get(secondRackSize), regionMap.get(regionsOnRack2),
+      printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+        regionsOnRack3));
+    assertEquals(rackMap.get(thirdRackSize), regionMap.get(regionsOnRack3),
+      printProportions(firstRackSize, secondRackSize, thirdRackSize, regionsOnRack1, regionsOnRack2,
+        regionsOnRack3));
   }
 
   private String printProportions(int firstRackSize, int secondRackSize, int thirdRackSize,
@@ -392,7 +390,7 @@ public class TestFavoredNodeAssignmentHelper {
 
     List<RegionInfo> regions = new ArrayList<>(20);
     for (int i = 0; i < 20; i++) {
-      regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      regions.add(RegionInfoBuilder.newBuilder(tableNameExt.getTableName())
         .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
     Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<ServerName, List<RegionInfo>>();
@@ -452,7 +450,7 @@ public class TestFavoredNodeAssignmentHelper {
     // Check we don't get a bad node on any number of attempts
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, Sets.newHashSet());
-      assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
+      assertTrue(servers.contains(sn), "Server:" + sn + " does not belong to list: " + servers);
     }
 
     // Check skipServers multiple times when an invalid server is specified
@@ -460,7 +458,7 @@ public class TestFavoredNodeAssignmentHelper {
       Sets.newHashSet(ServerName.valueOf("invalidnode:1234", ServerName.NON_STARTCODE));
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, skipServers);
-      assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
+      assertTrue(servers.contains(sn), "Server:" + sn + " does not belong to list: " + servers);
     }
 
     // Check skipRack multiple times when an valid servers are specified
@@ -468,8 +466,8 @@ public class TestFavoredNodeAssignmentHelper {
     skipServers = Sets.newHashSet(skipSN);
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName sn = helper.getOneRandomServer(rack, skipServers);
-      assertNotEquals("Skip server should not be selected ", skipSN.getAddress(), sn.getAddress());
-      assertTrue("Server:" + sn + " does not belong to list: " + servers, servers.contains(sn));
+      assertNotEquals(skipSN.getAddress(), sn.getAddress(), "Skip server should not be selected");
+      assertTrue(servers.contains(sn), "Server:" + sn + " does not belong to list: " + servers);
     }
   }
 
@@ -490,8 +488,8 @@ public class TestFavoredNodeAssignmentHelper {
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       for (String rack : rackList) {
         ServerName sn = helper.getOneRandomServer(rack, Sets.newHashSet());
-        assertTrue("Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack),
-          rackToServers.get(rack).contains(sn));
+        assertTrue(rackToServers.get(rack).contains(sn),
+          "Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack));
       }
     }
 
@@ -501,8 +499,8 @@ public class TestFavoredNodeAssignmentHelper {
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       for (String rack : rackList) {
         ServerName sn = helper.getOneRandomServer(rack, skipServers);
-        assertTrue("Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack),
-          rackToServers.get(rack).contains(sn));
+        assertTrue(rackToServers.get(rack).contains(sn),
+          "Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack));
       }
     }
 
@@ -514,9 +512,9 @@ public class TestFavoredNodeAssignmentHelper {
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       for (String rack : rackList) {
         ServerName sn = helper.getOneRandomServer(rack, skipServers);
-        assertFalse("Skip server should not be selected ", skipServers.contains(sn));
-        assertTrue("Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack),
-          rackToServers.get(rack).contains(sn));
+        assertFalse(skipServers.contains(sn), "Skip server should not be selected");
+        assertTrue(rackToServers.get(rack).contains(sn),
+          "Server:" + sn + " does not belong to rack servers: " + rackToServers.get(rack));
       }
     }
   }
@@ -534,7 +532,7 @@ public class TestFavoredNodeAssignmentHelper {
     helper.initialize();
     assertTrue(helper.canPlaceFavoredNodes());
 
-    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    RegionInfo region = RegionInfoBuilder.newBuilder(tableNameExt.getTableName())
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).build();
 
     for (int maxattempts = 0; maxattempts < MAX_ATTEMPTS; maxattempts++) {
@@ -569,13 +567,12 @@ public class TestFavoredNodeAssignmentHelper {
     for (int attempts = 0; attempts < MAX_ATTEMPTS; attempts++) {
       ServerName genSN = helper.generateMissingFavoredNode(fn, skipServers);
       checkDuplicateFN(fn, genSN);
-      assertNotEquals("Generated FN should not match excluded one", snRack1SN3, genSN);
+      assertNotEquals(snRack1SN3, genSN, "Generated FN should not match excluded one");
     }
   }
 
   @Test
   public void testGenMissingFavoredNodeMultiRack() throws IOException {
-
     ServerName snRack1SN1 = ServerName.valueOf("foo1:1234", ServerName.NON_STARTCODE);
     ServerName snRack1SN2 = ServerName.valueOf("foo2:1234", ServerName.NON_STARTCODE);
     ServerName snRack2SN1 = ServerName.valueOf("foo10:1234", ServerName.NON_STARTCODE);
@@ -612,22 +609,22 @@ public class TestFavoredNodeAssignmentHelper {
       ServerName genSN = helper.generateMissingFavoredNode(fn, skipServers);
       checkDuplicateFN(fn, genSN);
       checkFNRacks(fn, genSN);
-      assertNotEquals("Generated FN should not match excluded one", snRack2SN2, genSN);
+      assertNotEquals(snRack2SN2, genSN, "Generated FN should not match excluded one");
     }
   }
 
   private void checkDuplicateFN(List<ServerName> fnList, ServerName genFN) {
     Set<ServerName> favoredNodes = Sets.newHashSet(fnList);
-    assertNotNull("Generated FN can't be null", genFN);
+    assertNotNull(genFN, "Generated FN can't be null");
     favoredNodes.add(genFN);
-    assertEquals("Did not find expected number of favored nodes",
-      FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size());
+    assertEquals(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size(),
+      "Did not find expected number of favored nodes");
   }
 
   private void checkDuplicateFN(List<ServerName> fnList) {
     Set<ServerName> favoredNodes = Sets.newHashSet(fnList);
-    assertEquals("Did not find expected number of favored nodes",
-      FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size());
+    assertEquals(FavoredNodeAssignmentHelper.FAVORED_NODES_NUM, favoredNodes.size(),
+      "Did not find expected number of favored nodes");
   }
 
   private void checkFNRacks(List<ServerName> fnList, ServerName genFN) {
@@ -637,7 +634,7 @@ public class TestFavoredNodeAssignmentHelper {
     for (ServerName sn : favoredNodes) {
       racks.add(rackManager.getRack(sn));
     }
-    assertTrue("FN should be spread atleast across 2 racks", racks.size() >= 2);
+    assertTrue(racks.size() >= 2, "FN should be spread atleast across 2 racks");
   }
 
   private void checkFNRacks(List<ServerName> fnList) {
@@ -646,6 +643,6 @@ public class TestFavoredNodeAssignmentHelper {
     for (ServerName sn : favoredNodes) {
       racks.add(rackManager.getRack(sn));
     }
-    assertTrue("FN should be spread atleast across 2 racks", racks.size() >= 2);
+    assertTrue(racks.size() >= 2, "FN should be spread atleast across 2 racks");
   }
 }

@@ -17,32 +17,27 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.EnumSet;
 import java.util.List;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationStatusSourceStartedTargetStoppedWithRecovery
   extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStatusSourceStartedTargetStoppedWithRecovery.class);
 
   @Test
   public void testReplicationStatusSourceStartedTargetStoppedWithRecovery() throws Exception {
@@ -77,7 +72,7 @@ public class TestReplicationStatusSourceStartedTargetStoppedWithRecovery
         assertEquals(0, loadSource.getReplicationLag());
       }
     }
-    assertTrue("No normal queue found.", foundNormal);
-    assertTrue("No recovery queue found.", foundRecovery);
+    assertTrue(foundNormal, "No normal queue found.");
+    assertTrue(foundRecovery, "No recovery queue found.");
   }
 }

@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CONF_DIR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,7 +35,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilder;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -49,36 +48,25 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
-import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.TestReplicationBase;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category({ ReplicationTests.class, SmallTests.class })
-public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadReplicationHFileRefs.class);
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestBulkLoadReplicationHFileRefs extends TestReplicationBaseNoBeforeAll {
 
   private static final String PEER1_CLUSTER_ID = "peer1";
   private static final String PEER2_CLUSTER_ID = "peer2";
@@ -96,9 +84,6 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
   private byte[] qualifier = Bytes.toBytes("q1");
   private byte[] value = Bytes.toBytes("v1");
 
-  @ClassRule
-  public static TemporaryFolder testFolder = new TemporaryFolder();
-
   private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
 
   private static Admin admin1;
@@ -106,11 +91,15 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
 
   private static ReplicationQueueStorage queueStorage;
 
-  @BeforeClass
+  private static File sourceDir;
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
+    configureClusters(UTIL1, UTIL2);
+    sourceDir = new File(UTIL1.getRandomDir().toString()).getAbsoluteFile();
     setupBulkLoadConfigsForCluster(CONF1, PEER1_CLUSTER_ID);
     setupBulkLoadConfigsForCluster(CONF2, PEER2_CLUSTER_ID);
-    TestReplicationBase.setUpBeforeClass();
+    startClusters();
     admin1 = UTIL1.getConnection().getAdmin();
     admin2 = UTIL2.getConnection().getAdmin();
 
@@ -127,20 +116,21 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
     String clusterReplicationId) throws Exception {
     config.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     config.set(REPLICATION_CLUSTER_ID, clusterReplicationId);
-    File sourceConfigFolder = testFolder.newFolder(clusterReplicationId);
-    File sourceConfigFile = new File(sourceConfigFolder.getAbsolutePath() + "/hbase-site.xml");
+    File sourceConfigFolder = new File(sourceDir, clusterReplicationId);
+    sourceConfigFolder.mkdirs();
+    File sourceConfigFile = new File(sourceConfigFolder.getAbsolutePath(), "hbase-site.xml");
     config.writeXml(new FileOutputStream(sourceConfigFile));
-    config.set(REPLICATION_CONF_DIR, testFolder.getRoot().getAbsolutePath());
+    config.set(REPLICATION_CONF_DIR, sourceDir.getAbsolutePath());
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     for (ReplicationPeerDescription peer : admin1.listReplicationPeers()) {
       admin1.removeReplicationPeer(peer.getPeerId());
     }
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     for (ReplicationPeerDescription peer : admin1.listReplicationPeers()) {
       admin1.removeReplicationPeer(peer.getPeerId());
@@ -164,9 +154,9 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
       ReplicationPeerConfig.newBuilder().setClusterKey(UTIL2.getClusterKey())
         .setReplicateAllUserTables(true).setExcludeTableCFsMap(excludeTableCFs).build();
     admin1.addReplicationPeer(PEER_ID2, peerConfig);
-    Assert.assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
-    Assert.assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE, CF_A));
-    Assert.assertFalse(peerConfig.needToReplicate(REPLICATE_TABLE, CF_B));
+    assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE));
+    assertTrue(peerConfig.needToReplicate(REPLICATE_TABLE, CF_A));
+    assertFalse(peerConfig.needToReplicate(REPLICATE_TABLE, CF_B));
 
     assertEquals(0, queueStorage.getAllHFileRefs().size());
 
@@ -235,7 +225,6 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
 
     // Bulk load data into the table of the namespace that is not replicated.
     byte[] row = Bytes.toBytes("001");
-    byte[] value = Bytes.toBytes("v1");
     bulkLoadOnCluster(NO_REPLICATE_TABLE, CF_A);
     Threads.sleep(1000);
 
@@ -261,7 +250,9 @@ public class TestBulkLoadReplicationHFileRefs extends TestReplicationBase {
       .setType(Cell.Type.Put);
 
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(UTIL1.getConfiguration());
-    File hFileLocation = testFolder.newFile();
+    File randomDir = new File(UTIL1.getRandomDir().toString()).getAbsoluteFile();
+    randomDir.mkdirs();
+    File hFileLocation = new File(randomDir, "hfile");
     FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);

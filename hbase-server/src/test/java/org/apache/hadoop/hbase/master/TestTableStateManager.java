@@ -17,9 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -29,49 +28,41 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Tests the default table lock manager
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTableStateManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableStateManager.class);
 
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testMigration() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testMigration(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY_STR);
     TEST_UTIL.getAdmin().disableTable(tableName);
     // Table is disabled. Now remove the DISABLED column from the hbase:meta for this table's
     // region. We want to see if Master will read the DISABLED from zk and make use of it as
     // though it were reading the zk table state written by a hbase-1.x cluster.
     TableState state = MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName);
-    assertTrue("State=" + state, state.getState().equals(TableState.State.DISABLED));
+    assertTrue(state.getState().equals(TableState.State.DISABLED), "State=" + state);
     MetaTableAccessor.deleteTableState(TEST_UTIL.getConnection(), tableName);
     assertTrue(MetaTableAccessor.getTableState(TEST_UTIL.getConnection(), tableName) == null);
     // Now kill Master so a new one can come up and run through the zk migration.
