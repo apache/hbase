@@ -17,13 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Waiter;
@@ -43,23 +44,19 @@ import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
+
   MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
   static final RegionInfo info = RegionInfoBuilder.newBuilder(tableName).build();
   NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationEmptyWALRecovery.class);
-
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, InterruptedException {
     cleanUp();
     scopes.put(famName, HConstants.REPLICATION_SCOPE_GLOBAL);
@@ -195,12 +192,12 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     // Now we should expect numOfEntriesToReplicate entries
     // replicated from each region server. This makes sure we didn't loose data
     // from any previous batch when we encounter EOF exception for empty file.
-    Assert.assertEquals("Replicated entries are not correct", numOfEntriesToReplicate * numRs,
-      replicatedEntries.size());
+    assertEquals(numOfEntriesToReplicate * numRs, replicatedEntries.size(),
+      "Replicated entries are not correct");
 
     // We expect just one batch of replication which will
     // be from when we handle the EOF exception.
-    Assert.assertEquals("Replicated batches are not correct", 1, replicateCount.intValue());
+    assertEquals(1, replicateCount.intValue(), "Replicated batches are not correct");
     verifyNumberOfLogsInQueue(1, numRs);
     // we're now writing to the new wal
     // if everything works, the source should've stopped reading from the empty wal, and start
@@ -250,12 +247,12 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     // Now we should expect numOfEntriesToReplicate entries
     // replicated from each region server. This makes sure we didn't loose data
     // from any previous batch when we encounter EOF exception for empty file.
-    Assert.assertEquals("Replicated entries are not correct", numOfEntriesToReplicate * numRs,
-      replicatedEntries.size());
+    assertEquals(numOfEntriesToReplicate * numRs, replicatedEntries.size(),
+      "Replicated entries are not correct");
 
     // We expect just one batch of replication to be shipped which will
     // for non empty WAL
-    Assert.assertEquals("Replicated batches are not correct", 1, replicateCount.get());
+    assertEquals(1, replicateCount.get(), "Replicated batches are not correct");
     verifyNumberOfLogsInQueue(1, numRs);
     // we're now writing to the new wal
     // if everything works, the source should've stopped reading from the empty wal, and start
@@ -307,12 +304,12 @@ public class TestReplicationEmptyWALRecovery extends TestReplicationBase {
     // Now we should expect numOfEntriesToReplicate entries
     // replicated from each region server. This makes sure we didn't loose data
     // from any previous batch when we encounter EOF exception for empty file.
-    Assert.assertEquals("Replicated entries are not correct", numOfEntriesToReplicate * numRs * 2,
-      replicatedEntries.size());
+    assertEquals(numOfEntriesToReplicate * numRs * 2, replicatedEntries.size(),
+      "Replicated entries are not correct");
 
     // We expect two batch of replication to be shipped which will
     // for non empty WAL
-    Assert.assertEquals("Replicated batches are not correct", 2, replicateCount.get());
+    assertEquals(2, replicateCount.get(), "Replicated batches are not correct");
     verifyNumberOfLogsInQueue(1, numRs);
     // we're now writing to the new wal
     // if everything works, the source should've stopped reading from the empty wal, and start

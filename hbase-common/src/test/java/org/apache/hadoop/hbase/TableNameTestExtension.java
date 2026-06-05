@@ -45,6 +45,10 @@ public class TableNameTestExtension implements BeforeEachCallback {
     return tableName;
   }
 
+  public TableName getTableName(String suffix) {
+    return TableName.valueOf(tableName.getNameAsString() + suffix);
+  }
+
   @Override
   public void beforeEach(ExtensionContext context) {
     tableName = TableName.valueOf(cleanUpTestName(context.getRequiredTestMethod().getName()));

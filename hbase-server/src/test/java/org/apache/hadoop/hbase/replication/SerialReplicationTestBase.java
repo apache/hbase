@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -28,6 +28,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -40,11 +41,10 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.extension.RegisterExtension;
 
 /**
  * Base class for testing serial replication.
@@ -65,14 +65,14 @@ public class SerialReplicationTestBase {
 
   protected static WALProvider.Writer WRITER;
 
-  @Rule
-  public final TestName name = new TestName();
+  @RegisterExtension
+  protected final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
   protected Path logPath;
 
   public static final class LocalReplicationEndpoint extends BaseReplicationEndpoint {
 
-    private static final UUID PEER_UUID = UTIL.getRandomUUID();
+    private static final UUID PEER_UUID = HBaseTestingUtility.getRandomUUID();
 
     @Override
     public UUID getPeerUUID() {
@@ -120,7 +120,7 @@ public class SerialReplicationTestBase {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.getConfiguration().setInt("replication.source.nb.capacity", 10);
     UTIL.getConfiguration().setLong("replication.sleep.before.failover", 1000);
@@ -133,12 +133,12 @@ public class SerialReplicationTestBase {
     FS.mkdirs(LOG_DIR);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Admin admin = UTIL.getAdmin();
     for (ReplicationPeerDescription pd : admin.listReplicationPeers()) {
@@ -187,7 +187,7 @@ public class SerialReplicationTestBase {
   }
 
   protected final void setupWALWriter() throws IOException {
-    logPath = new Path(LOG_DIR, name.getMethodName());
+    logPath = new Path(LOG_DIR, tableNameExt.getTableName().getNameAsString());
     WRITER = WALFactory.createWALWriter(FS, logPath, UTIL.getConfiguration());
   }
 
@@ -237,9 +237,8 @@ public class SerialReplicationTestBase {
         if (entry == null) {
           break;
         }
-        assertTrue(
-          "Sequence id go backwards from " + seqId + " to " + entry.getKey().getSequenceId(),
-          entry.getKey().getSequenceId() >= seqId);
+        assertTrue(entry.getKey().getSequenceId() >= seqId,
+          "Sequence id go backwards from " + seqId + " to " + entry.getKey().getSequenceId());
         seqId = entry.getKey().getSequenceId();
         count++;
       }
@@ -248,7 +247,7 @@ public class SerialReplicationTestBase {
   }
 
   protected final TableName createTable() throws IOException, InterruptedException {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = tableNameExt.getTableName();
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(CF).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build());

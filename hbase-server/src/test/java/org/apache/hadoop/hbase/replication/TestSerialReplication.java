@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -28,7 +28,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -44,19 +43,15 @@ import org.apache.hadoop.hbase.util.CommonFSUtils.StreamLacksCapabilityException
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSerialReplication extends SerialReplicationTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSerialReplication.class);
-
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, StreamLacksCapabilityException {
     setupWALWriter();
     // add in disable state, so later when enabling it all sources will start push together.
@@ -117,14 +112,14 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         }
         String encodedName = Bytes.toString(entry.getKey().getEncodedRegionName());
         Long seqId = regionsToSeqId.get(encodedName);
-        assertNotNull(
-          "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions, seqId);
-        assertTrue("Sequence id go backwards from " + seqId + " to "
-          + entry.getKey().getSequenceId() + " for " + encodedName,
-          entry.getKey().getSequenceId() >= seqId.longValue());
+        assertNotNull(seqId,
+          "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions);
+        assertTrue(entry.getKey().getSequenceId() >= seqId.longValue(),
+          "Sequence id go backwards from " + seqId + " to " + entry.getKey().getSequenceId()
+            + " for " + encodedName);
         if (count < 100) {
-          assertEquals(encodedName + " is pushed before parent " + region.getEncodedName(),
-            region.getEncodedName(), encodedName);
+          assertEquals(region.getEncodedName(), encodedName,
+            encodedName + " is pushed before parent " + region.getEncodedName());
         } else {
           assertNotEquals(region.getEncodedName(), encodedName);
         }
@@ -137,7 +132,7 @@ public class TestSerialReplication extends SerialReplicationTestBase {
   @Test
   public void testRegionMerge() throws Exception {
     byte[] splitKey = Bytes.toBytes(50);
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = tableNameExt.getTableName();
     UTIL.getAdmin().createTable(
       TableDescriptorBuilder.newBuilder(tableName)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(CF)
@@ -178,11 +173,11 @@ public class TestSerialReplication extends SerialReplicationTestBase {
         }
         String encodedName = Bytes.toString(entry.getKey().getEncodedRegionName());
         Long seqId = regionsToSeqId.get(encodedName);
-        assertNotNull(
-          "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions, seqId);
-        assertTrue("Sequence id go backwards from " + seqId + " to "
-          + entry.getKey().getSequenceId() + " for " + encodedName,
-          entry.getKey().getSequenceId() >= seqId.longValue());
+        assertNotNull(seqId,
+          "Unexcepted entry " + entry + ", expected regions " + region + ", or " + regions);
+        assertTrue(entry.getKey().getSequenceId() >= seqId.longValue(),
+          "Sequence id go backwards from " + seqId + " to " + entry.getKey().getSequenceId()
+            + " for " + encodedName);
         if (count < 100) {
           assertNotEquals(
             encodedName + " is pushed before parents " + regions.stream()

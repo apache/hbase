@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Set;
 import java.util.TreeSet;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @SuppressWarnings("deprecation")
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFirstKeyValueMatchingQualifiersFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFirstKeyValueMatchingQualifiersFilter.class);
 
   private static final byte[] ROW = Bytes.toBytes("test");
   private static final byte[] COLUMN_FAMILY = Bytes.toBytes("test");
@@ -48,6 +44,7 @@ public class TestFirstKeyValueMatchingQualifiersFilter {
    * Test the functionality of
    * {@link FirstKeyValueMatchingQualifiersFilter#filterCell(org.apache.hadoop.hbase.Cell)}
    */
+  @Test
   public void testFirstKeyMatchingQualifierFilter() throws Exception {
     Set<byte[]> quals = new TreeSet<>(Bytes.BYTES_COMPARATOR);
     quals.add(COLUMN_QUALIFIER_1);
@@ -57,19 +54,19 @@ public class TestFirstKeyValueMatchingQualifiersFilter {
     // Match in first attempt
     KeyValue cell;
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_1, VAL_1);
-    assertTrue("includeAndSetFlag", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+    assertTrue(filter.filterCell(cell) == Filter.ReturnCode.INCLUDE, "includeAndSetFlag");
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("flagIsSetSkipToNextRow", filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
+    assertTrue(filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW, "flagIsSetSkipToNextRow");
 
     // A mismatch in first attempt and match in second attempt.
     filter.reset();
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_3, VAL_1);
     System.out.println(filter.filterCell(cell));
-    assertTrue("includeFlagIsUnset", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+    assertTrue(filter.filterCell(cell) == Filter.ReturnCode.INCLUDE, "includeFlagIsUnset");
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_2, VAL_1);
-    assertTrue("includeAndSetFlag", filter.filterCell(cell) == Filter.ReturnCode.INCLUDE);
+    assertTrue(filter.filterCell(cell) == Filter.ReturnCode.INCLUDE, "includeAndSetFlag");
     cell = new KeyValue(ROW, COLUMN_FAMILY, COLUMN_QUALIFIER_1, VAL_1);
-    assertTrue("flagIsSetSkipToNextRow", filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW);
+    assertTrue(filter.filterCell(cell) == Filter.ReturnCode.NEXT_ROW, "flagIsSetSkipToNextRow");
   }
 
 }
