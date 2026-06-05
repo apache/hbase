@@ -1619,8 +1619,8 @@ public class MasterRpcServices extends RSRpcServices
       LOG.info(master.getClientIdAuditPrefix() + " snapshot request for:"
         + ClientSnapshotDescriptionUtils.toString(request.getSnapshot()));
       // get the snapshot information
-      SnapshotDescription snapshot =
-        SnapshotDescriptionUtils.validate(request.getSnapshot(), master.getConfiguration());
+      SnapshotDescription snapshot = SnapshotDescriptionUtils.validate(master.getConnection(),
+        request.getSnapshot(), master.getConfiguration());
       master.snapshotManager.takeSnapshot(snapshot);
 
       // send back the max amount of time the client should wait for the snapshot to complete
