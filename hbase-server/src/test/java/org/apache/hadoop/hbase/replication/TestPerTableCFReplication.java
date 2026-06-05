@@ -17,7 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,13 +31,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -43,29 +49,24 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.replication.ReplicationAdmin;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
-import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ReplicationProtos;
 
-@Category({ FlakeyTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestPerTableCFReplication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPerTableCFReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPerTableCFReplication.class);
 
@@ -79,28 +80,24 @@ public class TestPerTableCFReplication {
   private static final long SLEEP_TIME = 500;
   private static final int NB_RETRIES = 100;
 
-  private static final TableName tableName = TableName.valueOf("test");
   private static final TableName tabAName = TableName.valueOf("TA");
   private static final TableName tabBName = TableName.valueOf("TB");
   private static final TableName tabCName = TableName.valueOf("TC");
-  private static final byte[] famName = Bytes.toBytes("f");
   private static final byte[] f1Name = Bytes.toBytes("f1");
   private static final byte[] f2Name = Bytes.toBytes("f2");
   private static final byte[] f3Name = Bytes.toBytes("f3");
   private static final byte[] row1 = Bytes.toBytes("row1");
   private static final byte[] row2 = Bytes.toBytes("row2");
-  private static final byte[] noRepfamName = Bytes.toBytes("norep");
   private static final byte[] val = Bytes.toBytes("myval");
 
-  private static HTableDescriptor table;
   private static HTableDescriptor tabA;
   private static HTableDescriptor tabB;
   private static HTableDescriptor tabC;
 
-  @Rule
-  public TestName name = new TestName();
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf1 = HBaseConfiguration.create();
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
@@ -118,7 +115,7 @@ public class TestPerTableCFReplication {
     utility1 = new HBaseTestingUtility(conf1);
     utility1.startMiniZKCluster();
     MiniZooKeeperCluster miniZK = utility1.getZkCluster();
-    new ZKWatcher(conf1, "cluster1", null, true);
+    new ZKWatcher(conf1, "cluster1", null, true).close();
 
     conf2 = new Configuration(conf1);
     conf2.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/2");
@@ -128,21 +125,14 @@ public class TestPerTableCFReplication {
 
     utility2 = new HBaseTestingUtility(conf2);
     utility2.setZkCluster(miniZK);
-    new ZKWatcher(conf2, "cluster3", null, true);
+    new ZKWatcher(conf2, "cluster3", null, true).close();
 
     utility3 = new HBaseTestingUtility(conf3);
     utility3.setZkCluster(miniZK);
-    new ZKWatcher(conf3, "cluster3", null, true);
-
-    table = new HTableDescriptor(tableName);
-    HColumnDescriptor fam = new HColumnDescriptor(famName);
-    fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
-    table.addFamily(fam);
-    fam = new HColumnDescriptor(noRepfamName);
-    table.addFamily(fam);
+    new ZKWatcher(conf3, "cluster3", null, true).close();
 
     tabA = new HTableDescriptor(tabAName);
-    fam = new HColumnDescriptor(f1Name);
+    HColumnDescriptor fam = new HColumnDescriptor(f1Name);
     fam.setScope(HConstants.REPLICATION_SCOPE_GLOBAL);
     tabA.addFamily(fam);
     fam = new HColumnDescriptor(f2Name);
@@ -179,7 +169,7 @@ public class TestPerTableCFReplication {
     utility3.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     utility3.shutdownMiniCluster();
     utility2.shutdownMiniCluster();
@@ -200,9 +190,9 @@ public class TestPerTableCFReplication {
     tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig("   ");
     assertEquals(null, tabCFsMap);
 
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
+    final TableName tableName1 = tableNameExt.getTableName("1");
+    final TableName tableName2 = tableNameExt.getTableName("2");
+    final TableName tableName3 = tableNameExt.getTableName("3");
 
     // 2. single table: "tableName1" / "tableName2:cf1" / "tableName3:cf1,cf3"
     tabCFsMap = ReplicationPeerConfigUtil.parseTableCFsFromConfig(tableName1.getNameAsString());
@@ -291,9 +281,9 @@ public class TestPerTableCFReplication {
     tableCFs = ReplicationPeerConfigUtil.convert(tabCFsMap);
     assertEquals(0, tableCFs.length);
 
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
+    final TableName tableName1 = tableNameExt.getTableName("1");
+    final TableName tableName2 = tableNameExt.getTableName("2");
+    final TableName tableName3 = tableNameExt.getTableName("3");
 
     // 2. single table: "tab1" / "tab2:cf1" / "tab3:cf1,cf3"
     tabCFsMap.clear();
