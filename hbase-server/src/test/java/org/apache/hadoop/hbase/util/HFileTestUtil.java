@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.regionserver.HStoreFile.BULKLOAD_TIME_KEY;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -151,7 +151,7 @@ public class HFileTestUtil {
         }
         Tag t = tag.get();
         byte[] tval = Tag.cloneValue(t);
-        assertArrayEquals(c.toString() + " has tag" + Bytes.toString(tval), r.getRow(), tval);
+        assertArrayEquals(r.getRow(), tval, c.toString() + " has tag" + Bytes.toString(tval));
       }
     }
   }

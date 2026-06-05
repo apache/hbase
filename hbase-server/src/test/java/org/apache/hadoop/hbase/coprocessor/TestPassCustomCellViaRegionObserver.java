@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -32,7 +32,6 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -53,24 +52,16 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestPassCustomCellViaRegionObserver {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPassCustomCellViaRegionObserver.class);
-
-  @Rule
-  public TestName testName = new TestName();
 
   private TableName tableName;
   private Table table = null;
@@ -85,22 +76,22 @@ public class TestPassCustomCellViaRegionObserver {
 
   private static final byte[] QUALIFIER_FROM_CP = Bytes.toBytes("QUALIFIER_FROM_CP");
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // small retry number can speed up the failed tests.
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void clearTable() throws IOException {
+  @BeforeEach
+  public void clearTable(TestInfo testInfo) throws IOException {
     RegionObserverImpl.COUNT.set(0);
-    tableName = TableName.valueOf(testName.getMethodName());
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     if (table != null) {
       table.close();
     }
@@ -149,8 +140,8 @@ public class TestPassCustomCellViaRegionObserver {
     Delete delete = new Delete(ROW);
     delete.addColumns(FAMILY, QUALIFIER);
     table.delete(delete);
-    assertTrue(Arrays.asList(table.get(new Get(ROW)).rawCells()).toString(),
-      table.get(new Get(ROW)).isEmpty());
+    assertTrue(table.get(new Get(ROW)).isEmpty(),
+      Arrays.asList(table.get(new Get(ROW)).rawCells()).toString());
     assertObserverHasExecuted();
 
     assertTrue(table.checkAndPut(ROW, FAMILY, QUALIFIER, null, put));
@@ -186,21 +177,21 @@ public class TestPassCustomCellViaRegionObserver {
   private static void assertResult(Result result, byte[] expectedValue) {
     assertFalse(result.isEmpty());
     for (Cell c : result.rawCells()) {
-      assertTrue(c.toString(), Bytes.equals(ROW, CellUtil.cloneRow(c)));
-      assertTrue(c.toString(), Bytes.equals(FAMILY, CellUtil.cloneFamily(c)));
-      assertTrue(c.toString(), Bytes.equals(expectedValue, CellUtil.cloneValue(c)));
+      assertTrue(Bytes.equals(ROW, CellUtil.cloneRow(c)), c.toString());
+      assertTrue(Bytes.equals(FAMILY, CellUtil.cloneFamily(c)), c.toString());
+      assertTrue(Bytes.equals(expectedValue, CellUtil.cloneValue(c)), c.toString());
     }
   }
 
   private static void assertResult(Result result, byte[] expectedValue, byte[] expectedFromCp) {
     assertFalse(result.isEmpty());
     for (Cell c : result.rawCells()) {
-      assertTrue(c.toString(), Bytes.equals(ROW, CellUtil.cloneRow(c)));
-      assertTrue(c.toString(), Bytes.equals(FAMILY, CellUtil.cloneFamily(c)));
+      assertTrue(Bytes.equals(ROW, CellUtil.cloneRow(c)), c.toString());
+      assertTrue(Bytes.equals(FAMILY, CellUtil.cloneFamily(c)), c.toString());
       if (Bytes.equals(QUALIFIER, CellUtil.cloneQualifier(c))) {
-        assertTrue(c.toString(), Bytes.equals(expectedValue, CellUtil.cloneValue(c)));
+        assertTrue(Bytes.equals(expectedValue, CellUtil.cloneValue(c)), c.toString());
       } else if (Bytes.equals(QUALIFIER_FROM_CP, CellUtil.cloneQualifier(c))) {
-        assertTrue(c.toString(), Bytes.equals(expectedFromCp, CellUtil.cloneValue(c)));
+        assertTrue(Bytes.equals(expectedFromCp, CellUtil.cloneValue(c)), c.toString());
       } else {
         fail("No valid qualifier");
       }

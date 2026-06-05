@@ -36,6 +36,7 @@ import java.util.TreeMap;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.master.RackManager;
@@ -44,11 +45,10 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Triple;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -65,8 +65,8 @@ public class TestFavoredNodeAssignmentHelper {
   // Some tests have randomness, so we run them multiple times
   private static final int MAX_ATTEMPTS = 100;
 
-  @Rule
-  public TestName name = new TestName();
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
 
   private static String getRack(int index) {
     if (index < 10) {
@@ -80,7 +80,7 @@ public class TestFavoredNodeAssignmentHelper {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // Set up some server -> rack mappings
     // Have three racks in the cluster with 10 hosts each.
@@ -296,7 +296,7 @@ public class TestFavoredNodeAssignmentHelper {
     // create regions
     List<RegionInfo> regions = new ArrayList<>(regionCount);
     for (int i = 0; i < regionCount; i++) {
-      regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      regions.add(RegionInfoBuilder.newBuilder(tableNameExt.getTableName())
         .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
     // place the regions
@@ -390,7 +390,7 @@ public class TestFavoredNodeAssignmentHelper {
 
     List<RegionInfo> regions = new ArrayList<>(20);
     for (int i = 0; i < 20; i++) {
-      regions.add(RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      regions.add(RegionInfoBuilder.newBuilder(tableNameExt.getTableName())
         .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build());
     }
     Map<ServerName, List<RegionInfo>> assignmentMap = new HashMap<ServerName, List<RegionInfo>>();
@@ -532,7 +532,7 @@ public class TestFavoredNodeAssignmentHelper {
     helper.initialize();
     assertTrue(helper.canPlaceFavoredNodes());
 
-    RegionInfo region = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+    RegionInfo region = RegionInfoBuilder.newBuilder(tableNameExt.getTableName())
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).build();
 
     for (int maxattempts = 0; maxattempts < MAX_ATTEMPTS; maxattempts++) {
