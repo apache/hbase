@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.LoadBalancer;
@@ -35,14 +35,12 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,17 +50,11 @@ import org.slf4j.LoggerFactory;
  * kill combinations to make sure the distribution is more than just for startup. NOTE: Regions on
  * Master does not work well. See HBASE-19828. Until addressed, disabling this test.
  */
-@Ignore
-@Category({ MediumTests.class })
+@Disabled
+@Tag(MediumTests.TAG)
 public class TestRegionsOnMasterOptions {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionsOnMasterOptions.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionsOnMasterOptions.class);
-  @Rule
-  public TestName name = new TestName();
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private Configuration c;
   private String tablesOnMasterOldValue;
@@ -75,14 +67,17 @@ public class TestRegionsOnMasterOptions {
   private static final int REGIONS = 12;
   private static final int SYSTEM_REGIONS = 2; // ns and meta -- no acl unless enabled.
 
-  @Before
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
+
+  @BeforeEach
   public void setup() {
     this.c = TEST_UTIL.getConfiguration();
     this.tablesOnMasterOldValue = c.get(LoadBalancer.TABLES_ON_MASTER);
     this.systemTablesOnMasterOldValue = c.get(LoadBalancer.SYSTEM_TABLES_ON_MASTER);
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     unset(LoadBalancer.TABLES_ON_MASTER, this.tablesOnMasterOldValue);
     unset(LoadBalancer.SYSTEM_TABLES_ON_MASTER, this.systemTablesOnMasterOldValue);
@@ -112,7 +107,7 @@ public class TestRegionsOnMasterOptions {
     checkBalance(0, rsCount);
   }
 
-  @Ignore // Fix this. The Master startup doesn't allow Master reporting as a RegionServer, not
+  // Fix this. The Master startup doesn't allow Master reporting as a RegionServer, not
   // until way late after the Master startup finishes. Needs more work.
   @Test
   public void testSystemTablesOnMaster() throws Exception {
@@ -172,7 +167,7 @@ public class TestRegionsOnMasterOptions {
     StartMiniClusterOption option = StartMiniClusterOption.builder().numMasters(MASTERS)
       .numRegionServers(SLAVES).numDataNodes(SLAVES).build();
     MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(option);
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+    TableName tn = tableNameExt.getTableName();
     try {
       Table t = TEST_UTIL.createMultiRegionTable(tn, HConstants.CATALOG_FAMILY, REGIONS);
       LOG.info("Server: " + cluster.getMaster().getServerManager().getOnlineServersList());
@@ -229,7 +224,7 @@ public class TestRegionsOnMasterOptions {
   }
 
   private void checkCount(int actual, int expected) {
-    assertTrue("Actual=" + actual + ", expected=" + expected,
-      actual >= (expected - 2) && actual <= (expected + 2)); // Lots of slop +/- 2
+    assertTrue(actual >= (expected - 2) && actual <= (expected + 2),
+      "Actual=" + actual + ", expected=" + expected); // Lots of slop +/- 2
   }
 }

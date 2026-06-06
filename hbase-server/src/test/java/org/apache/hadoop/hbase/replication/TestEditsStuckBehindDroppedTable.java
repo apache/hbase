@@ -17,22 +17,17 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestEditsStuckBehindDroppedTable extends ReplicationDroppedTablesTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEditsStuckBehindDroppedTable.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setupClusters(false);
   }

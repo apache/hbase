@@ -27,7 +27,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Threads;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,8 +115,12 @@ public abstract class ReplicationKillRSTestBase extends TestReplicationBaseNoBef
     Thread killer = new Thread() {
       @Override
       public void run() {
-        Threads.sleepWithoutInterrupt(timeout);
-        utility.getHBaseCluster().getRegionServer(rs).abort("Stopping as part of the test");
+        try {
+          Thread.sleep(timeout);
+          utility.getHBaseCluster().getRegionServer(rs).abort("Stopping as part of the test");
+        } catch (Exception e) {
+          LOG.error("Couldn't kill a region server", e);
+        }
       }
     };
     killer.setDaemon(true);

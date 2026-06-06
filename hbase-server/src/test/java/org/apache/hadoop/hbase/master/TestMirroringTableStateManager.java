@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static junit.framework.TestCase.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -32,13 +31,11 @@ import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
@@ -47,29 +44,25 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ZooKeeperProtos;
  * Tests that table state is mirrored out to zookeeper for hbase-1.x clients. Also tests that table
  * state gets migrated from zookeeper on master start.
  */
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMirroringTableStateManager {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMirroringTableStateManager.class);
-  @Rule
-  public TestName name = new TestName();
 
   private final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testMirroring() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testMirroring(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TEST_UTIL.createTable(tableName, HConstants.CATALOG_FAMILY_STR);
     ZKWatcher zkw = TEST_UTIL.getZooKeeperWatcher();
     assertTrue(TableState.State.ENABLED.equals(getTableStateInZK(zkw, tableName)));
