@@ -46,10 +46,6 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 
 public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
 
-  private long gracefulRollingRestartTSSLeepTime;
-  private long rollingBatchSuspendRSSleepTime;
-  private float rollingBatchSuspendtRSRatio;
-
   @Override
   public ChaosMonkey build() {
     loadProperties();
@@ -63,18 +59,15 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
     Action[] actions2 = new Action[] { new SplitRandomRegionOfTableAction(tableName),
       new MergeRandomAdjacentRegionsOfTableAction(tableName), new AddColumnAction(tableName),
       new RemoveColumnAction(tableName, columnFamilies),
-      new MoveRegionsOfTableAction(MonkeyConstants.DEFAULT_MOVE_REGIONS_SLEEP_TIME, 1600,
-        tableName),
-      new MoveRandomRegionOfTableAction(MonkeyConstants.DEFAULT_MOVE_RANDOM_REGION_SLEEP_TIME,
-        tableName),
-      new RestartRandomRsAction(MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_SLEEP_TIME),
-      new BatchRestartRsAction(MonkeyConstants.DEFAULT_BATCH_RESTART_RS_SLEEP_TIME, 0.5f),
-      new RollingBatchRestartRsAction(MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
-        1.0f),
-      new RestartRsHoldingMetaAction(MonkeyConstants.DEFAULT_RESTART_RS_HOLDING_META_SLEEP_TIME),
+      new MoveRegionsOfTableAction(moveRegionsSleepTime, 1600, tableName),
+      new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
+      new RestartRandomRsAction(restartRandomRSSleepTime),
+      new BatchRestartRsAction(batchRestartRSSleepTime, rollingBatchSuspendtRSRatio),
+      new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime, rollingBatchRestartRSRatio),
+      new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
       new ChangeSplitPolicyAction(tableName), new SplitAllRegionOfTableAction(tableName),
-      new DecreaseMaxHFileSizeAction(MonkeyConstants.DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME,
-        tableName),
+      new DecreaseMaxHFileSizeAction(decreaseHFileSizeSleepTime, decreaseHFileSizeMinHFileSize,
+        decreaseHFileSizeHFileSizeJitter, tableName),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
         rollingBatchSuspendtRSRatio) };
@@ -83,21 +76,9 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
     Action[] actions3 = new Action[] { new DumpClusterStatusAction() };
 
     return new PolicyBasedChaosMonkey(properties, util,
-      new PeriodicRandomActionPolicy(90 * 1000, actions1),
-      new CompositeSequentialPolicy(new DoActionsOncePolicy(90 * 1000, actions2),
-        new PeriodicRandomActionPolicy(90 * 1000, actions2)),
-      new PeriodicRandomActionPolicy(90 * 1000, actions3));
-  }
-
-  private void loadProperties() {
-    gracefulRollingRestartTSSLeepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME + ""));
-    rollingBatchSuspendRSSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME + ""));
-    rollingBatchSuspendtRSRatio =
-      Float.parseFloat(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
+      new PeriodicRandomActionPolicy(action1Period, actions1),
+      new CompositeSequentialPolicy(new DoActionsOncePolicy(action2Period, actions2),
+        new PeriodicRandomActionPolicy(action2Period, actions2)),
+      new PeriodicRandomActionPolicy(action3Period, actions3));
   }
 }
