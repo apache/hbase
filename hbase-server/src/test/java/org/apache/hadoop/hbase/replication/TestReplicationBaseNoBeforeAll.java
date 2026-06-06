@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -49,9 +49,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
@@ -289,7 +287,6 @@ public class TestReplicationBaseNoBeforeAll {
     source.getAdmin().addReplicationPeer(peerId, builder.build());
   }
 
-  @Before
   @BeforeEach
   public void setUpBase() throws Exception {
     addPeer(PEER_ID2, tableName);
@@ -305,7 +302,6 @@ public class TestReplicationBaseNoBeforeAll {
     }
   }
 
-  @After
   @AfterEach
   public void tearDownBase() throws Exception {
     removePeer(PEER_ID2);
@@ -365,7 +361,7 @@ public class TestReplicationBaseNoBeforeAll {
     waitForReplication(NB_ROWS_IN_BATCH, NB_RETRIES);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (htable2 != null) {
       htable2.close();

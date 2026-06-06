@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster.MiniHBaseClusterRegionServer;
@@ -47,13 +46,10 @@ import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -65,11 +61,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.MultiRespo
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestShortCircuitGet {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShortCircuitGet.class);
 
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   private static final byte[] FAMILY = Bytes.toBytes("testFamily");
@@ -85,10 +79,7 @@ public class TestShortCircuitGet {
   static final byte[] r6 = Bytes.toBytes("row-6");
   static final TableName tableName = TableName.valueOf("TestShortCircuitGet");
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 30 * 60 * 1000);
@@ -101,7 +92,7 @@ public class TestShortCircuitGet {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -141,9 +132,9 @@ public class TestShortCircuitGet {
       scan.withStartRow(r0, true).withStopRow(r1, true);
       resultScanner = table.getScanner(scan);
       Result result = resultScanner.next();
-      assertTrue("Expected row: row-0", Bytes.equals(r0, result.getRow()));
+      assertTrue(Bytes.equals(r0, result.getRow()), "Expected row: row-0");
       result = resultScanner.next();
-      assertTrue("Expected row: row-1", Bytes.equals(r1, result.getRow()));
+      assertTrue(Bytes.equals(r1, result.getRow()), "Expected row: row-1");
       assertNull(resultScanner.next());
     } finally {
       if (resultScanner != null) {
@@ -283,7 +274,7 @@ public class TestShortCircuitGet {
         try {
           table1 = connection.getTable(tableName);
           Result result = table1.get(get2);
-          assertTrue("Expected row: row-2", Bytes.equals(r2, result.getRow()));
+          assertTrue(Bytes.equals(r2, result.getRow()), "Expected row: row-2");
 
         } finally {
           if (table1 != null) {
@@ -304,8 +295,8 @@ public class TestShortCircuitGet {
         try {
           table2 = connection.getTable(tableName);
           Result[] results = table2.get(Arrays.asList(get3, get4));
-          assertTrue("Expected row: row-3", Bytes.equals(r3, results[0].getRow()));
-          assertTrue("Expected row: row-4", Bytes.equals(r4, results[1].getRow()));
+          assertTrue(Bytes.equals(r3, results[0].getRow()), "Expected row: row-3");
+          assertTrue(Bytes.equals(r4, results[1].getRow()), "Expected row: row-4");
         } finally {
           if (table2 != null) {
             table2.close();
@@ -328,9 +319,9 @@ public class TestShortCircuitGet {
           table3 = connection.getTable(tableName);
           resultScanner = table3.getScanner(newScan);
           Result result = resultScanner.next();
-          assertTrue("Expected row: row-5", Bytes.equals(r5, result.getRow()));
+          assertTrue(Bytes.equals(r5, result.getRow()), "Expected row: row-5");
           result = resultScanner.next();
-          assertTrue("Expected row: row-6", Bytes.equals(r6, result.getRow()));
+          assertTrue(Bytes.equals(r6, result.getRow()), "Expected row: row-6");
           result = resultScanner.next();
           assertNull(result);
         } finally {

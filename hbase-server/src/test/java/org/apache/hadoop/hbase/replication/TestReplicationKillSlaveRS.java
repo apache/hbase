@@ -22,9 +22,6 @@ import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
-/**
- *
- */
 @Tag(ReplicationTests.TAG)
 @Tag(LargeTests.TAG)
 public class TestReplicationKillSlaveRS extends ReplicationKillSlaveRSTestBase {

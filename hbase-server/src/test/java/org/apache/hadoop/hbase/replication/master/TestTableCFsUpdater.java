@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.replication.ReplicationPeerConfigUtil;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ZKReplicationPeerStorage;
@@ -36,22 +36,17 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableCFsUpdater.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestTableCFsUpdater.class);
   private final static HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
@@ -60,20 +55,20 @@ public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
   private static Abortable abortable = null;
   private static ZKStorageUtil zkStorageUtil = null;
 
+  @RegisterExtension
+  private final TableNameTestExtension tableNameExt = new TableNameTestExtension();
+
   private static class ZKStorageUtil extends ZKReplicationPeerStorage {
     public ZKStorageUtil(ZKWatcher zookeeper, Configuration conf) {
       super(zookeeper, conf);
     }
   }
 
-  @Rule
-  public TestName name = new TestName();
-
   public TestTableCFsUpdater() {
     super(zkw, TEST_UTIL.getConfiguration());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniZKCluster();
     Configuration conf = TEST_UTIL.getConfiguration();
@@ -92,7 +87,7 @@ public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
     zkStorageUtil = new ZKStorageUtil(zkw, conf);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -100,9 +95,9 @@ public class TestTableCFsUpdater extends ReplicationPeerConfigUpgrader {
   @Test
   public void testUpgrade() throws Exception {
     String peerId = "1";
-    final TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    final TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
-    final TableName tableName3 = TableName.valueOf(name.getMethodName() + "3");
+    final TableName tableName1 = tableNameExt.getTableName("1");
+    final TableName tableName2 = tableNameExt.getTableName("2");
+    final TableName tableName3 = tableNameExt.getTableName("3");
 
     ReplicationPeerConfig rpc = new ReplicationPeerConfig();
     rpc.setClusterKey(zkw.getQuorum());

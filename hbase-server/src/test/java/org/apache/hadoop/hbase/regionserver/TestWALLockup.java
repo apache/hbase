@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.NavigableMap;
@@ -30,7 +31,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.CoordinatedStateManager;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
@@ -52,14 +52,11 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALProvider.Writer;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,17 +66,11 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 /**
  * Testing for lock up of FSHLog.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALLockup {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALLockup.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestWALLockup.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final String COLUMN_FAMILY = "MyCF";
   private static final byte[] COLUMN_FAMILY_BYTES = Bytes.toBytes(COLUMN_FAMILY);
@@ -90,18 +81,21 @@ public class TestWALLockup {
   private String dir;
 
   // Test names
-  protected TableName tableName;
+  private TableName tableName;
 
-  @Before
-  public void setup() throws IOException {
+  private String methodName;
+
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
     CONF = TEST_UTIL.getConfiguration();
     // Disable block cache.
     CONF.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
     dir = TEST_UTIL.getDataTestDir("TestHRegion").toString();
-    tableName = TableName.valueOf(name.getMethodName());
+    methodName = testInfo.getTestMethod().get().getName();
+    tableName = TableName.valueOf(methodName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     LOG.info("Cleaning test directory: " + TEST_UTIL.getDataTestDir());
@@ -109,7 +103,7 @@ public class TestWALLockup {
   }
 
   private String getName() {
-    return name.getMethodName();
+    return methodName;
   }
 
   // A WAL that we can have throw exceptions when a flag is set.
@@ -259,7 +253,7 @@ public class TestWALLockup {
       } catch (Exception e) {
         exception = true;
       }
-      assertTrue("Did not get sync exception", exception);
+      assertTrue(exception, "Did not get sync exception");
 
       // Get a memstore flush going too so we have same hung profile as up in the issue over
       // in HBASE-14317. Flush hangs trying to get sequenceid because the ringbuffer is held up
@@ -348,7 +342,7 @@ public class TestWALLockup {
       protected void publishSyncOnRingBufferAndBlock(long sequence) {
         try {
           super.blockOnSync(super.publishSyncOnRingBuffer(sequence, false));
-          Assert.fail("Expect an IOException here.");
+          fail("Expect an IOException here.");
         } catch (IOException ignore) {
           // Here, we will get an IOException.
         }
@@ -435,7 +429,7 @@ public class TestWALLockup {
         LOG.info("Call sync for testing whether RingBufferEventHandler is hanging.");
         dodgyWAL.sync(false); // Should not get a hang here, otherwise we will see timeout in this
                               // test.
-        Assert.fail("Expect an IOException here.");
+        fail("Expect an IOException here.");
       } catch (IOException ignore) {
       }
 

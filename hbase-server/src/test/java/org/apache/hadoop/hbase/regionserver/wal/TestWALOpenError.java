@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
@@ -24,7 +26,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.FailedCloseWALAfterInitializedErrorException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HRegionInfo;
 import org.apache.hadoop.hbase.ServerName;
@@ -34,28 +35,22 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.FSHLogProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test WAL Init ERROR
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALOpenError {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALOpenError.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALOpenError.class);
 
@@ -70,18 +65,16 @@ public class TestWALOpenError {
   protected WALFactory wals;
   private ServerName currentServername;
 
-  @Rule
-  public final TestName currentTest = new TestName();
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     fs = cluster.getFileSystem();
-    dir = new Path(hbaseDir, currentTest.getMethodName());
-    this.currentServername = ServerName.valueOf(currentTest.getMethodName(), 16010, 1);
+    String methodName = testInfo.getTestMethod().get().getName();
+    dir = new Path(hbaseDir, methodName);
+    this.currentServername = ServerName.valueOf(methodName, 16010, 1);
     wals = new WALFactory(conf, this.currentServername.toString());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // testAppendClose closes the FileSystem, which will prevent us from closing cleanly here.
     try {
@@ -97,7 +90,7 @@ public class TestWALOpenError {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniDFSCluster(3);
     conf = TEST_UTIL.getConfiguration();
@@ -109,7 +102,7 @@ public class TestWALOpenError {
     hbaseWALDir = TEST_UTIL.createWALRootDir();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -128,11 +121,11 @@ public class TestWALOpenError {
     } catch (IOException ex) {
       hasFakeInitException = ex.getMessage().contains("Fake init exception");
     }
-    Assert.assertTrue(hasFakeInitException);
-    Assert.assertTrue(myFSLogCreated.closed);
+    assertTrue(hasFakeInitException);
+    assertTrue(myFSLogCreated.closed);
 
     FileStatus[] fileStatuses = CommonFSUtils.listStatus(fs, myFSLogCreated.walDir);
-    Assert.assertTrue(fileStatuses == null || fileStatuses.length == 0);
+    assertTrue(fileStatuses == null || fileStatuses.length == 0);
   }
 
   @Test
@@ -144,7 +137,7 @@ public class TestWALOpenError {
     } catch (FailedCloseWALAfterInitializedErrorException ex) {
       failedCloseWalException = true;
     }
-    Assert.assertTrue(failedCloseWalException);
+    assertTrue(failedCloseWalException);
   }
 
   public static class MyFSWalProvider extends FSHLogProvider {
