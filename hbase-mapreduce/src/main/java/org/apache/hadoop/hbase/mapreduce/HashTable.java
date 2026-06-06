@@ -58,7 +58,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Charsets;
-import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 import org.apache.hbase.thirdparty.com.google.common.collect.Ordering;
 
 @InterfaceAudience.Private
@@ -68,7 +67,14 @@ public class HashTable extends Configured implements Tool {
 
   private static final int DEFAULT_BATCH_SIZE = 8000;
 
+  /**
+   * Default hash algorithm. Kept as MD5 so that manifests produced by older versions, which did not
+   * record an algorithm, remain readable.
+   */
+  static final String DEFAULT_HASH_ALGORITHM = "MD5";
+
   private final static String HASH_BATCH_SIZE_CONF_KEY = "hash.batch.size";
+  final static String HASH_ALGORITHM_CONF_KEY = "hash.algorithm";
   final static String PARTITIONS_FILE_NAME = "partitions";
   final static String MANIFEST_FILE_NAME = "manifest";
   final static String HASH_DATA_DIR = "hashes";
@@ -99,6 +105,7 @@ public class HashTable extends Configured implements Tool {
     long endTime = 0;
     boolean ignoreTimestamps;
     boolean rawScan;
+    String hashAlgorithm = DEFAULT_HASH_ALGORITHM;
 
     List<ImmutableBytesWritable> partitions;
 
@@ -138,6 +145,7 @@ public class HashTable extends Configured implements Tool {
         p.setProperty("endTimestamp", Long.toString(endTime));
       }
       p.setProperty("rawScan", Boolean.toString(rawScan));
+      p.setProperty("hashAlgorithm", hashAlgorithm);
 
       try (OutputStreamWriter osw = new OutputStreamWriter(fs.create(path), Charsets.UTF_8)) {
         p.store(osw, null);
@@ -189,6 +197,8 @@ public class HashTable extends Configured implements Tool {
       if (endTimeString != null) {
         endTime = Long.parseLong(endTimeString);
       }
+
+      hashAlgorithm = p.getProperty("hashAlgorithm", DEFAULT_HASH_ALGORITHM);
     }
 
     Scan initScan() throws IOException {
@@ -316,6 +326,7 @@ public class HashTable extends Configured implements Tool {
         sb.append(", versions=").append(versions);
       }
       sb.append(", rawScan=").append(rawScan);
+      sb.append(", hashAlgorithm=").append(hashAlgorithm);
       if (startTime != 0) {
         sb.append("startTime=").append(startTime);
       }
@@ -448,6 +459,7 @@ public class HashTable extends Configured implements Tool {
     Configuration jobConf = job.getConfiguration();
     jobConf.setLong(HASH_BATCH_SIZE_CONF_KEY, tableHash.batchSize);
     jobConf.setBoolean(IGNORE_TIMESTAMPS, tableHash.ignoreTimestamps);
+    jobConf.set(HASH_ALGORITHM_CONF_KEY, tableHash.hashAlgorithm);
     job.setJarByClass(HashTable.class);
 
     TableMapReduceUtil.initTableMapperJob(tableHash.tableName, tableHash.initScan(),
@@ -487,11 +499,11 @@ public class HashTable extends Configured implements Tool {
     private long batchSize = 0;
     boolean ignoreTimestamps;
 
-    public ResultHasher() {
+    public ResultHasher(String algorithm) {
       try {
-        digest = MessageDigest.getInstance("MD5");
+        digest = MessageDigest.getInstance(algorithm);
       } catch (NoSuchAlgorithmException e) {
-        Throwables.propagate(e);
+        throw new IllegalArgumentException("Unsupported hash algorithm: " + algorithm, e);
       }
     }
 
@@ -566,10 +578,10 @@ public class HashTable extends Configured implements Tool {
 
     @Override
     protected void setup(Context context) throws IOException, InterruptedException {
-      targetBatchSize =
-        context.getConfiguration().getLong(HASH_BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
-      hasher = new ResultHasher();
-      hasher.ignoreTimestamps = context.getConfiguration().getBoolean(IGNORE_TIMESTAMPS, false);
+      Configuration conf = context.getConfiguration();
+      targetBatchSize = conf.getLong(HASH_BATCH_SIZE_CONF_KEY, DEFAULT_BATCH_SIZE);
+      hasher = new ResultHasher(conf.get(HASH_ALGORITHM_CONF_KEY, DEFAULT_HASH_ALGORITHM));
+      hasher.ignoreTimestamps = conf.getBoolean(IGNORE_TIMESTAMPS, false);
       TableSplit split = (TableSplit) context.getInputSplit();
       hasher.startBatch(new ImmutableBytesWritable(split.getStartRow()));
     }
@@ -640,6 +652,8 @@ public class HashTable extends Configured implements Tool {
     System.err.println(" families          comma-separated list of families to include");
     System.err.println(" ignoreTimestamps  if true, ignores cell timestamps");
     System.err.println("                   when calculating hashes");
+    System.err.println(" hashAlgorithm     MessageDigest algorithm to use for batch hashes");
+    System.err.println("                   (defaults to " + DEFAULT_HASH_ALGORITHM + ")");
     System.err.println();
     System.err.println("Args:");
     System.err.println(" tablename     Name of the table to hash");
@@ -665,7 +679,7 @@ public class HashTable extends Configured implements Tool {
 
       for (int i = 0; i < args.length - NUM_ARGS; i++) {
         String cmd = args[i];
-        if (cmd.equals("-h") || cmd.startsWith("--h")) {
+        if (cmd.equals("-h") || cmd.equals("--help")) {
           printUsage(null);
           return false;
         }
@@ -737,6 +751,12 @@ public class HashTable extends Configured implements Tool {
           continue;
         }
 
+        final String hashAlgorithmKey = "--hashAlgorithm=";
+        if (cmd.startsWith(hashAlgorithmKey)) {
+          tableHash.hashAlgorithm = cmd.substring(hashAlgorithmKey.length());
+          continue;
+        }
+
         printUsage("Invalid argument '" + cmd + "'");
         return false;
       }
@@ -746,6 +766,13 @@ public class HashTable extends Configured implements Tool {
       ) {
         printUsage("Invalid time range filter: starttime=" + tableHash.startTime + " >=  endtime="
           + tableHash.endTime);
+        return false;
+      }
+
+      try {
+        MessageDigest.getInstance(tableHash.hashAlgorithm);
+      } catch (NoSuchAlgorithmException e) {
+        printUsage("Unsupported hash algorithm: " + tableHash.hashAlgorithm);
         return false;
       }
 

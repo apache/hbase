@@ -270,7 +270,7 @@ public class SyncTable extends Configured implements Tool {
       // create a hasher, but don't start it right away
       // instead, find the first hash batch at or after the start row
       // and skip any rows that come before. they will be caught by the previous task
-      targetHasher = new HashTable.ResultHasher();
+      targetHasher = new HashTable.ResultHasher(sourceTableHash.hashAlgorithm);
       targetHasher.ignoreTimestamps = ignoreTimestamp;
     }
 
