@@ -480,8 +480,13 @@ public final class PermissionStorage {
 
   public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
     TableName tableName) throws IOException {
-    return getPermissions(conf, tableName != null ? tableName.getName() : null, null, null, null,
-      null, false);
+    return getTablePermissions(conf, tableName, null);
+  }
+
+  public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
+    TableName tableName, Table t) throws IOException {
+    return getPermissions(conf, tableName != null ? tableName.getName() : null, t, null, null, null,
+      false);
   }
 
   public static ListMultimap<String, UserPermission> getNamespacePermissions(Configuration conf,
