@@ -133,7 +133,7 @@ public class CloneSnapshotProcedure extends AbstractStateMachineTableProcedure<C
     Configuration conf = env.getMasterServices().getConfiguration();
     if (
       restoreAcl && snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null
-        && SnapshotDescriptionUtils.isSecurityAvailable(conf)
+        && SnapshotDescriptionUtils.isSecurityAvailable(env.getMasterServices().getConnection())
     ) {
       RestoreSnapshotHelper.restoreSnapshotAcl(snapshot, tableDescriptor.getTableName(), conf);
     }
