@@ -44,6 +44,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
@@ -82,6 +83,7 @@ import org.apache.hadoop.hbase.io.hfile.ReaderContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.UncompressedBlockSizePredicator;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -216,6 +218,73 @@ public class TestHStoreFile {
     } finally {
       writer.close();
     }
+  }
+
+  /**
+   * Regression test for HBASE-29348. A compacted store file whose reader has been closed - e.g. the
+   * background archiver called {@code HFileArchiver.moveAndClose() -> closeStoreFile()} but the
+   * subsequent rename to the archive dir failed, leaving the file stranded in the compactedfiles
+   * list with a null reader - must not cause an NPE when the date-tiered comparator
+   * ({@link StoreFileComparators#SEQ_ID_MAX_TIMESTAMP}) re-sorts the file list inside
+   * {@code DefaultStoreFileManager.addCompactionResults()}.
+   * <p>
+   * Before the fix, {@code GetMaxTimestamp -> HStoreFile.getMaximumTimestamp()} dereferenced the
+   * null reader and threw the NPE reported in the JIRA, which permanently wedged compaction for
+   * date-tiered stores. With the null-safe fix, the sort completes normally.
+   */
+  @Test
+  public void testDateTieredComparatorToleratesStrandedCompactedFile() throws IOException {
+    final RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("testDateTieredSortNpe")).build();
+    HRegionFileSystem regionFs = HRegionFileSystem.createRegionOnFileSystem(conf, fs,
+      new Path(testDir, hri.getTable().getNameAsString()), hri);
+
+    HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
+    StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, this.fs)
+      .withFilePath(regionFs.createTempName()).withFileContext(meta).build();
+    writeStoreFile(writer);
+    Path sfPath = regionFs.commitStoreFile(TEST_FAMILY, writer.getPath());
+    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, false,
+      StoreContext.getBuilder()
+        .withFamilyStoreDirectoryPath(new Path(regionFs.getRegionDir(), TEST_FAMILY))
+        .withColumnFamilyDescriptor(ColumnFamilyDescriptorBuilder.of(TEST_FAMILY))
+        .withRegionFileSystem(regionFs).build());
+
+    // Date-tiered store file manager: uses SEQ_ID_MAX_TIMESTAMP, whose GetMaxTimestamp reads the
+    // file's reader while sorting (the frame that NPEs in the JIRA stack trace).
+    DefaultStoreFileManager sfm = new DefaultStoreFileManager(CellComparatorImpl.COMPARATOR,
+      StoreFileComparators.SEQ_ID_MAX_TIMESTAMP, conf, mock(CompactionConfiguration.class));
+
+    // Two HStoreFile instances over the same committed HFile => identical max sequence id, so the
+    // comparator gets past the seqId key and actually evaluates GetMaxTimestamp.
+    HStoreFile firstCompacted =
+      new HStoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true, sft);
+    firstCompacted.initReader();
+    // Round 1: firstCompacted becomes a compacted file (now sitting in `compactedfiles`).
+    sfm.addCompactionResults(Lists.newArrayList(firstCompacted), Collections.emptyList());
+
+    // Simulate the archiver having closed the reader (moveAndClose -> closeStoreFile) while the
+    // archive rename failed, leaving it stranded in `compactedfiles` with a null reader.
+    firstCompacted.closeStoreFile(true);
+    assertNull("precondition: stranded file reader must be closed/null", firstCompacted.getReader());
+
+    // Round 2: another compaction completes; addCompactionResults re-sorts
+    // concat(compactedfiles=[firstCompacted], [secondCompacted]) with the date-tiered comparator.
+    HStoreFile secondCompacted =
+      new HStoreFile(this.fs, sfPath, conf, cacheConf, BloomType.NONE, true, sft);
+    secondCompacted.initReader();
+
+    // With the null-safe date-tiered comparator (StoreFileComparators.GetMaxTimestamp), the sort
+    // tolerates the stranded null-reader file instead of throwing NPE. No re-open is performed, so
+    // there is no extra I/O; the file remains tracked for archival/retry by the discharger.
+    sfm.addCompactionResults(Lists.newArrayList(secondCompacted), Collections.emptyList());
+
+    assertEquals("both compacted files should remain tracked for archival", 2,
+      sfm.getCompactedfiles().size());
+    assertNull("stranded reader is intentionally left closed (no re-open / no extra I/O)",
+      firstCompacted.getReader());
+
+    secondCompacted.closeStoreFile(true);
   }
 
   /**
