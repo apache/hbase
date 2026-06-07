@@ -175,6 +175,37 @@ public class TestSyncTable {
   }
 
   @Test
+  public void testSyncTableWithSha256(TestInfo testInfo) throws Exception {
+    final TableName sourceTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_source");
+    final TableName targetTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_target");
+    Path testDir = UTIL1.getDataTestDirOnTestFS(testInfo.getTestMethod().get().getName());
+
+    writeTestData(UTIL1, sourceTableName, UTIL1, targetTableName);
+    hashSourceTable(UTIL1, sourceTableName, testDir, "--hashAlgorithm=SHA-256");
+
+    HashTable.TableHash tableHash =
+      HashTable.TableHash.read(UTIL1.getTestFileSystem().getConf(), testDir);
+    assertEquals("SHA-256", tableHash.hashAlgorithm,
+      "manifest must carry the algorithm so SyncTable can match the source-side digest");
+
+    Counters syncCounters =
+      syncTables(UTIL1.getConfiguration(), sourceTableName, targetTableName, testDir);
+    assertEqualTables(90, UTIL1, sourceTableName, UTIL1, targetTableName, false);
+
+    assertEquals(60, syncCounters.findCounter(Counter.ROWSWITHDIFFS).getValue());
+    assertEquals(10, syncCounters.findCounter(Counter.SOURCEMISSINGROWS).getValue());
+    assertEquals(10, syncCounters.findCounter(Counter.TARGETMISSINGROWS).getValue());
+    assertEquals(50, syncCounters.findCounter(Counter.SOURCEMISSINGCELLS).getValue());
+    assertEquals(50, syncCounters.findCounter(Counter.TARGETMISSINGCELLS).getValue());
+    assertEquals(20, syncCounters.findCounter(Counter.DIFFERENTCELLVALUES).getValue());
+
+    UTIL1.deleteTable(sourceTableName);
+    UTIL1.deleteTable(targetTableName);
+  }
+
+  @Test
   public void testSyncTableIgnoreTimestampsTrue(TestInfo testInfo) throws Exception {
     final TableName sourceTableName =
       TableName.valueOf(testInfo.getTestMethod().get().getName() + "_source");
