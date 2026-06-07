@@ -347,7 +347,7 @@ public class TestHashTable {
     empty.writePartitionFile(fs.getConf(), new Path(testDir, HashTable.PARTITIONS_FILE_NAME));
 
     HashTable.TableHash tableHash = HashTable.TableHash.read(fs.getConf(), testDir);
-    assertEquals("MD5", tableHash.hashAlgorithm,
+    assertEquals(HashTable.DEFAULT_HASH_ALGORITHM, tableHash.hashAlgorithm,
       "Manifests without an algorithm property must default to MD5 for back-compat");
 
     TEST_UTIL.cleanupDataTestDirOnTestFS();

@@ -653,6 +653,7 @@ public class HashTable extends Configured implements Tool {
     System.err.println(" ignoreTimestamps  if true, ignores cell timestamps");
     System.err.println("                   when calculating hashes");
     System.err.println(" hashAlgorithm     MessageDigest algorithm to use for batch hashes");
+    System.err.println("                   examples: MD5, SHA-256, SHA-384, SHA-512");
     System.err.println("                   (defaults to " + DEFAULT_HASH_ALGORITHM + ")");
     System.err.println();
     System.err.println("Args:");
