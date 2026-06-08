@@ -24,14 +24,14 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
 @Tag(LargeTests.TAG)
-public class TestClearRegionBlockCache extends ClearRegionBlockCacheTestBase {
+public class TestClearRegionBlockCacheWithBucketCache extends ClearRegionBlockCacheTestBase {
 
   private static final TableName TABLE_NAME =
-    TableName.valueOf("testClearRegionBlockCacheWithLruBlockCache");
+    TableName.valueOf("testClearRegionBlockCacheWithBucketCache");
 
   @BeforeAll
   public static void setUp() throws Exception {
-    setUpCluster(TABLE_NAME);
+    setUpBucketCacheCluster(TABLE_NAME);
   }
 
   @AfterAll
