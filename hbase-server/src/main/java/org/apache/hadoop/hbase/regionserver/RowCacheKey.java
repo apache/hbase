@@ -41,6 +41,10 @@ public class RowCacheKey implements HeapSize {
     this.rowCacheSeqNum = region.getRowCacheSeqNum();
   }
 
+  String getEncodedRegionName() {
+    return encodedRegionName;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (o == null || getClass() != o.getClass()) return false;
@@ -65,7 +69,7 @@ public class RowCacheKey implements HeapSize {
     return FIXED_OVERHEAD + ClassSize.align(rowKey.length);
   }
 
-  boolean isSameRegion(HRegion region) {
-    return this.encodedRegionName.equals(region.getRegionInfo().getEncodedName());
+  boolean isSameRegion(String encodedRegionName) {
+    return this.encodedRegionName.equals(encodedRegionName);
   }
 }

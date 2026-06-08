@@ -18,9 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
+import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Tag;
+import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
 
@@ -29,20 +33,47 @@ public class RowCells implements HeapSize {
   public static final long FIXED_OVERHEAD = ClassSize.estimateBase(RowCells.class, false);
 
   private final List<Cell> cells = new ArrayList<>();
+  /**
+   * Earliest expiration time among contained cells, derived from cell-level TTL tags. Set to
+   * {@link Long#MAX_VALUE} when no cell carries a TTL tag, which lets the row cache short-circuit
+   * the expiration check on every hit.
+   */
+  private final long earliestExpirationMs;
 
   public RowCells(List<Cell> cells) throws CloneNotSupportedException {
+    long earliest = Long.MAX_VALUE;
     for (Cell cell : cells) {
       if (!(cell instanceof ExtendedCell extCell)) {
         throw new CloneNotSupportedException("Cell is not an ExtendedCell");
       }
       try {
         // To garbage collect the objects referenced by the cells
-        this.cells.add(extCell.deepClone());
+        ExtendedCell cloned = extCell.deepClone();
+        this.cells.add(cloned);
+        long exp = expirationTimeOf(cloned);
+        if (exp < earliest) {
+          earliest = exp;
+        }
       } catch (RuntimeException e) {
-        // throw new CloneNotSupportedException("Deep clone failed");
-        this.cells.add(extCell);
+        throw new CloneNotSupportedException("Deep clone failed");
       }
     }
+    this.earliestExpirationMs = earliest;
+  }
+
+  private static long expirationTimeOf(ExtendedCell cell) {
+    Iterator<Tag> i = PrivateCellUtil.tagsIterator(cell);
+    while (i.hasNext()) {
+      Tag t = i.next();
+      if (TagType.TTL_TAG_TYPE == t.getType()) {
+        return cell.getTimestamp() + Tag.getValueAsLong(t);
+      }
+    }
+    return Long.MAX_VALUE;
+  }
+
+  public boolean isExpired(long now) {
+    return earliestExpirationMs < now;
   }
 
   @Override

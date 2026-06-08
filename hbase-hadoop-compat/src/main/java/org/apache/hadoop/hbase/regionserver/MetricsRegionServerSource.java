@@ -430,6 +430,13 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String L2_CACHE_HIT_RATIO_DESC = "L2 cache hit ratio.";
   String L2_CACHE_MISS_RATIO = "l2CacheMissRatio";
   String L2_CACHE_MISS_RATIO_DESC = "L2 cache miss ratio.";
+
+  String ROW_CACHE_HIT_COUNT = "rowCacheHitCount";
+  String ROW_CACHE_MISS_COUNT = "rowCacheMissCount";
+  String ROW_CACHE_EVICTED_ROW_COUNT = "rowCacheEvictedRowCount";
+  String ROW_CACHE_SIZE = "rowCacheSize";
+  String ROW_CACHE_COUNT = "rowCacheCount";
+
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";

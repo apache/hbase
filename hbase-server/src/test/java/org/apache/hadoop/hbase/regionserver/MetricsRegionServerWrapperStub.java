@@ -663,6 +663,31 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getRowCacheHitCount() {
+    return 2;
+  }
+
+  @Override
+  public long getRowCacheMissCount() {
+    return 1;
+  }
+
+  @Override
+  public long getRowCacheEvictedRowCount() {
+    return 0;
+  }
+
+  @Override
+  public long getRowCacheSize() {
+    return 1;
+  }
+
+  @Override
+  public long getRowCacheCount() {
+    return 2;
+  }
+
+  @Override
   public int getSplitQueueSize() {
     return 0;
   }

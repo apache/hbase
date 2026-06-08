@@ -148,6 +148,11 @@ public class TestMetricsRegionServer {
     HELPER.assertGauge("l2CacheHitRatio", 90, serverSource);
     HELPER.assertGauge("l2CacheMissRatio", 10, serverSource);
     HELPER.assertCounter("updatesBlockedTime", 419, serverSource);
+    HELPER.assertCounter("rowCacheHitCount", 2, serverSource);
+    HELPER.assertCounter("rowCacheMissCount", 1, serverSource);
+    HELPER.assertCounter("rowCacheEvictedRowCount", 0, serverSource);
+    HELPER.assertGauge("rowCacheSize", 1, serverSource);
+    HELPER.assertGauge("rowCacheCount", 2, serverSource);
   }
 
   @Test
