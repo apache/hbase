@@ -807,6 +807,10 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
                 ((!scan.isReversed() && difference > 0) || (scan.isReversed() && difference < 0))
               ) {
                 if (familyCmp != 0) {
+                  if (!matcher.moreRowsMayExistAfter(cell)) {
+                    close(false);// Do all cleanup except heap.close()
+                    return scannerContext.setScannerState(NextState.NO_MORE_VALUES).hasMoreValues();
+                  }
                   matcher.clearCurrentRow();
                   seekOrSkipToNextRow(cell);
                 } else {
