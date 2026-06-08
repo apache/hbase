@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -101,7 +102,7 @@ public class TestBucketCacheRefCnt {
     }
   }
 
-  @org.junit.Ignore
+  @Disabled
   @Test // Disabled by HBASE-24079. Reenable issue HBASE-24082
   // Flakey TestBucketCacheRefCnt.testBlockInRAMCache:121 expected:<3> but was:<2>
   public void testBlockInRAMCache() throws IOException {
