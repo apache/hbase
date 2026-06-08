@@ -24,7 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -258,7 +257,7 @@ public class TestHFileLinkCleaner {
     // deletable and remove it.
     cleaner.chore();
     assertFalse(fs.exists(linkBackRef),
-    "Back-reference should be removed after HFileLink Reference file is gone");
+      "Back-reference should be removed after HFileLink Reference file is gone");
     // Archived HFile cleanup (requires TTL to expire) is validated by @After.
   }
 
