@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.anyString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -38,25 +37,16 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.RSGroupMappingScript;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test {@link RSGroupInfoManager#determineRSGroupInfoForTable(TableName)}
  */
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestDetermineRSGroupInfoForTable {
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestDetermineRSGroupInfoForTable.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDetermineRSGroupInfoForTable.class);
 
   private static final HBaseTestingUtility UTIL = new HBaseTestingUtility();
 
@@ -75,7 +65,7 @@ public class TestDetermineRSGroupInfoForTable {
 
   private static final TableName TABLE_NAME = TableName.valueOf(NAMESPACE_NAME, "tb");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().set(HConstants.HBASE_MASTER_LOADBALANCER_CLASS,
       RSGroupBasedLoadBalancer.class.getName());
@@ -103,7 +93,7 @@ public class TestDetermineRSGroupInfoForTable {
     admin.createNamespace(NamespaceDescriptor.create(OTHER_NAMESPACE_NAME).build());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     admin.deleteNamespace(NAMESPACE_NAME);
 

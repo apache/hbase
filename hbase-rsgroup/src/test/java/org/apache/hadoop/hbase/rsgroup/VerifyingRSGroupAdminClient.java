@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.List;
@@ -39,7 +42,6 @@ import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
-import org.junit.Assert;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
@@ -148,8 +150,7 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
         .getValue(RSGroupInfoManager.META_FAMILY_BYTES, RSGroupInfoManager.META_QUALIFIER_BYTES));
       groupMap.put(proto.getName(), RSGroupProtobufUtil.toGroupInfo(proto));
     }
-    Assert.assertEquals(Sets.newHashSet(groupMap.values()),
-      Sets.newHashSet(wrapped.listRSGroups()));
+    assertEquals(Sets.newHashSet(groupMap.values()), Sets.newHashSet(wrapped.listRSGroups()));
     try {
       String groupBasePath = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "rsgroup");
       for (String znode : ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
@@ -161,9 +162,9 @@ public class VerifyingRSGroupAdminClient implements RSGroupAdmin {
           zList.add(RSGroupProtobufUtil.toGroupInfo(RSGroupProtos.RSGroupInfo.parseFrom(bis)));
         }
       }
-      Assert.assertEquals(zList.size(), groupMap.size());
+      assertEquals(zList.size(), groupMap.size());
       for (RSGroupInfo RSGroupInfo : zList) {
-        Assert.assertTrue(groupMap.get(RSGroupInfo.getName()).equals(RSGroupInfo));
+        assertTrue(groupMap.get(RSGroupInfo.getName()).equals(RSGroupInfo));
       }
     } catch (KeeperException e) {
       throw new IOException("ZK verification failed", e);

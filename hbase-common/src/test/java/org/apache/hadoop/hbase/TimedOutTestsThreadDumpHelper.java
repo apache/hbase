@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase;
 
-import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.management.LockInfo;
@@ -25,49 +24,24 @@ import java.lang.management.ManagementFactory;
 import java.lang.management.MonitorInfo;
 import java.lang.management.ThreadInfo;
 import java.lang.management.ThreadMXBean;
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
 import java.util.Map;
-import org.junit.runner.notification.Failure;
-import org.junit.runner.notification.RunListener;
 
 /**
  * JUnit run listener which prints full thread dump into System.err in case a test is failed due to
  * timeout.
  */
-public class TimedOutTestsListener extends RunListener {
-
-  private static final String TEST_TIMED_OUT_PREFIX = "test timed out after";
+public final class TimedOutTestsThreadDumpHelper {
 
   private static final DateTimeFormatter TIMESTAMP_FORMATTER =
     DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss,SSS Z").withZone(ZoneId.systemDefault());
 
-  private static String INDENT = "    ";
+  private static final String INDENT = "    ";
 
-  private final PrintWriter output;
-
-  public TimedOutTestsListener() {
-    this.output = new PrintWriter(new OutputStreamWriter(System.err, StandardCharsets.UTF_8));
-  }
-
-  public TimedOutTestsListener(PrintWriter output) {
-    this.output = output;
-  }
-
-  @Override
-  public void testFailure(Failure failure) throws Exception {
-    if (
-      failure != null && failure.getMessage() != null
-        && failure.getMessage().startsWith(TEST_TIMED_OUT_PREFIX)
-    ) {
-      output.println("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
-      output.println();
-      output.print(buildThreadDiagnosticString());
-    }
-    output.flush();
+  private TimedOutTestsThreadDumpHelper() {
   }
 
   public static String buildThreadDiagnosticString() {

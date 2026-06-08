@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Locale;
@@ -38,7 +40,6 @@ import org.apache.hadoop.hbase.util.MultiThreadedWriter;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -257,7 +258,7 @@ public class StripeCompactionsPerformanceEvaluation extends AbstractHBaseTool {
      */
     status(description + " test took "
       + (EnvironmentEdgeManager.currentTime() - testStartTime) / 1000 + "sec");
-    Assert.assertTrue(success);
+    assertTrue(success);
   }
 
   private static void status(String s) {

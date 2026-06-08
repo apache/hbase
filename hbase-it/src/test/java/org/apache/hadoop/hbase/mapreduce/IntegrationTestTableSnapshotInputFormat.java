@@ -28,9 +28,9 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -61,7 +61,7 @@ import org.slf4j.LoggerFactory;
  * "IntegrationTestTableSnapshotInputFormat.tableDir" =&gt; temporary directory to restore the
  * snapshot files
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 // Not runnable as a unit test. See TestTableSnapshotInputFormat
 public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase {
   private static final Logger LOG =
@@ -97,7 +97,7 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
   }
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     super.setUp();
     util = getTestingUtil(getConf());
@@ -106,7 +106,7 @@ public class IntegrationTestTableSnapshotInputFormat extends IntegrationTestBase
   }
 
   @Override
-  @After
+  @AfterEach
   public void cleanUp() throws Exception {
     util.restoreCluster();
   }

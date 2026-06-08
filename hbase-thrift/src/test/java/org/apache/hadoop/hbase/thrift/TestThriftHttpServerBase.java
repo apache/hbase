@@ -21,7 +21,6 @@ import static org.apache.hadoop.hbase.thrift.TestThriftServerCmdLine.createBound
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -40,7 +39,6 @@ import org.apache.thrift.protocol.TProtocol;
 import org.apache.thrift.transport.THttpClient;
 import org.apache.thrift.transport.TTransportException;
 import org.junit.jupiter.api.Test;
-import org.junit.rules.ExpectedException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -73,21 +71,11 @@ public class TestThriftHttpServerBase {
     Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
     conf.set("hbase.thrift.security.qop", "privacy");
     conf.setBoolean("hbase.thrift.ssl.enabled", false);
-    ExpectedException thrown = ExpectedException.none();
-    ThriftServerRunner tsr = null;
-    try {
-      thrown.expect(IllegalArgumentException.class);
-      thrown.expectMessage(
-        "Thrift HTTP Server's QoP is privacy, " + "but hbase.thrift.ssl.enabled is false");
-      tsr = TestThriftServerCmdLine.createBoundServer(() -> new ThriftServer(conf));
-      fail("Thrift HTTP Server starts up even with wrong security configurations.");
-    } catch (Exception e) {
-      LOG.info("Expected!", e);
-    } finally {
-      if (tsr != null) {
-        tsr.close();
-      }
-    }
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+      () -> TestThriftServerCmdLine.createBoundServer(() -> new ThriftServer(conf)),
+      "Thrift HTTP Server starts up even with wrong security configurations.");
+    assertEquals("Thrift HTTP Server's QoP is privacy, but hbase.thrift.ssl.enabled is false",
+      e.getMessage());
   }
 
   @Test

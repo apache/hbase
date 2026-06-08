@@ -35,7 +35,7 @@ public class TestBuildThreadDiagnosticString {
 
   @Test
   public void test() {
-    String threadDump = TimedOutTestsListener.buildThreadDiagnosticString();
+    String threadDump = TimedOutTestsThreadDumpHelper.buildThreadDiagnosticString();
     LOG.info(threadDump);
     assertThat(threadDump,
       containsString(getClass().getName() + ".test(" + getClass().getSimpleName() + ".java:"));
