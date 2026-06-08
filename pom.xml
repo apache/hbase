@@ -843,7 +843,6 @@
     <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
     <jruby.version>9.4.14.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
-    <junit.vintage.version>5.13.4</junit.vintage.version>
     <awaitility.version>4.3.0</awaitility.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
@@ -1602,28 +1601,11 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
         <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-params</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.vintage.version}</version>
-        <scope>test</scope>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.awaitility</groupId>
@@ -2487,6 +2469,24 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-junit4</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>junit:junit</exclude>
+                    <exclude>org.junit.vintage:*</exclude>
+                  </excludes>
+                  <message>Use junit5 instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
@@ -2656,7 +2656,7 @@
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Use junit4 instead</reason>
+                  <reason>Use junit5 instead</reason>
                   <bannedImports>
                     <bannedImport>junit.framework.**</bannedImport>
                   </bannedImports>
@@ -4113,6 +4113,10 @@
               <exclusion>
                 <groupId>org.jline</groupId>
                 <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
               </exclusion>
             </exclusions>
           </dependency>

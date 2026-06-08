@@ -22,9 +22,9 @@ import static org.apache.hadoop.hbase.backup.BackupTestUtil.enableBackup;
 import static org.apache.hadoop.hbase.backup.BackupTestUtil.verifyBackup;
 import static org.apache.hadoop.hbase.backup.BackupType.FULL;
 import static org.apache.hadoop.hbase.backup.BackupType.INCREMENTAL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

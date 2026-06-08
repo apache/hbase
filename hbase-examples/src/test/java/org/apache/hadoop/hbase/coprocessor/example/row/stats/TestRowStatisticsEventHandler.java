@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example.row.stats;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doNothing;
 import static org.mockito.Mockito.doThrow;
@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.hbase.metrics.impl.CounterImpl;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.Test;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 @Tag(SmallTests.TAG)
 public class TestRowStatisticsEventHandler {
@@ -53,7 +53,7 @@ public class TestRowStatisticsEventHandler {
   private Counter failureCounter;
   private RowStatisticsEventHandler eventHandler;
 
-  @Before
+  @BeforeEach
   public void setup() {
     bufferedMutator = mock(BufferedMutator.class);
     failureCounter = new CounterImpl();
