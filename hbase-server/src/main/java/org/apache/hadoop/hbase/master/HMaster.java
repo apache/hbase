@@ -1567,6 +1567,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private void initMobCleaner() {
     this.mobFileCleanerChore = new MobFileCleanerChore(this);
+    configurationManager.registerObserver(this.mobFileCleanerChore);
     getChoreService().scheduleChore(mobFileCleanerChore);
     this.mobFileCompactionChore = new MobFileCompactionChore(this);
     getChoreService().scheduleChore(mobFileCompactionChore);
@@ -1963,6 +1964,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   protected void stopChores() {
+    if (mobFileCleanerChore != null) {
+      configurationManager.deregisterObserver(mobFileCleanerChore);
+    }
     shutdownChore(mobFileCleanerChore);
     shutdownChore(mobFileCompactionChore);
     shutdownChore(balancerChore);
