@@ -1964,9 +1964,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   protected void stopChores() {
-    if (mobFileCleanerChore != null) {
-      configurationManager.deregisterObserver(mobFileCleanerChore);
-    }
     shutdownChore(mobFileCleanerChore);
     shutdownChore(mobFileCompactionChore);
     shutdownChore(balancerChore);
