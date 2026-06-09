@@ -99,7 +99,10 @@ public interface ColumnFamilyDescriptor {
   /** Returns an unmodifiable map. */
   Map<String, String> getConfiguration();
 
-  /** Returns accessing the configuration value by key. */
+  /**
+   * Returns the value for the given key, looking in the values map (where the shell writes settings
+   * since HBASE-20819) and the legacy configuration map.
+   */
   String getConfigurationValue(String key);
 
   /** Returns replication factor set for this CF */
