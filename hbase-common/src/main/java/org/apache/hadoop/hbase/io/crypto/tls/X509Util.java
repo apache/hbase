@@ -47,6 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.OpenSsl;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
@@ -210,7 +211,14 @@ public final class X509Util {
       sslContextBuilder.protocols(enabledProtocols);
     }
     String[] cipherSuites = getCipherSuites(config);
-    if (cipherSuites != null) {
+    if (cipherSuites == null) {
+      /*
+       * if cipher list is not explicitly defined, we use the most inclusive cipher list at the
+       * client side
+       */
+      sslContextBuilder.ciphers(null,
+        IdentityCipherSuiteFilter.INSTANCE_DEFAULTING_TO_SUPPORTED_CIPHERS);
+    } else {
       sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
     }
 
