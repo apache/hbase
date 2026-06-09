@@ -36,6 +36,16 @@ public enum CacheWriteSource {
   READ_MISS,
 
   /**
+   * Block was inserted from the HFile write/cache-on-write path.
+   * <p>
+   * This source covers write-side population where the caller does not expose whether the HFile is
+   * being produced by flush, compaction, bulk load, or another writer. More specific write-side
+   * sources can be added later when that context is available at the call site.
+   * </p>
+   */
+  WRITE_PATH,
+
+  /**
    * Cache population during flush output generation.
    */
   FLUSH,

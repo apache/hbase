@@ -122,7 +122,7 @@ public final class CacheRequestContext {
      * @param caching true when caching is enabled
      * @return this builder
      */
-    public Builder setCaching(boolean caching) {
+    public Builder withCaching(boolean caching) {
       this.caching = caching;
       return this;
     }
@@ -132,7 +132,7 @@ public final class CacheRequestContext {
      * @param repeat true when this is a repeated lookup
      * @return this builder
      */
-    public Builder setRepeat(boolean repeat) {
+    public Builder withRepeat(boolean repeat) {
       this.repeat = repeat;
       return this;
     }
@@ -142,7 +142,7 @@ public final class CacheRequestContext {
      * @param updateCacheMetrics true when metrics should be updated
      * @return this builder
      */
-    public Builder setUpdateCacheMetrics(boolean updateCacheMetrics) {
+    public Builder withUpdateCacheMetrics(boolean updateCacheMetrics) {
       this.updateCacheMetrics = updateCacheMetrics;
       return this;
     }
@@ -152,7 +152,7 @@ public final class CacheRequestContext {
      * @param blockType expected block type
      * @return this builder
      */
-    public Builder setBlockType(BlockType blockType) {
+    public Builder withBlockType(BlockType blockType) {
       this.blockType = blockType;
       return this;
     }
@@ -162,7 +162,7 @@ public final class CacheRequestContext {
      * @param compaction true when compaction-related
      * @return this builder
      */
-    public Builder setCompaction(boolean compaction) {
+    public Builder withCompaction(boolean compaction) {
       this.compaction = compaction;
       return this;
     }
@@ -172,7 +172,7 @@ public final class CacheRequestContext {
      * @param prefetch true when prefetch-related
      * @return this builder
      */
-    public Builder setPrefetch(boolean prefetch) {
+    public Builder withPrefetch(boolean prefetch) {
       this.prefetch = prefetch;
       return this;
     }

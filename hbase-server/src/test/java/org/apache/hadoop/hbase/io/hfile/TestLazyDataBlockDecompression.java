@@ -132,6 +132,10 @@ public class TestLazyDataBlockDecompression {
     reader.close();
   }
 
+  /*
+   * TODO: migrate this test to use new HBASE-30018 APIs and remove the need to cast to
+   * LruBlockCache
+   */
   @TestTemplate
   public void testCompressionIncreasesEffectiveBlockCacheSize() throws Exception {
     // enough room for 2 uncompressed block

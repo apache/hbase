@@ -309,8 +309,8 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     Configuration conf) {
     Optional<Boolean> cacheFileBlock = Optional.of(true);
     // For DATA blocks only, if BucketCache is in use, we don't need to cache block again
-    if (getBlockCache().isPresent() && category.equals(BlockCategory.DATA)) {
-      Optional<Boolean> result = getBlockCache().get().shouldCacheFile(hFileInfo, conf);
+    if (category.equals(BlockCategory.DATA)) {
+      Optional<Boolean> result = getCacheAccessService().shouldCacheFile(hFileInfo, conf);
       if (result.isPresent()) {
         cacheFileBlock = result;
       }

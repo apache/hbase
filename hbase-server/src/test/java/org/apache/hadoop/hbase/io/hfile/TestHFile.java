@@ -219,6 +219,7 @@ public class TestHFile {
     BlockCache cache = Mockito.mock(BlockCache.class);
     Mockito.when(cache.shouldCacheBlock(Mockito.any(), Mockito.anyLong(), Mockito.any()))
       .thenReturn(Optional.of(false));
+    Mockito.when(cache.isCacheEnabled()).thenReturn(true);
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testWriterCacheOnWriteSkipDoesNotLeak");
     HFileContext context = new HFileContextBuilder().withBlockSize(blockSize).build();
 

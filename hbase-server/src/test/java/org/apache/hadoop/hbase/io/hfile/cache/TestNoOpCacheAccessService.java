@@ -52,10 +52,10 @@ public class TestNoOpCacheAccessService {
   void testNoOpCacheAccessService() {
     CacheAccessService service = new NoOpCacheAccessService(new CacheStats("noop"));
     BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
-    CacheRequestContext requestContext = CacheRequestContext.newBuilder().setCaching(true)
-      .setRepeat(false).setUpdateCacheMetrics(true).build();
-    CacheWriteContext writeContext = CacheWriteContext.newBuilder().setInMemory(true)
-      .setWaitWhenCache(true).setSource(CacheWriteSource.READ_MISS).build();
+    CacheRequestContext requestContext = CacheRequestContext.newBuilder().withCaching(true)
+      .withRepeat(false).withUpdateCacheMetrics(true).build();
+    CacheWriteContext writeContext = CacheWriteContext.newBuilder().withInMemory(true)
+      .withWaitWhenCache(true).withSource(CacheWriteSource.READ_MISS).build();
     Cacheable block = mock(Cacheable.class);
     Configuration conf = new Configuration(false);
 

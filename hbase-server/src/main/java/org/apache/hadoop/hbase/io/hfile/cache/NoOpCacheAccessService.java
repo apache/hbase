@@ -25,6 +25,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -289,5 +290,20 @@ public final class NoOpCacheAccessService implements CacheAccessService {
   public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
     Objects.requireNonNull(fileName, "fileName must not be null");
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    Objects.requireNonNull(hFileInfo, "hFileInfo must not be null");
+    Objects.requireNonNull(conf, "conf must not be null");
+    return Optional.empty();
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimestamp,
+    Configuration conf) {
+    Objects.requireNonNull(key, "key must not be null");
+    Objects.requireNonNull(conf, "conf must not be null");
+    return Optional.empty();
   }
 }

@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder.NoOpEncodedSeeker;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
@@ -619,9 +620,9 @@ public class TestHFileBlockIndex {
     // should open hfile.block.index.cacheonwrite
     conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, true);
     CacheConfig cacheConf = new CacheConfig(conf, BlockCacheFactory.createBlockCache(conf));
-    BlockCache blockCache = cacheConf.getBlockCache().get();
+    CacheAccessService cache = cacheConf.getCacheAccessService();
     // Evict all blocks that were cached-on-write by the previous invocation.
-    blockCache.evictBlocksByHfileName(hfilePath.getName());
+    cache.evictBlocksByHfileName(hfilePath.getName());
     // Write the HFile
     HFileContext meta = new HFileContextBuilder().withBlockSize(SMALL_BLOCK_SIZE)
       .withCompression(Algorithm.NONE).withDataBlockEncoding(DataBlockEncoding.NONE).build();
@@ -671,14 +672,14 @@ public class TestHFileBlockIndex {
   public void testHFileWriterAndReader() throws IOException {
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "hfile_for_block_index");
     CacheConfig cacheConf = new CacheConfig(conf, BlockCacheFactory.createBlockCache(conf));
-    BlockCache blockCache = cacheConf.getBlockCache().get();
+    CacheAccessService cache = cacheConf.getCacheAccessService();
 
     for (int testI = 0; testI < INDEX_CHUNK_SIZES.length; ++testI) {
       int indexBlockSize = INDEX_CHUNK_SIZES[testI];
       int expectedNumLevels = EXPECTED_NUM_LEVELS[testI];
       LOG.info("Index block size: " + indexBlockSize + ", compression: " + compr);
       // Evict all blocks that were cached-on-write by the previous invocation.
-      blockCache.evictBlocksByHfileName(hfilePath.getName());
+      cache.evictBlocksByHfileName(hfilePath.getName());
 
       conf.setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, indexBlockSize);
       Set<String> keyStrSet = new HashSet<>();

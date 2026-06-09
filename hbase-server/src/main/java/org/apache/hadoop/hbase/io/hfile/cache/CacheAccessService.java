@@ -17,7 +17,9 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Objects;
 import java.util.Optional;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -25,6 +27,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -119,8 +122,8 @@ public interface CacheAccessService {
    */
   default Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
-    CacheRequestContext context = CacheRequestContext.newBuilder().setCaching(caching)
-      .setRepeat(repeat).setUpdateCacheMetrics(updateCacheMetrics).build();
+    CacheRequestContext context = CacheRequestContext.newBuilder().withCaching(caching)
+      .withRepeat(repeat).withUpdateCacheMetrics(updateCacheMetrics).build();
     return getBlock(cacheKey, context);
   }
 
@@ -140,8 +143,9 @@ public interface CacheAccessService {
    */
   default Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics, BlockType blockType) {
-    CacheRequestContext context = CacheRequestContext.newBuilder().setCaching(caching)
-      .setRepeat(repeat).setUpdateCacheMetrics(updateCacheMetrics).setBlockType(blockType).build();
+    CacheRequestContext context =
+      CacheRequestContext.newBuilder().withCaching(caching).withRepeat(repeat)
+        .withUpdateCacheMetrics(updateCacheMetrics).withBlockType(blockType).build();
     return getBlock(cacheKey, context);
   }
 
@@ -178,7 +182,7 @@ public interface CacheAccessService {
    * @param inMemory whether the block should be treated as in-memory
    */
   default void cacheBlock(BlockCacheKey cacheKey, Cacheable block, boolean inMemory) {
-    CacheWriteContext context = CacheWriteContext.newBuilder().setInMemory(inMemory).build();
+    CacheWriteContext context = CacheWriteContext.newBuilder().withInMemory(inMemory).build();
     cacheBlock(cacheKey, block, context);
   }
 
@@ -196,8 +200,8 @@ public interface CacheAccessService {
    */
   default void cacheBlock(BlockCacheKey cacheKey, Cacheable block, boolean inMemory,
     boolean waitWhenCache) {
-    CacheWriteContext context =
-      CacheWriteContext.newBuilder().setInMemory(inMemory).setWaitWhenCache(waitWhenCache).build();
+    CacheWriteContext context = CacheWriteContext.newBuilder().withInMemory(inMemory)
+      .withWaitWhenCache(waitWhenCache).build();
     cacheBlock(cacheKey, block, context);
   }
 
@@ -443,5 +447,73 @@ public interface CacheAccessService {
   default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
     // noop
+  }
+
+  /**
+   * Executes the supplied action when this cache service is enabled.
+   * <p>
+   * This helper is intended to preserve the old {@code getBlockCache().ifPresent(...)} style for
+   * call sites that should do nothing when block cache is disabled. It keeps callers independent of
+   * concrete implementations such as {@code NoOpCacheAccessService} while still allowing disabled
+   * cache wiring to behave like an absent cache.
+   * </p>
+   * <p>
+   * Implementations normally do not need to override this method. The default implementation checks
+   * {@link #isCacheEnabled()} and invokes the supplied action only when cache access is enabled.
+   * </p>
+   * @param action action to execute with this cache service when enabled
+   */
+  default void ifEnabled(Consumer<CacheAccessService> action) {
+    Objects.requireNonNull(action, "action must not be null");
+    if (isCacheEnabled()) {
+      action.accept(this);
+    }
+  }
+
+  /**
+   * Returns whether blocks from the given HFile should be cached. TODO: this method is a temporary
+   * adapter for file-level admission decisions. It will be removed and replaced by a more general
+   * admission API in the future.
+   * <p>
+   * This is a file-level admission hook used by cache population paths. Implementations may use
+   * file metadata, configuration, data tiering state, or implementation-specific bookkeeping to
+   * decide whether the file should be admitted into cache.
+   * </p>
+   * <p>
+   * The returned {@link Optional} is empty when the cache service does not support file-level
+   * admission decisions. In that case, callers should preserve existing default behavior, typically
+   * treating the result as "no opinion" rather than as a rejection.
+   * </p>
+   * @param hFileInfo HFile metadata used for the admission decision
+   * @param conf      configuration
+   * @return empty if unsupported; otherwise whether the file should be cached
+   */
+  default Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns whether the block represented by the given key and timestamp should be cached. TODO:
+   * this method is a temporary adapter for file-level admission decisions. It will be removed and
+   * replaced by a more general admission API in the future.
+   * <p>
+   * <p>
+   * This is a block-level admission hook used by cache population paths. Implementations may use
+   * block identity, maximum timestamp, configuration, data tiering state, or
+   * implementation-specific policy to decide whether the block should be admitted into cache.
+   * </p>
+   * <p>
+   * The returned {@link Optional} is empty when the cache service does not support block-level
+   * admission decisions. In that case, callers should preserve existing default behavior, typically
+   * treating the result as "no opinion" rather than as a rejection.
+   * </p>
+   * @param key          block cache key
+   * @param maxTimestamp maximum timestamp associated with the block
+   * @param conf         configuration
+   * @return empty if unsupported; otherwise whether the block should be cached
+   */
+  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimestamp,
+    Configuration conf) {
+    return Optional.empty();
   }
 }

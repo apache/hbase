@@ -365,7 +365,7 @@ public class HalfStoreFileReader extends StoreFileReader {
           long offset = s.getCurBlock().getOffset();
           LOG.trace("Seeking to split cell in reader: {} for file: {} top: {}, split offset: {}",
             this, reference, top, offset);
-          ((HFileReaderImpl) reader).getCacheConf().getBlockCache().ifPresent(cache -> {
+          ((HFileReaderImpl) reader).getCacheConf().getCacheAccessService().ifEnabled(cache -> {
             int numEvictedReferred = top
               ? cache.evictBlocksRangeByHfileName(referred, offset, Long.MAX_VALUE)
               : cache.evictBlocksRangeByHfileName(referred, 0, offset);

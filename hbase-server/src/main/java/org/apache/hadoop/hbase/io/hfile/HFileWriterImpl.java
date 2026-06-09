@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock.BlockWritable;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.security.EncryptionUtil;
 import org.apache.hadoop.hbase.security.User;
@@ -576,7 +577,7 @@ public class HFileWriterImpl implements HFile.Writer {
    * @param offset the offset of the block we want to cache. Used to determine the cache key.
    */
   private void doCacheOnWrite(long offset) {
-    cacheConf.getBlockCache().ifPresent(cache -> {
+    cacheConf.getCacheAccessService().ifEnabled(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
       try {
         BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
@@ -598,7 +599,7 @@ public class HFileWriterImpl implements HFile.Writer {
     return new BlockCacheKey(name, offset, true, blockType);
   }
 
-  private boolean shouldCacheBlock(BlockCache cache, BlockCacheKey key) {
+  private boolean shouldCacheBlock(CacheAccessService cache, BlockCacheKey key) {
     Optional<Boolean> result =
       cache.shouldCacheBlock(key, timeRangeTrackerForTiering.get().getMax(), conf);
     return result.orElse(true);
