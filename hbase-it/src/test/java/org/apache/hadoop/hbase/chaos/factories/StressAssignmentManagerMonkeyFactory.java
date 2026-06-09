@@ -62,7 +62,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
       new MoveRegionsOfTableAction(moveRegionsSleepTime, 1600, tableName),
       new MoveRandomRegionOfTableAction(moveRandomRegionSleepTime, tableName),
       new RestartRandomRsAction(restartRandomRSSleepTime),
-      new BatchRestartRsAction(batchRestartRSSleepTime, rollingBatchSuspendtRSRatio),
+      new BatchRestartRsAction(batchRestartRSSleepTime, rollingBatchSuspendRSRatio),
       new RollingBatchRestartRsAction(rollingBatchRestartRSSleepTime, rollingBatchRestartRSRatio),
       new RestartRsHoldingMetaAction(restartRsHoldingMetaSleepTime),
       new ChangeSplitPolicyAction(tableName), new SplitAllRegionOfTableAction(tableName),
@@ -70,7 +70,7 @@ public class StressAssignmentManagerMonkeyFactory extends MonkeyFactory {
         decreaseHFileSizeHFileSizeJitter, tableName),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-        rollingBatchSuspendtRSRatio) };
+        rollingBatchSuspendRSRatio) };
 
     // Action to log more info for debugging
     Action[] actions3 = new Action[] { new DumpClusterStatusAction() };

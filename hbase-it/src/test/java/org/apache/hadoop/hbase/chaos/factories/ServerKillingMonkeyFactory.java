@@ -51,7 +51,7 @@ public class ServerKillingMonkeyFactory extends MonkeyFactory {
       new ForceBalancerAction(),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio)
+          rollingBatchSuspendRSRatio)
     };
     // @formatter:on
 

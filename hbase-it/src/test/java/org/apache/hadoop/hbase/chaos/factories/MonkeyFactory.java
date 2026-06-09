@@ -61,7 +61,7 @@ public abstract class MonkeyFactory {
   protected float decreaseHFileSizeHFileSizeJitter;
   protected long gracefulRollingRestartTSSLeepTime;
   protected long rollingBatchSuspendRSSleepTime;
-  protected float rollingBatchSuspendtRSRatio;
+  protected float rollingBatchSuspendRSRatio;
   protected long snapshotTableTtl;
 
   protected long cpuLoadDuration;
@@ -178,7 +178,7 @@ public abstract class MonkeyFactory {
     rollingBatchSuspendRSSleepTime = Long
       .parseLong(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME + ""));
-    rollingBatchSuspendtRSRatio =
+    rollingBatchSuspendRSRatio =
       Float.parseFloat(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
         MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
     snapshotTableTtl =

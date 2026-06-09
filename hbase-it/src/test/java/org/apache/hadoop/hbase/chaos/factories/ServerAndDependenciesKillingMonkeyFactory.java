@@ -60,7 +60,7 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new RestartRandomZKNodeAction(restartRandomZKNodeSleepTime),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio)
+          rollingBatchSuspendRSRatio)
     };
     // @formatter:on
 

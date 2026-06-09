@@ -82,7 +82,7 @@ public class SlowDeterministicMonkeyFactory extends MonkeyFactory {
       new SplitAllRegionOfTableAction(tableName),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-        rollingBatchSuspendtRSRatio) };
+        rollingBatchSuspendRSRatio) };
   }
 
   @Override
