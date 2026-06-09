@@ -155,6 +155,8 @@ public class HttpServer implements FilterContainer {
     "hbase.security.authentication.ui.config.protected";
   public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
+  public static final String PROFILER_ENABLED_KEY = "hbase.profiler.enabled";
+  public static final boolean PROFILER_ENABLED_DEFAULT = true;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -872,7 +874,11 @@ public class HttpServer implements FilterContainer {
       addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
     }
 
-    if (ProfileServlet.isAvailable()) {
+    if (!conf.getBoolean(PROFILER_ENABLED_KEY, PROFILER_ENABLED_DEFAULT)) {
+      addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
+      LOG.info("Profiler disabled by configuration ({}=false). Disabling /prof endpoint.",
+        PROFILER_ENABLED_KEY);
+    } else if (ProfileServlet.isAvailable()) {
       addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
       Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
       if (Files.notExists(tmpDir)) {

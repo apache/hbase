@@ -675,4 +675,22 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn.connect();
     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
   }
+
+  @Test
+  public void testProfilerDisabledByConfig() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(HttpServer.PROFILER_ENABLED_KEY, false);
+    HttpServer myServer = new HttpServer.Builder().setName("test")
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf).build();
+    myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    try {
+      URL profUrl =
+        new URL("http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/prof");
+      HttpURLConnection conn = (HttpURLConnection) profUrl.openConnection();
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, conn.getResponseCode());
+    } finally {
+      myServer.stop();
+    }
+  }
 }

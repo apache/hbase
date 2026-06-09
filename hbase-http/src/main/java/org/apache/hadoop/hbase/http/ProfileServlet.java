@@ -70,6 +70,11 @@ public class ProfileServlet extends HttpServlet {
   private static final String ASYNC_PROFILER_HOME_ENV = "ASYNC_PROFILER_HOME";
   private static final String ASYNC_PROFILER_HOME_SYSTEM_PROPERTY = "async.profiler.home";
 
+  // Cached backend detection result — computed once at class-load time so that isAvailable()
+  // and the default constructor do not each pay the reflective detection cost.
+  private static final ProfilerBackend DETECTED_BACKEND =
+    ProfilerBackend.detect(getAsyncProfilerHome());
+
   enum Event {
     CPU("cpu"),
     WALL("wall"),
@@ -226,7 +231,7 @@ public class ProfileServlet extends HttpServlet {
   }
 
   public ProfileServlet() {
-    this.backend = ProfilerBackend.detect(getAsyncProfilerHome());
+    this.backend = DETECTED_BACKEND;
     LOG.info("ProfileServlet initialized with backend: {}",
       backend != null ? backend.getClass().getSimpleName() : "none");
   }
@@ -236,7 +241,7 @@ public class ProfileServlet extends HttpServlet {
     this.backend = backend;
   }
 
-  public static String getAsyncProfilerHome() {
+  static String getAsyncProfilerHome() {
     String home = System.getenv(ASYNC_PROFILER_HOME_ENV);
     if (home == null || home.trim().isEmpty()) {
       home = System.getProperty(ASYNC_PROFILER_HOME_SYSTEM_PROPERTY);
@@ -245,7 +250,7 @@ public class ProfileServlet extends HttpServlet {
   }
 
   public static boolean isAvailable() {
-    return ProfilerBackend.detect(getAsyncProfilerHome()) != null;
+    return DETECTED_BACKEND != null;
   }
 
   public ProfileRequest parseProfileRequest(final HttpServletRequest req) {
@@ -329,6 +334,13 @@ public class ProfileServlet extends HttpServlet {
       LOG.warn("Interrupted while acquiring profile lock.", e);
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
         "Interrupted while acquiring profile lock.");
+    } catch (Error e) {
+      // Native library load failures (UnsatisfiedLinkError, glibc symbol mismatch,
+      // kernel perf_event disabled, seccomp policy, etc.) surface as Errors on first use.
+      LOG.warn("Profiler native library failed to load or execute", e);
+      writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+        "Profiler native library error: " + e.getMessage()
+          + ". Check that the async-profiler native library is compatible with this OS/kernel.");
     } finally {
       if (locked) {
         profilerLock.unlock();
