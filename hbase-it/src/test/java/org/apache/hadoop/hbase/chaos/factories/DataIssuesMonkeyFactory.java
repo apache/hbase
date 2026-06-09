@@ -51,15 +51,4 @@ public class DataIssuesMonkeyFactory extends MonkeyFactory {
       new PeriodicRandomActionPolicy(action1Period, actions1),
       new PeriodicRandomActionPolicy(action2Period, actions2));
   }
-
-  private void loadProperties() {
-    action1Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
-    action2Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION2_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
-    chanceToAct = Float.parseFloat(this.properties.getProperty(MonkeyConstants.DATA_ISSUE_CHANCE,
-      MonkeyConstants.DEFAULT_DATA_ISSUE_CHANCE + ""));
-  }
 }
