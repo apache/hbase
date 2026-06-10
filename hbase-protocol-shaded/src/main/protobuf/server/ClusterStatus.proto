@@ -206,6 +206,18 @@ message ClientMetrics {
 
   /** the current total filtered requests made from a client */
   optional uint64 filtered_requests_count = 4;
+
+  /** the IP address of the client */
+  optional string host_address = 5;
+
+  /** the name of the user making requests from this client */
+  optional string user_name = 6;
+
+  /** the version of the client */
+  optional string client_version = 7;
+
+  /** the protobuf RPC service name from the client connection header */
+  optional string service_name = 8;
 }
 
 /* Server-level protobufs */

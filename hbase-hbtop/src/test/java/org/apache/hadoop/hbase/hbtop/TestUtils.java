@@ -50,14 +50,23 @@ public final class TestUtils {
   private TestUtils() {
   }
 
+  private static final String TEST_USER_FOO = "FOO";
+  private static final String TEST_USER_BAR = "BAR";
+  private static final String TEST_HOST_ADDRESS_A = "10.0.0.1";
+  private static final String TEST_HOST_ADDRESS_B = "10.0.0.2";
+  private static final String TEST_SERVICE_NAME = "ClientService";
+  private static final String TEST_CLIENT_VERSION = "test-client-version";
+
   public static ClusterMetrics createDummyClusterMetrics() {
     Map<ServerName, ServerMetrics> serverMetricsMap = new HashMap<>();
 
     // host1
     List<RegionMetrics> regionMetricsList = new ArrayList<>();
     List<UserMetrics> userMetricsList = new ArrayList<>();
-    userMetricsList.add(createUserMetrics("FOO", 1, 2, 4));
-    userMetricsList.add(createUserMetrics("BAR", 2, 3, 3));
+    userMetricsList.add(createUserMetrics(TEST_USER_FOO, 1, 2, 4, TEST_HOST_ADDRESS_A,
+      TEST_HOST_ADDRESS_B, TEST_CLIENT_VERSION, TEST_SERVICE_NAME));
+    userMetricsList.add(createUserMetrics(TEST_USER_BAR, 2, 3, 3, TEST_HOST_ADDRESS_A,
+      TEST_HOST_ADDRESS_B, TEST_CLIENT_VERSION, TEST_SERVICE_NAME));
     regionMetricsList.add(createRegionMetrics("table1,,1.00000000000000000000000000000000.", 100,
       50, 100, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
       new Size(100, Size.Unit.MEGABYTE), 0.1f, 100, 100, "2019-07-22 00:00:00"));
@@ -76,8 +85,10 @@ public final class TestUtils {
     // host2
     regionMetricsList.clear();
     userMetricsList.clear();
-    userMetricsList.add(createUserMetrics("FOO", 5, 7, 3));
-    userMetricsList.add(createUserMetrics("BAR", 4, 8, 4));
+    userMetricsList.add(createUserMetrics(TEST_USER_FOO, 5, 7, 3, TEST_HOST_ADDRESS_A,
+      TEST_HOST_ADDRESS_B, TEST_CLIENT_VERSION, TEST_SERVICE_NAME));
+    userMetricsList.add(createUserMetrics(TEST_USER_BAR, 4, 8, 4, TEST_HOST_ADDRESS_A,
+      TEST_HOST_ADDRESS_B, TEST_CLIENT_VERSION, TEST_SERVICE_NAME));
     regionMetricsList.add(createRegionMetrics("table1,1,4.00000000000000000000000000000003.", 100,
       50, 100, new Size(100, Size.Unit.MEGABYTE), new Size(200, Size.Unit.MEGABYTE), 1,
       new Size(100, Size.Unit.MEGABYTE), 0.4f, 50, 100, "2019-07-22 00:00:03"));
@@ -105,12 +116,15 @@ public final class TestUtils {
   }
 
   private static UserMetrics createUserMetrics(String user, long readRequestCount,
-    long writeRequestCount, long filteredReadRequestsCount) {
+    long writeRequestCount, long filteredReadRequestsCount, String hostAddressA,
+    String hostAddressB, String clientVersion, String serviceName) {
     return UserMetricsBuilder.newBuilder(Bytes.toBytes(user))
       .addClientMetris(new UserMetricsBuilder.ClientMetricsImpl("CLIENT_A_" + user,
-        readRequestCount, writeRequestCount, filteredReadRequestsCount))
+        readRequestCount, writeRequestCount, filteredReadRequestsCount, hostAddressA, user,
+        serviceName, clientVersion))
       .addClientMetris(new UserMetricsBuilder.ClientMetricsImpl("CLIENT_B_" + user,
-        readRequestCount, writeRequestCount, filteredReadRequestsCount))
+        readRequestCount, writeRequestCount, filteredReadRequestsCount, hostAddressB, user,
+        serviceName, clientVersion))
       .build();
   }
 
@@ -312,10 +326,10 @@ public final class TestUtils {
       switch (user) {
         // readRequestPerSecond and writeRequestPerSecond will be zero
         // because there is no change or new metrics during refresh
-        case "FOO":
+        case TEST_USER_FOO:
           assertRecordInUserMode(record, 0L, 0L, 0L);
           break;
-        case "BAR":
+        case TEST_USER_BAR:
           assertRecordInUserMode(record, 0L, 0L, 0L);
           break;
         default:
@@ -331,17 +345,21 @@ public final class TestUtils {
       switch (client) {
         // readRequestPerSecond and writeRequestPerSecond will be zero
         // because there is no change or new metrics during refresh
-        case "CLIENT_A_FOO":
-          assertRecordInClientMode(record, 0L, 0L, 0L);
+        case "CLIENT_A_" + TEST_USER_FOO:
+          assertRecordInClientMode(record, 0L, 0L, 0L, TEST_HOST_ADDRESS_A, TEST_USER_FOO,
+            TEST_CLIENT_VERSION, TEST_SERVICE_NAME);
           break;
-        case "CLIENT_A_BAR":
-          assertRecordInClientMode(record, 0L, 0L, 0L);
+        case "CLIENT_A_" + TEST_USER_BAR:
+          assertRecordInClientMode(record, 0L, 0L, 0L, TEST_HOST_ADDRESS_A, TEST_USER_BAR,
+            TEST_CLIENT_VERSION, TEST_SERVICE_NAME);
           break;
-        case "CLIENT_B_FOO":
-          assertRecordInClientMode(record, 0L, 0L, 0L);
+        case "CLIENT_B_" + TEST_USER_FOO:
+          assertRecordInClientMode(record, 0L, 0L, 0L, TEST_HOST_ADDRESS_B, TEST_USER_FOO,
+            TEST_CLIENT_VERSION, TEST_SERVICE_NAME);
           break;
-        case "CLIENT_B_BAR":
-          assertRecordInClientMode(record, 0L, 0L, 0L);
+        case "CLIENT_B_" + TEST_USER_BAR:
+          assertRecordInClientMode(record, 0L, 0L, 0L, TEST_HOST_ADDRESS_B, TEST_USER_BAR,
+            TEST_CLIENT_VERSION, TEST_SERVICE_NAME);
           break;
         default:
           fail();
@@ -351,7 +369,7 @@ public final class TestUtils {
 
   private static void assertRecordInUserMode(Record record, long readRequestCountPerSecond,
     long writeCountRequestPerSecond, long filteredReadRequestsCount) {
-    assertThat(record.size(), is(6));
+    assertThat(record.size(), is(10));
     assertThat(record.get(Field.READ_REQUEST_COUNT_PER_SECOND).asLong(),
       is(readRequestCountPerSecond));
     assertThat(record.get(Field.WRITE_REQUEST_COUNT_PER_SECOND).asLong(),
@@ -362,14 +380,19 @@ public final class TestUtils {
   }
 
   private static void assertRecordInClientMode(Record record, long readRequestCountPerSecond,
-    long writeCountRequestPerSecond, long filteredReadRequestsCount) {
-    assertThat(record.size(), is(6));
+    long writeCountRequestPerSecond, long filteredReadRequestsCount, String hostAddress,
+    String userName, String clientVersion, String serviceName) {
+    assertThat(record.size(), is(10));
     assertThat(record.get(Field.READ_REQUEST_COUNT_PER_SECOND).asLong(),
       is(readRequestCountPerSecond));
     assertThat(record.get(Field.WRITE_REQUEST_COUNT_PER_SECOND).asLong(),
       is(writeCountRequestPerSecond));
     assertThat(record.get(Field.FILTERED_READ_REQUEST_COUNT_PER_SECOND).asLong(),
       is(filteredReadRequestsCount));
+    assertThat(record.get(Field.HOST_ADDRESS).asString(), is(hostAddress));
+    assertThat(record.get(Field.USER_NAME).asString(), is(userName));
+    assertThat(record.get(Field.CLIENT_VERSION).asString(), is(clientVersion));
+    assertThat(record.get(Field.SERVICE_NAME).asString(), is(serviceName));
     assertThat(record.get(Field.USER_COUNT).asInt(), is(1));
   }
 
