@@ -3483,15 +3483,22 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return getRegionServerAccounting().getFlushPressure();
   }
 
+  /**
+   * Dynamically updates HRegionServer's configuration. Since HRegionServer inherits from
+   * {@link HBaseServerBase}, the {@code updatedConf} parameter references the same
+   * {@link Configuration} object as HRegionServer's {@code this.conf} instance variable in a real
+   * HBase deployment. This isn't necessarily the case in unit tests.
+   * @param updatedConf the dynamically updated configuration
+   */
   @Override
-  public void onConfigurationChange(Configuration newConf) {
+  public void onConfigurationChange(Configuration updatedConf) {
     ThroughputController old = this.flushThroughputController;
     if (old != null) {
       old.stop("configuration change");
     }
-    this.flushThroughputController = FlushThroughputControllerFactory.create(this, newConf);
+    this.flushThroughputController = FlushThroughputControllerFactory.create(this, updatedConf);
     try {
-      Superusers.initialize(newConf);
+      Superusers.initialize(updatedConf);
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
@@ -3499,13 +3506,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
 
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
-      this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY, false, this.toString(),
-      conf -> {
-        this.rsHost = new RegionServerCoprocessorHost(this, conf);
-        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
-          CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
-      });
+    // updatedConf and this.conf reference the same Configuration object in an actual HBase
+    // deployment. However, in unit test cases they reference different Configuration objects, so
+    // this.conf needs to be updated.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+      originalIsReadOnlyEnabled, this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      false, this.toString(), conf -> this.rsHost = new RegionServerCoprocessorHost(this, conf));
   }
 
   @Override
