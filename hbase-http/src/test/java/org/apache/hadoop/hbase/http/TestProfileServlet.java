@@ -121,6 +121,112 @@ public class TestProfileServlet {
     assertTrue(refreshCaptor.getValue().contains("/prof-output-hbase/"));
   }
 
+  // ---- doGet error paths ----
+
+  @Test
+  public void testDoGetBackendThrowsRuntimeException() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    Mockito.when(mockBackend.executeStart(Mockito.any(), Mockito.any()))
+      .thenThrow(new IllegalStateException("profiler already started"));
+
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "1",
+      "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+      "bufsize", null, "width", null, "height", null, "minwidth", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    StringWriter body = new StringWriter();
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(body));
+
+    servlet.doGet(req, resp);
+
+    Mockito.verify(resp).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    assertTrue(body.toString().contains("Profiler error"));
+  }
+
+  @Test
+  public void testDoGetBackendThrowsError() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    Mockito.when(mockBackend.executeStart(Mockito.any(), Mockito.any()))
+      .thenThrow(new UnsatisfiedLinkError("no libasyncProfiler in java.library.path"));
+
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "1",
+      "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+      "bufsize", null, "width", null, "height", null, "minwidth", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    StringWriter body = new StringWriter();
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(body));
+
+    servlet.doGet(req, resp);
+
+    Mockito.verify(resp).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    assertTrue(body.toString().contains("Profiler error"));
+  }
+
+  @Test
+  public void testDoGetSecondRequestRejectedWithConflictWhenProfilingActive() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    Mockito.when(mockBackend.executeStart(Mockito.any(), Mockito.any())).thenReturn("OK");
+
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    // Use a long duration so the stopper thread cannot reset profiling=false before the second
+    // request runs, which would make the test flaky on slow hosts.
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "3600",
+      "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+      "bufsize", null, "width", null, "height", null, "minwidth", null);
+
+    // First request succeeds and sets profiling=true.
+    HttpServletResponse resp1 = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(resp1.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+    servlet.doGet(req, resp1);
+    Mockito.verify(resp1).setStatus(HttpServletResponse.SC_ACCEPTED);
+
+    // Second request must see profiling=true under the lock and return 409 CONFLICT.
+    HttpServletResponse resp2 = Mockito.mock(HttpServletResponse.class);
+    StringWriter body2 = new StringWriter();
+    Mockito.when(resp2.getWriter()).thenReturn(new PrintWriter(body2));
+    servlet.doGet(req, resp2);
+
+    Mockito.verify(resp2).setStatus(HttpServletResponse.SC_CONFLICT);
+    assertTrue(body2.toString().contains("already running"));
+  }
+
+  // ---- parseProfileRequest — enum fallbacks ----
+
+  @Test
+  public void testGetOutputFallsBackToHtmlOnUnknownValue() {
+    ProfileServlet servlet = new ProfileServlet(null);
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "output", "bogusformat", "pid",
+      null, "duration", null, "event", null, "interval", null, "jstackdepth", null, "bufsize", null,
+      "width", null, "height", null, "minwidth", null, "refreshDelay", null);
+    assertEquals(ProfileServlet.Output.HTML, servlet.parseProfileRequest(req).getOutput());
+  }
+
+  @Test
+  public void testGetEventFallsBackToCpuOnUnknownValue() {
+    ProfileServlet servlet = new ProfileServlet(null);
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "event", "bogusevent", "pid", null,
+      "duration", null, "output", null, "interval", null, "jstackdepth", null, "bufsize", null,
+      "width", null, "height", null, "minwidth", null, "refreshDelay", null);
+    assertEquals(ProfileServlet.Event.CPU, servlet.parseProfileRequest(req).getEvent());
+  }
+
+  @Test
+  public void testDurationCappedAtMax() {
+    ProfileServlet servlet = new ProfileServlet(null);
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "duration", "999999", "pid", null,
+      "output", null, "event", null, "interval", null, "jstackdepth", null, "bufsize", null,
+      "width", null, "height", null, "minwidth", null, "refreshDelay", null);
+    assertEquals(ProfileServlet.MAX_DURATION_SECONDS,
+      servlet.parseProfileRequest(req).getDuration());
+  }
+
   // ---- isAvailable / getAsyncProfilerHome ----
 
   @Test

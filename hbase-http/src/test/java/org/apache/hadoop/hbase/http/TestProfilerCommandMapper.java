@@ -69,7 +69,8 @@ public class TestProfilerCommandMapper {
     assertTrue(cmd.contains("event=alloc"));
     assertTrue(cmd.contains("interval=1000"));
     assertTrue(cmd.contains("jstackdepth=256"));
-    assertTrue(cmd.contains("bufsize=100000"));
+    // bufsize= is not a recognized 4.x agent option and must not be emitted for LibraryBackend
+    assertFalse(cmd.contains("bufsize"));
     assertTrue(cmd.contains("threads"));
     assertTrue(cmd.contains("simple"));
   }
@@ -77,7 +78,7 @@ public class TestProfilerCommandMapper {
   // ---- Library stop command ----
 
   @Test
-  public void testLibraryStopCommand() throws IOException {
+  public void testLibraryStopCommandHtml() throws IOException {
     Map<String, String[]> flags = new HashMap<>();
     flags.put("reverse", new String[] { "" });
     ProfileServlet.ProfileRequest req =
@@ -89,11 +90,38 @@ public class TestProfilerCommandMapper {
     String cmd = ProfilerCommandMapper.toLibraryStopCommand(req, outputFile);
     assertTrue(cmd.startsWith("stop"));
     assertTrue(cmd.contains("file=" + outputFile.getAbsolutePath()));
-    assertTrue(cmd.contains("format=html"));
-    assertTrue(cmd.contains("width=1200"));
-    assertTrue(cmd.contains("height=16"));
+    // html: format derived from .html extension — no format= key emitted
+    assertFalse(cmd.contains("format="));
+    // width/height not recognized by 4.x agent — must not be emitted
+    // (use ",width=" prefix to avoid matching ",minwidth=")
+    assertFalse(cmd.contains(",width="));
+    assertFalse(cmd.contains(",height="));
     assertTrue(cmd.contains("minwidth=0.5"));
     assertTrue(cmd.contains("reverse"));
+  }
+
+  @Test
+  public void testLibraryStopCommandTree() throws IOException {
+    ProfileServlet.ProfileRequest req = parseRequest(Collections.emptyMap(), "output", "tree");
+    File outputFile = File.createTempFile("prof", ".tree");
+    outputFile.deleteOnExit();
+
+    String cmd = ProfilerCommandMapper.toLibraryStopCommand(req, outputFile);
+    // text-based formats need the bare token
+    assertTrue(cmd.contains(",tree"));
+    assertFalse(cmd.contains("format="));
+  }
+
+  @Test
+  public void testLibraryStopCommandSvgRemappedToHtml() throws IOException {
+    ProfileServlet.ProfileRequest req = parseRequest(Collections.emptyMap(), "output", "svg");
+    File outputFile = File.createTempFile("prof", ".html");
+    outputFile.deleteOnExit();
+
+    String cmd = ProfilerCommandMapper.toLibraryStopCommand(req, outputFile);
+    // SVG is obsolete — must be remapped to html
+    assertFalse(cmd.contains("svg"));
+    assertFalse(cmd.contains("format="));
   }
 
   // ---- CLI command ----
@@ -121,6 +149,22 @@ public class TestProfilerCommandMapper {
     assertTrue(cmd.contains("-f"));
     assertTrue(cmd.contains(outputFile.getAbsolutePath()));
     assertTrue(cmd.contains("1234"));
+  }
+
+  @Test
+  public void testCliCommandSvgRemappedToHtml() throws IOException {
+    Path binDir = Files.createDirectories(tempDir.resolve("bin"));
+    Files.createFile(binDir.resolve("asprof"));
+
+    ProfileServlet.ProfileRequest req = parseRequest(Collections.emptyMap(), "output", "svg");
+    File outputFile = File.createTempFile("prof", ".html");
+    outputFile.deleteOnExit();
+
+    List<String> cmd =
+      ProfilerCommandMapper.toCliCommand(req, outputFile, tempDir.toString(), 1234);
+    // SVG is obsolete; toCliCommand must remap to html, not pass "-o svg"
+    assertFalse(cmd.contains("svg"));
+    assertTrue(cmd.contains("html"));
   }
 
   @Test
@@ -183,7 +227,8 @@ public class TestProfilerCommandMapper {
       ProfilerCommandMapper.toFormatString(ProfileServlet.Output.COLLAPSED));
     assertEquals("tree", ProfilerCommandMapper.toFormatString(ProfileServlet.Output.TREE));
     assertEquals("jfr", ProfilerCommandMapper.toFormatString(ProfileServlet.Output.JFR));
-    assertEquals("svg", ProfilerCommandMapper.toFormatString(ProfileServlet.Output.SVG));
+    // SVG is obsolete in async-profiler 2.x+ — remapped to html
+    assertEquals("html", ProfilerCommandMapper.toFormatString(ProfileServlet.Output.SVG));
     assertEquals("html", ProfilerCommandMapper.toFormatString(ProfileServlet.Output.HTML));
   }
 

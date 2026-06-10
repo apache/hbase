@@ -64,6 +64,7 @@ public class ProfileServlet extends HttpServlet {
   private static final String ACCESS_CONTROL_ALLOW_ORIGIN = "Access-Control-Allow-Origin";
   private static final String CONTENT_TYPE_TEXT = "text/plain; charset=utf-8";
   private static final int DEFAULT_DURATION_SECONDS = 10;
+  static final int MAX_DURATION_SECONDS = 3600;
   private static final AtomicInteger ID_GEN = new AtomicInteger(0);
   static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output-hbase";
 
@@ -121,7 +122,7 @@ public class ProfileServlet extends HttpServlet {
     TRACES,
     FLAT,
     COLLAPSED,
-    // No SVG in 2.x asyncprofiler.
+    // SVG dropped in async-profiler 2.0 (HBASE-25685); remapped to HTML by ProfilerCommandMapper.
     SVG,
     TREE,
     JFR,
@@ -258,7 +259,8 @@ public class ProfileServlet extends HttpServlet {
     // We keep the pid parameter for API compatibility, but do not support external processes.
     Integer requestedPid = getInteger(req, "pid", null);
 
-    final int duration = getInteger(req, "duration", DEFAULT_DURATION_SECONDS);
+    final int duration =
+      Math.min(getInteger(req, "duration", DEFAULT_DURATION_SECONDS), MAX_DURATION_SECONDS);
     final Output output = getOutput(req);
     final Event event = getEvent(req);
     final Long interval = getLong(req, "interval");
@@ -293,22 +295,24 @@ public class ProfileServlet extends HttpServlet {
 
     final ProfileRequest request = parseProfileRequest(req);
 
-    // We keep the pid parameter for backward compatibility but only support profiling this JVM.
-    if (request.getPid() != null && request.getPid().longValue() != currentPid) {
+    // LibraryBackend can only profile the current JVM; BinaryBackend supports external PIDs.
+    if (
+      request.getPid() != null && request.getPid().longValue() != currentPid
+        && backend instanceof LibraryBackend
+    ) {
+      LOG.warn("Rejected profiling request for PID {} (current PID: {}) — "
+        + "LibraryBackend only supports the current process", request.getPid(), currentPid);
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
         "The 'pid' parameter is only supported for the current process when using the "
-          + "embedded async-profiler library.");
-      return;
-    }
-
-    if (profiling) {
-      writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-        "Another instance of profiler is already running.");
+          + "LibraryBackend (in-process async-profiler). Use ASYNC_PROFILER_HOME to enable "
+          + "the BinaryBackend for cross-process profiling.");
       return;
     }
 
     int lockTimeoutSecs = 3;
     boolean locked = false;
+    boolean thisRequestSetProfiling = false;
+    boolean stopperStarted = false;
     try {
       locked = profilerLock.tryLock(lockTimeoutSecs, TimeUnit.SECONDS);
       if (!locked) {
@@ -319,14 +323,23 @@ public class ProfileServlet extends HttpServlet {
         return;
       }
 
+      // Re-check under the lock to close the TOCTOU window.
+      if (profiling) {
+        writeError(resp, HttpServletResponse.SC_CONFLICT,
+          "Another instance of profiler is already running.");
+        return;
+      }
+
       File outputFile = createOutputFile(request);
       // Ensure the file exists so ProfileOutputServlet can poll until it is complete.
       Files.write(outputFile.toPath(), new byte[0]);
 
       executeStart(request, outputFile);
       profiling = true;
+      thisRequestSetProfiling = true;
 
       startStopperThread(request.getDuration(), request, outputFile);
+      stopperStarted = true;
 
       writeAcceptedResponse(resp, request, outputFile);
     } catch (InterruptedException e) {
@@ -334,14 +347,22 @@ public class ProfileServlet extends HttpServlet {
       LOG.warn("Interrupted while acquiring profile lock.", e);
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
         "Interrupted while acquiring profile lock.");
-    } catch (Error e) {
-      // Native library load failures (UnsatisfiedLinkError, glibc symbol mismatch,
-      // kernel perf_event disabled, seccomp policy, etc.) surface as Errors on first use.
-      LOG.warn("Profiler native library failed to load or execute", e);
+    } catch (Error | RuntimeException e) {
+      // Catches native load failures (UnsatisfiedLinkError, glibc mismatch, perf_event blocked)
+      // and profiler runtime errors (IllegalStateException/IllegalArgumentException from
+      // execute()).
+      LOG.warn("Profiler failed to start or execute", e);
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-        "Profiler native library error: " + e.getMessage()
+        "Profiler error: " + e.getMessage()
           + ". Check that the async-profiler native library is compatible with this OS/kernel.");
     } finally {
+      // Only reset the profiling flag if THIS request was the one that set it, and the stopper
+      // thread was never started (e.g. t.start() threw OutOfMemoryError). Using a separate flag
+      // avoids incorrectly clearing profiling=true for a concurrently-running session when this
+      // request exited early via the 409 conflict path.
+      if (thisRequestSetProfiling && !stopperStarted) {
+        profiling = false;
+      }
       if (locked) {
         profilerLock.unlock();
       }
@@ -398,9 +419,11 @@ public class ProfileServlet extends HttpServlet {
 
   private File createOutputFile(final ProfileRequest request) throws IOException {
     final long pid = request.getPid() != null ? request.getPid().longValue() : currentPid;
-    File outputFile =
-      new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-" + request.getEvent().name().toLowerCase()
-        + "-" + ID_GEN.incrementAndGet() + "." + request.getOutput().name().toLowerCase());
+    // Use the remapped format string for the extension so that (e.g.) SVG→HTML remap is
+    // reflected in the filename. This keeps the extension consistent with the actual content.
+    String ext = ProfilerCommandMapper.toFormatString(request.getOutput());
+    File outputFile = new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-"
+      + request.getEvent().name().toLowerCase() + "-" + ID_GEN.incrementAndGet() + "." + ext);
     Files.createDirectories(Paths.get(OUTPUT_DIR));
     return outputFile;
   }

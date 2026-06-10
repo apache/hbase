@@ -1829,6 +1829,17 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.profiler.enabled</name>
+    <value>true</value>
+    <description>
+      Whether the async-profiler /prof endpoint is enabled. When false, the endpoint is
+      registered as a disabled stub (HTTP 500) regardless of whether the async-profiler
+      library or ASYNC_PROFILER_HOME is present. Set to false to prevent profiling access
+      on security-sensitive deployments even when the profiler binary is bundled. Requires
+      a service restart to take effect.
+    </description>
+  </property>
+  <property>
   	<name>hbase.replication.rpc.codec</name>
   	<value>org.apache.hadoop.hbase.codec.KeyValueCodecWithTags</value>
   	<description>

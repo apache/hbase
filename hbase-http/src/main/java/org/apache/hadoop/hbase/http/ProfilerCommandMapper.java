@@ -44,14 +44,17 @@ final class ProfilerCommandMapper {
 
   /**
    * Builds the start command string for the async-profiler Java API. Format:
-   * {@code start,event=<event>[,interval=N][,jstackdepth=N][,bufsize=N][,threads][,simple]}
+   * {@code start,event=<event>[,interval=N][,jstackdepth=N][,threads][,simple]}
+   * <p>
+   * Note: {@code bufsize} is intentionally omitted — it is not a recognized option in the
+   * async-profiler 4.x agent grammar and is silently ignored. It remains supported by the
+   * BinaryBackend CLI path via {@code -b}.
    */
   static String toLibraryStartCommand(ProfileServlet.ProfileRequest request) {
     StringBuilder sb = new StringBuilder("start");
     sb.append(",event=").append(request.getEvent().getInternalName());
     appendOption(sb, "interval", request.getInterval());
     appendOption(sb, "jstackdepth", request.getJstackDepth());
-    appendOption(sb, "bufsize", request.getBufsize());
     if (request.isThread()) {
       sb.append(",threads");
     }
@@ -63,14 +66,22 @@ final class ProfilerCommandMapper {
 
   /**
    * Builds the stop command string for the async-profiler Java API. Format:
-   * {@code stop,file=<path>,format=<fmt>[,width=N][,height=N][,minwidth=N][,reverse]}
+   * {@code stop,file=<path>[,<format-token>][,minwidth=N][,reverse]}
+   * <p>
+   * In async-profiler 4.x the output format is derived from the file extension for html/jfr, and
+   * via a bare token (e.g. {@code tree}, {@code flat}) for text-based formats. The {@code format=}
+   * key is not recognized. {@code width} and {@code height} are also not recognized by the 4.x
+   * agent grammar; they remain supported via the BinaryBackend CLI.
    */
   static String toLibraryStopCommand(ProfileServlet.ProfileRequest request, File outputFile) {
     StringBuilder sb = new StringBuilder("stop");
     sb.append(",file=").append(outputFile.getAbsolutePath());
-    sb.append(",format=").append(toFormatString(request.getOutput()));
-    appendOption(sb, "width", request.getWidth());
-    appendOption(sb, "height", request.getHeight());
+    String fmt = toFormatString(request.getOutput());
+    // html/jfr/collapsed: format derived from file extension — no token needed.
+    // text-based formats (tree, flat, traces, summary): append as bare token.
+    if (!fmt.equals("html") && !fmt.equals("jfr") && !fmt.equals("collapsed")) {
+      sb.append(",").append(fmt);
+    }
     appendOption(sb, "minwidth", request.getMinwidth());
     if (request.isReverse()) {
       sb.append(",reverse");
@@ -98,7 +109,7 @@ final class ProfilerCommandMapper {
     cmd.add("-d");
     cmd.add(String.valueOf(request.getDuration()));
     cmd.add("-o");
-    cmd.add(request.getOutput().name().toLowerCase());
+    cmd.add(toFormatString(request.getOutput()));
     cmd.add("-f");
     cmd.add(outputFile.getAbsolutePath());
     if (request.getInterval() != null) {
@@ -156,7 +167,11 @@ final class ProfilerCommandMapper {
       case JFR:
         return "jfr";
       case SVG:
-        return "svg";
+        // SVG was dropped in async-profiler 2.0 (HBASE-25685) and hard-errors in 4.x.
+        // Silently redirect to html (FlameGraph) so existing ?output=svg callers keep working.
+        LOG.warn("output=svg is obsolete (HBASE-25685); redirecting to html (FlameGraph). "
+          + "Use output=html explicitly.");
+        return "html";
       case HTML:
       default:
         return "html";
