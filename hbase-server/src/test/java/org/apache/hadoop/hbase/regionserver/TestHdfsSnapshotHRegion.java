@@ -92,10 +92,9 @@ public class TestHdfsSnapshotHRegion {
     Path regionDirectoryPath = new Path(tableDir, encodedName);
     TEST_UTIL.getTestFileSystem()
       .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_TEMP_DIR));
-    TEST_UTIL.getTestFileSystem()
-      .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_SPLITS_DIR));
-    TEST_UTIL.getTestFileSystem()
-      .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_MERGES_DIR));
+    // Legacy directories created by split/merge before HBASE-26187
+    TEST_UTIL.getTestFileSystem().create(new Path(regionDirectoryPath, ".splits"));
+    TEST_UTIL.getTestFileSystem().create(new Path(regionDirectoryPath, ".merges"));
     // now snapshot
     String snapshotDir = client.createSnapshot(baseDir, "foo_snapshot");
     // everything should still open just fine

@@ -78,22 +78,6 @@ public class HRegionFileSystem {
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";
 
-  /**
-   * Temporary subdirectory of the region directory used for merges.
-   * @deprecated Since 3.0.0, will be removed in 4.0.0. Merges now write directly to the merged
-   *             region directory under the table dir since HBASE-26187.
-   */
-  @Deprecated
-  public static final String REGION_MERGES_DIR = ".merges";
-
-  /**
-   * Temporary subdirectory of the region directory used for splits.
-   * @deprecated Since 3.0.0, will be removed in 4.0.0. Splits now write directly to the daughter
-   *             region directory under the table dir since HBASE-26187.
-   */
-  @Deprecated
-  public static final String REGION_SPLITS_DIR = ".splits";
-
   /** Temporary subdirectory of the region directory used for compaction output. */
   static final String REGION_TEMP_DIR = ".tmp";
 
