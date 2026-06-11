@@ -78,12 +78,14 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparator;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -172,6 +174,7 @@ import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationObserver;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.trace.TraceUtil;
@@ -8997,20 +9000,54 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
+    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
+
+    // The updatedConf is potentially a shared Configuration object, so we do not want to directly
+    // revert its read-only value if another active cluster already exists. For now, we reference
+    // updatedConf and create a copy for modification below if necessary.
+    Configuration confForCoprocessors = updatedConf;
+
+    if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
+      // Changing this cluster from a replica to an active cluster. There should not be another
+      // active cluster already.
+      try {
+        FileSystem regionFs = getFilesystem();
+        Path rootDir = CommonFSUtils.getRootDir(this.conf);
+        ClusterId clusterId = FSUtils.getClusterIdFile(regionFs, rootDir, new ClusterId.Parser());
+        if (clusterId != null) {
+          ActiveClusterSuffix localSuffix = ActiveClusterSuffix.fromConfig(updatedConf, clusterId);
+          if (AbstractReadOnlyController.isAnotherClusterActive(regionFs, rootDir, localSuffix)) {
+            LOG.error(
+              "Cannot disable read-only mode for region {}. Another cluster is already "
+                + "the active cluster on this storage location. Reverting {} to true.",
+              this, HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
+            // Revert read-only mode here
+            confForCoprocessors =
+              ConfigurationUtil.getReadOnlyEnabledConfigurationCopy(updatedConf);
+            newReadOnlyEnabled = true;
+          }
+        }
+      } catch (IOException e) {
+        LOG.error("Failed to check active cluster status for region {}. "
+          + "Blocking read-only mode transition to prevent potential data corruption.", this, e);
+        // Revert read-only mode here
+        confForCoprocessors = ConfigurationUtil.getReadOnlyEnabledConfigurationCopy(updatedConf);
+        newReadOnlyEnabled = true;
+      }
+    }
 
     // HRegion's this.conf is a special Configuration type called CompoundConfiguration. This means
-    // we don't want to use the updatedConf provided in onConfigurationChange() for creating a new
+    // we don't want to use the confForCoprocessors Configuration for creating a new
     // RegionCoprocessorHost. Instead, we update this.conf and use that for decorating the region
     // config and updating this.coprocessorHost.
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(confForCoprocessors, this.conf,
       originalIsReadOnlyEnabled, this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       false, this.toString(), conf -> {
         decorateRegionConfiguration(conf);
         this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
       });
 
-    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
-
+    // Changing this cluster from a replica to an active cluster
     if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
       LOG.info("Cluster Read Only mode disabled");
       for (HStore store : stores.values()) {

@@ -74,9 +74,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExecutorStatusChore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -155,9 +157,11 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -316,7 +320,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private LeaseManager leaseManager;
 
   private volatile boolean dataFsOk;
-  private volatile boolean isGlobalReadOnlyEnabled;
 
   static final String ABORT_TIMEOUT = "hbase.regionserver.abort.timeout";
   // Default abort timeout is 1200 seconds for safe
@@ -3513,11 +3516,32 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
 
-    // updatedConf and this.conf reference the same Configuration object in an actual HBase
-    // deployment. However, in unit test cases they reference different Configuration objects, so
-    // this.conf needs to be updated.
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+    // The updatedConf is potentially a shared Configuration object, so we do not want to directly
+    // revert its read-only value if another active cluster already exists. For now, we reference
+    // updatedConf and create a copy for modification below if necessary.
+    Configuration confForCoprocessors = updatedConf;
+
+    if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
+      // Changing this cluster from a replica to an active cluster. There should not be another
+      // active cluster already.
+      ActiveClusterSuffix localSuffix =
+        ActiveClusterSuffix.fromConfig(this.conf, new ClusterId(getClusterId()));
+      if (
+        AbstractReadOnlyController.isAnotherClusterActive(getFileSystem(), getDataRootDir(),
+          localSuffix)
+      ) {
+        // Revert read-only mode here
+        confForCoprocessors = this.blockReadOnlyTransition(updatedConf);
+      }
+    }
+
+    // In a real HBase deployment, confForCoprocessors may reference the same object as this.conf.
+    // This is assuming confForCoprocessors still references updatedConf, as mentioned in a previous
+    // comment. For unit tests, this Configuration object is not shared, so we need to make sure to
+    // update the coprocessors specifically for this.conf.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(confForCoprocessors, this.conf,
       originalIsReadOnlyEnabled, this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       false, this.toString(), conf -> this.rsHost = new RegionServerCoprocessorHost(this, conf));
   }
