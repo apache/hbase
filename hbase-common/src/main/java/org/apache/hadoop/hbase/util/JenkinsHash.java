@@ -104,18 +104,9 @@ public class JenkinsHash extends Hash {
     a = b = c = 0xdeadbeef + length + initval;
     int offset = 0;
     for (; length > 12; offset += 12, length -= 12) {
-      a += (hashKey.get(offset) & BYTE_MASK);
-      a += ((hashKey.get(offset + 1) & BYTE_MASK) << 8);
-      a += ((hashKey.get(offset + 2) & BYTE_MASK) << 16);
-      a += ((hashKey.get(offset + 3) & BYTE_MASK) << 24);
-      b += (hashKey.get(offset + 4) & BYTE_MASK);
-      b += ((hashKey.get(offset + 5) & BYTE_MASK) << 8);
-      b += ((hashKey.get(offset + 6) & BYTE_MASK) << 16);
-      b += ((hashKey.get(offset + 7) & BYTE_MASK) << 24);
-      c += (hashKey.get(offset + 8) & BYTE_MASK);
-      c += ((hashKey.get(offset + 9) & BYTE_MASK) << 8);
-      c += ((hashKey.get(offset + 10) & BYTE_MASK) << 16);
-      c += ((hashKey.get(offset + 11) & BYTE_MASK) << 24);
+      a += hashKey.getIntLE(offset);
+      b += hashKey.getIntLE(offset + 4);
+      c += hashKey.getIntLE(offset + 8);
 
       /*
        * mix -- mix 3 32-bit values reversibly. This is reversible, so any information in (a,b,c)
