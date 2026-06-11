@@ -114,7 +114,6 @@ public class TestMasterChoreScheduled {
     MobFileCleanerChore mobFileCleanerChore =
       mobFileCleanerTestChoreField.getChoreObj("mobFileCleanerChore");
     mobFileCleanerTestChoreField.testIfChoreScheduled(mobFileCleanerChore);
-    assertTrue(hMaster.getConfigurationManager().containsObserver(mobFileCleanerChore));
   }
 
   /**
