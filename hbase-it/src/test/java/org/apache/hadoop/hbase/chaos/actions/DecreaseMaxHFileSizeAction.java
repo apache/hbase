@@ -28,16 +28,20 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class DecreaseMaxHFileSizeAction extends Action {
+
   private static final Logger LOG = LoggerFactory.getLogger(DecreaseMaxHFileSizeAction.class);
 
-  private static final long minFileSize = 1024 * 1024 * 1024L;
-
   private final long sleepTime;
+  private final long minHFileSize;
+  private final float hfileSizeJitter;
   private final TableName tableName;
   private Admin admin;
 
-  public DecreaseMaxHFileSizeAction(long sleepTime, TableName tableName) {
+  public DecreaseMaxHFileSizeAction(long sleepTime, long minHFileSize, float hfileSizeJitter,
+    TableName tableName) {
     this.sleepTime = sleepTime;
+    this.minHFileSize = minHFileSize;
+    this.hfileSizeJitter = hfileSizeJitter;
     this.tableName = tableName;
   }
 
@@ -72,7 +76,9 @@ public class DecreaseMaxHFileSizeAction extends Action {
 
     // We don't want to go too far below 1gb.
     // So go to about 1gb +/- 512 on each side.
-    newValue = Math.max(minFileSize, newValue) - (512 - ThreadLocalRandom.current().nextInt(1024));
+    newValue = Math.max(minHFileSize, newValue);
+    newValue +=
+      newValue * ThreadLocalRandom.current().nextDouble(-hfileSizeJitter, hfileSizeJitter);
 
     // Change the table descriptor.
     TableDescriptor modifiedTable =
