@@ -17,36 +17,24 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.mockito.Mockito.mockStatic;
 
-@InterfaceAudience.Private
-public class ByteArrayHashKey extends HashKey<byte[]> {
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.mockito.MockedStatic;
 
-  private final int offset;
-  private final int length;
-
-  public ByteArrayHashKey(byte[] t, int offset, int length) {
-    super(t);
-    this.offset = offset;
-    this.length = length;
-  }
-
-  @Override
-  public byte get(int pos) {
-    return t[getAbsolutePos(pos)];
-  }
-
-  private int getAbsolutePos(int pos) {
-    return this.offset + pos;
-  }
-
-  @Override
-  public int length() {
-    return this.length;
-  }
-
-  @Override
-  public int getIntLE(int pos) {
-    return LittleEndianBytes.toInt(t, getAbsolutePos(pos));
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
+public class TestLittleEndianBytesWoUnsafe extends TestLittleEndianBytesBase {
+  @BeforeAll
+  public static void disableUnsafe() {
+    try (MockedStatic<HBasePlatformDependent> mocked = mockStatic(HBasePlatformDependent.class)) {
+      mocked.when(HBasePlatformDependent::unaligned).thenReturn(false);
+      assertFalse(LittleEndianBytes.UNSAFE_UNALIGNED);
+    }
   }
 }

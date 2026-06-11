@@ -17,36 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.hadoop.hbase.testclassification.MiscTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.Tag;
 
-@InterfaceAudience.Private
-public class ByteArrayHashKey extends HashKey<byte[]> {
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
+public class TestLittleEndianBytes extends TestLittleEndianBytesBase {
 
-  private final int offset;
-  private final int length;
-
-  public ByteArrayHashKey(byte[] t, int offset, int length) {
-    super(t);
-    this.offset = offset;
-    this.length = length;
-  }
-
-  @Override
-  public byte get(int pos) {
-    return t[getAbsolutePos(pos)];
-  }
-
-  private int getAbsolutePos(int pos) {
-    return this.offset + pos;
-  }
-
-  @Override
-  public int length() {
-    return this.length;
-  }
-
-  @Override
-  public int getIntLE(int pos) {
-    return LittleEndianBytes.toInt(t, getAbsolutePos(pos));
-  }
 }

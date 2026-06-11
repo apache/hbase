@@ -35,4 +35,12 @@ public abstract class HashKey<T> {
 
   /** Returns The number of bytes in this HashKey */
   public abstract int length();
+
+  /**
+   * Returns the little-endian 32-bit int value starting at the given position in this
+   * {@code HashKey}.
+   * @param pos the starting offset of the 4-byte little-endian int
+   * @return the 32-bit value decoded in little-endian order
+   */
+  public abstract int getIntLE(int pos);
 }
