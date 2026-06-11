@@ -376,6 +376,17 @@ public class RegionStates {
 
   private void setServerState(ServerName serverName, ServerState state) {
     ServerStateNode serverNode = getServerNode(serverName);
+    if (serverNode == null) {
+      // The ServerStateNode is only kept in memory and is rebuilt on Master startup just for the
+      // 'live' servers. A ServerCrashProcedure persisted before a Master restart can resume for a
+      // server that is no longer 'live' (already splitting and only referenced by the SCP), so no
+      // node was recreated for it. See HBASE-28659. The split state we set here is bookkeeping
+      // only, so if the node is gone there is nothing to update; skip rather than NPE (NPE would
+      // fail the SCP and trigger an unsupported rollback).
+      LOG.warn("Can not set state {} for {} as the ServerStateNode does not exist", state,
+        serverName);
+      return;
+    }
     synchronized (serverNode) {
       serverNode.setState(state);
     }
