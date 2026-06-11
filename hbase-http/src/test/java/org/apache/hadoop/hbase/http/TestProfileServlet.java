@@ -175,9 +175,9 @@ public class TestProfileServlet {
     ProfileServlet servlet = new ProfileServlet(mockBackend);
     servlet.init(mockServletConfig());
 
-    // Use a long duration so the stopper thread cannot reset profiling=false before the second
-    // request runs, which would make the test flaky on slow hosts.
-    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "3600",
+    // Use a duration long enough that the stopper thread cannot fire before the second doGet
+    // runs, but short enough not to leave a long-lived daemon thread per test run.
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "60",
       "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
       "bufsize", null, "width", null, "height", null, "minwidth", null);
 

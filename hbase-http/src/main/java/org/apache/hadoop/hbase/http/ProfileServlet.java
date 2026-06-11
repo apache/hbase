@@ -354,10 +354,12 @@ public class ProfileServlet extends HttpServlet {
       LOG.warn("Interrupted while acquiring profile lock.", e);
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
         "Interrupted while acquiring profile lock.");
-    } catch (Error | RuntimeException e) {
-      // Catches native load failures (UnsatisfiedLinkError, glibc mismatch, perf_event blocked)
-      // and profiler runtime errors (IllegalStateException/IllegalArgumentException from
-      // execute()).
+    } catch (IOException | Error | RuntimeException e) {
+      // Catches:
+      // - IOException: AsyncProfiler.execute() throws IOException for invalid agent commands
+      // - UnsatisfiedLinkError / other Error: native lib absent or incompatible OS/kernel
+      // - IllegalStateException / IllegalArgumentException (RuntimeException): double-start,
+      // unsupported event, rejected format from the profiler API
       LOG.warn("Profiler failed to start or execute", e);
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
         "Profiler error: " + e.getMessage()
@@ -431,9 +433,10 @@ public class ProfileServlet extends HttpServlet {
 
   private File createOutputFile(final ProfileRequest request) throws IOException {
     final long pid = request.getPid() != null ? request.getPid().longValue() : currentPid;
-    // Use the remapped format string for the extension so that (e.g.) SVG→HTML remap is
-    // reflected in the filename. This keeps the extension consistent with the actual content.
-    String ext = ProfilerCommandMapper.toFormatString(request.getOutput());
+    // Use the remapped file extension so that (e.g.) SVG→HTML remap is reflected in the
+    // filename. toFileExtension is used here (not toFormatString) to avoid a duplicate
+    // LOG.warn — the warning is emitted once by toLibraryStopCommand or toCliCommand.
+    String ext = ProfilerCommandMapper.toFileExtension(request.getOutput());
     File outputFile = new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-"
       + request.getEvent().name().toLowerCase() + "-" + ID_GEN.incrementAndGet() + "." + ext);
     Files.createDirectories(Paths.get(OUTPUT_DIR));

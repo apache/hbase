@@ -77,9 +77,10 @@ final class ProfilerCommandMapper {
     StringBuilder sb = new StringBuilder("stop");
     sb.append(",file=").append(outputFile.getAbsolutePath());
     String fmt = toFormatString(request.getOutput());
-    // html/jfr/collapsed: format derived from file extension — no token needed.
-    // text-based formats (tree, flat, traces, summary): append as bare token.
-    if (!fmt.equals("html") && !fmt.equals("jfr") && !fmt.equals("collapsed")) {
+    // html/jfr: format derived from file extension by async-profiler 4.x — no token needed.
+    // collapsed/tree/flat/traces/summary: must be passed as a bare token; the .collapsed
+    // extension is NOT auto-detected by detectOutputFormat in 4.x.
+    if (!fmt.equals("html") && !fmt.equals("jfr")) {
       sb.append(",").append(fmt);
     }
     appendOption(sb, "minwidth", request.getMinwidth());
@@ -150,9 +151,24 @@ final class ProfilerCommandMapper {
   }
 
   /**
-   * Maps the {@link ProfileServlet.Output} enum to the format string used by both backends.
+   * Maps the {@link ProfileServlet.Output} enum to the format string used by both backends. Logs a
+   * deprecation warning when SVG is requested (it was removed in async-profiler 2.0, see
+   * HBASE-25685). Use {@link #toFileExtension} when only the file extension is needed and the
+   * warning has already been emitted.
    */
   static String toFormatString(ProfileServlet.Output output) {
+    if (output == ProfileServlet.Output.SVG) {
+      LOG.warn("output=svg is obsolete (HBASE-25685); redirecting to html (FlameGraph). "
+        + "Use output=html explicitly.");
+    }
+    return toFileExtension(output);
+  }
+
+  /**
+   * Maps the {@link ProfileServlet.Output} enum to a file extension / format token without emitting
+   * any log warnings. SVG is silently remapped to {@code "html"}.
+   */
+  static String toFileExtension(ProfileServlet.Output output) {
     switch (output) {
       case SUMMARY:
         return "summary";
@@ -168,9 +184,6 @@ final class ProfilerCommandMapper {
         return "jfr";
       case SVG:
         // SVG was dropped in async-profiler 2.0 (HBASE-25685) and hard-errors in 4.x.
-        // Silently redirect to html (FlameGraph) so existing ?output=svg callers keep working.
-        LOG.warn("output=svg is obsolete (HBASE-25685); redirecting to html (FlameGraph). "
-          + "Use output=html explicitly.");
         return "html";
       case HTML:
       default:

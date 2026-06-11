@@ -113,6 +113,18 @@ public class TestProfilerCommandMapper {
   }
 
   @Test
+  public void testLibraryStopCommandCollapsed() throws IOException {
+    ProfileServlet.ProfileRequest req = parseRequest(Collections.emptyMap(), "output", "collapsed");
+    File outputFile = File.createTempFile("prof", ".collapsed");
+    outputFile.deleteOnExit();
+
+    String cmd = ProfilerCommandMapper.toLibraryStopCommand(req, outputFile);
+    // collapsed must be passed as a bare token — .collapsed extension is not auto-detected by 4.x
+    assertTrue(cmd.contains(",collapsed"));
+    assertFalse(cmd.contains("format="));
+  }
+
+  @Test
   public void testLibraryStopCommandSvgRemappedToHtml() throws IOException {
     ProfileServlet.ProfileRequest req = parseRequest(Collections.emptyMap(), "output", "svg");
     File outputFile = File.createTempFile("prof", ".html");
