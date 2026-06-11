@@ -1834,9 +1834,15 @@ possible configurations would overwhelm and obscure the important.
     <description>
       Whether the async-profiler /prof endpoint is enabled. When false, the endpoint is
       registered as a disabled stub (HTTP 500) regardless of whether the async-profiler
-      library or ASYNC_PROFILER_HOME is present. Set to false to prevent profiling access
-      on security-sensitive deployments even when the profiler binary is bundled. Requires
-      a service restart to take effect.
+      library or ASYNC_PROFILER_HOME is present.
+
+      Security note: when the async-profiler Maven dependency is present on the classpath
+      (built with -Pasync-profiler), the /prof endpoint is registered as a privileged servlet
+      by default (this property defaults to true). Access is gated by
+      hadoop.security.instrumentation.requires.admin when Hadoop security is enabled, but on
+      clusters without that flag any authenticated user can trigger profiling. Set this property
+      to false to disable the endpoint on security-sensitive deployments regardless of whether
+      the profiler library is present. Requires a service restart to take effect.
     </description>
   </property>
   <property>

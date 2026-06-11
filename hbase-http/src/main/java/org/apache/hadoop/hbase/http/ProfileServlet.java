@@ -250,6 +250,13 @@ public class ProfileServlet extends HttpServlet {
     return home;
   }
 
+  /**
+   * Returns true if a profiler backend was detected at class-load time. Detection is a one-shot
+   * operation: a library added to the classpath after the JVM starts requires a restart. A backend
+   * that resolved successfully here may still fail on first use if the native binary is
+   * incompatible with the OS/kernel — that error surfaces at request time via the
+   * {@code catch(Error | RuntimeException)} block in {@link #doGet}.
+   */
   public static boolean isAvailable() {
     return DETECTED_BACKEND != null;
   }
@@ -377,8 +384,13 @@ public class ProfileServlet extends HttpServlet {
         executeStop(request, outputFile);
       } catch (Exception e) {
         try {
-          Files.write(outputFile.toPath(),
-            ("Profiler failed: " + e.getMessage()).getBytes(StandardCharsets.UTF_8));
+          // Pad the error message to >100 bytes so ProfileOutputServlet's size check
+          // treats the file as complete and stops auto-refreshing the browser.
+          String msg = "Profiler stop/dump failed: " + e.getMessage();
+          while (msg.length() < 101) {
+            msg += " ";
+          }
+          Files.write(outputFile.toPath(), msg.getBytes(StandardCharsets.UTF_8));
         } catch (IOException ioe) {
           LOG.warn("Unable to write profiler error to output file", ioe);
         }
@@ -513,17 +525,20 @@ public class ProfileServlet extends HttpServlet {
 
     private static final long serialVersionUID = 1L;
 
+    /** Init-param key for the human-readable disable reason. */
+    static final String REASON_PARAM = "disabledReason";
+
     @Override
     protected void doGet(final HttpServletRequest req, final HttpServletResponse resp)
       throws IOException {
       resp.setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
       setResponseHeader(resp);
-      resp.getWriter()
-        .write("The profiler servlet was disabled at startup.\n\n"
-          + "Please ensure the prerequisites for the Profiler Servlet have been installed and the\n"
-          + "environment is properly configured. For more information please see\n"
-          + "https://hbase.apache.org/docs/profiler\n");
-      return;
+      String reason = getInitParameter(REASON_PARAM);
+      if (reason == null || reason.isEmpty()) {
+        reason = "The profiler servlet was disabled at startup.";
+      }
+      resp.getWriter().write(reason + "\n\nFor more information please see "
+        + "https://hbase.apache.org/docs/profiler\n");
     }
 
   }

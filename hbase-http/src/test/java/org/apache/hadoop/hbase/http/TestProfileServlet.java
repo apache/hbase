@@ -255,8 +255,9 @@ public class TestProfileServlet {
   // ---- DisabledServlet ----
 
   @Test
-  public void testDisabledServletReturns500() throws Exception {
+  public void testDisabledServletReturns500WithDefaultReason() throws Exception {
     ProfileServlet.DisabledServlet disabled = new ProfileServlet.DisabledServlet();
+    disabled.init(mockServletConfig());
     HttpServletRequest req = Mockito.mock(HttpServletRequest.class);
     HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
     StringWriter body = new StringWriter();
@@ -265,7 +266,29 @@ public class TestProfileServlet {
     disabled.doGet(req, resp);
 
     Mockito.verify(resp).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
-    assertTrue(body.toString().contains("profiler servlet was disabled"));
+    // No reason param set — falls back to the default message
+    assertTrue(body.toString().contains("disabled at startup"));
+  }
+
+  @Test
+  public void testDisabledServletReturns500WithCustomReason() throws Exception {
+    ProfileServlet.DisabledServlet disabled = new ProfileServlet.DisabledServlet();
+    ServletConfig config = Mockito.mock(ServletConfig.class);
+    ServletContext ctx = Mockito.mock(ServletContext.class);
+    Mockito.when(config.getServletContext()).thenReturn(ctx);
+    Mockito.when(config.getInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM))
+      .thenReturn("disabled via hbase.profiler.enabled=false");
+    disabled.init(config);
+
+    HttpServletRequest req = Mockito.mock(HttpServletRequest.class);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    StringWriter body = new StringWriter();
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(body));
+
+    disabled.doGet(req, resp);
+
+    Mockito.verify(resp).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    assertTrue(body.toString().contains("hbase.profiler.enabled=false"));
   }
 
   // ---- helpers ----

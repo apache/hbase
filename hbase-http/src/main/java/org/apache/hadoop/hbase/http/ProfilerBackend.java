@@ -57,6 +57,12 @@ interface ProfilerBackend {
    * Detects which backend is available. Prefers {@link LibraryBackend} over {@link BinaryBackend}.
    * Returns {@code null} if neither is available.
    * <p>
+   * Detection runs <b>once</b> at class-load time (via {@code DETECTED_BACKEND} in
+   * {@link ProfileServlet}). A library that becomes loadable after the JVM starts requires a
+   * restart to be detected. A library that resolves at class-load but whose native binary is
+   * incompatible with the OS/kernel will not surface the error here — it will throw an
+   * {@code Error} or {@code RuntimeException} on the first {@code execute()} call at request time.
+   * <p>
    * When both the library and a binary home are available, {@link LibraryBackend} is preferred and
    * {@code ASYNC_PROFILER_HOME} is ignored.
    * <p>

@@ -875,7 +875,10 @@ public class HttpServer implements FilterContainer {
     }
 
     if (!conf.getBoolean(PROFILER_ENABLED_KEY, PROFILER_ENABLED_DEFAULT)) {
-      addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
+      ServletHolder disabledHolder = new ServletHolder(new ProfileServlet.DisabledServlet());
+      disabledHolder.setInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM,
+        "The /prof endpoint is disabled by configuration (" + PROFILER_ENABLED_KEY + "=false).");
+      addUnprivilegedServlet("/prof", disabledHolder);
       LOG.info("Profiler disabled by configuration ({}=false). Disabling /prof endpoint.",
         PROFILER_ENABLED_KEY);
     } else if (ProfileServlet.isAvailable()) {
@@ -889,7 +892,11 @@ public class HttpServer implements FilterContainer {
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
       genCtx.setDisplayName("prof-output-hbase");
     } else {
-      addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
+      ServletHolder disabledHolder = new ServletHolder(new ProfileServlet.DisabledServlet());
+      disabledHolder.setInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM,
+        "The /prof endpoint is unavailable: the async-profiler library is not on the classpath "
+          + "(build with -Pasync-profiler) and ASYNC_PROFILER_HOME is not set.");
+      addUnprivilegedServlet("/prof", disabledHolder);
       LOG.info("async-profiler not available (no library on classpath and ASYNC_PROFILER_HOME "
         + "not set). Disabling /prof endpoint.");
     }
