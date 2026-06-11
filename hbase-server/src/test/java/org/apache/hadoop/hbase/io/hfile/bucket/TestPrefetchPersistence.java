@@ -32,11 +32,13 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -94,6 +96,8 @@ public class TestPrefetchPersistence {
   public void setup() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
+    conf.setInt(PrefetchExecutor.PREFETCH_DELAY, 0);
+    PrefetchExecutor.loadConfiguration(conf);
     testDir = TEST_UTIL.getDataTestDir();
     TEST_UTIL.getTestFileSystem().mkdirs(testDir);
     fs = HFileSystem.get(conf);
@@ -138,14 +142,8 @@ public class TestPrefetchPersistence {
   public void readStoreFile(Path storeFilePath) throws Exception {
     // Open the file
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConf, true, conf);
-    int retries = 0;
-    while (
-      !reader.prefetchComplete()
-        && !bucketCache.fullyCachedFiles.containsKey(storeFilePath.getName()) && retries < 5
-    ) {
-      Thread.sleep(500);
-      retries++;
-    }
+    Waiter.waitFor(conf, 30000, () -> reader.prefetchComplete()
+      || bucketCache.fullyCachedFiles.containsKey(storeFilePath.getName()));
   }
 
   public Path writeStoreFile(String fname) throws IOException {
