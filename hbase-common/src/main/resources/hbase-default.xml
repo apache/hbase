@@ -1927,12 +1927,12 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>hbase.mob.compaction.cache.blocks</name>
+    <name>hbase.mob.compaction.read.cache.blocks</name>
     <value>true</value>
     <description>
-      Whether MOB compaction should cache blocks when resolving existing MOB file references.
-      The default value is true to preserve the previous behavior. Set to false to avoid polluting
-      the block cache with background compaction reads.
+      Whether MOB compaction should cache blocks while reading existing MOB files to resolve
+      references during compaction. The default value is true to preserve the previous behavior.
+      Set to false to avoid polluting the block cache with background compaction reads.
     </description>
   </property>
   <property>

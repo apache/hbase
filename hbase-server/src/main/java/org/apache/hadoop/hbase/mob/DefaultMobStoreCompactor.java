@@ -170,8 +170,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     this.ioOptimizedMode =
       conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.DEFAULT_MOB_COMPACTION_TYPE)
         .equals(MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
-    this.cacheMobBlocksOnCompaction = conf.getBoolean(MobConstants.MOB_COMPACTION_CACHE_BLOCKS,
-      MobConstants.DEFAULT_MOB_COMPACTION_CACHE_BLOCKS);
+    this.cacheMobBlocksOnCompaction = conf.getBoolean(MobConstants.MOB_COMPACTION_READ_CACHE_BLOCKS,
+      MobConstants.DEFAULT_MOB_COMPACTION_READ_CACHE_BLOCKS);
   }
 
   @Override

@@ -43,7 +43,7 @@ public class TestDefaultMobStoreCompactor {
   @Test
   public void testCacheMobBlocksOnCompactionCanBeDisabled() {
     Configuration conf = new Configuration();
-    conf.setBoolean(MobConstants.MOB_COMPACTION_CACHE_BLOCKS, false);
+    conf.setBoolean(MobConstants.MOB_COMPACTION_READ_CACHE_BLOCKS, false);
     DefaultMobStoreCompactor compactor = newCompactor(conf);
 
     assertFalse(compactor.cacheMobBlocksOnCompaction);
