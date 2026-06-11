@@ -63,12 +63,8 @@ public final class LittleEndianBytes {
 
       @Override
       int toInt(byte[] bytes, int offset) {
-        int n = 0;
-        for (int i = offset + 3; i >= offset; i--) {
-          n <<= 8;
-          n ^= (bytes[i] & 0xFF);
-        }
-        return n;
+        return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8)
+          | ((bytes[offset + 2] & 0xFF) << 16) | ((bytes[offset + 3] & 0xFF) << 24);
       }
 
       @Override
@@ -79,11 +75,10 @@ public final class LittleEndianBytes {
 
       @Override
       int putInt(byte[] bytes, int offset, int val) {
-        for (int i = offset; i < offset + 3; i++) {
-          bytes[i] = (byte) val;
-          val >>>= 8;
-        }
-        bytes[offset + 3] = (byte) val;
+        bytes[offset] = (byte) val;
+        bytes[offset + 1] = (byte) (val >>> 8);
+        bytes[offset + 2] = (byte) (val >>> 16);
+        bytes[offset + 3] = (byte) (val >>> 24);
         return offset + Bytes.SIZEOF_INT;
       }
     }
