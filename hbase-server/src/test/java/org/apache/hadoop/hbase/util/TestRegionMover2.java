@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.Assert.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -118,10 +119,23 @@ public class TestRegionMover2 {
     List<Put> puts = createPuts(10000);
     table.put(puts);
     admin.flush(tableName);
-    HRegionServer regionServer = cluster.getRegionServer(0);
-    RegionInfo regionA = regionServer.getRegions(tableName).get(0).getRegionInfo();
-    RegionInfo regionB = admin.getRegions(tableName).stream()
-      .filter(ri -> Bytes.equals(ri.getStartKey(), regionA.getEndKey())).findFirst().get();
+    HRegionServer regionServer = null;
+    RegionInfo regionA = null;
+    RegionInfo regionB = null;
+    for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
+      HRegionServer rs = rst.getRegionServer();
+      for (HRegion region : rs.getRegions(tableName)) {
+        if (!region.getRegionInfo().isLast()) {
+          regionServer = rs;
+          regionA = region.getRegionInfo();
+          regionB = admin.getRegions(tableName).stream()
+            .filter(ri -> Bytes.equals(ri.getStartKey(), region.getRegionInfo().getEndKey()))
+            .findFirst().get();
+          break;
+        }
+      }
+    }
+    assertNotNull(regionServer);
     // if regionB is not this regionServer, move it
     AssignmentManager am = cluster.getMaster().getAssignmentManager();
     while (
