@@ -24,7 +24,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
@@ -55,14 +55,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 @Tag(MediumTests.TAG)
 public class TestRecoverUnknownWithNullRegionLocation {
 
-  private static HBaseTestingUtil UTIL;
+  private static HBaseTestingUtility UTIL;
   private static final TableName TABLE_NAME =
     TableName.valueOf("TestRecoverUnknownWithNullRegionLocation");
   private static final byte[] FAMILY = Bytes.toBytes("cf");
 
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    UTIL = new HBaseTestingUtil();
+    UTIL = new HBaseTestingUtility();
     UTIL.startMiniCluster(2);
   }
 
@@ -93,7 +93,7 @@ public class TestRecoverUnknownWithNullRegionLocation {
 
       node.lock();
       try {
-        am.regionClosedAbnormally(node).get();
+        am.regionClosedAbnormally(node);
         assertTrue(node.isInState(RegionState.State.ABNORMALLY_CLOSED),
           "regionClosedAbnormally must move state to ABNORMALLY_CLOSED");
         assertNull(node.getRegionLocation(), "regionClosedAbnormally must null out the location");
