@@ -98,6 +98,7 @@ public class TestSnapshotInfo {
     // Deleting snapshot and cluster has no snapshots, .hbase-snapshot directory would still exist
     admin.deleteSnapshot(snapshotName);
     assertTrue(fs.exists(snapshotDir));
+    assertTrue(fs.exists(new Path(snapshotDir, SnapshotDescriptionUtils.SNAPSHOT_TMP_DIR_NAME)));
     snapshotDescList = SnapshotInfo.getSnapshotList(conf);
     assertTrue(snapshotDescList.isEmpty());
   }
