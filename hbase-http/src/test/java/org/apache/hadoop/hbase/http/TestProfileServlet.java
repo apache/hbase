@@ -23,9 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringWriter;
 import java.lang.reflect.Field;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
@@ -37,6 +40,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
@@ -45,6 +49,11 @@ import org.mockito.Mockito;
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestProfileServlet {
+
+  @BeforeEach
+  public void clearLastResultBeforeEach() throws Exception {
+    clearLastResult();
+  }
 
   // ---- parseProfileRequest ----
 
@@ -177,9 +186,7 @@ public class TestProfileServlet {
     ProfileServlet servlet = new ProfileServlet(mockBackend);
     servlet.init(mockServletConfig());
 
-    // Use a duration long enough that the stopper thread cannot fire before the second doGet
-    // runs, but short enough not to leave a long-lived daemon thread per test run.
-    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "5",
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "1",
       "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
       "bufsize", null, "width", null, "height", null, "minwidth", null);
 
@@ -197,6 +204,74 @@ public class TestProfileServlet {
 
     Mockito.verify(resp2).setStatus(HttpServletResponse.SC_CONFLICT);
     assertTrue(body2.toString().contains("already running"));
+  }
+
+  // ---- doGet error paths — orphan file cleanup ----
+
+  @Test
+  public void testDoGetDeletesOrphanFileWhenExecuteStartThrows() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    ArgumentCaptor<File> fileCaptor = ArgumentCaptor.forClass(File.class);
+    Mockito.when(mockBackend.executeStart(Mockito.any(), fileCaptor.capture()))
+      .thenThrow(new IllegalStateException("profiler already started"));
+
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "1",
+      "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+      "bufsize", null, "width", null, "height", null, "minwidth", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+    servlet.doGet(req, resp);
+
+    Mockito.verify(resp).setStatus(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);
+    // The placeholder created for this specific request must have been deleted.
+    File created = fileCaptor.getValue();
+    assertFalse(created.exists(),
+      "Orphan placeholder must be deleted when executeStart fails: " + created.getName());
+  }
+
+  @Test
+  public void testStopperThreadWritesPaddedErrorOnExecuteStopFailure() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    Mockito.when(mockBackend.executeStart(Mockito.any(), Mockito.any())).thenReturn("OK");
+    Mockito.when(mockBackend.executeStop(Mockito.any(), Mockito.any()))
+      .thenThrow(new IllegalStateException("stop failed"));
+
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "1",
+      "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+      "bufsize", null, "width", null, "height", null, "minwidth", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    ArgumentCaptor<String> refreshCaptor = ArgumentCaptor.forClass(String.class);
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+    servlet.doGet(req, resp);
+    Mockito.verify(resp).setHeader(Mockito.eq("Refresh"), refreshCaptor.capture());
+
+    // Extract the output file path from the Refresh header URL
+    String refreshValue = refreshCaptor.getValue();
+    // Refresh header: "1;/prof-output-hbase/<filename>"
+    String relUrl = refreshValue.substring(refreshValue.indexOf(';') + 1);
+    String fileName = relUrl.substring(relUrl.lastIndexOf('/') + 1);
+    File outputFile = new File(ProfileServlet.OUTPUT_DIR, fileName);
+
+    // Wait for the stopper thread to finish (duration=1s + some buffer)
+    long deadline = System.currentTimeMillis() + 5000;
+    while (outputFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES
+      && System.currentTimeMillis() < deadline) {
+      Thread.sleep(50);
+    }
+
+    byte[] content = Files.readAllBytes(outputFile.toPath());
+    assertTrue(content.length > ProfileServlet.PROF_OUTPUT_MIN_BYTES,
+      "Stopper must pad error file to > PROF_OUTPUT_MIN_BYTES so ProfileOutputServlet stops polling");
+    assertTrue(new String(content, StandardCharsets.UTF_8).contains("stop failed"),
+      "Padded error file must contain the failure message");
   }
 
   // ---- ?last ----

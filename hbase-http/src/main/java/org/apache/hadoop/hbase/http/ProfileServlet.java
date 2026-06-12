@@ -392,6 +392,7 @@ public class ProfileServlet extends HttpServlet {
     boolean locked = false;
     boolean thisRequestSetProfiling = false;
     boolean stopperStarted = false;
+    File outputFile = null;
     try {
       locked = profilerLock.tryLock(lockTimeoutSecs, TimeUnit.SECONDS);
       if (!locked) {
@@ -415,7 +416,7 @@ public class ProfileServlet extends HttpServlet {
         return;
       }
 
-      File outputFile = createOutputFile(request);
+      outputFile = createOutputFile(request);
       final String relativeUrl = "/prof-output-hbase/" + outputFile.getName();
       // Write the placeholder before starting the profiler. If executeStart succeeds but a
       // subsequent step throws, the stopper thread (which owns profiling=false) will write the
@@ -445,6 +446,17 @@ public class ProfileServlet extends HttpServlet {
       writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
         "Profiler error: " + e.getMessage()
           + ". Check that the async-profiler native library is compatible with this OS/kernel.");
+      // Delete the placeholder whenever the stopper thread was never started — in that case
+      // no client received the output URL and the stopper will never write a result to the file.
+      // Guard on !stopperStarted (not !thisRequestSetProfiling) to also cover the rare path where
+      // executeStart succeeded but t.start() threw, leaving a 0-byte file with no owner.
+      if (!stopperStarted && outputFile != null) {
+        try {
+          Files.deleteIfExists(outputFile.toPath());
+        } catch (IOException ioe) {
+          LOG.warn("Unable to delete orphan placeholder {}", outputFile.getName(), ioe);
+        }
+      }
     } finally {
       // Only reset the profiling flag if THIS request was the one that set it, and the stopper
       // thread was never started (e.g. t.start() threw OutOfMemoryError). Using a separate flag
