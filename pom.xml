@@ -4747,6 +4747,11 @@
           <name>m2e.version</name>
         </property>
       </activation>
+      <properties>
+        <!-- Keeps test-scope deps on the main classpath in Eclipse so test
+             sources can resolve sibling *-tests.jar artifacts without errors. -->
+        <m2e.disableTestClasspathFlag>true</m2e.disableTestClasspathFlag>
+      </properties>
       <build>
         <pluginManagement>
           <plugins>
