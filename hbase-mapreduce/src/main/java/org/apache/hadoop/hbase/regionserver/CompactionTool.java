@@ -145,6 +145,9 @@ public class CompactionTool extends Configured implements Tool {
     private void compactStoreFiles(final Path tableDir, final TableDescriptor htd,
       final RegionInfo hri, final String familyName, final boolean compactOnce, final boolean major)
       throws IOException {
+      // CompactionTool intentionally compacts, archives, and (optionally) deletes store files in
+      // the operator-supplied production path. Unlike the MR snapshot-scanning path, it is exempt
+      // from the HBASE-29435 guard: archiving/deleting production data here is its purpose.
       HStore store = getStore(conf, fs, tableDir, htd, hri, familyName);
       LOG.info("Compact table=" + htd.getTableName() + " region=" + hri.getRegionNameAsString()
         + " family=" + familyName);

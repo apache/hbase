@@ -1,3 +1,20 @@
+/*
+ * Licensed to the Apache Software Foundation (ASF) under one
+ * or more contributor license agreements.  See the NOTICE file
+ * distributed with this work for additional information
+ * regarding copyright ownership.  The ASF licenses this file
+ * to you under the Apache License, Version 2.0 (the
+ * "License"); you may not use this file except in compliance
+ * with the License.  You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 package org.apache.hadoop.hbase.util;
 
 import java.io.FileNotFoundException;
@@ -26,12 +43,23 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.backup.FailedArchiveException;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotArchiver;
+import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
-public class MapreduceHFileArchiver {
+/**
+ * MapReduce-local archiver used by {@link
+ * org.apache.hadoop.hbase.mapreduce.MapreduceRestoreSnapshotHelper}. It mirrors the server-side
+ * {@code HFileArchiver} but lives in the MapReduce module so the snapshot-scanning path can be
+ * evolved independently. It is injected into the shared {@link
+ * org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper} restore/clone logic via {@link
+ * RestoreSnapshotArchiver}.
+ */
+@InterfaceAudience.Private
+public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
 
   private static final Logger LOG = LoggerFactory.getLogger(MapreduceHFileArchiver.class);
   private static final String SEPARATOR = ".";
@@ -45,8 +73,6 @@ public class MapreduceHFileArchiver {
       return file == null ? null : file.getPath();
     }
   };
-
-  private static ThreadPoolExecutor archiveExecutor;
 
   /** Returns True if the Region exits in the filesystem. */
   public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
@@ -65,7 +91,8 @@ public class MapreduceHFileArchiver {
    *                 the archive path)
    * @param tableDir {@link Path} to where the table is being stored (for building the archive path)
    */
-  public static void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info, Path rootDir,
+  @Override
+  public void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info, Path rootDir,
     Path tableDir) throws IOException {
     archiveRegion(conf, fs, rootDir, tableDir, FSUtils.getRegionDirFromRootDir(rootDir, info));
   }
@@ -166,7 +193,8 @@ public class MapreduceHFileArchiver {
    * @param family    the family hosting the store files
    * @throws IOException if the files could not be correctly disposed.
    */
-  public static void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf, RegionInfo parent,
+  @Override
+  public void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf, RegionInfo parent,
     Path familyDir, byte[] family) throws IOException {
     FileStatus[] storeFiles = CommonFSUtils.listStatus(fs, familyDir);
     if (storeFiles == null) {

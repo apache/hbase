@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -32,69 +31,40 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.ResultScanner;
-import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.MergeTableRegionsProcedure;
-import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.mob.MobUtils;
-import org.apache.hadoop.hbase.monitoring.MonitoredTask;
-import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
-import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.regionserver.HRegionServer;
-import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
-import org.apache.hadoop.hbase.snapshot.SnapshotCreationException;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
-import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils.SnapshotMock;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 
 /**
- * Test the restore/clone operation from a file-system point of view.
+ * Tests for {@link MapreduceRestoreSnapshotHelper}, the thin MapReduce wrapper that guards against
+ * accidental production data loss (HBASE-29435) and then delegates the actual restore/clone to
+ * {@code RestoreSnapshotHelper} using the MapReduce-local archiver.
  */
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
 public class TestMapreduceRestoreSnapshotHelper {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestMapreduceRestoreSnapshotHelper.class);
-
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  protected final static String TEST_HFILE = "abc";
 
   protected Configuration conf;
-  protected Path archiveDir;
   protected FileSystem fs;
   protected Path rootDir;
-
-  protected void setupConf(Configuration conf) {
-  }
 
   @BeforeAll
   public static void setupCluster() throws Exception {
@@ -110,10 +80,8 @@ public class TestMapreduceRestoreSnapshotHelper {
   @BeforeEach
   public void setup() throws Exception {
     rootDir = TEST_UTIL.getDataTestDir("testRestore");
-    archiveDir = new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY);
     fs = TEST_UTIL.getTestFileSystem();
     conf = TEST_UTIL.getConfiguration();
-    setupConf(conf);
     CommonFSUtils.setRootDir(conf, rootDir);
     // Turn off balancer so it doesn't cut in and mess up our placements.
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
@@ -124,10 +92,10 @@ public class TestMapreduceRestoreSnapshotHelper {
     fs.delete(TEST_UTIL.getDataTestDir(), true);
   }
 
-  protected SnapshotMock createSnapshotMock() throws IOException {
-    return new SnapshotMock(TEST_UTIL.getConfiguration(), fs, rootDir);
-  }
-
+  /**
+   * A fresh restore directory outside the HBase root must be accepted and must restore via the clone
+   * path (HFileLinks land under restoreDir, never inside the production data directory).
+   */
   @Test
   public void testNoHFileLinkInRootDir() throws IOException {
     rootDir = TEST_UTIL.getDefaultRootDirPath();
@@ -139,10 +107,12 @@ public class TestMapreduceRestoreSnapshotHelper {
     createTableAndSnapshot(tableName, snapshotName);
 
     Path restoreDir = new Path("/hbase/.tmp-restore");
-    MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir,
+      snapshotName);
     checkNoHFileLinkInTableDir(tableName);
   }
 
+  /** Restoring an expired snapshot must surface the TTL error from the delegated helper. */
   @Test
   public void testCopyExpiredSnapshotForScanner() throws IOException, InterruptedException {
     rootDir = TEST_UTIL.getDefaultRootDirPath();
@@ -179,29 +149,28 @@ public class TestMapreduceRestoreSnapshotHelper {
       .copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName));
   }
 
-  private void createAndAssertSnapshot(TableName tableName, String snapshotName)
-    throws SnapshotCreationException, IllegalArgumentException, IOException {
-    org.apache.hadoop.hbase.client.SnapshotDescription snapshotDescOne =
-      new org.apache.hadoop.hbase.client.SnapshotDescription(snapshotName, tableName,
-        SnapshotType.FLUSH, null, EnvironmentEdgeManager.currentTime(), -1);
-    TEST_UTIL.getAdmin().snapshot(snapshotDescOne);
-    boolean isExist = TEST_UTIL.getAdmin().listSnapshots().stream()
-      .anyMatch(ele -> snapshotName.equals(ele.getName()));
-    assertTrue(isExist);
-
+  /**
+   * Guard (HBASE-29435): a restore directory exactly equal to the HBase root directory must be
+   * rejected before any filesystem work, to avoid archiving/deleting production data.
+   */
+  @Test
+  public void testRejectRestoreDirEqualToRootDir() {
+    Path root = new Path("/hbase");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
+      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, root, "snap"));
+    assertTrue(e.getMessage().contains("BLOCKED: MapReduce restore directory cannot be the HBase root directory"), e.getMessage());
   }
 
-  private void flipCompactions(boolean isEnable) {
-    int numLiveRegionServers = TEST_UTIL.getHBaseCluster().getNumLiveRegionServers();
-    for (int serverNumber = 0; serverNumber < numLiveRegionServers; serverNumber++) {
-      HRegionServer regionServer = TEST_UTIL.getHBaseCluster().getRegionServer(serverNumber);
-      regionServer.getCompactSplitThread().setCompactionsEnabled(isEnable);
-    }
-
-  }
-
-  private ProcedureExecutor<MasterProcedureEnv> getMasterProcedureExecutor() {
-    return TEST_UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor();
+  /**
+   * Guard (HBASE-29435): a restore directory nested under the HBase root directory must be rejected.
+   */
+  @Test
+  public void testRejectRestoreDirUnderRootDir() {
+    Path root = new Path("/hbase");
+    Path restoreDir = new Path(root, "data/.tmp-restore");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
+      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, restoreDir, "snap"));
+    assertTrue(e.getMessage().contains("BLOCKED: MapReduce restore directory cannot be the HBase root directory"), e.getMessage());
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)
@@ -232,29 +201,5 @@ public class TestMapreduceRestoreSnapshotHelper {
       }
     }
     return false;
-  }
-
-  private void verifyRestore(final Path rootDir, final TableDescriptor sourceHtd,
-    final TableDescriptor htdClone) throws IOException {
-    List<String> files = SnapshotTestingUtils.listHFileNames(fs,
-      CommonFSUtils.getTableDir(rootDir, htdClone.getTableName()));
-    assertEquals(12, files.size());
-    for (int i = 0; i < files.size(); i += 2) {
-      String linkFile = files.get(i);
-      String refFile = files.get(i + 1);
-      assertTrue(HFileLink.isHFileLink(linkFile), linkFile + " should be a HFileLink");
-      assertTrue(StoreFileInfo.isReference(refFile), refFile + " should be a Reference");
-      assertEquals(sourceHtd.getTableName(), HFileLink.getReferencedTableName(linkFile));
-      Path refPath = getReferredToFile(refFile);
-      LOG.debug("get reference name for file " + refFile + " = " + refPath);
-      assertTrue(HFileLink.isHFileLink(refPath.getName()),
-        refPath.getName() + " should be a HFileLink");
-      assertEquals(linkFile, refPath.getName());
-    }
-  }
-
-  private Path getReferredToFile(final String referenceName) {
-    Path fakeBasePath = new Path(new Path("table", "region"), "cf");
-    return StoreFileInfo.getReferredToFile(new Path(fakeBasePath, referenceName));
   }
 }
