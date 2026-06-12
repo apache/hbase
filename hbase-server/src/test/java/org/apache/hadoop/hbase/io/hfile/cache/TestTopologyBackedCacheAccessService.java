@@ -463,12 +463,12 @@ public class TestTopologyBackedCacheAccessService {
   }
 
   private static CacheRequestContext requestContext() {
-    return CacheRequestContext.newBuilder().setCaching(true).setRepeat(false)
-      .setUpdateCacheMetrics(true).setBlockType(BlockType.DATA).build();
+    return CacheRequestContext.newBuilder().withCaching(true).withRepeat(false)
+      .withUpdateCacheMetrics(true).withBlockType(BlockType.DATA).build();
   }
 
   private static CacheWriteContext writeContext() {
-    return CacheWriteContext.newBuilder().setInMemory(true).setWaitWhenCache(true)
-      .setSource(CacheWriteSource.READ_MISS).build();
+    return CacheWriteContext.newBuilder().withInMemory(true).withWaitWhenCache(true)
+      .withSource(CacheWriteSource.READ_MISS).build();
   }
 }

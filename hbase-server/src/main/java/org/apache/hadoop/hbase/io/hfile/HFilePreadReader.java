@@ -42,7 +42,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     fileInfo.initMetaAndIndex(this);
     // master hosted regions, like the master procedures store wouldn't have a block cache
     // Prefetch file blocks upon open if requested
-    if (cacheConf.getBlockCache().isPresent() && cacheConf.shouldPrefetchOnOpen()) {
+    if (cacheConf.getCacheAccessService().isCacheEnabled() && cacheConf.shouldPrefetchOnOpen()) {
       PrefetchExecutor.request(path, new Runnable() {
         @Override
         public void run() {
@@ -50,7 +50,7 @@ public class HFilePreadReader extends HFileReaderImpl {
           long end = 0;
           HFile.Reader prefetchStreamReader = null;
           try {
-            cacheConf.getBlockCache().ifPresent(
+            cacheConf.getCacheAccessService().ifEnabled(
               cache -> cache.waitForCacheInitialization(WAIT_TIME_FOR_CACHE_INITIALIZATION));
             ReaderContext streamReaderContext = ReaderContextBuilder.newBuilder(context)
               .withReaderType(ReaderContext.ReaderType.STREAM)
@@ -185,7 +185,7 @@ public class HFilePreadReader extends HFileReaderImpl {
     // Deallocate blocks in load-on-open section
     this.fileInfo.close();
     // Deallocate data blocks
-    cacheConf.getBlockCache().ifPresent(cache -> {
+    cacheConf.getCacheAccessService().ifEnabled(cache -> {
       if (evictOnClose) {
         int numEvicted = cache.evictBlocksByHfileName(name);
         if (LOG.isTraceEnabled()) {

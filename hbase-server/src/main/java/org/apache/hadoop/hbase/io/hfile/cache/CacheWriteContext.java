@@ -110,7 +110,7 @@ public final class CacheWriteContext {
      * @param inMemory true when in-memory treatment is requested
      * @return this builder
      */
-    public Builder setInMemory(boolean inMemory) {
+    public Builder withInMemory(boolean inMemory) {
       this.inMemory = inMemory;
       return this;
     }
@@ -120,7 +120,7 @@ public final class CacheWriteContext {
      * @param waitWhenCache true when insertion should wait
      * @return this builder
      */
-    public Builder setWaitWhenCache(boolean waitWhenCache) {
+    public Builder withWaitWhenCache(boolean waitWhenCache) {
       this.waitWhenCache = waitWhenCache;
       return this;
     }
@@ -130,7 +130,7 @@ public final class CacheWriteContext {
      * @param cacheCompressed true when compressed caching is requested
      * @return this builder
      */
-    public Builder setCacheCompressed(boolean cacheCompressed) {
+    public Builder withCacheCompressed(boolean cacheCompressed) {
       this.cacheCompressed = cacheCompressed;
       return this;
     }
@@ -140,7 +140,7 @@ public final class CacheWriteContext {
      * @param blockCategory block category
      * @return this builder
      */
-    public Builder setBlockCategory(BlockCategory blockCategory) {
+    public Builder withBlockCategory(BlockCategory blockCategory) {
       this.blockCategory = blockCategory;
       return this;
     }
@@ -150,7 +150,7 @@ public final class CacheWriteContext {
      * @param source cache write source
      * @return this builder
      */
-    public Builder setSource(CacheWriteSource source) {
+    public Builder withSource(CacheWriteSource source) {
       this.source = source;
       return this;
     }

@@ -63,8 +63,8 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.io.HeapSize;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -115,7 +115,7 @@ public class TestAtomicOperation {
       if (wal != null) {
         wal.close();
       }
-      cacheConfig.getBlockCache().ifPresent(BlockCache::shutdown);
+      cacheConfig.getCacheAccessService().ifEnabled(CacheAccessService::shutdown);
       region = null;
     }
   }

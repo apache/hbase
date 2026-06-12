@@ -1075,7 +1075,7 @@ public class HFileBlockIndex {
         if (midKeyMetadata != null) blockStream.write(midKeyMetadata);
         blockWriter.writeHeaderAndData(out);
         if (cacheConf != null) {
-          cacheConf.getBlockCache().ifPresent(cache -> {
+          cacheConf.getCacheAccessService().ifEnabled(cache -> {
             HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
             cache.cacheBlock(new BlockCacheKey(nameForCaching, rootLevelIndexPos, true,
               blockForCaching.getBlockType()), blockForCaching);
@@ -1169,7 +1169,7 @@ public class HFileBlockIndex {
       blockWriter.writeHeaderAndData(out);
 
       if (getCacheOnWrite()) {
-        cacheConf.getBlockCache().ifPresent(cache -> {
+        cacheConf.getCacheAccessService().ifEnabled(cache -> {
           HFileBlock blockForCaching = blockWriter.getBlockForCaching(cacheConf);
           try {
             cache.cacheBlock(

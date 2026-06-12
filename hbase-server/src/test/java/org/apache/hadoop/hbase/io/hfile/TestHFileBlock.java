@@ -36,7 +36,6 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ExecutionException;
@@ -65,6 +64,7 @@ import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
@@ -288,7 +288,7 @@ public class TestHFileBlock {
   @TestTemplate
   public void testNoCompression() throws IOException {
     CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
-    Mockito.when(cacheConf.getBlockCache()).thenReturn(Optional.empty());
+    Mockito.when(cacheConf.getCacheAccessService()).thenReturn(new NoOpCacheAccessService());
 
     HFileBlock block =
       createTestV2Block(NONE, includesMemstoreTS, false).getBlockForCaching(cacheConf);

@@ -69,8 +69,8 @@ public class TestBlockCacheBackedCacheAccessService {
 
     when(blockCache.getBlock(key, true, true, false, BlockType.DATA)).thenReturn(block);
 
-    CacheRequestContext context = CacheRequestContext.newBuilder().setCaching(true).setRepeat(true)
-      .setUpdateCacheMetrics(false).setBlockType(BlockType.DATA).build();
+    CacheRequestContext context = CacheRequestContext.newBuilder().withCaching(true)
+      .withRepeat(true).withUpdateCacheMetrics(false).withBlockType(BlockType.DATA).build();
 
     assertSame(block, service.getBlock(key, context));
     verify(blockCache).getBlock(key, true, true, false, BlockType.DATA);
@@ -88,8 +88,8 @@ public class TestBlockCacheBackedCacheAccessService {
 
     when(blockCache.getBlock(key, true, false, true)).thenReturn(block);
 
-    CacheRequestContext context = CacheRequestContext.newBuilder().setCaching(true).setRepeat(false)
-      .setUpdateCacheMetrics(true).build();
+    CacheRequestContext context = CacheRequestContext.newBuilder().withCaching(true)
+      .withRepeat(false).withUpdateCacheMetrics(true).build();
 
     assertSame(block, service.getBlock(key, context));
     verify(blockCache).getBlock(key, true, false, true);
@@ -105,8 +105,8 @@ public class TestBlockCacheBackedCacheAccessService {
     BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
     Cacheable block = mock(Cacheable.class);
 
-    CacheWriteContext context = CacheWriteContext.newBuilder().setInMemory(true)
-      .setWaitWhenCache(true).setSource(CacheWriteSource.READ_MISS).build();
+    CacheWriteContext context = CacheWriteContext.newBuilder().withInMemory(true)
+      .withWaitWhenCache(true).withSource(CacheWriteSource.READ_MISS).build();
 
     service.cacheBlock(key, block, context);
 

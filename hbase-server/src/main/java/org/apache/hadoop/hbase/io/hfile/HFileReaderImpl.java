@@ -1271,7 +1271,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
 
       // Cache the block
       if (cacheBlock) {
-        cacheConf.getBlockCache().ifPresent(
+        cacheConf.getCacheAccessService().ifEnabled(
           cache -> cache.cacheBlock(cacheKey, uncompressedBlock, cacheConf.isInMemory()));
       }
       return uncompressedBlock;
@@ -1290,7 +1290,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
    *      boolean, boolean)
    */
   private boolean shouldUseHeap(BlockType expectedBlockType, boolean cacheBlock) {
-    if (!cacheConf.getBlockCache().isPresent()) {
+    if (!cacheConf.getCacheAccessService().isCacheEnabled()) {
       return false;
     }
 
@@ -1411,7 +1411,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         // Don't need the unpacked block back and we're storing the block in the cache compressed
         if (cacheOnly && cacheCompressed && cacheOnRead) {
           HFileBlock blockNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, hfileBlock);
-          cacheConf.getBlockCache().ifPresent(cache -> {
+          cacheConf.getCacheAccessService().ifEnabled(cache -> {
             LOG.debug("Skipping decompression of block {} in prefetch", cacheKey);
             // Cache the block if necessary
             if (cacheBlock && cacheOnRead) {
@@ -1427,7 +1427,7 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
         HFileBlock unpacked = hfileBlock.unpack(hfileContext, fsBlockReader);
         HFileBlock unpackedNoChecksum = BlockCacheUtil.getBlockForCaching(cacheConf, unpacked);
         // Cache the block if necessary
-        cacheConf.getBlockCache().ifPresent(cache -> {
+        cacheConf.getCacheAccessService().ifEnabled(cache -> {
           if (cacheBlock && cacheOnRead) {
             // Using the wait on cache during compaction and prefetching.
             cache.cacheBlock(cacheKey,
