@@ -443,9 +443,11 @@ public class ProfileServlet extends HttpServlet {
       // - IllegalStateException / IllegalArgumentException (RuntimeException): double-start,
       // unsupported event, rejected format from the profiler API
       LOG.warn("Profiler failed to start or execute", e);
-      writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-        "Profiler error: " + e.getMessage()
-          + ". Check that the async-profiler native library is compatible with this OS/kernel.");
+      if (!resp.isCommitted()) {
+        writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+          "Profiler error: " + e.getMessage()
+            + ". Check that the async-profiler native library is compatible with this OS/kernel.");
+      }
       // Delete the placeholder whenever the stopper thread was never started — in that case
       // no client received the output URL and the stopper will never write a result to the file.
       // Guard on !stopperStarted (not !thisRequestSetProfiling) to also cover the rare path where

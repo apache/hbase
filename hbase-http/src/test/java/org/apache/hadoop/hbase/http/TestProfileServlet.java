@@ -274,6 +274,60 @@ public class TestProfileServlet {
       "Padded error file must contain the failure message");
   }
 
+  @Test
+  public void testStopperThreadWritesPaddedErrorOnInterrupt() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    Mockito.when(mockBackend.executeStart(Mockito.any(), Mockito.any())).thenReturn("OK");
+
+    // Use a long duration so the stopper is sleeping when we interrupt it
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "60",
+      "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+      "bufsize", null, "width", null, "height", null, "minwidth", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    ArgumentCaptor<String> refreshCaptor = ArgumentCaptor.forClass(String.class);
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+    servlet.doGet(req, resp);
+    Mockito.verify(resp).setHeader(Mockito.eq("Refresh"), refreshCaptor.capture());
+
+    String relUrl = refreshCaptor.getValue().substring(refreshCaptor.getValue().indexOf(';') + 1);
+    String fileName = relUrl.substring(relUrl.lastIndexOf('/') + 1);
+    File outputFile = new File(ProfileServlet.OUTPUT_DIR, fileName);
+
+    // Find the stopper thread by name and interrupt it while it is sleeping
+    Thread stopper = null;
+    long findDeadline = System.currentTimeMillis() + 2000;
+    while (stopper == null && System.currentTimeMillis() < findDeadline) {
+      for (Thread t : Thread.getAllStackTraces().keySet()) {
+        if ("ProfileServlet-stopper".equals(t.getName()) && t.isAlive()) {
+          stopper = t;
+          break;
+        }
+      }
+      if (stopper == null) {
+        Thread.sleep(10);
+      }
+    }
+    assertNotNull(stopper, "ProfileServlet-stopper thread must be alive during the sleep");
+    stopper.interrupt();
+
+    // Wait for the stopper to write the interrupted-session message
+    long deadline = System.currentTimeMillis() + 3000;
+    while (outputFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES
+      && System.currentTimeMillis() < deadline) {
+      Thread.sleep(50);
+    }
+
+    byte[] content = Files.readAllBytes(outputFile.toPath());
+    assertTrue(content.length > ProfileServlet.PROF_OUTPUT_MIN_BYTES,
+      "Stopper must pad interrupted-session file to > PROF_OUTPUT_MIN_BYTES");
+    assertTrue(new String(content, StandardCharsets.UTF_8).contains("interrupted"),
+      "Padded error file must contain 'interrupted'");
+  }
+
   // ---- ?last ----
 
   @Test
