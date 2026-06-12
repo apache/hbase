@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.locks.Lock;
@@ -34,24 +35,49 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * Servlet that runs async-profiler as web-endpoint. Following options from async-profiler can be
- * specified as query paramater. // -e event profiling event: cpu|alloc|lock|cache-misses etc. // -d
- * duration run profiling for 'duration' seconds (integer) // -i interval sampling interval in
- * nanoseconds (long) // -j jstackdepth maximum Java stack depth (integer) // -b bufsize frame
- * buffer size (long) // -t profile different threads separately // -s simple class names instead of
- * FQN // -o fmt[,fmt...] output format: summary|traces|flat|collapsed|svg|tree|jfr|html // --width
- * px SVG width pixels (integer) // --height px SVG frame height pixels (integer) // --minwidth px
- * skip frames smaller than px (double) // --reverse generate stack-reversed FlameGraph / Call tree
- * Example: - To collect 30 second CPU profile of current process (returns FlameGraph svg) curl
- * "http://localhost:10002/prof" - To collect 1 minute CPU profile of current process and output in
- * tree format (html) curl "http://localhost:10002/prof?output=tree&amp;duration=60" - To collect 30
- * second heap allocation profile of current process (returns FlameGraph svg) curl
- * "http://localhost:10002/prof?event=alloc" - To collect lock contention profile of current process
- * (returns FlameGraph svg) curl "http://localhost:10002/prof?event=lock" Following event types are
- * supported (default is 'cpu') (NOTE: not all OS'es support all events) // Perf events: // cpu //
- * page-faults // context-switches // cycles // instructions // cache-references // cache-misses //
- * branches // branch-misses // bus-cycles // L1-dcache-load-misses // LLC-load-misses //
- * dTLB-load-misses // mem:breakpoint // trace:tracepoint // Java events: // alloc // lock
+ * Servlet that runs async-profiler as a web endpoint.
+ * <p>
+ * Query parameters:
+ * <ul>
+ * <li>{@code event} - profiling event: cpu|alloc|lock|cache-misses etc. (default: cpu)</li>
+ * <li>{@code duration} - run profiling for N seconds, clamped to [1,
+ * {@value #MAX_DURATION_SECONDS}] (default: 10)</li>
+ * <li>{@code interval} - sampling interval in nanoseconds (long)</li>
+ * <li>{@code jstackdepth} - maximum Java stack depth (integer)</li>
+ * <li>{@code bufsize} - frame buffer size (long); honored only by BinaryBackend</li>
+ * <li>{@code thread} - profile different threads separately (flag)</li>
+ * <li>{@code simple} - simple class names instead of FQN (flag)</li>
+ * <li>{@code output} - output format: summary|traces|flat|collapsed|tree|jfr|html (default:
+ * html)</li>
+ * <li>{@code width} - flame graph width in pixels; honored only by BinaryBackend</li>
+ * <li>{@code height} - flame graph frame height in pixels; honored only by BinaryBackend</li>
+ * <li>{@code minwidth} - skip frames smaller than this width in pixels (double)</li>
+ * <li>{@code reverse} - generate stack-reversed FlameGraph / Call tree (flag)</li>
+ * <li>{@code pid} - target process ID; LibraryBackend only supports the current JVM (returns 400
+ * for other PIDs), BinaryBackend supports external PIDs</li>
+ * <li>{@code refreshDelay} - extra seconds added to the auto-refresh delay (integer)</li>
+ * <li>{@code last} - instead of starting a new session, redirect to the most recently completed
+ * profiling result. Returns 404 if no result is cached yet. The last result is kept in memory for
+ * the lifetime of the JVM.</li>
+ * </ul>
+ * <p>
+ * Examples:
+ *
+ * <pre>
+ * # 30-second CPU profile (default)
+ * curl "http://localhost:10002/prof"
+ *
+ * # 1-minute allocation profile in tree format
+ * curl "http://localhost:10002/prof?event=alloc&amp;output=tree&amp;duration=60"
+ *
+ * # Redirect to the most recent profiling result
+ * curl "http://localhost:10002/prof?last"
+ * </pre>
+ * <p>
+ * Profiling is single-flight: only one session runs at a time. A second request while a session is
+ * active returns HTTP 409 Conflict with the URL of the last completed result (if any). Closing the
+ * browser tab does not cancel a running session — the stopper thread runs to completion on the
+ * server.
  */
 @InterfaceAudience.Private
 public class ProfileServlet extends HttpServlet {
@@ -67,9 +93,30 @@ public class ProfileServlet extends HttpServlet {
   static final int MAX_DURATION_SECONDS = 3600;
   private static final AtomicInteger ID_GEN = new AtomicInteger(0);
   static final String OUTPUT_DIR = System.getProperty("java.io.tmpdir") + "/prof-output-hbase";
+  // ProfileOutputServlet considers a file complete when its size exceeds this threshold.
+  // Error messages written to the output file must be padded past this limit.
+  static final int PROF_OUTPUT_MIN_BYTES = 100;
 
   private static final String ASYNC_PROFILER_HOME_ENV = "ASYNC_PROFILER_HOME";
   private static final String ASYNC_PROFILER_HOME_SYSTEM_PROPERTY = "async.profiler.home";
+
+  /** Immutable record of a completed profiling session. */
+  static final class ProfileResult {
+    final String relativeUrl;
+    final String event;
+    final int durationSeconds;
+    final Instant completedAt;
+
+    ProfileResult(String relativeUrl, String event, int durationSeconds, Instant completedAt) {
+      this.relativeUrl = relativeUrl;
+      this.event = event;
+      this.durationSeconds = durationSeconds;
+      this.completedAt = completedAt;
+    }
+  }
+
+  // Last completed profiling result — static so it survives servlet reloads within the same JVM.
+  private static volatile ProfileResult lastResult = null;
 
   // Cached backend detection result — computed once at class-load time so that isAvailable()
   // and the default constructor do not each pay the reflective detection cost.
@@ -243,6 +290,17 @@ public class ProfileServlet extends HttpServlet {
     this.backend = backend;
   }
 
+  @Override
+  public void init() throws javax.servlet.ServletException {
+    super.init();
+    try {
+      Files.createDirectories(Paths.get(OUTPUT_DIR));
+    } catch (IOException e) {
+      throw new javax.servlet.ServletException(
+        "Failed to create profiler output directory: " + OUTPUT_DIR, e);
+    }
+  }
+
   static String getAsyncProfilerHome() {
     String home = System.getenv(ASYNC_PROFILER_HOME_ENV);
     if (home == null || home.trim().isEmpty()) {
@@ -301,6 +359,19 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
 
+    // ?last — redirect to the most recent completed profiling result, or list recent results.
+    if (req.getParameterMap().containsKey("last")) {
+      ProfileResult last = lastResult;
+      if (last == null) {
+        writeError(resp, HttpServletResponse.SC_NOT_FOUND,
+          "No profiling results available yet. Run /prof to start a session.");
+      } else {
+        setResponseHeader(resp);
+        resp.sendRedirect(last.relativeUrl);
+      }
+      return;
+    }
+
     final ProfileRequest request = parseProfileRequest(req);
 
     // LibraryBackend can only profile the current JVM; BinaryBackend supports external PIDs.
@@ -333,23 +404,32 @@ public class ProfileServlet extends HttpServlet {
 
       // Re-check under the lock to close the TOCTOU window.
       if (profiling) {
-        writeError(resp, HttpServletResponse.SC_CONFLICT,
-          "Another instance of profiler is already running.");
+        StringBuilder msg = new StringBuilder("Another instance of profiler is already running.");
+        ProfileResult last = lastResult;
+        if (last != null) {
+          msg.append(" Last result: ").append(last.relativeUrl).append(" (").append(last.event)
+            .append(", ").append(last.durationSeconds).append("s, completed ")
+            .append(last.completedAt).append("). Use /prof?last to view it.");
+        }
+        writeError(resp, HttpServletResponse.SC_CONFLICT, msg.toString());
         return;
       }
 
       File outputFile = createOutputFile(request);
-      executeStart(request, outputFile);
-      // Create the placeholder only after executeStart succeeds so the file is not orphaned
-      // if the profiler fails to start (no client polls it, but it would linger in OUTPUT_DIR).
+      final String relativeUrl = "/prof-output-hbase/" + outputFile.getName();
+      // Write the placeholder before starting the profiler. If executeStart succeeds but a
+      // subsequent step throws, the stopper thread (which owns profiling=false) will write the
+      // error message to this file. Without the file, a partial-start failure would leave the
+      // profiler running with no stopper and profiling=false, allowing a second concurrent session.
       Files.write(outputFile.toPath(), new byte[0]);
+      executeStart(request, outputFile);
       profiling = true;
       thisRequestSetProfiling = true;
 
-      startStopperThread(request.getDuration(), request, outputFile);
+      startStopperThread(request.getDuration(), request, outputFile, relativeUrl);
       stopperStarted = true;
 
-      writeAcceptedResponse(resp, request, outputFile);
+      writeAcceptedResponse(resp, request, relativeUrl);
     } catch (InterruptedException e) {
       Thread.currentThread().interrupt();
       LOG.warn("Interrupted while acquiring profile lock.", e);
@@ -380,25 +460,41 @@ public class ProfileServlet extends HttpServlet {
   }
 
   private void startStopperThread(final int durationSeconds, final ProfileRequest request,
-    final File outputFile) {
+    final File outputFile, final String relativeUrl) {
     Thread t = new Thread(() -> {
+      boolean succeeded = false;
+      Throwable failure = null;
       try {
         TimeUnit.SECONDS.sleep(durationSeconds);
         executeStop(request, outputFile);
-      } catch (Exception e) {
-        try {
-          // Pad the error message to >100 bytes so ProfileOutputServlet's size check
-          // treats the file as complete and stops auto-refreshing the browser.
-          String msg = "Profiler stop/dump failed: " + e.getMessage();
-          while (msg.length() < 101) {
-            msg += " ";
-          }
-          Files.write(outputFile.toPath(), msg.getBytes(StandardCharsets.UTF_8));
-        } catch (IOException ioe) {
-          LOG.warn("Unable to write profiler error to output file", ioe);
-        }
+        lastResult = new ProfileResult(relativeUrl, request.getEvent().getInternalName(),
+          durationSeconds, Instant.now());
+        succeeded = true;
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        failure = e;
+        LOG.warn("Profiler stopper thread interrupted; profiling session may not have stopped"
+          + " cleanly.", e);
+      } catch (Throwable e) {
+        failure = e;
         LOG.warn("Profiler stop/dump failed", e);
       } finally {
+        // If the session did not complete successfully, pad the output file to >100 bytes so
+        // ProfileOutputServlet's size check treats it as done and stops auto-refreshing.
+        if (!succeeded && failure != null) {
+          try {
+            String msg = (failure instanceof InterruptedException)
+              ? "Profiler session interrupted before stop completed."
+              : "Profiler stop/dump failed: " + failure.getMessage();
+            // PROF_OUTPUT_MIN_BYTES is checked by ProfileOutputServlet to determine completion.
+            while (msg.length() <= PROF_OUTPUT_MIN_BYTES) {
+              msg += " ";
+            }
+            Files.write(outputFile.toPath(), msg.getBytes(StandardCharsets.UTF_8));
+          } catch (IOException ioe) {
+            LOG.warn("Unable to write profiler error to output file", ioe);
+          }
+        }
         profiling = false;
       }
     }, "ProfileServlet-stopper");
@@ -440,22 +536,32 @@ public class ProfileServlet extends HttpServlet {
     String ext = ProfilerCommandMapper.toFileExtension(request.getOutput());
     File outputFile = new File(OUTPUT_DIR, "async-prof-pid-" + pid + "-"
       + request.getEvent().name().toLowerCase() + "-" + ID_GEN.incrementAndGet() + "." + ext);
-    Files.createDirectories(Paths.get(OUTPUT_DIR));
     return outputFile;
   }
 
   private void writeAcceptedResponse(final HttpServletResponse resp, final ProfileRequest request,
-    final File outputFile) throws IOException {
+    final String relativeUrl) throws IOException {
     setResponseHeader(resp);
     resp.setStatus(HttpServletResponse.SC_ACCEPTED);
-    String relativeUrl = "/prof-output-hbase/" + outputFile.getName();
-    resp.getWriter()
-      .write("Started [" + request.getEvent().getInternalName()
-        + "] profiling. This page will automatically redirect to " + relativeUrl + " after "
-        + request.getDuration() + " seconds. "
-        + "If empty diagram and Linux 4.6+, see 'Basic Usage' section on the Async "
-        + "Profiler Home Page, https://github.com/jvm-profiling-tools/async-profiler.");
-
+    StringBuilder body = new StringBuilder();
+    body.append("Started [").append(request.getEvent().getInternalName())
+      .append("] profiling. This page will automatically redirect to ").append(relativeUrl)
+      .append(" after ").append(request.getDuration()).append(" seconds. ")
+      .append("If empty diagram and Linux 4.6+, see 'Basic Usage' section on the Async ")
+      .append("Profiler Home Page, https://github.com/jvm-profiling-tools/async-profiler.");
+    if (backend instanceof LibraryBackend) {
+      if (request.getBufsize() != null) {
+        body.append("\nNote: bufsize= is not supported by the in-process LibraryBackend"
+          + " (async-profiler 4.x) and was ignored."
+          + " Set ASYNC_PROFILER_HOME to use BinaryBackend if you need -b support.");
+      }
+      if (request.getWidth() != null || request.getHeight() != null) {
+        body.append("\nNote: width= and height= are not supported by the in-process LibraryBackend"
+          + " (async-profiler 4.x) and were ignored."
+          + " Set ASYNC_PROFILER_HOME to use BinaryBackend if you need --width/--height support.");
+      }
+    }
+    resp.getWriter().write(body.toString());
     resp.setHeader("Refresh",
       (request.getDuration() + request.getRefreshDelay()) + ";" + relativeUrl);
     resp.getWriter().flush();

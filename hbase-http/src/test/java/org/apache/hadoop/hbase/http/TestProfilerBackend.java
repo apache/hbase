@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
+import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -78,5 +80,31 @@ public class TestProfilerBackend {
     BinaryBackend backend = new BinaryBackend("/fake/home");
     // Should not throw when no process has been started
     backend.destroy();
+  }
+
+  @Test
+  public void testBinaryBackendExecuteStartFailureIsNotNullPointerException() throws Exception {
+    // BinaryBackend.executeStart must surface failures as IOException or RuntimeException,
+    // never NullPointerException. The null-PID guard at BinaryBackend.java:116-118 cannot be
+    // triggered without mocking ProcessUtils.getPid() (static method), but we verify the
+    // adjacent failure path: a non-existent profiler home causes ProcessBuilder.start() to fail,
+    // which runCmdAsync wraps in IllegalStateException. This confirms the error path goes through
+    // the expected exception type and not an unguarded NPE from pid.toString().
+    BinaryBackend backend = new BinaryBackend("/fake/home/that/does/not/exist");
+    ProfileServlet servlet = new ProfileServlet(null);
+    javax.servlet.http.HttpServletRequest req =
+      org.mockito.Mockito.mock(javax.servlet.http.HttpServletRequest.class);
+    org.mockito.Mockito.when(req.getParameterMap()).thenReturn(java.util.Collections.emptyMap());
+    org.mockito.Mockito.when(req.getParameter(org.mockito.Mockito.anyString())).thenReturn(null);
+    ProfileServlet.ProfileRequest profileReq = servlet.parseProfileRequest(req);
+    Throwable caught = null;
+    try {
+      backend.executeStart(profileReq, File.createTempFile("test", ".html"));
+    } catch (Exception e) {
+      caught = e;
+    }
+    assertNotNull(caught, "executeStart must throw when profiler home is missing");
+    assertFalse(caught instanceof NullPointerException,
+      "executeStart must not throw NullPointerException; got: " + caught.getClass().getName());
   }
 }

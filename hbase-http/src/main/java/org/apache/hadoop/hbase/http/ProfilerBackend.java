@@ -37,6 +37,8 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 interface ProfilerBackend {
 
+  Logger LOG = LoggerFactory.getLogger(ProfilerBackend.class);
+
   /**
    * Executes a profiling start command and returns the profiler's response.
    */
@@ -82,8 +84,14 @@ interface ProfilerBackend {
       return (ProfilerBackend) Class
         .forName("org.apache.hadoop.hbase.http.LibraryBackend", true, cl).getDeclaredConstructor()
         .newInstance();
-    } catch (UnsatisfiedLinkError | ReflectiveOperationException e) {
-      // library not on classpath or native lib failed to load
+    } catch (UnsatisfiedLinkError | ExceptionInInitializerError | ReflectiveOperationException e) {
+      // library not on classpath, native lib missing/incompatible, or static initializer failure
+    } catch (Throwable e) {
+      // Guard against any other unexpected failure during reflective instantiation so that a
+      // broken async-profiler installation falls back to DisabledServlet rather than crashing
+      // the daemon at DETECTED_BACKEND static-field initialization time.
+      LOG.warn("Unexpected error during async-profiler backend detection; "
+        + "profiling will be unavailable. Cause: {}", e.toString());
     }
     // 2. Try external binary
     if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
@@ -112,11 +120,9 @@ final class BinaryBackend implements ProfilerBackend {
   @Override
   public String executeStart(ProfileServlet.ProfileRequest request, File outputFile)
     throws IOException {
-    Integer pid = request.getPid() != null ? request.getPid() : ProcessUtils.getPid();
-    if (pid == null) {
-      throw new IOException("Unable to determine PID of current process. "
-        + "Set the JVM_PID environment variable or pass '?pid=<pid>' explicitly.");
-    }
+    // Prefer the caller-supplied ?pid= param; fall back to ProcessHandle (Java 9+, always correct)
+    // rather than ProcessUtils.getPid() which reads the potentially-stale JVM_PID env variable.
+    int pid = request.getPid() != null ? request.getPid() : (int) ProcessHandle.current().pid();
     List<String> cmd = ProfilerCommandMapper.toCliCommand(request, outputFile, profilerHome, pid);
     process = ProcessUtils.runCmdAsync(cmd);
     return "";
@@ -125,7 +131,18 @@ final class BinaryBackend implements ProfilerBackend {
   @Override
   public String executeStop(ProfileServlet.ProfileRequest request, File outputFile)
     throws IOException {
-    // The binary runs for the requested duration and exits on its own — nothing to do here.
+    // The binary runs for the requested duration and exits on its own. Wait for it so the
+    // profiling flag is not cleared before the process has actually finished writing the output
+    // file — otherwise a new request could start a second asprof while the first is still running.
+    Process p = process;
+    if (p != null) {
+      try {
+        p.waitFor();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.warn("Interrupted while waiting for async-profiler process to finish.", e);
+      }
+    }
     return "";
   }
 

@@ -25,6 +25,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.PrintWriter;
 import java.io.StringWriter;
+import java.lang.reflect.Field;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -197,6 +199,75 @@ public class TestProfileServlet {
     assertTrue(body2.toString().contains("already running"));
   }
 
+  // ---- ?last ----
+
+  @Test
+  public void testLastReturns404WhenNoResultCached() throws Exception {
+    clearLastResult();
+
+    ProfileServlet servlet = new ProfileServlet(null);
+    servlet.init(mockServletConfig());
+    Map<String, String[]> params = new HashMap<>();
+    params.put("last", new String[] { "" });
+    HttpServletRequest req = mockRequest(params, "pid", null, "duration", null, "output", null,
+      "event", null, "interval", null, "jstackdepth", null, "bufsize", null, "width", null,
+      "height", null, "minwidth", null, "refreshDelay", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    StringWriter body = new StringWriter();
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(body));
+
+    servlet.doGet(req, resp);
+
+    Mockito.verify(resp).setStatus(HttpServletResponse.SC_NOT_FOUND);
+    assertTrue(body.toString().contains("No profiling results available yet"));
+  }
+
+  @Test
+  public void testLastRedirectsToMostRecentResult() throws Exception {
+    String expectedUrl = "/prof-output-hbase/profile-cpu-20260612-120000.html";
+    setLastResult(new ProfileServlet.ProfileResult(expectedUrl, "cpu", 10, Instant.now()));
+
+    ProfileServlet servlet = new ProfileServlet(null);
+    servlet.init(mockServletConfig());
+    Map<String, String[]> params = new HashMap<>();
+    params.put("last", new String[] { "" });
+    HttpServletRequest req = mockRequest(params, "pid", null, "duration", null, "output", null,
+      "event", null, "interval", null, "jstackdepth", null, "bufsize", null, "width", null,
+      "height", null, "minwidth", null, "refreshDelay", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+    servlet.doGet(req, resp);
+
+    Mockito.verify(resp).sendRedirect(expectedUrl);
+  }
+
+  @Test
+  public void testLastResultOverwrittenByNewSession() throws Exception {
+    String firstUrl = "/prof-output-hbase/profile-cpu-first.html";
+    String secondUrl = "/prof-output-hbase/profile-cpu-second.html";
+    setLastResult(new ProfileServlet.ProfileResult(firstUrl, "cpu", 10, Instant.now()));
+
+    // Overwrite with a second result — only the latest is kept
+    setLastResult(new ProfileServlet.ProfileResult(secondUrl, "cpu", 30, Instant.now()));
+
+    ProfileServlet servlet = new ProfileServlet(null);
+    servlet.init(mockServletConfig());
+    Map<String, String[]> params = new HashMap<>();
+    params.put("last", new String[] { "" });
+    HttpServletRequest req = mockRequest(params, "pid", null, "duration", null, "output", null,
+      "event", null, "interval", null, "jstackdepth", null, "bufsize", null, "width", null,
+      "height", null, "minwidth", null, "refreshDelay", null);
+    HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+    Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(new StringWriter()));
+
+    servlet.doGet(req, resp);
+
+    // Only the most recent result is cached — redirect must point to secondUrl, not firstUrl
+    Mockito.verify(resp).sendRedirect(secondUrl);
+    Mockito.verify(resp, Mockito.never()).sendRedirect(firstUrl);
+  }
+
   // ---- parseProfileRequest — enum fallbacks ----
 
   @Test
@@ -323,5 +394,19 @@ public class TestProfileServlet {
     ServletConfig config = Mockito.mock(ServletConfig.class);
     Mockito.when(config.getServletContext()).thenReturn(ctx);
     return config;
+  }
+
+  private static Field lastResultField() throws Exception {
+    Field f = ProfileServlet.class.getDeclaredField("lastResult");
+    f.setAccessible(true);
+    return f;
+  }
+
+  private static void setLastResult(ProfileServlet.ProfileResult result) throws Exception {
+    lastResultField().set(null, result);
+  }
+
+  private static void clearLastResult() throws Exception {
+    lastResultField().set(null, null);
   }
 }
