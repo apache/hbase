@@ -85,7 +85,7 @@ public class TestProfileServlet {
     assertEquals(100000L, parsed.getBufsize());
     assertEquals(1200, parsed.getWidth());
     assertEquals(16, parsed.getHeight());
-    assertEquals(0.5, parsed.getMinwidth());
+    assertEquals(0.5, parsed.getMinwidth(), 1e-9);
     assertEquals(3, parsed.getRefreshDelay());
     assertTrue(parsed.isThread());
     assertTrue(parsed.isSimple());
@@ -177,7 +177,7 @@ public class TestProfileServlet {
 
     // Use a duration long enough that the stopper thread cannot fire before the second doGet
     // runs, but short enough not to leave a long-lived daemon thread per test run.
-    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "60",
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", null, "duration", "5",
       "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
       "bufsize", null, "width", null, "height", null, "minwidth", null);
 
@@ -215,6 +215,20 @@ public class TestProfileServlet {
       "duration", null, "output", null, "interval", null, "jstackdepth", null, "bufsize", null,
       "width", null, "height", null, "minwidth", null, "refreshDelay", null);
     assertEquals(ProfileServlet.Event.CPU, servlet.parseProfileRequest(req).getEvent());
+  }
+
+  @Test
+  public void testDurationClampedToMinOne() {
+    ProfileServlet servlet = new ProfileServlet(null);
+    HttpServletRequest req = mockRequest(Collections.emptyMap(), "duration", "0", "pid", null,
+      "output", null, "event", null, "interval", null, "jstackdepth", null, "bufsize", null,
+      "width", null, "height", null, "minwidth", null, "refreshDelay", null);
+    assertEquals(1, servlet.parseProfileRequest(req).getDuration());
+
+    HttpServletRequest negReq = mockRequest(Collections.emptyMap(), "duration", "-5", "pid", null,
+      "output", null, "event", null, "interval", null, "jstackdepth", null, "bufsize", null,
+      "width", null, "height", null, "minwidth", null, "refreshDelay", null);
+    assertEquals(1, servlet.parseProfileRequest(negReq).getDuration());
   }
 
   @Test

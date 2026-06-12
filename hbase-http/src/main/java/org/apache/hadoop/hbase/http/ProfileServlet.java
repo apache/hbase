@@ -139,6 +139,7 @@ public class ProfileServlet extends HttpServlet {
       justification = "This class is never serialized nor restored.")
   private final ProfilerBackend backend;
 
+  @InterfaceAudience.Private
   public static final class ProfileRequest {
     private final int duration;
     private final Output output;
@@ -266,8 +267,8 @@ public class ProfileServlet extends HttpServlet {
     // We keep the pid parameter for API compatibility, but do not support external processes.
     Integer requestedPid = getInteger(req, "pid", null);
 
-    final int duration =
-      Math.min(getInteger(req, "duration", DEFAULT_DURATION_SECONDS), MAX_DURATION_SECONDS);
+    final int duration = Math.min(
+      Math.max(getInteger(req, "duration", DEFAULT_DURATION_SECONDS), 1), MAX_DURATION_SECONDS);
     final Output output = getOutput(req);
     final Event event = getEvent(req);
     final Long interval = getLong(req, "interval");
@@ -309,7 +310,7 @@ public class ProfileServlet extends HttpServlet {
     ) {
       LOG.warn("Rejected profiling request for PID {} (current PID: {}) — "
         + "LibraryBackend only supports the current process", request.getPid(), currentPid);
-      writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
+      writeError(resp, HttpServletResponse.SC_BAD_REQUEST,
         "The 'pid' parameter is only supported for the current process when using the "
           + "LibraryBackend (in-process async-profiler). Use ASYNC_PROFILER_HOME to enable "
           + "the BinaryBackend for cross-process profiling.");
@@ -338,10 +339,10 @@ public class ProfileServlet extends HttpServlet {
       }
 
       File outputFile = createOutputFile(request);
-      // Ensure the file exists so ProfileOutputServlet can poll until it is complete.
-      Files.write(outputFile.toPath(), new byte[0]);
-
       executeStart(request, outputFile);
+      // Create the placeholder only after executeStart succeeds so the file is not orphaned
+      // if the profiler fails to start (no client polls it, but it would linger in OUTPUT_DIR).
+      Files.write(outputFile.toPath(), new byte[0]);
       profiling = true;
       thisRequestSetProfiling = true;
 
