@@ -160,6 +160,8 @@ public class TestRegionSplit {
   public void testRITWithSplitTableRegion() throws Exception {
     final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    // Disable CatalogJanitor to keep the split region in hbase:meta throughout the test
+    UTIL.getHBaseCluster().getMaster().getCatalogJanitor().setEnabled(false);
 
     RegionInfo[] regions =
       MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName);
@@ -184,6 +186,8 @@ public class TestRegionSplit {
     assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(), "not able to split table");
     assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
       UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
+    assertTrue(UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+      .getOrCreateRegionStateNode(regions[0]).isSplit());
     // As there are only 3 RS, start one more RS before expiring one
     UTIL.getHBaseCluster().startRegionServer();
 
@@ -205,6 +209,8 @@ public class TestRegionSplit {
 
     assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
       UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
+    assertTrue(UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+      .getOrCreateRegionStateNode(regions[0]).isSplit());
   }
 
   @Test
