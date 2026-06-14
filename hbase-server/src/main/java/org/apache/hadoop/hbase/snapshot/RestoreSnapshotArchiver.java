@@ -40,14 +40,14 @@ public interface RestoreSnapshotArchiver {
   /**
    * Archive the hfiles of an entire region that is being removed from the table directory.
    */
-  void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info, Path rootDir, Path tableDir)
-    throws IOException;
+  void archiveRegion(Configuration conf, FileSystem fs, RegionInfo info, Path rootDir,
+    Path tableDir) throws IOException;
 
   /**
    * Archive the store files of a single column family that is being removed from a region.
    */
-  void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf, RegionInfo parent, Path familyDir,
-    byte[] family) throws IOException;
+  void archiveFamilyByFamilyDir(FileSystem fs, Configuration conf, RegionInfo parent,
+    Path familyDir, byte[] family) throws IOException;
 
   /** Default archiver backed by {@link HFileArchiver}, used by server-side restore/clone. */
   RestoreSnapshotArchiver DEFAULT = new RestoreSnapshotArchiver() {

@@ -67,9 +67,9 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
   /** Number of retries in case of fs operation failure */
   private static final int DEFAULT_RETRIES_NUMBER = 3;
 
-  private static final Function<MapreduceHFileArchiver.File, Path> FUNC_FILE_TO_PATH = new Function<MapreduceHFileArchiver.File, Path>() {
+  private static final Function<File, Path> FUNC_FILE_TO_PATH = new Function<File, Path>() {
     @Override
-    public Path apply(MapreduceHFileArchiver.File file) {
+    public Path apply(File file) {
       return file == null ? null : file.getPath();
     }
   };
@@ -131,11 +131,11 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
     Path regionArchiveDir = HFileArchiveUtil.getRegionArchiveDir(rootdir,
       CommonFSUtils.getTableName(tableDir), regionDir.getName());
 
-    MapreduceHFileArchiver.FileStatusConverter getAsFile = new MapreduceHFileArchiver.FileStatusConverter(fs);
+    FileStatusConverter getAsFile = new FileStatusConverter(fs);
     // otherwise, we attempt to archive the store files
 
     // build collection of just the store directories to archive
-    Collection<MapreduceHFileArchiver.File> toArchive = new ArrayList<>();
+    Collection<File> toArchive = new ArrayList<>();
     final PathFilter dirFilter = new FSUtils.DirFilter(fs);
     PathFilter nonHidden = new PathFilter() {
       @Override
@@ -153,7 +153,7 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
     // convert the files in the region to a File
     Stream.of(storeDirs).map(getAsFile).forEachOrdered(toArchive::add);
     LOG.debug("Archiving " + toArchive);
-    List<MapreduceHFileArchiver.File> failedArchive = resolveAndArchive(conf, fs, regionArchiveDir, toArchive,
+    List<File> failedArchive = resolveAndArchive(conf, fs, regionArchiveDir, toArchive,
       EnvironmentEdgeManager.currentTime());
     if (!failedArchive.isEmpty()) {
       throw new FailedArchiveException(
@@ -203,12 +203,12 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
       return;
     }
 
-    MapreduceHFileArchiver.FileStatusConverter getAsFile = new MapreduceHFileArchiver.FileStatusConverter(fs);
-    Collection<MapreduceHFileArchiver.File> toArchive = Stream.of(storeFiles).map(getAsFile).collect(Collectors.toList());
+    FileStatusConverter getAsFile = new FileStatusConverter(fs);
+    Collection<File> toArchive = Stream.of(storeFiles).map(getAsFile).collect(Collectors.toList());
     Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, parent, family);
 
     // do the actual archive
-    List<MapreduceHFileArchiver.File> failedArchive =
+    List<File> failedArchive =
       resolveAndArchive(conf, fs, storeArchiveDir, toArchive, EnvironmentEdgeManager.currentTime());
     if (!failedArchive.isEmpty()) {
       throw new FailedArchiveException(
@@ -231,8 +231,8 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
    * @return the list of failed to archive files.
    * @throws IOException if an unexpected file operation exception occurred
    */
-  private static List<MapreduceHFileArchiver.File> resolveAndArchive(Configuration conf, FileSystem fs,
-    Path baseArchiveDir, Collection<MapreduceHFileArchiver.File> toArchive, long start) throws IOException {
+  private static List<File> resolveAndArchive(Configuration conf, FileSystem fs,
+    Path baseArchiveDir, Collection<File> toArchive, long start) throws IOException {
     // Early exit if no files to archive
     if (toArchive.isEmpty()) {
       LOG.trace("No files to archive, returning an empty list.");
@@ -245,12 +245,12 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
     ensureArchiveDirectoryExists(fs, baseArchiveDir);
 
     // Thread-safe collection for storing failures
-    Queue<MapreduceHFileArchiver.File> failures = new ConcurrentLinkedQueue<>();
+    Queue<File> failures = new ConcurrentLinkedQueue<>();
     String startTime = Long.toString(start);
 
     // Separate files and directories for processing
-    List<MapreduceHFileArchiver.File> filesOnly = new ArrayList<>();
-    for (MapreduceHFileArchiver.File file : toArchive) {
+    List<File> filesOnly = new ArrayList<>();
+    for (File file : toArchive) {
       if (file.isFile()) {
         filesOnly.add(file);
       } else {
@@ -273,12 +273,12 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
   }
 
   private static void handleDirectory(Configuration conf, FileSystem fs, Path baseArchiveDir,
-    Queue<MapreduceHFileArchiver.File> failures, MapreduceHFileArchiver.File directory, long start) {
+    Queue<File> failures, File directory, long start) {
     LOG.trace("Processing directory: {}, archiving its children.", directory);
     Path subArchiveDir = new Path(baseArchiveDir, directory.getName());
 
     try {
-      Collection<MapreduceHFileArchiver.File> children = directory.getChildren();
+      Collection<File> children = directory.getChildren();
       failures.addAll(resolveAndArchive(conf, fs, subArchiveDir, children, start));
     } catch (IOException e) {
       LOG.warn("Failed to archive directory: {}", directory, e);
@@ -287,24 +287,24 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
   }
 
   private static void archiveFilesConcurrently(Configuration conf, Path baseArchiveDir,
-    List<MapreduceHFileArchiver.File> files, Queue<MapreduceHFileArchiver.File> failures, String startTime) {
+    List<File> files, Queue<File> failures, String startTime) {
     LOG.trace("Archiving {} files concurrently into directory: {}", files.size(), baseArchiveDir);
-    Map<MapreduceHFileArchiver.File, Future<Boolean>> futureMap = new HashMap<>();
+    Map<File, Future<Boolean>> futureMap = new HashMap<>();
     // Submit file archiving tasks
     // default is 16 which comes equal hbase.hstore.blockingStoreFiles default value
     int maxThreads = conf.getInt("hbase.hfilearchiver.per.region.thread.pool.max", 16);
     ThreadPoolExecutor hfilesArchiveExecutor = Threads.getBoundedCachedThreadPool(maxThreads, 30L,
       TimeUnit.SECONDS, getThreadFactory("HFileArchiverPerRegion-"));
     try {
-      for (MapreduceHFileArchiver.File file : files) {
+      for (File file : files) {
         Future<Boolean> future = hfilesArchiveExecutor
           .submit(() -> resolveAndArchiveFile(baseArchiveDir, file, startTime));
         futureMap.put(file, future);
       }
 
       // Process results of each task
-      for (Map.Entry<MapreduceHFileArchiver.File, Future<Boolean>> entry : futureMap.entrySet()) {
-        MapreduceHFileArchiver.File file = entry.getKey();
+      for (Map.Entry<File, Future<Boolean>> entry : futureMap.entrySet()) {
+        File file = entry.getKey();
         try {
           if (!entry.getValue().get()) {
             LOG.warn("Failed to archive file: {} into directory: {}", file, baseArchiveDir);
@@ -336,7 +336,7 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
    *         problem, but the operation still completed.
    * @throws IOException on failure to complete {@link FileSystem} operations.
    */
-  private static boolean resolveAndArchiveFile(Path archiveDir, MapreduceHFileArchiver.File currentFile,
+  private static boolean resolveAndArchiveFile(Path archiveDir, File currentFile,
     String archiveStartTime) throws IOException {
     // build path as it should be in the archive
     String filename = currentFile.getName();
@@ -473,11 +473,11 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
 
 
   /**
-   * Adapt a type to match the {@link MapreduceHFileArchiver.File} interface, which is used internally for handling
+   * Adapt a type to match the {@link File} interface, which is used internally for handling
    * archival/removal of files
-   * @param <T> type to adapt to the {@link MapreduceHFileArchiver.File} interface
+   * @param <T> type to adapt to the {@link File} interface
    */
-  private static abstract class FileConverter<T> implements Function<T, MapreduceHFileArchiver.File> {
+  private static abstract class FileConverter<T> implements Function<T, File> {
     protected final FileSystem fs;
 
     public FileConverter(FileSystem fs) {
@@ -488,14 +488,14 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
   /**
    * Convert a FileStatus to something we can manage in the archiving
    */
-  private static class FileStatusConverter extends MapreduceHFileArchiver.FileConverter<FileStatus> {
+  private static class FileStatusConverter extends FileConverter<FileStatus> {
     public FileStatusConverter(FileSystem fs) {
       super(fs);
     }
 
     @Override
-    public MapreduceHFileArchiver.File apply(FileStatus input) {
-      return new MapreduceHFileArchiver.FileablePath(fs, input.getPath());
+    public File apply(FileStatus input) {
+      return new FileablePath(fs, input.getPath());
     }
   }
 
@@ -520,7 +520,7 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
      * @return if this is a directory, returns all the children in the directory, otherwise returns
      *         an empty list
      */
-    abstract Collection<MapreduceHFileArchiver.File> getChildren() throws IOException;
+    abstract Collection<File> getChildren() throws IOException;
 
     /**
      * close any outside readers of the file
@@ -555,16 +555,16 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
   }
 
   /**
-   * A {@link MapreduceHFileArchiver.File} that wraps a simple {@link Path} on a {@link FileSystem}.
+   * A {@link File} that wraps a simple {@link Path} on a {@link FileSystem}.
    */
-  private static class FileablePath extends MapreduceHFileArchiver.File {
+  private static class FileablePath extends File {
     private final Path file;
-    private final MapreduceHFileArchiver.FileStatusConverter getAsFile;
+    private final FileStatusConverter getAsFile;
 
     public FileablePath(FileSystem fs, Path file) {
       super(fs);
       this.file = file;
-      this.getAsFile = new MapreduceHFileArchiver.FileStatusConverter(fs);
+      this.getAsFile = new FileStatusConverter(fs);
     }
 
     @Override
@@ -573,7 +573,7 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
     }
 
     @Override
-    public Collection<MapreduceHFileArchiver.File> getChildren() throws IOException {
+    public Collection<File> getChildren() throws IOException {
       if (fs.isFile(file)) {
         return Collections.emptyList();
       }

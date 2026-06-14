@@ -93,8 +93,8 @@ public class TestMapreduceRestoreSnapshotHelper {
   }
 
   /**
-   * A fresh restore directory outside the HBase root must be accepted and must restore via the clone
-   * path (HFileLinks land under restoreDir, never inside the production data directory).
+   * A fresh restore directory outside the HBase root must be accepted and must restore via the
+   * clone path (HFileLinks land under restoreDir, never inside the production data directory).
    */
   @Test
   public void testNoHFileLinkInRootDir() throws IOException {
@@ -158,11 +158,13 @@ public class TestMapreduceRestoreSnapshotHelper {
     Path root = new Path("/hbase");
     IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
       MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, root, "snap"));
-    assertTrue(e.getMessage().contains("BLOCKED: MapReduce restore directory cannot be the HBase root directory"), e.getMessage());
+    assertTrue(e.getMessage().contains("BLOCKED"), e.getMessage());
+    assertTrue(e.getMessage().contains("cannot be the HBase root directory"), e.getMessage());
   }
 
   /**
-   * Guard (HBASE-29435): a restore directory nested under the HBase root directory must be rejected.
+   * Guard (HBASE-29435): a restore directory nested under the HBase root directory must be
+   * rejected.
    */
   @Test
   public void testRejectRestoreDirUnderRootDir() {
@@ -170,7 +172,44 @@ public class TestMapreduceRestoreSnapshotHelper {
     Path restoreDir = new Path(root, "data/.tmp-restore");
     IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
       MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, restoreDir, "snap"));
-    assertTrue(e.getMessage().contains("BLOCKED: MapReduce restore directory cannot be the HBase root directory"), e.getMessage());
+    assertTrue(e.getMessage().contains("BLOCKED"), e.getMessage());
+    assertTrue(e.getMessage().contains("cannot be the HBase root directory"), e.getMessage());
+  }
+
+  /**
+   * Guard (HBASE-29435): a filesystem that does not host the HBase root directory must be rejected,
+   * so a restore can never archive files across filesystems.
+   */
+  @Test
+  public void testRejectMismatchedFilesystem() throws IOException {
+    Path hdfsRoot = TEST_UTIL.getDefaultRootDirPath();
+    FileSystem localFs = FileSystem.getLocal(conf);
+    Path restoreDir = new Path(hdfsRoot, "data/.tmp-restore");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
+      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, localFs, hdfsRoot, restoreDir,
+        "snap"));
+    assertTrue(e.getMessage().contains("BLOCKED"), e.getMessage());
+  }
+
+  /**
+   * Negative contract: a restore directory that is a sibling of (not under) the HBase root
+   * directory must not be blocked by the guard. The snapshot does not exist, so any failure comes
+   * from snapshot loading downstream, never from the guard.
+   */
+  @Test
+  public void testSiblingRestoreDirNotBlocked() throws IOException {
+    rootDir = TEST_UTIL.getDefaultRootDirPath();
+    CommonFSUtils.setRootDir(conf, rootDir);
+    fs = rootDir.getFileSystem(conf);
+    Path siblingRestore = new Path("/hbase/.tmp-sibling-restore");
+    try {
+      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, siblingRestore,
+        "nonexistent-snapshot");
+    } catch (Exception e) {
+      String msg = e.getMessage();
+      assertFalse(msg != null && msg.contains("BLOCKED"),
+        "sibling restoreDir must not be blocked by the guard: " + msg);
+    }
   }
 
   protected void createTableAndSnapshot(TableName tableName, String snapshotName)

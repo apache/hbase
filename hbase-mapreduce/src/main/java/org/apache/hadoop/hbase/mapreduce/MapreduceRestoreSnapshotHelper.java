@@ -24,57 +24,59 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 /**
  * MapReduce entry point for restoring a snapshot into a temporary directory for scanning.
  * <p>
  * This is a thin wrapper around {@link RestoreSnapshotHelper}: it adds a MapReduce-specific safety
  * guard that prevents the restore directory from pointing at (or under) the live HBase root
- * directory, then delegates the actual restore/clone to {@link RestoreSnapshotHelper}, injecting the
- * MapReduce-local {@link MapreduceHFileArchiver} so that no core restore logic is duplicated here.
+ * directory, then delegates the actual restore/clone to {@link RestoreSnapshotHelper}, injecting
+ * the MapReduce-local {@link MapreduceHFileArchiver} so that no core restore logic is duplicated
+ * here.
  * <p>
- * The extra guard matters because a misconfigured {@code restoreDir} under {@code hbase.rootdir/data}
- * would let the MapReduce job archive (and ultimately delete) production HFiles. The server-side
- * restore/clone procedures legitimately operate against the production root directory, so this
- * stricter validation is layered only on the MapReduce path rather than in
+ * The extra guard matters because a misconfigured {@code restoreDir} under
+ * {@code hbase.rootdir/data} would let the MapReduce job archive (and ultimately delete) production
+ * HFiles. The server-side restore/clone procedures legitimately operate against the production root
+ * directory, so this stricter validation is layered only on the MapReduce path rather than in
  * {@link RestoreSnapshotHelper} itself. See HBASE-29435.
  */
 @InterfaceAudience.Private
 public final class MapreduceRestoreSnapshotHelper {
 
-  private static final Logger LOG =
-    LoggerFactory.getLogger(MapreduceRestoreSnapshotHelper.class);
-
   private MapreduceRestoreSnapshotHelper() {
   }
 
   /**
-   * Copy the snapshot files for a snapshot scanner, discards meta changes.
+   * Copy the snapshot files for a snapshot scanner.
    * <p>
-   * Rejects a {@code restoreDir} that equals or is nested under {@code rootDir} before delegating to
-   * {@link RestoreSnapshotHelper#copySnapshotForScanner}, which performs the restore using the
+   * Rejects a {@code restoreDir} that equals or is nested under {@code rootDir} (compared as
+   * fully-qualified paths), and a {@code fs} that does not host {@code rootDir}, before delegating
+   * to {@link RestoreSnapshotHelper#copySnapshotForScanner}, which performs the restore using the
    * MapReduce-local archiver.
    */
-  public static RestoreSnapshotHelper.RestoreMetaChanges copySnapshotForScanner(Configuration conf,
-    FileSystem fs, Path rootDir, Path restoreDir, String snapshotName) throws IOException {
-    // Guard (HBASE-29435): the restore directory must not be the HBase root directory or a
-    // sub directory of it, otherwise the MR job could archive and permanently delete production
-    // HFiles once the HFileCleaner TTL elapses.
-    String rootPath = rootDir.toUri().getPath();
-    String restorePath = restoreDir.toUri().getPath();
-    if (restorePath.equals(rootPath) || restorePath.startsWith(rootPath + "/")) {
-      String message = "BLOCKED: MapReduce restore directory cannot be the HBase root directory "
-        + "or a sub directory of it. This could lead to accidental archival and permanent "
-        + "data loss if the path falls under " + rootDir + "/data/. Use a temporary directory "
-        + "outside of hbase.rootdir for MR snapshot scanning. RootDir: " + rootDir
-        + ", restoreDir: " + restoreDir;
-      LOG.error(message);
-      throw new IllegalArgumentException(message);
+  public static void copySnapshotForScanner(Configuration conf, FileSystem fs, Path rootDir,
+    Path restoreDir, String snapshotName) throws IOException {
+    // The provided filesystem must host the HBase root directory; otherwise the path comparison
+    // below is meaningless and a restore could archive files across filesystems (HBASE-29435).
+    FileSystem rootDirFs = rootDir.getFileSystem(conf);
+    if (!fs.getUri().equals(rootDirFs.getUri())) {
+      throw new IllegalArgumentException("BLOCKED: MapReduce restore filesystem " + fs.getUri()
+        + " does not match the HBase root directory filesystem " + rootDirFs.getUri()
+        + ". Use the HBase root filesystem for MR snapshot scanning.");
     }
-
-    return RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
+    // Compare fully-qualified paths (scheme + authority + path) so that trailing slashes or
+    // authority differences cannot slip a production path past the guard.
+    String rootPath = fs.makeQualified(rootDir).toString();
+    String restorePath = fs.makeQualified(restoreDir).toString();
+    if (restorePath.equals(rootPath) || restorePath.startsWith(rootPath + "/")) {
+      throw new IllegalArgumentException(
+        "BLOCKED: MapReduce restore directory cannot be the HBase root directory or a sub "
+          + "directory of it. This could lead to accidental archival and permanent data loss if "
+          + "the path falls under " + rootDir + "/data/. Use a temporary directory outside of "
+          + "hbase.rootdir for MR snapshot scanning. RootDir: " + rootDir + ", restoreDir: "
+          + restoreDir);
+    }
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
       new MapreduceHFileArchiver());
   }
 }

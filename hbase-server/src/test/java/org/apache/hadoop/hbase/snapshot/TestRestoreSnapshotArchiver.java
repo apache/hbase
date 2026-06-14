@@ -145,8 +145,8 @@ public class TestRestoreSnapshotArchiver {
   }
 
   /**
-   * A fresh (empty) restore directory always takes the clone path, which only creates HFileLinks and
-   * must never invoke the archiver.
+   * A fresh (empty) restore directory always takes the clone path, which only creates HFileLinks
+   * and must never invoke the archiver.
    */
   @Test
   public void testFreshCloneDoesNotInvokeArchiver() throws IOException {
