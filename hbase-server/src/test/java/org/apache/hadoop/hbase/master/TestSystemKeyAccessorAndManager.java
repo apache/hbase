@@ -25,6 +25,7 @@ import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -358,6 +359,8 @@ public class TestSystemKeyAccessorAndManager {
     public static final HBaseClassTestRule CLASS_RULE =
       HBaseClassTestRule.forClass(TestAccessorMisc.class);
 
+    private static final String CLUSTER_ID = "clusterId";
+
     @Test
     public void testLoadSystemKeySuccess() throws Exception {
       Path testPath = new Path("/test/key/path");
@@ -372,9 +375,11 @@ public class TestSystemKeyAccessorAndManager {
 
       // Mock key provider
       ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);
-      when(realProvider.unwrapKey(null, testMetadata, null)).thenReturn(testKeyData);
+      when(realProvider.unwrapKey(any(ManagedKeyIdentity.class), eq(testMetadata), isNull()))
+        .thenReturn(testKeyData);
 
-      // Create testable SystemKeyAccessor that overrides both loadKeyMetadata and getKeyProvider
+      // Create testable SystemKeyAccessor that overrides loadKeyMetadata, getKeyProvider and the
+      // cluster ID (so no real cluster-id read is attempted against the mock FS).
       SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
         @Override
         protected String loadKeyMetadata(Path keyPath) throws IOException {
@@ -386,13 +391,18 @@ public class TestSystemKeyAccessorAndManager {
         public ManagedKeyProvider getKeyProvider() {
           return realProvider;
         }
+
+        @Override
+        protected ClusterId getClusterId() {
+          return new ClusterId(CLUSTER_ID);
+        }
       };
 
       ManagedKeyData result = testAccessor.loadSystemKey(testPath);
       assertEquals(testKeyData, result);
 
       // Verify the key provider was called correctly
-      verify(realProvider).unwrapKey(null, testMetadata, null);
+      verify(realProvider).unwrapKey(any(ManagedKeyIdentity.class), eq(testMetadata), isNull());
     }
 
     @Test(expected = RuntimeException.class)
@@ -402,7 +412,8 @@ public class TestSystemKeyAccessorAndManager {
 
       // Mock key provider to return null
       ManagedKeyProvider realProvider = mock(ManagedKeyProvider.class);
-      when(realProvider.unwrapKey(null, testMetadata, null)).thenReturn(null);
+      when(realProvider.unwrapKey(any(ManagedKeyIdentity.class), eq(testMetadata), isNull()))
+        .thenReturn(null);
 
       SystemKeyAccessor testAccessor = new SystemKeyAccessor(mockMaster) {
         @Override
@@ -414,6 +425,11 @@ public class TestSystemKeyAccessorAndManager {
         @Override
         public ManagedKeyProvider getKeyProvider() {
           return realProvider;
+        }
+
+        @Override
+        protected ClusterId getClusterId() {
+          return new ClusterId(CLUSTER_ID);
         }
       };
 
@@ -451,6 +467,11 @@ public class TestSystemKeyAccessorAndManager {
         @Override
         public ManagedKeyProvider getKeyProvider() {
           return mock(ManagedKeyProvider.class);
+        }
+
+        @Override
+        protected ClusterId getClusterId() {
+          return new ClusterId(CLUSTER_ID);
         }
       };
 

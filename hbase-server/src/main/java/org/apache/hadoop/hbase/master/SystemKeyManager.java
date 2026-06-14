@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.UUID;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyState;
@@ -72,14 +73,23 @@ public class SystemKeyManager extends SystemKeyAccessor {
     return rotateSystemKey(latestKeyMetadata, latestFileResult.getSecond());
   }
 
+  /**
+   * Use the cluster ID the master already holds in memory rather than reading it from the file
+   * system. This avoids a redundant FS read and keeps the rotate path's stubbed-cluster-id tests
+   * honest.
+   */
+  @Override
+  protected ClusterId getClusterId() {
+    return master.getMasterFileSystem().getClusterId();
+  }
+
   private ManagedKeyData rotateSystemKey(String currentKeyMetadata, List<Path> allSystemKeyFiles)
     throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
-    ManagedKeyData clusterKey =
-      provider.getSystemKey(master.getMasterFileSystem().getClusterId().toString().getBytes());
+    ManagedKeyData clusterKey = provider.getSystemKey(getClusterId().toString().getBytes());
     if (clusterKey == null) {
-      throw new IOException("Failed to get system key for cluster id: "
-        + master.getMasterFileSystem().getClusterId().toString());
+      throw new IOException(
+        "Failed to get system key for cluster id: " + getClusterId().toString());
     }
     if (clusterKey.getKeyState() != ManagedKeyState.ACTIVE) {
       throw new IOException("System key is expected to be ACTIVE but it is: "

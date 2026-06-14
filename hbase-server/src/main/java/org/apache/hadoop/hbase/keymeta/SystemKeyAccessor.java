@@ -30,10 +30,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyData;
 import org.apache.hadoop.hbase.io.crypto.ManagedKeyProvider;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -45,6 +48,11 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   private final FileSystem fs;
   protected final Path systemKeyDir;
+
+  // Lazily-read system key identity, cached so the cluster-id file is read at most once per
+  // accessor instance even though loadSystemKey() is invoked once per system key file by
+  // SystemKeyCache.createCache().
+  private ManagedKeyIdentity systemKeyIdentity;
 
   public SystemKeyAccessor(Server server) throws IOException {
     this(server.getConfiguration(), server.getFileSystem());
@@ -95,11 +103,45 @@ public class SystemKeyAccessor extends KeyManagementBase {
 
   public ManagedKeyData loadSystemKey(Path keyPath) throws IOException {
     ManagedKeyProvider provider = getKeyProvider();
-    ManagedKeyData keyData = provider.unwrapKey(null, loadKeyMetadata(keyPath), null);
+    ManagedKeyData keyData =
+      provider.unwrapKey(getSystemKeyIdentity(), loadKeyMetadata(keyPath), null);
     if (keyData == null) {
       throw new RuntimeException("Failed to load system key from: " + keyPath);
     }
     return keyData;
+  }
+
+  /**
+   * Return the cluster ID, which is used as the system key custodian. The base implementation reads
+   * it from the file system; {@link org.apache.hadoop.hbase.master.SystemKeyManager} overrides this
+   * to use the cluster ID the master already holds in memory.
+   * @return the cluster ID, or {@code null} if it is not available
+   * @throws IOException if reading the cluster ID fails
+   */
+  protected ClusterId getClusterId() throws IOException {
+    return FSUtils.getClusterId(fs, CommonFSUtils.getRootDir(getConfiguration()));
+  }
+
+  /**
+   * Build the (prefix) identity for the system key: the cluster ID as the custodian and the global
+   * namespace. This is the same custodian and namespace
+   * {@link org.apache.hadoop.hbase.master.SystemKeyManager} uses when it generates the system key,
+   * so a provider can rebuild the same full identity from the supplied prefix plus the stored
+   * metadata. The result is cached per instance since the cluster ID is immutable for the life of
+   * the cluster.
+   * @return the system key identity prefix, never {@code null}
+   * @throws IOException if the cluster ID is not available
+   */
+  private ManagedKeyIdentity getSystemKeyIdentity() throws IOException {
+    if (systemKeyIdentity == null) {
+      ClusterId clusterId = getClusterId();
+      if (clusterId == null || clusterId.toString() == null || clusterId.toString().isEmpty()) {
+        throw new IOException("Cannot build system key identity: cluster ID is not available");
+      }
+      systemKeyIdentity = new KeyIdentityPrefixBytesBacked(
+        new Bytes(clusterId.toString().getBytes()), ManagedKeyData.KEY_SPACE_GLOBAL_BYTES);
+    }
+    return systemKeyIdentity;
   }
 
   @InterfaceAudience.Private

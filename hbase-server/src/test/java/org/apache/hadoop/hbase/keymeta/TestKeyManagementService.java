@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
@@ -70,6 +71,22 @@ public class TestKeyManagementService {
     conf.set(HConstants.CRYPTO_MANAGED_KEYPROVIDER_CONF_KEY,
       MockManagedKeyProvider.class.getName());
     conf.set(HConstants.HBASE_ORIGINAL_ROOT_DIR, "/tmp/hbase");
+    conf.set(HConstants.HBASE_DIR, "/tmp/hbase");
+  }
+
+  /**
+   * Stub the cluster-id file read on the mock file system so SystemKeyAccessor can build a
+   * non-null system key identity (custodian = cluster ID).
+   */
+  private void stubClusterIdRead() throws IOException {
+    Path idPath = new Path(CommonFSUtils.getRootDir(conf), HConstants.CLUSTER_ID_FILE_NAME);
+    byte[] content = new ClusterId().toByteArray();
+    FileStatus idStatus = mock(FileStatus.class);
+    when(idStatus.getLen()).thenReturn((long) content.length);
+    when(mockFileSystem.exists(eq(idPath))).thenReturn(true);
+    when(mockFileSystem.getFileStatus(eq(idPath))).thenReturn(idStatus);
+    when(mockFileSystem.open(eq(idPath)))
+      .thenReturn(new FSDataInputStream(new SeekableByteArrayInputStream(content)));
   }
 
   @Test
@@ -98,6 +115,7 @@ public class TestKeyManagementService {
     when(mockFileSystem.open(eq(mockFileStatus.getPath()))).thenReturn(realStream);
     when(mockFileSystem.globStatus(eq(new Path(systemKeyDir, SYSTEM_KEY_FILE_PREFIX + "*"))))
       .thenReturn(new FileStatus[] { mockFileStatus });
+    stubClusterIdRead();
 
     KeyManagementService service = KeyManagementService.createDefault(conf, mockFileSystem);
     assertNotNull(service);
