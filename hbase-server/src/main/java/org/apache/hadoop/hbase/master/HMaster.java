@@ -4316,17 +4316,21 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       throw new TableNotFoundException(tableName);
     }
 
+    TableDescriptor tableDescriptor = getTableDescriptors().get(tableName);
+    if (tableDescriptor == null) {
+      throw new TableNotFoundException(tableName);
+    }
+
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
           ReopenTableRegionsProcedure proc;
           if (regionNames.isEmpty()) {
-            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
-              getTableDescriptors().get(tableName));
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(), tableDescriptor);
           } else {
-            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
-              getTableDescriptors().get(tableName), regionNames);
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(), tableDescriptor,
+              regionNames);
           }
 
           LOG.info("{} throttled reopening {} regions for table {}", getClientIdAuditPrefix(),

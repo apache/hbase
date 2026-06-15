@@ -82,6 +82,12 @@ public class RegionsRecoveryChore extends ScheduledChore {
         "Starting up Regions Recovery chore for reopening regions based on storeFileRefCount...");
     }
     try {
+      if (!hMaster.isInitialized()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping regions recovery chore because master is not initialized yet");
+        }
+        return;
+      }
       // only if storeFileRefCountThreshold > 0, consider the feature turned on
       if (storeFileRefCountThreshold > 0) {
         final ClusterMetrics clusterMetrics = hMaster.getClusterMetrics();

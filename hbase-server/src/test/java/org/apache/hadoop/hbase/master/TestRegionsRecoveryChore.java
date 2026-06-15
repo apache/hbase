@@ -208,6 +208,24 @@ public class TestRegionsRecoveryChore {
     Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any(byte[].class));
   }
 
+  @Test
+  public void testRegionReopensSkippedWhenMasterNotInitialized() throws Exception {
+    Mockito.when(hMaster.isInitialized()).thenReturn(false);
+
+    Stoppable stoppable = new StoppableImplementation();
+    Configuration configuration = getCustomConf();
+    configuration.setInt("hbase.regions.recovery.store.file.ref.count", 300);
+    regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
+    regionsRecoveryChore.chore();
+
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
+    Mockito.verify(hMaster, Mockito.times(0)).getClusterMetrics();
+    Mockito.verify(hMaster, Mockito.times(0)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
+    Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any(byte[].class));
+  }
+
   private static ClusterMetrics getClusterMetrics(int noOfLiveServer) {
     ClusterMetrics clusterMetrics = new ClusterMetrics() {
 
