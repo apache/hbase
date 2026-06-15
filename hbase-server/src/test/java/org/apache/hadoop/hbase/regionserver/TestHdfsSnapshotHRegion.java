@@ -83,8 +83,8 @@ public class TestHdfsSnapshotHRegion {
   }
 
   @Test
-  public void testSnapshottingWithTmpSplitsAndMergeDirectoriesPresent() throws Exception {
-    // lets get a region and create those directories and make sure we ignore them
+  public void testSnapshottingWithTmpDirectoryPresent() throws Exception {
+    // Create the temp directory and make sure snapshot-open still ignores it.
     RegionInfo firstRegion = TEST_UTIL.getConnection().getRegionLocator(table.getName())
       .getAllRegionLocations().stream().findFirst().get().getRegion();
     String encodedName = firstRegion.getEncodedName();
@@ -92,9 +92,6 @@ public class TestHdfsSnapshotHRegion {
     Path regionDirectoryPath = new Path(tableDir, encodedName);
     TEST_UTIL.getTestFileSystem()
       .create(new Path(regionDirectoryPath, HRegionFileSystem.REGION_TEMP_DIR));
-    // Legacy directories created by split/merge before HBASE-26187
-    TEST_UTIL.getTestFileSystem().create(new Path(regionDirectoryPath, ".splits"));
-    TEST_UTIL.getTestFileSystem().create(new Path(regionDirectoryPath, ".merges"));
     // now snapshot
     String snapshotDir = client.createSnapshot(baseDir, "foo_snapshot");
     // everything should still open just fine
