@@ -95,6 +95,7 @@ public class TestRegionsRecoveryChore {
   public void setUp() throws Exception {
     this.hMaster = Mockito.mock(HMaster.class);
     this.assignmentManager = Mockito.mock(AssignmentManager.class);
+    Mockito.when(hMaster.isInitialized()).thenReturn(true);
   }
 
   @AfterEach
@@ -127,6 +128,8 @@ public class TestRegionsRecoveryChore {
     configuration.setInt("hbase.regions.recovery.store.file.ref.count", 300);
     regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
     regionsRecoveryChore.chore();
+
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
 
     // Verify that we need to reopen regions of 2 tables
     Mockito.verify(hMaster, Mockito.times(2)).reopenRegionsThrottled(Mockito.any(),
@@ -163,6 +166,8 @@ public class TestRegionsRecoveryChore {
     regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
     regionsRecoveryChore.chore();
 
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
+
     // Verify that we need to reopen regions of only 1 table
     Mockito.verify(hMaster, Mockito.times(1)).reopenRegionsThrottled(Mockito.any(),
       Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
@@ -197,6 +202,8 @@ public class TestRegionsRecoveryChore {
     configuration.unset("hbase.regions.recovery.store.file.ref.count");
     regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
     regionsRecoveryChore.chore();
+
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
 
     // Verify that by default the feature is turned off so no regions
     // should be reopened
