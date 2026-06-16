@@ -45,22 +45,15 @@ public abstract class Cipher {
   public static final String RNG_PROVIDER_KEY = "hbase.crypto.algorithm.rng.provider";
 
   private final CipherProvider provider;
-  private final SecureRandom rng;
+  // Lazily initialized via getRNG(). The RNG is only used on the encrypt path
+  // (getEncryptor()/getRandomKey()); the decrypt path never touches it, so building it eagerly in
+  // the constructor would waste a SecureRandom.getInstance() provider lookup on every key unwrap.
+  // The config it needs is read lazily off the retained provider, so no constructor-side capture is
+  // required.
+  private volatile SecureRandom rng;
 
   public Cipher(CipherProvider provider) {
     this.provider = provider;
-    String rngAlgorithm = provider.getConf().get(RNG_ALGORITHM_KEY, "SHA1PRNG");
-    String rngProvider = provider.getConf().get(RNG_PROVIDER_KEY);
-    SecureRandom instance;
-    try {
-      instance = (rngProvider != null)
-        ? SecureRandom.getInstance(rngAlgorithm, rngProvider)
-        : SecureRandom.getInstance(rngAlgorithm);
-    } catch (GeneralSecurityException e) {
-      LOG.warn("Could not instantiate specified RNG, falling back to default", e);
-      instance = new SecureRandom();
-    }
-    this.rng = instance;
   }
 
   /**
@@ -70,9 +63,29 @@ public abstract class Cipher {
     return provider;
   }
 
-  /** Return the {@link SecureRandom} instance used by this cipher. */
+  /**
+   * Return the {@link SecureRandom} instance used by this cipher, constructing it lazily on first
+   * use. Only the encrypt path needs it; callers on the decrypt path never invoke this, so the RNG
+   * is never built for unwrap-only ciphers. No locking: if two threads race here they each build a
+   * valid, independently-seeded RNG and one is published to the volatile field; the redundant one is
+   * simply discarded, which is harmless.
+   */
   protected SecureRandom getRNG() {
-    return rng;
+    SecureRandom result = rng;
+    if (result == null) {
+      String rngAlgorithm = provider.getConf().get(RNG_ALGORITHM_KEY, "SHA1PRNG");
+      String rngProvider = provider.getConf().get(RNG_PROVIDER_KEY);
+      try {
+        result = (rngProvider != null)
+          ? SecureRandom.getInstance(rngAlgorithm, rngProvider)
+          : SecureRandom.getInstance(rngAlgorithm);
+      } catch (GeneralSecurityException e) {
+        LOG.warn("Could not instantiate specified RNG, falling back to default", e);
+        result = new SecureRandom();
+      }
+      rng = result;
+    }
+    return result;
   }
 
   /**
@@ -113,7 +126,7 @@ public abstract class Cipher {
    */
   public Key getRandomKey() {
     byte[] keyBytes = new byte[getKeyLength()];
-    rng.nextBytes(keyBytes);
+    getRNG().nextBytes(keyBytes);
     return new SecretKeySpec(keyBytes, getKeyAlgorithm());
   }
 
