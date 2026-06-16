@@ -1450,6 +1450,7 @@ public class HMaster extends HRegionServer implements MasterServices {
 
   private void initMobCleaner() {
     this.mobFileCleanerChore = new MobFileCleanerChore(this);
+    configurationManager.registerObserver(this.mobFileCleanerChore);
     getChoreService().scheduleChore(mobFileCleanerChore);
     this.mobFileCompactionChore = new MobFileCompactionChore(this);
     getChoreService().scheduleChore(mobFileCompactionChore);
