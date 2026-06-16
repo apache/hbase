@@ -126,6 +126,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -755,7 +756,7 @@ public class TestThriftHBaseServiceHandler {
    * Tests keeping a HBase scanner alive for long periods of time. Each call to getScannerRow()
    * should reset the ConnectionCache timeout for the scanner's connection
    */
-  @org.junit.Ignore
+  @Disabled
   @Test // Flakey. Diasabled by HBASE-24079. Renable with Fails with HBASE-24083.
   // Caused by: java.util.concurrent.RejectedExecutionException:
   // Task org.apache.hadoop.hbase.client.ResultBoundedCompletionService$QueueingFuture@e385431

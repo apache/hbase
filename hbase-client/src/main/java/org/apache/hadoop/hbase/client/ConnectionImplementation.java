@@ -1092,6 +1092,8 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
             // the parent in the above condition, so we may have already reached a region which does
             // not contains us.
             if (!regionInfo.containsRow(row)) {
+              LOG.debug("RegionInfo {} does not contains row {}", regionInfo,
+                Bytes.toStringBinary(row));
               throw new IOException(
                 "Unable to find region for " + Bytes.toStringBinary(row) + " in " + tableName);
             }

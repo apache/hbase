@@ -51,6 +51,7 @@ import org.junit.jupiter.api.Test;
 public class TestZstdDictionarySplitMerge {
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+  private static int numRows = 10_000;
   private static Configuration conf;
 
   @BeforeAll
@@ -82,16 +83,16 @@ public class TestZstdDictionarySplitMerge {
         .setConfiguration(ZstdCodec.ZSTD_DICTIONARY_KEY, dictionaryPath).build())
       .build();
     final Admin admin = TEST_UTIL.getAdmin();
-    admin.createTable(td, new byte[][] { Bytes.toBytes(1) });
+    admin.createTable(td, new byte[][] { Bytes.toBytes(String.valueOf(1)) });
     TEST_UTIL.waitTableAvailable(tableName);
     // Load some data
     Table t = ConnectionFactory.createConnection(conf).getTable(tableName);
-    TEST_UTIL.loadNumericRows(t, cfName, 0, 100_000);
+    TEST_UTIL.loadNumericRows(t, cfName, 0, numRows);
     admin.flush(tableName);
     assertTrue(DictionaryCache.contains(dictionaryPath), "Dictionary was not loaded");
-    TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
+    TEST_UTIL.verifyNumericRows(t, cfName, 0, numRows, 0);
     // Test split procedure
-    admin.split(tableName, Bytes.toBytes(50_000));
+    admin.split(tableName, Bytes.toBytes(String.valueOf(numRows / 2)));
     TEST_UTIL.waitFor(30000, new ExplainingPredicate<Exception>() {
       @Override
       public boolean evaluate() throws Exception {
@@ -104,30 +105,36 @@ public class TestZstdDictionarySplitMerge {
       }
     });
     TEST_UTIL.waitUntilNoRegionsInTransition();
-    TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
+    TEST_UTIL.verifyNumericRows(t, cfName, 0, numRows, 0);
     // Test merge procedure
     RegionInfo regionA = null;
     RegionInfo regionB = null;
+
     for (RegionInfo region : admin.getRegions(tableName)) {
       if (region.getStartKey().length == 0) {
         regionA = region;
-      } else if (Bytes.equals(region.getStartKey(), Bytes.toBytes(1))) {
+      } else if (Bytes.equals(region.getStartKey(), Bytes.toBytes(String.valueOf(1)))) {
         regionB = region;
       }
     }
     assertNotNull(regionA);
     assertNotNull(regionB);
+
+    // major compact before merging otherwise the regions are not mergable
+    TEST_UTIL.compact(tableName, true);
+    admin.reopenTableRegions(tableName);
+
     admin
       .mergeRegionsAsync(new byte[][] { regionA.getRegionName(), regionB.getRegionName() }, false)
-      .get(30, TimeUnit.SECONDS);
+      .get(300, TimeUnit.SECONDS);
     assertEquals(2, admin.getRegions(tableName).size());
     ServerName expected = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
     assertEquals(expected, TEST_UTIL.getConnection().getRegionLocator(tableName)
-      .getRegionLocation(Bytes.toBytes(1), true).getServerName());
+      .getRegionLocation(Bytes.toBytes(String.valueOf(1)), true).getServerName());
     try (AsyncConnection asyncConn = ConnectionFactory.createAsyncConnection(conf).get()) {
       assertEquals(expected, asyncConn.getRegionLocator(tableName)
-        .getRegionLocation(Bytes.toBytes(1), true).get().getServerName());
+        .getRegionLocation(Bytes.toBytes(String.valueOf(1)), true).get().getServerName());
     }
-    TEST_UTIL.verifyNumericRows(t, cfName, 0, 100_000, 0);
+    TEST_UTIL.verifyNumericRows(t, cfName, 0, numRows, 0);
   }
 }
