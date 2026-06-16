@@ -78,12 +78,6 @@ public class HRegionFileSystem {
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";
 
-  /** Temporary subdirectory of the region directory used for merges. */
-  public static final String REGION_MERGES_DIR = ".merges";
-
-  /** Temporary subdirectory of the region directory used for splits. */
-  public static final String REGION_SPLITS_DIR = ".splits";
-
   /** Temporary subdirectory of the region directory used for compaction output. */
   static final String REGION_TEMP_DIR = ".tmp";
 
@@ -998,31 +992,6 @@ public class HRegionFileSystem {
     if (!fs.delete(regionDir, true)) {
       LOG.warn("Failed delete of " + regionDir);
     }
-  }
-
-  /**
-   * Retrieves the Region ID from the given HFile path.
-   * @param hFilePath The path of the HFile.
-   * @return The Region ID extracted from the HFile path.
-   * @throws IOException If an I/O error occurs or if the HFile path is incorrect.
-   */
-  public static String getRegionId(Path hFilePath) throws IOException {
-    if (hFilePath.getParent() == null || hFilePath.getParent().getParent() == null) {
-      throw new IOException("Incorrect HFile Path: " + hFilePath);
-    }
-    Path dir = hFilePath.getParent().getParent();
-    if (isTemporaryDirectoryName(dir.getName())) {
-      if (dir.getParent() == null) {
-        throw new IOException("Incorrect HFile Path: " + hFilePath);
-      }
-      return dir.getParent().getName();
-    }
-    return dir.getName();
-  }
-
-  private static boolean isTemporaryDirectoryName(String dirName) {
-    return REGION_MERGES_DIR.equals(dirName) || REGION_SPLITS_DIR.equals(dirName)
-      || REGION_TEMP_DIR.equals(dirName);
   }
 
   /**
