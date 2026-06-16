@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Objects;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -54,6 +56,35 @@ public final class CacheAccessServices {
   public static CacheAccessService fromBlockCache(BlockCache blockCache) {
     return new BlockCacheBackedCacheAccessService(
       Objects.requireNonNull(blockCache, "blockCache must not be null"));
+  }
+
+  /**
+   * Creates a {@link CacheAccessService} from the block cache configuration.
+   * <p>
+   * This method is a compatibility factory for tests and transitional code paths that want to
+   * obtain a {@link CacheAccessService} directly from {@link Configuration}, while still using the
+   * existing {@link BlockCacheFactory} and legacy {@link BlockCache} implementations underneath.
+   * </p>
+   * <p>
+   * The method delegates block-cache construction to
+   * {@link BlockCacheFactory#createBlockCache(Configuration)}. If the legacy factory creates a
+   * {@link BlockCache}, the returned service is backed by that cache through
+   * {@link BlockCacheBackedCacheAccessService}. If the legacy factory does not create a cache, this
+   * method returns the disabled/no-op cache access service.
+   * </p>
+   * <p>
+   * This method does not introduce new cache-engine or topology-based runtime wiring. It is
+   * intended only as a bridge while existing HBase tests and integration paths migrate from direct
+   * {@link BlockCache} usage to {@link CacheAccessService}.
+   * </p>
+   * @param conf configuration used by {@link BlockCacheFactory}
+   * @return cache access service created from the configured legacy block cache, or disabled when
+   *         no block cache is configured
+   * @throws NullPointerException if {@code conf} is {@code null}
+   */
+  public static CacheAccessService fromConfiguration(Configuration conf) {
+    Objects.requireNonNull(conf, "conf must not be null");
+    return fromBlockCache(BlockCacheFactory.createBlockCache(conf));
   }
 
   /**
