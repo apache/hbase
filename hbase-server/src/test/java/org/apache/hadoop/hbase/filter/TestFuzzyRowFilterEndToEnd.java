@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
@@ -326,6 +327,47 @@ public class TestFuzzyRowFilterEndToEnd {
 
     // Only one row who's rowKey=1
     assertNull(scanner.next());
+
+    TEST_UTIL.deleteTable(TableName.valueOf(name));
+  }
+
+  @Test
+  public void testReverseScanMovesPastSameRowFuzzyHint(TestInfo testInfo) throws IOException {
+    final String cf = "f";
+    final String cq = "q";
+
+    String name = testInfo.getTestMethod().orElseThrow(AssertionError::new).getName();
+    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name), Bytes.toBytes(cf))) {
+      List<Put> puts = Lists.newArrayList();
+      puts.add(new Put(Bytes.toBytes("aaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("aba")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abb")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abc")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      ht.put(puts);
+
+      TEST_UTIL.flush();
+
+      List<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
+      fuzzyList.add(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 }));
+
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      scan.setFilter(new FuzzyRowFilter(fuzzyList));
+
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        assertEquals("aba", Bytes.toString(result.getRow()));
+        result = scanner.next();
+        assertNotNull(result);
+        assertEquals("aaa", Bytes.toString(result.getRow()));
+        assertNull(scanner.next());
+      }
+    }
 
     TEST_UTIL.deleteTable(TableName.valueOf(name));
   }
