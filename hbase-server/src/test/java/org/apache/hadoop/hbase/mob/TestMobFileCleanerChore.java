@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
@@ -33,6 +34,28 @@ import org.junit.jupiter.api.Test;
 @Tag(MasterTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestMobFileCleanerChore {
+
+  @Test
+  public void testOnConfigurationChangeResizesExecutor() {
+    Configuration conf = new Configuration();
+    conf.setInt(MobConstants.MOB_CLEANER_THREAD_COUNT, 2);
+    HMaster master = mock(HMaster.class);
+    when(master.getServerName()).thenReturn(ServerName.valueOf("localhost", 12345, 1));
+    when(master.getConfiguration()).thenReturn(conf);
+
+    MobFileCleanerChore chore = new MobFileCleanerChore(master);
+    assertEquals(2, chore.getExecutor().getCorePoolSize());
+    assertEquals(2, chore.getExecutor().getMaximumPoolSize());
+
+    Configuration newConf = new Configuration(conf);
+    newConf.setInt(MobConstants.MOB_CLEANER_THREAD_COUNT, 4);
+    chore.onConfigurationChange(newConf);
+
+    assertEquals(4, chore.getExecutor().getCorePoolSize());
+    assertEquals(4, chore.getExecutor().getMaximumPoolSize());
+
+    chore.shutdown();
+  }
 
   @Test
   public void testShutdownCleansUpExecutor() {
