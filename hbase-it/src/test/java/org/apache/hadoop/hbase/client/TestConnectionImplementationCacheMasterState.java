@@ -17,41 +17,36 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.UndeclaredThrowableException;
 import org.apache.commons.lang3.reflect.FieldUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
-import org.mockito.junit.MockitoJUnitRunner;
 
-@Category({ ClientTests.class, MediumTests.class })
-@RunWith(MockitoJUnitRunner.class)
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestConnectionImplementationCacheMasterState {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestConnectionImplementationCacheMasterState.class);
+
   private static final IntegrationTestingUtility TEST_UTIL = new IntegrationTestingUtility();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -117,7 +112,7 @@ public class TestConnectionImplementationCacheMasterState {
     // Verify that masterState is "false" because of to injected exception
     boolean isKeepAliveMasterRunning =
       (boolean) getIsKeepAliveMasterConnectedAndRunningMethod().invoke(conn);
-    Assert.assertFalse(isKeepAliveMasterRunning);
+    assertFalse(isKeepAliveMasterRunning);
     conn.close();
   }
 
@@ -137,7 +132,7 @@ public class TestConnectionImplementationCacheMasterState {
       (boolean) getIsKeepAliveMasterConnectedAndRunningMethod().invoke(conn);
 
     // Verify that masterState is "false" because of to injected exception
-    Assert.assertFalse(isKeepAliveMasterRunning);
+    assertFalse(isKeepAliveMasterRunning);
     conn.close();
   }
 

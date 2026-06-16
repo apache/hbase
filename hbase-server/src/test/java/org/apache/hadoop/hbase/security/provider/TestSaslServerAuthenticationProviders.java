@@ -17,16 +17,15 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -34,19 +33,15 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class, SecurityTests.class })
+@Tag(SmallTests.TAG)
+@Tag(SecurityTests.TAG)
 public class TestSaslServerAuthenticationProviders {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslServerAuthenticationProviders.class);
-
-  @Before
+  @BeforeEach
   public void reset() {
     // Clear out any potentially bogus state from the providers class
     SaslServerAuthenticationProviders.reset();
@@ -66,8 +61,8 @@ public class TestSaslServerAuthenticationProviders {
     } catch (RuntimeException e) {
     }
 
-    assertSame("Expected the original provider to be present", p1,
-      registeredProviders.entrySet().iterator().next().getValue());
+    assertSame(p1, registeredProviders.entrySet().iterator().next().getValue(),
+      "Expected the original provider to be present");
   }
 
   @Test
@@ -100,8 +95,8 @@ public class TestSaslServerAuthenticationProviders {
       providers.selectProvider(InitCheckingSaslServerAuthenticationProvider.ID);
     assertEquals(InitCheckingSaslServerAuthenticationProvider.class, provider.getClass());
 
-    assertTrue("Provider was not inititalized",
-      ((InitCheckingSaslServerAuthenticationProvider) provider).isInitialized());
+    assertTrue(((InitCheckingSaslServerAuthenticationProvider) provider).isInitialized(),
+      "Provider was not inititalized");
   }
 
   public static class InitCheckingSaslServerAuthenticationProvider
