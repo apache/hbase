@@ -596,7 +596,6 @@
     <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
     <jruby.version>9.3.15.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
-    <junit.vintage.version>5.13.4</junit.vintage.version>
     <awaitility.version>4.3.0</awaitility.version>
     <hamcrest.version>1.3</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
@@ -797,9 +796,10 @@
     <vega.version>5.32.0</vega.version>
     <vega-embed.version>6.29.0</vega-embed.version>
     <vega-lite.version>5.23.0</vega-lite.version>
-    <!-- Required for testing LDAP integration -->
+    <!--
+      Required for testing LDAP integration for hadoop 3.x
+    -->
     <apacheds.version>2.0.0.AM27</apacheds.version>
-    <ldap-api.version>2.1.7</ldap-api.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1374,28 +1374,11 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
         <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-params</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.vintage.version}</version>
-        <scope>test</scope>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.awaitility</groupId>
@@ -2285,6 +2268,24 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-junit4</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>junit:junit</exclude>
+                    <exclude>org.junit.vintage:*</exclude>
+                  </excludes>
+                  <message>Use junit5 instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
@@ -2446,7 +2447,7 @@
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Use junit4 instead</reason>
+                  <reason>Use junit5 instead</reason>
                   <bannedImports>
                     <bannedImport>junit.framework.**</bannedImport>
                   </bannedImports>
@@ -4032,6 +4033,10 @@
                 <groupId>bouncycastle</groupId>
                 <artifactId>bcprov-jdk15</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4039,7 +4044,6 @@
             <artifactId>hadoop-annotations</artifactId>
             <version>${hadoop-two.version}</version>
           </dependency>
-
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-distcp</artifactId>
@@ -4720,6 +4724,25 @@
                 <groupId>org.jline</groupId>
                 <artifactId>jline</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+              </exclusion>
+            </exclusions>
+          </dependency>
+          <dependency>
+            <groupId>org.apache.directory.server</groupId>
+            <artifactId>apacheds-all</artifactId>
+            <version>${apacheds.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk15on</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcpkix-jdk15on</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4727,7 +4750,6 @@
             <artifactId>hadoop-distcp</artifactId>
             <version>${hadoop-three.version}</version>
           </dependency>
-
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.chaos.actions;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -25,7 +27,6 @@ import java.util.Set;
 import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ServerName;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,8 +70,8 @@ public class UnbalanceKillAndRebalanceAction extends Action {
     Set<ServerName> killedServers = new HashSet<>();
     int liveCount = (int) Math.ceil(FRC_SERVERS_THAT_HOARD_AND_LIVE * victimServers.size());
     int deadCount = (int) Math.ceil(FRC_SERVERS_THAT_HOARD_AND_DIE * victimServers.size());
-    Assert.assertTrue("There are not enough victim servers: " + victimServers.size(),
-      liveCount + deadCount < victimServers.size());
+    assertTrue(liveCount + deadCount < victimServers.size(),
+      "There are not enough victim servers: " + victimServers.size());
     Random rand = ThreadLocalRandom.current();
     List<ServerName> targetServers = new ArrayList<>(liveCount);
     for (int i = 0; i < liveCount + deadCount; ++i) {
