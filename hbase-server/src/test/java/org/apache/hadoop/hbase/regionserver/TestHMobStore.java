@@ -63,6 +63,7 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.mob.MobCell;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.mob.MobUtils;
@@ -435,13 +436,17 @@ public class TestHMobStore {
     Path targetPath = new Path(store.getPath(), targetPathName);
     store.commitFile(mobFilePath, targetPath);
     // resolve
-    Cell resultCell1 = store.resolve(seekKey1, false).getCell();
-    Cell resultCell2 = store.resolve(seekKey2, false).getCell();
-    Cell resultCell3 = store.resolve(seekKey3, false).getCell();
-    // compare
-    assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell1)));
-    assertEquals(Bytes.toString(value), Bytes.toString(CellUtil.cloneValue(resultCell2)));
-    assertEquals(Bytes.toString(value2), Bytes.toString(CellUtil.cloneValue(resultCell3)));
+    try (MobCell resultCell1 = store.resolve(seekKey1, false);
+      MobCell resultCell2 = store.resolve(seekKey2, false);
+      MobCell resultCell3 = store.resolve(seekKey3, false)) {
+      // compare
+      assertEquals(Bytes.toString(value),
+        Bytes.toString(CellUtil.cloneValue(resultCell1.getCell())));
+      assertEquals(Bytes.toString(value),
+        Bytes.toString(CellUtil.cloneValue(resultCell2.getCell())));
+      assertEquals(Bytes.toString(value2),
+        Bytes.toString(CellUtil.cloneValue(resultCell3.getCell())));
+    }
   }
 
   @Test
