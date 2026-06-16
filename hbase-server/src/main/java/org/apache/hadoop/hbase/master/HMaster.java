@@ -4176,7 +4176,12 @@ public class HMaster extends HRegionServer implements MasterServices {
    *                    unique id).
    * @return procedure Id
    * @throws IOException if reopening region fails while running procedure
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *             {@link #reopenRegionsThrottled(TableName, List, long, long)} instead so region
+   *             reopening honors the configured throttling.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-29809">HBASE-29809</a>
    */
+  @Deprecated
   long reopenRegions(final TableName tableName, final List<byte[]> regionNames,
     final long nonceGroup, final long nonce) throws IOException {
 
@@ -4220,17 +4225,21 @@ public class HMaster extends HRegionServer implements MasterServices {
       throw new TableNotFoundException(tableName);
     }
 
+    TableDescriptor tableDescriptor = getTableDescriptors().get(tableName);
+    if (tableDescriptor == null) {
+      throw new TableNotFoundException(tableName);
+    }
+
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
           ReopenTableRegionsProcedure proc;
           if (regionNames.isEmpty()) {
-            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
-              getTableDescriptors().get(tableName));
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(), tableDescriptor);
           } else {
-            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
-              getTableDescriptors().get(tableName), regionNames);
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(), tableDescriptor,
+              regionNames);
           }
 
           LOG.info("{} throttled reopening {} regions for table {}", getClientIdAuditPrefix(),
