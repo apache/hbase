@@ -2659,7 +2659,14 @@
                   <reason>Use junit5 instead</reason>
                   <bannedImports>
                     <bannedImport>junit.framework.**</bannedImport>
+                    <bannedImport>org.junit.**</bannedImport>
+                    <bannedImport>static org.junit.Assert.**</bannedImport>
+                    <bannedImport>static org.junit.Assume.**</bannedImport>
                   </bannedImports>
+                  <allowedImports>
+                    <allowedImport>org.junit.jupiter.**</allowedImport>
+                    <allowedImport>org.junit.platform.**</allowedImport>
+                  </allowedImports>
                 </restrictImports>
               </rules>
             </configuration>
