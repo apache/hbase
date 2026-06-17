@@ -377,8 +377,8 @@ public class TestFuzzyRowFilter {
 
   @Test
   public void testReverseFilterListSkipsSameRowFuzzyHint() throws IOException {
-    for (FilterList.Operator operator :
-      Arrays.asList(FilterList.Operator.MUST_PASS_ALL, FilterList.Operator.MUST_PASS_ONE)) {
+    for (FilterList.Operator operator : Arrays.asList(FilterList.Operator.MUST_PASS_ALL,
+      FilterList.Operator.MUST_PASS_ONE)) {
       FilterList filterList =
         new FilterList(operator, newReverseFuzzyRowFilter(), newReverseFuzzyRowFilter());
 
@@ -392,14 +392,14 @@ public class TestFuzzyRowFilter {
   }
 
   private static FuzzyRowFilter newReverseFuzzyRowFilter() {
-    FuzzyRowFilter filter = new FuzzyRowFilter(Arrays.asList(
-      new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 })));
+    FuzzyRowFilter filter =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 })));
     filter.setReversed(true);
     return filter;
   }
 
   private static void assertRow(String expected, Cell cell) {
-    assertEquals(expected, Bytes.toString(cell.getRowArray(), cell.getRowOffset(),
-      cell.getRowLength()));
+    assertEquals(expected,
+      Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
   }
 }
