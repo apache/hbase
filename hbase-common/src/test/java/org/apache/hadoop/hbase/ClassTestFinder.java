@@ -22,9 +22,7 @@ import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
-import org.junit.experimental.categories.Category;
 import org.junit.jupiter.api.Tag;
-import org.junit.runners.Suite;
 
 /**
  * ClassFinder that is pre-configured with filters that will only allow test classes. The name is
@@ -36,26 +34,24 @@ public class ClassTestFinder extends ClassFinder {
     super(new TestFileNameFilter(), new TestFileNameFilter(), new TestClassFilter());
   }
 
-  public ClassTestFinder(Class<?> category) {
-    super(new TestFileNameFilter(), new TestFileNameFilter(), new TestClassFilter(category));
+  public ClassTestFinder(Class<?> tag) {
+    super(new TestFileNameFilter(), new TestFileNameFilter(), new TestClassFilter(tag));
   }
 
-  public static Class<?>[] getCategoryAnnotations(Class<?> c) {
-    Category category = c.getAnnotation(Category.class);
-    if (category != null) {
-      return category.value();
-    }
-    return new Class<?>[0];
-  }
-
-  public static String[] getTagAnnotations(Class<?> c) {
+  public static Class<?>[] getTagAnnotations(Class<?> c) {
     // TODO handle optional Tags annotation
     Tag[] tags = c.getAnnotationsByType(Tag.class);
-    List<String> values = new ArrayList<>();
-    for (Tag tag : tags) {
-      values.add(tag.value());
+    List<Class<?>> values = new ArrayList<>();
+    if (tags != null) {
+      for (Tag tag : tags) {
+        try {
+          values.add(Class.forName(tag.value()));
+        } catch (ClassNotFoundException e) {
+          throw new RuntimeException(e);
+        }
+      }
     }
-    return values.toArray(new String[values.size()]);
+    return values.toArray(new Class<?>[values.size()]);
   }
 
   /** Filters both test classes and anything in the hadoop-compat modules */
@@ -79,10 +75,10 @@ public class ClassTestFinder extends ClassFinder {
    * is annotated with org.junit.Test OR - the class is annotated with Suite.SuiteClasses
    */
   public static class TestClassFilter implements ClassFilter {
-    private Class<?> categoryAnnotation = null;
+    private Class<?> tagAnnotation = null;
 
     public TestClassFilter(Class<?> categoryAnnotation) {
-      this.categoryAnnotation = categoryAnnotation;
+      this.tagAnnotation = categoryAnnotation;
     }
 
     public TestClassFilter() {
@@ -91,7 +87,7 @@ public class ClassTestFinder extends ClassFinder {
 
     @Override
     public boolean isCandidateClass(Class<?> c) {
-      return isTestClass(c) && isCategorizedClass(c);
+      return isTestClass(c) && isTagedClass(c);
     }
 
     private boolean isTestClass(Class<?> c) {
@@ -99,15 +95,8 @@ public class ClassTestFinder extends ClassFinder {
         return false;
       }
 
-      if (c.getAnnotation(Suite.SuiteClasses.class) != null) {
-        return true;
-      }
-
       for (Method met : c.getMethods()) {
-        if (
-          met.getAnnotation(org.junit.Test.class) != null
-            || met.getAnnotation(org.junit.jupiter.api.Test.class) != null
-        ) {
+        if (met.getAnnotation(org.junit.jupiter.api.Test.class) != null) {
           return true;
         }
       }
@@ -115,12 +104,12 @@ public class ClassTestFinder extends ClassFinder {
       return false;
     }
 
-    private boolean isCategorizedClass(Class<?> c) {
-      if (this.categoryAnnotation == null) {
+    private boolean isTagedClass(Class<?> c) {
+      if (this.tagAnnotation == null) {
         return true;
       }
-      for (Class<?> cc : getCategoryAnnotations(c)) {
-        if (cc.equals(this.categoryAnnotation)) {
+      for (Class<?> cc : getTagAnnotations(c)) {
+        if (cc.equals(this.tagAnnotation)) {
           return true;
         }
       }

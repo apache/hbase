@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -44,9 +48,8 @@ import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.hbck.HbckTestingUtil;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -94,7 +97,7 @@ import org.slf4j.LoggerFactory;
  * -Dhbase.IntegrationTestDDLMasterFailover.numRegions=50 --monkey masterKilling
  */
 
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestDDLMasterFailover.class);
@@ -196,8 +199,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         assertTrue(admin.getNamespaceDescriptor(nsName) != null,
           "Namespace: " + nsName + " in namespaceMap does not exist");
       } catch (NamespaceNotFoundException nsnfe) {
-        Assert
-          .fail("Namespace: " + nsName + " in namespaceMap does not exist: " + nsnfe.getMessage());
+        fail("Namespace: " + nsName + " in namespaceMap does not exist: " + nsnfe.getMessage());
       }
     }
     admin.close();
@@ -216,8 +218,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         "Table: " + tableName + " in disabledTables is not disabled");
     }
     for (TableName tableName : deletedTables.keySet()) {
-      Assert.assertFalse("Table: " + tableName + " in deletedTables is not deleted",
-        admin.tableExists(tableName));
+      assertFalse(admin.tableExists(tableName),
+        "Table: " + tableName + " in deletedTables is not deleted");
     }
     admin.close();
   }
@@ -545,7 +547,7 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         TableName tableName = selected.getTableName();
         LOG.info("Deleting table :" + selected);
         admin.deleteTable(tableName);
-        Assert.assertFalse("Table: " + selected + " was not deleted", admin.tableExists(tableName));
+        assertFalse(admin.tableExists(tableName), "Table: " + selected + " was not deleted");
         deletedTables.put(tableName, selected);
         LOG.info("Deleted table :" + selected);
       } catch (Exception e) {
@@ -644,10 +646,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
         ColumnFamilyDescriptor freshColumnDesc =
           freshTableDesc.getColumnFamily(columnDesc.getName());
-        Assert.assertEquals("Column family: " + columnDesc + " was not altered",
-          freshColumnDesc.getMaxVersions(), versions);
-        Assert.assertEquals("Column family: " + freshColumnDesc + " was not altered",
-          freshColumnDesc.getMinVersions(), versions);
+        assertEquals(freshColumnDesc.getMaxVersions(), versions,
+          "Column family: " + columnDesc + " was not altered");
+        assertEquals(freshColumnDesc.getMinVersions(), versions,
+          "Column family: " + freshColumnDesc + " was not altered");
         assertTrue(admin.isTableDisabled(tableName),
           "After alter versions of column family, Table: " + tableName + " is not disabled");
         disabledTables.put(tableName, freshTableDesc);
@@ -695,11 +697,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         TableDescriptor freshTableDesc = admin.getTableDescriptor(tableName);
         ColumnFamilyDescriptor freshColumnDesc =
           freshTableDesc.getColumnFamily(columnDesc.getName());
-        Assert.assertEquals("Encoding of column family: " + columnDesc + " was not altered",
-          freshColumnDesc.getDataBlockEncoding().getId(), id);
-        Assert.assertTrue(
-          "After alter encoding of column family, Table: " + tableName + " is not disabled",
-          admin.isTableDisabled(tableName));
+        assertEquals(freshColumnDesc.getDataBlockEncoding().getId(), id,
+          "Encoding of column family: " + columnDesc + " was not altered");
+        assertTrue(admin.isTableDisabled(tableName),
+          "After alter encoding of column family, Table: " + tableName + " is not disabled");
         disabledTables.put(tableName, freshTableDesc);
         LOG.info("Altered encoding of column family: " + freshColumnDesc + " to: " + id
           + " in table: " + tableName);
@@ -733,10 +734,10 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
         admin.deleteColumnFamily(tableName, cfd.getName());
         // assertion
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
-        Assert.assertFalse("Column family: " + cfd + " was not added",
-          freshTableDesc.hasColumnFamily(cfd.getName()));
-        Assert.assertTrue("After delete column family, Table: " + tableName + " is not disabled",
-          admin.isTableDisabled(tableName));
+        assertFalse(freshTableDesc.hasColumnFamily(cfd.getName()),
+          "Column family: " + cfd + " was not added");
+        assertTrue(admin.isTableDisabled(tableName),
+          "After delete column family, Table: " + tableName + " is not disabled");
         disabledTables.put(tableName, freshTableDesc);
         LOG.info("Deleted column family: " + cfd + " from table: " + tableName);
       } catch (Exception e) {
@@ -784,8 +785,8 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
           table.put(put);
         }
         TableDescriptor freshTableDesc = admin.getDescriptor(tableName);
-        Assert.assertTrue("After insert, Table: " + tableName + " in not enabled",
-          admin.isTableEnabled(tableName));
+        assertTrue(admin.isTableEnabled(tableName),
+          "After insert, Table: " + tableName + " in not enabled");
         enabledTables.put(tableName, freshTableDesc);
         LOG.info("Added " + numRows + " rows to table: " + selected);
       } catch (Exception e) {
@@ -898,11 +899,9 @@ public class IntegrationTestDDLMasterFailover extends IntegrationTestBase {
     for (Worker worker : workers) {
       Exception e = worker.getSavedException();
       if (e != null) {
-        LOG.error("Found exception in thread: " + worker.getName());
-        e.printStackTrace();
+        LOG.error("Found exception in thread: " + worker.getName(), e);
       }
-      Assert.assertNull("Action failed: " + worker.getAction() + " in thread: " + worker.getName(),
-        e);
+      assertNull(e, "Action failed: " + worker.getAction() + " in thread: " + worker.getName());
     }
   }
 

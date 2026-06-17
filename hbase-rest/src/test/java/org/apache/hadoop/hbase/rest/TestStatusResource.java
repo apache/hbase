@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.rest;
 
-import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -56,7 +56,7 @@ public class TestStatusResource {
 
   private static void validate(StorageClusterStatusModel model) {
     assertNotNull(model);
-    assertTrue(model.getRegions() + ">= 1", model.getRegions() >= 1);
+    assertTrue(model.getRegions() >= 1, model.getRegions() + ">= 1");
     assertTrue(model.getRequests() >= 0);
     assertTrue(model.getAverageLoad() >= 0.0);
     assertNotNull(model.getLiveNodes());
