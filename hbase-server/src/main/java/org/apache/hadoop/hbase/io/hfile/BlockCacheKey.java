@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
@@ -113,6 +114,8 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @param isPrimaryReplica Whether this is from primary replica
    * @param blockType        Type of block
    */
+  @RestrictedApi(explanation = "Should only be called in tests due to costly path parsing",
+    link = "", allowedOnPath = ".*/src/test/.*")
   public BlockCacheKey(Path hfilePath, long offset, boolean isPrimaryReplica, BlockType blockType) {
     this(hfilePath.getName(), hfilePath.getParent().getName(),
       hfilePath.getParent().getParent().getName(), offset, isPrimaryReplica, blockType, false);
