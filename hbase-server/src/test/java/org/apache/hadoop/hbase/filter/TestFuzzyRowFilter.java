@@ -262,11 +262,6 @@ public class TestFuzzyRowFilter {
       new byte[] { 5, 1, 0, 2, 1 }, // current
       new byte[] { 5, 1, 0, 2 }); // expected next
 
-    assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
-      new byte[] { 0, -1, 0, 0 }, // mask
-      new byte[] { 5, 1, (byte) 255, 1 }, // current
-      new byte[] { 5, 1, (byte) 255, 0 }); // expected next
-
     assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
       new byte[] { 0, -1, 0, -1 }, // mask
       new byte[] { 5, 1, 0, 1 }, // current
@@ -302,6 +297,20 @@ public class TestFuzzyRowFilter {
       new byte[] { 2, 1, 1, 1, 0 }, // row to check
       new byte[] { 1, 2, (byte) 255, 4 }); // expected next
 
+    // no before cell than current which satisfies the fuzzy row -> null
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
+      new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
+  }
+
+  // Same-row adjusted reverse hints should fall back to the unadjusted candidate, so the hint keeps
+  // moving before the current row.
+  @Test
+  public void testGetNextForFuzzyRuleReverseAvoidsSameRowHint() {
+    assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
+      new byte[] { 0, -1, 0, 0 }, // mask
+      new byte[] { 5, 1, (byte) 255, 1 }, // current
+      new byte[] { 5, 1, (byte) 255, 0 }); // expected next
+
     assertNext(true, new byte[] { 1, 0, 1 }, // fuzzy row
       new byte[] { -1, 0, -1 }, // mask
       new byte[] { 1, (byte) 128, 2 }, // row to check
@@ -326,10 +335,6 @@ public class TestFuzzyRowFilter {
       new byte[] { 0, 0, 0, 0 }, // mask
       new byte[] { 1, 1, 2, 3 }, // row to check
       new byte[] { 1, 1, 2, 2 }); // expected next
-
-    // no before cell than current which satisfies the fuzzy row -> null
-    assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
-      new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
   }
 
   private static void assertNext(boolean reverse, byte[] fuzzyRow, byte[] mask, byte[] current,
