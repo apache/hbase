@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -883,14 +882,25 @@ public class HttpServer implements FilterContainer {
         PROFILER_ENABLED_KEY);
     } else if (ProfileServlet.isAvailable()) {
       addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
+      ProfileServlet.ensureOutputDir();
       Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
-      if (Files.notExists(tmpDir)) {
-        Files.createDirectories(tmpDir);
-      }
       ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hbase");
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
       genCtx.setDisplayName("prof-output-hbase");
+      // Gate the output-file context behind AdminAuthorizedFilter when authentication is enabled.
+      // Without this, any unauthenticated user who can reach the HTTP port can read raw profiling
+      // output (heap/CPU profiles, stack traces with row keys and credential frames) even though
+      // the /prof start endpoint requires admin access.
+      if (authenticationEnabled) {
+        FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
+        filter.setName(AdminAuthorizedFilter.class.getSimpleName());
+        FilterMapping fmap = new FilterMapping();
+        fmap.setPathSpec("/*");
+        fmap.setDispatches(FilterMapping.ALL);
+        fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
+        genCtx.getServletHandler().addFilter(filter, fmap);
+      }
     } else {
       ServletHolder disabledHolder = new ServletHolder(new ProfileServlet.DisabledServlet());
       disabledHolder.setInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM,

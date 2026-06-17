@@ -21,7 +21,10 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -177,10 +180,10 @@ public class ProfileServlet extends HttpServlet {
     HTML
   }
 
-  @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_TRANSIENT_FIELD_NOT_RESTORED",
-      justification = "This class is never serialized nor restored.")
-  private transient Lock profilerLock = new ReentrantLock();
-  private transient volatile boolean profiling;
+  // Static so a second ProfileServlet instance (servlet reload, test harness) shares the same
+  // lock and flag as the first — both gate the same JVM-global AsyncProfiler singleton.
+  private static final Lock profilerLock = new ReentrantLock();
+  private static volatile boolean profiling;
   private final long currentPid = ProcessHandle.current().pid();
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "SE_BAD_FIELD",
       justification = "This class is never serialized nor restored.")
@@ -294,10 +297,32 @@ public class ProfileServlet extends HttpServlet {
   public void init() throws javax.servlet.ServletException {
     super.init();
     try {
-      Files.createDirectories(Paths.get(OUTPUT_DIR));
+      ensureOutputDir();
     } catch (IOException e) {
-      throw new javax.servlet.ServletException(
-        "Failed to create profiler output directory: " + OUTPUT_DIR, e);
+      // Log and continue rather than failing daemon startup — a read-only or full /tmp is not
+      // a reason to refuse to bring up Master/RegionServer. Profiling will fail at request time.
+      LOG.warn("Failed to create profiler output directory {}; profiling requests will fail. "
+        + "Check that java.io.tmpdir is writable.", OUTPUT_DIR, e);
+    }
+  }
+
+  /**
+   * Creates {@link #OUTPUT_DIR} with permissions 0700 (owner-only) when the filesystem supports
+   * POSIX permissions, so other local users cannot plant symlinks or read profiling output. No-ops
+   * if the directory already exists. Silently skips the permission step on non-POSIX filesystems
+   * (Windows, some container runtimes).
+   */
+  static void ensureOutputDir() throws IOException {
+    Path dir = Paths.get(OUTPUT_DIR);
+    if (Files.exists(dir)) {
+      return;
+    }
+    try {
+      Files.createDirectories(dir,
+        PosixFilePermissions.asFileAttribute(PosixFilePermissions.fromString("rwx------")));
+    } catch (UnsupportedOperationException e) {
+      // Non-POSIX filesystem (Windows, some container setups) — fall back to plain mkdir.
+      Files.createDirectories(dir);
     }
   }
 
@@ -359,20 +384,38 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
 
-    // ?last — redirect to the most recent completed profiling result, or list recent results.
+    // ?last — redirect to the most recent completed profiling result.
     if (req.getParameterMap().containsKey("last")) {
       ProfileResult last = lastResult;
       if (last == null) {
         writeError(resp, HttpServletResponse.SC_NOT_FOUND,
           "No profiling results available yet. Run /prof to start a session.");
-      } else {
-        setResponseHeader(resp);
-        resp.sendRedirect(last.relativeUrl);
+        return;
       }
+      // The output file may have been removed by tmpwatch / fs cleanup or a JVM restart.
+      // Verify the file still exists before redirecting; otherwise clear the stale pointer.
+      String fileName = last.relativeUrl.substring(last.relativeUrl.lastIndexOf('/') + 1);
+      File outputFile = new File(OUTPUT_DIR, fileName);
+      if (!outputFile.exists()) {
+        lastResult = null;
+        writeError(resp, HttpServletResponse.SC_NOT_FOUND,
+          "The most recent profiling result (" + last.relativeUrl + ") no longer exists "
+            + "(may have been cleaned up by the OS). Run /prof to start a new session.");
+        return;
+      }
+      setResponseHeader(resp);
+      resp.sendRedirect(last.relativeUrl);
       return;
     }
 
     final ProfileRequest request = parseProfileRequest(req);
+
+    // Reject non-positive PIDs regardless of backend — no valid process has pid <= 0.
+    if (request.getPid() != null && request.getPid() <= 0) {
+      writeError(resp, HttpServletResponse.SC_BAD_REQUEST,
+        "Invalid pid " + request.getPid() + ": must be a positive process ID.");
+      return;
+    }
 
     // LibraryBackend can only profile the current JVM; BinaryBackend supports external PIDs.
     if (
@@ -388,18 +431,17 @@ public class ProfileServlet extends HttpServlet {
       return;
     }
 
-    int lockTimeoutSecs = 3;
     boolean locked = false;
     boolean thisRequestSetProfiling = false;
     boolean stopperStarted = false;
     File outputFile = null;
     try {
-      locked = profilerLock.tryLock(lockTimeoutSecs, TimeUnit.SECONDS);
+      locked = profilerLock.tryLock(100, TimeUnit.MILLISECONDS);
       if (!locked) {
-        writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
-          "Unable to acquire lock. Another instance of profiler might be running.");
-        LOG.warn("Unable to acquire lock in " + lockTimeoutSecs
-          + " seconds. Another instance of profiler might be running.");
+        LOG.info("Profiler lock busy; returning 409 immediately.");
+        writeError(resp, HttpServletResponse.SC_CONFLICT,
+          "Another instance of profiler is already running or the lock is contended. "
+            + "Try again in a moment.");
         return;
       }
 
@@ -418,11 +460,10 @@ public class ProfileServlet extends HttpServlet {
 
       outputFile = createOutputFile(request);
       final String relativeUrl = "/prof-output-hbase/" + outputFile.getName();
-      // Write the placeholder before starting the profiler. If executeStart succeeds but a
-      // subsequent step throws, the stopper thread (which owns profiling=false) will write the
-      // error message to this file. Without the file, a partial-start failure would leave the
-      // profiler running with no stopper and profiling=false, allowing a second concurrent session.
-      Files.write(outputFile.toPath(), new byte[0]);
+      // Write the placeholder before starting the profiler. Using CREATE_NEW (O_CREAT|O_EXCL)
+      // so a pre-planted symlink causes an immediate IOException rather than following the link
+      // and truncating the symlink target (symlink-attack mitigation).
+      Files.write(outputFile.toPath(), new byte[0], StandardOpenOption.CREATE_NEW);
       executeStart(request, outputFile);
       profiling = true;
       thisRequestSetProfiling = true;
@@ -447,6 +488,17 @@ public class ProfileServlet extends HttpServlet {
         writeError(resp, HttpServletResponse.SC_INTERNAL_SERVER_ERROR,
           "Profiler error: " + e.getMessage()
             + ". Check that the async-profiler native library is compatible with this OS/kernel.");
+      }
+      // If executeStart succeeded but startStopperThread failed (e.g. t.start() threw
+      // OutOfMemoryError), the LibraryBackend AsyncProfiler instance is still in "started" state
+      // with no stopper to drain it. A best-effort stop closes it so future requests don't hit
+      // IllegalStateException("profiler already started").
+      if (thisRequestSetProfiling && !stopperStarted) {
+        try {
+          executeStop(request, outputFile);
+        } catch (Exception stopEx) {
+          LOG.warn("Best-effort stop after failed startStopperThread also failed", stopEx);
+        }
       }
       // Delete the placeholder whenever the stopper thread was never started — in that case
       // no client received the output URL and the stopper will never write a result to the file.
@@ -481,18 +533,37 @@ public class ProfileServlet extends HttpServlet {
       try {
         TimeUnit.SECONDS.sleep(durationSeconds);
         executeStop(request, outputFile);
+        // C5: executeStop may succeed but the profiler wrote nothing (e.g. zero samples collected).
+        // ProfileOutputServlet polls until size >= PROF_OUTPUT_MIN_BYTES, so pad a short/empty
+        // output file to unblock it rather than letting the browser auto-refresh forever.
+        if (outputFile.length() < PROF_OUTPUT_MIN_BYTES) {
+          String pad = "Profiling completed but output was empty or very short.";
+          while (pad.length() <= PROF_OUTPUT_MIN_BYTES) {
+            pad += " ";
+          }
+          Files.write(outputFile.toPath(), pad.getBytes(StandardCharsets.UTF_8),
+            java.nio.file.StandardOpenOption.APPEND);
+        }
         lastResult = new ProfileResult(relativeUrl, request.getEvent().getInternalName(),
           durationSeconds, Instant.now());
         succeeded = true;
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         failure = e;
-        LOG.warn("Profiler stopper thread interrupted; profiling session may not have stopped"
-          + " cleanly.", e);
+        LOG.warn("Profiler stopper thread interrupted; attempting best-effort stop.", e);
+        // C3: The LibraryBackend AsyncProfiler is still in "started" state after an interrupt.
+        // Best-effort stop so future /prof requests don't hit IllegalStateException.
+        try {
+          executeStop(request, outputFile);
+        } catch (Exception stopEx) {
+          LOG.warn("Best-effort stop after stopper interrupt also failed", stopEx);
+        }
       } catch (Throwable e) {
         failure = e;
         LOG.warn("Profiler stop/dump failed", e);
       } finally {
+        // C4: Reset profiling flag FIRST, before any I/O that could throw an Error and skip it.
+        profiling = false;
         // If the session did not complete successfully, pad the output file to >100 bytes so
         // ProfileOutputServlet's size check treats it as done and stops auto-refreshing.
         if (!succeeded && failure != null) {
@@ -509,7 +580,6 @@ public class ProfileServlet extends HttpServlet {
             LOG.warn("Unable to write profiler error to output file", ioe);
           }
         }
-        profiling = false;
       }
     }, "ProfileServlet-stopper");
     t.setDaemon(true);
@@ -563,6 +633,9 @@ public class ProfileServlet extends HttpServlet {
       .append(" after ").append(request.getDuration()).append(" seconds. ")
       .append("If empty diagram and Linux 4.6+, see 'Basic Usage' section on the Async ")
       .append("Profiler Home Page, https://github.com/jvm-profiling-tools/async-profiler.");
+    if (request.getOutput() == Output.SVG) {
+      body.append("\nNote: output=svg is not supported in async-profiler 2.0+; serving html.");
+    }
     if (backend instanceof LibraryBackend) {
       if (request.getBufsize() != null) {
         body.append("\nNote: bufsize= is not supported by the in-process LibraryBackend"

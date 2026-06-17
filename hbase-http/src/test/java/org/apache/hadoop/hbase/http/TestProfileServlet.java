@@ -33,6 +33,7 @@ import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
 import javax.servlet.ServletConfig;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServletRequest;
@@ -40,6 +41,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -51,8 +53,21 @@ import org.mockito.Mockito;
 public class TestProfileServlet {
 
   @BeforeEach
-  public void clearLastResultBeforeEach() throws Exception {
+  public void resetStaticStateBeforeEach() throws Exception {
     clearLastResult();
+    resetProfiling();
+  }
+
+  @AfterEach
+  public void joinStopperThreadAfterEach() throws Exception {
+    // T1: stopper threads left running by a test can write lastResult after the test body
+    // returns, overwriting the @BeforeEach clear of the next test. Join any live stopper so
+    // the next test starts with fully settled static state.
+    for (Thread t : Thread.getAllStackTraces().keySet()) {
+      if ("ProfileServlet-stopper".equals(t.getName()) && t.isAlive()) {
+        t.join(5000);
+      }
+    }
   }
 
   // ---- parseProfileRequest ----
@@ -179,9 +194,44 @@ public class TestProfileServlet {
   }
 
   @Test
+  public void testDoGetRejectsNonPositivePidWith400() throws Exception {
+    ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
+    ProfileServlet servlet = new ProfileServlet(mockBackend);
+    servlet.init(mockServletConfig());
+
+    for (String badPid : new String[] { "-1", "0", "-999" }) {
+      HttpServletRequest req = mockRequest(Collections.emptyMap(), "pid", badPid, "duration", "1",
+        "refreshDelay", null, "output", null, "event", null, "interval", null, "jstackdepth", null,
+        "bufsize", null, "width", null, "height", null, "minwidth", null);
+      HttpServletResponse resp = Mockito.mock(HttpServletResponse.class);
+      StringWriter body = new StringWriter();
+      Mockito.when(resp.getWriter()).thenReturn(new PrintWriter(body));
+
+      servlet.doGet(req, resp);
+
+      Mockito.verify(resp).setStatus(HttpServletResponse.SC_BAD_REQUEST);
+      assertTrue(body.toString().contains("Invalid pid"),
+        "Expected 'Invalid pid' in response for pid=" + badPid + ", got: " + body);
+      // backend must never be called for an invalid pid
+      Mockito.verify(mockBackend, Mockito.never()).executeStart(Mockito.any(), Mockito.any());
+
+      // reset mocks for next iteration
+      Mockito.reset(resp, mockBackend);
+    }
+  }
+
+  @Test
   public void testDoGetSecondRequestRejectedWithConflictWhenProfilingActive() throws Exception {
+    // T2: without synchronization the stopper's 1s sleep could finish before the second doGet
+    // runs on a slow CI runner, producing 202 instead of 409. Block executeStop on a latch so
+    // profiling=true is guaranteed to be set when the second request arrives.
+    CountDownLatch secondRequestIssued = new CountDownLatch(1);
     ProfilerBackend mockBackend = Mockito.mock(ProfilerBackend.class);
     Mockito.when(mockBackend.executeStart(Mockito.any(), Mockito.any())).thenReturn("OK");
+    Mockito.when(mockBackend.executeStop(Mockito.any(), Mockito.any())).thenAnswer(inv -> {
+      secondRequestIssued.await();
+      return "";
+    });
 
     ProfileServlet servlet = new ProfileServlet(mockBackend);
     servlet.init(mockServletConfig());
@@ -201,6 +251,7 @@ public class TestProfileServlet {
     StringWriter body2 = new StringWriter();
     Mockito.when(resp2.getWriter()).thenReturn(new PrintWriter(body2));
     servlet.doGet(req, resp2);
+    secondRequestIssued.countDown();
 
     Mockito.verify(resp2).setStatus(HttpServletResponse.SC_CONFLICT);
     assertTrue(body2.toString().contains("already running"));
@@ -262,8 +313,10 @@ public class TestProfileServlet {
 
     // Wait for the stopper thread to finish (duration=1s + some buffer)
     long deadline = System.currentTimeMillis() + 5000;
-    while (outputFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES
-      && System.currentTimeMillis() < deadline) {
+    while (
+      outputFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES
+        && System.currentTimeMillis() < deadline
+    ) {
       Thread.sleep(50);
     }
 
@@ -316,8 +369,10 @@ public class TestProfileServlet {
 
     // Wait for the stopper to write the interrupted-session message
     long deadline = System.currentTimeMillis() + 3000;
-    while (outputFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES
-      && System.currentTimeMillis() < deadline) {
+    while (
+      outputFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES
+        && System.currentTimeMillis() < deadline
+    ) {
       Thread.sleep(50);
     }
 
@@ -353,7 +408,13 @@ public class TestProfileServlet {
 
   @Test
   public void testLastRedirectsToMostRecentResult() throws Exception {
-    String expectedUrl = "/prof-output-hbase/profile-cpu-20260612-120000.html";
+    // C8 fix: ?last checks Files.exists before redirecting, so the output file must exist on disk.
+    String fileName = "profile-cpu-20260612-120000.html";
+    File outputDir = new File(ProfileServlet.OUTPUT_DIR);
+    outputDir.mkdirs();
+    File outputFile = new File(outputDir, fileName);
+    outputFile.createNewFile();
+    String expectedUrl = "/prof-output-hbase/" + fileName;
     setLastResult(new ProfileServlet.ProfileResult(expectedUrl, "cpu", 10, Instant.now()));
 
     ProfileServlet servlet = new ProfileServlet(null);
@@ -373,6 +434,13 @@ public class TestProfileServlet {
 
   @Test
   public void testLastResultOverwrittenByNewSession() throws Exception {
+    // C8 fix: ?last checks Files.exists before redirecting, so output files must exist on disk.
+    File outputDir = new File(ProfileServlet.OUTPUT_DIR);
+    outputDir.mkdirs();
+    File firstFile = new File(outputDir, "profile-cpu-first.html");
+    firstFile.createNewFile();
+    File secondFile = new File(outputDir, "profile-cpu-second.html");
+    secondFile.createNewFile();
     String firstUrl = "/prof-output-hbase/profile-cpu-first.html";
     String secondUrl = "/prof-output-hbase/profile-cpu-second.html";
     setLastResult(new ProfileServlet.ProfileResult(firstUrl, "cpu", 10, Instant.now()));
@@ -537,5 +605,11 @@ public class TestProfileServlet {
 
   private static void clearLastResult() throws Exception {
     lastResultField().set(null, null);
+  }
+
+  private static void resetProfiling() throws Exception {
+    Field f = ProfileServlet.class.getDeclaredField("profiling");
+    f.setAccessible(true);
+    f.set(null, false);
   }
 }

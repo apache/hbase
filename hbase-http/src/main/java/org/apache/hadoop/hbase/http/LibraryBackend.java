@@ -21,6 +21,8 @@ import java.io.File;
 import java.io.IOException;
 import one.profiler.AsyncProfiler;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Backend that uses the async-profiler Java API (in-process). Requires the
@@ -32,6 +34,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 final class LibraryBackend implements ProfilerBackend {
+
+  private static final Logger LOG = LoggerFactory.getLogger(LibraryBackend.class);
 
   @Override
   public String executeStart(ProfileServlet.ProfileRequest request, File outputFile)
@@ -52,7 +56,8 @@ final class LibraryBackend implements ProfilerBackend {
     try {
       AsyncProfiler.getInstance().execute("stop");
     } catch (Exception e) {
-      // ignored — profiler may not have been active at shutdown time
+      LOG.debug("Best-effort stop on servlet destroy failed (profiler may not have been active)",
+        e);
     }
   }
 }

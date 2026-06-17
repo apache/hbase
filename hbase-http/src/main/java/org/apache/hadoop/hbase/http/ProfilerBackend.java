@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.http;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.util.ProcessUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -86,6 +87,8 @@ interface ProfilerBackend {
         .newInstance();
     } catch (UnsatisfiedLinkError | ExceptionInInitializerError | ReflectiveOperationException e) {
       // library not on classpath, native lib missing/incompatible, or static initializer failure
+      LOG.warn("async-profiler library not available ({}); falling back to BinaryBackend or"
+        + " DisabledServlet. Cause: {}", e.getClass().getSimpleName(), e.getMessage());
     } catch (Throwable e) {
       // Guard against any other unexpected failure during reflective instantiation so that a
       // broken async-profiler installation falls back to DisabledServlet rather than crashing
@@ -136,8 +139,19 @@ final class BinaryBackend implements ProfilerBackend {
     // file — otherwise a new request could start a second asprof while the first is still running.
     Process p = process;
     if (p != null) {
+      // C6: waitFor() without a timeout can block indefinitely if asprof hangs (e.g. waiting for
+      // perf_event_open). Allow duration + 30 s slack; forcibly kill on timeout so the stopper
+      // thread can exit and profiling=false is eventually restored.
+      int timeoutSecs = request.getDuration() + 30;
       try {
-        p.waitFor();
+        boolean finished = p.waitFor(timeoutSecs, TimeUnit.SECONDS);
+        if (!finished) {
+          LOG.warn("async-profiler process did not exit within {} s; forcibly killing it.",
+            timeoutSecs);
+          p.destroyForcibly();
+          throw new IOException(
+            "async-profiler process timed out after " + timeoutSecs + " seconds and was killed.");
+        }
       } catch (InterruptedException e) {
         Thread.currentThread().interrupt();
         LOG.warn("Interrupted while waiting for async-profiler process to finish.", e);
