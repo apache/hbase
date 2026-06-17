@@ -343,6 +343,8 @@ public class TestFuzzyRowFilterEndToEnd {
         Bytes.toBytes("v")));
       puts.add(new Put(Bytes.toBytes("aba")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
         Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
       puts.add(new Put(Bytes.toBytes("abb")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
         Bytes.toBytes("v")));
       puts.add(new Put(Bytes.toBytes("abc")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
@@ -360,6 +362,9 @@ public class TestFuzzyRowFilterEndToEnd {
 
       try (ResultScanner scanner = ht.getScanner(scan)) {
         Result result = scanner.next();
+        assertNotNull(result);
+        assertEquals("abaa", Bytes.toString(result.getRow()));
+        result = scanner.next();
         assertNotNull(result);
         assertEquals("aba", Bytes.toString(result.getRow()));
         result = scanner.next();
@@ -384,9 +389,11 @@ public class TestFuzzyRowFilterEndToEnd {
         Bytes.toBytes("v")));
       puts.add(new Put(Bytes.toBytes("aba")).addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"),
         Bytes.toBytes("v")));
-      // The same-row reverse hint is recreated for each cell on this non-matching row. Before the
-      // fix, the first cell could loop inside RowTracker and never return to StoreScanner. After the
-      // fix, StoreScanner advances cell by cell until it reaches the next matching row.
+      puts.add(new Put(Bytes.toBytes("abaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"),
+        Bytes.toBytes("v")));
+      // The same-row reverse hint can be recreated for each cell on this non-matching row.
+      // Before the fix, the first cell could loop inside RowTracker and never return to
+      // StoreScanner. After the fix, NEXT_ROW skips the whole row without skipping abaa.
       puts.add(new Put(Bytes.toBytes("abb"))
         .addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"), Bytes.toBytes("v1"))
         .addColumn(Bytes.toBytes(cf), Bytes.toBytes("q2"), Bytes.toBytes("v2"))
@@ -406,6 +413,9 @@ public class TestFuzzyRowFilterEndToEnd {
 
       try (ResultScanner scanner = ht.getScanner(scan)) {
         Result result = scanner.next();
+        assertNotNull(result);
+        assertEquals("abaa", Bytes.toString(result.getRow()));
+        result = scanner.next();
         assertNotNull(result);
         assertEquals("aba", Bytes.toString(result.getRow()));
         result = scanner.next();
