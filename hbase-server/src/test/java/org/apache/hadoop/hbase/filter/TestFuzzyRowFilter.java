@@ -307,7 +307,7 @@ public class TestFuzzyRowFilter {
       new byte[] { 2, 1, 1, 1, 0 }, // row to check
       new byte[] { 1, 2, (byte) 255, 4 }); // expected next
 
-    // no before cell than current which satisfies the fuzzy row -> null
+    // No cell before the current one satisfies the fuzzy row -> null.
     assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
       new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
   }
