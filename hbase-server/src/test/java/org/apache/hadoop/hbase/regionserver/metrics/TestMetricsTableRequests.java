@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.regionserver.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
@@ -133,8 +134,7 @@ public class TestMetricsTableRequests {
 
     MetricRegistry metricRegistry1 = requests1.getMetricRegistry();
     MetricRegistry metricRegistry2 = requests2.getMetricRegistry();
-    // verify ref-counting returns same instance
-    assertEquals(metricRegistry1, metricRegistry2);
+    assertSame(metricRegistry1, metricRegistry2);
 
     MetricRegistryInfo registryInfo = metricRegistry1.getMetricRegistryInfo();
     MetricRegistries.global().remove(registryInfo);
