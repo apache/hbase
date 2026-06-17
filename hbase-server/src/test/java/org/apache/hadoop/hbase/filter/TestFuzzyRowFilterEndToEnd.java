@@ -467,6 +467,8 @@ public class TestFuzzyRowFilterEndToEnd {
     }
 
     assertEquals(2, actualRowsList.size());
+    assertEquals("111444", Bytes.toString(actualRowsList.get(0)));
+    assertEquals("111446", Bytes.toString(actualRowsList.get(1)));
 
     // Reverse scan
     scan = new Scan();
@@ -481,6 +483,8 @@ public class TestFuzzyRowFilterEndToEnd {
     }
 
     assertEquals(2, actualRowsList.size());
+    assertEquals("111446", Bytes.toString(actualRowsList.get(0)));
+    assertEquals("111444", Bytes.toString(actualRowsList.get(1)));
 
     TEST_UTIL.deleteTable(TableName.valueOf(name));
   }
