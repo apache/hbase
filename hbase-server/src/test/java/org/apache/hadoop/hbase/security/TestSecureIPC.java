@@ -81,7 +81,7 @@ import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 
@@ -167,7 +167,7 @@ public class TestSecureIPC {
     serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -179,7 +179,7 @@ public class TestSecureIPC {
     callRpcService(User.create(ugi2));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth_CanonicalHostname() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -196,7 +196,7 @@ public class TestSecureIPC {
     callRpcService(User.create(ugi2));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth_NoCanonicalHostname() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -290,7 +290,7 @@ public class TestSecureIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRpcServerFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
@@ -306,7 +306,7 @@ public class TestSecureIPC {
     callRpcService(User.create(clientUgi));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcServerDisallowFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
@@ -329,7 +329,7 @@ public class TestSecureIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRpcClientFallbackToSimpleAuth() throws Exception {
     String serverUsername = "testuser";
     UserGroupInformation serverUgi =
@@ -344,7 +344,7 @@ public class TestSecureIPC {
     callRpcService(User.create(serverUgi), User.create(ugi));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcClientDisallowFallbackToSimpleAuth() throws Exception {
     String serverUsername = "testuser";
     UserGroupInformation serverUgi =
@@ -368,7 +368,7 @@ public class TestSecureIPC {
   /**
    * Test various combinations of Server and Client qops.
    */
-  @Test
+  @TestTemplate
   public void testSaslWithCommonQop() throws Exception {
     setRpcProtection("privacy,authentication", "authentication");
     callRpcService();
@@ -386,7 +386,7 @@ public class TestSecureIPC {
     callRpcService();
   }
 
-  @Test
+  @TestTemplate
   public void testSaslNoCommonQop() throws Exception {
     setRpcProtection("integrity", "privacy");
     SaslException se = assertThrows(SaslException.class, () -> callRpcService());
@@ -396,7 +396,7 @@ public class TestSecureIPC {
   /**
    * Test sasl encryption with Crypto AES.
    */
-  @Test
+  @TestTemplate
   public void testSaslWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
     setCryptoAES("true", "true");
@@ -406,7 +406,7 @@ public class TestSecureIPC {
   /**
    * Test various combinations of Server and Client configuration for Crypto AES.
    */
-  @Test
+  @TestTemplate
   public void testDifferentConfWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
 
