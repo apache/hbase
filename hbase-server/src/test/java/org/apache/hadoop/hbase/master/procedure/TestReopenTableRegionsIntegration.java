@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,11 +30,13 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.MetricsRegionWrapperImpl;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -307,6 +310,28 @@ public class TestReopenTableRegionsIntegration {
       }
 
     } finally {
+      UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testReopenTableRegionsFailsCleanlyWhenDescriptorMissing() throws Exception {
+    TableName tableName = TableName.valueOf("testReopenTableRegionsFailsWhenDescriptorMissing");
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build();
+    UTIL.getAdmin().createTable(td, Bytes.toBytes("a"), Bytes.toBytes("z"), 3);
+    UTIL.waitTableAvailable(tableName);
+
+    HMaster master = UTIL.getMiniHBaseCluster().getMaster();
+    TableDescriptor removedDescriptor = null;
+    try {
+      removedDescriptor = master.getTableDescriptors().remove(tableName);
+      assertThrows(TableNotFoundException.class,
+        () -> UTIL.getAdmin().reopenTableRegions(tableName));
+    } finally {
+      if (removedDescriptor != null && master.getTableDescriptors().get(tableName) == null) {
+        master.getTableDescriptors().update(removedDescriptor);
+      }
       UTIL.deleteTable(tableName);
     }
   }

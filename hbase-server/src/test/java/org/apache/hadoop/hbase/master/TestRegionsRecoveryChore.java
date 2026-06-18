@@ -95,6 +95,7 @@ public class TestRegionsRecoveryChore {
   public void setUp() throws Exception {
     this.hMaster = Mockito.mock(HMaster.class);
     this.assignmentManager = Mockito.mock(AssignmentManager.class);
+    Mockito.when(hMaster.isInitialized()).thenReturn(true);
   }
 
   @AfterEach
@@ -128,9 +129,11 @@ public class TestRegionsRecoveryChore {
     regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
     regionsRecoveryChore.chore();
 
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
+
     // Verify that we need to reopen regions of 2 tables
-    Mockito.verify(hMaster, Mockito.times(2)).reopenRegions(Mockito.any(), Mockito.anyList(),
-      Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(2)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
     Mockito.verify(hMaster, Mockito.times(1)).getClusterMetrics();
 
     // Verify that we need to reopen total 3 regions that have refCount > 300
@@ -163,9 +166,11 @@ public class TestRegionsRecoveryChore {
     regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
     regionsRecoveryChore.chore();
 
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
+
     // Verify that we need to reopen regions of only 1 table
-    Mockito.verify(hMaster, Mockito.times(1)).reopenRegions(Mockito.any(), Mockito.anyList(),
-      Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(1)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
     Mockito.verify(hMaster, Mockito.times(1)).getClusterMetrics();
 
     // Verify that we need to reopen only 1 region with refCount > 400
@@ -198,12 +203,32 @@ public class TestRegionsRecoveryChore {
     regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
     regionsRecoveryChore.chore();
 
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
+
     // Verify that by default the feature is turned off so no regions
     // should be reopened
-    Mockito.verify(hMaster, Mockito.times(0)).reopenRegions(Mockito.any(), Mockito.anyList(),
-      Mockito.anyLong(), Mockito.anyLong());
+    Mockito.verify(hMaster, Mockito.times(0)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
 
     // default maxCompactedStoreFileRefCount is -1 (no regions to be reopened using AM)
+    Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
+    Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any(byte[].class));
+  }
+
+  @Test
+  public void testRegionReopensSkippedWhenMasterNotInitialized() throws Exception {
+    Mockito.when(hMaster.isInitialized()).thenReturn(false);
+
+    Stoppable stoppable = new StoppableImplementation();
+    Configuration configuration = getCustomConf();
+    configuration.setInt("hbase.regions.recovery.store.file.ref.count", 300);
+    regionsRecoveryChore = new RegionsRecoveryChore(stoppable, configuration, hMaster);
+    regionsRecoveryChore.chore();
+
+    Mockito.verify(hMaster, Mockito.times(1)).isInitialized();
+    Mockito.verify(hMaster, Mockito.times(0)).getClusterMetrics();
+    Mockito.verify(hMaster, Mockito.times(0)).reopenRegionsThrottled(Mockito.any(),
+      Mockito.anyList(), Mockito.anyLong(), Mockito.anyLong());
     Mockito.verify(hMaster, Mockito.times(0)).getAssignmentManager();
     Mockito.verify(assignmentManager, Mockito.times(0)).getRegionInfo(Mockito.any(byte[].class));
   }
