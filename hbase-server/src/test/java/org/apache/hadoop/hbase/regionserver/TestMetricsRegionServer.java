@@ -166,7 +166,7 @@ public class TestMetricsRegionServer {
     MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
     when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
     when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
-    when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
+    when(metricsTableRequests.isEnableTableQueryMeterMetrics()).thenReturn(false);
     for (int i = 0; i < 12; i++) {
       rsm.updateAppend(region, 12, 120);
       rsm.updateAppend(region, 1002, 10020);
@@ -306,7 +306,7 @@ public class TestMetricsRegionServer {
     MetricsTableRequests metricsTableRequests = mock(MetricsTableRequests.class);
     when(region.getMetricsTableRequests()).thenReturn(metricsTableRequests);
     when(metricsTableRequests.isEnableTableLatenciesMetrics()).thenReturn(false);
-    when(metricsTableRequests.isEnabTableQueryMeterMetrics()).thenReturn(false);
+    when(metricsTableRequests.isEnableTableQueryMeterMetrics()).thenReturn(false);
     Configuration conf = new Configuration(false);
     // disable
     rsm.updateReadQueryMeter(region, 500L);
