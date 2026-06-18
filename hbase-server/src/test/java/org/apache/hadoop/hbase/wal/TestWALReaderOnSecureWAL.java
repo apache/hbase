@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -32,7 +33,6 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -55,32 +55,27 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKSplitLog;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test that verifies WAL written by SecureProtobufLogWriter is not readable by ProtobufLogReader
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWALReaderOnSecureWAL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALReaderOnSecureWAL.class);
 
   static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
   final byte[] value = Bytes.toBytes("Test value");
 
   private static final String WAL_ENCRYPTION = "hbase.regionserver.wal.encryption";
 
-  @Rule
-  public TestName currentTest = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, KeyProviderForTesting.class.getName());
@@ -88,6 +83,11 @@ public class TestWALReaderOnSecureWAL {
     conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, true);
     conf.setBoolean(HConstants.ENABLE_WAL_ENCRYPTION, true);
     CommonFSUtils.setRootDir(conf, TEST_UTIL.getDataTestDir());
+  }
+
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   private Path writeWAL(final WALFactory wals, final String tblName, boolean offheap)
@@ -152,8 +152,8 @@ public class TestWALReaderOnSecureWAL {
       WALProvider.AsyncWriter.class);
     conf.setBoolean(WAL_ENCRYPTION, true);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
-    final WALFactory wals = new WALFactory(conf, currentTest.getMethodName());
-    Path walPath = writeWAL(wals, currentTest.getMethodName(), offheap);
+    final WALFactory wals = new WALFactory(conf, methodName);
+    Path walPath = writeWAL(wals, methodName, offheap);
 
     // Insure edits are not plaintext
     long length = fs.getFileStatus(walPath).getLen();
@@ -161,7 +161,7 @@ public class TestWALReaderOnSecureWAL {
     byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
-    assertFalse("Cells appear to be plaintext", Bytes.contains(fileData, value));
+    assertFalse(Bytes.contains(fileData, value), "Cells appear to be plaintext");
 
     // Confirm the WAL cannot be read back by ProtobufLogReader
     try {
@@ -189,9 +189,8 @@ public class TestWALReaderOnSecureWAL {
     conf.setBoolean(WAL_ENCRYPTION, false);
     FileSystem fs = TEST_UTIL.getTestFileSystem();
     final WALFactory wals = new WALFactory(conf,
-      ServerName.valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime())
-        .toString());
-    Path walPath = writeWAL(wals, currentTest.getMethodName(), false);
+      ServerName.valueOf(methodName, 16010, EnvironmentEdgeManager.currentTime()).toString());
+    Path walPath = writeWAL(wals, methodName, false);
 
     // Ensure edits are plaintext
     long length = fs.getFileStatus(walPath).getLen();
@@ -199,7 +198,7 @@ public class TestWALReaderOnSecureWAL {
     byte[] fileData = new byte[(int) length];
     IOUtils.readFully(in, fileData);
     in.close();
-    assertTrue("Cells should be plaintext", Bytes.contains(fileData, value));
+    assertTrue(Bytes.contains(fileData, value), "Cells should be plaintext");
 
     // Confirm the WAL can be read back by SecureProtobufLogReader
     try {
@@ -218,7 +217,7 @@ public class TestWALReaderOnSecureWAL {
         new Path(ZKSplitLog.getSplitLogDir(rootdir, listStatus[0].getPath().getName()), "corrupt");
       assertTrue(!fs.exists(file));
     } catch (IOException ioe) {
-      assertTrue("WAL should have been processed", false);
+      fail("WAL should have been processed");
     }
     wals.close();
   }

@@ -106,7 +106,7 @@ public abstract class GenericTestUtils {
     } while (Time.now() - st < waitForMillis);
 
     throw new TimeoutException("Timed out waiting for condition. " + "Thread diagnostics:\n"
-      + TimedOutTestsListener.buildThreadDiagnosticString());
+      + TimedOutTestsThreadDumpHelper.buildThreadDiagnosticString());
   }
 
   /**

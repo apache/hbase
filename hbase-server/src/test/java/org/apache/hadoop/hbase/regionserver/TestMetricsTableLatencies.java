@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsTableLatencies {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsTableLatencies.class);
 
   public static MetricsAssertHelper HELPER =
     CompatibilityFactory.getInstance(MetricsAssertHelper.class);
@@ -49,8 +44,8 @@ public class TestMetricsTableLatencies {
     TableName tn2 = TableName.valueOf("table2");
     MetricsTableLatencies latencies =
       CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
-    assertTrue("'latencies' is actually " + latencies.getClass(),
-      latencies instanceof MetricsTableLatenciesImpl);
+    assertTrue(latencies instanceof MetricsTableLatenciesImpl,
+      "'latencies' is actually " + latencies.getClass());
     MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
     RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics(false);
 
@@ -79,8 +74,8 @@ public class TestMetricsTableLatencies {
     TableName tn1 = TableName.valueOf("table1");
     MetricsTableLatencies latencies =
       CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
-    assertTrue("'latencies' is actually " + latencies.getClass(),
-      latencies instanceof MetricsTableLatenciesImpl);
+    assertTrue(latencies instanceof MetricsTableLatenciesImpl,
+      "'latencies' is actually " + latencies.getClass());
     MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
 
     Configuration conf = new Configuration();

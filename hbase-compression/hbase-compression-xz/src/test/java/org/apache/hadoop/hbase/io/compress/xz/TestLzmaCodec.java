@@ -18,19 +18,10 @@
 package org.apache.hadoop.hbase.io.compress.xz;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
 public class TestLzmaCodec extends CompressionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLzmaCodec.class);
 
   @Test
   public void testLzmaCodecSmall() throws Exception {

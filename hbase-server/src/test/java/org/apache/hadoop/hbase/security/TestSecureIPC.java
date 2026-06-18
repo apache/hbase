@@ -26,11 +26,11 @@ import static org.apache.hadoop.hbase.security.provider.SaslClientAuthentication
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.either;
 import static org.hamcrest.Matchers.instanceOf;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.EOFException;
 import java.io.File;
@@ -42,16 +42,16 @@ import java.net.SocketException;
 import java.security.PrivilegedExceptionAction;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Stream;
 import javax.security.sasl.SaslClient;
 import javax.security.sasl.SaslException;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.exceptions.ConnectionClosedException;
@@ -77,16 +77,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -96,13 +92,10 @@ import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.UserInformation;
 
-@RunWith(Parameterized.class)
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
 public class TestSecureIPC {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSecureIPC.class);
 
   private static final HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
 
@@ -119,28 +112,30 @@ public class TestSecureIPC {
   private Configuration clientConf;
   private Configuration serverConf;
 
-  @Parameters(name = "{index}: rpcClientImpl={0}, rpcServerImpl={1}")
-  public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     List<String> rpcClientImpls =
       Arrays.asList(BlockingRpcClient.class.getName(), NettyRpcClient.class.getName());
     List<String> rpcServerImpls =
       Arrays.asList(SimpleRpcServer.class.getName(), NettyRpcServer.class.getName());
     for (String rpcClientImpl : rpcClientImpls) {
       for (String rpcServerImpl : rpcServerImpls) {
-        params.add(new Object[] { rpcClientImpl, rpcServerImpl });
+        params.add(Arguments.of(rpcClientImpl, rpcServerImpl));
       }
     }
-    return params;
+    return params.stream();
   }
 
-  @Parameter(0)
   public String rpcClientImpl;
 
-  @Parameter(1)
   public String rpcServerImpl;
 
-  @BeforeClass
+  public TestSecureIPC(String rpcClientImpl, String rpcServerImpl) {
+    this.rpcClientImpl = rpcClientImpl;
+    this.rpcServerImpl = rpcServerImpl;
+  }
+
+  @BeforeAll
   public static void setUp() throws Exception {
     KDC = TEST_UTIL.setupMiniKdc(KEYTAB_FILE);
     PRINCIPAL = "hbase/" + HOST;
@@ -151,7 +146,7 @@ public class TestSecureIPC {
     TEST_UTIL.getConfiguration().setInt("hbase.security.relogin.maxretries", 1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     if (KDC != null) {
       KDC.stop();
@@ -159,7 +154,7 @@ public class TestSecureIPC {
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUpTest() throws Exception {
     krbKeytab = getKeytabFileForTesting();
     krbPrincipal = getPrincipalForTesting();
@@ -172,7 +167,7 @@ public class TestSecureIPC {
     serverConf.set(RpcServerFactory.CUSTOM_RPC_SERVER_IMPL_CONF_KEY, rpcServerImpl);
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -184,7 +179,7 @@ public class TestSecureIPC {
     callRpcService(User.create(ugi2));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth_CanonicalHostname() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -201,7 +196,7 @@ public class TestSecureIPC {
     callRpcService(User.create(ugi2));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcCallWithEnabledKerberosSaslAuth_NoCanonicalHostname() throws Exception {
     UserGroupInformation ugi2 = UserGroupInformation.getCurrentUser();
 
@@ -295,7 +290,7 @@ public class TestSecureIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRpcServerFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
@@ -311,7 +306,7 @@ public class TestSecureIPC {
     callRpcService(User.create(clientUgi));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcServerDisallowFallbackToSimpleAuth() throws Exception {
     String clientUsername = "testuser";
     UserGroupInformation clientUgi =
@@ -334,7 +329,7 @@ public class TestSecureIPC {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testRpcClientFallbackToSimpleAuth() throws Exception {
     String serverUsername = "testuser";
     UserGroupInformation serverUgi =
@@ -349,7 +344,7 @@ public class TestSecureIPC {
     callRpcService(User.create(serverUgi), User.create(ugi));
   }
 
-  @Test
+  @TestTemplate
   public void testRpcClientDisallowFallbackToSimpleAuth() throws Exception {
     String serverUsername = "testuser";
     UserGroupInformation serverUgi =
@@ -373,7 +368,7 @@ public class TestSecureIPC {
   /**
    * Test various combinations of Server and Client qops.
    */
-  @Test
+  @TestTemplate
   public void testSaslWithCommonQop() throws Exception {
     setRpcProtection("privacy,authentication", "authentication");
     callRpcService();
@@ -391,7 +386,7 @@ public class TestSecureIPC {
     callRpcService();
   }
 
-  @Test
+  @TestTemplate
   public void testSaslNoCommonQop() throws Exception {
     setRpcProtection("integrity", "privacy");
     SaslException se = assertThrows(SaslException.class, () -> callRpcService());
@@ -401,7 +396,7 @@ public class TestSecureIPC {
   /**
    * Test sasl encryption with Crypto AES.
    */
-  @Test
+  @TestTemplate
   public void testSaslWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
     setCryptoAES("true", "true");
@@ -411,7 +406,7 @@ public class TestSecureIPC {
   /**
    * Test various combinations of Server and Client configuration for Crypto AES.
    */
-  @Test
+  @TestTemplate
   public void testDifferentConfWithCryptoAES() throws Exception {
     setRpcProtection("privacy", "privacy");
 

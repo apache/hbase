@@ -44,11 +44,8 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.experimental.categories.Category;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -56,7 +53,6 @@ import org.slf4j.LoggerFactory;
  * A helper class for process-based mini-cluster tests. Unlike {@link MiniHBaseCluster}, starts
  * daemons as separate processes, allowing to do real kill testing.
  */
-@Category({ MiscTests.class, LargeTests.class })
 public class ProcessBasedLocalHBaseCluster {
 
   private final String hbaseHome, workDir;

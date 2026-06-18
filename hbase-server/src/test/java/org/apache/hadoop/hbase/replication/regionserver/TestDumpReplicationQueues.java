@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.RecoverableZooKeeper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.experimental.categories.Category;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -43,7 +42,6 @@ import org.junit.jupiter.api.Test;
  */
 @Tag(ReplicationTests.TAG)
 @Tag(SmallTests.TAG)
-@Category({ ReplicationTests.class, SmallTests.class })
 public class TestDumpReplicationQueues {
 
   /**
