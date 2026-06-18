@@ -44,14 +44,14 @@ public class RegionInTransitionTracker {
   private final List<RegionState.State> ENABLE_TABLE_REGION_STATE =
     Collections.singletonList(RegionState.State.OPEN);
 
+  // DO NOT USE containsKey()/remove() on regionInTransition with a different RegionInfo instance:
+  // this map is ordered by RegionInfo.COMPARATOR, and that comparator includes the offline flag.
+  // Lookups can therefore fail if the RegionInfo used as the key has a different offline value,
+  // even when it refers to the same region. Offline value changes with splitting.
   private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
     new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
 
   private TableStateManager tableStateManager;
-
-  public boolean isRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransition.containsKey(regionInfo);
-  }
 
   /**
    * Handles a region whose hosting RegionServer has crashed. When a RegionServer fails, all regions
@@ -59,7 +59,7 @@ public class RegionInTransitionTracker {
    * other servers.
    */
   public void regionCrashed(RegionStateNode regionStateNode) {
-    if (regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+    if (isReplica(regionStateNode)) {
       return;
     }
 
@@ -79,7 +79,7 @@ public class RegionInTransitionTracker {
    */
   public void handleRegionStateNodeOperation(RegionStateNode regionStateNode) {
     // only consider default replica for availability
-    if (regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID) {
+    if (isReplica(regionStateNode)) {
       return;
     }
 
@@ -89,10 +89,7 @@ public class RegionInTransitionTracker {
       tableEnabled ? ENABLE_TABLE_REGION_STATE : DISABLE_TABLE_REGION_STATE;
 
     // if region is merged or split it should not be in RIT list
-    if (
-      currentState == RegionState.State.SPLIT || currentState == RegionState.State.MERGED
-        || regionStateNode.getRegionInfo().isSplit()
-    ) {
+    if (AssignmentManagerUtil.isSplitOrMerged(regionStateNode)) {
       if (removeRegionInTransition(regionStateNode.getRegionInfo())) {
         LOG.debug("Removed {} from RIT list as it is split or merged",
           regionStateNode.getRegionInfo().getEncodedName());
@@ -156,4 +153,9 @@ public class RegionInTransitionTracker {
   public void setTableStateManager(TableStateManager tableStateManager) {
     this.tableStateManager = tableStateManager;
   }
+
+  private static boolean isReplica(RegionStateNode regionStateNode) {
+    return regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID;
+  }
+
 }
