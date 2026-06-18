@@ -17,13 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
-
-import org.apache.hadoop.hbase.ServerName;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -32,6 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -227,11 +226,12 @@ public class TestRegionStates {
    * recreated for it. When the resumed SCP reaches SERVER_CRASH_SPLIT_LOGS it calls
    * {@link RegionStates#logSplitting(ServerName)} -> setServerState -> getServerNode, which returns
    * null. Before the fix, {@code synchronized (serverNode)} threw NPE (failing the SCP and
-   * triggering an unsupported rollback). After the fix, setServerState skips the missing node, so
-   * logSplitting (and the other split helpers) are safe no-ops.
+   * triggering an unsupported rollback). After the fix, setServerState recreates the missing node
+   * (these helpers only ever run for a crashed server inside an SCP), so the split helpers proceed
+   * without throwing and the state is recorded.
    */
   @Test
-  public void testLogSplittingNoOpWhenServerNodeMissing() {
+  public void testLogSplittingCreatesNodeWhenServerNodeMissing() {
     final RegionStates stateMap = new RegionStates();
     // The crashed server from the JIRA log: hregion1,16020,1715424228375
     final ServerName crashedServer = ServerName.valueOf("hregion1", 16020, 1715424228375L);
@@ -241,15 +241,17 @@ public class TestRegionStates {
     assertNull(stateMap.getServerNode(crashedServer),
       "precondition: no ServerStateNode should exist for the crashed server after restart");
 
-    // The resumed SCP advances through the split states. None of these should throw now; they are
-    // no-ops because the ServerStateNode is gone. Exercise every entry point into setServerState.
+    // The resumed SCP advances through the split states. None of these should throw now; the node
+    // is recreated on demand. Exercise every entry point into setServerState.
     assertDoesNotThrow(() -> stateMap.metaLogSplitting(crashedServer));
     assertDoesNotThrow(() -> stateMap.metaLogSplit(crashedServer));
     assertDoesNotThrow(() -> stateMap.logSplitting(crashedServer));
     assertDoesNotThrow(() -> stateMap.logSplit(crashedServer));
 
-    // And the node is still absent (we must not implicitly create it).
-    assertNull(stateMap.getServerNode(crashedServer));
+    // The node was recreated and reflects the last split state set above.
+    ServerStateNode serverNode = stateMap.getServerNode(crashedServer);
+    assertNotNull(serverNode, "the ServerStateNode should be recreated by setServerState");
+    assertTrue(serverNode.isInState(ServerState.OFFLINE));
   }
 
   /**
