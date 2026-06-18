@@ -77,12 +77,6 @@ public class HRegionFileSystem {
   /** Name of the region info file that resides just under the region directory. */
   public final static String REGION_INFO_FILE = ".regioninfo";
 
-  /** Temporary subdirectory of the region directory used for merges. */
-  public static final String REGION_MERGES_DIR = ".merges";
-
-  /** Temporary subdirectory of the region directory used for splits. */
-  public static final String REGION_SPLITS_DIR = ".splits";
-
   /** Temporary subdirectory of the region directory used for compaction output. */
   static final String REGION_TEMP_DIR = ".tmp";
 
