@@ -107,7 +107,11 @@ public abstract class RpcExecutor {
   private final Class<? extends BlockingQueue> queueClass;
   private final Object[] queueInitArgs;
 
+  // this is soft limit of the queue, not size/capacity.
   protected volatile int currentQueueLimit;
+  // While initializing we will use hard limit as the capacity of queue, it will let us dynamically
+  // change the queue limit
+  protected final int queueHardLimit;
 
   private final AtomicInteger activeHandlerCount = new AtomicInteger(0);
   private final List<RpcHandler> handlers;
@@ -161,11 +165,13 @@ public abstract class RpcExecutor {
       int handlerCountPerQueue = this.handlerCount / this.numCallQueues;
       maxQueueLength = handlerCountPerQueue * RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER;
     }
+    currentQueueLimit = maxQueueLength;
+    queueHardLimit = Math.max(maxQueueLength, DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
 
     if (isDeadlineQueueType(callQueueType)) {
       this.name += ".Deadline";
       this.queueInitArgs =
-        new Object[] { maxQueueLength, new CallPriorityComparator(conf, priority) };
+        new Object[] { queueHardLimit, new CallPriorityComparator(conf, priority) };
       this.queueClass = BoundedPriorityBlockingQueue.class;
     } else if (isCodelQueueType(callQueueType)) {
       this.name += ".Codel";
@@ -174,8 +180,8 @@ public abstract class RpcExecutor {
       int codelInterval = conf.getInt(CALL_QUEUE_CODEL_INTERVAL, CALL_QUEUE_CODEL_DEFAULT_INTERVAL);
       double codelLifoThreshold =
         conf.getDouble(CALL_QUEUE_CODEL_LIFO_THRESHOLD, CALL_QUEUE_CODEL_DEFAULT_LIFO_THRESHOLD);
-      this.queueInitArgs = new Object[] { maxQueueLength, codelTargetDelay, codelInterval,
-        codelLifoThreshold, numGeneralCallsDropped, numLifoModeSwitches };
+      this.queueInitArgs = new Object[] { queueHardLimit, codelTargetDelay, codelInterval,
+        codelLifoThreshold, numGeneralCallsDropped, numLifoModeSwitches, currentQueueLimit };
       this.queueClass = AdaptiveLifoCoDelCallQueue.class;
     } else if (isPluggableQueueType(callQueueType)) {
       Optional<Class<? extends BlockingQueue<CallRunner>>> pluggableQueueClass =
@@ -185,12 +191,12 @@ public abstract class RpcExecutor {
         throw new PluggableRpcQueueNotFound(
           "Pluggable call queue failed to load and selected call" + " queue type required");
       } else {
-        this.queueInitArgs = new Object[] { maxQueueLength, priority, conf };
+        this.queueInitArgs = new Object[] { queueHardLimit, priority, conf };
         this.queueClass = pluggableQueueClass.get();
       }
     } else {
       this.name += ".Fifo";
-      this.queueInitArgs = new Object[] { maxQueueLength };
+      this.queueInitArgs = new Object[] { queueHardLimit };
       this.queueClass = LinkedBlockingQueue.class;
     }
 
@@ -231,20 +237,7 @@ public abstract class RpcExecutor {
       .collect(Collectors.groupingBy(Pair::getFirst, Collectors.summingLong(Pair::getSecond)));
   }
 
-  // This method can only be called ONCE per executor instance.
-  // Before calling: queueInitArgs[0] contains the soft limit (desired queue capacity)
-  // After calling: queueInitArgs[0] is set to hard limit and currentQueueLimit stores the original
-  // soft limit.
-  // Multiple calls would incorrectly use the hard limit as the soft limit.
-  // As all the queues has same initArgs and queueClass, there should be no need to call this again.
   protected void initializeQueues(final int numQueues) {
-    if (!queues.isEmpty()) {
-      throw new RuntimeException("Queues are already initialized");
-    }
-    if (queueInitArgs.length > 0) {
-      currentQueueLimit = (int) queueInitArgs[0];
-      queueInitArgs[0] = Math.max((int) queueInitArgs[0], DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
-    }
     for (int i = 0; i < numQueues; ++i) {
       queues.add(ReflectionUtils.newInstance(queueClass, queueInitArgs));
     }
@@ -466,7 +459,15 @@ public abstract class RpcExecutor {
       }
     }
     final int queueLimit = currentQueueLimit;
-    currentQueueLimit = conf.getInt(configKey, queueLimit);
+    int newQueueLimit = conf.getInt(configKey, queueLimit);
+    if (newQueueLimit > queueHardLimit) {
+      LOG.warn(
+        "Requested soft limit {} exceeds queue hard limit/capacity {}. "
+          + "A region server restart is required to grow the underlying queue.",
+        newQueueLimit, queueHardLimit);
+      newQueueLimit = currentQueueLimit;
+    }
+    currentQueueLimit = newQueueLimit;
   }
 
   public void onConfigurationChange(Configuration conf) {
@@ -479,8 +480,10 @@ public abstract class RpcExecutor {
 
     for (BlockingQueue<CallRunner> queue : queues) {
       if (queue instanceof AdaptiveLifoCoDelCallQueue) {
+        // current queue Limit for executor is already updated as part of resizeQueues, we need to
+        // let codel queue also make aware of it
         ((AdaptiveLifoCoDelCallQueue) queue).updateTunables(codelTargetDelay, codelInterval,
-          codelLifoThreshold);
+          codelLifoThreshold, currentQueueLimit);
       } else if (queue instanceof ConfigurationObserver) {
         ((ConfigurationObserver) queue).onConfigurationChange(conf);
       }

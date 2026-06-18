@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -34,13 +35,14 @@ import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -87,6 +89,7 @@ public class TestSimpleRpcScheduler {
   };
   private Configuration conf;
   private String testMethodName;
+  private final AtomicInteger requestProcessed = new AtomicInteger(0);
 
   @BeforeEach
   public void setUp(TestInfo testInfo) {
@@ -226,6 +229,7 @@ public class TestSimpleRpcScheduler {
     RequestHeader header = RequestHeader.newBuilder().setPriority(priority).build();
     when(task.getRpcCall()).thenReturn(call);
     when(call.getHeader()).thenReturn(header);
+    when(call.getReceiveTime()).thenReturn(EnvironmentEdgeManager.currentTime());
     return task;
   }
 
@@ -578,66 +582,84 @@ public class TestSimpleRpcScheduler {
     }
   }
 
-  private static final class CoDelEnvironmentEdge implements EnvironmentEdge {
+  private final class CoDelEnvironmentEdge implements EnvironmentEdge {
 
-    private final BlockingQueue<Long> timeQ = new LinkedBlockingQueue<>();
+    private long perRequestOffset;
+    private long gapInRequests;
+    private long testStartTime = 0;
 
-    private long offset;
+    private int requestCount = 0;
 
-    private final Set<String> threadNamePrefixs = new HashSet<>();
+    private final Set<String> threadNamePrefixes = new HashSet<>();
+    private final String testThread = Thread.currentThread().getName();
 
     @Override
     public long currentTime() {
-      for (String threadNamePrefix : threadNamePrefixs) {
-        String threadName = Thread.currentThread().getName();
+      String threadName = Thread.currentThread().getName();
+      if (threadName.equals(testThread)) {
+        // test thread will create a request and add that to scheduler
+        // Replicating a constant rate of request arrival.
+        long requestStartTime = testStartTime + requestCount * gapInRequests;
+        requestCount++;
+        return requestStartTime;
+      }
+      // handler thread will pick the request from queue, this time will depend on processing time
+      // of handler
+      for (String threadNamePrefix : threadNamePrefixes) {
         if (threadName.startsWith(threadNamePrefix)) {
-          if (timeQ != null) {
-            Long qTime = timeQ.poll();
-            if (qTime != null) {
-              return qTime.longValue() + offset;
-            }
+          long requestPickTime;
+          if (gapInRequests >= perRequestOffset) {
+            // it means handler can complete the processing of last request and will be free when it
+            // will come to serve next request. We don't need it in fast path but just in case for
+            // other tests
+            requestPickTime = testStartTime + requestProcessed.get() * gapInRequests;
+          } else {
+            // this means handler will still be busy processing the last requests when new request
+            // will come in queue
+            requestPickTime = testStartTime + requestProcessed.get() * perRequestOffset;
           }
+          return requestPickTime;
         }
       }
       return System.currentTimeMillis();
     }
+
+    public void startTestFor(int arrivalRatePerSecond, long requestProcessingTime) {
+      this.perRequestOffset = requestProcessingTime;
+      this.gapInRequests = 1000L / arrivalRatePerSecond;
+      this.requestCount = 0;
+      requestProcessed.set(0);
+      this.testStartTime = System.currentTimeMillis();
+    }
   }
 
-  // FIX. I don't get this test (St.Ack). When I time this test, the minDelay is > 2 * codel delay
-  // from the get go. So we are always overloaded. The test below would seem to complete the
-  // queuing of all the CallRunners inside the codel check interval. I don't think we are skipping
-  // codel checking. Second, I think this test has been broken since HBASE-16089 Add on FastPath for
-  // CoDel went in. The thread name we were looking for was the name BEFORE we updated: i.e.
-  // "RpcServer.CodelBQ.default.handler". But same patch changed the name of the codel fastpath
-  // thread to: new FastPathBalancedQueueRpcExecutor("CodelFPBQ.default", handlerCount,
-  // numCallQueues... Codel is hard to test. This test is going to be flakey given it all
-  // timer-based. Disabling for now till chat with authors.
+  // This test is fixing the processing time and arrival rate of the request and checking if CoDel
+  // can utilize the maximum capacity of system
   @Test
   public void testCoDelScheduling() throws Exception {
     CoDelEnvironmentEdge envEdge = new CoDelEnvironmentEdge();
-    envEdge.threadNamePrefixs.add("RpcServer.default.FPBQ.Codel.handler");
+    envEdge.threadNamePrefixes.add("RpcServer.default.FPBQ.Codel.handler");
     Configuration schedConf = HBaseConfiguration.create();
     schedConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 250);
     schedConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
       RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+    schedConf.setInt(RpcExecutor.CALL_QUEUE_CODEL_TARGET_DELAY, 5);
     PriorityFunction priority = mock(PriorityFunction.class);
     when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
     SimpleRpcScheduler scheduler =
       new SimpleRpcScheduler(schedConf, 1, 1, 1, priority, HConstants.QOS_THRESHOLD);
+
     try {
-      // Loading mocked call runner can take a good amount of time the first time through
-      // (haven't looked why). Load it for first time here outside of the timed loop.
-      getMockedCallRunner(EnvironmentEdgeManager.currentTime(), 2);
       scheduler.start();
       EnvironmentEdgeManager.injectEdge(envEdge);
-      envEdge.offset = 5;
-      // Calls faster than min delay
-      // LOG.info("Start");
+
+      // incoming traffic < capacity
+      envEdge.startTestFor(20, 40);
       for (int i = 0; i < 100; i++) {
         long time = EnvironmentEdgeManager.currentTime();
-        envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
         scheduler.dispatch(cr);
+        Thread.sleep(50);
       }
       // LOG.info("Loop done");
       // make sure fast calls are handled
@@ -646,13 +668,15 @@ public class TestSimpleRpcScheduler {
       assertEquals(0, scheduler.getNumGeneralCallsDropped(),
         "None of these calls should have been discarded");
 
-      envEdge.offset = 151;
-      // calls slower than min delay, but not individually slow enough to be dropped
+      // incoming traffic = capacity
+      envEdge.startTestFor(20, 50);
       for (int i = 0; i < 20; i++) {
         long time = EnvironmentEdgeManager.currentTime();
-        envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 2);
         scheduler.dispatch(cr);
+        // We have mocked the arrival time and the time request get picked from queue but we need to
+        // also make sure that queue fill at the arrival rate
+        Thread.sleep(50);
       }
 
       // make sure somewhat slow calls are handled
@@ -661,21 +685,28 @@ public class TestSimpleRpcScheduler {
       assertEquals(0, scheduler.getNumGeneralCallsDropped(),
         "None of these calls should have been discarded");
 
-      envEdge.offset = 2000;
+      // incoming traffic > capacity
+      envEdge.startTestFor(20, 60);
       // now slow calls and the ones to be dropped
       for (int i = 0; i < 60; i++) {
         long time = EnvironmentEdgeManager.currentTime();
-        envEdge.timeQ.put(time);
         CallRunner cr = getMockedCallRunner(time, 100);
         scheduler.dispatch(cr);
+        Thread.sleep(50);
       }
 
       // make sure somewhat slow calls are handled
       waitUntilQueueEmpty(scheduler);
       Thread.sleep(100);
-      assertTrue(scheduler.getNumGeneralCallsDropped() > 12,
-        "There should have been at least 12 calls dropped however there were "
+      // 60 calls will take 3 second with 20 rps. And in 3 second with 60 processing time we can
+      // only serve 50 request
+      assertTrue(requestProcessed.get() >= 48,
+        "Number of processed requests should be greater then 90% of capacity"
+          + requestProcessed.get());
+      assertTrue(scheduler.getNumGeneralCallsDropped() >= 9,
+        "There should have been at least 9 calls dropped however there were "
           + scheduler.getNumGeneralCallsDropped());
+
     } finally {
       scheduler.stop();
     }
@@ -790,9 +821,8 @@ public class TestSimpleRpcScheduler {
           return;
         }
         try {
-          LOG.warn("Sleeping for " + sleepTime);
           Thread.sleep(sleepTime);
-          LOG.warn("Done Sleeping for " + sleepTime);
+          requestProcessed.incrementAndGet();
         } catch (InterruptedException e) {
         }
       }
@@ -807,4 +837,148 @@ public class TestSimpleRpcScheduler {
       }
     };
   }
+
+  /**
+   * Test LIFO switching behavior through actual RPC calls. This test verifies that when the queue
+   * fills beyond the LIFO threshold, newer calls are processed before older calls (LIFO mode).
+   */
+  @Test
+  public void testCoDelLifoWithRpcCalls() throws Exception {
+    Configuration testConf = HBaseConfiguration.create();
+    testConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+    int maxCallQueueLength = 50;
+    double coDelLifoThreshold = 0.8;
+    testConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, maxCallQueueLength);
+    testConf.setDouble(RpcExecutor.CALL_QUEUE_CODEL_LIFO_THRESHOLD, coDelLifoThreshold);
+    testConf.setInt(RpcExecutor.CALL_QUEUE_CODEL_TARGET_DELAY, 100);
+    testConf.setInt(RpcExecutor.CALL_QUEUE_CODEL_INTERVAL, 100);
+    testConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 1); // Single handler to control
+                                                                // processing
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler =
+      new SimpleRpcScheduler(testConf, 1, 0, 0, priority, HConstants.QOS_THRESHOLD);
+
+    try {
+      scheduler.init(CONTEXT);
+      scheduler.start();
+
+      // Track completion order
+      final List<Integer> completedCalls = Collections.synchronizedList(new ArrayList<>());
+
+      // Dispatch many slow calls rapidly to fill the queue beyond 80% threshold
+      // With queue limit of 50, we need > 40 calls to cross 80%
+      int numCalls = 48;
+      for (int i = 0; i < numCalls; i++) {
+        final int callId = i;
+        CallRunner call = createMockTask(HConstants.NORMAL_QOS);
+        call.setStatus(new MonitoredRPCHandlerImpl("test"));
+        doAnswer(invocation -> {
+          completedCalls.add(callId);
+          Thread.sleep(100); // Slow processing to allow queue to build up
+          return null;
+        }).when(call).run();
+        scheduler.dispatch(call);
+        // No delay between dispatches - rapidly fill the queue
+      }
+
+      // Wait for some calls to complete
+      await().atMost(2, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 3);
+
+      // Check that we had LIFO switches
+      long lifoSwitches = scheduler.getNumLifoModeSwitches();
+      assertTrue(lifoSwitches > 0,
+        "Should have switched to LIFO mode at least once, but got: " + lifoSwitches);
+
+      // Verify LIFO behavior: Among first completed calls, we should see higher call IDs
+      // (indicating later dispatched calls completed first)
+      int maxCallIdCompleted = -1;
+      for (int i = 0; i < completedCalls.size(); i++) {
+        maxCallIdCompleted = Math.max(maxCallIdCompleted, completedCalls.get(i));
+      }
+      // At least one of the early completed calls should have a high ID (>20)
+      // indicating LIFO processing
+      assertTrue(maxCallIdCompleted > maxCallQueueLength * coDelLifoThreshold,
+        "Expected LIFO behavior: early completed calls should include call arrived after threshold "
+          + "maxCallIdCompleted: " + maxCallIdCompleted);
+
+    } finally {
+      scheduler.stop();
+    }
+  }
+
+  /**
+   * Test that CoDel queue returns to FIFO mode after draining below threshold.
+   */
+  @Test
+  public void testCoDelQueueDrainAndFifoReturn() throws Exception {
+    Configuration testConf = HBaseConfiguration.create();
+    testConf.set(RpcExecutor.CALL_QUEUE_TYPE_CONF_KEY,
+      RpcExecutor.CALL_QUEUE_TYPE_CODEL_CONF_VALUE);
+    testConf.setLong(RpcExecutor.CALL_QUEUE_CODEL_TARGET_DELAY, 100);
+    testConf.setInt(RpcScheduler.IPC_SERVER_MAX_CALLQUEUE_LENGTH, 50);
+    testConf.setDouble(RpcExecutor.CALL_QUEUE_CODEL_LIFO_THRESHOLD, 0.8);
+    testConf.setInt(HConstants.REGION_SERVER_HANDLER_COUNT, 2);
+
+    PriorityFunction priority = mock(PriorityFunction.class);
+    when(priority.getPriority(any(), any(), any())).thenReturn(HConstants.NORMAL_QOS);
+    SimpleRpcScheduler scheduler =
+      new SimpleRpcScheduler(testConf, 2, 0, 0, priority, HConstants.QOS_THRESHOLD);
+
+    try {
+      scheduler.init(CONTEXT);
+      scheduler.start();
+
+      final List<Integer> completedCalls = Collections.synchronizedList(new ArrayList<>());
+
+      // Fill queue rapidly to trigger LIFO (>40 calls for 80% of 50)
+      for (int i = 0; i < 48; i++) {
+        final int callId = i;
+        CallRunner call = createMockTask(HConstants.NORMAL_QOS);
+        call.setStatus(new MonitoredRPCHandlerImpl("test"));
+        doAnswer(invocation -> {
+          completedCalls.add(callId);
+          Thread.sleep(80);
+          return null;
+        }).when(call).run();
+        scheduler.dispatch(call);
+      }
+
+      // Wait for calls to complete
+      await().atMost(1, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 3);
+      assertTrue(scheduler.getNumLifoModeSwitches() > 0, "Should have entered LIFO mode");
+
+      await().atMost(2, TimeUnit.SECONDS).until(
+        () -> scheduler.getGeneralQueueLength() == 0 && scheduler.getActiveRpcHandlerCount() == 0);
+
+      long pastNumLifoModeSwitches = scheduler.getNumLifoModeSwitches();
+      // Send new calls - should process in FIFO order
+      completedCalls.clear();
+      for (int i = 100; i < 105; i++) {
+        final int callId = i;
+        CallRunner call = createMockTask(HConstants.NORMAL_QOS);
+        call.setStatus(new MonitoredRPCHandlerImpl("test"));
+        doAnswer(invocation -> {
+          completedCalls.add(callId);
+          Thread.sleep(50);
+          return null;
+        }).when(call).run();
+        scheduler.dispatch(call);
+      }
+
+      // Wait for these calls to complete
+      await().atMost(2, TimeUnit.SECONDS).until(() -> completedCalls.size() >= 2);
+
+      long newLifoSwitch = scheduler.getNumLifoModeSwitches() - pastNumLifoModeSwitches;
+      // Allow at most 1 violation due to concurrent execution by 2 handlers
+      assertEquals(0, newLifoSwitch,
+        "Queue should not switch to LIFO last 5 calls but number of LIFO switch are : "
+          + newLifoSwitch);
+    } finally {
+      scheduler.stop();
+    }
+  }
+
 }
