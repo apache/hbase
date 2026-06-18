@@ -888,19 +888,21 @@ public class HttpServer implements FilterContainer {
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
       genCtx.setDisplayName("prof-output-hbase");
-      // Gate the output-file context behind AdminAuthorizedFilter when authentication is enabled.
-      // Without this, any unauthenticated user who can reach the HTTP port can read raw profiling
-      // output (heap/CPU profiles, stack traces with row keys and credential frames) even though
-      // the /prof start endpoint requires admin access.
-      if (authenticationEnabled) {
-        FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
-        filter.setName(AdminAuthorizedFilter.class.getSimpleName());
-        FilterMapping fmap = new FilterMapping();
-        fmap.setPathSpec("/*");
-        fmap.setDispatches(FilterMapping.ALL);
-        fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
-        genCtx.getServletHandler().addFilter(filter, fmap);
-      }
+      // Must populate CONF_CONTEXT_ATTRIBUTE and ADMINS_ACL so AdminAuthorizedFilter.init()
+      // and hasAdministratorAccess() can read them. Without this, conf and acl are null and
+      // every /prof-output-hbase/* request throws NPE → 500 when authentication is enabled.
+      setContextAttributes(genCtx, conf);
+      // Always wire AdminAuthorizedFilter — hasAdministratorAccess short-circuits to true when
+      // hadoop.security.authorization=false, so this is a no-op when auth is off and a real
+      // gate when it is on. Profiling output can contain row keys and credential frames, so
+      // restricting it to admins matches the access control on the /prof start endpoint.
+      FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
+      filter.setName(AdminAuthorizedFilter.class.getSimpleName());
+      FilterMapping fmap = new FilterMapping();
+      fmap.setPathSpec("/*");
+      fmap.setDispatches(FilterMapping.ALL);
+      fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
+      genCtx.getServletHandler().addFilter(filter, fmap);
     } else {
       ServletHolder disabledHolder = new ServletHolder(new ProfileServlet.DisabledServlet());
       disabledHolder.setInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM,
