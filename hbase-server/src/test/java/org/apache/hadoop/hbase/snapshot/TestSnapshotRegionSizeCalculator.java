@@ -17,34 +17,29 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestSnapshotRegionSizeCalculator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotRegionSizeCalculator.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static FileSystem fs;
@@ -55,7 +50,7 @@ public class TestSnapshotRegionSizeCalculator {
   private static Admin admin;
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     conf = TEST_UTIL.getConfiguration();
@@ -65,7 +60,7 @@ public class TestSnapshotRegionSizeCalculator {
     admin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     fs.delete(rootDir, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -91,7 +86,7 @@ public class TestSnapshotRegionSizeCalculator {
       SnapshotRegionSizeCalculator.calculateRegionSizes(TEST_UTIL.getConfiguration(), manifest);
 
     for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
-      assertTrue("Region size should be 0.", entry.getValue() == 0);
+      assertEquals(0, (long) entry.getValue(), "Region size should be 0.");
     }
 
     admin.deleteSnapshot(snapshotName);
@@ -108,7 +103,7 @@ public class TestSnapshotRegionSizeCalculator {
     regionSizes =
       SnapshotRegionSizeCalculator.calculateRegionSizes(TEST_UTIL.getConfiguration(), manifest);
     for (Map.Entry<String, Long> entry : regionSizes.entrySet()) {
-      assertTrue("Region size should be greater than 0.", entry.getValue() > 0);
+      assertTrue(entry.getValue() > 0, "Region size should be greater than 0.");
     }
 
     TEST_UTIL.deleteTable(tableName);

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -222,6 +223,7 @@ public class TableSnapshotInputFormatImpl {
 
       Bytes.writeByteArray(out, Bytes.toBytes(scan));
       Bytes.writeByteArray(out, Bytes.toBytes(restoreDir));
+      out.writeLong(length);
 
     }
 
@@ -238,6 +240,12 @@ public class TableSnapshotInputFormatImpl {
 
       this.scan = Bytes.toString(Bytes.readByteArray(in));
       this.restoreDir = Bytes.toString(Bytes.readByteArray(in));
+      try {
+        this.length = in.readLong();
+      } catch (EOFException e) {
+        // Older serialized splits do not carry length and keep the previous behavior
+        this.length = 0L;
+      }
     }
   }
 
