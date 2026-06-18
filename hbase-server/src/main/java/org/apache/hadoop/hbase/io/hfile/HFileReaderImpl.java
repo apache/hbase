@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.KeyValueScanner;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.IdLock;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
 import org.apache.hadoop.io.WritableUtils;
@@ -124,6 +125,14 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
   /** Minor versions starting with this number have faked index key */
   static final int MINOR_VERSION_WITH_FAKED_KEY = 3;
 
+  private final String fileName;
+
+  private final String region;
+
+  private final String family;
+
+  private final boolean archived;
+
   /**
    * Opens a HFile.
    * @param context   Reader context info
@@ -149,6 +158,10 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     fsBlockReader.setDataBlockEncoder(dataBlockEncoder, conf);
     dataBlockIndexReader = fileInfo.getDataBlockIndexReader();
     metaBlockIndexReader = fileInfo.getMetaBlockIndexReader();
+    fileName = path.getName();
+    family = path.getParent().getName();
+    region = path.getParent().getParent().getName();
+    archived = HFileArchiveUtil.isHFileArchived(path);
   }
 
   @SuppressWarnings("serial")
@@ -1255,8 +1268,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     synchronized (metaBlockIndexReader.getRootBlockKey(block)) {
       // Check cache for block. If found return.
       long metaBlockOffset = metaBlockIndexReader.getRootBlockOffset(block);
-      BlockCacheKey cacheKey =
-        new BlockCacheKey(path, metaBlockOffset, this.isPrimaryReplicaReader(), BlockType.META);
+      BlockCacheKey cacheKey = new BlockCacheKey(fileName, family, region, metaBlockOffset,
+        this.isPrimaryReplicaReader(), BlockType.META, archived);
 
       cacheBlock &=
         cacheConf.shouldCacheBlockOnRead(BlockType.META.getCategory(), getHFileInfo(), conf);
@@ -1345,9 +1358,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     // the other choice is to duplicate work (which the cache would prevent you
     // from doing).
 
-    BlockCacheKey cacheKey =
-      new BlockCacheKey(path, dataBlockOffset, this.isPrimaryReplicaReader(), expectedBlockType);
-
+    BlockCacheKey cacheKey = new BlockCacheKey(fileName, family, region, dataBlockOffset,
+      this.isPrimaryReplicaReader(), expectedBlockType, archived);
     boolean useLock = false;
     IdLock.Entry lockEntry = null;
     final Span span = Span.current();
