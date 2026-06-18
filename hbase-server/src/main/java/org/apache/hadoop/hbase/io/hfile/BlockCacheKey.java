@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.FastStringPool;
-import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,8 +37,6 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   private static final FastStringPool REGION_NAME_POOL = new FastStringPool();
 
   private static final FastStringPool CF_NAME_POOL = new FastStringPool();
-
-  // New compressed format using integer file ID (when codec is available)
 
   private final String hfileName;
 
@@ -90,6 +88,8 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
    * @param offset           Offset of the block into the file
    * @param isPrimaryReplica Whether this is from primary replica
    * @param blockType        Type of block
+   * @param archived         Whether the file is archived or not. This is relevant for proper cache
+   *                         metrics computation.
    */
   public BlockCacheKey(String hfileName, String cfName, String regionName, long offset,
     boolean isPrimaryReplica, BlockType blockType, boolean archived) {
@@ -105,17 +105,20 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
 
   /**
    * Construct a new BlockCacheKey using a file path. File, column family and region information
-   * will be extracted from the passed path. This should be used when inserting keys into the cache,
-   * so that region cache metrics are recorded properly.
+   * will be extracted from the passed path, so that region cache metrics are recorded properly.
+   * NOTE: This should be used when inserting keys into the cache from tests only, as the region and
+   * cf name parsing from the path can be costly and induce a 10% performance degradation on the
+   * read path, when this parsing is performed on each key creation time.
    * @param hfilePath        The path to the HFile
    * @param offset           Offset of the block into the file
    * @param isPrimaryReplica Whether this is from primary replica
    * @param blockType        Type of block
    */
+  @RestrictedApi(explanation = "Should only be called in tests due to costly path parsing",
+      link = "", allowedOnPath = ".*/src/test/.*")
   public BlockCacheKey(Path hfilePath, long offset, boolean isPrimaryReplica, BlockType blockType) {
     this(hfilePath.getName(), hfilePath.getParent().getName(),
-      hfilePath.getParent().getParent().getName(), offset, isPrimaryReplica, blockType,
-      HFileArchiveUtil.isHFileArchived(hfilePath));
+      hfilePath.getParent().getParent().getName(), offset, isPrimaryReplica, blockType, false);
   }
 
   @Override
@@ -194,5 +197,4 @@ public class BlockCacheKey implements HeapSize, java.io.Serializable {
   public boolean isArchived() {
     return archived;
   }
-
 }
