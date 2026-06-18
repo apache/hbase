@@ -15,7 +15,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.hbase.metrics.impl.DropwizardMeter;
 import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
-import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.AfterEach;
@@ -53,10 +52,6 @@ public class TestMetricsTableRequests {
     TableName tn2 = TableName.valueOf("table2");
     MetricsTableRequests requests1 = new MetricsTableRequests(tn1, new Configuration());
     MetricsTableRequests requests2 = new MetricsTableRequests(tn2, new Configuration());
-    assertTrue(requests1 instanceof MetricsTableRequests,
-      "'requests' is actually " + requests1.getClass());
-    assertTrue(requests2 instanceof MetricsTableRequests,
-      "'requests' is actually " + requests2.getClass());
 
     MetricRegistryInfo info1 = requests1.getMetricRegistryInfo();
     MetricRegistryInfo info2 = requests2.getMetricRegistryInfo();
@@ -102,8 +97,6 @@ public class TestMetricsTableRequests {
     // enable
     assertTrue(enableTableQueryMeter);
     MetricsTableRequests requests = new MetricsTableRequests(tn1, conf);
-    assertTrue(requests instanceof MetricsTableRequests,
-      "'requests' is actually " + requests.getClass());
 
     MetricRegistryInfo info = requests.getMetricRegistryInfo();
     Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
@@ -122,8 +115,6 @@ public class TestMetricsTableRequests {
         MetricsTableRequests.ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT);
     assertFalse(enableTableQueryMeter);
     requests = new MetricsTableRequests(tn1, conf);
-    assertTrue(requests instanceof MetricsTableRequests,
-      "'requests' is actually " + requests.getClass());
 
     info = requests.getMetricRegistryInfo();
     registry = MetricRegistries.global().get(info);
