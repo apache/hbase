@@ -907,7 +907,8 @@ public class TestSplitTransactionOnCluster {
       } catch (DoNotRetryIOException e) {
         // Expected
       }
-      assertFalse(am.isRegionInTransition(hri), "Split region can't be assigned");
+      assertFalse(AssignmentTestingUtil.isRegionInTransition(hri, am),
+        "Split region can't be assigned");
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
 
       // We should not be able to unassign it either
@@ -917,7 +918,8 @@ public class TestSplitTransactionOnCluster {
       } catch (DoNotRetryIOException e) {
         // Expected
       }
-      assertFalse(am.isRegionInTransition(hri), "Split region can't be unassigned");
+      assertFalse(AssignmentTestingUtil.isRegionInTransition(hri, am),
+        "Split region can't be unassigned");
       assertTrue(regionStates.isRegionInState(hri, State.SPLIT));
     } finally {
       admin.balancerSwitch(true, false);
