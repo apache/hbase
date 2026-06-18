@@ -1871,9 +1871,10 @@ public class AssignmentManager {
       }
       // add regions to RIT while visiting the meta
       regionInTransitionTracker.handleRegionStateNodeOperation(regionNode);
-      // If region location of region belongs to a dead server mark the region crashed
+      // If region is supposed to be serve traffic (NOT split and merged) and location of region
+      // belongs to a dead server mark the region crashed
       if (
-        regionNode.getRegionLocation() != null
+        regionNode.getRegionLocation() != null && !AssignmentManagerUtil.isSplitOrMerged(regionNode)
           && master.getServerManager().isServerDead(regionNode.getRegionLocation())
       ) {
         long timeOfCrash = master.getServerManager().getDeadServers()
@@ -2079,10 +2080,6 @@ public class AssignmentManager {
 
   public List<RegionStateNode> getRegionsInTransition() {
     return regionInTransitionTracker.getRegionsInTransition();
-  }
-
-  public boolean isRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransitionTracker.isRegionInTransition(regionInfo);
   }
 
   public int getRegionTransitScheduledCount() {
