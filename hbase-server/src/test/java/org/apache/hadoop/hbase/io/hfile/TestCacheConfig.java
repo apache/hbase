@@ -41,6 +41,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -159,31 +160,31 @@ public class TestCacheConfig {
   }
 
   /**
-   * @param bc       The block cache instance.
+   * @param service  The cache access service instance.
    * @param cc       Cache config.
    * @param doubling If true, addition of element ups counter by 2, not 1, because element added to
    *                 onheap and offheap caches.
    * @param sizing   True if we should run sizing test (doesn't always apply).
    */
-  void basicBlockCacheOps(final BlockCache bc, final CacheConfig cc, final boolean doubling,
-    final boolean sizing) {
+  void basicBlockCacheOps(final CacheAccessService service, final CacheConfig cc,
+    final boolean doubling, final boolean sizing) {
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
     BlockCacheKey bck = new BlockCacheKey("f", 0);
     Cacheable c = new DataCacheEntry();
     // Do asserts on block counting.
-    long initialBlockCount = bc.getBlockCount();
-    bc.cacheBlock(bck, c, cc.isInMemory());
-    assertEquals(doubling ? 2 : 1, bc.getBlockCount() - initialBlockCount);
-    bc.evictBlock(bck);
-    assertEquals(initialBlockCount, bc.getBlockCount());
+    long initialBlockCount = service.getBlockCount();
+    service.cacheBlock(bck, c, cc.isInMemory());
+    assertEquals(doubling ? 2 : 1, service.getBlockCount() - initialBlockCount);
+    service.evictBlock(bck);
+    assertEquals(initialBlockCount, service.getBlockCount());
     // Do size accounting. Do it after the above 'warm-up' because it looks like some
     // buffers do lazy allocation so sizes are off on first go around.
     if (sizing) {
-      long originalSize = bc.getCurrentSize();
-      bc.cacheBlock(bck, c, cc.isInMemory());
-      assertTrue(bc.getCurrentSize() > originalSize);
-      bc.evictBlock(bck);
-      long size = bc.getCurrentSize();
+      long originalSize = service.getCurrentDataSize();
+      service.cacheBlock(bck, c, cc.isInMemory());
+      assertTrue(service.getCurrentDataSize() > originalSize);
+      service.evictBlock(bck);
+      long size = service.getCurrentDataSize();
       assertEquals(originalSize, size);
     }
   }
@@ -254,7 +255,8 @@ public class TestCacheConfig {
     ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
       .newBuilder(Bytes.toBytes("testDisableCacheDataBlock")).setBlockCacheEnabled(false).build();
 
-    cacheConfig = new CacheConfig(conf, columnFamilyDescriptor, null, ByteBuffAllocator.HEAP);
+    cacheConfig = new CacheConfig(conf, columnFamilyDescriptor, (CacheAccessService) null,
+      ByteBuffAllocator.HEAP);
     assertFalse(cacheConfig.shouldCacheBlockOnRead(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheCompressed(BlockCategory.DATA));
     assertFalse(cacheConfig.shouldCacheDataCompressed());
@@ -271,9 +273,9 @@ public class TestCacheConfig {
   public void testCacheConfigDefaultLRUBlockCache() {
     CacheConfig cc = new CacheConfig(this.conf);
     assertTrue(CacheConfig.DEFAULT_IN_MEMORY == cc.isInMemory());
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
-    basicBlockCacheOps(blockCache, cc, false, true);
-    assertTrue(blockCache instanceof LruBlockCache);
+    CacheAccessService service = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
+    basicBlockCacheOps(service, cc, false, true);
+    assertTrue(CacheAccessServiceTestFactory.blockCache(service) instanceof LruBlockCache);
   }
 
   /**
@@ -303,11 +305,11 @@ public class TestCacheConfig {
     final int bcSize = 100;
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
     CacheConfig cc = new CacheConfig(this.conf);
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
-    basicBlockCacheOps(blockCache, cc, false, false);
-    assertTrue(blockCache instanceof CombinedBlockCache);
+    CacheAccessService service = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
+    basicBlockCacheOps(service, cc, false, false);
+    assertTrue(CacheAccessServiceTestFactory.blockCache(service) instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
-    CombinedBlockCache cbc = (CombinedBlockCache) blockCache;
+    CombinedBlockCache cbc = (CombinedBlockCache) CacheAccessServiceTestFactory.blockCache(service);
     BlockCache[] bcs = cbc.getBlockCaches();
     assertTrue(bcs[0] instanceof LruBlockCache);
     LruBlockCache lbc = (LruBlockCache) bcs[0];
@@ -335,11 +337,11 @@ public class TestCacheConfig {
     assertTrue(lruExpectedSize < bcExpectedSize);
     this.conf.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, bcSize);
     CacheConfig cc = new CacheConfig(this.conf);
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
-    basicBlockCacheOps(blockCache, cc, false, false);
-    assertTrue(blockCache instanceof CombinedBlockCache);
+    CacheAccessService service = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
+    basicBlockCacheOps(service, cc, false, false);
+    assertTrue(CacheAccessServiceTestFactory.blockCache(service) instanceof CombinedBlockCache);
     // TODO: Assert sizes allocated are right and proportions.
-    CombinedBlockCache cbc = (CombinedBlockCache) blockCache;
+    CombinedBlockCache cbc = (CombinedBlockCache) CacheAccessServiceTestFactory.blockCache(service);
     FirstLevelBlockCache lbc = cbc.l1Cache;
     assertEquals(lruExpectedSize, lbc.getMaxSize());
     BlockCache bc = cbc.l2Cache;
@@ -388,19 +390,18 @@ public class TestCacheConfig {
 
   @Test
   public void testIndexOnlyLruBlockCache() {
-    CacheConfig cc = new CacheConfig(this.conf);
     conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
-    assertTrue(blockCache instanceof IndexOnlyLruBlockCache);
+    CacheAccessService cache = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
+    assertTrue(CacheAccessServiceTestFactory.blockCache(cache) instanceof IndexOnlyLruBlockCache);
     // reject data block
-    long initialBlockCount = blockCache.getBlockCount();
+    long initialBlockCount = cache.getBlockCount();
     BlockCacheKey bck = new BlockCacheKey("bck", 0);
     Cacheable c = new DataCacheEntry();
-    blockCache.cacheBlock(bck, c, true);
+    cache.cacheBlock(bck, c, true);
     // accept index block
     Cacheable indexCacheEntry = new IndexCacheEntry();
-    blockCache.cacheBlock(bck, indexCacheEntry, true);
-    assertEquals(initialBlockCount + 1, blockCache.getBlockCount());
+    cache.cacheBlock(bck, indexCacheEntry, true);
+    assertEquals(initialBlockCount + 1, cache.getBlockCount());
   }
 
   @Test
@@ -440,7 +441,7 @@ public class TestCacheConfig {
   void testCacheAccessServiceIsNoOpWhenBlockCacheIsNull() {
     Configuration conf = this.conf;
 
-    CacheConfig cacheConfig = new CacheConfig(conf, null);
+    CacheConfig cacheConfig = new CacheConfig(conf);
 
     CacheAccessService service = cacheConfig.getCacheAccessService();
 

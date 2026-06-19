@@ -64,6 +64,8 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
@@ -102,7 +104,7 @@ public class TestPrefetch {
   private Configuration conf;
   private CacheConfig cacheConf;
   private FileSystem fs;
-  private BlockCache blockCache;
+  private CacheAccessService cache;
 
   @RegisterExtension
   private static OpenTelemetryExtension OTEL_EXT = OpenTelemetryExtension.create();
@@ -112,8 +114,8 @@ public class TestPrefetch {
     conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, true);
     fs = HFileSystem.get(conf);
-    blockCache = BlockCacheFactory.createBlockCache(conf);
-    cacheConf = new CacheConfig(conf, blockCache);
+    cache = CacheAccessServiceTestFactory.fromConfiguration(conf);
+    cacheConf = new CacheConfig(conf, cache);
   }
 
   @Test
@@ -122,7 +124,7 @@ public class TestPrefetch {
       .newBuilder(Bytes.toBytes("f")).setPrefetchBlocksOnOpen(true).build();
     Configuration c = HBaseConfiguration.create();
     assertFalse(c.getBoolean(CacheConfig.PREFETCH_BLOCKS_ON_OPEN_KEY, false));
-    CacheConfig cc = new CacheConfig(c, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+    CacheConfig cc = new CacheConfig(c, columnFamilyDescriptor, cache, ByteBuffAllocator.HEAP);
     assertTrue(cc.shouldPrefetchOnOpen());
   }
 
@@ -137,7 +139,7 @@ public class TestPrefetch {
         .setBlockCacheEnabled(false).build();
     HFileContext meta = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     CacheConfig cacheConfig =
-      new CacheConfig(conf, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+      new CacheConfig(conf, columnFamilyDescriptor, cache, ByteBuffAllocator.HEAP);
     Path storeFile = writeStoreFile("testPrefetchBlockCacheDisabled", meta, cacheConfig);
     readStoreFile(storeFile, (r, o) -> {
       HFileBlock block = null;
@@ -148,7 +150,7 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      boolean isCached = cache.getBlock(key, true, false, true) != null;
       if (
         block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
           || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
@@ -169,7 +171,7 @@ public class TestPrefetch {
     Configuration newConf = new Configuration(conf);
     newConf.setDouble(CacheConfig.PREFETCH_HEAP_USAGE_THRESHOLD, 0.1);
     CacheConfig cacheConfig =
-      new CacheConfig(newConf, columnFamilyDescriptor, blockCache, ByteBuffAllocator.HEAP);
+      new CacheConfig(newConf, columnFamilyDescriptor, cache, ByteBuffAllocator.HEAP);
     Path storeFile = writeStoreFile("testPrefetchHeapUsageAboveThreshold", meta, cacheConfig);
     MutableInt cachedCount = new MutableInt(0);
     MutableInt unCachedCount = new MutableInt(0);
@@ -182,7 +184,7 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      boolean isCached = cache.getBlock(key, true, false, true) != null;
       if (
         block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
           || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
@@ -253,7 +255,7 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      boolean isCached = cache.getBlock(key, true, false, true) != null;
       if (
         block.getBlockType() == BlockType.DATA || block.getBlockType() == BlockType.ROOT_INDEX
           || block.getBlockType() == BlockType.INTERMEDIATE_INDEX
@@ -273,7 +275,7 @@ public class TestPrefetch {
       }
       return block;
     }, (key, block) -> {
-      boolean isCached = blockCache.getBlock(key, true, false, true) != null;
+      boolean isCached = cache.getBlock(key, true, false, true) != null;
       if (block.getBlockType() == BlockType.DATA) {
         assertFalse(block.isUnpacked());
       } else if (
@@ -315,7 +317,7 @@ public class TestPrefetch {
   @Test
   public void testPrefetchCompressed() throws Exception {
     conf.setBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
-    cacheConf = new CacheConfig(conf, blockCache);
+    cacheConf = new CacheConfig(conf, cache);
     HFileContext context = new HFileContextBuilder().withCompression(Compression.Algorithm.GZ)
       .withBlockSize(DATA_BLOCK_SIZE).build();
     Path storeFile = writeStoreFile("TestPrefetchCompressed", context);
@@ -408,7 +410,7 @@ public class TestPrefetch {
 
   private void testPrefetchWhenRefs(boolean compactionEnabled, Consumer<Cacheable> test)
     throws Exception {
-    cacheConf = new CacheConfig(conf, blockCache);
+    cacheConf = new CacheConfig(conf, cache);
     HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     Path tableDir = new Path(TEST_UTIL.getDataTestDir(), "testPrefetchSkipRefs");
     RegionInfo region =
@@ -438,14 +440,14 @@ public class TestPrefetch {
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       if (block.getBlockType() == BlockType.DATA) {
-        test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
+        test.accept(cache.getBlock(blockCacheKey, true, false, true));
       }
       offset += block.getOnDiskSizeWithHeader();
     }
   }
 
   private void testPrefetchWhenHFileLink(Consumer<Cacheable> test) throws Exception {
-    cacheConf = new CacheConfig(conf, blockCache);
+    cacheConf = new CacheConfig(conf, cache);
     HFileContext context = new HFileContextBuilder().withBlockSize(DATA_BLOCK_SIZE).build();
     Path testDir = TEST_UTIL.getDataTestDir("testPrefetchWhenHFileLink");
     final RegionInfo hri =
@@ -493,7 +495,7 @@ public class TestPrefetch {
       HFileBlock block = reader.readBlock(offset, -1, false, true, false, true, null, null, true);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
       if (block.getBlockType() == BlockType.DATA) {
-        test.accept(blockCache.getBlock(blockCacheKey, true, false, true));
+        test.accept(cache.getBlock(blockCacheKey, true, false, true));
       }
       offset += block.getOnDiskSizeWithHeader();
     }

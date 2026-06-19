@@ -640,4 +640,33 @@ public final class CacheAccessServiceTestFactory {
       new BucketCache(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
         persistencePath, ioErrorsTolerationDuration, conf, onlineRegions));
   }
+
+  /**
+   * Returns the legacy {@link BlockCache} backing the supplied {@link CacheAccessService}.
+   * <p>
+   * This helper is intended for tests only. It supports transitional test migration where
+   * production code is exercised through {@link CacheAccessService}, but the test still needs
+   * direct access to the underlying legacy {@link BlockCache} for implementation-specific
+   * assertions, cached-block iteration, metrics inspection, or other diagnostic checks.
+   * </p>
+   * <p>
+   * Only {@link BlockCacheBackedCacheAccessService} is supported. Services backed by future
+   * topology/cache-engine implementations are not required to expose a legacy {@link BlockCache}.
+   * Tests that use this method should therefore be treated as compatibility tests, not as tests of
+   * the final pluggable-cache architecture.
+   * </p>
+   * @param cacheAccessService cache access service
+   * @return backing legacy block cache
+   * @throws NullPointerException     if {@code cacheAccessService} is {@code null}
+   * @throws IllegalArgumentException if {@code cacheAccessService} is not backed by a legacy
+   *                                  {@link BlockCache}
+   */
+  public static BlockCache blockCache(CacheAccessService cacheAccessService) {
+    Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
+    if (cacheAccessService instanceof BlockCacheBackedCacheAccessService) {
+      return ((BlockCacheBackedCacheAccessService) cacheAccessService).getBlockCache();
+    }
+    throw new IllegalArgumentException("CacheAccessService is not backed by a legacy BlockCache: "
+      + cacheAccessService.getClass().getName());
+  }
 }

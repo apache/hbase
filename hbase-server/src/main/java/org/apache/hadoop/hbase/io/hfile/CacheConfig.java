@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -190,11 +191,38 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    * @param conf hbase configuration
    */
   public CacheConfig(Configuration conf) {
-    this(conf, null);
+    this(conf, (CacheAccessService) null);
   }
 
+  /**
+   * Create a cache configuration using the specified configuration object and block cache. Only use
+   * in tests
+   * @param conf       hbase configuration
+   * @param blockCache block cache to use for this configuration
+   */
   public CacheConfig(Configuration conf, BlockCache blockCache) {
     this(conf, null, blockCache, ByteBuffAllocator.HEAP);
+  }
+
+  /**
+   * Create a cache configuration using the specified configuration object and cache access service.
+   * Only use in tests
+   * @param conf    hbase configuration
+   * @param service cache access service to use for this configuration
+   */
+  public CacheConfig(Configuration conf, CacheAccessService service) {
+    this(conf, null, service, ByteBuffAllocator.HEAP);
+  }
+
+  public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, CacheAccessService service,
+    ByteBuffAllocator byteBuffAllocator) {
+    initFromConf(conf, family);
+    this.byteBuffAllocator = byteBuffAllocator;
+    this.cacheAccessService = service != null ? service : CacheAccessServices.disabled();
+    this.blockCache = service instanceof BlockCacheBackedCacheAccessService
+      ? ((BlockCacheBackedCacheAccessService) service).getBlockCache()
+      : null;
+
   }
 
   /**
@@ -204,6 +232,15 @@ public class CacheConfig implements PropagatingConfigurationObserver {
    */
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
     ByteBuffAllocator byteBuffAllocator) {
+    initFromConf(conf, family);
+    this.blockCache = blockCache;
+    this.byteBuffAllocator = byteBuffAllocator;
+    this.cacheAccessService = blockCache != null
+      ? CacheAccessServices.fromBlockCache(blockCache)
+      : CacheAccessServices.disabled();
+  }
+
+  private void initFromConf(Configuration conf, ColumnFamilyDescriptor family) {
     if (family == null || family.isBlockCacheEnabled()) {
       this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
       this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
@@ -233,11 +270,6 @@ public class CacheConfig implements PropagatingConfigurationObserver {
       this.heapUsageThreshold =
         conf.getDouble(PREFETCH_HEAP_USAGE_THRESHOLD, DEFAULT_PREFETCH_HEAP_USAGE_THRESHOLD);
     }
-    this.blockCache = blockCache;
-    this.byteBuffAllocator = byteBuffAllocator;
-    this.cacheAccessService = blockCache != null
-      ? CacheAccessServices.fromBlockCache(blockCache)
-      : CacheAccessServices.disabled();
   }
 
   /**

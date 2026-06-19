@@ -287,8 +287,8 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
   }
 
   /**
-   * Returns aggregate occupied cache size across participating engines.
-   * @return aggregate occupied cache size
+   * Returns aggregate total cache size across participating engines.
+   * @return aggregate total cache size
    */
   @Override
   public long size() {
@@ -297,6 +297,16 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
       size += engine.size();
     }
     return size;
+  }
+
+  /**
+   * Returns aggregate occupied cache size across participating engines.
+   * @return aggregate occupied cache size
+   */
+  @Override
+  public long getCurrentSize() {
+
+    return getCurrentDataSize();
   }
 
   /**

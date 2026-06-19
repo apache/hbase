@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Iterator;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -51,7 +53,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.Private
-public class BlockCacheBackedCacheAccessService implements CacheAccessService {
+public class BlockCacheBackedCacheAccessService
+  implements CacheAccessService, Iterable<CachedBlock> {
 
   private final BlockCache blockCache;
 
@@ -320,5 +323,15 @@ public class BlockCacheBackedCacheAccessService implements CacheAccessService {
     Objects.requireNonNull(key, "key must not be null");
     Objects.requireNonNull(conf, "conf must not be null");
     return blockCache.shouldCacheBlock(key, maxTimestamp, conf);
+  }
+
+  @Override
+  public Iterator<CachedBlock> iterator() {
+    return blockCache.iterator();
+  }
+
+  @Override
+  public long getCurrentSize() {
+    return blockCache.getCurrentSize();
   }
 }

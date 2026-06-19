@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.SizeCachedNoTagsByteBufferKeyValue;
 import org.apache.hadoop.hbase.SizeCachedNoTagsKeyValue;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -109,7 +110,7 @@ public class TestRowIndexV1RoundTrip {
       cacheConfig = new CacheConfig(conf);
     } else {
       ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
-      cacheConfig = new CacheConfig(conf, null, null, allocator);
+      cacheConfig = new CacheConfig(conf, null, (CacheAccessService) null, allocator);
     }
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, false, conf);
     HFileScanner scanner = reader.getScanner(conf, false, false);
