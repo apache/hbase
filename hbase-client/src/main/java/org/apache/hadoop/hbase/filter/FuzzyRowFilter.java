@@ -97,7 +97,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   private int lastFoundIndex = -1;
 
   /**
-   * Row tracker (keeps all next rows after SEEK_NEXT_USING_HINT was returned)
+   * Row tracker for next row hints and reverse same-row hint detection.
    */
   private final RowTracker tracker;
 
@@ -240,9 +240,14 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
         return ReturnCode.INCLUDE;
       }
     }
-    // NOT FOUND -> seek next using hint
+    // NOT FOUND -> seek next using hint or skip the current row.
     lastFoundIndex = -1;
     filterRow = true;
+    // For reverse scans, a non-matching row can recreate itself as the next hint. Since fuzzy
+    // matching is row-key based, skip the whole non-matching row instead of seeking to it again.
+    if (isReversed() && tracker.updateTracker(c) && tracker.isNextRowSameAs(c)) {
+      return ReturnCode.NEXT_ROW;
+    }
     return ReturnCode.SEEK_NEXT_USING_HINT;
   }
 
@@ -263,6 +268,12 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       return null;
     }
     byte[] nextRowKey = tracker.nextRow();
+    if (isReversed() && !tracker.lessThan(currentCell, nextRowKey)) {
+      // filterCell normally handles same-row reverse hints with NEXT_ROW. If a non-progressing
+      // hint still reaches here, keep the current-row boundary to avoid skipping matching rows
+      // under it, but return a non-seeking hint so StoreScanner advances normally.
+      return PrivateCellUtil.createLastOnRow(currentCell);
+    }
     return PrivateCellUtil.createFirstOnRow(nextRowKey, 0, (short) nextRowKey.length);
   }
 
@@ -310,7 +321,12 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
         while (!nextRows.isEmpty() && !lessThan(currentCell, nextRows.peek().getFirst())) {
           Pair<byte[], Pair<byte[], byte[]>> head = nextRows.poll();
           Pair<byte[], byte[]> fuzzyData = head.getSecond();
-          updateWith(currentCell, fuzzyData);
+          byte[] nextRowKeyCandidate = updateWith(currentCell, fuzzyData);
+          if (nextRowKeyCandidate != null && !lessThan(currentCell, nextRowKeyCandidate)) {
+            // The candidate still does not make progress for this row. Keep it in the queue so
+            // filterCell can skip the row or getNextCellHint can return a non-seeking hint.
+            break;
+          }
         }
       }
       return !nextRows.isEmpty();
@@ -322,13 +338,23 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       return (!isReversed() && compareResult < 0) || (isReversed() && compareResult > 0);
     }
 
-    void updateWith(Cell currentCell, Pair<byte[], byte[]> fuzzyData) {
+    boolean isNextRowSameAs(Cell currentCell) {
+      if (nextRows.isEmpty()) {
+        return false;
+      }
+      byte[] candidateRowKey = nextRows.peek().getFirst();
+      return CellComparator.getInstance().compareRows(currentCell, candidateRowKey, 0,
+        candidateRowKey.length) == 0;
+    }
+
+    byte[] updateWith(Cell currentCell, Pair<byte[], byte[]> fuzzyData) {
       byte[] nextRowKeyCandidate =
         getNextForFuzzyRule(isReversed(), currentCell.getRowArray(), currentCell.getRowOffset(),
           currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (nextRowKeyCandidate != null) {
         nextRows.add(new Pair<>(nextRowKeyCandidate, fuzzyData));
       }
+      return nextRowKeyCandidate;
     }
 
   }
