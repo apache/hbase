@@ -40,7 +40,6 @@ public class MetricsRegionServer {
   public static final String RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY =
     "hbase.regionserver.enable.server.query.meter";
   public static final boolean RS_ENABLE_SERVER_QUERY_METER_METRICS_KEY_DEFAULT = true;
-
   public static final String SLOW_METRIC_TIME = "hbase.ipc.slow.metric.time";
   private final MetricsRegionServerSource serverSource;
   private final MetricsRegionServerWrapper regionServerWrapper;
@@ -266,15 +265,6 @@ public class MetricsRegionServer {
     }
     if (serverWriteQueryMeter != null) {
       serverWriteQueryMeter.mark(count);
-    }
-  }
-
-  public void updateWriteQueryMeter(HRegion region) {
-    if (region.getMetricsTableRequests() != null) {
-      region.getMetricsTableRequests().updateTableWriteQueryMeter();
-    }
-    if (serverWriteQueryMeter != null) {
-      serverWriteQueryMeter.mark();
     }
   }
 
