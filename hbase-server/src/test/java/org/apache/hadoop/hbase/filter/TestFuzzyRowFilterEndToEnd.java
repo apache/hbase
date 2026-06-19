@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.filter;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
@@ -346,6 +347,103 @@ public class TestFuzzyRowFilterEndToEnd {
   }
 
   @Test
+  public void testReverseScanMovesPastSameRowFuzzyHint(TestInfo testInfo) throws IOException {
+    final String cf = "f";
+    final String cq = "q";
+
+    String name = testInfo.getTestMethod().orElseThrow(AssertionError::new).getName();
+    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name), Bytes.toBytes(cf))) {
+      List<Put> puts = Lists.newArrayList();
+      puts.add(new Put(Bytes.toBytes("aaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("aba")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abb")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abc")).addColumn(Bytes.toBytes(cf), Bytes.toBytes(cq),
+        Bytes.toBytes("v")));
+      ht.put(puts);
+
+      TEST_UTIL.flush();
+
+      List<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
+      fuzzyList.add(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 }));
+
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      scan.setFilter(new FuzzyRowFilter(fuzzyList));
+
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        assertEquals("abaa", Bytes.toString(result.getRow()));
+        result = scanner.next();
+        assertNotNull(result);
+        assertEquals("aba", Bytes.toString(result.getRow()));
+        result = scanner.next();
+        assertNotNull(result);
+        assertEquals("aaa", Bytes.toString(result.getRow()));
+        assertNull(scanner.next());
+      }
+    }
+
+    TEST_UTIL.deleteTable(TableName.valueOf(name));
+  }
+
+  @Test
+  public void testReverseScanMovesPastSameRowFuzzyHintAcrossMultipleCells(TestInfo testInfo)
+    throws IOException {
+    final String cf = "f";
+
+    String name = testInfo.getTestMethod().orElseThrow(AssertionError::new).getName();
+    try (Table ht = TEST_UTIL.createTable(TableName.valueOf(name), Bytes.toBytes(cf))) {
+      List<Put> puts = Lists.newArrayList();
+      puts.add(new Put(Bytes.toBytes("aaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("aba")).addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"),
+        Bytes.toBytes("v")));
+      puts.add(new Put(Bytes.toBytes("abaa")).addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"),
+        Bytes.toBytes("v")));
+      // The same-row reverse hint can be recreated for each cell on this non-matching row.
+      // Before the fix, the first cell could loop inside RowTracker and never return to
+      // StoreScanner. After the fix, NEXT_ROW skips the whole row without skipping abaa.
+      puts.add(new Put(Bytes.toBytes("abb"))
+        .addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"), Bytes.toBytes("v1"))
+        .addColumn(Bytes.toBytes(cf), Bytes.toBytes("q2"), Bytes.toBytes("v2"))
+        .addColumn(Bytes.toBytes(cf), Bytes.toBytes("q3"), Bytes.toBytes("v3")));
+      puts.add(new Put(Bytes.toBytes("abc")).addColumn(Bytes.toBytes(cf), Bytes.toBytes("q1"),
+        Bytes.toBytes("v")));
+      ht.put(puts);
+
+      TEST_UTIL.flush();
+
+      List<Pair<byte[], byte[]>> fuzzyList = new LinkedList<>();
+      fuzzyList.add(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 }));
+
+      Scan scan = new Scan();
+      scan.setReversed(true);
+      scan.setFilter(new FuzzyRowFilter(fuzzyList));
+
+      try (ResultScanner scanner = ht.getScanner(scan)) {
+        Result result = scanner.next();
+        assertNotNull(result);
+        assertEquals("abaa", Bytes.toString(result.getRow()));
+        result = scanner.next();
+        assertNotNull(result);
+        assertEquals("aba", Bytes.toString(result.getRow()));
+        result = scanner.next();
+        assertNotNull(result);
+        assertEquals("aaa", Bytes.toString(result.getRow()));
+        assertNull(scanner.next());
+      }
+    }
+
+    TEST_UTIL.deleteTable(TableName.valueOf(name));
+  }
+
+  @Test
   public void testHBASE28634(TestInfo testInfo) throws IOException {
     final String CF = "f";
     final String CQ = "name";
@@ -365,8 +463,11 @@ public class TestFuzzyRowFilterEndToEnd {
       Bytes.toBytes("a4")));
     puts.add(new Put(Bytes.toBytes("111446")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
       Bytes.toBytes("a5")));
-    puts.add(new Put(Bytes.toBytes("111777")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+    // Keep a real boundary row at the reverse hint target so this test also guards HBASE-28634.
+    puts.add(new Put(Bytes.toBytes("1115")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
       Bytes.toBytes("a6")));
+    puts.add(new Put(Bytes.toBytes("111777")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
+      Bytes.toBytes("a7")));
     puts.add(new Put(Bytes.toBytes("111777")).addColumn(Bytes.toBytes(CF), Bytes.toBytes(CQ),
       Bytes.toBytes("a")));
     ht.put(puts);
@@ -391,6 +492,8 @@ public class TestFuzzyRowFilterEndToEnd {
     }
 
     assertEquals(2, actualRowsList.size());
+    assertEquals("111444", Bytes.toString(actualRowsList.get(0)));
+    assertEquals("111446", Bytes.toString(actualRowsList.get(1)));
 
     // Reverse scan
     scan = new Scan();
@@ -405,6 +508,8 @@ public class TestFuzzyRowFilterEndToEnd {
     }
 
     assertEquals(2, actualRowsList.size());
+    assertEquals("111446", Bytes.toString(actualRowsList.get(0)));
+    assertEquals("111444", Bytes.toString(actualRowsList.get(1)));
 
     TEST_UTIL.deleteTable(TableName.valueOf(name));
   }
