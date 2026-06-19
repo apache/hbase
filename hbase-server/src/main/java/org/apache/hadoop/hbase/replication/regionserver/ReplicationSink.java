@@ -42,6 +42,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -71,6 +72,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.RateLimiter;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -94,7 +96,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.StoreDescript
  * TODO make this class more like ReplicationSource wrt log handling
  */
 @InterfaceAudience.Private
-public class ReplicationSink {
+public class ReplicationSink implements ConfigurationObserver {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSink.class);
   private final Configuration conf;
@@ -108,6 +110,7 @@ public class ReplicationSink {
   private long hfilesReplicated = 0;
   private SourceFSConfigurationProvider provider;
   private WALEntrySinkFilter walEntrySinkFilter;
+  private final RateLimiter bulkLoadCopyRateLimiter = RateLimiter.create(Double.MAX_VALUE);
 
   /**
    * Row size threshold for multi requests above which a warning is logged
@@ -143,6 +146,25 @@ public class ReplicationSink {
       throw new IllegalArgumentException(
         "Configured source fs configuration provider class " + className + " throws error.", e);
     }
+    updateBulkLoadCopyBandwidth(conf);
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration newConf) {
+    updateBulkLoadCopyBandwidth(newConf);
+  }
+
+  double getBulkLoadCopyRateLimiterRate() {
+    return bulkLoadCopyRateLimiter.getRate();
+  }
+
+  private void updateBulkLoadCopyBandwidth(Configuration conf) {
+    double bandwidthMb = conf.getDouble(HFileReplicator.REPLICATION_BULKLOAD_COPY_BANDWIDTH_MB_KEY,
+      HFileReplicator.REPLICATION_BULKLOAD_COPY_BANDWIDTH_MB_DEFAULT);
+    double newRate = bandwidthMb <= 0 ? Double.MAX_VALUE : bandwidthMb * 1024 * 1024;
+    bulkLoadCopyRateLimiter.setRate(newRate);
+    LOG.info("Bulkload copy bandwidth updated: {}",
+      bandwidthMb <= 0 ? "unlimited" : bandwidthMb + " MB/s");
   }
 
   private WALEntrySinkFilter setupWALEntrySinkFilter() throws IOException {
@@ -319,7 +341,7 @@ public class ReplicationSink {
             Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
             try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
               sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-              getConnection(), entry.getKey())) {
+              getConnection(), entry.getKey(), bulkLoadCopyRateLimiter)) {
               hFileReplicator.replicate();
               LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
             }

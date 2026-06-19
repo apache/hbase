@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.ExtendedCellScanner;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Stoppable;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ReplicationSinkService;
@@ -41,7 +42,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 
 @InterfaceAudience.Private
-public class ReplicationSinkServiceImpl implements ReplicationSinkService {
+public class ReplicationSinkServiceImpl implements ReplicationSinkService, ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationSinkServiceImpl.class);
 
   private Configuration conf;
@@ -87,6 +88,14 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService {
   public void stopReplicationService() {
     if (this.replicationSink != null) {
       this.replicationSink.stopReplicationSinkServices();
+    }
+  }
+
+  @Override
+  public void onConfigurationChange(Configuration conf) {
+    this.conf = conf;
+    if (this.replicationSink != null) {
+      this.replicationSink.onConfigurationChange(conf);
     }
   }
 
