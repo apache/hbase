@@ -35,14 +35,15 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TreeMap;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.client.Row;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.security.UserProvider;
@@ -111,6 +113,9 @@ public class ReplicationSink implements ConfigurationObserver {
   private SourceFSConfigurationProvider provider;
   private WALEntrySinkFilter walEntrySinkFilter;
   private final RateLimiter bulkLoadCopyRateLimiter = RateLimiter.create(Double.MAX_VALUE);
+  // Tracks bulkload events currently being processed to prevent duplicate execution on RPC retry.
+  // Key: replicationClusterId + "#" + encodedRegionName + "#" + bulkloadSeqNum
+  private final Set<String> inProgressBulkLoads = ConcurrentHashMap.newKeySet();
 
   /**
    * Row size threshold for multi requests above which a warning is logged
@@ -156,6 +161,10 @@ public class ReplicationSink implements ConfigurationObserver {
 
   double getBulkLoadCopyRateLimiterRate() {
     return bulkLoadCopyRateLimiter.getRate();
+  }
+
+  Set<String> getInProgressBulkLoads() {
+    return inProgressBulkLoads;
   }
 
   private void updateBulkLoadCopyBandwidth(Configuration conf) {
@@ -230,6 +239,8 @@ public class ReplicationSink implements ConfigurationObserver {
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
       Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
+      // bulkload keys registered in inProgressBulkLoads for this batch, to be removed on completion
+      List<String> registeredBulkLoadKeys = null;
       Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
         new Pair<>(new ArrayList<>(), new ArrayList<>());
       for (WALEntry entry : entries) {
@@ -262,6 +273,16 @@ public class ReplicationSink implements ConfigurationObserver {
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
             BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
             if (bld.getReplicate()) {
+              String bulkLoadKey = buildBulkLoadKey(replicationClusterId, bld);
+              if (!inProgressBulkLoads.add(bulkLoadKey)) {
+                LOG.warn("Skipping duplicate bulkload replication, already in progress: {}",
+                  bulkLoadKey);
+                continue;
+              }
+              if (registeredBulkLoadKeys == null) {
+                registeredBulkLoadKeys = new ArrayList<>();
+              }
+              registeredBulkLoadKeys.add(bulkLoadKey);
               if (bulkLoadsPerClusters == null) {
                 bulkLoadsPerClusters = new HashMap<>();
               }
@@ -333,18 +354,25 @@ public class ReplicationSink implements ConfigurationObserver {
       }
 
       if (bulkLoadsPerClusters != null) {
-        for (Entry<List<String>,
-          Map<String, List<Pair<byte[], List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
-          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
-          if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-            LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
-            Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
-            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
-              sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-              getConnection(), entry.getKey(), bulkLoadCopyRateLimiter)) {
-              hFileReplicator.replicate();
-              LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
+        try {
+          for (Entry<List<String>,
+            Map<String, List<Pair<byte[], List<String>>>>> entry : bulkLoadsPerClusters
+              .entrySet()) {
+            Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
+            if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
+              LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
+              Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
+              try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
+                sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
+                getConnection(), entry.getKey(), bulkLoadCopyRateLimiter)) {
+                hFileReplicator.replicate();
+                LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
+              }
             }
+          }
+        } finally {
+          if (registeredBulkLoadKeys != null) {
+            inProgressBulkLoads.removeAll(registeredBulkLoadKeys);
           }
         }
       }
@@ -442,6 +470,11 @@ public class ReplicationSink implements ConfigurationObserver {
     List<Pair<byte[], List<String>>> newFamilyHFilePathsList = new ArrayList<>();
     newFamilyHFilePathsList.add(newFamilyHFilePathsPair);
     bulkLoadHFileMap.put(tableName, newFamilyHFilePathsList);
+  }
+
+  private static String buildBulkLoadKey(String replicationClusterId, BulkLoadDescriptor bld) {
+    return replicationClusterId + "#" + Bytes.toString(bld.getEncodedRegionName().toByteArray())
+      + "#" + bld.getBulkloadSeqNum();
   }
 
   private String getHFilePath(TableName table, BulkLoadDescriptor bld, String storeFile,
