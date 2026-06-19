@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -117,4 +119,26 @@ public final class CacheAccessServices {
   public static CacheAccessService disabled() {
     return new NoOpCacheAccessService();
   }
+
+  /**
+   * Returns an iterable cached-block view for the supplied cache access service when available.
+   * <p>
+   * Cached-block iteration is intended for tests, diagnostics, and admin views only. It must not be
+   * used by normal read/write paths. Not every {@link CacheAccessService} implementation is
+   * required to expose cached-block iteration.
+   * </p>
+   * @param cacheAccessService cache access service
+   * @return optional iterable cached-block view
+   * @throws NullPointerException if {@code cacheAccessService} is {@code null}
+   */
+  @SuppressWarnings("unchecked")
+  public static Optional<Iterable<CachedBlock>>
+    asCachedBlockIterable(CacheAccessService cacheAccessService) {
+    Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
+    if (cacheAccessService instanceof Iterable) {
+      return Optional.of((Iterable<CachedBlock>) cacheAccessService);
+    }
+    return Optional.empty();
+  }
+
 }

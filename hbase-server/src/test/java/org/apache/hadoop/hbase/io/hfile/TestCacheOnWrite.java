@@ -50,6 +50,10 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -88,7 +92,7 @@ public class TestCacheOnWrite {
   private FileSystem fs;
   private Random rand = new Random(12983177L);
   private Path storeFilePath;
-  private BlockCache blockCache;
+  private CacheAccessService cache;
   private String testDescription;
 
   private final CacheOnWriteType cowType;
@@ -148,46 +152,47 @@ public class TestCacheOnWrite {
   }
 
   public TestCacheOnWrite(CacheOnWriteType cowType, Compression.Algorithm compress,
-    boolean cacheCompressedData, BlockCache blockCache) {
+    boolean cacheCompressedData, CacheAccessService blockCache) {
     this.cowType = cowType;
     this.compress = compress;
     this.cacheCompressedData = cacheCompressedData;
-    this.blockCache = blockCache;
+    this.cache = blockCache;
     testDescription = "[cacheOnWrite=" + cowType + ", compress=" + compress
       + ", cacheCompressedData=" + cacheCompressedData + "]";
     LOG.info(testDescription);
   }
 
-  private static List<BlockCache> getBlockCaches() throws IOException {
+  private static List<CacheAccessService> getCacheServices() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
-    List<BlockCache> blockcaches = new ArrayList<>();
+    List<CacheAccessService> caches = new ArrayList<>();
     // default
-    blockcaches.add(BlockCacheFactory.createBlockCache(conf));
+    caches.add(CacheAccessServiceTestFactory.fromConfiguration(conf));
 
     // set LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
     TEST_UTIL.getConfiguration().setFloat(LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
       2.0f);
     // memory
-    BlockCache lru = new LruBlockCache(128 * 1024 * 1024, 64 * 1024, TEST_UTIL.getConfiguration());
-    blockcaches.add(lru);
+    CacheAccessService lru =
+      CacheAccessServiceTestFactory.lru(128 * 1024 * 1024, 64 * 1024, TEST_UTIL.getConfiguration());
+    caches.add(lru);
 
     // bucket cache
     FileSystem.get(conf).mkdirs(TEST_UTIL.getDataTestDir());
     int[] bucketSizes =
       { INDEX_BLOCK_SIZE, DATA_BLOCK_SIZE, BLOOM_BLOCK_SIZE, 64 * 1024, 128 * 1024 };
-    BlockCache bucketcache =
-      new BucketCache("offheap", 128 * 1024 * 1024, 64 * 1024, bucketSizes, 5, 64 * 100, null);
-    blockcaches.add(bucketcache);
-    return blockcaches;
+    CacheAccessService bucketcache = CacheAccessServiceTestFactory.bucket("offheap",
+      128 * 1024 * 1024, 64 * 1024, bucketSizes, 5, 64 * 100, null);
+    caches.add(bucketcache);
+    return caches;
   }
 
   public static Stream<Arguments> parameters() throws IOException {
     List<Arguments> params = new ArrayList<>();
-    for (BlockCache blockCache : getBlockCaches()) {
+    for (CacheAccessService cache : getCacheServices()) {
       for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
         for (Compression.Algorithm compress : HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS) {
           for (boolean cacheCompressedData : new boolean[] { false, true }) {
-            params.add(Arguments.of(cowType, compress, cacheCompressedData, blockCache));
+            params.add(Arguments.of(cowType, compress, cacheCompressedData, cache));
           }
         }
       }
@@ -195,23 +200,25 @@ public class TestCacheOnWrite {
     return params.stream();
   }
 
-  private void clearBlockCache(BlockCache blockCache) throws InterruptedException {
+  private void clearBlockCache(CacheAccessService cache) throws InterruptedException {
+    // TODO: HBASE-30018 refactor later
+    BlockCache blockCache = ((BlockCacheBackedCacheAccessService) cache).getBlockCache();
     if (blockCache instanceof LruBlockCache) {
       ((LruBlockCache) blockCache).clearCache();
     } else {
       // BucketCache may not return all cached blocks(blocks in write queue), so check it here.
-      for (int clearCount = 0; blockCache.getBlockCount() > 0; clearCount++) {
+      for (int clearCount = 0; cache.getBlockCount() > 0; clearCount++) {
         if (clearCount > 0) {
-          LOG.warn("clear block cache " + blockCache + " " + clearCount + " times, "
-            + blockCache.getBlockCount() + " blocks remaining");
+          LOG.warn("clear block cache " + cache + " " + clearCount + " times, "
+            + cache.getBlockCount() + " blocks remaining");
           Thread.sleep(10);
         }
         for (CachedBlock block : Lists.newArrayList(blockCache)) {
           BlockCacheKey key = new BlockCacheKey(block.getFilename(), block.getOffset());
           // CombinedBucketCache may need evict two times.
-          for (int evictCount = 0; blockCache.evictBlock(key); evictCount++) {
+          for (int evictCount = 0; cache.evictBlock(key); evictCount++) {
             if (evictCount > 1) {
-              LOG.warn("evict block " + block + " in " + blockCache + " " + evictCount
+              LOG.warn("evict block " + block + " in " + cache + " " + evictCount
                 + " times, maybe a bug here");
             }
           }
@@ -233,13 +240,13 @@ public class TestCacheOnWrite {
       cowType.shouldBeCached(BlockType.LEAF_INDEX));
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
       cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
-    cacheConf = new CacheConfig(conf, blockCache);
+    cacheConf = new CacheConfig(conf, ((BlockCacheBackedCacheAccessService) cache).getBlockCache());
     fs = HFileSystem.get(conf);
   }
 
   @AfterEach
   public void tearDown() throws IOException, InterruptedException {
-    clearBlockCache(blockCache);
+    clearBlockCache(cache);
   }
 
   @AfterAll
@@ -277,7 +284,7 @@ public class TestCacheOnWrite {
       HFileBlock block =
         reader.readBlock(offset, -1, false, true, false, true, null, encodingInCache);
       BlockCacheKey blockCacheKey = new BlockCacheKey(reader.getName(), offset);
-      HFileBlock fromCache = (HFileBlock) blockCache.getBlock(blockCacheKey, true, false, true);
+      HFileBlock fromCache = (HFileBlock) cache.getBlock(blockCacheKey, true, false, true);
       boolean isCached = fromCache != null;
       cachedBlocksOffset.add(offset);
       cachedBlocks.put(offset, fromCache == null ? null : Pair.newPair(block, fromCache));
@@ -434,7 +441,8 @@ public class TestCacheOnWrite {
       ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(cfBytes)
         .setCompressionType(compress).setBloomFilterType(BLOOM_TYPE).setMaxVersions(maxVersions)
         .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding()).build();
-      HRegion region = TEST_UTIL.createTestRegion(table, cfd, blockCache);
+      HRegion region = TEST_UTIL.createTestRegion(table, cfd,
+        ((BlockCacheBackedCacheAccessService) cache).getBlockCache());
       int rowIdx = 0;
       long ts = EnvironmentEdgeManager.currentTime();
       for (int iFile = 0; iFile < 5; ++iFile) {
@@ -466,8 +474,8 @@ public class TestCacheOnWrite {
         region.flush(true);
       }
 
-      clearBlockCache(blockCache);
-      assertEquals(0, blockCache.getBlockCount());
+      clearBlockCache(cache);
+      assertEquals(0, cache.getBlockCount());
 
       region.compact(false);
       LOG.debug("compactStores() returned");
@@ -475,8 +483,10 @@ public class TestCacheOnWrite {
       boolean dataBlockCached = false;
       boolean bloomBlockCached = false;
       boolean indexBlockCached = false;
+      Iterable<CachedBlock> cachedBlocks =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow();
 
-      for (CachedBlock block : blockCache) {
+      for (CachedBlock block : cachedBlocks) {
         if (DATA_BLOCK_TYPES.contains(block.getBlockType())) {
           dataBlockCached = true;
         } else if (BLOOM_BLOCK_TYPES.contains(block.getBlockType())) {
@@ -489,8 +499,8 @@ public class TestCacheOnWrite {
       // Data blocks should be cached in instances where we are caching blocks on write. In the case
       // of testing
       // BucketCache, we cannot verify block type as it is not stored in the cache.
-      boolean cacheOnCompactAndNonBucketCache =
-        cacheBlocksOnCompaction && !(blockCache instanceof BucketCache);
+      boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction
+        && !(((BlockCacheBackedCacheAccessService) cache).getBlockCache() instanceof BucketCache);
 
       String assertErrorMessage = "\nTest description: " + testDescription
         + "\ncacheBlocksOnCompaction: " + cacheBlocksOnCompaction + "\n";

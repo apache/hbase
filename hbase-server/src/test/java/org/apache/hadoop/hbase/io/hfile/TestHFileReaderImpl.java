@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -118,7 +119,7 @@ public class TestHFileReaderImpl {
 
   @Test
   public void testReadWorksWhenCacheCorrupt() throws Exception {
-    BlockCache mockedCache = mock(BlockCache.class);
+    CacheAccessService mockedCache = mock(CacheAccessService.class);
     when(mockedCache.getBlock(any(), anyBoolean(), anyBoolean(), anyBoolean(), any()))
       .thenThrow(new RuntimeException("Injected error"));
     Path p = makeNewFile();
