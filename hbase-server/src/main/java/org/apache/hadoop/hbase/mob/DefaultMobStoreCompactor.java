@@ -79,6 +79,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
   protected long mobSizeThreshold;
   protected HMobStore mobStore;
   protected boolean ioOptimizedMode = false;
+  protected final boolean cacheMobBlocksOnCompaction;
 
   /*
    * MOB file reference set thread local variable. It contains set of a MOB file names, which newly
@@ -86,7 +87,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
    * content of it is written into meta section of a newly created store file at the final step of
    * compaction process.
    */
-
   static ThreadLocal<SetMultimap<TableName, String>> mobRefSet =
     ThreadLocal.withInitial(HashMultimap::create);
 
@@ -169,7 +169,8 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
     this.ioOptimizedMode =
       conf.get(MobConstants.MOB_COMPACTION_TYPE_KEY, MobConstants.DEFAULT_MOB_COMPACTION_TYPE)
         .equals(MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
-
+    this.cacheMobBlocksOnCompaction = conf.getBoolean(MobConstants.MOB_COMPACTION_READ_CACHE_BLOCKS,
+      MobConstants.DEFAULT_MOB_COMPACTION_READ_CACHE_BLOCKS);
   }
 
   @Override
@@ -258,7 +259,6 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         throw new FileNotFoundException("Could not find mob file " + mobfile + " in the list of "
           + "expected locations: " + locations);
       }
-
     }
   }
 
@@ -371,7 +371,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               String fName = MobUtils.getMobFileName(c);
               // Added to support migration
               try {
-                mobCell = mobStore.resolve(c, true, false).getCell();
+                mobCell = mobStore.resolve(c, cacheMobBlocksOnCompaction, false).getCell();
               } catch (FileNotFoundException fnfe) {
                 if (discardMobMiss) {
                   LOG.error("Missing MOB cell: file={} not found cell={}", fName, c);

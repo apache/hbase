@@ -1921,6 +1921,15 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.mob.compaction.read.cache.blocks</name>
+    <value>true</value>
+    <description>
+      Whether MOB compaction should cache blocks while reading existing MOB files to resolve
+      references during compaction. The default value is true to preserve the previous behavior.
+      Set to false to avoid polluting the block cache with background compaction reads.
+    </description>
+  </property>
+  <property>
     <name>hbase.snapshot.master.timeout.millis</name>
     <value>300000</value>
     <description>

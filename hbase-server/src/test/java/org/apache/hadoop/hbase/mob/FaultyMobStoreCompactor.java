@@ -192,7 +192,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               String fName = MobUtils.getMobFileName(c);
               // Added to support migration
               try {
-                mobCell = mobStore.resolve(c, true, false).getCell();
+                mobCell = mobStore.resolve(c, cacheMobBlocksOnCompaction, false).getCell();
               } catch (FileNotFoundException fnfe) {
                 if (discardMobMiss) {
                   LOG.error("Missing MOB cell: file={} not found", fName);
@@ -259,7 +259,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
                 // the mob cell from the mob file, and write it back to the store file.
-                mobCell = mobStore.resolve(c, true, false).getCell();
+                mobCell = mobStore.resolve(c, cacheMobBlocksOnCompaction, false).getCell();
                 if (mobCell.getValueLength() != 0) {
                   // put the mob data back to the store file
                   PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
