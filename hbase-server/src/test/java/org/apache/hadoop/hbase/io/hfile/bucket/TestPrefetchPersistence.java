@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.hasKey;
+import static org.hamcrest.io.FileMatchers.anExistingFile;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -42,21 +46,24 @@ import org.apache.hadoop.hbase.io.hfile.PrefetchExecutor;
 import org.apache.hadoop.hbase.io.hfile.RandomKeyValueUtil;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.testclassification.IOTests;
-import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Tag(IOTests.TAG)
-@Tag(LargeTests.TAG)
+@Tag(SmallTests.TAG)
 @HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestPrefetchPersistence {
 
-  @SuppressWarnings("checkstyle:Indentation")
+  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+
+  private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
+  private static final int DATA_BLOCK_SIZE = 2048;
+  private static final int NUM_KV = 1000;
+
   public static Stream<Arguments> parameters() {
     return Stream.of(Arguments.of(16 * 1024,
       new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
@@ -64,21 +71,13 @@ public class TestPrefetchPersistence {
         128 * 1024 + 1024 }));
   }
 
-  final int constructedBlockSize;
-  final int[] constructedBlockSizes;
+  private final int constructedBlockSize;
+  private final int[] constructedBlockSizes;
 
   public TestPrefetchPersistence(int constructedBlockSize, int[] constructedBlockSizes) {
     this.constructedBlockSize = constructedBlockSize;
     this.constructedBlockSizes = constructedBlockSizes;
   }
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestPrefetchPersistence.class);
-
-  private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-
-  private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
-  private static final int DATA_BLOCK_SIZE = 2048;
-  private static final int NUM_KV = 1000;
 
   private Configuration conf;
   private CacheConfig cacheConf;
@@ -123,15 +122,15 @@ public class TestPrefetchPersistence {
     assertNotEquals(0, usedSize);
 
     bucketCache.shutdown();
-    assertTrue(new File(testDir + "/bucket.persistence").exists());
+    assertThat(new File(testDir + "/bucket.persistence"), anExistingFile());
     bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
       constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
       testDir + "/bucket.persistence", 60 * 1000, conf);
     bucketCache.waitForCacheInitialization(10000);
     cacheConf = new CacheConfig(conf, bucketCache);
-    assertTrue(usedSize != 0);
-    assertTrue(bucketCache.fullyCachedFiles.containsKey(storeFile.getName()));
-    assertTrue(bucketCache.fullyCachedFiles.containsKey(storeFile2.getName()));
+    assertNotEquals(usedSize, 0);
+    assertThat(bucketCache.fullyCachedFiles,
+      both(hasKey(storeFile.getName())).and(hasKey(storeFile2.getName())));
   }
 
   @AfterEach
