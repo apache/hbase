@@ -28,6 +28,7 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.jupiter.api.TestTemplate;
@@ -41,10 +42,24 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
   private void splitRegion() throws IOException {
     int numRegions = admin.getRegions(tableName).size();
+    // Major-compact every region into a single store file that spans the whole key range of the
+    // region. This guarantees that the split row falls inside an existing store file, so the split
+    // produces a reference file rather than a whole-file link (see HBASE-26421, which builds an
+    // HFileLink instead of a Reference when a store file lies entirely on one side of the split
+    // point). Without this, the randomly generated row keys may all fall on one side of the split
+    // point, leaving the snapshot with no reference files. The cloned table's meta would then be
+    // missing the parent split information, which is what HBASE-29111 guards against below. The
+    // region server has compaction disabled (see CloneSnapshotFromClientTestBase), so we compact
+    // the regions directly to bypass that; auto-compaction stays disabled afterwards so the
+    // post-split reference files are not compacted away.
+    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(tableName)) {
+      if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
+        region.compact(true);
+      }
+    }
     try (Table k = TEST_UTIL.getConnection().getTable(tableName);
       ResultScanner scanner = k.getScanner(new Scan())) {
       // Split on the second row to make sure that the snapshot contains reference files.
-      // We also disable the compaction so that the reference files are not compacted away.
       scanner.next();
       admin.split(tableName, scanner.next().getRow());
     }
