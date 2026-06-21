@@ -79,7 +79,9 @@ public class HFileReplicator implements Closeable {
   public static final int REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT = 10;
   /**
    * Bandwidth limit in MB/s for copying HFiles from source cluster during bulkload replication. 0
-   * means no limit. Can be changed dynamically via configuration reload.
+   * means no limit. Can be changed dynamically via configuration reload. A low limit can make the
+   * sink-side bulkload copy exceed the replication RPC timeout, so configure the timeout
+   * accordingly.
    */
   public static final String REPLICATION_BULKLOAD_COPY_BANDWIDTH_MB_KEY =
     "hbase.replication.bulkload.copy.bandwidth.mb";

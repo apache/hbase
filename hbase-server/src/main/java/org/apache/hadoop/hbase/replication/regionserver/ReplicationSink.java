@@ -472,7 +472,7 @@ public class ReplicationSink implements ConfigurationObserver {
     bulkLoadHFileMap.put(tableName, newFamilyHFilePathsList);
   }
 
-  private static String buildBulkLoadKey(String replicationClusterId, BulkLoadDescriptor bld) {
+  private String buildBulkLoadKey(String replicationClusterId, BulkLoadDescriptor bld) {
     return replicationClusterId + "#" + Bytes.toString(bld.getEncodedRegionName().toByteArray())
       + "#" + bld.getBulkloadSeqNum();
   }
