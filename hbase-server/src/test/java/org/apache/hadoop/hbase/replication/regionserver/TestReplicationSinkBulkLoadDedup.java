@@ -28,11 +28,12 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -52,7 +53,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
  * retries for the same bulkload event do not result in duplicate processing.
  */
 @Tag(ReplicationTests.TAG)
-@Tag(SmallTests.TAG)
+@Tag(MediumTests.TAG)
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 public class TestReplicationSinkBulkLoadDedup {
 
@@ -65,18 +66,24 @@ public class TestReplicationSinkBulkLoadDedup {
 
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private ReplicationSink sink;
+  private ZKWatcher zkw;
 
   @BeforeAll
   public void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set("hbase.replication.source.fs.conf.provider",
       TestSourceFSConfigurationProvider.class.getCanonicalName());
+    TEST_UTIL.startMiniZKCluster();
+    zkw = new ZKWatcher(conf, "replication-sink-bulkload-dedup", null);
     sink = new ReplicationSink(conf, null);
   }
 
   @AfterAll
-  public void tearDownAfterClass() {
-    // no cluster to shut down
+  public void tearDownAfterClass() throws Exception {
+    if (zkw != null) {
+      zkw.close();
+    }
+    TEST_UTIL.shutdownMiniZKCluster();
   }
 
   /**
@@ -159,6 +166,28 @@ public class TestReplicationSinkBulkLoadDedup {
     // Key still held by the "first call"
     assertTrue(sink.getInProgressBulkLoads().contains(key));
     sink.getInProgressBulkLoads().remove(key); // cleanup
+  }
+
+  @Test
+  public void testCompletedZkBulkLoadEventIsSkippedBySink() throws Exception {
+    WALProtos.BulkLoadDescriptor bld = buildBulkLoadDescriptor(REGION_NAME, SEQ_NUM + 2, true);
+    WALEdit edit = buildWALEdit(bld);
+    List<WALEntry> entries = buildWALEntries(edit);
+
+    ReplicationBulkLoadEventTracker tracker =
+      new ReplicationBulkLoadEventTracker(TEST_UTIL.getConfiguration(), zkw);
+    ReplicationBulkLoadEventTracker.Event event = tracker.newEvent(CLUSTER_ID_A, TABLE, REGION_NAME,
+      SEQ_NUM + 2, entries.get(0).getKey().getWriteTime());
+    tracker.markDone(event);
+
+    ReplicationSink zkSink = new ReplicationSink(TEST_UTIL.getConfiguration(), null, zkw);
+    zkSink.replicateEntries(entries,
+      PrivateCellUtil
+        .createExtendedCellScanner(WALEditInternalHelper.getExtendedCells(edit).iterator()),
+      CLUSTER_ID_A, "/missing/namespace", "/missing/archive");
+
+    assertTrue(tracker.isDone(event));
+    assertFalse(tracker.isInProgress(event));
   }
 
   // ---- helpers ----
