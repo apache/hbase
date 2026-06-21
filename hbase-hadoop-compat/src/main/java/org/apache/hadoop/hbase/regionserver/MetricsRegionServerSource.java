@@ -233,6 +233,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String MEMSTORE_OFFHEAP_SIZE_DESC = "Off-heap Size of the memstore";
   String STOREFILE_SIZE = "storeFileSize";
   String STOREFILE_SIZE_GROWTH_RATE = "storeFileSizeGrowthRate";
+  String STOREFILE_UNCOMPRESSED_SIZE = "storeFileUncompressedSize";
+  String STOREFILE_COMPRESSION_RATIO = "storeFileCompressionRatio";
   String MAX_STORE_FILE_AGE = "maxStoreFileAge";
   String MIN_STORE_FILE_AGE = "minStoreFileAge";
   String AVG_STORE_FILE_AGE = "avgStoreFileAge";
@@ -244,6 +246,10 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String STOREFILE_SIZE_DESC = "Size of storefiles being served.";
   String STOREFILE_SIZE_GROWTH_RATE_DESC =
     "Bytes per second by which the size of storefiles being served grows.";
+  String STOREFILE_UNCOMPRESSED_SIZE_DESC = "Total uncompressed size of storefiles being served.";
+  String STOREFILE_COMPRESSION_RATIO_DESC =
+    "Compression ratio of storefiles (compressed/uncompressed). Lower values indicate better"
+      + " compression. Returns 1.0 when there is no data.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
     "Total number of requests this RegionServer has answered; increments the count once for "
