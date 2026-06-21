@@ -28,6 +28,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -37,6 +38,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
@@ -45,12 +47,15 @@ import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -62,11 +67,19 @@ import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
+import org.apache.hadoop.hbase.replication.regionserver.ReplicationSink;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -75,6 +88,14 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.UUID;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 
 /**
  * Integration test for bulk load replication. Defines three clusters, with the following
@@ -225,6 +246,164 @@ public class TestBulkLoadReplication extends TestReplicationBaseNoBeforeAll {
     // Each event gets 3 counts (the originator cluster, plus the two peers),
     // so BULK_LOADS_COUNT expected value is 3 * 3 = 9.
     assertEquals(9, BULK_LOADS_COUNT.get());
+  }
+
+  @Test
+  public void testDuplicateBulkLoadWalEventSkippedAcrossTargetRegionServers() throws Exception {
+    byte[] row = Bytes.toBytes("duplicate-rs-retry");
+    byte[] value = Bytes.toBytes("dedup-value");
+    BulkLoadWalEvent bulkLoadWalEvent = createBulkLoadWalEvent(UTIL1, row, value);
+    ReplicationSink firstSink = null;
+    ReplicationSink retrySink = null;
+    JVMClusterUtil.RegionServerThread retryRegionServer = null;
+    boolean peer1Disabled = false;
+    boolean peer3Disabled = false;
+    try {
+      // Keep this test focused on the direct UTIL1 -> UTIL2 replay path. The fixture is
+      // active-active, so UTIL2's outgoing peers would otherwise increment the global observer.
+      peer1Disabled = disableReplicationPeerIfEnabled(UTIL2, PEER_ID1);
+      peer3Disabled = disableReplicationPeerIfEnabled(UTIL2, PEER_ID3);
+      firstSink = newReplicationSink(UTIL2, 0);
+      BULK_LOAD_LATCH = new CountDownLatch(1);
+      // The first sink simulates the original replication RPC and performs the actual bulk load.
+      firstSink.replicateEntries(bulkLoadWalEvent.entries,
+        PrivateCellUtil.createExtendedCellScanner(
+          WALEditInternalHelper.getExtendedCells(bulkLoadWalEvent.edit).iterator()),
+        PEER1_CLUSTER_ID, bulkLoadWalEvent.sourceBaseNamespaceDir,
+        bulkLoadWalEvent.sourceHFileArchiveDir);
+
+      assertTrue(BULK_LOAD_LATCH.await(1, TimeUnit.MINUTES));
+      assertTableHasValue(htable2, row, value);
+      assertEquals(1, BULK_LOADS_COUNT.get());
+
+      retryRegionServer = UTIL2.getMiniHBaseCluster().startRegionServer();
+      setupCoprocessor(UTIL2);
+      retrySink = new ReplicationSink(CONF2,
+        retryRegionServer.getRegionServer().getRegionServerCoprocessorHost(),
+        retryRegionServer.getRegionServer().getZooKeeper());
+
+      // A source-side retry may choose a different target RS sink, so replay the exact same WAL
+      // batch through another ReplicationSink and verify that the completed marker skips it.
+      retrySink.replicateEntries(bulkLoadWalEvent.entries,
+        PrivateCellUtil.createExtendedCellScanner(
+          WALEditInternalHelper.getExtendedCells(bulkLoadWalEvent.edit).iterator()),
+        PEER1_CLUSTER_ID, bulkLoadWalEvent.sourceBaseNamespaceDir,
+        bulkLoadWalEvent.sourceHFileArchiveDir);
+
+      assertEquals(1, BULK_LOADS_COUNT.get());
+    } finally {
+      if (retrySink != null) {
+        retrySink.stopReplicationSinkServices();
+      }
+      if (firstSink != null) {
+        firstSink.stopReplicationSinkServices();
+      }
+      if (retryRegionServer != null) {
+        UTIL2.getMiniHBaseCluster()
+          .stopRegionServer(retryRegionServer.getRegionServer().getServerName());
+        UTIL2.getMiniHBaseCluster().waitForRegionServerToStop(
+          retryRegionServer.getRegionServer().getServerName(), TimeUnit.MINUTES.toMillis(1));
+      }
+      if (peer3Disabled) {
+        UTIL2.getAdmin().enableReplicationPeer(PEER_ID3);
+      }
+      if (peer1Disabled) {
+        UTIL2.getAdmin().enableReplicationPeer(PEER_ID1);
+      }
+    }
+  }
+
+  private boolean disableReplicationPeerIfEnabled(HBaseTestingUtil utility, String peerId)
+    throws IOException {
+    boolean enabled = utility.getAdmin().listReplicationPeers().stream()
+      .anyMatch(peer -> peerId.equals(peer.getPeerId()) && peer.isEnabled());
+    if (enabled) {
+      utility.getAdmin().disableReplicationPeer(peerId);
+    }
+    return enabled;
+  }
+
+  private ReplicationSink newReplicationSink(HBaseTestingUtil utility, int regionServerIndex)
+    throws IOException {
+    RegionServerCoprocessorHost rsCpHost = utility.getMiniHBaseCluster()
+      .getRegionServer(regionServerIndex).getRegionServerCoprocessorHost();
+    ZKWatcher zkw = utility.getMiniHBaseCluster().getRegionServer(regionServerIndex).getZooKeeper();
+    return new ReplicationSink(utility.getConfiguration(), rsCpHost, zkw);
+  }
+
+  private BulkLoadWalEvent createBulkLoadWalEvent(HBaseTestingUtil source, byte[] row, byte[] value)
+    throws Exception {
+    String bulkLoadFilePath = createHFileForFamilies(row, value, source.getConfiguration());
+    Path sourceBaseNamespaceDir =
+      new Path(CommonFSUtils.getRootDir(source.getConfiguration()), HConstants.BASE_NAMESPACE_DIR);
+    Path sourceHFileArchiveDir = new Path(CommonFSUtils.getRootDir(source.getConfiguration()),
+      new Path(HConstants.HFILE_ARCHIVE_DIRECTORY, HConstants.BASE_NAMESPACE_DIR));
+    try (RegionLocator locator = source.getConnection().getRegionLocator(tableName)) {
+      RegionInfo regionInfo = locator.getRegionLocation(row).getRegion();
+      Path sourceHFilePath = copyBulkLoadFileToSourceCluster(source, bulkLoadFilePath,
+        sourceBaseNamespaceDir, regionInfo.getEncodedName(), Bytes.toString(famName));
+      WALEdit edit = createBulkLoadWALEdit(regionInfo, sourceHFilePath, source.getConfiguration());
+      WALEntry entry = createBulkLoadWALEntry(tableName, regionInfo, edit.getCells().size());
+      return new BulkLoadWalEvent(Collections.singletonList(entry), edit,
+        sourceBaseNamespaceDir.toString(), sourceHFileArchiveDir.toString());
+    }
+  }
+
+  private Path copyBulkLoadFileToSourceCluster(HBaseTestingUtil source, String bulkLoadFilePath,
+    Path sourceBaseNamespaceDir, String encodedRegionName, String familyName) throws IOException {
+    Path sourceHFilePath = new Path(sourceBaseNamespaceDir,
+      tableName.getNamespaceAsString() + Path.SEPARATOR + tableName.getQualifierAsString()
+        + Path.SEPARATOR + encodedRegionName + Path.SEPARATOR + familyName + Path.SEPARATOR
+        + new Path(bulkLoadFilePath).getName());
+    FileSystem sourceFs = source.getDFSCluster().getFileSystem();
+    sourceFs.mkdirs(sourceHFilePath.getParent());
+    sourceFs.copyFromLocalFile(new Path(bulkLoadFilePath), sourceHFilePath);
+    return sourceHFilePath;
+  }
+
+  private WALEdit createBulkLoadWALEdit(RegionInfo regionInfo, Path sourceHFilePath,
+    Configuration sourceConf) throws IOException {
+    Map<byte[], List<Path>> storeFiles = new HashMap<>(1);
+    storeFiles.put(famName, Collections.singletonList(sourceHFilePath));
+    Map<String, Long> storeFilesSize = new HashMap<>(1);
+    storeFilesSize.put(sourceHFilePath.getName(),
+      sourceHFilePath.getFileSystem(sourceConf).getFileStatus(sourceHFilePath).getLen());
+    long bulkLoadSeqNum = EnvironmentEdgeManager.currentTime();
+    WALProtos.BulkLoadDescriptor loadDescriptor = ProtobufUtil.toBulkLoadDescriptor(tableName,
+      UnsafeByteOperations.unsafeWrap(regionInfo.getEncodedNameAsBytes()), storeFiles,
+      storeFilesSize, bulkLoadSeqNum);
+    return WALEdit.createBulkLoadEvent(regionInfo, loadDescriptor);
+  }
+
+  private WALEntry createBulkLoadWALEntry(TableName tableName, RegionInfo regionInfo,
+    int associatedCellCount) {
+    UUID.Builder uuidBuilder = UUID.newBuilder();
+    uuidBuilder.setLeastSigBits(HConstants.DEFAULT_CLUSTER_ID.getLeastSignificantBits());
+    uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
+    WALKey.Builder keyBuilder = WALKey.newBuilder();
+    keyBuilder.setClusterId(uuidBuilder.build());
+    keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(tableName.getName()));
+    keyBuilder.setWriteTime(EnvironmentEdgeManager.currentTime());
+    keyBuilder
+      .setEncodedRegionName(UnsafeByteOperations.unsafeWrap(regionInfo.getEncodedNameAsBytes()));
+    keyBuilder.setLogSequenceNumber(1);
+    return WALEntry.newBuilder().setAssociatedCellCount(associatedCellCount)
+      .setKey(keyBuilder.build()).build();
+  }
+
+  private static final class BulkLoadWalEvent {
+    private final List<WALEntry> entries;
+    private final WALEdit edit;
+    private final String sourceBaseNamespaceDir;
+    private final String sourceHFileArchiveDir;
+
+    private BulkLoadWalEvent(List<WALEntry> entries, WALEdit edit, String sourceBaseNamespaceDir,
+      String sourceHFileArchiveDir) {
+      this.entries = entries;
+      this.edit = edit;
+      this.sourceBaseNamespaceDir = sourceBaseNamespaceDir;
+      this.sourceHFileArchiveDir = sourceHFileArchiveDir;
+    }
   }
 
   protected void assertBulkLoadConditions(TableName tableName, byte[] row, byte[] value,

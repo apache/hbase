@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
+import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -116,6 +117,7 @@ public class ReplicationSink implements ConfigurationObserver {
   // Tracks bulkload events currently being processed to prevent duplicate execution on RPC retry.
   // Key: replicationClusterId + "#" + encodedRegionName + "#" + bulkloadSeqNum
   private final Set<String> inProgressBulkLoads = ConcurrentHashMap.newKeySet();
+  private final ReplicationBulkLoadEventTracker bulkLoadEventTracker;
 
   /**
    * Row size threshold for multi requests above which a warning is logged
@@ -132,8 +134,15 @@ public class ReplicationSink implements ConfigurationObserver {
    */
   public ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost)
     throws IOException {
+    this(conf, rsServerHost, null);
+  }
+
+  public ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost,
+    ZKWatcher zkw) throws IOException {
     this.conf = HBaseConfiguration.create(conf);
     this.rsServerHost = rsServerHost;
+    this.bulkLoadEventTracker =
+      zkw == null ? null : new ReplicationBulkLoadEventTracker(this.conf, zkw);
     rowSizeWarnThreshold =
       conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
@@ -230,6 +239,9 @@ public class ReplicationSink implements ConfigurationObserver {
     if (entries.isEmpty()) {
       return;
     }
+    // Bulkload keys/events registered for this batch, to be removed on completion or failure.
+    List<String> registeredBulkLoadKeys = null;
+    List<ReplicationBulkLoadEventTracker.Event> claimedBulkLoadEvents = null;
     // Very simple optimization where we batch sequences of rows going
     // to the same table.
     try {
@@ -239,8 +251,8 @@ public class ReplicationSink implements ConfigurationObserver {
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
       Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
-      // bulkload keys registered in inProgressBulkLoads for this batch, to be removed on completion
-      List<String> registeredBulkLoadKeys = null;
+      Map<List<String>, List<ReplicationBulkLoadEventTracker.Event>> bulkLoadEventsPerClusters =
+        null;
       Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
         new Pair<>(new ArrayList<>(), new ArrayList<>());
       for (WALEntry entry : entries) {
@@ -273,24 +285,50 @@ public class ReplicationSink implements ConfigurationObserver {
           if (CellUtil.matchingQualifier(cell, WALEdit.BULK_LOAD)) {
             BulkLoadDescriptor bld = WALEdit.getBulkLoadDescriptor(cell);
             if (bld.getReplicate()) {
-              String bulkLoadKey = buildBulkLoadKey(replicationClusterId, bld);
-              if (!inProgressBulkLoads.add(bulkLoadKey)) {
-                LOG.warn("Skipping duplicate bulkload replication, already in progress: {}",
-                  bulkLoadKey);
-                continue;
+              ReplicationBulkLoadEventTracker.Event bulkLoadEvent = null;
+              if (bulkLoadEventTracker != null) {
+                bulkLoadEvent = bulkLoadEventTracker.newEvent(replicationClusterId, table,
+                  bld.getEncodedRegionName().toByteArray(), bld.getBulkloadSeqNum(),
+                  entry.getKey().getWriteTime());
+                ReplicationBulkLoadEventTracker.ClaimResult claimResult =
+                  bulkLoadEventTracker.claim(bulkLoadEvent);
+                if (!claimResult.isClaimed()) {
+                  LOG.info("Skipping completed bulkload replication event {}", bulkLoadEvent);
+                  continue;
+                }
+                if (claimedBulkLoadEvents == null) {
+                  claimedBulkLoadEvents = new ArrayList<>();
+                }
+                claimedBulkLoadEvents.add(bulkLoadEvent);
+              } else {
+                String bulkLoadKey = buildBulkLoadKey(replicationClusterId, bld);
+                if (!inProgressBulkLoads.add(bulkLoadKey)) {
+                  LOG.warn("Skipping duplicate bulkload replication, already in progress: {}",
+                    bulkLoadKey);
+                  continue;
+                }
+                if (registeredBulkLoadKeys == null) {
+                  registeredBulkLoadKeys = new ArrayList<>();
+                }
+                registeredBulkLoadKeys.add(bulkLoadKey);
               }
-              if (registeredBulkLoadKeys == null) {
-                registeredBulkLoadKeys = new ArrayList<>();
-              }
-              registeredBulkLoadKeys.add(bulkLoadKey);
               if (bulkLoadsPerClusters == null) {
                 bulkLoadsPerClusters = new HashMap<>();
               }
               // Map of table name Vs list of pair of family and list of
               // hfile paths from its namespace
+              List<String> clusterIds = entry.getKey().getClusterIdsList().stream()
+                .map(k -> toUUID(k).toString()).collect(Collectors.toList());
               Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
-                bulkLoadsPerClusters.computeIfAbsent(bld.getClusterIdsList(), k -> new HashMap<>());
+                bulkLoadsPerClusters.computeIfAbsent(clusterIds, k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
+              if (bulkLoadEvent != null) {
+                if (bulkLoadEventsPerClusters == null) {
+                  bulkLoadEventsPerClusters = new HashMap<>();
+                }
+                bulkLoadEventsPerClusters.computeIfAbsent(clusterIds, k -> new ArrayList<>())
+                  .add(bulkLoadEvent);
+              }
             }
           } else if (CellUtil.matchingQualifier(cell, WALEdit.REPLICATION_MARKER)) {
             Mutation put = processReplicationMarkerEntry(cell);
@@ -354,25 +392,21 @@ public class ReplicationSink implements ConfigurationObserver {
       }
 
       if (bulkLoadsPerClusters != null) {
-        try {
-          for (Entry<List<String>,
-            Map<String, List<Pair<byte[], List<String>>>>> entry : bulkLoadsPerClusters
-              .entrySet()) {
-            Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
-            if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
-              LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
-              Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
-              try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
-                sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-                getConnection(), entry.getKey(), bulkLoadCopyRateLimiter)) {
-                hFileReplicator.replicate();
-                LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
-              }
+        for (Entry<List<String>,
+          Map<String, List<Pair<byte[], List<String>>>>> entry : bulkLoadsPerClusters.entrySet()) {
+          Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap = entry.getValue();
+          if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
+            LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
+            Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
+            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
+              sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
+              getConnection(), entry.getKey(), bulkLoadCopyRateLimiter)) {
+              hFileReplicator.replicate();
+              markBulkLoadEventsDone(bulkLoadEventsPerClusters == null
+                ? null
+                : bulkLoadEventsPerClusters.get(entry.getKey()), claimedBulkLoadEvents);
+              LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
             }
-          }
-        } finally {
-          if (registeredBulkLoadKeys != null) {
-            inProgressBulkLoads.removeAll(registeredBulkLoadKeys);
           }
         }
       }
@@ -385,6 +419,53 @@ public class ReplicationSink implements ConfigurationObserver {
       LOG.error("Unable to accept edit because:", ex);
       this.metrics.incrementFailedBatches();
       throw ex;
+    } finally {
+      if (registeredBulkLoadKeys != null) {
+        inProgressBulkLoads.removeAll(registeredBulkLoadKeys);
+      }
+      releaseBulkLoadEvents(claimedBulkLoadEvents);
+    }
+  }
+
+  private void markBulkLoadEventsDone(List<ReplicationBulkLoadEventTracker.Event> events,
+    List<ReplicationBulkLoadEventTracker.Event> releasableEvents) throws IOException {
+    if (bulkLoadEventTracker == null || events == null) {
+      return;
+    }
+    for (int i = 0; i < events.size(); i++) {
+      ReplicationBulkLoadEventTracker.Event event = events.get(i);
+      try {
+        bulkLoadEventTracker.markDone(event);
+      } catch (IOException e) {
+        // HFiles may already be loaded, so keep unmarked events in-progress while this RS session
+        // is alive. Releasing them here could let another sink repeat the same bulkload.
+        keepUnmarkedBulkLoadEventsInProgress(events, releasableEvents, i);
+        throw e;
+      }
+    }
+  }
+
+  private void keepUnmarkedBulkLoadEventsInProgress(
+    List<ReplicationBulkLoadEventTracker.Event> events,
+    List<ReplicationBulkLoadEventTracker.Event> releasableEvents, int firstUnmarkedIndex) {
+    if (releasableEvents == null) {
+      return;
+    }
+    for (int i = firstUnmarkedIndex; i < events.size(); i++) {
+      releasableEvents.remove(events.get(i));
+    }
+  }
+
+  private void releaseBulkLoadEvents(List<ReplicationBulkLoadEventTracker.Event> events) {
+    if (bulkLoadEventTracker == null || events == null) {
+      return;
+    }
+    for (ReplicationBulkLoadEventTracker.Event event : events) {
+      try {
+        bulkLoadEventTracker.release(event);
+      } catch (IOException e) {
+        LOG.warn("Failed to release replicated bulkload event {}", event, e);
+      }
     }
   }
 

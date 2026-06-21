@@ -79,7 +79,7 @@ public class ReplicationSinkServiceImpl implements ReplicationSinkService, Confi
     if (server instanceof HRegionServer) {
       rsServerHost = ((HRegionServer) server).getRegionServerCoprocessorHost();
     }
-    this.replicationSink = new ReplicationSink(this.conf, rsServerHost);
+    this.replicationSink = new ReplicationSink(this.conf, rsServerHost, server.getZooKeeper());
     this.server.getChoreService().scheduleChore(new ReplicationStatisticsChore(
       "ReplicationSinkStatistics", server, (int) TimeUnit.SECONDS.toMillis(statsPeriodInSecond)));
   }
