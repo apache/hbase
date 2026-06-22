@@ -57,7 +57,7 @@
          maven dependency resolution won't pick it up for us. -->
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
+      <artifactId>hamcrest</artifactId>
       <!-- Overriding the scope in depMgmt -->
       <scope>compile</scope>
     </dependency>
@@ -404,7 +404,7 @@
         </dependency>
         <dependency>
           <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-core</artifactId>
+          <artifactId>hamcrest</artifactId>
           <scope>compile</scope>
         </dependency>
         <dependency>
