@@ -1981,7 +1981,11 @@ public class HRegionServer extends Thread
         .setHostName(clientMetrics.getHostName())
         .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
         .setFilteredRequestsCount(clientMetrics.getFilteredReadRequests())
-        .setReadRequestsCount(clientMetrics.getReadRequestsCount()).build())
+        .setReadRequestsCount(clientMetrics.getReadRequestsCount())
+        .setHostAddress(clientMetrics.getHostAddress()).setUserName(clientMetrics.getUserName())
+        .setClientVersion(clientMetrics.getClientVersion())
+        .setServiceName(clientMetrics.getServiceName())
+        .setClientVersion(clientMetrics.getClientVersion()).build())
       .forEach(userLoadBldr::addClientMetrics);
     return userLoadBldr.build();
   }
