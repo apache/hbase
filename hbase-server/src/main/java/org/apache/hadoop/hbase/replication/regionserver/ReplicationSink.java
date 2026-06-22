@@ -317,8 +317,7 @@ public class ReplicationSink implements ConfigurationObserver {
               }
               // Map of table name Vs list of pair of family and list of
               // hfile paths from its namespace
-              List<String> clusterIds = entry.getKey().getClusterIdsList().stream()
-                .map(k -> toUUID(k).toString()).collect(Collectors.toList());
+              List<String> clusterIds = bld.getClusterIdsList();
               Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap =
                 bulkLoadsPerClusters.computeIfAbsent(clusterIds, k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
