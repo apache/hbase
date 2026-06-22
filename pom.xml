@@ -597,7 +597,7 @@
     <jruby.version>9.4.14.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <awaitility.version>4.3.0</awaitility.version>
-    <hamcrest.version>1.3</hamcrest.version>
+    <hamcrest.version>3.0</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
     <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
     <opentelemetry-javaagent.version>2.26.1</opentelemetry-javaagent.version>
@@ -1388,12 +1388,7 @@
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-core</artifactId>
-        <version>${hamcrest.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-library</artifactId>
+        <artifactId>hamcrest</artifactId>
         <version>${hamcrest.version}</version>
       </dependency>
       <dependency>
@@ -2286,6 +2281,24 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-hamcrest-core-and-library</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.hamcrest:hamcrest-core</exclude>
+                    <exclude>org.hamcrest:hamcrest-library</exclude>
+                  </excludes>
+                  <message>Use org.hamcrest:hamcrest instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
@@ -2806,7 +2819,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -2862,7 +2875,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -2926,7 +2939,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -2989,7 +3002,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
