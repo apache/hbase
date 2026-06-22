@@ -137,7 +137,7 @@ public class TestVisibilityWithCheckAuths {
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.addColumn(fam, qual, 125L, value);
             table.put(p);
-            fail("Testcase should fail with AccesDeniedException");
+            fail("Testcase should fail with AccessDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           }
@@ -204,7 +204,7 @@ public class TestVisibilityWithCheckAuths {
             append.addColumn(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));
             table.append(append);
-            fail("Testcase should fail with AccesDeniedException");
+            fail("Testcase should fail with AccessDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           }
