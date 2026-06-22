@@ -331,6 +331,14 @@ public class RegionStates {
   }
 
   /**
+   * Returns all regions of the table, irrespective of assignment or split/offline state.
+   */
+  public List<RegionInfo> getAllRegionsOfTable(TableName table) {
+    return getTableRegionStateNodes(table).stream().map(RegionStateNode::getRegionInfo)
+      .collect(Collectors.toList());
+  }
+
+  /**
    * Get the regions for deleting a table.
    * <p/>
    * Here we need to return all the regions irrespective of the states in order to archive them all.
@@ -338,8 +346,7 @@ public class RegionStates {
    * references to the regions, we will lose the data of the regions.
    */
   public List<RegionInfo> getRegionsOfTableForDeleting(TableName table) {
-    return getTableRegionStateNodes(table).stream().map(RegionStateNode::getRegionInfo)
-      .collect(Collectors.toList());
+    return getAllRegionsOfTable(table);
   }
 
   /** Returns Return the regions of the table and filter them. */

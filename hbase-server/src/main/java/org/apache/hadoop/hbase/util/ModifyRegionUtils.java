@@ -21,7 +21,11 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -30,6 +34,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -80,6 +85,33 @@ public abstract class ModifyRegionUtils {
       }
     }
     return hRegionInfos;
+  }
+
+  /**
+   * Checks a set of candidate regions against each other and against a set of already-existing
+   * regions for encoded-name collisions.
+   */
+  public static void checkForEncodedNameCollisions(final Collection<RegionInfo> candidates,
+    final Collection<RegionInfo> existing) throws IOException {
+    if (candidates == null || candidates.isEmpty()) {
+      return;
+    }
+    Map<String, RegionInfo> seen = new HashMap<>();
+    if (existing != null) {
+      for (RegionInfo ri : existing) {
+        seen.putIfAbsent(ri.getEncodedName(), ri);
+      }
+    }
+    Set<String> candidateNames = new HashSet<>();
+    for (RegionInfo ri : candidates) {
+      String encoded = ri.getEncodedName();
+      RegionInfo conflict = seen.get(encoded);
+      if (conflict != null || !candidateNames.add(encoded)) {
+        throw new DoNotRetryIOException("Encoded region name collision detected: '" + encoded
+          + "' for table " + ri.getTable() + ". Refusing to proceed.");
+      }
+      seen.put(encoded, ri);
+    }
   }
 
   /**

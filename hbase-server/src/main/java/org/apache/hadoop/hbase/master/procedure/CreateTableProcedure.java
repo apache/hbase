@@ -296,6 +296,14 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
       return false;
     }
 
+    try {
+      ModifyRegionUtils.checkForEncodedNameCollisions(newRegions,
+        env.getAssignmentManager().getRegionStates().getAllRegionsOfTable(getTableName()));
+    } catch (DoNotRetryIOException e) {
+      setFailure("master-create-table", e);
+      return false;
+    }
+
     if (!tableName.isSystemTable()) {
       // do not check rs group for system tables as we may block the bootstrap.
       Supplier<String> forWhom = () -> "table " + tableName;
