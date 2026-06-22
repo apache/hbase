@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.visibility;
 
 import static org.apache.hadoop.hbase.security.visibility.VisibilityConstants.LABELS_TABLE_NAME;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -40,7 +41,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -137,7 +137,7 @@ public class TestVisibilityWithCheckAuths {
             p.setCellVisibility(new CellVisibility(PUBLIC + "&" + TOPSECRET));
             p.addColumn(fam, qual, 125L, value);
             table.put(p);
-            Assertions.fail("Testcase should fail with AccesDeniedException");
+            fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           }
@@ -204,7 +204,7 @@ public class TestVisibilityWithCheckAuths {
             append.addColumn(fam, qual, Bytes.toBytes("c"));
             append.setCellVisibility(new CellVisibility(PUBLIC));
             table.append(append);
-            Assertions.fail("Testcase should fail with AccesDeniedException");
+            fail("Testcase should fail with AccesDeniedException");
           } catch (Throwable t) {
             assertTrue(t.getMessage().contains("AccessDeniedException"));
           }
