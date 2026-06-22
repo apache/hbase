@@ -65,12 +65,14 @@ public class TestDefaultMobStoreCompactor {
       Bytes.toBytes("qualifier"), Bytes.toBytes("mob-value"));
     MobCell mobCell = mock(MobCell.class);
     when(mobCell.getCell()).thenReturn(resolved);
-    when(compactor.mobStore.resolve(reference, true, false)).thenReturn(mobCell);
+    when(compactor.mobStore.resolve(reference, compactor.cacheMobBlocksOnCompaction, false))
+      .thenReturn(mobCell);
 
     ExtendedCell copied = compactor.resolveMobCell(reference);
 
     assertNotSame(resolved, copied);
     assertTrue(CellUtil.matchingValue(resolved, copied));
+    verify(compactor.mobStore).resolve(reference, compactor.cacheMobBlocksOnCompaction, false);
     verify(mobCell).close();
   }
 
