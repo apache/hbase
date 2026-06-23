@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
@@ -26,7 +30,6 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.Locale;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -116,8 +119,8 @@ public class TestIPv6NIOServerSocketChannel {
       // On Windows JDK6, we will get expected exception:
       // java.net.SocketException: Address family not supported by protocol family
       // or java.net.SocketException: Protocol family not supported
-      Assertions.assertFalse(ex instanceof BindException);
-      Assertions.assertTrue(ex.getMessage().toLowerCase(Locale.ROOT).contains("protocol family"));
+      assertFalse(ex instanceof BindException);
+      assertTrue(ex.getMessage().toLowerCase(Locale.ROOT).contains("protocol family"));
       LOG.info("Received expected exception:", ex);
 
       // if this is the case, ensure that we are running on preferIPv4=true
@@ -132,7 +135,7 @@ public class TestIPv6NIOServerSocketChannel {
     InetAddress[] addrs = InetAddress.getAllByName("localhost");
     for (InetAddress addr : addrs) {
       LOG.info("resolved localhost as:" + addr);
-      Assertions.assertEquals(4, addr.getAddress().length); // ensure 4 byte ipv4 address
+      assertEquals(4, addr.getAddress().length); // ensure 4 byte ipv4 address
     }
   }
 

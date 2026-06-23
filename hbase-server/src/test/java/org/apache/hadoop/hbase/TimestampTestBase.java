@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Durability;
@@ -27,7 +29,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.jupiter.api.Assertions;
 
 /**
  * Tests user specifiable time stamps putting, getting and scanning. Also tests same in presence of
@@ -104,9 +105,9 @@ public class TimestampTestBase {
     get.addColumn(FAMILY_NAME, QUALIFIER_NAME);
     get.setMaxVersions(3);
     Result result = incommon.get(get);
-    Assertions.assertEquals(1, result.size());
+    assertEquals(1, result.size());
     long time = Bytes.toLong(CellUtil.cloneValue(result.rawCells()[0]));
-    Assertions.assertEquals(time, currentTime);
+    assertEquals(time, currentTime);
   }
 
   /*
@@ -122,7 +123,7 @@ public class TimestampTestBase {
     Result r = incommon.get(get);
     byte[] bytes = r.getValue(FAMILY_NAME, QUALIFIER_NAME);
     long t = Bytes.toLong(bytes);
-    Assertions.assertEquals(tss[0], t);
+    assertEquals(tss[0], t);
 
     // Now assert that if we ask for multiple versions, that they come out in
     // order.
@@ -131,10 +132,10 @@ public class TimestampTestBase {
     get.setMaxVersions(tss.length);
     Result result = incommon.get(get);
     Cell[] kvs = result.rawCells();
-    Assertions.assertEquals(kvs.length, tss.length);
+    assertEquals(kvs.length, tss.length);
     for (int i = 0; i < kvs.length; i++) {
       t = Bytes.toLong(CellUtil.cloneValue(kvs[i]));
-      Assertions.assertEquals(tss[i], t);
+      assertEquals(tss[i], t);
     }
 
     // Determine highest stamp to set as next max stamp
@@ -147,10 +148,10 @@ public class TimestampTestBase {
     get.setMaxVersions(kvs.length - 1);
     result = incommon.get(get);
     kvs = result.rawCells();
-    Assertions.assertEquals(kvs.length, tss.length - 1);
+    assertEquals(kvs.length, tss.length - 1);
     for (int i = 1; i < kvs.length; i++) {
       t = Bytes.toLong(CellUtil.cloneValue(kvs[i - 1]));
-      Assertions.assertEquals(tss[i], t);
+      assertEquals(tss[i], t);
     }
 
     // Test scanner returns expected version
@@ -169,12 +170,12 @@ public class TimestampTestBase {
     // Get count of latest items.
     int count = assertScanContentTimestamp(incommon, HConstants.LATEST_TIMESTAMP);
     // Assert I get same count when I scan at each timestamp.
-    Assertions.assertEquals(count, assertScanContentTimestamp(incommon, T0));
-    Assertions.assertEquals(count, assertScanContentTimestamp(incommon, T1));
+    assertEquals(count, assertScanContentTimestamp(incommon, T0));
+    assertEquals(count, assertScanContentTimestamp(incommon, T1));
     // Flush everything out to disk and then retry
     flusher.flushcache();
-    Assertions.assertEquals(count, assertScanContentTimestamp(incommon, T0));
-    Assertions.assertEquals(count, assertScanContentTimestamp(incommon, T1));
+    assertEquals(count, assertScanContentTimestamp(incommon, T0));
+    assertEquals(count, assertScanContentTimestamp(incommon, T1));
   }
 
   /*
