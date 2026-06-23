@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
@@ -631,7 +633,7 @@ public class IntegrationTestBigLinkedListWithVisibility extends IntegrationTestB
       new String[] { "1", "1", "20000",
         util.getDataTestDirOnTestFS("IntegrationTestBigLinkedListWithVisibility").toString(), "1",
         "10000" });
-    org.junit.jupiter.api.Assertions.assertEquals(0, ret);
+    assertEquals(0, ret);
   }
 
   public static void main(String[] args) throws Exception {

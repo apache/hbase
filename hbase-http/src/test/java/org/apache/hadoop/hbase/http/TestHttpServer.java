@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -73,7 +74,6 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Disabled;
@@ -297,7 +297,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertNotNull(entity);
         assertNull(entity.getContentEncoding());
         unencodedContentLength = entity.getContentLength();
-        MatcherAssert.assertThat(unencodedContentLength, greaterThan(0L));
+        assertThat(unencodedContentLength, greaterThan(0L));
         final String unencodedEntityBody = readFully(entity.getContent());
         assertEquals(sourceContent, unencodedEntityBody);
       }
@@ -310,13 +310,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertNotNull(entity.getContentEncoding());
         assertEquals("gzip", entity.getContentEncoding().getValue());
         encodedContentLength = entity.getContentLength();
-        MatcherAssert.assertThat(encodedContentLength, greaterThan(0L));
+        assertThat(encodedContentLength, greaterThan(0L));
         final String encodedEntityBody = readFully(entity.getContent());
         // the encoding/decoding process, as implemented in this specific combination of dependency
         // versions, does not perfectly preserve trailing whitespace. thus, `trim()`.
         assertEquals(sourceContent.trim(), encodedEntityBody.trim());
       }
-      MatcherAssert.assertThat(unencodedContentLength, greaterThan(encodedContentLength));
+      assertThat(unencodedContentLength, greaterThan(encodedContentLength));
     }
   }
 
