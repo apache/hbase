@@ -79,7 +79,6 @@ public class ReplicationSourceShipper extends Thread {
   private final long offsetUpdateIntervalMs;
   private final long offsetUpdateSizeThresholdBytes;
   private WALEntryBatch lastShippedBatch;
-  private volatile boolean abortingForRestart = false;
 
   private static final String OFFSET_UPDATE_INTERVAL_MS_KEY =
     "hbase.replication.shipper.offset.update.interval.ms";
@@ -113,77 +112,65 @@ public class ReplicationSourceShipper extends Thread {
   public final void run() {
     setWorkerState(WorkerState.RUNNING);
     LOG.info("Running ReplicationSourceShipper Thread for wal group: {}", this.walGroupId);
-    try {
-      // Loop until we close down
-      while (isActive()) {
-        // Sleep until replication is enabled again
-        if (!source.isPeerEnabled()) {
-          // The peer enabled check is in memory, not expensive, so do not need to increase the
-          // sleep interval as it may cause a long lag when we enable the peer.
-          sleepForRetries("Replication is disabled", sleepForRetries, 1, maxRetriesMultiplier);
+    // Loop until we close down
+    while (isActive()) {
+      // Sleep until replication is enabled again
+      if (!source.isPeerEnabled()) {
+        // The peer enabled check is in memory, not expensive, so do not need to increase the
+        // sleep interval as it may cause a long lag when we enable the peer.
+        sleepForRetries("Replication is disabled", sleepForRetries, 1, maxRetriesMultiplier);
+        continue;
+      }
+      try {
+        // check time-based offset persistence
+        if (shouldPersistLogPosition()) {
+          persistLogPosition();
+        }
+
+        long pollTimeout = getEntriesTimeout;
+        if (offsetUpdateIntervalMs != Long.MAX_VALUE) {
+          long elapsed = EnvironmentEdgeManager.currentTime() - lastOffsetUpdateTime;
+          long remaining = offsetUpdateIntervalMs - elapsed;
+          if (remaining > 0) {
+            pollTimeout = Math.min(getEntriesTimeout, remaining);
+          }
+        }
+        WALEntryBatch entryBatch = entryReader.poll(pollTimeout);
+        LOG.debug("Shipper from source {} got entry batch from reader: {}", source.getQueueId(),
+          entryBatch);
+
+        if (entryBatch == null) {
           continue;
         }
-        try {
-          // check time-based offset persistence
-          if (shouldPersistLogPosition()) {
-            persistLogPosition();
-          }
-
-          long pollTimeout = getEntriesTimeout;
-          if (offsetUpdateIntervalMs != Long.MAX_VALUE) {
-            long elapsed = EnvironmentEdgeManager.currentTime() - lastOffsetUpdateTime;
-            long remaining = offsetUpdateIntervalMs - elapsed;
-            if (remaining > 0) {
-              pollTimeout = Math.min(getEntriesTimeout, remaining);
-            }
-          }
-          WALEntryBatch entryBatch = entryReader.poll(pollTimeout);
-          LOG.debug("Shipper from source {} got entry batch from reader: {}", source.getQueueId(),
-            entryBatch);
-
-          if (entryBatch == null) {
-            continue;
-          }
-          // the NO_MORE_DATA instance has no path so do not call shipEdits
-          if (entryBatch == WALEntryBatch.NO_MORE_DATA) {
-            noMoreData();
-          } else {
-            shipEdits(entryBatch);
-          }
-        } catch (InterruptedException | ReplicationRuntimeException e) {
-          LOG.warn("Interrupted while waiting for next replication entry batch", e);
-          Thread.currentThread().interrupt();
-        } catch (IOException ioe) {
-          // During source shutdown / peer removal we can see interrupted IOEs
-          // from replication queue updates. Do not restart in this case.
-          if (!source.isSourceActive() || isInterrupted() || !source.isPeerEnabled()) {
-            LOG.info("Ignoring persist failure during shutdown for walGroupId={}", walGroupId, ioe);
-            break;
-          }
-          LOG.error("Shipper {} failed to persist offset, restarting", walGroupId, ioe);
-          abortAndRestart(ioe);
+        // the NO_MORE_DATA instance has no path so do not call shipEdits
+        if (entryBatch == WALEntryBatch.NO_MORE_DATA) {
+          noMoreData();
+        } else {
+          shipEdits(entryBatch);
+        }
+      } catch (InterruptedException | ReplicationRuntimeException e) {
+        LOG.warn("Interrupted while waiting for next replication entry batch", e);
+        Thread.currentThread().interrupt();
+      } catch (Exception e) {
+        // During source shutdown / peer removal we can see interrupted IOEs
+        // from replication queue updates. Do not restart in this case.
+        if (!source.isSourceActive() || isInterrupted() || !source.isPeerEnabled()) {
+          LOG.info("Ignoring persist failure during shutdown for walGroupId={}", walGroupId, e);
           break;
         }
-      }
-    } finally {
-      // Persist any buffered offset when the worker exits normally
-      // (peer disable, peer removal, source termination, etc).
-      // Skip when we are restarting because the next shipper will continue
-      // from the last persisted offset.
-      if (!isFinished() && !abortingForRestart) {
-        try {
-          persistLogPosition();
-        } catch (IOException e) {
-          // Failure to persist here is non-fatal because replication will resume
-          // from the last successfully persisted position after source recovery
-          // or peer re-enable, since Worker is already exiting.
-          LOG.warn("Failed persisting final offset during shutdown for walGroupId={}", walGroupId,
-            e);
-        }
+        LOG.error("Shipper {} failed to persist offset, restarting", walGroupId, e);
+        abortAndRestart(e);
+        return;
       }
     }
+
     // If the worker exits run loop without finishing its task, mark it as stopped.
     if (!isFinished()) {
+      try {
+        persistLogPosition();
+      } catch (Exception e) {
+        LOG.error("Failed persisting final offset for walGroupId={}", walGroupId, e);
+      }
       setWorkerState(WorkerState.STOPPED);
     } else {
       source.removeWorker(this);
@@ -318,7 +305,7 @@ public class ReplicationSourceShipper extends Thread {
       return;
     }
 
-    if (!source.isSourceActive() || isInterrupted()) {
+    if (!source.isSourceActive() || isInterrupted() || !source.isPeerEnabled()) {
       LOG.debug("Skip persistLogPosition for inactive/stopping source");
       return;
     }
@@ -466,7 +453,7 @@ public class ReplicationSourceShipper extends Thread {
     return sleepForRetries;
   }
 
-  // Restart from last persisted offset
+  // Restart worker so replication resumes from last persisted offset.
   void abortAndRestart(Throwable cause) {
     LOG.warn("Restarting shipper for walGroupId={}", walGroupId, cause);
     if (!source.isSourceActive() || !source.isPeerEnabled() || isInterrupted()) {
@@ -474,7 +461,6 @@ public class ReplicationSourceShipper extends Thread {
         Thread.currentThread().getName());
       return;
     }
-    abortingForRestart = true;
     setWorkerState(WorkerState.STOPPED);
     source.restartShipper(walGroupId, this);
   }
