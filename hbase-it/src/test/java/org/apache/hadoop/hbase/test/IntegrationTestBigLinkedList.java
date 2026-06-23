@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
