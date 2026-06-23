@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.test;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.DataInput;
 import java.io.DataOutput;
 import java.io.FileNotFoundException;
@@ -1859,7 +1861,7 @@ public class IntegrationTestBigLinkedList extends IntegrationTestBase {
     }
     int ret = ToolRunner.run(conf, new Loop(), new String[] { "1", "1", "2000000",
       util.getDataTestDirOnTestFS("IntegrationTestBigLinkedList").toString(), "1" });
-    org.junit.jupiter.api.Assertions.assertEquals(0, ret);
+    assertEquals(0, ret);
   }
 
   private void usage() {
