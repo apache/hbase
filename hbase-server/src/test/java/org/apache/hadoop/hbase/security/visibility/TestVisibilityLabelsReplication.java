@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -276,9 +275,9 @@ public class TestVisibilityLabelsReplication {
     if (VisibilityReplicationEndPointForTest.lastEntries == null) {
       return; // first call
     }
-    Assertions.assertEquals(1, VisibilityReplicationEndPointForTest.lastEntries.size());
+    assertEquals(1, VisibilityReplicationEndPointForTest.lastEntries.size());
     List<Cell> cells = VisibilityReplicationEndPointForTest.lastEntries.get(0).getEdit().getCells();
-    Assertions.assertEquals(4, cells.size());
+    assertEquals(4, cells.size());
     boolean tagFound = false;
     for (Cell cell : cells) {
       if (

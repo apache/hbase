@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -80,7 +81,7 @@ public class TestFSTableDescriptors {
     assertEquals(0, i);
     // Assert it won't eat garbage -- that it fails
     Path p2 = new Path(testDir, "abc");
-    org.junit.jupiter.api.Assertions.assertThrows(IllegalArgumentException.class,
+    assertThrows(IllegalArgumentException.class,
       () -> FSTableDescriptors.getTableInfoSequenceIdAndFileLength(p2));
   }
 

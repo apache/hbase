@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -176,7 +175,7 @@ public class TestVisibilityLabelsWithDefaultVisLabelService extends VisibilityLa
       }
     }
     // One label is the "system" label.
-    Assertions.assertEquals(13, i, "The count should be 13");
+    assertEquals(13, i, "The count should be 13");
   }
 
   @Test
