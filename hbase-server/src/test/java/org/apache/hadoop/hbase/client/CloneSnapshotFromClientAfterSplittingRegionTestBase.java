@@ -28,7 +28,6 @@ import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.junit.jupiter.api.TestTemplate;
@@ -49,14 +48,10 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
     // point). Without this, the randomly generated row keys may all fall on one side of the split
     // point, leaving the snapshot with no reference files. The cloned table's meta would then be
     // missing the parent split information, which is what HBASE-29111 guards against below. The
-    // region server has compaction disabled (see CloneSnapshotFromClientTestBase), so we compact
-    // the regions directly to bypass that; auto-compaction stays disabled afterwards so the
-    // post-split reference files are not compacted away.
-    for (HRegion region : TEST_UTIL.getHBaseCluster().getRegions(tableName)) {
-      if (RegionReplicaUtil.isDefaultReplica(region.getRegionInfo())) {
-        region.compact(true);
-      }
-    }
+    // region server has compaction disabled (see CloneSnapshotFromClientTestBase), so we
+    // major-compact the table's regions directly to bypass that; auto-compaction stays disabled
+    // afterward so the post-split reference files are not compacted away.
+    TEST_UTIL.compact(tableName, true);
     try (Table k = TEST_UTIL.getConnection().getTable(tableName);
       ResultScanner scanner = k.getScanner(new Scan())) {
       // Split on the second row to make sure that the snapshot contains reference files.

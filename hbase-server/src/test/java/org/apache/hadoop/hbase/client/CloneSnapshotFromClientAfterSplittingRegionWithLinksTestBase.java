@@ -38,11 +38,8 @@ import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestTemplate;
 
 /**
@@ -87,33 +84,24 @@ public class CloneSnapshotFromClientAfterSplittingRegionWithLinksTestBase
     TEST_UTIL.getConfiguration().setLong(TimeToLiveHFileCleaner.TTL_CONF_KEY, 0);
   }
 
-  /**
-   * Unlike the parent, build a controlled single-region table with two disjoint store files (in the
-   * test itself) rather than the default randomly-populated, pre-split table and snapshots, so the
-   * split deterministically produces whole-file HFileLinks. Hence we do not call {@code super}.
-   */
   @Override
-  @BeforeEach
-  public void setUp(TestInfo testInfo) throws Exception {
-    this.admin = TEST_UTIL.getAdmin();
-    long tid = EnvironmentEdgeManager.currentTime();
-    String methodName = testInfo.getTestMethod().get().getName()
-      + testInfo.getDisplayName().replaceAll("[^0-9A-Za-z_]", "_");
-    tableName = TableName.valueOf(methodName + tid);
-    clonedTableName = TableName.valueOf(methodName + "-clone-" + tid);
+  protected void initSnapshotNames(long tid) {
+    clonedTableName = TableName.valueOf(getValidMethodName() + "-clone-" + tid);
     snapshotName = "snaptb-links-" + tid;
-    // Keep the split parent around so that the snapshot (and therefore the clone) contains it.
-    admin.catalogJanitorSwitch(false);
   }
 
   @Override
+  protected void createTableAndSnapshots() throws Exception {
+    createTable();
+    admin.catalogJanitorSwitch(false);
+  }
+
   @AfterEach
-  public void tearDown() throws Exception {
+  public void tearDownClone() throws Exception {
     admin.catalogJanitorSwitch(true);
     if (clonedTableName != null && admin.tableExists(clonedTableName)) {
       TEST_UTIL.deleteTable(clonedTableName);
     }
-    super.tearDown();
   }
 
   /**
@@ -121,17 +109,11 @@ public class CloneSnapshotFromClientAfterSplittingRegionWithLinksTestBase
    */
   @Override
   protected void createTable() throws IOException, InterruptedException {
-    TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(tableName).setRegionReplication(numReplicas)
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).build();
-    TEST_UTIL.getAdmin().createTable(tableDescriptor);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+    SnapshotTestingUtils.createTable(TEST_UTIL, tableName, numReplicas, 1, FAMILY);
   }
 
   @TestTemplate
   public void testClonedTableWithLinksSurvivesSourceDeletion() throws Exception {
-    createTable();
-
     // Write two store files whose key ranges are disjoint and sit on opposite sides of SPLIT_KEY.
     int totalRows = loadTwoDisjointStoreFiles();
 
