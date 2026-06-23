@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.hamcrest.MatcherAssert.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.Assert.assertEquals;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.empty;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -40,11 +39,12 @@ import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -56,12 +56,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos.Procedu
  * <p/>
  * See HBASE-27109 for more details.
  */
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestRemovePeerProcedureWaitForSCP extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemovePeerProcedureWaitForSCP.class);
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestRemovePeerProcedureWaitForSCP extends TestReplicationBaseNoBeforeAll {
 
   private static final TableName tableName3 = TableName.valueOf("test3");
 
@@ -105,32 +102,30 @@ public class TestRemovePeerProcedureWaitForSCP extends TestReplicationBase {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     CONF1.setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
-    TestReplicationBase.setUpBeforeClass();
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
     createTable(tableName3);
     table3 = connection1.getTable(tableName3);
   }
 
-  @Override
-  public void setUpBase() throws Exception {
-    super.setUpBase();
+  @BeforeEach
+  public void addExtraPeer() throws Exception {
     // set up two replication peers and only 1 rs to test claim replication queue with multiple
     // round
     addPeer(PEER_ID3, tableName3);
   }
 
-  @Override
-  public void tearDownBase() throws Exception {
-    super.tearDownBase();
+  @AfterEach
+  public void removeExtraPeer() throws Exception {
     removePeer(PEER_ID3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(table3, true);
-    TestReplicationBase.tearDownAfterClass();
   }
 
   @Test

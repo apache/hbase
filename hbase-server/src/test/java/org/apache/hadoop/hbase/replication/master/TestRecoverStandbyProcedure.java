@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
@@ -27,7 +27,6 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -56,22 +55,18 @@ import org.apache.hadoop.hbase.wal.WAL.Entry;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRecoverStandbyProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecoverStandbyProcedure.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoverStandbyProcedure.class);
 
@@ -103,7 +98,7 @@ public class TestRecoverStandbyProcedure {
 
   private static Configuration conf;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     UTIL.startMiniCluster(RS_NUMBER);
     UTIL.getHBaseCluster().waitForActiveAndReadyMaster();
@@ -114,21 +109,17 @@ public class TestRecoverStandbyProcedure {
     procExec = master.getMasterProcedureExecutor();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
+    UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setupBeforeTest() throws IOException {
     UTIL.createTable(tableName, family);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     try (Admin admin = UTIL.getAdmin()) {
       if (admin.isTableEnabled(tableName)) {

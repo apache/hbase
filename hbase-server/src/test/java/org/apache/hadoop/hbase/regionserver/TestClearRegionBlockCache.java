@@ -17,171 +17,25 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.stream.Stream;
-import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.CacheEvictionStats;
-import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.Admin;
-import org.apache.hadoop.hbase.client.AsyncAdmin;
-import org.apache.hadoop.hbase.client.AsyncConnection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Scan;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.TestTemplate;
-import org.junit.jupiter.params.provider.Arguments;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Tag(LargeTests.TAG)
-@HBaseParameterizedTestTemplate(name = "{index}: {0}")
-public class TestClearRegionBlockCache {
+public class TestClearRegionBlockCache extends ClearRegionBlockCacheTestBase {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestClearRegionBlockCache.class);
-  private static final TableName TABLE_NAME = TableName.valueOf("testClearRegionBlockCache");
-  private static final byte[] FAMILY = Bytes.toBytes("family");
-  private static final byte[][] SPLIT_KEY = new byte[][] { Bytes.toBytes("5") };
-  private static final int NUM_RS = 2;
+  private static final TableName TABLE_NAME =
+    TableName.valueOf("testClearRegionBlockCacheWithLruBlockCache");
 
-  private final HBaseTestingUtil HTU = new HBaseTestingUtil();
-
-  private Configuration CONF = HTU.getConfiguration();
-  private Table table;
-  private HRegionServer rs1, rs2;
-  private SingleProcessHBaseCluster cluster;
-
-  private final String cacheType;
-
-  public TestClearRegionBlockCache(String cacheType) {
-    this.cacheType = cacheType;
+  @BeforeAll
+  public static void setUp() throws Exception {
+    setUpCluster(TABLE_NAME);
   }
 
-  public static Stream<Arguments> parameters() {
-    return Stream.of(Arguments.of("lru"), Arguments.of("bucket"));
-  }
-
-  @BeforeEach
-  public void setup() throws Exception {
-    if (cacheType.equals("bucket")) {
-      CONF.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-      CONF.setInt(HConstants.BUCKET_CACHE_SIZE_KEY, 30);
-    }
-
-    cluster = HTU.startMiniCluster(NUM_RS);
-    rs1 = cluster.getRegionServer(0);
-    rs2 = cluster.getRegionServer(1);
-
-    // Create table
-    table = HTU.createTable(TABLE_NAME, FAMILY, SPLIT_KEY);
-
-    HTU.loadNumericRows(table, FAMILY, 1, 10);
-    HTU.flush(TABLE_NAME);
-  }
-
-  @AfterEach
-  public void teardown() throws Exception {
-    HTU.shutdownMiniCluster();
-  }
-
-  @TestTemplate
-  public void testClearBlockCache() throws Exception {
-    BlockCache blockCache1 = rs1.getBlockCache().get();
-    BlockCache blockCache2 = rs2.getBlockCache().get();
-
-    long initialBlockCount1 = blockCache1.getBlockCount();
-    long initialBlockCount2 = blockCache2.getBlockCount();
-
-    // scan will cause blocks to be added in BlockCache
-    scanAllRegionsForRS(rs1);
-    assertEquals(blockCache1.getBlockCount() - initialBlockCount1,
-      HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY));
-    clearRegionBlockCache(rs1);
-
-    scanAllRegionsForRS(rs2);
-    assertEquals(blockCache2.getBlockCount() - initialBlockCount2,
-      HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
-    clearRegionBlockCache(rs2);
-
-    assertEquals(initialBlockCount1, blockCache1.getBlockCount(), "" + blockCache1.getBlockCount());
-    assertEquals(initialBlockCount2, blockCache2.getBlockCount(), "" + blockCache2.getBlockCount());
-  }
-
-  @TestTemplate
-  public void testClearBlockCacheFromAdmin() throws Exception {
-    Admin admin = HTU.getAdmin();
-
-    BlockCache blockCache1 = rs1.getBlockCache().get();
-    BlockCache blockCache2 = rs2.getBlockCache().get();
-    long initialBlockCount1 = blockCache1.getBlockCount();
-    long initialBlockCount2 = blockCache2.getBlockCount();
-
-    // scan will cause blocks to be added in BlockCache
-    scanAllRegionsForRS(rs1);
-    assertEquals(blockCache1.getBlockCount() - initialBlockCount1,
-      HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY));
-    scanAllRegionsForRS(rs2);
-    assertEquals(blockCache2.getBlockCount() - initialBlockCount2,
-      HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
-
-    CacheEvictionStats stats = admin.clearBlockCache(TABLE_NAME);
-    assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY)
-      + HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
-    assertEquals(initialBlockCount1, blockCache1.getBlockCount());
-    assertEquals(initialBlockCount2, blockCache2.getBlockCount());
-  }
-
-  @TestTemplate
-  public void testClearBlockCacheFromAsyncAdmin() throws Exception {
-    try (AsyncConnection conn =
-      ConnectionFactory.createAsyncConnection(HTU.getConfiguration()).get()) {
-      AsyncAdmin admin = conn.getAdmin();
-
-      BlockCache blockCache1 = rs1.getBlockCache().get();
-      BlockCache blockCache2 = rs2.getBlockCache().get();
-      long initialBlockCount1 = blockCache1.getBlockCount();
-      long initialBlockCount2 = blockCache2.getBlockCount();
-
-      // scan will cause blocks to be added in BlockCache
-      scanAllRegionsForRS(rs1);
-      assertEquals(blockCache1.getBlockCount() - initialBlockCount1,
-        HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY));
-      scanAllRegionsForRS(rs2);
-      assertEquals(blockCache2.getBlockCount() - initialBlockCount2,
-        HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
-
-      CacheEvictionStats stats = admin.clearBlockCache(TABLE_NAME).get();
-      assertEquals(stats.getEvictedBlocks(), HTU.getNumHFilesForRS(rs1, TABLE_NAME, FAMILY)
-        + HTU.getNumHFilesForRS(rs2, TABLE_NAME, FAMILY));
-      assertEquals(initialBlockCount1, blockCache1.getBlockCount());
-      assertEquals(initialBlockCount2, blockCache2.getBlockCount());
-    }
-  }
-
-  private void scanAllRegionsForRS(HRegionServer rs) throws IOException {
-    for (Region region : rs.getRegions(TABLE_NAME)) {
-      RegionScanner scanner = region.getScanner(new Scan());
-      while (scanner.next(new ArrayList<Cell>()))
-        ;
-    }
-  }
-
-  private void clearRegionBlockCache(HRegionServer rs) {
-    for (Region region : rs.getRegions(TABLE_NAME)) {
-      rs.clearRegionBlockCache(region);
-    }
+  @AfterAll
+  public static void tearDown() throws Exception {
+    tearDownCluster();
   }
 }

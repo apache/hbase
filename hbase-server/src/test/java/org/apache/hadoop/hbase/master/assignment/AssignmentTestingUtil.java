@@ -49,10 +49,15 @@ public final class AssignmentTestingUtil {
   }
 
   public static void waitForRegionToBeInTransition(final HBaseTestingUtil util,
-    final RegionInfo hri) throws Exception {
-    while (!getMaster(util).getAssignmentManager().isRegionInTransition(hri)) {
+    final RegionInfo hri) {
+    while (!isRegionInTransition(hri, getMaster(util).getAssignmentManager())) {
       Threads.sleep(10);
     }
+  }
+
+  public static boolean isRegionInTransition(RegionInfo hri, AssignmentManager am) {
+    return am.getRegionsInTransition().stream()
+      .anyMatch(rsn -> rsn.getRegionInfo().getEncodedName().equals(hri.getEncodedName()));
   }
 
   public static void waitForRsToBeDead(final HBaseTestingUtil util, final ServerName serverName)

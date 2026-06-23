@@ -15,22 +15,18 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase;
+package org.apache.hadoop.hbase.replication;
 
-import static org.junit.jupiter.api.Assertions.assertThrows;
-
-import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
-@Tag(MiscTests.TAG)
-@Tag(SmallTests.TAG)
-public class TestSystemExitInTest {
+/**
+ * Runs the TestReplicationKillRS test and selects the RS to kill in the master cluster Do not add
+ * other tests in this class.
+ */
+public class ReplicationKillMasterRSTestBase extends ReplicationKillRSTestBase {
 
   @Test
-  public void testSystemExit() {
-    assertThrows(SystemExitRule.SystemExitInTestException.class, () -> System.exit(1));
+  public void killOneMasterRS() throws Exception {
+    loadTableAndKillRS(UTIL1);
   }
-
 }

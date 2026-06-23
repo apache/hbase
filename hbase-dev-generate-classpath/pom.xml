@@ -56,7 +56,7 @@
          maven dependency resolution won't pick it up for us. -->
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
+      <artifactId>hamcrest</artifactId>
       <!-- Overriding the scope in depMgmt -->
       <scope>compile</scope>
     </dependency>
@@ -244,11 +244,6 @@
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter-params</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>

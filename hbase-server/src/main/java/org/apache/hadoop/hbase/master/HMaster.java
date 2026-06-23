@@ -1567,6 +1567,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
   private void initMobCleaner() {
     this.mobFileCleanerChore = new MobFileCleanerChore(this);
+    configurationManager.registerObserver(this.mobFileCleanerChore);
     getChoreService().scheduleChore(mobFileCleanerChore);
     this.mobFileCompactionChore = new MobFileCompactionChore(this);
     getChoreService().scheduleChore(mobFileCompactionChore);
@@ -4267,7 +4268,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
    *                    unique id).
    * @return procedure Id
    * @throws IOException if reopening region fails while running procedure
+   * @deprecated since 3.0.0 and will be removed in 4.0.0. Use
+   *             {@link #reopenRegionsThrottled(TableName, List, long, long)} instead so region
+   *             reopening honors the configured throttling.
+   * @see <a href="https://issues.apache.org/jira/browse/HBASE-29809">HBASE-29809</a>
    */
+  @Deprecated
   long reopenRegions(final TableName tableName, final List<byte[]> regionNames,
     final long nonceGroup, final long nonce) throws IOException {
 
@@ -4310,17 +4316,21 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       throw new TableNotFoundException(tableName);
     }
 
+    TableDescriptor tableDescriptor = getTableDescriptors().get(tableName);
+    if (tableDescriptor == null) {
+      throw new TableNotFoundException(tableName);
+    }
+
     return MasterProcedureUtil
       .submitProcedure(new MasterProcedureUtil.NonceProcedureRunnable(this, nonceGroup, nonce) {
         @Override
         protected void run() throws IOException {
           ReopenTableRegionsProcedure proc;
           if (regionNames.isEmpty()) {
-            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
-              getTableDescriptors().get(tableName));
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(), tableDescriptor);
           } else {
-            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(),
-              getTableDescriptors().get(tableName), regionNames);
+            proc = ReopenTableRegionsProcedure.throttled(getConfiguration(), tableDescriptor,
+              regionNames);
           }
 
           LOG.info("{} throttled reopening {} regions for table {}", getClientIdAuditPrefix(),
@@ -4491,26 +4501,32 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return masterRegion;
   }
 
+  /**
+   * Dynamically updates HMaster's configuration. Since HMaster inherits from
+   * {@link HBaseServerBase}, the {@code updatedConf} parameter references the same
+   * {@link Configuration} object as HMaster's {@code this.conf} instance variable in a real HBase
+   * deployment. This isn't necessarily the case in unit tests.
+   * @param updatedConf the dynamically updated configuration
+   */
   @Override
-  public void onConfigurationChange(Configuration newConf) {
+  public void onConfigurationChange(Configuration updatedConf) {
     try {
-      Superusers.initialize(newConf);
+      Superusers.initialize(updatedConf);
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
     // append the quotas observer back to the master coprocessor key
-    setQuotasObserver(newConf);
+    setQuotasObserver(updatedConf);
 
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
 
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
-      this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, this.maintenanceMode,
-      this.toString(), conf -> {
-        this.initializeCoprocessorHost(conf);
-        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
-          CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      });
+    // updatedConf and this.conf reference the same Configuration object in an actual HBase
+    // deployment. However, in unit test cases they reference different Configuration objects, so
+    // this.conf needs to be updated.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+      originalIsReadOnlyEnabled, this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      this.maintenanceMode, this.toString(), this::initializeCoprocessorHost);
 
     boolean maybeUpdatedReadOnlyMode = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);

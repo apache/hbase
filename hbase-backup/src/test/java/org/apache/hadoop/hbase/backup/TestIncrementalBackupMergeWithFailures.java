@@ -18,8 +18,10 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,7 +43,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -74,7 +75,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       if (val != null) {
         failurePhase = FailurePhase.valueOf(val);
       } else {
-        Assertions.fail("Failure phase is not set");
+        fail("Failure phase is not set");
       }
     }
 
@@ -242,13 +243,13 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
     LOG.debug("writing " + ADD_ROWS + " rows to " + table1);
 
-    Assertions.assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, TEST_UTIL.countRows(t1));
+    assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, TEST_UTIL.countRows(t1));
     t1.close();
     LOG.debug("written " + ADD_ROWS + " rows to " + table1);
 
     Table t2 = insertIntoTable(conn, table2, famName, 1, ADD_ROWS);
 
-    Assertions.assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, TEST_UTIL.countRows(t2));
+    assertEquals(NB_ROWS_IN_BATCH + ADD_ROWS, TEST_UTIL.countRows(t2));
     t2.close();
     LOG.debug("written " + ADD_ROWS + " rows to " + table2);
 
@@ -279,7 +280,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
         String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
         bAdmin.mergeBackups(backups);
-        Assertions.fail("Expected IOException");
+        fail("Expected IOException");
       } catch (IOException e) {
         BackupSystemTable table = new BackupSystemTable(conn);
         if (phase.ordinal() < FailurePhase.PHASE4.ordinal()) {
@@ -288,7 +289,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           assertFalse(table.isMergeInProgress());
           try {
             table.finishBackupExclusiveOperation();
-            Assertions.fail("IOException is expected");
+            fail("IOException is expected");
           } catch (IOException ee) {
             // Expected
           }
@@ -297,7 +298,7 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           assertTrue(table.isMergeInProgress());
           try {
             table.startBackupExclusiveOperation();
-            Assertions.fail("IOException is expected");
+            fail("IOException is expected");
           } catch (IOException ee) {
             // Expected - clean up before proceeding
             // table.finishMergeOperation();
@@ -330,12 +331,12 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
     Table hTable = conn.getTable(table1_restore);
     LOG.debug("After incremental restore: " + hTable.getDescriptor());
     LOG.debug("f1 has " + TEST_UTIL.countRows(hTable, famName) + " rows");
-    Assertions.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, TEST_UTIL.countRows(hTable, famName));
+    assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, TEST_UTIL.countRows(hTable, famName));
 
     hTable.close();
 
     hTable = conn.getTable(table2_restore);
-    Assertions.assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, TEST_UTIL.countRows(hTable));
+    assertEquals(NB_ROWS_IN_BATCH + 2 * ADD_ROWS, TEST_UTIL.countRows(hTable));
     hTable.close();
 
     admin.close();

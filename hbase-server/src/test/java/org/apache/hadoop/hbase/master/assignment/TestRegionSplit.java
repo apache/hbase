@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master.assignment;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -117,8 +118,8 @@ public class TestRegionSplit {
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
 
-    assertTrue(regions != null, "not able to find a splittable region");
-    assertTrue(regions.length == 1, "not able to find a splittable region");
+    assertNotNull(regions, "not able to find a splittable region");
+    assertEquals(1, regions.length, "not able to find a splittable region");
 
     // Split region of the table
     long procId = procExec.submitProcedure(
@@ -127,7 +128,7 @@ public class TestRegionSplit {
     ProcedureTestingUtility.waitProcedure(procExec, procId);
     ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
 
-    assertTrue(UTIL.getHBaseCluster().getRegions(tableName).size() == 2, "not able to split table");
+    assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(), "not able to split table");
 
     // disable table
     UTIL.getAdmin().disableTable(tableName);
@@ -153,6 +154,63 @@ public class TestRegionSplit {
       .getAssignmentManager().getRegionStates().getRegionAssignments();
     assertEquals(regionInfoMap.get(tableRegions.get(0).getRegionInfo()),
       regionInfoMap.get(tableRegions.get(1).getRegionInfo()));
+  }
+
+  @Test
+  public void testRITWithSplitTableRegion() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    // Disable CatalogJanitor to keep the split region in hbase:meta throughout the test
+    UTIL.getHBaseCluster().getMaster().getCatalogJanitor().setEnabled(false);
+
+    RegionInfo[] regions =
+      MasterProcedureTestingUtility.createTable(procExec, tableName, null, columnFamilyName);
+    insertData(UTIL, tableName, rowCount, startRowNum, columnFamilyName);
+    int splitRowNum = startRowNum + rowCount / 2;
+    byte[] splitKey = Bytes.toBytes("" + splitRowNum);
+
+    assertNotNull(regions, "not able to find a splittable region");
+    assertEquals(1, regions.length, "not able to find a splittable region");
+    assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
+
+    ServerName targetRS = UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+      .getRegionStates().getRegionServerOfRegion(regions[0]);
+    // Split region of the table
+    long procId = procExec.submitProcedure(
+      new SplitTableRegionProcedure(procExec.getEnvironment(), regions[0], splitKey));
+    // Wait the completion
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+
+    assertEquals(2, UTIL.getHBaseCluster().getRegions(tableName).size(), "not able to split table");
+    assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
+    assertTrue(UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+      .getOrCreateRegionStateNode(regions[0]).isSplit());
+    // As there are only 3 RS, start one more RS before expiring one
+    UTIL.getHBaseCluster().startRegionServer();
+
+    // We don't want SCP to complete so kill PR it after store update
+    ProcedureTestingUtility
+      .toggleKillAfterStoreUpdate(UTIL.getHBaseCluster().getMaster().getMasterProcedureExecutor());
+    // stop RS holding split parent to create SCP and add RS into deadServerList
+    UTIL.getHBaseCluster().getMaster().getServerManager().expireServer(targetRS);
+
+    // stop master
+    UTIL.getHBaseCluster().stopMaster(0);
+    UTIL.getHBaseCluster().waitOnMaster(0);
+
+    // restart master
+    UTIL.getHBaseCluster().startMaster();
+    assertTrue(UTIL.getHBaseCluster().waitForActiveAndReadyMaster(30000),
+      "Master failed to initialize in in 30 seconds");
+    UTIL.invalidateConnection();
+
+    assertFalse(AssignmentTestingUtil.isRegionInTransition(regions[0],
+      UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
+    assertTrue(UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
+      .getOrCreateRegionStateNode(regions[0]).isSplit());
   }
 
   @Test

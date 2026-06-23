@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -26,7 +26,6 @@ import java.net.URI;
 import java.util.Collection;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
@@ -34,25 +33,21 @@ import org.apache.hadoop.hbase.client.AsyncRegionServerAdmin;
 import org.apache.hadoop.hbase.replication.HBaseReplicationEndpoint.SinkPeer;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseReplicationEndpoint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseReplicationEndpoint.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private HBaseReplicationEndpoint endpoint;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     ReplicationPeer replicationPeer = mock(ReplicationPeer.class);
     ReplicationPeerConfig peerConfig = mock(ReplicationPeerConfig.class);

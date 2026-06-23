@@ -18,13 +18,12 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.PeerSyncReplicationStateTransitionState.REOPEN_ALL_REGIONS_IN_PEER_VALUE;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.coprocessor.RegionServerCoprocessor;
@@ -33,20 +32,17 @@ import org.apache.hadoop.hbase.coprocessor.RegionServerObserver;
 import org.apache.hadoop.hbase.master.replication.TransitPeerSyncReplicationStateProcedure;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testcase for HBASE-21441.
  */
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestSyncReplicationNewRSJoinBetweenRefreshes extends SyncReplicationTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationNewRSJoinBetweenRefreshes.class);
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestSyncReplicationNewRSJoinBetweenRefreshes
+  extends SyncReplicationTestBaseNoBeforeAll {
 
   private static boolean HALT;
 
@@ -89,7 +85,7 @@ public class TestSyncReplicationNewRSJoinBetweenRefreshes extends SyncReplicatio
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL1.getConfiguration().setClass(CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
       HaltCP.class, RegionServerObserver.class);

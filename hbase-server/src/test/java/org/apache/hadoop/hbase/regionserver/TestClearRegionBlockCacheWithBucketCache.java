@@ -15,25 +15,27 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.trace;
+package org.apache.hadoop.hbase.regionserver;
 
-import org.junit.rules.ExternalResource;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-/**
- * Used alongside {@link OpenTelemetryClassRule}. See that class's javadoc for details on when to
- * use these classes instead of {@link io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule} and an
- * example of how to use these classes together.
- */
-public final class OpenTelemetryTestRule extends ExternalResource {
+@Tag(LargeTests.TAG)
+public class TestClearRegionBlockCacheWithBucketCache extends ClearRegionBlockCacheTestBase {
 
-  private final OpenTelemetryClassRule classRuleSupplier;
+  private static final TableName TABLE_NAME =
+    TableName.valueOf("testClearRegionBlockCacheWithBucketCache");
 
-  public OpenTelemetryTestRule(final OpenTelemetryClassRule classRule) {
-    this.classRuleSupplier = classRule;
+  @BeforeAll
+  public static void setUp() throws Exception {
+    setUpBucketCacheCluster(TABLE_NAME);
   }
 
-  @Override
-  protected void before() throws Throwable {
-    classRuleSupplier.clearSpans();
+  @AfterAll
+  public static void tearDown() throws Exception {
+    tearDownCluster();
   }
 }

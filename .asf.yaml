@@ -31,11 +31,24 @@ github:
     issues: false
     projects: false
   enabled_merge_buttons:
-    squash:  true
-    merge:   false
-    rebase:  true
+    squash: true
+    merge: false
+    rebase: true
+  rulesets:
+    - name: "Default Branch Protection"
+      type: branch
+      branches:
+        includes:
+          - "~DEFAULT_BRANCH"
+          - "branch-*"
+          - "rel/*"
+        excludes: []
+      bypass_teams:
+        - root
+      restrict_deletion: true
+      restrict_force_push: true
 notifications:
-  commits:      commits@hbase.apache.org
-  issues:       issues@hbase.apache.org
+  commits: commits@hbase.apache.org
+  issues: issues@hbase.apache.org
   pullrequests: issues@hbase.apache.org
   jira_options: link label

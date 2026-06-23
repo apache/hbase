@@ -150,6 +150,7 @@ import org.apache.hadoop.hbase.ipc.ServerCall;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
 import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -8982,25 +8983,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * {@inheritDoc}
+   * Dynamically updates HRegion's configuration. Unlike {@link HMaster} and {@link HRegionServer},
+   * this {@code updatedConf} parameter does not reference the same {@link Configuration} object as
+   * HRegion's {@code this.conf} instance variable in a real HBase deployment. This is because
+   * HRegion's {@code this.conf} is a {@link CompoundConfiguration} object. Instead,
+   * {@code updatedConf} references the same Configuration object as HRegion's {@code this.baseConf}
+   * instance variable.
+   * @param updatedConf the dynamically updated configuration
    */
   @Override
-  public void onConfigurationChange(Configuration newConf) {
-    this.storeHotnessProtector.update(newConf);
+  public void onConfigurationChange(Configuration updatedConf) {
+    this.storeHotnessProtector.update(updatedConf);
 
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
 
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
-      this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, false, this.toString(),
-      conf -> {
+    // HRegion's this.conf is a special Configuration type called CompoundConfiguration. This means
+    // we don't want to use the updatedConf provided in onConfigurationChange() for creating a new
+    // RegionCoprocessorHost. Instead, we update this.conf and use that for decorating the region
+    // config and updating this.coprocessorHost.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+      originalIsReadOnlyEnabled, this.coprocessorHost, CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      false, this.toString(), conf -> {
         decorateRegionConfiguration(conf);
         this.coprocessorHost = new RegionCoprocessorHost(this, rsServices, conf);
-        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
-          CoprocessorHost.REGION_COPROCESSOR_CONF_KEY);
       });
 
-    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(newConf);
+    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
 
     if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
       LOG.info("Cluster Read Only mode disabled");
@@ -9156,5 +9165,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       allowedOnPath = ".*/src/test/.*")
   public ConfigurationManager getConfigurationManager() {
     return configurationManager;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public Configuration getConfiguration() {
+    return this.conf;
   }
 }

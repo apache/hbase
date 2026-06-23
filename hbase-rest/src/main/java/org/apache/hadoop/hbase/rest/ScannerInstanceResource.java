@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.rest;
 
 import java.io.IOException;
 import java.util.Base64;
+import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -26,6 +27,7 @@ import org.apache.hadoop.hbase.rest.model.CellModel;
 import org.apache.hadoop.hbase.rest.model.CellSetModel;
 import org.apache.hadoop.hbase.rest.model.RowModel;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.ConnectionCache;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,16 +55,29 @@ public class ScannerInstanceResource extends ResourceBase {
 
   ResultGenerator generator = null;
   String id = null;
+  String owner;
   int batch = 1;
 
   public ScannerInstanceResource() throws IOException {
   }
 
-  public ScannerInstanceResource(String table, String id, ResultGenerator generator, int batch)
+  public ScannerInstanceResource(String id, String owner, ResultGenerator generator, int batch)
     throws IOException {
     this.id = id;
+    this.owner = owner;
     this.generator = generator;
     this.batch = batch;
+  }
+
+  private Response checkOwner() {
+    ConnectionCache connCache = RESTServlet.getInstance().getConnectionCache();
+    if (!Objects.equals(connCache.getEffectiveUser(), owner)) {
+      LOG.warn("User {} is trying to access scanner {} which belongs to user {}",
+        connCache.getEffectiveUser(), id, owner);
+      return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
+        .entity("Not allowed" + CRLF).build();
+    }
+    return null;
   }
 
   @GET
@@ -77,10 +92,13 @@ public class ScannerInstanceResource extends ResourceBase {
       servlet.getMetrics().incrementFailedGetRequests(1);
       return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
         .entity("Not found" + CRLF).build();
-    } else {
-      // Updated the connection access time for each client next() call
-      RESTServlet.getInstance().getConnectionCache().updateConnectionAccessTime();
     }
+    Response checkResp = checkOwner();
+    if (checkResp != null) {
+      return checkResp;
+    }
+    // Updated the connection access time for each client next() call
+    RESTServlet.getInstance().getConnectionCache().updateConnectionAccessTime();
     CellSetModel model = new CellSetModel();
     RowModel rowModel = null;
     byte[] rowKeyArray = null;
@@ -159,13 +177,18 @@ public class ScannerInstanceResource extends ResourceBase {
     if (LOG.isTraceEnabled()) {
       LOG.trace("GET " + uriInfo.getAbsolutePath() + " as " + MIMETYPE_BINARY);
     }
+
     servlet.getMetrics().incrementRequests(1);
+    if (generator == null) {
+      servlet.getMetrics().incrementFailedGetRequests(1);
+      return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
+        .entity("Not found" + CRLF).build();
+    }
+    Response checkResp = checkOwner();
+    if (checkResp != null) {
+      return checkResp;
+    }
     try {
-      if (generator == null) {
-        servlet.getMetrics().incrementFailedGetRequests(1);
-        return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
-          .entity("Not found" + CRLF).build();
-      }
       Cell value = generator.next();
       if (value == null) {
         if (LOG.isTraceEnabled()) {
@@ -199,6 +222,7 @@ public class ScannerInstanceResource extends ResourceBase {
     if (LOG.isTraceEnabled()) {
       LOG.trace("DELETE " + uriInfo.getAbsolutePath());
     }
+
     servlet.getMetrics().incrementRequests(1);
     if (servlet.isReadOnly()) {
       return Response.status(Response.Status.FORBIDDEN).type(MIMETYPE_TEXT)
@@ -208,6 +232,10 @@ public class ScannerInstanceResource extends ResourceBase {
       servlet.getMetrics().incrementFailedDeleteRequests(1);
       return Response.status(Response.Status.NOT_FOUND).type(MIMETYPE_TEXT)
         .entity("Not found" + CRLF).build();
+    }
+    Response checkResp = checkOwner();
+    if (checkResp != null) {
+      return checkResp;
     }
     if (ScannerResource.delete(id)) {
       servlet.getMetrics().incrementSucessfulDeleteRequests(1);

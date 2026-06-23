@@ -409,13 +409,8 @@
           <scope>compile</scope>
         </dependency>
         <dependency>
-          <groupId>org.junit.vintage</groupId>
-          <artifactId>junit-vintage-engine</artifactId>
-          <scope>compile</scope>
-        </dependency>
-        <dependency>
           <groupId>org.hamcrest</groupId>
-          <artifactId>hamcrest-core</artifactId>
+          <artifactId>hamcrest</artifactId>
           <scope>compile</scope>
         </dependency>
         <dependency>

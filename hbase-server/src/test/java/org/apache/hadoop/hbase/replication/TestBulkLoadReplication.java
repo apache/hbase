@@ -15,13 +15,13 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CONF_DIR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -42,7 +42,6 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -62,24 +61,18 @@ import org.apache.hadoop.hbase.coprocessor.RegionCoprocessorEnvironment;
 import org.apache.hadoop.hbase.coprocessor.RegionObserver;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
-import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
-import org.apache.hadoop.hbase.replication.ReplicationQueueStorage;
-import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.replication.TestReplicationBase;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -93,12 +86,9 @@ import org.slf4j.LoggerFactory;
  * of the clusters. This CP counts the amount of times bulk load actually gets invoked, certifying
  * we are not entering the infinite loop condition addressed by HBASE-22380.
  */
-@Category({ ReplicationTests.class, MediumTests.class })
-public class TestBulkLoadReplication extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadReplication.class);
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestBulkLoadReplication extends TestReplicationBaseNoBeforeAll {
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestBulkLoadReplication.class);
 
@@ -117,28 +107,41 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
   private static final Path BULK_LOAD_BASE_DIR = new Path("/bulk_dir");
 
-  private static Table htable3;
-
-  @Rule
-  public TestName name = new TestName();
-
-  @ClassRule
-  public static TemporaryFolder testFolder = new TemporaryFolder();
+  private static File SOURCE_DIR;
 
   private static ReplicationQueueStorage queueStorage;
 
-  private static boolean replicationPeersAdded = false;
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @BeforeAll
+  public static void setUpBeforeAll() throws Exception {
+    setupConfig(UTIL3, "/3");
+    configureClusters(UTIL1, UTIL2);
+    SOURCE_DIR = new File(UTIL1.getRandomDir().toString()).getAbsoluteFile();
     setupBulkLoadConfigsForCluster(CONF1, PEER1_CLUSTER_ID);
     setupBulkLoadConfigsForCluster(CONF2, PEER2_CLUSTER_ID);
     setupBulkLoadConfigsForCluster(CONF3, PEER3_CLUSTER_ID);
-    setupConfig(UTIL3, "/3");
-    TestReplicationBase.setUpBeforeClass();
+    startClusters();
     startThirdCluster();
     queueStorage = ReplicationStorageFactory.getReplicationQueueStorage(UTIL1.getConnection(),
       UTIL1.getConfiguration());
+    setupCoprocessor(UTIL1);
+    setupCoprocessor(UTIL2);
+    setupCoprocessor(UTIL3);
+
+    ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
+    ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
+    ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
+    // Setup following topology: "1 <-> 2 <-> 3", 1 -> 2 will be added by setUpBase method in parent
+    // class
+    UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
+    // adds cluster3 as a remote peer on cluster2
+    UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
+    // adds cluster2 as a remote peer on cluster3
+    UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
+  }
+
+  @AfterAll
+  public static void tearDownAfterAll() throws Exception {
+    UTIL3.shutdownMiniCluster();
   }
 
   private static void startThirdCluster() throws Exception {
@@ -156,68 +159,47 @@ public class TestBulkLoadReplication extends TestReplicationBase {
       admin3.createTable(table, HBaseTestingUtil.KEYS_FOR_HBA_CREATE_TABLE);
     }
     UTIL3.waitUntilAllRegionsAssigned(tableName);
-    htable3 = connection3.getTable(tableName);
   }
 
-  @Before
-  @Override
-  public void setUpBase() throws Exception {
+  @BeforeEach
+  public void resetBulkLoadCount() throws Exception {
     // removing the peer and adding again causing the previously completed bulk load jobs getting
-    // submitted again, adding a check to add the peers only once.
-    if (!replicationPeersAdded) {
-      // "super.setUpBase()" already sets replication from 1->2,
-      // then on the subsequent lines, sets 2->1, 2->3 and 3->2.
-      // So we have following topology: "1 <-> 2 <->3"
-      super.setUpBase();
-      ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
-      ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
-      ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
-      // adds cluster1 as a remote peer on cluster2
-      UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
-      // adds cluster3 as a remote peer on cluster2
-      UTIL2.getAdmin().addReplicationPeer(PEER_ID3, peer3Config);
-      // adds cluster2 as a remote peer on cluster3
-      UTIL3.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
-      setupCoprocessor(UTIL1);
-      setupCoprocessor(UTIL2);
-      setupCoprocessor(UTIL3);
-      replicationPeersAdded = true;
-    }
+    // submitted again, so here we override the setUpBase and tearDownBase to not adding/removing
+    // peers between each tests, we will add peers in beforeAll
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
-  private ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util)
+  private static ReplicationPeerConfig getPeerConfigForCluster(HBaseTestingUtil util)
     throws UnknownHostException {
     return ReplicationPeerConfig.newBuilder().setClusterKey(util.getRpcConnnectionURI())
-      .setSerial(isSerialPeer()).build();
+      .setSerial(false).build();
   }
 
-  private void setupCoprocessor(HBaseTestingUtil cluster) {
-    cluster.getHBaseCluster().getRegions(tableName).forEach(r -> {
-      try {
-        TestBulkLoadReplication.BulkReplicationTestObserver cp = r.getCoprocessorHost()
+  private static void setupCoprocessor(HBaseTestingUtil cluster) throws IOException {
+    for (HRegion region : cluster.getHBaseCluster().getRegions(tableName)) {
+      TestBulkLoadReplication.BulkReplicationTestObserver cp = region.getCoprocessorHost()
+        .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
+      if (cp == null) {
+        region.getCoprocessorHost().load(TestBulkLoadReplication.BulkReplicationTestObserver.class,
+          0, cluster.getConfiguration());
+        cp = region.getCoprocessorHost()
           .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
-        if (cp == null) {
-          r.getCoprocessorHost().load(TestBulkLoadReplication.BulkReplicationTestObserver.class, 0,
-            cluster.getConfiguration());
-          cp = r.getCoprocessorHost()
-            .findCoprocessor(TestBulkLoadReplication.BulkReplicationTestObserver.class);
-          cp.clusterName = cluster.getRpcConnnectionURI();
-        }
-      } catch (Exception e) {
-        LOG.error(e.getMessage(), e);
+        cp.clusterName = cluster.getRpcConnnectionURI();
       }
-    });
+    }
   }
 
   protected static void setupBulkLoadConfigsForCluster(Configuration config,
     String clusterReplicationId) throws Exception {
     config.setBoolean(HConstants.REPLICATION_BULKLOAD_ENABLE_KEY, true);
     config.set(REPLICATION_CLUSTER_ID, clusterReplicationId);
-    File sourceConfigFolder = testFolder.newFolder(clusterReplicationId);
-    File sourceConfigFile = new File(sourceConfigFolder.getAbsolutePath() + "/hbase-site.xml");
-    config.writeXml(new FileOutputStream(sourceConfigFile));
-    config.set(REPLICATION_CONF_DIR, testFolder.getRoot().getAbsolutePath());
+    File sourceConfigFolder = new File(SOURCE_DIR, clusterReplicationId);
+    sourceConfigFolder.mkdirs();
+    File sourceConfigFile = new File(sourceConfigFolder.getAbsolutePath(), "hbase-site.xml");
+    try (FileOutputStream out = new FileOutputStream(sourceConfigFile)) {
+      config.writeXml(out);
+    }
+    config.set(REPLICATION_CONF_DIR, SOURCE_DIR.getAbsolutePath());
   }
 
   @Test
@@ -290,7 +272,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(clusterConfig);
     // TODO We need a way to do this without creating files
-    File hFileLocation = testFolder.newFile();
+    File randomDir = new File(UTIL1.getRandomDir().toString()).getAbsoluteFile();
+    randomDir.mkdirs();
+    File hFileLocation = new File(randomDir, "hfile");
     FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);
@@ -376,7 +360,9 @@ public class TestBulkLoadReplication extends TestReplicationBase {
 
     HFile.WriterFactory hFileFactory = HFile.getWriterFactoryNoCache(clusterConfig);
     // TODO We need a way to do this without creating files
-    File hFileLocation = testFolder.newFile();
+    File randomDir = new File(UTIL1.getRandomDir().toString()).getAbsoluteFile();
+    randomDir.mkdirs();
+    File hFileLocation = new File(randomDir, "hfile");
     FSDataOutputStream out = new FSDataOutputStream(new FileOutputStream(hFileLocation), null);
     try {
       hFileFactory.withOutputStream(out);

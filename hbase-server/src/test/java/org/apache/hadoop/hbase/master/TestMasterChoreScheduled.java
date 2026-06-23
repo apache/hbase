@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.janitor.CatalogJanitor;
+import org.apache.hadoop.hbase.mob.MobFileCleanerChore;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.junit.jupiter.api.AfterAll;
@@ -108,6 +109,12 @@ public class TestMasterChoreScheduled {
     TestChoreField<HbckChore> hbckChoreTestChoreField = new TestChoreField<>();
     HbckChore hbckChore = hbckChoreTestChoreField.getChoreObj("hbckChore");
     hbckChoreTestChoreField.testIfChoreScheduled(hbckChore);
+
+    TestChoreField<MobFileCleanerChore> mobFileCleanerTestChoreField = new TestChoreField<>();
+    MobFileCleanerChore mobFileCleanerChore =
+      mobFileCleanerTestChoreField.getChoreObj("mobFileCleanerChore");
+    mobFileCleanerTestChoreField.testIfChoreScheduled(mobFileCleanerChore);
+    assertTrue(hMaster.getConfigurationManager().containsObserver(mobFileCleanerChore));
   }
 
   /**

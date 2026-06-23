@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Get;
@@ -35,39 +35,32 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 
 /**
  * Test handling of changes to the number of a peer's regionservers.
  */
-@RunWith(Parameterized.class)
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: serialPeer={0}, syncPeer={1}")
 public class TestReplicationChangingPeerRegionservers extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationChangingPeerRegionservers.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestReplicationChangingPeerRegionservers.class);
 
-  @SuppressWarnings("checkstyle:VisibilityModifier")
-  @Parameter(0)
-  public boolean serialPeer;
+  private boolean serialPeer;
 
-  @Parameter(1)
-  public boolean syncPeer;
+  private boolean syncPeer;
+
+  public TestReplicationChangingPeerRegionservers(boolean serialPeer, boolean syncPeer) {
+    this.serialPeer = serialPeer;
+    this.syncPeer = syncPeer;
+  }
 
   @Override
   protected boolean isSerialPeer() {
@@ -79,13 +72,12 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     return syncPeer;
   }
 
-  @Parameters(name = "{index}: serialPeer={0}, syncPeer={1}")
-  public static List<Object[]> parameters() {
-    return ImmutableList.of(new Object[] { false, false }, new Object[] { false, true },
-      new Object[] { true, false }, new Object[] { true, true });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false, false), Arguments.of(false, true),
+      Arguments.of(true, false), Arguments.of(true, true));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Starting and stopping replication can make us miss new logs,
     // rolling like this makes sure the most recent one gets added to the queue
@@ -120,7 +112,7 @@ public class TestReplicationChangingPeerRegionservers extends TestReplicationBas
     }
   }
 
-  @Test
+  @TestTemplate
   public void testChangingNumberOfPeerRegionServers() throws IOException, InterruptedException {
     LOG.info("testSimplePutDelete");
     SingleProcessHBaseCluster peerCluster = UTIL2.getMiniHBaseCluster();

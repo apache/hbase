@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.junit.BeforeClass;
 import org.junit.jupiter.api.BeforeAll;
 
 /**
@@ -28,7 +27,6 @@ import org.junit.jupiter.api.BeforeAll;
 public class TestReplicationBase extends TestReplicationBaseNoBeforeAll {
 
   @BeforeAll
-  @BeforeClass
   public static void setUpBeforeClass() throws Exception {
     configureClusters(UTIL1, UTIL2);
     startClusters();

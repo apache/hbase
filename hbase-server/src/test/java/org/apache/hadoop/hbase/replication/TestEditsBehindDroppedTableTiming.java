@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -31,19 +30,15 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestEditsBehindDroppedTableTiming extends ReplicationDroppedTablesTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEditsBehindDroppedTableTiming.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setupClusters(true);
   }
@@ -58,58 +53,59 @@ public class TestEditsBehindDroppedTableTiming extends ReplicationDroppedTablesT
       TableDescriptorBuilder.newBuilder(tablename).setColumnFamily(ColumnFamilyDescriptorBuilder
         .newBuilder(familyName).setScope(HConstants.REPLICATION_SCOPE_GLOBAL).build()).build();
 
-    Connection connection1 = ConnectionFactory.createConnection(CONF1);
-    Connection connection2 = ConnectionFactory.createConnection(CONF2);
-    try (Admin admin1 = connection1.getAdmin()) {
-      admin1.createTable(table);
-    }
-    try (Admin admin2 = connection2.getAdmin()) {
-      admin2.createTable(table);
-    }
-    UTIL1.waitUntilAllRegionsAssigned(tablename);
-    UTIL2.waitUntilAllRegionsAssigned(tablename);
-
-    // now suspend replication
-    try (Admin admin1 = connection1.getAdmin()) {
-      admin1.disableReplicationPeer(PEER_ID2);
-    }
-
-    // put some data (lead with 0 so the edit gets sorted before the other table's edits
-    // in the replication batch) write a bunch of edits, making sure we fill a batch
-    try (Table droppedTable = connection1.getTable(tablename)) {
-      byte[] rowKey = Bytes.toBytes(0 + " put on table to be dropped");
-      Put put = new Put(rowKey);
-      put.addColumn(familyName, row, VALUE);
-      droppedTable.put(put);
-    }
-
-    try (Table table1 = connection1.getTable(tableName)) {
-      for (int i = 0; i < ROWS_COUNT; i++) {
-        Put put = new Put(generateRowKey(i)).addColumn(famName, row, VALUE);
-        table1.put(put);
+    try (Connection connection1 = ConnectionFactory.createConnection(CONF1);
+      Connection connection2 = ConnectionFactory.createConnection(CONF2)) {
+      try (Admin admin1 = connection1.getAdmin()) {
+        admin1.createTable(table);
       }
-    }
+      try (Admin admin2 = connection2.getAdmin()) {
+        admin2.createTable(table);
+      }
+      UTIL1.waitUntilAllRegionsAssigned(tablename);
+      UTIL2.waitUntilAllRegionsAssigned(tablename);
 
-    try (Admin admin2 = connection2.getAdmin()) {
-      admin2.disableTable(tablename);
-      admin2.deleteTable(tablename);
-    }
+      // now suspend replication
+      try (Admin admin1 = connection1.getAdmin()) {
+        admin1.disableReplicationPeer(PEER_ID2);
+      }
 
-    // edit should still be stuck
-    try (Admin admin1 = connection1.getAdmin()) {
-      // enable the replication peer.
-      admin1.enableReplicationPeer(PEER_ID2);
-      // the source table still exists, replication should be stalled
-      verifyReplicationStuck();
+      // put some data (lead with 0 so the edit gets sorted before the other table's edits
+      // in the replication batch) write a bunch of edits, making sure we fill a batch
+      try (Table droppedTable = connection1.getTable(tablename)) {
+        byte[] rowKey = Bytes.toBytes(0 + " put on table to be dropped");
+        Put put = new Put(rowKey);
+        put.addColumn(familyName, row, VALUE);
+        droppedTable.put(put);
+      }
 
-      admin1.disableTable(tablename);
-      // still stuck, source table still exists
-      verifyReplicationStuck();
+      try (Table table1 = connection1.getTable(tableName)) {
+        for (int i = 0; i < ROWS_COUNT; i++) {
+          Put put = new Put(generateRowKey(i)).addColumn(famName, row, VALUE);
+          table1.put(put);
+        }
+      }
 
-      admin1.deleteTable(tablename);
-      // now the source table is gone, replication should proceed, the
-      // offending edits be dropped
-      verifyReplicationProceeded();
+      try (Admin admin2 = connection2.getAdmin()) {
+        admin2.disableTable(tablename);
+        admin2.deleteTable(tablename);
+      }
+
+      // edit should still be stuck
+      try (Admin admin1 = connection1.getAdmin()) {
+        // enable the replication peer.
+        admin1.enableReplicationPeer(PEER_ID2);
+        // the source table still exists, replication should be stalled
+        verifyReplicationStuck();
+
+        admin1.disableTable(tablename);
+        // still stuck, source table still exists
+        verifyReplicationStuck();
+
+        admin1.deleteTable(tablename);
+        // now the source table is gone, replication should proceed, the
+        // offending edits be dropped
+        verifyReplicationProceeded();
+      }
     }
   }
 }

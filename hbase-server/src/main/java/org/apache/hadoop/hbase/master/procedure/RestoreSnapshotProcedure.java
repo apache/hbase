@@ -556,7 +556,7 @@ public class RestoreSnapshotProcedure
   private void restoreSnapshotAcl(final MasterProcedureEnv env) throws IOException {
     if (
       restoreAcl && snapshot.hasUsersAndPermissions() && snapshot.getUsersAndPermissions() != null
-        && SnapshotDescriptionUtils.isSecurityAvailable(env.getMasterServices().getConfiguration())
+        && SnapshotDescriptionUtils.isSecurityAvailable(env.getMasterServices().getConnection())
     ) {
       // restore acl of snapshot to table.
       RestoreSnapshotHelper.restoreSnapshotAcl(snapshot, TableName.valueOf(snapshot.getTable()),

@@ -910,9 +910,8 @@
     <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
     <jruby.version>9.4.14.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
-    <junit.vintage.version>5.13.4</junit.vintage.version>
     <awaitility.version>4.3.0</awaitility.version>
-    <hamcrest.version>1.3</hamcrest.version>
+    <hamcrest.version>3.0</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
     <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
     <opentelemetry-javaagent.version>2.26.1</opentelemetry-javaagent.version>
@@ -1669,28 +1668,11 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
         <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-params</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.vintage.version}</version>
-        <scope>test</scope>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <dependency>
         <groupId>org.awaitility</groupId>
@@ -1700,12 +1682,7 @@
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-core</artifactId>
-        <version>${hamcrest.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-library</artifactId>
+        <artifactId>hamcrest</artifactId>
         <version>${hamcrest.version}</version>
       </dependency>
       <dependency>
@@ -1885,6 +1862,10 @@
           <exclusion>
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>samples</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
           </exclusion>
         </exclusions>
       </dependency>
@@ -2140,6 +2121,8 @@
               <exclude>**/public/old-book-static-files/hbase.css</exclude>
               <!-- http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License -->
               <exclude>**/public/old-book-static-files/font-awesome.css</exclude>
+              <!-- Website SEO metadata file cannot carry an ASF license header. -->
+              <exclude>**/public/robots.txt</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -2583,6 +2566,42 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-junit4</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>junit:junit</exclude>
+                    <exclude>org.junit.vintage:*</exclude>
+                  </excludes>
+                  <message>Use junit5 instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-hamcrest-core-and-library</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.hamcrest:hamcrest-core</exclude>
+                    <exclude>org.hamcrest:hamcrest-library</exclude>
+                  </excludes>
+                  <message>Use org.hamcrest:hamcrest instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
@@ -2752,10 +2771,17 @@
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Use junit4 instead</reason>
+                  <reason>Use junit5 instead</reason>
                   <bannedImports>
                     <bannedImport>junit.framework.**</bannedImport>
+                    <bannedImport>org.junit.**</bannedImport>
+                    <bannedImport>static org.junit.Assert.**</bannedImport>
+                    <bannedImport>static org.junit.Assume.**</bannedImport>
                   </bannedImports>
+                  <allowedImports>
+                    <allowedImport>org.junit.jupiter.**</allowedImport>
+                    <allowedImport>org.junit.platform.**</allowedImport>
+                  </allowedImports>
                 </restrictImports>
               </rules>
             </configuration>
@@ -3052,7 +3078,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3108,7 +3134,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3172,7 +3198,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3235,7 +3261,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -4152,6 +4178,10 @@
                 <groupId>org.jline</groupId>
                 <artifactId>jline</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4737,6 +4767,11 @@
           <name>m2e.version</name>
         </property>
       </activation>
+      <properties>
+        <!-- Keeps test-scope deps on the main classpath in Eclipse so test
+             sources can resolve sibling *-tests.jar artifacts without errors. -->
+        <m2e.disableTestClasspathFlag>true</m2e.disableTestClasspathFlag>
+      </properties>
       <build>
         <pluginManagement>
           <plugins>

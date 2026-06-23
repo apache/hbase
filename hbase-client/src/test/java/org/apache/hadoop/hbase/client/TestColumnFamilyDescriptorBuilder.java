@@ -115,6 +115,26 @@ public class TestColumnFamilyDescriptorBuilder {
   }
 
   @Test
+  public void testGetConfigurationValueFallsBackToValues() {
+    // The shell writes settings into the values map (HBASE-20819). getConfigurationValue must see
+    // them, not just keys set via setConfiguration.
+    String key = "some.key";
+    ColumnFamilyDescriptor viaValue =
+      ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo")).setValue(key, "v").build();
+    assertEquals("v", viaValue.getConfigurationValue(key));
+
+    ColumnFamilyDescriptor viaConf = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"))
+      .setConfiguration(key, "c").build();
+    assertEquals("c", viaConf.getConfigurationValue(key));
+
+    // Values win on collision.
+    ColumnFamilyDescriptor both = ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes("foo"))
+      .setConfiguration(key, "c").setValue(key, "v").build();
+    assertEquals("v", both.getConfigurationValue(key));
+    assertNull(both.getConfigurationValue("absent"));
+  }
+
+  @Test
   public void testMobValuesInHColumnDescriptorShouldReadable() {
     boolean isMob = true;
     long threshold = 1000;
