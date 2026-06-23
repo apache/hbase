@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.ipc.RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_
 import static org.apache.hadoop.hbase.ipc.RpcExecutor.DEFAULT_CALL_QUEUE_HANDLER_FACTOR;
 import static org.apache.hadoop.hbase.ipc.RpcExecutor.DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT;
 import static org.apache.hadoop.hbase.ipc.RpcServer.DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 
 import java.util.List;
@@ -29,7 +30,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -63,19 +63,19 @@ public class TestRpcExecutor {
 
     List<BlockingQueue<CallRunner>> queues = executor.getQueues();
     int expectedQueueSize = Math.round(handlerCount * DEFAULT_CALL_QUEUE_HANDLER_FACTOR);
-    Assertions.assertEquals(expectedQueueSize, queues.size(),
+    assertEquals(expectedQueueSize, queues.size(),
       "Number of queues should be according to default callQueueHandlerFactor");
 
     // By default, the soft limit depends on number of handler the queue will serve
     int expectedSoftLimit =
       (handlerCount / expectedQueueSize) * DEFAULT_MAX_CALLQUEUE_LENGTH_PER_HANDLER;
-    Assertions.assertEquals(expectedSoftLimit, executor.currentQueueLimit,
+    assertEquals(expectedSoftLimit, executor.currentQueueLimit,
       "Soft limit of queues is wrongly calculated");
 
     // Hard limit should be maximum of softLimit and DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT
     int hardQueueLimit = queues.get(0).remainingCapacity() + queues.get(0).size();
     int expectedHardLimit = Math.max(expectedSoftLimit, DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT);
-    Assertions.assertEquals(expectedHardLimit, hardQueueLimit,
+    assertEquals(expectedHardLimit, hardQueueLimit,
       "Default hard limit of queues is wrongly calculated ");
   }
 
@@ -94,17 +94,17 @@ public class TestRpcExecutor {
       new BalancedQueueRpcExecutor(testInfo.getTestMethod().get().getName() + "1", handlerCount,
         maxQueueLength, qosFunction, conf, null);
 
-    Assertions.assertEquals(maxQueueLength, executor.currentQueueLimit,
+    assertEquals(maxQueueLength, executor.currentQueueLimit,
       "Configured soft limit is not applied.");
 
     List<BlockingQueue<CallRunner>> queues1 = executor.getQueues();
 
     int expectedQueueSize = Math.round(handlerCount * callQueueHandlerFactor);
-    Assertions.assertEquals(expectedQueueSize, queues1.size(),
+    assertEquals(expectedQueueSize, queues1.size(),
       "Number of queues should be according to callQueueHandlerFactor");
 
     int hardQueueLimit1 = queues1.get(0).remainingCapacity() + queues1.get(0).size();
-    Assertions.assertEquals(DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT, hardQueueLimit1,
+    assertEquals(DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT, hardQueueLimit1,
       "Default Hard limit is not applied");
 
   }

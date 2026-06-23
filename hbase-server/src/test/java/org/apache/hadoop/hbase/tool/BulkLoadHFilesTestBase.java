@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.countRows;
 import static org.apache.hadoop.hbase.util.LocatedBlockHelper.getLocatedBlockLocations;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -68,7 +69,6 @@ import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
 import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
-import org.hamcrest.MatcherAssert;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
@@ -664,7 +664,7 @@ public class BulkLoadHFilesTestBase {
     try (HFile.Reader reader =
       HFile.createReader(p.getFileSystem(conf), p, new CacheConfig(conf), true, conf)) {
       long fileCreateTime = reader.getHFileInfo().getHFileContext().getFileCreateTime();
-      MatcherAssert.assertThat(fileCreateTime, greaterThan(0L));
+      assertThat(fileCreateTime, greaterThan(0L));
     }
   }
 

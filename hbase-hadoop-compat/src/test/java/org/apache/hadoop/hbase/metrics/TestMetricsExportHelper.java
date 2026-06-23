@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.metrics;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Collection;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -24,7 +26,6 @@ import org.apache.hadoop.metrics2.AbstractMetric;
 import org.apache.hadoop.metrics2.MetricsRecord;
 import org.apache.hadoop.metrics2.impl.MetricsExportHelper;
 import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -49,10 +50,9 @@ public class TestMetricsExportHelper {
     Collection<MetricsRecord> metrics = MetricsExportHelper.export();
     DefaultMetricsSystem.instance().stop();
 
-    Assertions.assertTrue(metrics.stream().anyMatch(mr -> mr.name().equals(metricsName)));
-    Assertions.assertTrue(contains(metrics, metricsName, gaugeName),
-      gaugeName + " is missing in the export");
-    Assertions.assertTrue(contains(metrics, metricsName, counterName),
+    assertTrue(metrics.stream().anyMatch(mr -> mr.name().equals(metricsName)));
+    assertTrue(contains(metrics, metricsName, gaugeName), gaugeName + " is missing in the export");
+    assertTrue(contains(metrics, metricsName, counterName),
       counterName + " is missing in the export");
   }
 

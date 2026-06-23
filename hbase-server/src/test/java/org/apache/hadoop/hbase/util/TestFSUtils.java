@@ -432,8 +432,7 @@ public class TestFSUtils {
       CommonFSUtils.setStoragePolicy(testFs, new Path("non-exist"),
         HConstants.DEFAULT_WAL_STORAGE_POLICY, true);
     } catch (IOException e) {
-      org.junit.jupiter.api.Assertions
-        .fail("Should have bypassed the FS API when setting default storage policy");
+      fail("Should have bypassed the FS API when setting default storage policy");
     }
     // There should be exception thrown when given non-default storage policy, which indicates the
     // HDFS API has been called
