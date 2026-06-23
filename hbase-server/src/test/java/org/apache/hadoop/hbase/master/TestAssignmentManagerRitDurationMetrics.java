@@ -26,6 +26,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -49,7 +50,6 @@ public class TestAssignmentManagerRitDurationMetrics {
 
   private static HMaster MASTER;
   private static final String RIT_DURATION_NUM_OPS_METRIC = "RitDuration_num_ops";
-  private static final String RIT_DURATION_MAX_METRIC = "RitDuration_max";
 
   @BeforeAll
   public static void startCluster() throws Exception {
@@ -69,7 +69,7 @@ public class TestAssignmentManagerRitDurationMetrics {
       RegionInfo regionInfo =
         MASTER.getAssignmentManager().getRegionStates().getRegionsOfTable(tableName).get(0);
       TEST_UTIL.waitFor(WAIT_TIMEOUT_MS,
-        () -> !MASTER.getAssignmentManager().isRegionInTransition(regionInfo)
+        () -> !AssignmentTestingUtil.isRegionInTransition(regionInfo, MASTER.getAssignmentManager())
           && MASTER.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo)
               != null);
 
@@ -85,16 +85,17 @@ public class TestAssignmentManagerRitDurationMetrics {
         .orElseThrow(() -> new IllegalStateException("Need at least two regionservers"));
 
       TEST_UTIL.getAdmin().move(regionInfo.getEncodedNameAsBytes(), target);
-      TEST_UTIL.waitFor(WAIT_TIMEOUT_MS,
-        () -> target.equals(
-          MASTER.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo))
-          && !MASTER.getAssignmentManager().isRegionInTransition(regionInfo));
+      TEST_UTIL.waitFor(WAIT_TIMEOUT_MS, () -> target
+        .equals(MASTER.getAssignmentManager().getRegionStates().getRegionServerOfRegion(regionInfo))
+        && !AssignmentTestingUtil.isRegionInTransition(regionInfo, MASTER.getAssignmentManager()));
 
-      MetricsRecord metricsRecord = snapshotMetrics(amSource);
-      assertEquals(ritDurationNumOps + 1,
-        getMetricValue(metricsRecord, RIT_DURATION_NUM_OPS_METRIC));
-      assertTrue(getMetricValue(metricsRecord, RIT_DURATION_MAX_METRIC) > 0,
-        "ritDuration histogram should export a positive max value");
+      // num_ops is cumulative (never reset on snapshot); an increase proves the histogram is now
+      // fed on RIT completion. Use >= not ==: background RIT may also add. _max is not asserted --
+      // snapshot() resets it on every read, racing the metrics2 sampler.
+      long ritDurationNumOpsAfter =
+        getMetricValue(snapshotMetrics(amSource), RIT_DURATION_NUM_OPS_METRIC);
+      assertTrue(ritDurationNumOpsAfter >= ritDurationNumOps + 1,
+        "RitDuration histogram num_ops should increase after a region transition");
     }
   }
 
