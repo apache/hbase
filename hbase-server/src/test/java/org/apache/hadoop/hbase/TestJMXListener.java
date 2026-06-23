@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -31,7 +32,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -96,7 +96,7 @@ public class TestJMXListener {
 
     MBeanServerConnection mb = connector.getMBeanServerConnection();
     String domain = mb.getDefaultDomain();
-    Assertions.assertTrue(!domain.isEmpty(), "default domain is not correct");
+    assertTrue(!domain.isEmpty(), "default domain is not correct");
     connector.close();
 
   }
