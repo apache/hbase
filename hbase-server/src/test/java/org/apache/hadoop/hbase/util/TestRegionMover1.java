@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -43,7 +44,6 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.RegionMover.RegionMoverBuilder;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -345,7 +345,7 @@ public class TestRegionMover1 {
     int sourceServerRegions = regionServer.getRegions().size();
 
     try (RegionMover regionMover = rmBuilder.build()) {
-      Assertions.assertTrue(regionMover.unload());
+      assertTrue(regionMover.unload());
       LOG.info("Unloading {}", hostname);
       assertEquals(0, regionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(1).getNumberOfOnlineRegions());
@@ -354,11 +354,11 @@ public class TestRegionMover1 {
       List<HRegion> regionList = cluster.getRegionServer(1).getRegions();
       int index = 0;
       for (HRegion hRegion : regionList) {
-        Assertions.assertEquals(hRegion, regions.get(index++));
+        assertEquals(hRegion, regions.get(index++));
       }
-      Assertions.assertEquals(targetServerRegions + sourceServerRegions,
+      assertEquals(targetServerRegions + sourceServerRegions,
         cluster.getRegionServer(2).getNumberOfOnlineRegions());
-      Assertions.assertTrue(regionMover.load());
+      assertTrue(regionMover.load());
     }
 
     TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
@@ -400,7 +400,7 @@ public class TestRegionMover1 {
     int sourceServerRegions = sourceRegionServer.getRegions().size();
 
     try (RegionMover regionMover = rmBuilder.build()) {
-      Assertions.assertTrue(regionMover.unload());
+      assertTrue(regionMover.unload());
       LOG.info("Unloading {}", hostname);
       assertEquals(0, sourceRegionServer.getNumberOfOnlineRegions());
       assertEquals(regionsExcludeServer, cluster.getRegionServer(0).getNumberOfOnlineRegions());
@@ -409,11 +409,11 @@ public class TestRegionMover1 {
       List<HRegion> regionList = cluster.getRegionServer(0).getRegions();
       int index = 0;
       for (HRegion hRegion : regionList) {
-        Assertions.assertEquals(hRegion, regions.get(index++));
+        assertEquals(hRegion, regions.get(index++));
       }
-      Assertions.assertEquals(targetServerRegions + sourceServerRegions,
+      assertEquals(targetServerRegions + sourceServerRegions,
         cluster.getRegionServer(2).getNumberOfOnlineRegions());
-      Assertions.assertTrue(regionMover.load());
+      assertTrue(regionMover.load());
     }
 
     TEST_UTIL.getAdmin().recommissionRegionServer(excludeServer.getServerName(),
@@ -446,7 +446,7 @@ public class TestRegionMover1 {
       new RegionMoverBuilder(sourceServer, TEST_UTIL.getConfiguration()).ack(true)
         .excludeFile(excludeFile.getCanonicalPath());
     try (RegionMover regionMover = rmBuilder.build()) {
-      Assertions.assertFalse(regionMover.unload());
+      assertFalse(regionMover.unload());
     }
 
     TEST_UTIL.getAdmin().recommissionRegionServer(decomServer.getServerName(),

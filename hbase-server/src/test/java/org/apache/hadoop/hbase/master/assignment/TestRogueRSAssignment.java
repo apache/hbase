@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.core.Is.isA;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -155,7 +156,7 @@ public class TestRogueRSAssignment {
     // TODO: replace YouAreDeadException with appropriate exception as and when necessary
     ServiceException exception = assertThrows(ServiceException.class,
       () -> master.getMasterRpcServices().regionServerReport(null, request.build()));
-    assertInstanceOf(YouAreDeadException.class, exception.getCause());
+    assertThat((YouAreDeadException) exception.getCause(), isA(YouAreDeadException.class));
   }
 
   private RegionServerStatusProtos.RegionServerReportRequest.Builder

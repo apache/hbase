@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
@@ -33,7 +37,6 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -101,7 +104,7 @@ public class TestJMXConnectorServer {
       LOG.info("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
-    Assertions.assertTrue(accessDenied);
+    assertTrue(accessDenied);
 
     checkConnector();
   }
@@ -132,7 +135,7 @@ public class TestJMXConnectorServer {
       LOG.error("Exception occurred while stopping HMaster. ", e);
       accessDenied = true;
     }
-    Assertions.assertTrue(accessDenied);
+    assertTrue(accessDenied);
 
     checkConnector();
   }
@@ -145,10 +148,10 @@ public class TestJMXConnectorServer {
         .connect(JMXListener.buildJMXServiceURL(rmiRegistryPort, rmiRegistryPort));
     } catch (IOException e) {
       if (e.getCause() instanceof ServiceUnavailableException) {
-        Assertions.fail("Can't connect to ConnectorServer.");
+        fail("Can't connect to ConnectorServer.");
       }
     }
-    Assertions.assertNotNull(connector, "JMXConnector should not be null.");
+    assertNotNull(connector, "JMXConnector should not be null.");
     connector.close();
   }
 
