@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -37,7 +40,6 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -98,9 +100,9 @@ public class TestRegionMover3 {
     int numRegions1 = hRegionServer1.getNumberOfOnlineRegions();
     int numRegions2 = hRegionServer2.getNumberOfOnlineRegions();
 
-    Assertions.assertTrue(numRegions0 >= 3);
-    Assertions.assertTrue(numRegions1 >= 3);
-    Assertions.assertTrue(numRegions2 >= 3);
+    assertTrue(numRegions0 >= 3);
+    assertTrue(numRegions1 >= 3);
+    assertTrue(numRegions2 >= 3);
     int totalRegions = numRegions0 + numRegions1 + numRegions2;
 
     // source RS: rs0
@@ -127,8 +129,8 @@ public class TestRegionMover3 {
       int newNumRegions0 = hRegionServer0.getNumberOfOnlineRegions();
       int newNumRegions1 = hRegionServer1.getNumberOfOnlineRegions();
       int newNumRegions2 = hRegionServer2.getNumberOfOnlineRegions();
-      Assertions.assertEquals(0, newNumRegions1);
-      Assertions.assertEquals(totalRegions, newNumRegions0 + newNumRegions2);
+      assertEquals(0, newNumRegions1);
+      assertEquals(totalRegions, newNumRegions0 + newNumRegions2);
     }
 
     // use custom rackManager, which resolves "rack-1" for rs0 and rs1,
@@ -141,9 +143,9 @@ public class TestRegionMover3 {
       int newNumRegions0 = hRegionServer0.getNumberOfOnlineRegions();
       int newNumRegions1 = hRegionServer1.getNumberOfOnlineRegions();
       int newNumRegions2 = hRegionServer2.getNumberOfOnlineRegions();
-      Assertions.assertEquals(0, newNumRegions0);
-      Assertions.assertEquals(0, newNumRegions1);
-      Assertions.assertEquals(totalRegions, newNumRegions2);
+      assertEquals(0, newNumRegions0);
+      assertEquals(0, newNumRegions1);
+      assertEquals(totalRegions, newNumRegions2);
     }
 
   }
