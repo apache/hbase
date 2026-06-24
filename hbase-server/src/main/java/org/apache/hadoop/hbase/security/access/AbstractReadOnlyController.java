@@ -68,6 +68,33 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
   public void stop(CoprocessorEnvironment env) {
   }
 
+  /**
+   * Checks whether another cluster is currently active on this storage location by reading the
+   * {@value HConstants#ACTIVE_CLUSTER_SUFFIX_FILE_NAME} file on the filesystem.
+   * @param fs                 the filesystem to read from
+   * @param rootDir            the HBase root directory
+   * @param localClusterSuffix the local cluster's ActiveClusterSuffix identity
+   * @return true if the active cluster file exists and belongs to a different cluster; false if the
+   *         file does not exist or belongs to this cluster
+   */
+  public static boolean isAnotherClusterActive(FileSystem fs, Path rootDir,
+    ActiveClusterSuffix localClusterSuffix) {
+    try {
+      ActiveClusterSuffix fileData =
+        FSUtils.getClusterIdFile(fs, rootDir, new ActiveClusterSuffix.Parser());
+      if (fileData == null) {
+        return false;
+      }
+      return !localClusterSuffix.equals(fileData);
+    } catch (IOException e) {
+      LOG.error(
+        "Failed to read active cluster suffix file from {} at {}. "
+          + "Assuming another cluster is active to prevent potential data corruption.",
+        HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, rootDir, e);
+      return true;
+    }
+  }
+
   public static void manageActiveClusterIdFile(boolean readOnlyEnabled, MasterFileSystem mfs) {
     FileSystem fs = mfs.getFileSystem();
     Path rootDir = mfs.getRootDir();
@@ -110,8 +137,23 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
           FSUtils.setClusterIdFile(fs, rootDir, HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME,
             mfs.getActiveClusterSuffix(), wait);
         } else {
-          LOG.debug("Active cluster file already exists at: {}. No need to create it again.",
-            activeClusterFile);
+          try (FSDataInputStream in = fs.open(activeClusterFile)) {
+            ActiveClusterSuffix existingData = ActiveClusterSuffix.parseFrom(in.readAllBytes());
+            ActiveClusterSuffix localData = mfs.getActiveClusterSuffix();
+            if (localData.equals(existingData)) {
+              LOG.debug("Active cluster file already exists at {} and belongs to this cluster. "
+                + "No need to create it again.", activeClusterFile);
+            } else {
+              LOG.error(
+                "Active cluster file at {} belongs to a different cluster. "
+                  + "ID from active cluster file: {}, ID of this cluster: {}. "
+                  + "Another cluster is already the active cluster.",
+                activeClusterFile, existingData, localData);
+            }
+          } catch (DeserializationException e) {
+            LOG.error("Failed to deserialize ActiveClusterSuffix from file {}", activeClusterFile,
+              e);
+          }
         }
       }
     } catch (IOException e) {
