@@ -33,7 +33,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.params.provider.Arguments;
 
 /**
- * Base class for testing clone snapsot
+ * Base class for testing clone snapshot
  */
 public class CloneSnapshotFromClientTestBase {
 
@@ -93,12 +93,15 @@ public class CloneSnapshotFromClientTestBase {
     testName = testInfo.getTestMethod().get().getName()
       + testInfo.getDisplayName().replaceAll("[^0-9A-Za-z_]", "_");
     tableName = TableName.valueOf(getValidMethodName() + tid);
+    initSnapshotNames(tid);
+    createTableAndSnapshots();
+  }
+
+  protected void initSnapshotNames(long tid) {
     emptySnapshot = "emptySnaptb-" + tid;
     snapshotName0 = "snaptb0-" + tid;
     snapshotName1 = "snaptb1-" + tid;
     snapshotName2 = "snaptb2-" + tid;
-
-    createTableAndSnapshots();
   }
 
   protected void createTable() throws IOException, InterruptedException {
@@ -113,7 +116,7 @@ public class CloneSnapshotFromClientTestBase {
     return HBaseTestingUtil.countRows(table);
   }
 
-  private void createTableAndSnapshots() throws Exception {
+  protected void createTableAndSnapshots() throws Exception {
     // create Table and disable it
     createTable();
     admin.disableTable(tableName);
