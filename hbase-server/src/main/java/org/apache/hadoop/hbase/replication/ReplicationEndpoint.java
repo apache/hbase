@@ -283,4 +283,11 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
    * @throws IllegalStateException if this service's state isn't FAILED.
    */
   Throwable failureCause();
+
+  /**
+   * Hook invoked before persisting replication offsets. Eg: Buffered endpoints can flush/close WALs
+   * here.
+   */
+  default void beforePersistingReplicationOffset() throws IOException {
+  }
 }

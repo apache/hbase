@@ -866,4 +866,16 @@ public class ReplicationSource implements ReplicationSourceInterface {
   long getSleepForRetries() {
     return sleepForRetries;
   }
+
+  void restartShipper(String walGroupId, ReplicationSourceShipper oldWorker) {
+    boolean removed = workerThreads.remove(walGroupId, oldWorker);
+    if (!removed) {
+      // Worker was already replaced (e.g. concurrent restart)
+      LOG.debug("Skip restart for walGroupId={} as worker already replaced", walGroupId);
+      return;
+    }
+
+    tryStartNewShipper(walGroupId);
+  }
+
 }
