@@ -400,11 +400,12 @@ public final class SnapshotInfo extends AbstractHBaseTool {
       List<SnapshotDescription> snapshotDescriptions = getSnapshotList(conf);
       System.out.printf("%-20s | %-20s | %-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME",
         "TTL(Sec)", "EXPIRED", "TABLE NAME");
+      long currentTime = System.currentTimeMillis();
       for (SnapshotDescription desc : snapshotDescriptions) {
         String ttlInfo =
           desc.getTtl() == DEFAULT_SNAPSHOT_TTL ? TTL_FOREVER : String.valueOf(desc.getTtl());
         String expired = SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(),
-          desc.getCreationTime(), System.currentTimeMillis()) ? EXPIRED_LABEL : NOT_EXPIRED_LABEL;
+          desc.getCreationTime(), currentTime) ? EXPIRED_LABEL : NOT_EXPIRED_LABEL;
         System.out.printf("%-20s | %20s | %20s | %20s | %s%n", desc.getName(),
           df.format(new Date(desc.getCreationTime())), ttlInfo, expired,
           desc.getTableNameAsString());
