@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -130,7 +131,7 @@ public class TestBulkLoadReplication extends TestReplicationBaseNoBeforeAll {
     ReplicationPeerConfig peer1Config = getPeerConfigForCluster(UTIL1);
     ReplicationPeerConfig peer2Config = getPeerConfigForCluster(UTIL2);
     ReplicationPeerConfig peer3Config = getPeerConfigForCluster(UTIL3);
-    // Setup following topology: "1 <-> 2 <-> 3"
+    // Set up following topology: "1 <-> 2 <-> 3"
     UTIL1.getAdmin().addReplicationPeer(PEER_ID2, peer2Config);
     UTIL2.getAdmin().addReplicationPeer(PEER_ID1, peer1Config);
     // adds cluster3 as a remote peer on cluster2
@@ -170,6 +171,7 @@ public class TestBulkLoadReplication extends TestReplicationBaseNoBeforeAll {
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
+  @AfterEach
   @Override
   public void tearDownBase() throws Exception {
     // do not remove PEER_ID2
