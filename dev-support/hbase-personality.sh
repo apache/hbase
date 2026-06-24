@@ -292,7 +292,7 @@ function personality_modules
 
 # This is a workaround to fix the author check until YETUS-1266 is released.
 # TODO: Remove this when we upgraded to Yetus having YETUS-1266!
-## @description  Check the current directory for @author tags
+## @description  Check the current directory for author tags
 ## @audience     private
 ## @stability    evolving
 ## @replaceable  no
