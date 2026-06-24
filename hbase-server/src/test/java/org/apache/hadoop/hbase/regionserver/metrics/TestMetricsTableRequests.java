@@ -15,10 +15,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.hadoop.hbase.regionserver;
+package org.apache.hadoop.hbase.regionserver.metrics;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
@@ -31,12 +32,12 @@ import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.metrics.Snapshot;
 import org.apache.hadoop.hbase.metrics.impl.DropwizardMeter;
 import org.apache.hadoop.hbase.metrics.impl.HistogramImpl;
-import org.apache.hadoop.hbase.regionserver.metrics.MetricsTableRequests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
@@ -53,10 +54,6 @@ public class TestMetricsTableRequests {
     TableName tn2 = TableName.valueOf("table2");
     MetricsTableRequests requests1 = new MetricsTableRequests(tn1, new Configuration());
     MetricsTableRequests requests2 = new MetricsTableRequests(tn2, new Configuration());
-    assertTrue(requests1 instanceof MetricsTableRequests,
-      "'requests' is actually " + requests1.getClass());
-    assertTrue(requests2 instanceof MetricsTableRequests,
-      "'requests' is actually " + requests2.getClass());
 
     MetricRegistryInfo info1 = requests1.getMetricRegistryInfo();
     MetricRegistryInfo info2 = requests2.getMetricRegistryInfo();
@@ -102,8 +99,6 @@ public class TestMetricsTableRequests {
     // disable
     assertFalse(enableTableQueryMeter);
     MetricsTableRequests requests = new MetricsTableRequests(tn1, conf);
-    assertTrue(requests instanceof MetricsTableRequests,
-      "'requests' is actually " + requests.getClass());
 
     MetricRegistryInfo info = requests.getMetricRegistryInfo();
     Optional<MetricRegistry> registry = MetricRegistries.global().get(info);
@@ -119,8 +114,6 @@ public class TestMetricsTableRequests {
         MetricsTableRequests.ENABLE_TABLE_QUERY_METER_METRICS_KEY_DEFAULT);
     assertTrue(enableTableQueryMeter);
     requests = new MetricsTableRequests(tn1, conf);
-    assertTrue(requests instanceof MetricsTableRequests,
-      "'requests' is actually " + requests.getClass());
 
     info = requests.getMetricRegistryInfo();
     registry = MetricRegistries.global().get(info);
@@ -128,6 +121,25 @@ public class TestMetricsTableRequests {
     requests.updateTableReadQueryMeter(500L);
     read = registry.get().get("tableReadQueryPerSecond");
     assertTrue(read.isPresent());
-    assertEquals(((DropwizardMeter) read.get()).getCount(), 500);
+    assertEquals(500, ((DropwizardMeter) read.get()).getCount());
+  }
+
+  @Test
+  public void testSameRegistryInstanceRefCounting(TestInfo testInfo) {
+    TableName tn1 = TableName.valueOf(testInfo.getTestMethod().get().getName());
+
+    // create registry twice, should return same instance due to ref-counting
+    MetricsTableRequests requests1 = new MetricsTableRequests(tn1, new Configuration());
+    MetricsTableRequests requests2 = new MetricsTableRequests(tn1, new Configuration());
+
+    MetricRegistry metricRegistry1 = requests1.getMetricRegistry();
+    MetricRegistry metricRegistry2 = requests2.getMetricRegistry();
+    assertSame(metricRegistry1, metricRegistry2);
+
+    MetricRegistryInfo registryInfo = metricRegistry1.getMetricRegistryInfo();
+    MetricRegistries.global().remove(registryInfo);
+    assertTrue(MetricRegistries.global().get(registryInfo).isPresent());
+    MetricRegistries.global().remove(registryInfo);
+    assertFalse(MetricRegistries.global().get(registryInfo).isPresent());
   }
 }

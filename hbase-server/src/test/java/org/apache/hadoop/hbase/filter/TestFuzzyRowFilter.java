@@ -20,11 +20,15 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
+import java.io.IOException;
+import java.util.Arrays;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -247,6 +251,12 @@ public class TestFuzzyRowFilter {
       new byte[] { 1, 2, 1, 0, 1 }, // current
       new byte[] { 1, 1, 3 }); // expected next
 
+    // Preserve HBASE-28634 boundary hints. Lowering 1115 to 1114 would skip rows such as 111444.
+    assertNext(true, Bytes.toBytes("111433"), // fuzzy row
+      new byte[] { -1, -1, -1, -1, 0, 0 }, // mask
+      Bytes.toBytes("1115"), // current
+      Bytes.toBytes("1115")); // expected next
+
     assertNext(true, new byte[] { 0, 1, 0, 2, 0 }, // fuzzy row
       new byte[] { 0, -1, 0, -1, 0 }, // mask
       new byte[] { 1, 2, 1, 3, 1 }, // current
@@ -261,11 +271,6 @@ public class TestFuzzyRowFilter {
       new byte[] { 0, -1, 0, -1 }, // mask
       new byte[] { 5, 1, 0, 2, 1 }, // current
       new byte[] { 5, 1, 0, 2 }); // expected next
-
-    assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
-      new byte[] { 0, -1, 0, 0 }, // mask
-      new byte[] { 5, 1, (byte) 255, 1 }, // current
-      new byte[] { 5, 1, (byte) 255, 1 }); // expected next
 
     assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
       new byte[] { 0, -1, 0, -1 }, // mask
@@ -302,6 +307,24 @@ public class TestFuzzyRowFilter {
       new byte[] { 2, 1, 1, 1, 0 }, // row to check
       new byte[] { 1, 2, (byte) 255, 4 }); // expected next
 
+    // No cell before the current one satisfies the fuzzy row -> null.
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
+      new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
+  }
+
+  @Test
+  public void testGetNextForFuzzyRuleReverseCanReturnCurrentRow() {
+    // HBASE-28634 reverse adjustment can intentionally return the current row as a boundary hint.
+    assertNext(true, new byte[] { 'a', 'a', 'a' }, // fuzzy row
+      new byte[] { -1, 0, -1 }, // mask
+      new byte[] { 'a', 'b', 'b' }, // current
+      new byte[] { 'a', 'b', 'b' }); // expected next
+
+    assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
+      new byte[] { 0, -1, 0, 0 }, // mask
+      new byte[] { 5, 1, (byte) 255, 1 }, // current
+      new byte[] { 5, 1, (byte) 255, 1 }); // expected next
+
     assertNext(true, new byte[] { 1, 0, 1 }, // fuzzy row
       new byte[] { -1, 0, -1 }, // mask
       new byte[] { 1, (byte) 128, 2 }, // row to check
@@ -326,10 +349,6 @@ public class TestFuzzyRowFilter {
       new byte[] { 0, 0, 0, 0 }, // mask
       new byte[] { 1, 1, 2, 3 }, // row to check
       new byte[] { 1, 1, 2, 3 }); // expected next
-
-    // no before cell than current which satisfies the fuzzy row -> null
-    assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
-      new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
   }
 
   private static void assertNext(boolean reverse, byte[] fuzzyRow, byte[] mask, byte[] current,
@@ -338,5 +357,49 @@ public class TestFuzzyRowFilter {
     byte[] nextForFuzzyRule = FuzzyRowFilter.getNextForFuzzyRule(reverse, kv.getRowArray(),
       kv.getRowOffset(), kv.getRowLength(), fuzzyRow, mask);
     assertEquals(Bytes.toStringBinary(expected), Bytes.toStringBinary(nextForFuzzyRule));
+  }
+
+  @Test
+  public void testReverseFilterCellSkipsSameRowHint() {
+    // The first non-matching row can seek to abb, but abb would recreate abb as its reverse hint.
+    // The scanner should skip that non-matching row instead of seeking to the same row again.
+    FuzzyRowFilter filter = newReverseFuzzyRowFilter();
+
+    KeyValue abc = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abc"));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(abc));
+    Cell hint = filter.getNextCellHint(abc);
+    assertRow("abb", hint);
+
+    KeyValue abb = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abb"));
+    // filterCell handles the same-row hint by skipping the current non-matching row.
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(abb));
+  }
+
+  @Test
+  public void testReverseFilterListSkipsSameRowFuzzyHint() throws IOException {
+    for (FilterList.Operator operator : Arrays.asList(FilterList.Operator.MUST_PASS_ALL,
+      FilterList.Operator.MUST_PASS_ONE)) {
+      FilterList filterList =
+        new FilterList(operator, newReverseFuzzyRowFilter(), newReverseFuzzyRowFilter());
+
+      KeyValue abc = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abc"));
+      assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(abc));
+      assertRow("abb", filterList.getNextCellHint(abc));
+
+      KeyValue abb = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abb"));
+      assertEquals(Filter.ReturnCode.NEXT_ROW, filterList.filterCell(abb));
+    }
+  }
+
+  private static FuzzyRowFilter newReverseFuzzyRowFilter() {
+    FuzzyRowFilter filter =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 })));
+    filter.setReversed(true);
+    return filter;
+  }
+
+  private static void assertRow(String expected, Cell cell) {
+    assertEquals(expected,
+      Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
   }
 }

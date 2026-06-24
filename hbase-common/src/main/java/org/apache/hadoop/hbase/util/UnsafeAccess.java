@@ -82,6 +82,21 @@ public final class UnsafeAccess {
   }
 
   /**
+   * Converts a byte array to an int value considering it was written in little-endian format.
+   * @param bytes  byte array
+   * @param offset offset into array
+   * @return the int value
+   */
+  public static int toIntLE(byte[] bytes, int offset) {
+    if (LITTLE_ENDIAN) {
+      return HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET);
+    } else {
+      return Integer
+        .reverseBytes(HBasePlatformDependent.getInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET));
+    }
+  }
+
+  /**
    * Converts a byte array to a long value considering it was written in big-endian format.
    * @param bytes  byte array
    * @param offset offset into array
@@ -121,6 +136,21 @@ public final class UnsafeAccess {
    */
   public static int putInt(byte[] bytes, int offset, int val) {
     if (LITTLE_ENDIAN) {
+      val = Integer.reverseBytes(val);
+    }
+    HBasePlatformDependent.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
+    return offset + Bytes.SIZEOF_INT;
+  }
+
+  /**
+   * Put an int value out to the specified byte array position in little-endian format.
+   * @param bytes  the byte array
+   * @param offset position in the array
+   * @param val    int to write out
+   * @return incremented offset
+   */
+  public static int putIntLE(byte[] bytes, int offset, int val) {
+    if (!LITTLE_ENDIAN) {
       val = Integer.reverseBytes(val);
     }
     HBasePlatformDependent.putInt(bytes, offset + BYTE_ARRAY_BASE_OFFSET, val);
@@ -189,6 +219,18 @@ public final class UnsafeAccess {
       return Integer.reverseBytes(getAsInt(buf, offset));
     }
     return getAsInt(buf, offset);
+  }
+
+  /**
+   * Reads an int value at the given buffer's offset considering it was written in little-endian
+   * format.
+   * @return int value at offset
+   */
+  public static int toIntLE(ByteBuffer buf, int offset) {
+    if (LITTLE_ENDIAN) {
+      return getAsInt(buf, offset);
+    }
+    return Integer.reverseBytes(getAsInt(buf, offset));
   }
 
   /**

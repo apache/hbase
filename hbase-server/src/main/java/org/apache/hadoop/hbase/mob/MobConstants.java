@@ -76,6 +76,9 @@ public final class MobConstants {
   public static final String MOB_COMPACTION_CHORE_PERIOD = "hbase.mob.compaction.chore.period";
   public static final int DEFAULT_MOB_COMPACTION_CHORE_PERIOD = 24 * 60 * 60 * 7; // a week
   public static final String MOB_COMPACTOR_CLASS_KEY = "hbase.mob.compactor.class";
+  public static final String MOB_COMPACTION_READ_CACHE_BLOCKS =
+    "hbase.mob.compaction.read.cache.blocks";
+  public static final boolean DEFAULT_MOB_COMPACTION_READ_CACHE_BLOCKS = true;
 
   /**
    * Mob compaction type: "full", "optimized" "full" - run full major compaction (during migration)

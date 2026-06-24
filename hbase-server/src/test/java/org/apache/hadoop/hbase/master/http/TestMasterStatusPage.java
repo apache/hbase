@@ -114,6 +114,15 @@ public class TestMasterStatusPage {
     assertTrue(page.contains("<h2><a name=\"tasks\">Tasks</a></h2>"));
     assertTrue(page.contains("<h2><a name=\"attributes\">Software Attributes</a></h2>"));
 
+    assertTrue(page.contains("Client Connections"));
+    assertTrue(page.contains("tab_clientConnectionsStats"));
+    assertTrue(page.contains("clientConnectionsStatsTable"));
+    assertTrue(page.contains("ClientIP"));
+    assertTrue(page.contains("UserName"));
+    assertTrue(page.contains("ClientVersion"));
+    assertTrue(page.contains("ServiceName"));
+    assertTrue(page.contains("ServerInfo"));
+
     assertTrue(page.contains(VersionInfo.getVersion()));
   }
 
