@@ -304,10 +304,6 @@ function author_postcompile
   declare -r appname=$(basename "${BASH_SOURCE-$0}")
   declare -a globalignore
 
-  big_console_header "*** HBase Monkey-Patch: author_postcompile ***"
-
-  yetus_debug "HBase Monkey-Patch: author_postcompile"
-
   if [[ "${BUILDMODE}" != full ]]; then
     return
   fi
