@@ -306,4 +306,9 @@ public final class NoOpCacheAccessService implements CacheAccessService {
     Objects.requireNonNull(conf, "conf must not be null");
     return Optional.empty();
   }
+
+  @Override
+  public long getCurrentSize() {
+    return 0;
+  }
 }

@@ -22,6 +22,7 @@ import java.util.Optional;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -73,7 +74,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </p>
  */
 @InterfaceAudience.Private
-public interface CacheAccessService {
+public interface CacheAccessService extends ConfigurationObserver {
 
   /**
    * Returns a human-readable name for this cache access service instance.
@@ -326,6 +327,12 @@ public interface CacheAccessService {
   long size();
 
   /**
+   * Returns the occupied size of the block cache, in bytes.
+   * @return occupied space in cache, in bytes
+   */
+  long getCurrentSize();
+
+  /**
    * Returns the currently occupied size of cached data blocks, in bytes.
    * <p>
    * This is an aggregate service-level value. Implementations that cannot distinguish data-block
@@ -422,6 +429,7 @@ public interface CacheAccessService {
    * </p>
    * @param config new configuration
    */
+  @Override
   default void onConfigurationChange(Configuration config) {
     // noop
   }

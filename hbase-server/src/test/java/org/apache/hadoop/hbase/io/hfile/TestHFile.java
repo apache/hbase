@@ -43,6 +43,7 @@ import java.util.Optional;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -76,6 +77,8 @@ import org.apache.hadoop.hbase.io.encoding.IndexBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFile.Reader;
 import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
@@ -175,7 +178,8 @@ public class TestHFile {
     fillByteBuffAllocator(alloc, bufCount);
     Path storeFilePath = writeStoreFile();
     // Open the file reader with LRUBlockCache
-    BlockCache lru = new LruBlockCache(1024 * 1024 * 32, blockSize, true, conf);
+    CacheAccessService lru =
+      CacheAccessServiceTestFactory.lru(1024 * 1024 * 32, blockSize, true, conf);
     CacheConfig cacheConfig = new CacheConfig(conf, null, lru, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
     long offset = 0;
@@ -216,10 +220,15 @@ public class TestHFile {
         counter.incrementAndGet();
       }
     });
-    BlockCache cache = Mockito.mock(BlockCache.class);
+    CacheAccessService cache = Mockito.mock(CacheAccessService.class);
     Mockito.when(cache.shouldCacheBlock(Mockito.any(), Mockito.anyLong(), Mockito.any()))
       .thenReturn(Optional.of(false));
     Mockito.when(cache.isCacheEnabled()).thenReturn(true);
+    Mockito.doAnswer(invocation -> {
+      Consumer<CacheAccessService> action = invocation.getArgument(0);
+      action.accept(cache);
+      return null;
+    }).when(cache).ifEnabled(Mockito.<Consumer<CacheAccessService>> any());
     Path hfilePath = new Path(TEST_UTIL.getDataTestDir(), "testWriterCacheOnWriteSkipDoesNotLeak");
     HFileContext context = new HFileContextBuilder().withBlockSize(blockSize).build();
 
@@ -263,8 +272,8 @@ public class TestHFile {
     Path storeFilePath = writeStoreFile();
 
     // Initialize the block cache and HFile reader
-    BlockCache lru = BlockCacheFactory.createBlockCache(conf);
-    assertTrue(lru instanceof LruBlockCache);
+    CacheAccessService lru = CacheAccessServiceTestFactory.fromConfiguration(conf);
+    assertTrue(CacheAccessServiceTestFactory.blockCache(lru) instanceof LruBlockCache);
     CacheConfig cacheConfig = new CacheConfig(conf, null, lru, ByteBuffAllocator.HEAP);
     HFileReaderImpl reader =
       (HFileReaderImpl) HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
@@ -337,14 +346,14 @@ public class TestHFile {
     assertBytesReadFromCache(true, DataBlockEncoding.FAST_DIFF);
   }
 
-  private BlockCache initCombinedBlockCache(final String l1CachePolicy) {
+  private CacheAccessService initCombinedBlockCacheBackedService(final String l1CachePolicy) {
     Configuration that = HBaseConfiguration.create(conf);
     that.setFloat(BUCKET_CACHE_SIZE_KEY, 32); // 32MB for bucket cache.
     that.set(BUCKET_CACHE_IOENGINE_KEY, "offheap");
     that.set(BLOCKCACHE_POLICY_KEY, l1CachePolicy);
-    BlockCache bc = BlockCacheFactory.createBlockCache(that);
+    CacheAccessService bc = CacheAccessServiceTestFactory.fromConfiguration(that);
     assertNotNull(bc);
-    assertTrue(bc instanceof CombinedBlockCache);
+    assertTrue(CacheAccessServiceTestFactory.blockCache(bc) instanceof CombinedBlockCache);
     return bc;
   }
 
@@ -358,7 +367,7 @@ public class TestHFile {
     fillByteBuffAllocator(alloc, bufCount);
     Path storeFilePath = writeStoreFile();
     // Open the file reader with CombinedBlockCache
-    BlockCache combined = initCombinedBlockCache("LRU");
+    CacheAccessService combined = initCombinedBlockCacheBackedService("LRU");
     conf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
     CacheConfig cacheConfig = new CacheConfig(conf, null, combined, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
@@ -428,7 +437,8 @@ public class TestHFile {
 
     myConf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, cacheConfigCacheBlockOnRead);
     // Open the file reader with LRUBlockCache
-    BlockCache lru = new LruBlockCache(1024 * 1024 * 32, blockSize, true, myConf);
+    CacheAccessService lru =
+      CacheAccessServiceTestFactory.lru(1024 * 1024 * 32, blockSize, true, myConf);
     CacheConfig cacheConfig = new CacheConfig(myConf, null, lru, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, myConf);
     long offset = 0;
@@ -482,7 +492,7 @@ public class TestHFile {
     fillByteBuffAllocator(alloc, bufCount);
     Path storeFilePath = writeStoreFile();
     // Open the file reader with CombinedBlockCache
-    BlockCache combined = initCombinedBlockCache("LRU");
+    CacheAccessService combined = initCombinedBlockCacheBackedService("LRU");
     Configuration myConf = new Configuration(conf);
 
     myConf.setBoolean(CacheConfig.CACHE_DATA_ON_READ_KEY, cacheConfigCacheBlockOnRead);
@@ -539,7 +549,7 @@ public class TestHFile {
   private void readStoreFile(Path storeFilePath, Configuration conf, ByteBuffAllocator alloc)
     throws Exception {
     // Open the file reader with block cache disabled.
-    CacheConfig cache = new CacheConfig(conf, null, null, alloc);
+    CacheConfig cache = new CacheConfig(conf, null, (CacheAccessService) null, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cache, true, conf);
     long offset = 0;
     while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
@@ -1158,7 +1168,7 @@ public class TestHFile {
     fillByteBuffAllocator(alloc, bufCount);
     Path storeFilePath = writeStoreFile();
     // Open the file reader with CombinedBlockCache
-    BlockCache combined = initCombinedBlockCache(l1CachePolicy);
+    CacheAccessService combined = initCombinedBlockCacheBackedService(l1CachePolicy);
     conf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
     CacheConfig cacheConfig = new CacheConfig(conf, null, combined, alloc);
     HFile.Reader reader = HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);

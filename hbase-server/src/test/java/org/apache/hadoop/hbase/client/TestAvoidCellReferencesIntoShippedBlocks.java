@@ -46,6 +46,9 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -139,7 +142,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      final BlockCache cache = cacheConf.getBlockCache().get();
+      final CacheAccessService cache = cacheConf.getCacheAccessService();
       // insert data. 5 Rows are added
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -211,9 +214,9 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
   private static class ScannerThread extends Thread {
     private final Table table;
-    private final BlockCache cache;
+    private final CacheAccessService cache;
 
-    public ScannerThread(Table table, BlockCache cache) {
+    public ScannerThread(Table table, CacheAccessService cache) {
       this.table = table;
       this.cache = cache;
     }
@@ -230,7 +233,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
           }
         }
         List<BlockCacheKey> cacheList = new ArrayList<>();
-        Iterator<CachedBlock> iterator = cache.iterator();
+        Iterator<CachedBlock> iterator =
+          CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
         // evict all the blocks
         while (iterator.hasNext()) {
           CachedBlock next = iterator.next();
@@ -304,7 +308,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      final BlockCache cache = cacheConf.getBlockCache().get();
+      final CacheAccessService cache = cacheConf.getCacheAccessService();
       // insert data. 5 Rows are added
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -364,10 +368,12 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       try (ScanPerNextResultScanner scanner =
         new ScanPerNextResultScanner(TEST_UTIL.getAsyncConnection().getTable(tableName), s)) {
         Thread evictorThread = new Thread() {
+          @SuppressWarnings("unchecked")
           @Override
           public void run() {
             List<BlockCacheKey> cacheList = new ArrayList<>();
-            Iterator<CachedBlock> iterator = cache.iterator();
+            Iterator<CachedBlock> iterator =
+              CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
             // evict all the blocks
             while (iterator.hasNext()) {
               CachedBlock next = iterator.next();
@@ -383,7 +389,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
               Thread.sleep(1);
             } catch (InterruptedException e1) {
             }
-            iterator = cache.iterator();
+            iterator = CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
             int refBlockCount = 0;
             while (iterator.hasNext()) {
               iterator.next();
@@ -407,7 +413,8 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
               while (true) {
                 newBlockRefCount = 0;
                 newCacheList.clear();
-                iterator = cache.iterator();
+                iterator =
+                  CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
                 while (iterator.hasNext()) {
                   CachedBlock next = iterator.next();
                   BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
@@ -443,7 +450,9 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   /**
    * For {@link BucketCache},we only evict Block if there is no rpc referenced.
    */
-  private void evictBlock(BlockCache blockCache, BlockCacheKey blockCacheKey) {
+  private void evictBlock(CacheAccessService cache, BlockCacheKey blockCacheKey) {
+    // TODO: will be refactored later once we get CacheEngine refactoring done
+    BlockCache blockCache = ((BlockCacheBackedCacheAccessService) cache).getBlockCache();
     assertTrue(blockCache instanceof CombinedBlockCache);
     BlockCache[] blockCaches = blockCache.getBlockCaches();
     for (BlockCache currentBlockCache : blockCaches) {

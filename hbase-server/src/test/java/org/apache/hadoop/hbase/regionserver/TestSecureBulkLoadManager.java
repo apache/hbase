@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -228,7 +229,8 @@ public class TestSecureBulkLoadManager {
     ColumnFamilyDescriptor family = desc.getColumnFamily(FAMILY);
     Compression.Algorithm compression = HFile.DEFAULT_COMPRESSION_ALGORITHM;
 
-    CacheConfig writerCacheConf = new CacheConfig(conf, family, null, ByteBuffAllocator.HEAP);
+    CacheConfig writerCacheConf =
+      new CacheConfig(conf, family, (CacheAccessService) null, ByteBuffAllocator.HEAP);
     writerCacheConf.setCacheDataOnWrite(false);
     HFileContext hFileContext = new HFileContextBuilder().withIncludesMvcc(false)
       .withIncludesTags(true).withCompression(compression).withCompressTags(family.isCompressTags())
