@@ -164,9 +164,9 @@ public class TestBulkLoadReplication extends TestReplicationBaseNoBeforeAll {
   @BeforeEach
   @Override
   public void setUpBase() throws Exception {
-    // removing the peer and adding again causing the previously completed bulk load jobs getting
-    // submitted again, so here we override the setUpBase and tearDownBase to not adding/removing
-    // peers between each tests, we will add peers in beforeAll
+    // Removing the peer and adding it back causes previously completed bulk-load jobs to be
+    // resubmitted. Override setUpBase/tearDownBase so we do not add/remove peers between tests;
+    // peers are added once in @BeforeAll.
     BULK_LOADS_COUNT = new AtomicInteger(0);
   }
 
