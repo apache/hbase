@@ -332,9 +332,6 @@ function author_postcompile
       | "${SED}" 's/[][\\.^$*+?{}()|]/\\&/g' \
       | "${SED}" 's/^/^/' \
       > "${PATCH_DIR}/author-tags-filter.txt"
-
-    cat "${PATCH_DIR}/author-tags-filter.txt"
-
     "${GREP}" -v -E \
       -f "${PATCH_DIR}/author-tags-filter.txt" \
       "${PATCH_DIR}/author-tags-git.txt" \
