@@ -105,11 +105,10 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       p.setFirst(Arrays.copyOf(aFuzzyKeysData.getFirst(), aFuzzyKeysData.getFirst().length));
       p.setSecond(Arrays.copyOf(aFuzzyKeysData.getSecond(), aFuzzyKeysData.getSecond().length));
 
-      // normalize the mask into the encoding the active (unsafe/no-unsafe) path expects
+      // Normalize the mask, zero the non-fixed key bytes, then fix the unsafe mask to its final
+      // {-1, 0} form once here so it is never mutated during scanning.
       p.setSecond(preprocessMask(p.getSecond()));
       preprocessSearchKey(p, UNSAFE_UNALIGNED);
-      // Fix the unsafe mask into the {-1, 0} form satisfies() expects once, here, so the stored
-      // mask is never mutated during scanning (no-op on the no-unsafe path, which keeps {0, 1}).
       preprocessMaskForSatisfies(p.getSecond(), UNSAFE_UNALIGNED);
 
       fuzzyKeyDataCopy.add(p);
@@ -119,19 +118,15 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * Zeroes the non-fixed ("don't care") positions of the search key so that the next-cell hint
-   * built by {@link #getNextForFuzzyRule} is the smallest matching row. This now runs on BOTH paths
-   * (it used to be a no-op on the no-unsafe path), so {@link #getFuzzyKeys} and
-   * {@link #toByteArray} now report non-fixed key bytes as 0 on the no-unsafe path too, matching
-   * the long-standing unsafe-path behavior. The byte value at a non-fixed position is semantically
-   * dead (never compared), so this changes neither matching nor cross-version deserialization.
+   * Zeroes the non-fixed ("don't care") positions of the search key (on both paths) so the
+   * next-cell hint from {@link #getNextForFuzzyRule} is the smallest matching row. The byte at a
+   * non-fixed position is never compared, so this affects neither matching nor deserialization.
    */
   static void preprocessSearchKey(Pair<byte[], byte[]> p, boolean unsafeUnaligned) {
     byte[] key = p.getFirst();
     byte[] mask = p.getSecond();
     for (int i = 0; i < mask.length; i++) {
-      // set non-fixed part of a search key to 0. The non-fixed positions are encoded as 2 on the
-      // unsafe path (mask was preprocessed to {-1, 2}) and as 1 on the no-unsafe path ({0, 1}).
+      // non-fixed is encoded as 2 on the unsafe path ({-1, 2}) and as 1 on no-unsafe ({0, 1})
       if ((unsafeUnaligned && mask[i] == 2) || (!unsafeUnaligned && mask[i] == 1)) {
         key[i] = 0;
       }
@@ -139,24 +134,16 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * Normalizes the constructor/deserialized mask into the encoding the active code path expects.
-   * The public constructor format is {0 (fixed), 1 (non-fixed)}, but a mask can also arrive already
-   * preprocessed into the unsafe {-1 (fixed), 2 (non-fixed)} form - e.g. {@link #parseFrom} of a
-   * filter that was serialized on an unsafe peer. We accept either form on both paths so a filter
-   * serialized on one platform deserializes correctly on the other:
-   * <ul>
-   * <li>unsafe path: keep an already-preprocessed {-1, 2} mask, otherwise convert {0, 1} to {-1,
-   * 2}.</li>
-   * <li>no-unsafe path: keep a {0, 1} mask, otherwise convert an already-preprocessed {-1, 2} mask
-   * back to {0, 1} (the form {@link #satisfiesNoUnsafe} and {@link #preprocessMaskForHinting}
-   * expect).</li>
-   * </ul>
+   * Normalizes the incoming mask to the active path's encoding. Input is the public {0, 1} form, or
+   * the already-preprocessed unsafe {-1, 2} form when {@link #parseFrom} deserializes a filter from
+   * an unsafe peer; accepting both lets a filter serialized on one platform work on the other.
+   * Unsafe keeps/produces {-1, 2}; no-unsafe keeps/produces {0, 1}.
    * @return mask array
    */
   private byte[] preprocessMask(byte[] mask) {
     if (!UNSAFE_UNALIGNED) {
       if (isPreprocessedMask(mask)) {
-        // Mask was serialized by an unsafe peer in {-1, 2} form; restore the {0, 1} form.
+        // deserialized {-1, 2} from an unsafe peer -> restore {0, 1}
         for (int i = 0; i < mask.length; i++) {
           if (mask[i] == -1) {
             mask[i] = 0; // -1 -> 0
@@ -188,12 +175,11 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * Converts a stored mask back to the public constructor format {0 (fixed), 1 (non-fixed)},
-   * independent of the internal representation, so {@link #toByteArray} and {@link #getFuzzyKeys}
-   * never leak the internal preprocessed form onto the wire. On the no-unsafe path the stored mask
-   * is already {0, 1}. On the unsafe path the stored mask is {-1 (fixed), 0 (non-fixed)} (fixed up
-   * front by the constructor); a -1 byte is fixed and any other byte is non-fixed.
-   * @return a new array in {0 (fixed), 1 (non-fixed)} form
+   * Converts a stored mask back to the public {0 (fixed), 1 (non-fixed)} form as a new array, so
+   * serialization, {@link #getFuzzyKeys}, equals and hashCode never expose the internal encoding.
+   * No-unsafe already stores {0, 1}; unsafe stores {-1, 0}, where -1 is fixed and anything else is
+   * non-fixed.
+   * @return a new array in {0, 1} form
    */
   private static byte[] toConstructorMask(byte[] mask, boolean unsafeUnaligned) {
     byte[] out = Arrays.copyOf(mask, mask.length);
@@ -345,9 +331,8 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     }
 
     byte[] updateWith(Cell currentCell, Pair<byte[], byte[]> fuzzyData) {
-      // getNextForFuzzyRule needs {-1, 0}. On the no-unsafe path this returns a converted copy; on
-      // the unsafe path the stored mask is already {-1, 0} (fixed by the constructor), so it is
-      // returned as is.
+      // getNextForFuzzyRule needs {-1, 0}: a converted copy on no-unsafe, the stored mask on
+      // unsafe.
       byte[] fuzzyKeyMeta = preprocessMaskForHinting(fuzzyData.getSecond(), UNSAFE_UNALIGNED);
       byte[] nextRowKeyCandidate = getNextForFuzzyRule(isReversed(), currentCell.getRowArray(),
         currentCell.getRowOffset(), currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyKeyMeta);
@@ -371,8 +356,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
       bbpBuilder.setFirst(UnsafeByteOperations.unsafeWrap(fuzzyData.getFirst()));
-      // Serialize the mask in the public constructor {0, 1} form rather than the internal
-      // preprocessed representation, so the wire bytes are platform- and state-independent.
+      // Emit the public {0, 1} mask, not the internal form, so the wire is platform-independent.
       bbpBuilder.setSecond(UnsafeByteOperations
         .unsafeWrap(toConstructorMask(fuzzyData.getSecond(), UNSAFE_UNALIGNED)));
       builder.addFuzzyKeysData(bbpBuilder);
@@ -503,13 +487,10 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * Prepares the mask for {@link #satisfies}, mutating {@code mask} in place. Called once from the
-   * constructor (after {@link #preprocessSearchKey}) so the stored mask is fixed up front and never
-   * mutated during scanning. On the unsafe path the stored mask uses {-1, 2}; this shifts it to the
-   * {-1 (fixed), 0 (non-fixed)} form the word-based {@code satisfies} expects (the shift is
-   * idempotent: -1 stays -1, 2 becomes 0). On the no-unsafe path the mask keeps its original {0
-   * (fixed), 1 (non-fixed)} representation, which is what {@link #satisfiesNoUnsafe} expects, so
-   * this is a no-op.
+   * Mutates {@code mask} in place into the form {@link #satisfies} expects. Called once from the
+   * constructor so the stored mask is fixed up front and never mutated during scanning. Unsafe:
+   * shift {-1, 2} -&gt; {-1, 0} (the word-based satisfies wants non-fixed = 0). No-unsafe: no-op,
+   * {@link #satisfiesNoUnsafe} already wants {0, 1}.
    */
   static void preprocessMaskForSatisfies(byte[] mask, boolean unsafeUnaligned) {
     if (!unsafeUnaligned) {
@@ -521,11 +502,9 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
   }
 
   /**
-   * Prepares the mask for {@link #getNextForFuzzyRule}, which expects {-1 (fixed), 0 (non-fixed)}.
-   * On the no-unsafe path the stored mask is {0 (fixed), 1 (non-fixed)}, so it is converted into a
-   * new array (the original is left untouched because {@link #satisfiesNoUnsafe} still needs it).
-   * On the unsafe path the stored mask is already {-1, 0} (the constructor fixes it up front), so
-   * it is returned as is.
+   * Returns the mask in the {-1 (fixed), 0 (non-fixed)} form {@link #getNextForFuzzyRule} expects.
+   * No-unsafe converts {0, 1} into a NEW array (the stored {0, 1} is still needed by
+   * {@link #satisfiesNoUnsafe}); unsafe is already {-1, 0}, returned as is.
    */
   static byte[] preprocessMaskForHinting(byte[] mask, boolean unsafeUnaligned) {
     if (unsafeUnaligned) {
@@ -788,8 +767,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {
       Pair<byte[], byte[]> thisData = this.fuzzyKeysData.get(i);
       Pair<byte[], byte[]> otherData = other.fuzzyKeysData.get(i);
-      // Compare the mask in the normalized constructor {0, 1} form (the form toByteArray emits) so
-      // equality is independent of the internal mask encoding and consistent with the wire bytes.
+      // Compare masks in the normalized {0, 1} form, so equality matches the serialized bytes.
       if (
         !(Bytes.equals(thisData.getFirst(), otherData.getFirst())
           && Bytes.equals(toConstructorMask(thisData.getSecond(), UNSAFE_UNALIGNED),
@@ -808,8 +786,6 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
 
   @Override
   public int hashCode() {
-    // Hash the same normalized fields equals() compares (the mask in constructor {0, 1} form) so
-    // equal filters hash identically (content-based, independent of the internal mask encoding).
     int result = 1;
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       result = 31 * result + Bytes.hashCode(fuzzyData.getFirst());
