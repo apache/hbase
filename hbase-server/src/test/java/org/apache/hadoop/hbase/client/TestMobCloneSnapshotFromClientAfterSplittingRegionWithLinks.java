@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
-import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
@@ -61,7 +61,7 @@ public class TestMobCloneSnapshotFromClientAfterSplittingRegionWithLinks
   }
 
   @Override
-  protected void verifyRowCount(final HBaseTestingUtil util, final TableName tableName,
+  protected void verifyRowCount(final HBaseTestingUtility util, final TableName tableName,
     long expectedRows) throws IOException {
     // Read every cell value so the MOB files are actually resolved: the point of this test is that
     // the MOB data is still readable after the source table and snapshot are removed.
