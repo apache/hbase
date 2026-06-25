@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
+import static org.awaitility.Awaitility.await;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -24,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.time.Duration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -207,8 +209,13 @@ public abstract class AbstractTestLogRolling {
     log.rollWriter();
 
     // should have deleted all the rolled wal files
-    TEST_UTIL.waitFor(5000, () -> AbstractFSWALProvider.getNumRolledLogFiles(log) == 0);
-    assertEquals(0, AbstractFSWALProvider.getLogFileSize(log));
+    await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
+      // we call archive log in a background thread but remove the log from wal file map in
+      // foreground, which means it is possible that when numRolledLogFiles reaches zero, the log
+      // file size is still greater than zero, so here we need to wait for them both.
+      assertEquals(0, AbstractFSWALProvider.getNumRolledLogFiles(log));
+      assertEquals(0, AbstractFSWALProvider.getLogFileSize(log));
+    });
   }
 
   protected String getName() {
