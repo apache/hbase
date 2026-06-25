@@ -675,4 +675,65 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn.connect();
     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
   }
+
+  @Test
+  public void testProfilerDisabledByConfig() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(HttpServer.PROFILER_ENABLED_KEY, false);
+    HttpServer myServer = new HttpServer.Builder().setName("test")
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf).build();
+    myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    try {
+      URL profUrl =
+        new URL("http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/prof");
+      HttpURLConnection conn = (HttpURLConnection) profUrl.openConnection();
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, conn.getResponseCode());
+    } finally {
+      myServer.stop();
+    }
+  }
+
+  /**
+   * Verify that /prof-output-hbase/* returns 200 (not 500) for a request when authorization is
+   * disabled. A 500 here would indicate an NPE inside AdminAuthorizedFilter.init() or
+   * hasAdministratorAccess(), which happens when setContextAttributes() is not called on the output
+   * servlet's ServletContextHandler and conf/acl are null.
+   * <p>
+   * The authorization enforcement path (401/403 for non-admins) cannot be tested at this level
+   * without a full SPNEGO/Kerberos or PseudoAuthentication filter stack, which requires keytab
+   * configuration and is tested separately via testHasAdministratorAccess().
+   */
+  @Test
+  public void testProfilerOutputServletNoNpeWhenContextAttributesSet() throws Exception {
+    Configuration conf = new Configuration();
+    // authorization=false: hasAdministratorAccess short-circuits to true, so any request to
+    // /prof-output-hbase/* reaches the servlet. A 500 response means NPE from null conf/acl.
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+
+    HttpServer myServer = new HttpServer.Builder().setName("test")
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf)
+      .setACL(new AccessControlList("adminUser adminGroup")).build();
+    myServer.start();
+
+    // Plant a finished profile file in OUTPUT_DIR so the servlet has something to serve.
+    ProfileServlet.ensureOutputDir();
+    java.io.File profileFile =
+      new java.io.File(ProfileServlet.OUTPUT_DIR, "test-profile-access-control.html");
+    java.nio.file.Files.write(profileFile.toPath(),
+      "<html>flame</html>".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+      java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+
+    try {
+      String base = "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
+      String outputPath = "prof-output-hbase/" + profileFile.getName();
+
+      // Must return 200, not 500. A 500 would mean NPE: conf or acl was null inside
+      // AdminAuthorizedFilter because setContextAttributes() was not called on genCtx.
+      assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(base + outputPath, "adminUser"));
+    } finally {
+      profileFile.delete();
+      myServer.stop();
+    }
+  }
 }
