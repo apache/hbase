@@ -32,17 +32,17 @@ import org.apache.yetus.audience.InterfaceAudience;
  * 3 examples to illustrate their usage:
  * <p>
  * Consider a store with 100MB of key-values allocated on-heap and 20MB of metadata allocated
- * on-heap. The counters are <100MB, 120MB, 0>, respectively.
+ * on-heap. The counters are {@code <100MB, 120MB, 0>}, respectively.
  * </p>
  * <p>
  * Consider a store with 100MB of key-values allocated off-heap and 20MB of metadata allocated
- * on-heap (e.g, CAM index). The counters are <100MB, 20MB, 100MB>, respectively.
+ * on-heap (e.g, CAM index). The counters are {@code <100MB, 20MB, 100MB>}, respectively.
  * </p>
  * <p>
  * Consider a store with 100MB of key-values from which 95MB are allocated off-heap and 5MB are
  * allocated on-heap (e.g., due to upserts) and 20MB of metadata from which 15MB allocated off-heap
- * (e.g, CCM index) and 5MB allocated on-heap (e.g, CSLM index in active). The counters are <100MB,
- * 10MB, 110MB>, respectively.
+ * (e.g, CCM index) and 5MB allocated on-heap (e.g, CSLM index in active). The counters are
+ * {@code <100MB, 10MB, 110MB>}, respectively.
  * </p>
  * Like {@link TimeRangeTracker}, it has thread-safe and non-thread-safe implementations.
  */
