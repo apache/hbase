@@ -1435,6 +1435,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
             ? Strings.hostnamesEqual(hostnameFromMasterPOV, expectedHostName)
             : Strings.hostnamesEqual(hostnameFromMasterPOV, useThisHostnameInstead);
+
           if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
               + (StringUtils.isBlank(useThisHostnameInstead)

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
@@ -91,9 +92,32 @@ public final class Strings {
   }
 
   /**
+   * Returns whether the given string is an IP address, including bracketed IPv6 URI form.
+   * @param host hostname or IP
+   * @return {@code true} if {@code host} is an IP address
+   * @throws NullPointerException if {@code host} is {@code null}
+   */
+  public static boolean isInetAddress(String host) {
+    Objects.requireNonNull(host, "Hostname or IP cannot be null");
+    host = host.trim();
+    if (host.startsWith("[") && host.endsWith("]")) {
+      return InetAddresses.isUriInetAddress(host);
+    }
+    return InetAddresses.isInetAddress(host);
+  }
+
+  private static InetAddress parseInetAddress(String host) {
+    host = host.trim();
+    if (host.startsWith("[") && host.endsWith("]")) {
+      return InetAddresses.forUriString(host);
+    }
+    return InetAddresses.forString(host);
+  }
+
+  /**
    * Compare two host identifiers for equality. DNS hostnames are compared case-insensitively
    * because DNS labels are case-insensitive. IP address literals are compared by numeric address.
-   * @param left first hostname or IP
+   * @param left  first hostname or IP
    * @param right second hostname or IP
    * @return {@code true} if both refer to the same host identifier
    * @throws NullPointerException if either argument is {@code null}
@@ -101,13 +125,13 @@ public final class Strings {
   public static boolean hostnamesEqual(String left, String right) {
     Objects.requireNonNull(left, "Hostname or IP cannot be null");
     Objects.requireNonNull(right, "Hostname or IP cannot be null");
-    boolean leftIsIp = InetAddresses.isInetAddress(left);
-    boolean rightIsIp = InetAddresses.isInetAddress(right);
+    boolean leftIsIp = isInetAddress(left);
+    boolean rightIsIp = isInetAddress(right);
     if (leftIsIp != rightIsIp) {
       return false;
     }
     if (leftIsIp) {
-      return InetAddresses.forString(left).equals(InetAddresses.forString(right));
+      return parseInetAddress(left).equals(parseInetAddress(right));
     }
     return left.equalsIgnoreCase(right);
   }
