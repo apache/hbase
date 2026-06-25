@@ -560,15 +560,16 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
    * Checks for the following pre-checks in order:
    * <ol>
    * <li>RegionServer is running</li>
-   * <li>If authorization is enabled, then RPC caller has ADMIN permissions</li>
+   * <li>If authorization is enabled, then RPC caller has the passed permissions</li>
    * </ol>
    * @param requestName name of rpc request. Used in reporting failures to provide context.
+   * @param action passed action to verify.
    * @throws ServiceException If any of the above listed pre-check fails.
    */
-  private void rpcPreCheck(String requestName) throws ServiceException {
+  private void rpcPreCheck(String requestName, Permission.Action action) throws ServiceException {
     try {
       checkOpen();
-      requirePermission(requestName, Permission.Action.ADMIN);
+      requirePermission(requestName, action);
     } catch (IOException ioe) {
       throw new ServiceException(ioe);
     }
@@ -1599,7 +1600,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public CompactionSwitchResponse compactionSwitch(RpcController controller,
     CompactionSwitchRequest request) throws ServiceException {
-    rpcPreCheck("compactionSwitch");
+    rpcPreCheck("compactionSwitch", Permission.Action.ADMIN);
     final CompactSplit compactSplitThread = server.getCompactSplitThread();
     requestCount.increment();
     boolean prevState = compactSplitThread.isCompactionsEnabled();
@@ -2307,7 +2308,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   @QosPriority(priority = HConstants.ADMIN_QOS)
   public StopServerResponse stopServer(final RpcController controller,
     final StopServerRequest request) throws ServiceException {
-    rpcPreCheck("stopServer");
+    rpcPreCheck("stopServer", Permission.Action.ADMIN);
     requestCount.increment();
     String reason = request.getReason();
     server.stop(reason);
@@ -2317,7 +2318,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   @Override
   public UpdateFavoredNodesResponse updateFavoredNodes(RpcController controller,
     UpdateFavoredNodesRequest request) throws ServiceException {
-    rpcPreCheck("updateFavoredNodes");
+    rpcPreCheck("updateFavoredNodes", Permission.Action.ADMIN);
     List<UpdateFavoredNodesRequest.RegionUpdateInfo> openInfoList = request.getUpdateInfoList();
     UpdateFavoredNodesResponse.Builder respBuilder = UpdateFavoredNodesResponse.newBuilder();
     for (UpdateFavoredNodesRequest.RegionUpdateInfo regionUpdateInfo : openInfoList) {
@@ -3877,7 +3878,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   @Override
   public CoprocessorServiceResponse execRegionServerService(RpcController controller,
     CoprocessorServiceRequest request) throws ServiceException {
-    rpcPreCheck("execRegionServerService");
+    rpcPreCheck("execRegionServerService", Permission.Action.READ);
     return server.execRegionServerService(controller, request);
   }
 
@@ -3906,7 +3907,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
   public ClearRegionBlockCacheResponse clearRegionBlockCache(RpcController controller,
     ClearRegionBlockCacheRequest request) throws ServiceException {
     try {
-      rpcPreCheck("clearRegionBlockCache");
+      rpcPreCheck("clearRegionBlockCache", Permission.Action.ADMIN);
       ClearRegionBlockCacheResponse.Builder builder = ClearRegionBlockCacheResponse.newBuilder();
       CacheEvictionStatsBuilder stats = CacheEvictionStats.builder();
       server.getRegionServerCoprocessorHost().preClearRegionBlockCache();
