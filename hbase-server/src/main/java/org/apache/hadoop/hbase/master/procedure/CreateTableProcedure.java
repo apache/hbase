@@ -298,7 +298,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
 
     try {
       ModifyRegionUtils.checkForEncodedNameCollisions(newRegions,
-        env.getAssignmentManager().getRegionStates().getAllRegionsOfTable(getTableName()));
+        env.getAssignmentManager().getRegionStates());
     } catch (DoNotRetryIOException e) {
       setFailure("master-create-table", e);
       return false;

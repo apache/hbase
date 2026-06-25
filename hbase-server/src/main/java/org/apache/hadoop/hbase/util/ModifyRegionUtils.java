@@ -21,10 +21,9 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
@@ -39,6 +38,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -88,29 +88,25 @@ public abstract class ModifyRegionUtils {
   }
 
   /**
-   * Checks a set of candidate regions against each other and against a set of already-existing
-   * regions for encoded-name collisions.
+   * Checks candidate regions for encoded\-name collisions. Ensures there are no duplicates in the
+   * input and no conflicts with existing region states.
    */
   public static void checkForEncodedNameCollisions(final Collection<RegionInfo> candidates,
-    final Collection<RegionInfo> existing) throws IOException {
+    final RegionStates regionStates) throws IOException {
     if (candidates == null || candidates.isEmpty()) {
       return;
     }
-    Map<String, RegionInfo> seen = new HashMap<>();
-    if (existing != null) {
-      for (RegionInfo ri : existing) {
-        seen.putIfAbsent(ri.getEncodedName(), ri);
-      }
-    }
+    Objects.requireNonNull(regionStates, "regionStates is null");
     Set<String> candidateNames = new HashSet<>();
     for (RegionInfo ri : candidates) {
       String encoded = ri.getEncodedName();
-      RegionInfo conflict = seen.get(encoded);
-      if (conflict != null || !candidateNames.add(encoded)) {
+      if (
+        !candidateNames.add(encoded)
+          || regionStates.getRegionStateNodeFromEncodedRegionName(encoded) != null
+      ) {
         throw new DoNotRetryIOException("Encoded region name collision detected: '" + encoded
           + "' for table " + ri.getTable() + ". Refusing to proceed.");
       }
-      seen.put(encoded, ri);
     }
   }
 

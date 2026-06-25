@@ -143,7 +143,7 @@ public class SplitTableRegionProcedure
     this.daughterTwoRI = RegionInfoBuilder.newBuilder(table).setStartKey(bestSplitRow)
       .setEndKey(regionToSplit.getEndKey()).setSplit(false).setRegionId(rid).build();
     ModifyRegionUtils.checkForEncodedNameCollisions(Arrays.asList(daughterOneRI, daughterTwoRI),
-      env.getAssignmentManager().getRegionStates().getAllRegionsOfTable(getTableName()));
+      env.getAssignmentManager().getRegionStates());
 
     if (tableDescriptor.getRegionSplitPolicyClassName() != null) {
       // Since we don't have region reference here, creating the split policy instance without it.
