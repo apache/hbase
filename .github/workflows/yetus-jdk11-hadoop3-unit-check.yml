@@ -57,20 +57,20 @@ jobs:
 
     steps:
       - name: Checkout HBase
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           path: src
           fetch-depth: 0
           persist-credentials: false
 
       - name: Set up JDK 11
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
         with:
           java-version: '11'
           distribution: 'temurin'
 
       - name: Maven cache
-        uses: actions/cache@cdf6c1fa76f9f475f3d7449005a359c84ca0f306 # v5.0.3
+        uses: actions/cache@2c8a9bd7457de244a408f35966fab2fb45fda9c8 # v6.0.0
         with:
           path: ~/.m2
           key: hbase-m2-${{ hashFiles('**/pom.xml') }}
@@ -92,14 +92,14 @@ jobs:
 
       - name: Set up JDK 21 (prerelease, build-only)
         if: ${{ contains(github.event.pull_request.labels.*.name, 'test-yetus-prerelease') }}
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
+        uses: actions/setup-java@ad2b38190b15e4d6bdf0c97fb4fca8412226d287 # v5.3.0
         with:
           java-version: '21'
           distribution: 'temurin'
 
       - name: Checkout apache/yetus@HEAD (prerelease)
         if: ${{ contains(github.event.pull_request.labels.*.name, 'test-yetus-prerelease') }}
-        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
           repository: apache/yetus
           path: yetus-src
@@ -159,7 +159,7 @@ jobs:
 
       - name: Publish Test Results
         if: always()
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: yetus-jdk11-hadoop3-unit-check-${{ matrix.name }}
           path: ${{ github.workspace }}/yetus-jdk11-hadoop3-unit-check/output
