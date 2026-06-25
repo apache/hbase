@@ -405,7 +405,7 @@ public class TestFuzzyRowFilter {
     original.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
 
     FuzzyRowFilter parsed = FuzzyRowFilter.parseFrom(original.toByteArray());
-    // A row matching only via the wildcard position must still be INCLUDEEd after the round-trip.
+    // A row matching only via the wildcard position must still be INCLUDED after the round-trip.
     assertEquals(Filter.ReturnCode.INCLUDE,
       parsed.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
   }
