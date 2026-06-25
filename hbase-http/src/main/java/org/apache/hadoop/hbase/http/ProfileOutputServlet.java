@@ -47,8 +47,8 @@ public class ProfileOutputServlet extends DefaultServlet {
     File requestedFile = new File(absoluteDiskPath);
     // async-profiler version 1.4 writes 'Started [cpu] profiling' to output file when profiler is
     // running which gets replaced by final output. If final output is not ready yet, the file size
-    // will be <100 bytes (in all modes).
-    if (requestedFile.length() < 100) {
+    // will be < ProfileServlet.PROF_OUTPUT_MIN_BYTES (in all modes).
+    if (requestedFile.length() < ProfileServlet.PROF_OUTPUT_MIN_BYTES) {
       LOG.info(requestedFile + " is incomplete. Sending auto-refresh header.");
       String refreshUrl = req.getRequestURI();
       // Rebuild the query string (if we have one)

@@ -26,7 +26,6 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -155,6 +154,8 @@ public class HttpServer implements FilterContainer {
     "hbase.security.authentication.ui.config.protected";
   public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
+  public static final String PROFILER_ENABLED_KEY = "hbase.profiler.enabled";
+  public static final boolean PROFILER_ENABLED_DEFAULT = true;
 
   // The ServletContext attribute where the daemon Configuration
   // gets stored.
@@ -871,21 +872,45 @@ public class HttpServer implements FilterContainer {
     } else {
       addUnprivilegedServlet("conf", "/conf", ConfServlet.class);
     }
-    final String asyncProfilerHome = ProfileServlet.getAsyncProfilerHome();
-    if (asyncProfilerHome != null && !asyncProfilerHome.trim().isEmpty()) {
+
+    if (!conf.getBoolean(PROFILER_ENABLED_KEY, PROFILER_ENABLED_DEFAULT)) {
+      ServletHolder disabledHolder = new ServletHolder(new ProfileServlet.DisabledServlet());
+      disabledHolder.setInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM,
+        "The /prof endpoint is disabled by configuration (" + PROFILER_ENABLED_KEY + "=false).");
+      addUnprivilegedServlet("/prof", disabledHolder);
+      LOG.info("Profiler disabled by configuration ({}=false). Disabling /prof endpoint.",
+        PROFILER_ENABLED_KEY);
+    } else if (ProfileServlet.isAvailable()) {
       addPrivilegedServlet("prof", "/prof", ProfileServlet.class);
+      ProfileServlet.ensureOutputDir();
       Path tmpDir = Paths.get(ProfileServlet.OUTPUT_DIR);
-      if (Files.notExists(tmpDir)) {
-        Files.createDirectories(tmpDir);
-      }
       ServletContextHandler genCtx = new ServletContextHandler(contexts, "/prof-output-hbase");
       genCtx.addServlet(ProfileOutputServlet.class, "/*");
       genCtx.setResourceBase(tmpDir.toAbsolutePath().toString());
       genCtx.setDisplayName("prof-output-hbase");
+      // Must populate CONF_CONTEXT_ATTRIBUTE and ADMINS_ACL so AdminAuthorizedFilter.init()
+      // and hasAdministratorAccess() can read them. Without this, conf and acl are null and
+      // every /prof-output-hbase/* request throws NPE → 500 when authentication is enabled.
+      setContextAttributes(genCtx, conf);
+      // Always wire AdminAuthorizedFilter — hasAdministratorAccess short-circuits to true when
+      // hadoop.security.authorization=false, so this is a no-op when auth is off and a real
+      // gate when it is on. Profiling output can contain row keys and credential frames, so
+      // restricting it to admins matches the access control on the /prof start endpoint.
+      FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
+      filter.setName(AdminAuthorizedFilter.class.getSimpleName());
+      FilterMapping fmap = new FilterMapping();
+      fmap.setPathSpec("/*");
+      fmap.setDispatches(FilterMapping.ALL);
+      fmap.setFilterName(AdminAuthorizedFilter.class.getSimpleName());
+      genCtx.getServletHandler().addFilter(filter, fmap);
     } else {
-      addUnprivilegedServlet("prof", "/prof", ProfileServlet.DisabledServlet.class);
-      LOG.info("ASYNC_PROFILER_HOME environment variable and async.profiler.home system property "
-        + "not specified. Disabling /prof endpoint.");
+      ServletHolder disabledHolder = new ServletHolder(new ProfileServlet.DisabledServlet());
+      disabledHolder.setInitParameter(ProfileServlet.DisabledServlet.REASON_PARAM,
+        "The /prof endpoint is unavailable: the async-profiler library is not on the classpath "
+          + "(build with -Pasync-profiler) and ASYNC_PROFILER_HOME is not set.");
+      addUnprivilegedServlet("/prof", disabledHolder);
+      LOG.info("async-profiler not available (no library on classpath and ASYNC_PROFILER_HOME "
+        + "not set). Disabling /prof endpoint.");
     }
 
     /* register metrics servlets */
