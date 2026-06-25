@@ -18,30 +18,25 @@
 package org.apache.hadoop.hbase.mapreduce;
 
 import java.io.IOException;
+import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.jupiter.api.Tag;
-import org.junit.jupiter.api.Test;
+import org.junit.ClassRule;
+import org.junit.Test;
+import org.junit.experimental.categories.Category;
 
-@Tag(MapReduceTests.TAG)
-@Tag(MediumTests.TAG)
-public class TestTableInputFormatScanEmptyToEmpty extends TestTableInputFormatScanBase {
-
-  /**
-   * Tests a MR scan using specific start and stop rows.
-   */
-  @Test
-  public void testScanEmptyToEmpty()
-    throws IOException, InterruptedException, ClassNotFoundException {
-    testScan(null, null, null);
-  }
+@Category({ MapReduceTests.class, MediumTests.class })
+public class TestTableInputFormatScanQPPToOBB extends TestTableInputFormatScanBase {
+  @ClassRule
+  public static final HBaseClassTestRule CLASS_RULE =
+    HBaseClassTestRule.forClass(TestTableInputFormatScanQPPToOBB.class);
 
   /**
    * Tests a MR reverse scan using specific start and stop rows.
    */
   @Test
-  public void testReverseScanEmptyToEmpty()
+  public void testReverseScanQPPToOBB()
     throws IOException, InterruptedException, ClassNotFoundException {
-    testReverseScan(null, null, null);
+    testReverseScan("qpp", "obb", "obc");
   }
 }
