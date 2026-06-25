@@ -71,6 +71,10 @@ public class RetriesExhaustedException extends IOException {
       }
       return joiner.toString();
     }
+
+    public Throwable getThrowable() {
+      return throwable;
+    }
   }
 
   /**
