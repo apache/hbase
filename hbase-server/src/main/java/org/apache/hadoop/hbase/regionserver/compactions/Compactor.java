@@ -132,13 +132,13 @@ public abstract class Compactor<T extends CellSink> {
   }
 
   /** The sole reason this class exists is that java has no ref/out/pointer parameters. */
-  protected static class FileDetails {
+  public static class FileDetails {
     /** Maximum key count after compaction (for blooms) */
     public long maxKeyCount = 0;
     /** Earliest put timestamp if major compaction */
     public long earliestPutTs = HConstants.LATEST_TIMESTAMP;
     /** Latest put timestamp */
-    public long latestPutTs = HConstants.LATEST_TIMESTAMP;
+    public long latestPutTs = 0;
     /** The last key in the files we're compacting. */
     public long maxSeqId = 0;
     /** Latest memstore read point found in any of the involved files */
@@ -158,11 +158,12 @@ public abstract class Compactor<T extends CellSink> {
    * @parma major If major compaction
    * @return The result.
    */
-  private FileDetails getFileDetails(Collection<HStoreFile> filesToCompact, boolean allFiles,
-    boolean major) throws IOException {
+  static FileDetails getFileDetails(Collection<HStoreFile> filesToCompact, long keepSeqIdPeriod,
+      boolean allFiles, boolean major, Compression.Algorithm majorCompactionCompression,
+      Compression.Algorithm minorCompactionCompression) throws IOException {
     FileDetails fd = new FileDetails();
     long oldestHFileTimestampToKeepMVCC =
-      EnvironmentEdgeManager.currentTime() - (1000L * 60 * 60 * 24 * this.keepSeqIdPeriod);
+      EnvironmentEdgeManager.currentTime() - (1000L * 60 * 60 * 24 * keepSeqIdPeriod);
 
     for (HStoreFile file : filesToCompact) {
       if (allFiles && (file.getModificationTimestamp() < oldestHFileTimestampToKeepMVCC)) {
@@ -220,8 +221,9 @@ public abstract class Compactor<T extends CellSink> {
         }
       }
       tmp = fileInfo.get(TIMERANGE_KEY);
-      fd.latestPutTs =
+      long latestPutTs =
         tmp == null ? HConstants.LATEST_TIMESTAMP : TimeRangeTracker.parseFrom(tmp).getMax();
+      fd.latestPutTs = Math.max(fd.latestPutTs, latestPutTs);
       LOG.debug(
         "Compacting {}, keycount={}, bloomtype={}, size={}, "
           + "encoding={}, compression={}, seqNum={}{}",
@@ -332,7 +334,9 @@ public abstract class Compactor<T extends CellSink> {
   protected final List<Path> compact(final CompactionRequestImpl request,
     InternalScannerFactory scannerFactory, CellSinkFactory<T> sinkFactory,
     ThroughputController throughputController, User user) throws IOException {
-    FileDetails fd = getFileDetails(request.getFiles(), request.isAllFiles(), request.isMajor());
+    FileDetails fd =
+        getFileDetails(request.getFiles(), keepSeqIdPeriod, request.isAllFiles(), request.isMajor(),
+            majorCompactionCompression, minorCompactionCompression);
 
     // Find the smallest read point across all the Scanners.
     long smallestReadPoint = getSmallestReadPoint();
