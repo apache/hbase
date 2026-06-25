@@ -53,6 +53,11 @@ public interface RSGroupInfoManager {
   void moveServers(Set<Address> servers, String targetGroupName) throws IOException;
 
   /**
+   * Move all servers from src to a new group.
+   */
+  void moveAllServers(String sourceGroupName, String targetGroupName) throws IOException;
+
+  /**
    * Gets the group info of server.
    */
   RSGroupInfo getRSGroupOfServer(Address serverHostPort) throws IOException;
