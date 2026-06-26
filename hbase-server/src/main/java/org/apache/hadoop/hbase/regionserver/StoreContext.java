@@ -46,6 +46,7 @@ public final class StoreContext implements HeapSize {
   private final HRegionFileSystem regionFileSystem;
   private final CellComparator comparator;
   private final BloomType bloomFilterType;
+  private final BloomFilterImpl bloomFilterImpl;
   private final Supplier<Collection<HStoreFile>> compactedFilesSupplier;
   private final Supplier<InetSocketAddress[]> favoredNodesSupplier;
   private final ColumnFamilyDescriptor family;
@@ -59,6 +60,7 @@ public final class StoreContext implements HeapSize {
     this.regionFileSystem = builder.regionFileSystem;
     this.comparator = builder.comparator;
     this.bloomFilterType = builder.bloomFilterType;
+    this.bloomFilterImpl = builder.bloomFilterImpl;
     this.compactedFilesSupplier = builder.compactedFilesSupplier;
     this.favoredNodesSupplier = builder.favoredNodesSupplier;
     this.family = builder.family;
@@ -88,6 +90,10 @@ public final class StoreContext implements HeapSize {
 
   public BloomType getBloomFilterType() {
     return bloomFilterType;
+  }
+
+  public BloomFilterImpl getBloomFilterImpl() {
+    return bloomFilterImpl;
   }
 
   public Supplier<Collection<HStoreFile>> getCompactedFilesSupplier() {
@@ -146,6 +152,7 @@ public final class StoreContext implements HeapSize {
     private HRegionFileSystem regionFileSystem;
     private CellComparator comparator;
     private BloomType bloomFilterType;
+    private BloomFilterImpl bloomFilterImpl;
     private Supplier<Collection<HStoreFile>> compactedFilesSupplier;
     private Supplier<InetSocketAddress[]> favoredNodesSupplier;
     private ColumnFamilyDescriptor family;
@@ -179,6 +186,11 @@ public final class StoreContext implements HeapSize {
 
     public Builder withBloomType(BloomType bloomFilterType) {
       this.bloomFilterType = bloomFilterType;
+      return this;
+    }
+
+    public Builder withBloomFilterImpl(BloomFilterImpl bloomFilterImpl) {
+      this.bloomFilterImpl = bloomFilterImpl;
       return this;
     }
 
