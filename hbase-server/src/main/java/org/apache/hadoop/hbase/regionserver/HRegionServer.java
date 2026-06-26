@@ -3827,7 +3827,9 @@ public class HRegionServer extends Thread
     movedRegionInfoCache.put(encodedName, new MovedRegionInfo(destination, closeSeqNum));
   }
 
-  void removeFromMovedRegions(String encodedName) {
+  // public for being called in tests
+  @InterfaceAudience.Private
+  public void removeFromMovedRegions(String encodedName) {
     movedRegionInfoCache.invalidate(encodedName);
   }
 
