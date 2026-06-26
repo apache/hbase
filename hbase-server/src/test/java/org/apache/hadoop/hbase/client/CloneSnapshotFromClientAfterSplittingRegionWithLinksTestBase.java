@@ -121,12 +121,13 @@ public class CloneSnapshotFromClientAfterSplittingRegionWithLinksTestBase
     // so the snapshot contains only HFileLinks and no Reference files.
     int numRegions = admin.getRegions(tableName).size();
     admin.split(tableName, SPLIT_KEY);
-    await().atMost(Duration.ofSeconds(60)).untilAsserted(
+    await().atMost(Duration.ofSeconds(30)).untilAsserted(
       () -> assertEquals(numRegions + numReplicas, admin.getRegions(tableName).size()));
 
-    // Guard: the split must have produced only HFileLinks (no Reference files) for the daughters,
-    // otherwise this test would silently degrade into the Reference case.
-    assertDaughtersHaveOnlyLinks();
+    // Guard: the split must have produced only HFileLinks (no Reference files) for the daughters.
+    // admin.getRegions() can report the daughters (from meta) before the region servers have opened
+    // them and loaded their store files, so retry until the links are actually online.
+    await().atMost(Duration.ofSeconds(30)).untilAsserted(this::assertDaughtersHaveOnlyLinks);
 
     // Take a snapshot and clone it.
     admin.snapshot(snapshotName, tableName);
