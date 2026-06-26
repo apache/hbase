@@ -34,8 +34,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
+import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.regionserver.CellSink;
@@ -171,6 +173,28 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
         .equals(MobConstants.OPTIMIZED_MOB_COMPACTION_TYPE);
     this.cacheMobBlocksOnCompaction = conf.getBoolean(MobConstants.MOB_COMPACTION_READ_CACHE_BLOCKS,
       MobConstants.DEFAULT_MOB_COMPACTION_READ_CACHE_BLOCKS);
+  }
+
+  /**
+   * Resolves a MOB reference cell to its backing MOB value and returns an independent,
+   * heap-resident copy of the resolved cell.
+   * <p>
+   * A MOB cell resolved from a MOB file is backed by a {@code StoreFileScanner}; closing the
+   * {@link MobCell} closes that scanner and may release/recycle the NIO buffers referenced by the
+   * returned cell. We close the {@link MobCell} here to avoid leaking scanners/buffers while
+   * compacting many reference cells.
+   * <p>
+   * The {@link KeyValueUtil#copyToNewKeyValue(Cell)} call is required by this ownership model:
+   * HFile writers and encoders may retain references to appended cells (e.g. {@code lastCell},
+   * {@code firstCellInBlock}, and the data block encoder's {@code prevCell}) until
+   * {@code beforeShipped()}. Returning the scanner-backed cell directly would let those later reads
+   * access released buffers. Removing this copy would require changing the caller to retain each
+   * {@link MobCell} and close it only after the writers have shipped their retained references.
+   */
+  protected ExtendedCell resolveMobCell(ExtendedCell reference) throws IOException {
+    try (MobCell mobCell = mobStore.resolve(reference, cacheMobBlocksOnCompaction, false)) {
+      return KeyValueUtil.copyToNewKeyValue(mobCell.getCell());
+    }
   }
 
   @Override
@@ -371,7 +395,7 @@ public class DefaultMobStoreCompactor extends DefaultCompactor {
               String fName = MobUtils.getMobFileName(c);
               // Added to support migration
               try {
-                mobCell = mobStore.resolve(c, cacheMobBlocksOnCompaction, false).getCell();
+                mobCell = resolveMobCell(c);
               } catch (FileNotFoundException fnfe) {
                 if (discardMobMiss) {
                   LOG.error("Missing MOB cell: file={} not found cell={}", fName, c);
