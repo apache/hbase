@@ -43,13 +43,6 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TCompactProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.layered.TFramedTransport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -59,6 +52,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TCompactProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.server.TServer;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TSocket;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TTransport;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.layered.TFramedTransport;
 
 /**
  * Start the HBase Thrift server on a random port through the command-line interface and talk to it
