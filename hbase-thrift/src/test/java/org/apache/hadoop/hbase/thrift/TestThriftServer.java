@@ -68,10 +68,6 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
@@ -79,6 +75,11 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TSocket;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TTransport;
 
 /**
  * Unit testing for ThriftServerRunner.HBaseServiceHandler, a part of the

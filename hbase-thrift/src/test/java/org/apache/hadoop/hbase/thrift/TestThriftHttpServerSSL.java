@@ -49,9 +49,6 @@ import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClientBuilder;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContexts;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.TMemoryBuffer;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -60,6 +57,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TMemoryBuffer;
 
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)

@@ -26,20 +26,20 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.apache.thrift.TException;
-import org.apache.thrift.TProcessor;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.server.TServer;
-import org.apache.thrift.server.TThreadPoolServer;
-import org.apache.thrift.transport.TServerTransport;
-import org.apache.thrift.transport.TSocket;
-import org.apache.thrift.transport.TTransport;
-import org.apache.thrift.transport.TTransportException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
+import org.apache.hbase.thirdparty.org.apache.thrift.TException;
+import org.apache.hbase.thirdparty.org.apache.thrift.TProcessor;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.server.TServer;
+import org.apache.hbase.thirdparty.org.apache.thrift.server.TThreadPoolServer;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TServerTransport;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TSocket;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TTransport;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TTransportException;
 
 /**
  * A bounded thread pool server customized for HBase.

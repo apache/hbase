@@ -84,9 +84,15 @@
       <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-hadoop-compat</artifactId>
     </dependency>
+    <!--
+      Thrift runtime classes come from the relocated/shaded artifact in hbase-thirdparty
+      (org.apache.hbase.thirdparty.org.apache.thrift.*) instead of upstream libthrift. This
+      avoids the libthrift CVE chain and lets us keep Java 8 / javax.servlet / Apache
+      HttpClient 4.x compatibility regardless of upstream's choices. See HBASE-30194.
+    -->
     <dependency>
-      <groupId>org.apache.thrift</groupId>
-      <artifactId>libthrift</artifactId>
+      <groupId>org.apache.hbase.thirdparty</groupId>
+      <artifactId>hbase-shaded-thrift</artifactId>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
@@ -371,12 +377,15 @@
                     <requireProperty>
                       <property>thrift.version</property>
                       <message>"The Thrift version must be specified."</message>
-                      <regex>0\.14\.1</regex>
+                      <regex>0\.23\.\d+</regex>
                       <regexMessage>-
 -
 [FATAL] ==========================================================================================
-[FATAL] HBase Thrift requires the thrift generator version 0.14.1.
-[FATAL] Setting it to something else needs to be reviewed for wire and behavior compatibility.
+[FATAL] HBase Thrift requires the thrift generator version 0.23.x (matching the libthrift
+[FATAL] runtime shipped in hbase-thirdparty/hbase-shaded-thrift). Setting it to something else
+[FATAL] needs to be reviewed for wire and behavior compatibility, and for source compatibility
+[FATAL] with the maven-replacer-plugin rewrite that retargets generated code to the shaded
+[FATAL] org.apache.hbase.thirdparty.org.apache.thrift namespace.
 [FATAL] ==========================================================================================
 -
 -</regexMessage>
@@ -447,6 +456,42 @@
                     <argument>${basedir}/src/main/resources/org/apache/hadoop/hbase/thrift2/hbase.thrift</argument>
                   </arguments>
                 </configuration>
+              </execution>
+            </executions>
+          </plugin>
+          <!--
+            After the Thrift IDL compiler regenerates Java sources under src/main/java/.../generated,
+            rewrite the `import org.apache.thrift.*` lines (and qualified references) to point at
+            the relocated namespace used by org.apache.hbase.thirdparty:hbase-shaded-thrift. The
+            committed generated sources are expected to already contain the rewritten imports;
+            this step keeps the in-tree files in sync after a regeneration. The regex is
+            idempotent: it leaves any already-shaded `org.apache.hbase.thirdparty.org.apache.thrift`
+            references alone (we only match when not preceded by a dot).
+          -->
+          <plugin>
+            <groupId>com.google.code.maven-replacer-plugin</groupId>
+            <artifactId>replacer</artifactId>
+            <configuration>
+              <basedir>${basedir}/src/main/java</basedir>
+              <includes>
+                <include>org/apache/hadoop/hbase/thrift/generated/**/*.java</include>
+                <include>org/apache/hadoop/hbase/thrift2/generated/**/*.java</include>
+              </includes>
+              <ignoreErrors>false</ignoreErrors>
+              <replacements>
+                <replacement>
+                  <token>([^.])org\.apache\.thrift</token>
+                  <value>$1org.apache.hbase.thirdparty.org.apache.thrift</value>
+                </replacement>
+              </replacements>
+            </configuration>
+            <executions>
+              <execution>
+                <id>shade-generated-thrift-imports</id>
+                <goals>
+                  <goal>replace</goal>
+                </goals>
+                <phase>process-sources</phase>
               </execution>
             </executions>
           </plugin>

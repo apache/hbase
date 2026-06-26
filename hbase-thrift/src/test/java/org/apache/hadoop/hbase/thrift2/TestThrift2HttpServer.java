@@ -31,12 +31,13 @@ import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.thrift.protocol.TBinaryProtocol;
-import org.apache.thrift.protocol.TProtocol;
-import org.apache.thrift.transport.THttpClient;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
+
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TBinaryProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TProtocol;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.THttpClient;
 
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)

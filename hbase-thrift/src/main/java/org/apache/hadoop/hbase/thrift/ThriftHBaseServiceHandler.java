@@ -82,12 +82,12 @@ import org.apache.hadoop.hbase.thrift.generated.TRowResult;
 import org.apache.hadoop.hbase.thrift.generated.TScan;
 import org.apache.hadoop.hbase.thrift.generated.TThriftServerType;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.thrift.TException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
+import org.apache.hbase.thirdparty.org.apache.thrift.TException;
 
 /**
  * The HBaseServiceHandler is a glue object that connects Thrift RPC calls to the HBase client API
