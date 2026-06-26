@@ -31,7 +31,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * ThriftMetrics.
  */
 @InterfaceAudience.Private
-public class HbaseHandlerMetricsProxy implements InvocationHandler {
+public final class HbaseHandlerMetricsProxy implements InvocationHandler {
 
   private final Object handler;
   private final ThriftMetrics metrics;

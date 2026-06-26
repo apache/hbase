@@ -79,9 +79,10 @@ import org.apache.hadoop.hbase.thrift2.generated.TTableDescriptor;
 import org.apache.hadoop.hbase.thrift2.generated.TTableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.thrift.TException;
-import org.apache.thrift.transport.TTransport;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.org.apache.thrift.TException;
+import org.apache.hbase.thirdparty.org.apache.thrift.transport.TTransport;
 
 @InterfaceAudience.Private
 public class ThriftAdmin implements Admin {

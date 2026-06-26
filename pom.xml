@@ -613,7 +613,11 @@
     <internal.protobuf.version>4.34.0</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.14.1</thrift.version>
+    <!-- Version of the Thrift IDL compiler used to (re)generate the Java sources under
+         hbase-thrift/src/main/java/.../generated when the -Pcompile-thrift profile is active.
+         The libthrift runtime classes are pulled from the hbase-shaded-thrift artifact in
+         hbase-thirdparty. -->
+    <thrift.version>0.23.0</thrift.version>
     <zookeeper.version>3.8.6</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.33</slf4j.version>
@@ -673,7 +677,11 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.13</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.14</hbase-thirdparty.version>
+    <!-- for.exclusion version are NOT for direct dependencies. To use the provided
+    scope to transitively exclude some transitive dependencies, we need to specify
+    some existing version to for maven. -->
+    <tomcat.version.for.exclusion>${tomcat.jasper.version}</tomcat.version.for.exclusion>
     <!-- Coverage properties -->
     <jacoco.version>0.8.8</jacoco.version>
     <jacocoArgLine/>
@@ -1279,17 +1287,6 @@
         <version>${jline.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.thrift</groupId>
-        <artifactId>libthrift</artifactId>
-        <version>${thrift.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>org.jruby</groupId>
         <artifactId>jruby-complete</artifactId>
         <version>${jruby.version}</version>
@@ -1560,6 +1557,11 @@
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-protobuf</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-thrift</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
@@ -2293,6 +2295,25 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-libthrift</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.thrift:*</exclude>
+                  </excludes>
+                  <message>Do not depend on upstream libthrift. Use the shaded
+                    org.apache.hbase.thirdparty:hbase-shaded-thrift artifact instead, see
+                    HBASE-30194 / HBASE-30195.</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
@@ -2364,6 +2385,7 @@
                     <bannedImport>org.apache.commons.collections.**</bannedImport>
                     <bannedImport>org.apache.commons.collections4.**</bannedImport>
                     <bannedImport>org.apache.hadoop.thirdparty.**</bannedImport>
+                    <bannedImport>org.apache.thrift.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
