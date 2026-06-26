@@ -26,9 +26,10 @@ import java.util.Locale;
 import java.util.TreeMap;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HColumnDescriptor;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.Append;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.io.compress.Compression;
@@ -44,7 +45,9 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
-public class ThriftUtilities {
+public final class ThriftUtilities {
+  private ThriftUtilities() {
+  }
 
   /**
    * This utility method creates a new Hbase HColumnDescriptor object based on a Thrift
@@ -52,7 +55,8 @@ public class ThriftUtilities {
    * @param in Thrift ColumnDescriptor object
    * @throws IllegalArgument if the column name is empty
    */
-  static public HColumnDescriptor colDescFromThrift(ColumnDescriptor in) throws IllegalArgument {
+  public static ColumnFamilyDescriptor colDescFromThrift(ColumnDescriptor in)
+    throws IllegalArgument {
     Compression.Algorithm comp =
       Compression.getCompressionAlgorithmByName(in.compression.toLowerCase(Locale.ROOT));
     BloomType bt = BloomType.valueOf(in.bloomFilterType);
@@ -61,10 +65,10 @@ public class ThriftUtilities {
       throw new IllegalArgument("column name is empty");
     }
     byte[] parsedName = CellUtil.parseColumn(Bytes.getBytes(in.name))[0];
-    HColumnDescriptor col = new HColumnDescriptor(parsedName).setMaxVersions(in.maxVersions)
+    return ColumnFamilyDescriptorBuilder.newBuilder(parsedName).setMaxVersions(in.maxVersions)
       .setCompressionType(comp).setInMemory(in.inMemory).setBlockCacheEnabled(in.blockCacheEnabled)
-      .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE).setBloomFilterType(bt);
-    return col;
+      .setTimeToLive(in.timeToLive > 0 ? in.timeToLive : Integer.MAX_VALUE).setBloomFilterType(bt)
+      .build();
   }
 
   /**
@@ -72,7 +76,7 @@ public class ThriftUtilities {
    * HColumnDescriptor object. Hbase HColumnDescriptor object
    * @return Thrift ColumnDescriptor
    */
-  static public ColumnDescriptor colDescFromHbase(HColumnDescriptor in) {
+  public static ColumnDescriptor colDescFromHbase(ColumnFamilyDescriptor in) {
     ColumnDescriptor col = new ColumnDescriptor();
     col.name = ByteBuffer.wrap(Bytes.add(in.getName(), KeyValue.COLUMN_FAMILY_DELIM_ARRAY));
     col.maxVersions = in.getMaxVersions();
@@ -89,7 +93,7 @@ public class ThriftUtilities {
    * empty list is returned if the input is null. Hbase Cell object
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(Cell in) {
+  public static List<TCell> cellFromHBase(Cell in) {
     List<TCell> list = new ArrayList<>(1);
     if (in != null) {
       list.add(new TCell(ByteBuffer.wrap(CellUtil.cloneValue(in)), in.getTimestamp()));
@@ -103,7 +107,7 @@ public class ThriftUtilities {
    * @param in Hbase Cell array
    * @return Thrift TCell array
    */
-  static public List<TCell> cellFromHBase(Cell[] in) {
+  public static List<TCell> cellFromHBase(Cell[] in) {
     List<TCell> list = null;
     if (in != null) {
       list = new ArrayList<>(in.length);
@@ -124,14 +128,16 @@ public class ThriftUtilities {
    * TRowResult's columns member which is a map of columnName and TCell struct
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
+  public static List<TRowResult> rowResultFromHBase(Result[] in, boolean sortColumns) {
     List<TRowResult> results = new ArrayList<>(in.length);
     for (Result result_ : in) {
       if (result_ == null || result_.isEmpty()) {
         continue;
       }
+
       TRowResult result = new TRowResult();
       result.row = ByteBuffer.wrap(result_.getRow());
+
       if (sortColumns) {
         result.sortedColumns = new ArrayList<>();
         for (Cell kv : result_.rawCells()) {
@@ -149,8 +155,10 @@ public class ThriftUtilities {
             new TCell(ByteBuffer.wrap(CellUtil.cloneValue(kv)), kv.getTimestamp()));
         }
       }
+
       results.add(result);
     }
+
     return results;
   }
 
@@ -160,11 +168,11 @@ public class ThriftUtilities {
    * objects
    * @return Thrift TRowResult array
    */
-  static public List<TRowResult> rowResultFromHBase(Result[] in) {
+  public static List<TRowResult> rowResultFromHBase(Result[] in) {
     return rowResultFromHBase(in, false);
   }
 
-  static public List<TRowResult> rowResultFromHBase(Result in) {
+  public static List<TRowResult> rowResultFromHBase(Result in) {
     Result[] result = { in };
     return rowResultFromHBase(result);
   }
@@ -177,7 +185,11 @@ public class ThriftUtilities {
   public static Increment incrementFromThrift(TIncrement tincrement) {
     Increment inc = new Increment(tincrement.getRow());
     byte[][] famAndQf = CellUtil.parseColumn(tincrement.getColumn());
-    if (famAndQf.length != 2) return null;
+
+    if (famAndQf.length != 2) {
+      return null;
+    }
+
     inc.addColumn(famAndQf[0], famAndQf[1], tincrement.getAmmount());
     return inc;
   }
