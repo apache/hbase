@@ -467,9 +467,8 @@ public class TestFuzzyRowFilter {
   }
 
   /**
-   * Unsafe-path coverage for branch-2's is_mask_v2 wire plumbing (only exercised on the no-unsafe
-   * path otherwise): the flag must round-trip (v1-parsed stays v1, v2/client stays v2) and
-   * {@code toByteArray} must always emit the public {0, 1} mask, never the internal {-1, 0/2}.
+   * Unsafe-path coverage for branch-2's is_mask_v2 plumbing: the flag round-trips (v1 stays v1,
+   * v2/client stays v2) and toByteArray always emits the public {0, 1} mask.
    */
   @Test
   public void testIsMaskV2WireRoundTrip() throws Exception {
@@ -502,9 +501,8 @@ public class TestFuzzyRowFilter {
   }
 
   /**
-   * getFuzzyKeys must expose the public {0, 1} form, never the internal stored encoding (on the
-   * unsafe path the stored mask is {-1, 0}). This is the form REST ScannerModel feeds back into the
-   * constructor, so a leak would corrupt a round-tripped REST filter.
+   * getFuzzyKeys must expose the public {0, 1} form, not the internal stored mask (unsafe stores
+   * {-1, 0}) -- REST ScannerModel feeds it straight back into the constructor.
    */
   @Test
   public void testGetFuzzyKeysReturnsPublicForm() {
@@ -514,10 +512,8 @@ public class TestFuzzyRowFilter {
   }
 
   /**
-   * Unsafe-path companion to
-   * TestFuzzyRowFilterWoUnsafe#testParseFromLegacyV1EncodedFilterEnforcesFixedPositions: a legacy
-   * pre-HBASE-26537 v1 wire (no is_mask_v2 flag, internal {-1, 0} form) must still enforce its fixed
-   * positions after parseFrom.
+   * Unsafe-path companion to the no-unsafe legacy-v1 test: a no-flag, internal {-1, 0} v1 wire must
+   * still enforce its fixed positions after parseFrom.
    */
   @Test
   public void testParseFromLegacyV1EncodedFilterEnforcesFixedPositions() throws Exception {
@@ -526,18 +522,16 @@ public class TestFuzzyRowFilter {
         .setFirst(UnsafeByteOperations.unsafeWrap(new byte[] { 1, 0, 3 }))
         .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { -1, 0, -1 })))
       .build().toByteArray();
-    assertEquals(Filter.ReturnCode.INCLUDE,
-      FuzzyRowFilter.parseFrom(wire).filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
-    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT,
-      FuzzyRowFilter.parseFrom(wire).filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 9 })));
+    assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
+      .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, FuzzyRowFilter.parseFrom(wire)
+      .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 9 })));
   }
 
   /**
-   * Inherent twin of
-   * TestFuzzyRowFilterWoUnsafe#testParseFromLegacyNoUnsafeAllFixedMaskEnforcesFixedPositions: a
-   * no-flag all-zeros wire {0, 0, 0} is the legacy unsafe v1 all-wildcard encoding (HBASE-15676), so
-   * on the unsafe path it matches every row -- the deliberate opposite of the no-unsafe all-fixed
-   * reading. Pins that cross-version asymmetry on the unsafe side; guarded to the unsafe path.
+   * Twin of the no-unsafe all-fixed test: a no-flag all-zeros wire {0, 0, 0} is the legacy unsafe
+   * v1 all-wildcard encoding (HBASE-15676), so on the unsafe path it matches every row -- the
+   * deliberate opposite of the no-unsafe all-fixed reading. Guarded to the unsafe path.
    */
   @Test
   public void testParseFromLegacyV1AllZerosMaskIsAllWildcardOnUnsafe() throws Exception {
@@ -547,8 +541,8 @@ public class TestFuzzyRowFilter {
         .setFirst(UnsafeByteOperations.unsafeWrap(new byte[] { 1, 2, 3 }))
         .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { 0, 0, 0 })))
       .build().toByteArray();
-    assertEquals(Filter.ReturnCode.INCLUDE,
-      FuzzyRowFilter.parseFrom(wire).filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 9, 9, 9 })));
+    assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
+      .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 9, 9, 9 })));
   }
 
   private static FuzzyRowFilter newReverseFuzzyRowFilter() {

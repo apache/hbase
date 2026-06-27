@@ -70,7 +70,7 @@ public class TestFuzzyRowFilterWoUnsafe {
   }
 
   /**
-   * A row that matches the fuzzy rule only thanks to a wildcard position must be INCLUDEd. On the
+   * A row that matches the fuzzy rule only thanks to a wildcard position must be INCLUDED. On the
    * broken no-unsafe path the mask was shifted to all-zeroes (all positions treated as fixed), so
    * the wildcard row was wrongly rejected.
    */
@@ -145,7 +145,7 @@ public class TestFuzzyRowFilterWoUnsafe {
    * exactly the {key, mask} pair {@link FuzzyRowFilter#parseFrom} hands to the constructor for such
    * a filter. Before the fix the no-unsafe constructor left {-1, 2} untouched, so
    * {@link FuzzyRowFilter#satisfiesNoUnsafe} (which keys off {0, 1}) treated every position as a
-   * wildcard and stopped enforcing the fixed bytes, wrongly INCLUDEing non-matching rows.
+   * wildcard and stopped enforcing the fixed bytes, wrongly INCLUDING non-matching rows.
    */
   @Test
   public void testUnsafeEncodedMaskFromPeerEnforcesFixedPositions() {
@@ -155,7 +155,7 @@ public class TestFuzzyRowFilterWoUnsafe {
     assertEquals(Filter.ReturnCode.INCLUDE,
       match.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
 
-    // A row that differs at a FIXED position (pos 2: 9 != 3) must not be INCLUDEd.
+    // A row that differs at a FIXED position (pos 2: 9 != 3) must not be INCLUDED.
     FuzzyRowFilter reject = new FuzzyRowFilter(
       Collections.singletonList(new Pair<>(new byte[] { 1, 0, 3 }, new byte[] { -1, 2, -1 })));
     assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT,
@@ -179,17 +179,15 @@ public class TestFuzzyRowFilterWoUnsafe {
 
     assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
       .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
-    // A row that differs at a FIXED position (pos 2: 9 != 3) must not be INCLUDEd.
+    // A row that differs at a FIXED position (pos 2: 9 != 3) must not be INCLUDED.
     assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, FuzzyRowFilter.parseFrom(wire)
       .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 9 })));
   }
 
   /**
-   * branch-2 keeps the legacy HBASE-15676 v1 wire encoding for backwards compatibility: a peer that
-   * predates the {@code is_mask_v2} flag puts the mask on the wire in its v1 internal form
-   * {-1 (fixed), 0 (non-fixed)} with no flag, so {@link FuzzyRowFilter#parseFrom} reads it as v1
-   * (processed wildcard = 0). A no-unsafe server must still normalize it back to {0, 1} and enforce
-   * the fixed positions, exactly like the v2 case above.
+   * A legacy pre-HBASE-26537 peer wires the v1 internal mask {-1 (fixed), 0 (non-fixed)} with no
+   * is_mask_v2 flag. A no-unsafe server must normalize it back to {0, 1} and enforce the fixed
+   * positions, like the v2 case above.
    */
   @Test
   public void testParseFromLegacyV1EncodedFilterEnforcesFixedPositions() throws Exception {
@@ -202,18 +200,15 @@ public class TestFuzzyRowFilterWoUnsafe {
 
     assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
       .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
-    // A row that differs at a FIXED position (pos 2: 9 != 3) must not be INCLUDEd.
+    // A row that differs at a FIXED position (pos 2: 9 != 3) must not be INCLUDED.
     assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, FuzzyRowFilter.parseFrom(wire)
       .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 9 })));
   }
 
   /**
-   * Legacy public form is the other half of the {@code 0} ambiguity: a pre-HBASE-26537 no-unsafe
-   * peer serialized the mask in its public {0 (fixed), 1 (non-fixed)} form with no is_mask_v2 flag,
-   * so an all-fixed rule went on the wire as all-zeros {0, 0, 0}. Since that carries no -1 fixed
-   * marker it must be read as public all-fixed (NOT as a legacy unsafe all-wildcard mask, which is
-   * also all-zeros), so a row differing at a fixed position is rejected rather than wrongly
-   * INCLUDEd. This pins the chosen tradeoff for the inherently ambiguous all-zeros wire.
+   * The other half of the {@code 0} ambiguity: a legacy no-unsafe peer wires an all-fixed rule as
+   * all-zeros {0, 0, 0} (public form, no flag). With no -1 marker it must read as public all-fixed,
+   * not as a legacy unsafe all-wildcard mask -- so a row differing at a fixed position is rejected.
    */
   @Test
   public void testParseFromLegacyNoUnsafeAllFixedMaskEnforcesFixedPositions() throws Exception {
@@ -224,7 +219,7 @@ public class TestFuzzyRowFilterWoUnsafe {
         .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { 0, 0, 0 })))
       .build().toByteArray();
 
-    // Exact-match row is INCLUDEd ...
+    // Exact-match row is INCLUDED ...
     assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
       .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 2, 3 })));
     // ... but a row differing at a fixed position must NOT be (all-zeros is all-fixed, not
@@ -234,11 +229,9 @@ public class TestFuzzyRowFilterWoUnsafe {
   }
 
   /**
-   * A v2 unsafe peer encodes an all-wildcard rule as the internal all-non-fixed mask {2, 2, 2} (with
-   * is_mask_v2 set). It carries no -1 fixed marker but is still internal form, since the public {0,
-   * 1} form never uses 2. A no-unsafe server must normalize it back to the public all-wildcard {1,
-   * 1, 1}, so getFuzzyKeys / toByteArray / equals never leak the internal {2} encoding (scan
-   * matching is unaffected either way, but the wire/equality contract is public-form).
+   * A v2 unsafe peer wires an all-wildcard rule as the internal {2, 2, 2} (with is_mask_v2 set) --
+   * no -1 marker, but still internal since the public form never uses 2. A no-unsafe server must
+   * normalize it to public {1, 1, 1} so getFuzzyKeys / toByteArray / equals never leak {2}.
    */
   @Test
   public void testParseFromUnsafeAllWildcardMaskNormalizesToPublicForm() throws Exception {
