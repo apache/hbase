@@ -22,7 +22,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.PriorityQueue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
@@ -127,9 +126,11 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       p.setFirst(Arrays.copyOf(aFuzzyKeysData.getFirst(), aFuzzyKeysData.getFirst().length));
       p.setSecond(Arrays.copyOf(aFuzzyKeysData.getSecond(), aFuzzyKeysData.getSecond().length));
 
-      // update mask ( 0 -> -1 (0xff), 1 -> [0 or 2 depending on processedWildcardMask value])
+      // Normalize the mask, zero the non-fixed key bytes, then fix the unsafe mask to its final
+      // {-1, 0} form once here so it is never mutated during scanning.
       p.setSecond(preprocessMask(p.getSecond()));
-      preprocessSearchKey(p);
+      preprocessSearchKey(p, UNSAFE_UNALIGNED);
+      preprocessMaskForSatisfies(p.getSecond(), UNSAFE_UNALIGNED);
 
       fuzzyKeyDataCopy.add(p);
     }
@@ -137,29 +138,41 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     this.tracker = new RowTracker();
   }
 
-  private void preprocessSearchKey(Pair<byte[], byte[]> p) {
-    if (!UNSAFE_UNALIGNED) {
-      // do nothing
-      return;
-    }
+  /**
+   * Zeroes the non-fixed ("don't care") positions of the search key (on both paths) so the
+   * next-cell hint from {@link #getNextForFuzzyRule} is the smallest matching row. The byte at a
+   * non-fixed position is never compared, so this affects neither matching nor deserialization.
+   */
+  static void preprocessSearchKey(Pair<byte[], byte[]> p, boolean unsafeUnaligned) {
     byte[] key = p.getFirst();
     byte[] mask = p.getSecond();
     for (int i = 0; i < mask.length; i++) {
-      // set non-fixed part of a search key to 0.
-      if (mask[i] == processedWildcardMask) {
+      // non-fixed = anything but -1 on unsafe ({-1, 0/2}); 1 on no-unsafe ({0, 1})
+      if ((unsafeUnaligned && mask[i] != -1) || (!unsafeUnaligned && mask[i] == 1)) {
         key[i] = 0;
       }
     }
   }
 
   /**
-   * We need to preprocess mask array, as since we treat 2's as unfixed positions and -1 (0xff) as
-   * fixed positions
+   * Normalizes the incoming mask to the active path's encoding. Input is the public {0, 1} form, or
+   * the already-preprocessed unsafe form ({-1, 0} v1 / {-1, 2} v2) when {@link #parseFrom}
+   * deserializes a filter from a legacy (pre-HBASE-30256) unsafe peer -- current peers emit the
+   * public {0, 1} form via {@link #toByteArray}; accepting both keeps such legacy filters working
+   * across platforms. Unsafe keeps/produces {-1, 0/2}; no-unsafe keeps/produces {0, 1}.
    * @return mask array
    */
   private byte[] preprocessMask(byte[] mask) {
     if (!UNSAFE_UNALIGNED) {
-      // do nothing
+      // A mask from an unsafe peer is in internal form (-1 fixed; non-fixed 0 v1 / 2 v2). A byte
+      // outside the public {0, 1} marks internal form -> normalize to {0, 1}. An all-zeros mask is
+      // kept as public all-fixed: ambiguous with a legacy unsafe all-wildcard mask (HBASE-15676),
+      // resolved as all-fixed to avoid over-matching.
+      if (!isPublicMask(mask)) {
+        for (int i = 0; i < mask.length; i++) {
+          mask[i] = (byte) (mask[i] == -1 ? 0 : 1);
+        }
+      }
       return mask;
     }
     if (isPreprocessedMask(mask)) return mask;
@@ -173,6 +186,19 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     return mask;
   }
 
+  /**
+   * Returns true if {@code mask} is already in the public {0, 1} form, i.e. it has no internal-form
+   * byte (a -1 or a 2). An all-zeros mask counts as public (all-fixed).
+   */
+  private static boolean isPublicMask(byte[] mask) {
+    for (int i = 0; i < mask.length; i++) {
+      if (mask[i] != 0 && mask[i] != 1) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   private boolean isPreprocessedMask(byte[] mask) {
     for (int i = 0; i < mask.length; i++) {
       if (mask[i] != -1 && mask[i] != processedWildcardMask) {
@@ -180,6 +206,23 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       }
     }
     return true;
+  }
+
+  /**
+   * Converts a stored mask back to the public {0 (fixed), 1 (non-fixed)} form as a new array, so
+   * serialization, {@link #getFuzzyKeys}, equals and hashCode never expose the internal encoding.
+   * No-unsafe already stores {0, 1}; unsafe stores {-1, 0}, where -1 is fixed and anything else is
+   * non-fixed.
+   * @return a new array in {0, 1} form
+   */
+  private static byte[] toConstructorMask(byte[] mask, boolean unsafeUnaligned) {
+    byte[] out = Arrays.copyOf(mask, mask.length);
+    if (unsafeUnaligned) {
+      for (int i = 0; i < out.length; i++) {
+        out[i] = (byte) (out[i] == -1 ? 0 : 1);
+      }
+    }
+    return out;
   }
 
   /**
@@ -192,18 +235,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       Pair<byte[], byte[]> returnKey = new Pair<>();
       // This won't revert the original key's don't care values, but we don't care.
       returnKey.setFirst(Arrays.copyOf(fuzzyKey.getFirst(), fuzzyKey.getFirst().length));
-      byte[] returnMask = Arrays.copyOf(fuzzyKey.getSecond(), fuzzyKey.getSecond().length);
-      if (UNSAFE_UNALIGNED && isPreprocessedMask(returnMask)) {
-        // Revert the preprocessing.
-        for (int i = 0; i < returnMask.length; i++) {
-          if (returnMask[i] == -1) {
-            returnMask[i] = 0; // -1 >> 0
-          } else if (returnMask[i] == processedWildcardMask) {
-            returnMask[i] = 1; // 0 or 2 >> 1 depending on mask version
-          }
-        }
-      }
-      returnKey.setSecond(returnMask);
+      returnKey.setSecond(toConstructorMask(fuzzyKey.getSecond(), UNSAFE_UNALIGNED));
       returnList.add(returnKey);
     }
     return returnList;
@@ -232,7 +264,6 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     for (int i = startIndex; i < size + startIndex; i++) {
       final int index = i % size;
       Pair<byte[], byte[]> fuzzyData = fuzzyKeysData.get(index);
-      idempotentMaskShift(fuzzyData.getSecond());
       SatisfiesCode satisfiesCode = satisfies(isReversed(), c.getRowArray(), c.getRowOffset(),
         c.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
       if (satisfiesCode == SatisfiesCode.YES) {
@@ -348,9 +379,11 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     }
 
     byte[] updateWith(Cell currentCell, Pair<byte[], byte[]> fuzzyData) {
-      byte[] nextRowKeyCandidate =
-        getNextForFuzzyRule(isReversed(), currentCell.getRowArray(), currentCell.getRowOffset(),
-          currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyData.getSecond());
+      // getNextForFuzzyRule needs {-1, 0}: a converted copy on no-unsafe, the stored mask on
+      // unsafe.
+      byte[] fuzzyKeyMeta = preprocessMaskForHinting(fuzzyData.getSecond(), UNSAFE_UNALIGNED);
+      byte[] nextRowKeyCandidate = getNextForFuzzyRule(isReversed(), currentCell.getRowArray(),
+        currentCell.getRowOffset(), currentCell.getRowLength(), fuzzyData.getFirst(), fuzzyKeyMeta);
       if (nextRowKeyCandidate != null) {
         nextRows.add(new Pair<>(nextRowKeyCandidate, fuzzyData));
       }
@@ -372,7 +405,9 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       BytesBytesPair.Builder bbpBuilder = BytesBytesPair.newBuilder();
       bbpBuilder.setFirst(UnsafeByteOperations.unsafeWrap(fuzzyData.getFirst()));
-      bbpBuilder.setSecond(UnsafeByteOperations.unsafeWrap(fuzzyData.getSecond()));
+      // Emit the public {0, 1} mask, not the internal form, so the wire is platform-independent.
+      bbpBuilder.setSecond(UnsafeByteOperations
+        .unsafeWrap(toConstructorMask(fuzzyData.getSecond(), UNSAFE_UNALIGNED)));
       builder.addFuzzyKeysData(bbpBuilder);
     }
     return builder.build().toByteArray();
@@ -503,6 +538,40 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       }
     }
     return SatisfiesCode.YES;
+  }
+
+  /**
+   * Mutates {@code mask} in place into the form {@link #satisfies} expects. Called once from the
+   * constructor so the stored mask is fixed up front and never mutated during scanning. Unsafe:
+   * shift {-1, 0/2} -&gt; {-1, 0} (the word-based satisfies wants non-fixed = 0). No-unsafe: no-op,
+   * {@link #satisfiesNoUnsafe} already wants {0, 1}.
+   */
+  static void preprocessMaskForSatisfies(byte[] mask, boolean unsafeUnaligned) {
+    if (!unsafeUnaligned) {
+      return;
+    }
+    // unsafe stores {-1, <wildcard>}; shift to {-1, 0} for satisfies (works for v1 and v2)
+    idempotentMaskShift(mask);
+  }
+
+  /**
+   * Returns the mask in the {-1 (fixed), 0 (non-fixed)} form {@link #getNextForFuzzyRule} expects.
+   * No-unsafe converts {0, 1} into a NEW array (the stored {0, 1} is still needed by
+   * {@link #satisfiesNoUnsafe}); unsafe is already {-1, 0}, returned as is.
+   */
+  static byte[] preprocessMaskForHinting(byte[] mask, boolean unsafeUnaligned) {
+    if (unsafeUnaligned) {
+      return mask;
+    }
+    byte[] converted = Arrays.copyOf(mask, mask.length);
+    for (int i = 0; i < converted.length; i++) {
+      if (converted[i] == 0) {
+        converted[i] = -1;
+      } else if (converted[i] == 1) {
+        converted[i] = 0;
+      }
+    }
+    return converted;
   }
 
   static SatisfiesCode satisfiesNoUnsafe(boolean reverse, byte[] row, int offset, int length,
@@ -754,9 +823,11 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {
       Pair<byte[], byte[]> thisData = this.fuzzyKeysData.get(i);
       Pair<byte[], byte[]> otherData = other.fuzzyKeysData.get(i);
+      // Compare masks in the normalized {0, 1} form, so equality matches the serialized bytes.
       if (
         !(Bytes.equals(thisData.getFirst(), otherData.getFirst())
-          && Bytes.equals(thisData.getSecond(), otherData.getSecond()))
+          && Bytes.equals(toConstructorMask(thisData.getSecond(), UNSAFE_UNALIGNED),
+            toConstructorMask(otherData.getSecond(), UNSAFE_UNALIGNED)))
       ) {
         return false;
       }
@@ -771,6 +842,12 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
 
   @Override
   public int hashCode() {
-    return Objects.hash(this.fuzzyKeysData);
+    int result = 1;
+    for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
+      result = 31 * result + Bytes.hashCode(fuzzyData.getFirst());
+      result =
+        31 * result + Bytes.hashCode(toConstructorMask(fuzzyData.getSecond(), UNSAFE_UNALIGNED));
+    }
+    return result;
   }
 }
