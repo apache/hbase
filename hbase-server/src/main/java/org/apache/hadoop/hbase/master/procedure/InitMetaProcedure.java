@@ -77,7 +77,7 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   private static TableDescriptor writeFsLayout(Path rootDir, Configuration conf)
     throws IOException {
-    LOG.info("BOOTSTRAP: creating hbase:meta region");
+    LOG.info("BOOTSTRAP: creating {} region", TableName.META_TABLE_NAME);
     FileSystem fs = rootDir.getFileSystem(conf);
     Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
     if (fs.exists(tableDir) && !deleteMetaTableDirectoryIfPartial(fs, tableDir)) {

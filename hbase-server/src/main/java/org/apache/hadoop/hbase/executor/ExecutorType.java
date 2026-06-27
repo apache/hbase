@@ -1,4 +1,4 @@
-/*
+hbase-server/src/main/java/org/apache/hadoop/hbase/executor/ExecutorType.java/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -57,7 +57,8 @@ public enum ExecutorType {
   RS_SNAPSHOT_OPERATIONS(36),
   RS_FLUSH_OPERATIONS(37),
   RS_RELOAD_QUOTAS_OPERATIONS(38),
-  RS_LOG_ROLL(39);
+  RS_LOG_ROLL(39),
+  RS_REFRESH_HFILES(40);
 
   ExecutorType(int value) {
   }

@@ -431,7 +431,7 @@ public interface RegionInfo extends Comparable<RegionInfo> {
    */
   static String prettyPrint(final String encodedRegionName) {
     if (encodedRegionName.equals("1028785192")) {
-      return encodedRegionName + "/hbase:meta";
+      return encodedRegionName + "/" + TableName.META_TABLE_NAME;
     }
     return encodedRegionName;
   }
