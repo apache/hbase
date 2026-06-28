@@ -195,7 +195,7 @@ public final class StoreFileTrackerFactory {
     // descriptors with the SFT impl specific configs. By the time this happens, the table has no
     // regions nor stores yet, so it can't create a proper StoreContext.
     if (StringUtils.isEmpty(descriptor.getValue(TRACKER_IMPL))) {
-      StoreFileTracker tracker = StoreFileTrackerFactory.create(conf, true, null);
+      StoreFileTracker tracker = create(conf, true, null);
       TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(descriptor);
       return tracker.updateWithTrackerConfigs(builder).build();
     }
