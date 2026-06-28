@@ -25,7 +25,6 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
-import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.security.cert.X509Certificate;
 import javax.net.ssl.SSLHandshakeException;
@@ -48,7 +47,6 @@ import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
 import org.bouncycastle.asn1.x500.X500NameBuilder;
 import org.bouncycastle.asn1.x500.style.BCStyle;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -143,7 +141,7 @@ public abstract class AbstractTestMutualTls {
   }
 
   protected abstract void initialize(Configuration serverConf, Configuration clientConf)
-    throws IOException, GeneralSecurityException, OperatorCreationException;
+    throws Exception;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -164,8 +162,7 @@ public abstract class AbstractTestMutualTls {
     stub = TestProtobufRpcServiceImpl.newBlockingStub(rpcClient, rpcServer.getListenerAddress());
   }
 
-  protected void handleCertConfig(Configuration confToSet)
-    throws GeneralSecurityException, IOException, OperatorCreationException {
+  protected void handleCertConfig(Configuration confToSet) throws Exception {
     switch (certConfig) {
       case NO_CLIENT_CERT:
         // clearing out the keystore location will cause no cert to be sent.

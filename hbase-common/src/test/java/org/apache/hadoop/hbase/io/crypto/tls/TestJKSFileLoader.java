@@ -52,7 +52,7 @@ public class TestJKSFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadKeyStoreWithWrongPassword() throws IOException {
+  public void testLoadKeyStoreWithWrongPassword() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       new JKSFileLoader.Builder().setKeyStorePath(path)
@@ -61,7 +61,7 @@ public class TestJKSFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadKeyStoreWithWrongFilePath() throws IOException {
+  public void testLoadKeyStoreWithWrongFilePath() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       new JKSFileLoader.Builder().setKeyStorePath(path + ".does_not_exist")
@@ -78,7 +78,7 @@ public class TestJKSFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadKeyStoreWithWrongFileType() throws IOException {
+  public void testLoadKeyStoreWithWrongFileType() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       // Trying to load a PEM file with JKS loader should fail
@@ -96,7 +96,7 @@ public class TestJKSFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadTrustStoreWithWrongPassword() throws IOException {
+  public void testLoadTrustStoreWithWrongPassword() throws Exception {
     String path = x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       new JKSFileLoader.Builder().setTrustStorePath(path)
@@ -105,7 +105,7 @@ public class TestJKSFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadTrustStoreWithWrongFilePath() throws IOException {
+  public void testLoadTrustStoreWithWrongFilePath() throws Exception {
     String path = x509TestContext.getTrustStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       new JKSFileLoader.Builder().setTrustStorePath(path + ".does_not_exist")

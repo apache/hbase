@@ -151,8 +151,9 @@ final class X509TestHelpers {
         "CA private key does not match the public key in " + "the CA cert");
     }
     LocalDate now = LocalDate.now(ZoneId.systemDefault());
-    X509v3CertificateBuilder builder = initCertBuilder(new X500Name(caCert.getIssuerDN().getName()),
-      now, now.plusDays(1), certSubject, certPublicKey);
+    X509v3CertificateBuilder builder =
+      initCertBuilder(new X500Name(caCert.getIssuerX500Principal().getName()), now, now.plusDays(1),
+        certSubject, certPublicKey);
     builder.addExtension(Extension.basicConstraints, true, new BasicConstraints(false)); // not a CA
     builder.addExtension(Extension.keyUsage, true,
       new KeyUsage(KeyUsage.digitalSignature | KeyUsage.keyEncipherment));
@@ -305,7 +306,7 @@ final class X509TestHelpers {
     if (password != null && password.length > 0) {
       encryptor =
         new JceOpenSSLPKCS8EncryptorBuilder(PKCSObjectIdentifiers.pbeWithSHAAnd3_KeyTripleDES_CBC)
-          .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG).setPasssword(password)
+          .setProvider(BouncyCastleProvider.PROVIDER_NAME).setRandom(PRNG).setPassword(password)
           .build();
     }
     pemWriter.writeObject(new JcaPKCS8Generator(key, encryptor));
@@ -382,7 +383,7 @@ final class X509TestHelpers {
   private static byte[] certToTrustStoreBytes(X509Certificate cert, char[] keyPassword,
     KeyStore trustStore) throws IOException, GeneralSecurityException {
     trustStore.load(null, keyPassword);
-    trustStore.setCertificateEntry(cert.getSubjectDN().toString(), cert);
+    trustStore.setCertificateEntry(cert.getSubjectX500Principal().toString(), cert);
     ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
     trustStore.store(outputStream, keyPassword);
     outputStream.flush();

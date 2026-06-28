@@ -53,7 +53,7 @@ public class TestPEMFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadKeyStoreWithWrongPassword() throws IOException {
+  public void testLoadKeyStoreWithWrongPassword() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
     assertThrows(Exception.class, () -> {
       new PEMFileLoader.Builder().setKeyStorePath(path)
@@ -62,7 +62,7 @@ public class TestPEMFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadKeyStoreWithWrongFilePath() throws IOException {
+  public void testLoadKeyStoreWithWrongFilePath() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       new PEMFileLoader.Builder().setKeyStorePath(path + ".does_not_exist")
@@ -79,7 +79,7 @@ public class TestPEMFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadKeyStoreWithWrongFileType() throws IOException {
+  public void testLoadKeyStoreWithWrongFileType() throws Exception {
     String path = x509TestContext.getKeyStoreFile(KeyStoreFileType.JKS).getAbsolutePath();
     assertThrows(KeyStoreException.class, () -> {
       // Trying to load a JKS file with PEM loader should fail
@@ -97,7 +97,7 @@ public class TestPEMFileLoader extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testLoadTrustStoreWithWrongFilePath() throws IOException {
+  public void testLoadTrustStoreWithWrongFilePath() throws Exception {
     String path = x509TestContext.getTrustStoreFile(KeyStoreFileType.PEM).getAbsolutePath();
     assertThrows(IOException.class, () -> {
       new PEMFileLoader.Builder().setTrustStorePath(path + ".does_not_exist")
