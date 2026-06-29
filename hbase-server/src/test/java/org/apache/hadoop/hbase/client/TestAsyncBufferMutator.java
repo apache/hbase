@@ -262,7 +262,7 @@ public class TestAsyncBufferMutator {
     }
 
     @Override
-    protected Batch drainBatch() {
+    protected List<Batch> drainBatch() {
       drainCount++;
       return super.drainBatch();
     }
