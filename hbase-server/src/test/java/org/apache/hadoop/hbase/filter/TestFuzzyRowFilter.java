@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.filter;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -27,6 +28,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
@@ -543,6 +545,26 @@ public class TestFuzzyRowFilter {
       .build().toByteArray();
     assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
       .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 9, 9, 9 })));
+  }
+
+  /**
+   * Two filters with identical fuzzy keys but different mask-encoding versions (v1 vs v2) serialize
+   * to different bytes (is_mask_v2 differs), so they must not be equal. A v2 filter must still
+   * equal another v2 filter built from the same keys and hash alike. See HBASE-30256.
+   */
+  @Test
+  public void testEqualsAndHashCodeAccountForMaskVersion() {
+    List<Pair<byte[], byte[]>> keys =
+      Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 }));
+    FuzzyRowFilter v1 = new FuzzyRowFilter(keys, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
+    FuzzyRowFilter v2 = new FuzzyRowFilter(keys, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+    FuzzyRowFilter v2Copy = new FuzzyRowFilter(keys, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+
+    // Same logical keys, different serialized form -> not equal.
+    assertNotEquals(v1, v2);
+    // Same keys and same version -> equal, and equal objects must share a hashCode.
+    assertEquals(v2, v2Copy);
+    assertEquals(v2.hashCode(), v2Copy.hashCode());
   }
 
   private static FuzzyRowFilter newReverseFuzzyRowFilter() {

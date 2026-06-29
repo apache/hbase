@@ -313,8 +313,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
    * all next rows (one per every fuzzy key) and put them (the fuzzy key is bundled) into a priority
    * queue so that the smallest row key always appears at queue head, which helps to decide the
    * "Next Cell Hint". As scanning going on, the number of candidate rows in the RowTracker will
-   * remain the size of fuzzy keys until some of the fuzzy keys won't possibly have matches any
-   * more.
+   * remain the size of fuzzy keys until some of the fuzzy keys won't possibly have matches anymore.
    */
   private class RowTracker {
     private final PriorityQueue<Pair<byte[], Pair<byte[], byte[]>>> nextRows;
@@ -808,7 +807,7 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
 
   /**
    * Returns true if and only if the fields of the filter that are serialized are equal to the
-   * corresponding fields in other. Used for testing.
+   * corresponding fields in others. Used for testing.
    */
   @Override
   boolean areSerializedFieldsEqual(Filter o) {
@@ -819,6 +818,11 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
       return false;
     }
     FuzzyRowFilter other = (FuzzyRowFilter) o;
+    // The mask-encoding version (serialized as is_mask_v2 by toByteArray) is a serialized field
+    // too, so two filters that would serialize to different bytes must not be considered equal.
+    if (this.processedWildcardMask != other.processedWildcardMask) {
+      return false;
+    }
     if (this.fuzzyKeysData.size() != other.fuzzyKeysData.size()) return false;
     for (int i = 0; i < fuzzyKeysData.size(); ++i) {
       Pair<byte[], byte[]> thisData = this.fuzzyKeysData.get(i);
@@ -842,7 +846,8 @@ public class FuzzyRowFilter extends FilterBase implements HintingFilter {
 
   @Override
   public int hashCode() {
-    int result = 1;
+    // Include the mask-encoding version (is_mask_v2) so hashCode stays consistent with equals.
+    int result = 31 + processedWildcardMask;
     for (Pair<byte[], byte[]> fuzzyData : fuzzyKeysData) {
       result = 31 * result + Bytes.hashCode(fuzzyData.getFirst());
       result =
