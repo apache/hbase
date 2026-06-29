@@ -18,15 +18,21 @@
 package org.apache.hadoop.hbase.mob;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.CellUtil;
+import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.HMobStore;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -47,6 +53,27 @@ public class TestDefaultMobStoreCompactor {
     DefaultMobStoreCompactor compactor = newCompactor(conf);
 
     assertFalse(compactor.cacheMobBlocksOnCompaction);
+  }
+
+  @Test
+  public void testResolveMobCellClosesMobCellAndReturnsIndependentCopy() throws Exception {
+    Configuration conf = new Configuration();
+    DefaultMobStoreCompactor compactor = newCompactor(conf);
+    Cell reference = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"),
+      Bytes.toBytes("qualifier"), Bytes.toBytes("mob-reference"));
+    Cell resolved = new KeyValue(Bytes.toBytes("row"), Bytes.toBytes("family"),
+      Bytes.toBytes("qualifier"), Bytes.toBytes("mob-value"));
+    MobCell mobCell = mock(MobCell.class);
+    when(mobCell.getCell()).thenReturn(resolved);
+    when(compactor.mobStore.resolve(reference, compactor.cacheMobBlocksOnCompaction, false))
+      .thenReturn(mobCell);
+
+    Cell copied = compactor.resolveMobCell(reference);
+
+    assertNotSame(resolved, copied);
+    assertTrue(CellUtil.matchingValue(resolved, copied));
+    verify(compactor.mobStore).resolve(reference, compactor.cacheMobBlocksOnCompaction, false);
+    verify(mobCell).close();
   }
 
   private DefaultMobStoreCompactor newCompactor(Configuration conf) {
