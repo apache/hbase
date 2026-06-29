@@ -179,9 +179,14 @@ class DefaultStoreFileManager implements StoreFileManager {
     // Let a background thread close the actual reader on these compacted files and also
     // ensure to evict the blocks from block cache so that they are no longer in
     // cache
-    newCompactedfiles.forEach(HStoreFile::markCompactedAway);
-    compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
-      Iterables.concat(compactedfiles, newCompactedfiles));
+    try {
+      newCompactedfiles.forEach(HStoreFile::markCompactedAway);
+      compactedfiles = ImmutableList.sortedCopyOf(storeFileComparator,
+        Iterables.concat(compactedfiles, newCompactedfiles));
+    } catch (Exception e) {
+      LOG.error("Error marking files as compacted away or adding to compactedfiles list", e);
+      throw e;
+    }
   }
 
   @Override
