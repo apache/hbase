@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterList;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.MapreduceRestoreSnapshotHelper;
 import org.apache.hadoop.hbase.mapreduce.TableInputFormat;
 import org.apache.hadoop.hbase.mapreduce.TableMapReduceUtil;
 import org.apache.hadoop.hbase.mapreduce.TableMapper;
@@ -58,7 +59,6 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerStorage;
 import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
@@ -435,8 +435,10 @@ public class VerifyReplication extends Configured implements Tool {
     FileSystem.setDefaultUri(peerConf, peerFSAddress);
     CommonFSUtils.setRootDir(peerConf, new Path(peerFSAddress, peerHBaseRootAddress));
     FileSystem fs = FileSystem.get(peerConf);
-    RestoreSnapshotHelper.copySnapshotForScanner(peerConf, fs, CommonFSUtils.getRootDir(peerConf),
-      new Path(peerFSAddress, peerSnapshotTmpDir), peerSnapshotName);
+    Path peerRootDir = CommonFSUtils.getRootDir(peerConf);
+    Path peerRestoreDir = new Path(peerFSAddress, peerSnapshotTmpDir);
+    MapreduceRestoreSnapshotHelper.copySnapshotForScanner(peerConf, fs, peerRootDir, peerRestoreDir,
+      peerSnapshotName);
   }
 
   /**

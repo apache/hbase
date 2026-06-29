@@ -53,7 +53,6 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionRecordReader;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
@@ -708,7 +707,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
       SnapshotTestingUtils.createSnapshotAndValidate(admin, tableName, Arrays.asList(FAMILIES),
         null, snapshotName, rootDir, fs, true);
       Path tempRestoreDir = UTIL.getDataTestDirOnTestFS("restore_" + snapshotName);
-      RestoreSnapshotHelper.copySnapshotForScanner(UTIL.getConfiguration(), fs, rootDir,
+      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(UTIL.getConfiguration(), fs, rootDir,
         tempRestoreDir, snapshotName);
       assertTrue(fs.exists(tempRestoreDir), "Restore directory should exist");
 

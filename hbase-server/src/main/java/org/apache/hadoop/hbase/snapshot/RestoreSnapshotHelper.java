@@ -39,7 +39,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -145,6 +144,7 @@ public class RestoreSnapshotHelper {
   private final Configuration conf;
   private final FileSystem fs;
   private final boolean createBackRefs;
+  private final RestoreSnapshotArchiver archiver;
 
   public RestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
     final SnapshotManifest manifest, final TableDescriptor tableDescriptor, final Path rootDir,
@@ -156,6 +156,14 @@ public class RestoreSnapshotHelper {
     final SnapshotManifest manifest, final TableDescriptor tableDescriptor, final Path rootDir,
     final ForeignExceptionDispatcher monitor, final MonitoredTask status,
     final boolean createBackRefs) {
+    this(conf, fs, manifest, tableDescriptor, rootDir, monitor, status, createBackRefs,
+      RestoreSnapshotArchiver.DEFAULT);
+  }
+
+  public RestoreSnapshotHelper(final Configuration conf, final FileSystem fs,
+    final SnapshotManifest manifest, final TableDescriptor tableDescriptor, final Path rootDir,
+    final ForeignExceptionDispatcher monitor, final MonitoredTask status,
+    final boolean createBackRefs, final RestoreSnapshotArchiver archiver) {
     this.fs = fs;
     this.conf = conf;
     this.snapshotManifest = manifest;
@@ -167,6 +175,7 @@ public class RestoreSnapshotHelper {
     this.monitor = monitor;
     this.status = status;
     this.createBackRefs = createBackRefs;
+    this.archiver = archiver;
   }
 
   /**
@@ -415,7 +424,7 @@ public class RestoreSnapshotHelper {
     ModifyRegionUtils.editRegions(exec, regions, new ModifyRegionUtils.RegionEditTask() {
       @Override
       public void editRegion(final RegionInfo hri) throws IOException {
-        HFileArchiver.archiveRegion(conf, fs, hri, rootDir, tableDir);
+        archiver.archiveRegion(conf, fs, hri, rootDir, tableDir);
       }
     });
   }
@@ -556,7 +565,7 @@ public class RestoreSnapshotHelper {
           + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
         LOG.debug("Removing family=" + Bytes.toString(family) + " in snapshot=" + snapshotName
           + " from region=" + regionInfo.getEncodedName() + " table=" + tableName);
-        HFileArchiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
+        archiver.archiveFamilyByFamilyDir(fs, conf, regionInfo, familyDir, family);
         fs.delete(familyDir, true);
       }
 
@@ -882,6 +891,19 @@ public class RestoreSnapshotHelper {
    */
   public static RestoreMetaChanges copySnapshotForScanner(Configuration conf, FileSystem fs,
     Path rootDir, Path restoreDir, String snapshotName) throws IOException {
+    return copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
+      RestoreSnapshotArchiver.DEFAULT);
+  }
+
+  /**
+   * Copy the snapshot files for a snapshot scanner, discards meta changes.
+   * <p>
+   * The {@code archiver} lets callers (for example the MapReduce snapshot-scanning path) plug in a
+   * module-local archiver while reusing the shared restore/clone logic.
+   */
+  public static RestoreMetaChanges copySnapshotForScanner(Configuration conf, FileSystem fs,
+    Path rootDir, Path restoreDir, String snapshotName, RestoreSnapshotArchiver archiver)
+    throws IOException {
     // ensure that restore dir is not under root dir
     if (!restoreDir.getFileSystem(conf).getUri().equals(rootDir.getFileSystem(conf).getUri())) {
       throw new IllegalArgumentException(
@@ -909,7 +931,7 @@ public class RestoreSnapshotHelper {
     // we send createBackRefs=false so that restored hfiles do not create back reference links
     // in the base hbase root dir.
     RestoreSnapshotHelper helper = new RestoreSnapshotHelper(conf, fs, manifest,
-      manifest.getTableDescriptor(), restoreDir, monitor, status, false);
+      manifest.getTableDescriptor(), restoreDir, monitor, status, false, archiver);
     RestoreMetaChanges metaChanges = helper.restoreHdfsRegions(); // TODO: parallelize.
 
     if (LOG.isDebugEnabled()) {

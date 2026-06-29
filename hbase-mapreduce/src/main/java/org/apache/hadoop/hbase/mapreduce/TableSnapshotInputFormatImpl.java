@@ -44,7 +44,6 @@ import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.regionserver.HRegion;
-import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -616,7 +615,8 @@ public class TableSnapshotInputFormatImpl {
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
 
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir,
+      snapshotName);
     conf.set(RESTORE_DIR_KEY, restoreDir.toString());
   }
 
