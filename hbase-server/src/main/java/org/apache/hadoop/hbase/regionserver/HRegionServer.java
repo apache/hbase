@@ -168,6 +168,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -1432,8 +1433,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
             expectedHostName = rpcServices.getSocketAddress().getAddress().getHostAddress();
           }
           boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
-            ? hostnameFromMasterPOV.equals(expectedHostName)
-            : hostnameFromMasterPOV.equals(useThisHostnameInstead);
+            ? Strings.hostnamesEqual(hostnameFromMasterPOV, expectedHostName)
+            : Strings.hostnamesEqual(hostnameFromMasterPOV, useThisHostnameInstead);
+
           if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
               + (StringUtils.isBlank(useThisHostnameInstead)
