@@ -166,11 +166,10 @@ public final class X509TestContext {
 
   /**
    * Returns the path to the trust store file in the given format (JKS or PEM). Note that the file
-   * is created lazily, the first time this method is called. The trust store file is temporary and
-   * will be deleted on exit.
+   * is created lazily, the first time this method is called.
    * @param storeFileType the store file type (JKS or PEM).
    * @return the path to the trust store file.
-   * @throws IOException if there is an error creating the trust store file.
+   * @throws Exception if there is an error creating the trust store file.
    */
   public File getTrustStoreFile(KeyStoreFileType storeFileType) throws Exception {
     switch (storeFileType) {
@@ -270,11 +269,10 @@ public final class X509TestContext {
 
   /**
    * Returns the path to the key store file in the given format (JKS, PEM, ...). Note that the file
-   * is created lazily, the first time this method is called. The key store file is temporary and
-   * will be deleted on exit.
+   * is created lazily, the first time this method is called.
    * @param storeFileType the store file type (JKS, PEM, ...).
    * @return the path to the key store file.
-   * @throws IOException if there is an error creating the key store file.
+   * @throws Exception if there is an error creating the key store file.
    */
   public File getKeyStoreFile(KeyStoreFileType storeFileType) throws Exception {
     switch (storeFileType) {
@@ -363,7 +361,7 @@ public final class X509TestContext {
    *
    * @param keyStoreFileType   the store file type to use for the key store (JKS, PEM, ...).
    * @param trustStoreFileType the store file type to use for the trust store (JKS, PEM, ...).
-   * @throws IOException if there is an error creating the key store file or trust store file.
+   * @throws Exception if there is an error creating the key store file or trust store file.
    */
   public void setConfigurations(KeyStoreFileType keyStoreFileType,
     KeyStoreFileType trustStoreFileType) throws Exception {
