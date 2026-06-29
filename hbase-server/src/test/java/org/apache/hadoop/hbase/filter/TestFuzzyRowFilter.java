@@ -391,6 +391,43 @@ public class TestFuzzyRowFilter {
     }
   }
 
+  /**
+   * Serializing a filter must not leak the internal mask encoding. On the unsafe path the stored
+   * mask is {-1 (fixed), 0 (non-fixed)}; {@code toByteArray} must emit the public constructor {0,
+   * 1} form so the round-tripped filter behaves identically (otherwise the leaked {-1, 0} is
+   * reparsed as an all-fixed mask). Processing a cell first must not change this.
+   */
+  @Test
+  public void testSerializationAfterFilterCellPreservesBehavior() throws Exception {
+    FuzzyRowFilter original =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    // Process a cell first to prove serialization is unaffected by scanning.
+    original.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
+
+    FuzzyRowFilter parsed = FuzzyRowFilter.parseFrom(original.toByteArray());
+    // A row matching only via the wildcard position must still be INCLUDED after the round-trip.
+    assertEquals(Filter.ReturnCode.INCLUDE,
+      parsed.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
+  }
+
+  /**
+   * Two filters built from the same rule (distinct array instances) must be equal and hash equally,
+   * i.e. {@code equals}/{@code hashCode} must be content-based, not identity-based, and consistent
+   * with each other and with the serialized ({0, 1}) form. This must also hold after one of them
+   * has processed a cell.
+   */
+  @Test
+  public void testEqualsConsistentAfterFilterCell() {
+    FuzzyRowFilter fresh =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    FuzzyRowFilter scanned =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    scanned.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
+
+    assertEquals(fresh, scanned);
+    assertEquals(fresh.hashCode(), scanned.hashCode());
+  }
+
   private static FuzzyRowFilter newReverseFuzzyRowFilter() {
     FuzzyRowFilter filter =
       new FuzzyRowFilter(Arrays.asList(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 })));
