@@ -129,7 +129,7 @@ public class TestNettyTlsIPC extends AbstractTestIPC {
   }
 
   @BeforeEach
-  public void setUp() throws IOException {
+  public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword);
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
     CONF.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, acceptPlainText);

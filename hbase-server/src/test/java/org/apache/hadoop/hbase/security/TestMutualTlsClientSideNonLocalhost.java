@@ -23,7 +23,6 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hbase.ipc.TestProtobufRpcServiceImpl;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -144,8 +142,7 @@ public class TestMutualTlsClientSideNonLocalhost {
     stub = TestProtobufRpcServiceImpl.newBlockingStub(rpcClient, rpcServer.getListenerAddress());
   }
 
-  private void initialize(Configuration serverConf, Configuration clientConf)
-    throws GeneralSecurityException, IOException, OperatorCreationException {
+  private void initialize(Configuration serverConf, Configuration clientConf) throws Exception {
     serverConf.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, supportPlaintext);
     clientConf.setBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_VERIFY_SERVER_HOSTNAME, true);
     x509TestContext.regenerateStores(X509KeyType.RSA, X509KeyType.RSA, KeyStoreFileType.JKS,

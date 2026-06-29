@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.io.File;
-import java.io.IOException;
 import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
@@ -104,7 +103,7 @@ public abstract class AbstractTestX509Parameterized {
   }
 
   @BeforeEach
-  public void setUp() throws IOException {
+  public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(caKeyType, certKeyType, keyPassword);
     x509TestContext.setConfigurations(KeyStoreFileType.JKS, KeyStoreFileType.JKS);
     conf = new Configuration(UTIL.getConfiguration());
