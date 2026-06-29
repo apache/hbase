@@ -1106,16 +1106,24 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // Checking if meta needs initializing.
     startupTaskGroup.addTask("Initializing meta table if this is a new deploy");
     InitMetaProcedure initMetaProc = null;
-    // Print out state of hbase:meta on startup; helps debugging.
-    if (!this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)) {
-      Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
-        .filter(p -> p instanceof InitMetaProcedure).map(o -> (InitMetaProcedure) o).findAny();
-      initMetaProc = optProc.orElseGet(() -> {
-        // schedule an init meta procedure if meta has not been deployed yet
-        InitMetaProcedure temp = new InitMetaProcedure();
-        procedureExecutor.submitProcedure(temp);
-        return temp;
-      });
+
+    // Always look for an already-running InitMetaProcedure first. Once such a procedure has passed
+    // the INIT_META_ASSIGN_META state, a RegionState for meta exists, so guarding this lookup with
+    // hasTableRegionStates would hide a still-running procedure, and we would skip awaiting it.
+    // Filter out finished procedures: getProcedures() also returns completed procedures reloaded
+    // from the procedure store, and awaiting such a procedure would block forever because its
+    // completion latch is reset to 1 on deserialization and never counted down again.
+    Optional<InitMetaProcedure> optProc = procedureExecutor.getProcedures().stream()
+      .filter(p -> p instanceof InitMetaProcedure && !p.isFinished())
+      .map(o -> (InitMetaProcedure) o).findAny();
+    if (optProc.isPresent()) {
+      initMetaProc = optProc.get();
+    } else if (
+      !this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)
+    ) {
+      // schedule an init meta procedure if meta has not been deployed yet
+      initMetaProc = new InitMetaProcedure();
+      procedureExecutor.submitProcedure(initMetaProc);
     }
 
     // initialize load balancer
