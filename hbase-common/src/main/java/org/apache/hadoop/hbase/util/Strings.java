@@ -18,11 +18,13 @@
 package org.apache.hadoop.hbase.util;
 
 import java.io.UnsupportedEncodingException;
+import java.net.InetAddress;
 import java.net.URI;
 import java.net.URLDecoder;
 import java.nio.charset.StandardCharsets;
 import java.util.Collections;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +32,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
+import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
 /**
  * Utility for Strings.
@@ -85,6 +88,51 @@ public final class Strings {
     }
 
     return dnPtr.endsWith(".") ? dnPtr.substring(0, dnPtr.length() - 1) : dnPtr;
+  }
+
+  /**
+   * Returns whether the given string is an IP address, including bracketed IPv6 URI form.
+   * @param host hostname or IP
+   * @return {@code true} if {@code host} is an IP address
+   * @throws NullPointerException if {@code host} is {@code null}
+   */
+  public static boolean isInetAddress(String host) {
+    Objects.requireNonNull(host, "Hostname or IP cannot be null");
+    host = host.trim();
+    if (host.startsWith("[") && host.endsWith("]")) {
+      return InetAddresses.isUriInetAddress(host);
+    }
+    return InetAddresses.isInetAddress(host);
+  }
+
+  private static InetAddress parseInetAddress(String host) {
+    host = host.trim();
+    if (host.startsWith("[") && host.endsWith("]")) {
+      return InetAddresses.forUriString(host);
+    }
+    return InetAddresses.forString(host);
+  }
+
+  /**
+   * Compare two host identifiers for equality. DNS hostnames are compared case-insensitively
+   * because DNS labels are case-insensitive. IP address literals are compared by numeric address.
+   * @param left  first hostname or IP
+   * @param right second hostname or IP
+   * @return {@code true} if both refer to the same host identifier
+   * @throws NullPointerException if either argument is {@code null}
+   */
+  public static boolean hostnamesEqual(String left, String right) {
+    Objects.requireNonNull(left, "Hostname or IP cannot be null");
+    Objects.requireNonNull(right, "Hostname or IP cannot be null");
+    boolean leftIsIp = isInetAddress(left);
+    boolean rightIsIp = isInetAddress(right);
+    if (leftIsIp != rightIsIp) {
+      return false;
+    }
+    if (leftIsIp) {
+      return parseInetAddress(left).equals(parseInetAddress(right));
+    }
+    return left.equalsIgnoreCase(right);
   }
 
   /**
