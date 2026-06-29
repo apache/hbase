@@ -73,6 +73,11 @@ public class CommonsCryptoAES extends AESCipher {
   }
 
   @Override
+  public String getTransformation() {
+    return cipherMode;
+  }
+
+  @Override
   public Encryptor getEncryptor() {
     return new CommonsCryptoAESEncryptor(cipherMode, props, getRNG());
   }

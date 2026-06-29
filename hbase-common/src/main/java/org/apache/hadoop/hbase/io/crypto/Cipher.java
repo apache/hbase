@@ -120,6 +120,19 @@ public abstract class Cipher {
   }
 
   /**
+   * Return the JCE transformation string for this cipher (algorithm/mode/padding, e.g.
+   * "AES/GCM/NoPadding"), suitable for {@link javax.crypto.Cipher#getInstance(String)}. This lets a
+   * caller that runs its own one-shot {@code doFinal} — rather than HBase's streaming
+   * {@link Encryptor}/{@link Decryptor} — build the JCE cipher without hardcoding the transformation,
+   * keeping this class the single source of truth for the suite definition. Defaults to {@code null}
+   * for ciphers that do not expose one; callers must treat {@code null} as "unavailable" and fail
+   * rather than guess a transformation.
+   */
+  public String getTransformation() {
+    return null;
+  }
+
+  /**
    * Create a random symmetric key. Generates {@link #getKeyLength()} random bytes and wraps them in
    * a {@link SecretKeySpec} using {@link #getKeyAlgorithm()}.
    * @return the random symmetric key

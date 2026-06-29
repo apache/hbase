@@ -65,6 +65,11 @@ public class AES256GCM extends AESCipher {
   }
 
   @Override
+  public String getTransformation() {
+    return CIPHER_MODE;
+  }
+
+  @Override
   public Encryptor getEncryptor() {
     return new AES256GCMEncryptor(getJCECipherInstance(), getRNG());
   }

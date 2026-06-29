@@ -77,6 +77,15 @@ public class TestAES {
     return Arrays.asList(new Object[][] { { HConstants.CIPHER_AES, Cipher.KEY_LENGTH, Cipher.IV_LENGTH },
       { HConstants.CIPHER_AES_256_GCM, AES256GCM.KEY_LENGTH, AES256GCM.NONCE_LENGTH }, });
   }
+ 
+  @Test
+  public void testGetTransformation() throws Exception {
+    Configuration conf = HBaseConfiguration.create();
+    Cipher cipher = Encryption.getCipher(conf, cipherName);
+    String expected =
+      HConstants.CIPHER_AES_256_GCM.equals(cipherName) ? "AES/GCM/NoPadding" : "AES/CTR/NoPadding";
+    assertEquals(expected, cipher.getTransformation());
+  }
 
   // Validation for AES in CTR mode with a 128 bit key
   // From NIST Special Publication 800-38A

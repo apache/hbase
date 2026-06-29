@@ -59,7 +59,9 @@ public class TestAES256GCM {
     assertEquals("AES_256_GCM", cipher.getName());
     assertEquals(32, cipher.getKeyLength());
     assertEquals(12, cipher.getIvLength());
+    assertEquals(16, cipher.getAuthTagLength());
     assertEquals("AES", cipher.getKeyAlgorithm());
+    assertEquals("AES/GCM/NoPadding", cipher.getTransformation());
   }
 
   @Test
