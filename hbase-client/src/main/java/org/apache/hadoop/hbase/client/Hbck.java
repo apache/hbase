@@ -143,37 +143,4 @@ public interface Hbck extends Abortable, Closeable {
    * Fix Meta.
    */
   void fixMeta() throws IOException;
-
-  /**
-   * Submit a {@code RepairFsftRegionProcedure} for the given region/family. Closes the region
-   * as {@code ABNORMALLY_CLOSED}, rebuilds the FILE store-file-tracker manifest
-   * ({@code .filelist}), and reopens the region.
-   * <p>
-   * Used to recover from a corrupted FSFT manifest for a user-table region or
-   * {@code hbase:meta}. {@code master:store} is refused — use the offline
-   * {@code hbase sft --repair} CLI for that case (procedure store is master:store, so the
-   * framework can't help when its own backing region is corrupt). Lineage-assisted mode is
-   * refused for {@code hbase:meta}.
-   * @param encodedRegionName encoded region name; e.g. {@code 1588230740} for hbase:meta
-   * @param family            target column family
-   * @param mode              one of {@code disk-only} or {@code lineage-assisted}
-   * @param dryRun            when true, the procedure runs through compute/state-stamp but
-   *                          does NOT write a new manifest and does not stamp ABNORMALLY_CLOSED
-   * @return pid of the submitted procedure; caller polls {@code getProcedureResult}
-   */
-  long repairFsftRegion(String encodedRegionName, byte[] family, RepairFsftRegionMode mode,
-    boolean dryRun) throws IOException;
-
-  /**
-   * Mode for {@link #repairFsftRegion(String, byte[], RepairFsftRegionMode, boolean)}.
-   */
-  enum RepairFsftRegionMode {
-    /** Reconstruct manifest purely from disk-walk of the store directory. */
-    DISK_ONLY,
-    /**
-     * Disk-walk plus pull split/merge parent file lineage from meta to recover
-     * references/links the daughter compaction may have removed prematurely.
-     */
-    LINEAGE_ASSISTED;
-  }
 }

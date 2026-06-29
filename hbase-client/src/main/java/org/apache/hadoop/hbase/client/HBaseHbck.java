@@ -35,8 +35,6 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.RegionSpecifier.RegionSpecifierType;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.AssignsResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.BypassProcedureRequest;
@@ -45,16 +43,12 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.FixMetaReq
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.GetTableStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.HbckService.BlockingInterface;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RegionSpecifierAndState;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RepairFsftRegionRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RepairFsftRegionResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.RunHbckChoreResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleSCPsForUnknownServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleSCPsForUnknownServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.ScheduleServerCrashProcedureResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos.UnassignsResponse;
-
-import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
 /**
  * Use {@link Connection#getHbck()} to obtain an instance of {@link Hbck} instead of constructing an
@@ -235,36 +229,6 @@ public class HBaseHbck implements Hbck {
     try {
       this.hbck.fixMeta(rpcControllerFactory.newController(), FixMetaRequest.newBuilder().build());
     } catch (ServiceException se) {
-      throw new IOException(se);
-    }
-  }
-
-  @Override
-  public long repairFsftRegion(String encodedRegionName, byte[] family,
-    Hbck.RepairFsftRegionMode mode, boolean dryRun) throws IOException {
-    RegionSpecifier rs = RegionSpecifier.newBuilder().setType(RegionSpecifierType.ENCODED_REGION_NAME)
-      .setValue(UnsafeByteOperations.unsafeWrap(encodedRegionName.getBytes())).build();
-    MasterProtos.RepairFsftRegionMode protoMode;
-    switch (mode) {
-      case DISK_ONLY:
-        protoMode = MasterProtos.RepairFsftRegionMode.REPAIR_FSFT_REGION_MODE_DISK_ONLY;
-        break;
-      case LINEAGE_ASSISTED:
-        protoMode = MasterProtos.RepairFsftRegionMode.REPAIR_FSFT_REGION_MODE_LINEAGE_ASSISTED;
-        break;
-      default:
-        throw new IllegalArgumentException("Unknown RepairFsftRegionMode: " + mode);
-    }
-    RepairFsftRegionRequest request = RepairFsftRegionRequest.newBuilder().setRegion(rs)
-      .setFamily(UnsafeByteOperations.unsafeWrap(family)).setMode(protoMode).setDryRun(dryRun)
-      .build();
-    try {
-      RepairFsftRegionResponse response =
-        hbck.repairFsftRegion(rpcControllerFactory.newController(), request);
-      return response.getProcId();
-    } catch (ServiceException se) {
-      LOG.debug("repairFsftRegion encodedRegionName={}, family={}, mode={}, dryRun={}",
-        encodedRegionName, new String(family), mode, dryRun, se);
       throw new IOException(se);
     }
   }
