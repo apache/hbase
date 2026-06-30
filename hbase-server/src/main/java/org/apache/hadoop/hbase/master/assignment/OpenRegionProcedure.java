@@ -132,6 +132,17 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
       // should have already been persisted, ignore
       return;
     }
+    if (transitionCode == TransitionCode.FAILED_OPEN) {
+      // The RS reported FAILED_OPEN before the master crashed. We must not mark the region as
+      // OPEN on restore (it was never opened); doing so could place the region on a now-dead
+      // server. Mirror the live path (updateTransitionWithoutPersistingToMeta) and let the parent
+      // TransitRegionStateProcedure retry the assignment. See HBASE-29364.
+      am.regionFailedOpen(regionNode, false);
+      return;
+    }
+
+    // OPENED (or a legacy record with no persisted transitionCode): re-apply the open that had not
+    // yet been persisted to hbase:meta.
     regionOpenedWithoutPersistingToMeta(am, regionNode, TransitionCode.OPENED, openSeqNum);
   }
 }
