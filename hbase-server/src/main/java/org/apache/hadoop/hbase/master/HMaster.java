@@ -141,6 +141,7 @@ import org.apache.hadoop.hbase.master.cleaner.DirScanPool;
 import org.apache.hadoop.hbase.master.cleaner.HFileCleaner;
 import org.apache.hadoop.hbase.master.cleaner.LogCleaner;
 import org.apache.hadoop.hbase.master.cleaner.ReplicationBarrierCleaner;
+import org.apache.hadoop.hbase.master.cleaner.ReplicationBulkLoadEventCleaner;
 import org.apache.hadoop.hbase.master.cleaner.SnapshotCleanerChore;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.http.MasterDumpServlet;
@@ -435,6 +436,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // The exclusive hfile cleaner pool for scanning the archive directory
   private DirScanPool exclusiveHFileCleanerPool;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
+  private ReplicationBulkLoadEventCleaner replicationBulkLoadEventCleaner;
   private MobFileCleanerChore mobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactionChore;
   private RollingUpgradeChore rollingUpgradeChore;
@@ -1803,6 +1805,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     replicationBarrierCleaner =
       new ReplicationBarrierCleaner(conf, this, getConnection(), replicationPeerManager);
     getChoreService().scheduleChore(replicationBarrierCleaner);
+    replicationBulkLoadEventCleaner =
+      new ReplicationBulkLoadEventCleaner(conf, this, getZooKeeper());
+    getChoreService().scheduleChore(replicationBulkLoadEventCleaner);
 
     final boolean isSnapshotChoreEnabled = this.snapshotCleanupStateStore.get();
     this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
@@ -1990,6 +1995,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       hfileCleaners = null;
     }
     shutdownChore(replicationBarrierCleaner);
+    shutdownChore(replicationBulkLoadEventCleaner);
     shutdownChore(snapshotCleanerChore);
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
