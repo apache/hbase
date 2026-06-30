@@ -382,8 +382,7 @@ public class RegionStates {
     // in meta, so no node was recreated for it. See HBASE-28659. These split helpers only ever run
     // for a crashed server inside an SCP, so recreate the node rather than NPE; the SCP will remove
     // it again via removeServer at SERVER_CRASH_FINISH.
-    ServerStateNode serverNode =
-      serverMap.computeIfAbsent(serverName, key -> new ServerStateNode(key));
+    ServerStateNode serverNode = createServer(serverName);
     synchronized (serverNode) {
       serverNode.setState(state);
     }
