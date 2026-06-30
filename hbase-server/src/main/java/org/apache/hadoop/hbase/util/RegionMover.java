@@ -711,8 +711,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       LOG.warn("Interrupted while {} regions on {}:{}", operation, this.hostname, this.port, e);
       throw e;
     } catch (ExecutionException e) {
-      LOG.error("Error while {} regions on RegionServer {}:{}", operation, this.hostname,
-        this.port, e);
+      LOG.error("Error while {} regions on RegionServer {}:{}", operation, this.hostname, this.port,
+        e);
       throw e;
     }
   }
