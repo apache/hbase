@@ -17,14 +17,19 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ConcurrentSkipListMap;
+import java.util.Objects;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.function.LongConsumer;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.TableStateManager;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,31 +41,50 @@ import org.slf4j.LoggerFactory;
 public class RegionInTransitionTracker {
   private static final Logger LOG = LoggerFactory.getLogger(RegionInTransitionTracker.class);
 
-  private final List<RegionState.State> DISABLE_TABLE_REGION_STATE =
+  private static final List<RegionState.State> DISABLE_TABLE_REGION_STATE =
     List.of(RegionState.State.OFFLINE, RegionState.State.CLOSED);
 
-  private final List<RegionState.State> ENABLE_TABLE_REGION_STATE = List.of(RegionState.State.OPEN);
+  private static final List<RegionState.State> ENABLE_TABLE_REGION_STATE =
+    List.of(RegionState.State.OPEN);
 
-  // DO NOT USE containsKey()/remove() on regionInTransition with a different RegionInfo instance:
-  // this map is ordered by RegionInfo.COMPARATOR, and that comparator includes the offline flag.
-  // Lookups can therefore fail if the RegionInfo used as the key has a different offline value,
-  // even when it refers to the same region. Offline value changes with splitting.
-  private final ConcurrentSkipListMap<RegionInfo, RegionStateNode> regionInTransition =
-    new ConcurrentSkipListMap<>(RegionInfo.COMPARATOR);
+  // DO NOT USE containsKey()/remove() on regionInTransition with a RegionInfo instance whose
+  // offline flag differs from the one stored as the key: RegionInfo#equals and #hashCode both
+  // include the offline flag, so such a lookup misses even when it refers to the same region.
+  // Offline value changes with splitting.
+  private final ConcurrentHashMap<RegionInfo, Pair<RegionStateNode, Long>> regionInTransition =
+    new ConcurrentHashMap<>();
 
+  private final LongConsumer ritDurationConsumer;
   private TableStateManager tableStateManager;
+
+  public RegionInTransitionTracker(LongConsumer ritDurationConsumer) {
+    this.ritDurationConsumer = Objects.requireNonNull(ritDurationConsumer);
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  boolean isRegionInTransition(final RegionInfo regionInfo) {
+    return regionInTransition.containsKey(regionInfo);
+  }
 
   /**
    * Handles a region whose hosting RegionServer has crashed. When a RegionServer fails, all regions
    * it was hosting are automatically added to the RIT list since they need to be reassigned to
    * other servers.
+   * @param regionStateNode the region whose hosting server crashed
+   * @param crashTime       the RIT start time to use when the region is not already in transition
+   *                        (an existing entry keeps its earlier start). Passed explicitly rather
+   *                        than read from {@link RegionStateNode#getLastUpdate()}, which a stale
+   *                        procedure can mask. A non-positive value falls back to the node's last
+   *                        update.
    */
-  public void regionCrashed(RegionStateNode regionStateNode) {
+  public void regionCrashed(RegionStateNode regionStateNode, long crashTime) {
     if (isReplica(regionStateNode)) {
       return;
     }
 
-    if (addRegionInTransition(regionStateNode)) {
+    long startTime = crashTime > 0 ? crashTime : regionStateNode.getLastUpdate();
+    if (addRegionInTransition(regionStateNode, startTime)) {
       LOG.debug("{} added to RIT list because hosting region server is crashed ",
         regionStateNode.getRegionInfo().getEncodedName());
     }
@@ -128,11 +152,26 @@ public class RegionInTransitionTracker {
   }
 
   private boolean addRegionInTransition(final RegionStateNode regionStateNode) {
-    return regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(), regionStateNode) == null;
+    return addRegionInTransition(regionStateNode, regionStateNode.getLastUpdate());
+  }
+
+  private boolean addRegionInTransition(final RegionStateNode regionStateNode, long startTime) {
+    if (startTime <= 0) {
+      startTime = EnvironmentEdgeManager.currentTime();
+    }
+    return regionInTransition.putIfAbsent(regionStateNode.getRegionInfo(),
+      Pair.newPair(regionStateNode, startTime)) == null;
   }
 
   private boolean removeRegionInTransition(final RegionInfo regionInfo) {
-    return regionInTransition.remove(regionInfo) != null;
+    Pair<RegionStateNode, Long> removed = regionInTransition.remove(regionInfo);
+    if (removed != null) {
+      long duration = EnvironmentEdgeManager.currentTime() - removed.getSecond();
+      if (duration >= 0) {
+        ritDurationConsumer.accept(duration);
+      }
+    }
+    return removed != null;
   }
 
   public void stop() {
@@ -143,8 +182,16 @@ public class RegionInTransitionTracker {
     return !regionInTransition.isEmpty();
   }
 
+  public int getRegionsInTransitionCount() {
+    return regionInTransition.size();
+  }
+
   public List<RegionStateNode> getRegionsInTransition() {
-    return new ArrayList<>(regionInTransition.values());
+    List<RegionStateNode> regions = new ArrayList<>(regionInTransition.size());
+    for (Pair<RegionStateNode, Long> entry : regionInTransition.values()) {
+      regions.add(entry.getFirst());
+    }
+    return regions;
   }
 
   public void setTableStateManager(TableStateManager tableStateManager) {
@@ -154,5 +201,4 @@ public class RegionInTransitionTracker {
   private static boolean isReplica(RegionStateNode regionStateNode) {
     return regionStateNode.getRegionInfo().getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID;
   }
-
 }
