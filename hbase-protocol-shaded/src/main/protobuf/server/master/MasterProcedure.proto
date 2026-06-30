@@ -125,6 +125,34 @@ message TruncateRegionStateData {
   optional string snapshot_name = 3;
 }
 
+// ============================================================================
+//  StoreFileTracker (FSFT) version migration
+// ============================================================================
+
+enum FSFTVersionMigrationState {
+  FSFT_VERSION_MIGRATION_PREPARE = 1;
+  FSFT_VERSION_MIGRATION_SCHEDULE_REGIONS = 2;
+}
+
+message FSFTVersionMigrationStateData {
+  repeated RegionInfo region_info = 1;
+  optional uint32 next_index = 2;
+  optional uint32 batch_size = 3;
+  optional uint32 batch_size_max = 4;
+  optional uint64 regions_scheduled = 5;
+  optional uint64 batches_processed = 6;
+  optional uint64 batch_backoff_millis = 7;
+}
+
+enum FSFTVersionUpgradeRegionState {
+  FSFT_VERSION_UPGRADE_REGION_PREPARE = 1;
+  FSFT_VERSION_UPGRADE_REGION_UPGRADE = 2;
+}
+
+message FSFTVersionUpgradeRegionStateData {
+  required RegionInfo region_info = 1;
+}
+
 enum DeleteTableState {
   DELETE_TABLE_PRE_OPERATION = 1;
   DELETE_TABLE_REMOVE_FROM_META = 2;

@@ -225,6 +225,7 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshotNotifierFactory;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicy;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
+import org.apache.hadoop.hbase.regionserver.storefiletracker.FSFTUpgradeChore;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.ModifyColumnFamilyStoreFileTrackerProcedure;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.ModifyTableStoreFileTrackerProcedure;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -1168,6 +1169,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.assignmentManager.processOfflineRegions();
     // this must be called after the above processOfflineRegions to prevent race
     this.assignmentManager.wakeMetaLoadedEvent();
+
+    startupTaskGroup.addTask("Upgrading FSFT version if needed");
+    new FSFTUpgradeChore(this).triggerOnce();
 
     // for migrating from a version without HBASE-25099, and also for honoring the configuration
     // first.

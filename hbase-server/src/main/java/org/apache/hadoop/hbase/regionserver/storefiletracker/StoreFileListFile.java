@@ -74,7 +74,7 @@ class StoreFileListFile {
   private static final Logger LOG = LoggerFactory.getLogger(StoreFileListFile.class);
 
   // the current version for StoreFileList
-  static final long VERSION = 1;
+  static final long VERSION = 2;
 
   static final String TRACK_FILE_DIR = ".filelist";
 
@@ -144,7 +144,7 @@ class StoreFileListFile {
     return load(fs, path);
   }
 
-  private int select(StoreFileList[] lists) {
+  public static int select(StoreFileList[] lists) {
     if (lists[0] == null) {
       return 1;
     }
@@ -157,33 +157,37 @@ class StoreFileListFile {
   // file sequence id to path
   private NavigableMap<Long, List<Path>> listFiles() throws IOException {
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
-    FileStatus[] statuses;
-    try {
-      statuses = fs.listStatus(trackFileDir);
-    } catch (FileNotFoundException e) {
-      LOG.debug("Track file directory {} does not exist", trackFileDir, e);
-      return Collections.emptyNavigableMap();
-    }
-    if (statuses == null || statuses.length == 0) {
-      return Collections.emptyNavigableMap();
-    }
-    TreeMap<Long, List<Path>> map = new TreeMap<>(Comparator.reverseOrder());
-    for (FileStatus status : statuses) {
-      Path file = status.getPath();
-      if (!status.isFile()) {
-        LOG.warn("Found invalid track file {}, which is not a file", file);
-        continue;
-      }
-      if (!TRACK_FILE_PATTERN.matcher(file.getName()).matches()) {
-        LOG.warn("Found invalid track file {}, skip", file);
-        continue;
-      }
-      List<String> parts = Splitter.on(TRACK_FILE_SEPARATOR).splitToList(file.getName());
-      // For compatibility, set the timestamp to 0 if it is missing in the file name.
-      long timestamp = parts.size() > 1 ? Long.parseLong(parts.get(1)) : 0L;
-      map.computeIfAbsent(timestamp, k -> new ArrayList<>()).add(file);
-    }
-    return map;
+    return listFiles(fs, trackFileDir);
+  }
+  
+  public static NavigableMap<Long, List<Path>> listFiles(FileSystem fs, Path trackFileDir) throws IOException {
+	  FileStatus[] statuses;
+	    try {
+	      statuses = fs.listStatus(trackFileDir);
+	    } catch (FileNotFoundException e) {
+	      LOG.debug("Track file directory {} does not exist", trackFileDir, e);
+	      return Collections.emptyNavigableMap();
+	    }
+	    if (statuses == null || statuses.length == 0) {
+	      return Collections.emptyNavigableMap();
+	    }
+	    TreeMap<Long, List<Path>> map = new TreeMap<>(Comparator.reverseOrder());
+	    for (FileStatus status : statuses) {
+	      Path file = status.getPath();
+	      if (!status.isFile()) {
+	        LOG.warn("Found invalid track file {}, which is not a file", file);
+	        continue;
+	      }
+	      if (!TRACK_FILE_PATTERN.matcher(file.getName()).matches()) {
+	        LOG.warn("Found invalid track file {}, skip", file);
+	        continue;
+	      }
+	      List<String> parts = Splitter.on(TRACK_FILE_SEPARATOR).splitToList(file.getName());
+	      // For compatibility, set the timestamp to 0 if it is missing in the file name.
+	      long timestamp = parts.size() > 1 ? Long.parseLong(parts.get(1)) : 0L;
+	      map.computeIfAbsent(timestamp, k -> new ArrayList<>()).add(file);
+	    }
+	    return map;
   }
 
   private void initializeTrackFiles(long seqId) {
