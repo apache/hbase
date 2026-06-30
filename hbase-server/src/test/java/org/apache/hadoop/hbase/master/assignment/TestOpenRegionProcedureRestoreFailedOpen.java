@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -132,12 +133,13 @@ public class TestOpenRegionProcedureRestoreFailedOpen {
     // Wait until the reassignment open has failed and the procedure is frozen in REPORT_SUCCEED
     // (its post-FAILED_OPEN persistToMeta is blocked in the meta coprocessor).
     LOG.info("Waiting for the FAILED_OPEN procedure to freeze in REPORT_SUCCEED...");
-    org.junit.jupiter.api.Assertions.assertTrue(
+    assertTrue(
       FailOpenAndBlockMetaCP.reachedBlock.await(120, TimeUnit.SECONDS),
       "Timed out waiting for the FAILED_OPEN persistToMeta to be reached");
 
     // The region must NOT be OPEN at this point - the open failed.
     State beforeFailover = regionState(cluster.getMaster(), hri);
+    assertEquals(State.OPENING, regionState(cluster.getMaster(), hri));
     LOG.info("State before failover (active master): {}", beforeFailover);
 
     // The active Master "dies"; a backup Master takes over and replays procedures during meta-load.
