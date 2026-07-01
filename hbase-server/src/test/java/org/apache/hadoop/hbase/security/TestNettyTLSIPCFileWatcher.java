@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.security.GeneralSecurityException;
 import java.security.Security;
 import java.time.Duration;
 import java.util.ArrayList;
@@ -64,7 +63,6 @@ import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.NettyEventLoopGroupConfig;
 import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -76,7 +74,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos;
@@ -139,7 +136,7 @@ public class TestNettyTLSIPCFileWatcher {
   }
 
   @BeforeEach
-  public void setUp() throws IOException {
+  public void setUp() throws Exception {
     x509TestContext = PROVIDER.get(keyType, keyType, "keyPa$$word".toCharArray());
     x509TestContext.setConfigurations(storeFileType, storeFileType);
     CONF.setBoolean(X509Util.HBASE_SERVER_NETTY_TLS_SUPPORTPLAINTEXT, false);
@@ -162,8 +159,7 @@ public class TestNettyTLSIPCFileWatcher {
   }
 
   @TestTemplate
-  public void testReplaceServerKeystore() throws IOException, ServiceException,
-    GeneralSecurityException, OperatorCreationException, InterruptedException {
+  public void testReplaceServerKeystore() throws Exception {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
@@ -214,8 +210,7 @@ public class TestNettyTLSIPCFileWatcher {
   }
 
   @TestTemplate
-  public void testReplaceClientAndServerKeystore() throws GeneralSecurityException, IOException,
-    OperatorCreationException, ServiceException, InterruptedException {
+  public void testReplaceClientAndServerKeystore() throws Exception {
     Configuration clientConf = new Configuration(CONF);
     RpcServer rpcServer = createRpcServer("testRpcServer",
       Lists.newArrayList(new RpcServer.BlockingServiceAndInterface(SERVICE, null)),
