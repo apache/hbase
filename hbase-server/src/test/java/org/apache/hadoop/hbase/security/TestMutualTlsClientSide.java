@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import java.io.IOException;
-import java.security.GeneralSecurityException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Stream;
@@ -28,7 +26,6 @@ import org.apache.hadoop.hbase.io.crypto.tls.X509KeyType;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.bouncycastle.operator.OperatorCreationException;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.params.provider.Arguments;
 
@@ -72,8 +69,7 @@ public class TestMutualTlsClientSide extends AbstractTestMutualTls {
   }
 
   @Override
-  protected void initialize(Configuration serverConf, Configuration clientConf)
-    throws IOException, GeneralSecurityException, OperatorCreationException {
+  protected void initialize(Configuration serverConf, Configuration clientConf) throws Exception {
     // client verifies server hostname, and injects bad certs into server conf
     clientConf.setBoolean(X509Util.HBASE_CLIENT_NETTY_TLS_VERIFY_SERVER_HOSTNAME,
       validateHostnames);
