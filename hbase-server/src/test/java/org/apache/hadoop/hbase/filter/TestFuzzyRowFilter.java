@@ -19,21 +19,32 @@ package org.apache.hadoop.hbase.filter;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.opentest4j.AssertionFailedError;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos.BytesBytesPair;
 
 @Tag(FilterTests.TAG)
 @Tag(SmallTests.TAG)
@@ -418,6 +429,142 @@ public class TestFuzzyRowFilter {
       KeyValue abb = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abb"));
       assertEquals(Filter.ReturnCode.NEXT_ROW, filterList.filterCell(abb));
     }
+  }
+
+  /**
+   * Serializing a filter must not leak the internal mask encoding. On the unsafe path the stored
+   * mask is {-1 (fixed), 0 (non-fixed)}; {@code toByteArray} must emit the public constructor {0,
+   * 1} form so the round-tripped filter behaves identically (otherwise the leaked {-1, 0} is
+   * reparsed as an all-fixed mask). Processing a cell first must not change this.
+   */
+  @Test
+  public void testSerializationAfterFilterCellPreservesBehavior() throws Exception {
+    FuzzyRowFilter original =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    // Process a cell first to prove serialization is unaffected by scanning.
+    original.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
+
+    FuzzyRowFilter parsed = FuzzyRowFilter.parseFrom(original.toByteArray());
+    // A row matching only via the wildcard position must still be INCLUDED after the round-trip.
+    assertEquals(Filter.ReturnCode.INCLUDE,
+      parsed.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
+  }
+
+  /**
+   * Two filters built from the same rule (distinct array instances) must be equal and hash equally,
+   * i.e. {@code equals}/{@code hashCode} must be content-based, not identity-based, and consistent
+   * with each other and with the serialized ({0, 1}) form. This must also hold after one of them
+   * has processed a cell.
+   */
+  @Test
+  public void testEqualsConsistentAfterFilterCell() {
+    FuzzyRowFilter fresh =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    FuzzyRowFilter scanned =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    scanned.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
+
+    assertEquals(fresh, scanned);
+    assertEquals(fresh.hashCode(), scanned.hashCode());
+  }
+
+  /**
+   * Unsafe-path coverage for branch-2's is_mask_v2 plumbing: the flag round-trips (v1 stays v1,
+   * v2/client stays v2) and toByteArray always emits the public {0, 1} mask.
+   */
+  @Test
+  public void testIsMaskV2WireRoundTrip() throws Exception {
+    // v1 in (no flag) -> stays v1 on the wire, mask normalized to public {0, 1, 0}.
+    byte[] v1Wire = FilterProtos.FuzzyRowFilter.newBuilder()
+      .addFuzzyKeysData(BytesBytesPair.newBuilder()
+        .setFirst(UnsafeByteOperations.unsafeWrap(new byte[] { 1, 0, 3 }))
+        .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { -1, 0, -1 })))
+      .build().toByteArray();
+    FilterProtos.FuzzyRowFilter v1Out =
+      FilterProtos.FuzzyRowFilter.parseFrom(FuzzyRowFilter.parseFrom(v1Wire).toByteArray());
+    assertFalse(v1Out.getIsMaskV2());
+    assertArrayEquals(new byte[] { 0, 1, 0 }, v1Out.getFuzzyKeysData(0).getSecond().toByteArray());
+
+    // v2 in -> stays v2, mask normalized to public {0, 1, 0}.
+    byte[] v2Wire = FilterProtos.FuzzyRowFilter.newBuilder().setIsMaskV2(true)
+      .addFuzzyKeysData(BytesBytesPair.newBuilder()
+        .setFirst(UnsafeByteOperations.unsafeWrap(new byte[] { 1, 0, 3 }))
+        .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { -1, 2, -1 })))
+      .build().toByteArray();
+    FilterProtos.FuzzyRowFilter v2Out =
+      FilterProtos.FuzzyRowFilter.parseFrom(FuzzyRowFilter.parseFrom(v2Wire).toByteArray());
+    assertTrue(v2Out.getIsMaskV2());
+    assertArrayEquals(new byte[] { 0, 1, 0 }, v2Out.getFuzzyKeysData(0).getSecond().toByteArray());
+
+    // A client-built filter is always v2 on the wire.
+    FuzzyRowFilter client =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    assertTrue(FilterProtos.FuzzyRowFilter.parseFrom(client.toByteArray()).getIsMaskV2());
+  }
+
+  /**
+   * getFuzzyKeys must expose the public {0, 1} form, not the internal stored mask (unsafe stores
+   * {-1, 0}) -- REST ScannerModel feeds it straight back into the constructor.
+   */
+  @Test
+  public void testGetFuzzyKeysReturnsPublicForm() {
+    FuzzyRowFilter filter =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    assertArrayEquals(new byte[] { 0, 1, 0 }, filter.getFuzzyKeys().get(0).getSecond());
+  }
+
+  /**
+   * Unsafe-path companion to the no-unsafe legacy-v1 test: a no-flag, internal {-1, 0} v1 wire must
+   * still enforce its fixed positions after parseFrom.
+   */
+  @Test
+  public void testParseFromLegacyV1EncodedFilterEnforcesFixedPositions() throws Exception {
+    byte[] wire = FilterProtos.FuzzyRowFilter.newBuilder()
+      .addFuzzyKeysData(BytesBytesPair.newBuilder()
+        .setFirst(UnsafeByteOperations.unsafeWrap(new byte[] { 1, 0, 3 }))
+        .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { -1, 0, -1 })))
+      .build().toByteArray();
+    assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
+      .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, FuzzyRowFilter.parseFrom(wire)
+      .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 9 })));
+  }
+
+  /**
+   * Twin of the no-unsafe all-fixed test: a no-flag all-zeros wire {0, 0, 0} is the legacy unsafe
+   * v1 all-wildcard encoding (HBASE-15676), so on the unsafe path it matches every row -- the
+   * deliberate opposite of the no-unsafe all-fixed reading. Guarded to the unsafe path.
+   */
+  @Test
+  public void testParseFromLegacyV1AllZerosMaskIsAllWildcardOnUnsafe() throws Exception {
+    assumeTrue(HBasePlatformDependent.unaligned());
+    byte[] wire = FilterProtos.FuzzyRowFilter.newBuilder()
+      .addFuzzyKeysData(BytesBytesPair.newBuilder()
+        .setFirst(UnsafeByteOperations.unsafeWrap(new byte[] { 1, 2, 3 }))
+        .setSecond(UnsafeByteOperations.unsafeWrap(new byte[] { 0, 0, 0 })))
+      .build().toByteArray();
+    assertEquals(Filter.ReturnCode.INCLUDE, FuzzyRowFilter.parseFrom(wire)
+      .filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 9, 9, 9 })));
+  }
+
+  /**
+   * Two filters with identical fuzzy keys but different mask-encoding versions (v1 vs v2) serialize
+   * to different bytes (is_mask_v2 differs), so they must not be equal. A v2 filter must still
+   * equal another v2 filter built from the same keys and hash alike. See HBASE-30256.
+   */
+  @Test
+  public void testEqualsAndHashCodeAccountForMaskVersion() {
+    List<Pair<byte[], byte[]>> keys =
+      Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 }));
+    FuzzyRowFilter v1 = new FuzzyRowFilter(keys, FuzzyRowFilter.V1_PROCESSED_WILDCARD_MASK);
+    FuzzyRowFilter v2 = new FuzzyRowFilter(keys, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+    FuzzyRowFilter v2Copy = new FuzzyRowFilter(keys, FuzzyRowFilter.V2_PROCESSED_WILDCARD_MASK);
+
+    // Same logical keys, different serialized form -> not equal.
+    assertNotEquals(v1, v2);
+    // Same keys and same version -> equal, and equal objects must share a hashCode.
+    assertEquals(v2, v2Copy);
+    assertEquals(v2.hashCode(), v2Copy.hashCode());
   }
 
   private static FuzzyRowFilter newReverseFuzzyRowFilter() {
