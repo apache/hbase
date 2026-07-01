@@ -17,15 +17,18 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
+import static org.awaitility.Awaitility.await;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
@@ -44,6 +47,7 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -1713,6 +1717,96 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
       assertTrue(Bytes.equals(current.getRowArray(), current.getRowOffset(), current.getRowLength(),
         row2, 0, row2.length));
     }
+  }
+
+  /**
+   * On a cell-visibility table, two DeleteColumn markers carrying different labels shadow disjoint
+   * cells, so neither is redundant w.r.t. the other. A minor compaction must not drop the
+   * lower-timestamp marker just because a higher-timestamp marker of a different label was tracked
+   * first; doing so would resurrect data that must stay deleted. This is the end-to-end regression
+   * guard for {@link VisibilityScanDeleteTracker#isRedundantDelete}.
+   * <p>
+   * The big put is larger than {@code hbase.hstore.compaction.max.size}, so minor compaction
+   * excludes its file and merges only the two small delete-marker files (isAllFiles=false, hence
+   * COMPACT_RETAIN_DELETES and MinorCompactionScanQueryMatcher, the path that calls
+   * isRedundantDelete). The put's data stays in its own file, so dropping the SECRET marker would
+   * make it visible again.
+   */
+  @Test
+  public void testDifferentLabelDeleteMarkersSurviveMinorCompaction(TestInfo testInfo)
+    throws Exception {
+    setAuths();
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
+    // Minor compaction merges at most two files and skips any file larger than 64KB.
+    ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(fam)
+      .setMaxVersions(5).setConfiguration("hbase.hstore.compaction.min", "2")
+      .setConfiguration("hbase.hstore.compaction.max", "2")
+      .setConfiguration("hbase.hstore.compaction.max.size", "65536");
+    // Disable automatic compaction while the three HFiles are laid down, so the minor compaction
+    // under test is exactly the one triggered explicitly below (no racing background compaction).
+    TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
+      .setCompactionEnabled(false).setColumnFamily(cfd.build()).build());
+
+    SUPERUSER.runAs((PrivilegedExceptionAction<Void>) () -> {
+      try (Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName)) {
+        // Big SECRET-visible put at ts=40. Random bytes keep the file above max.size so it is
+        // excluded from the minor compaction and retains the data the SECRET delete shadows.
+        byte[] big = new byte[200 * 1024];
+        new Random(1).nextBytes(big);
+        Put put = new Put(row1);
+        put.addColumn(fam, qual, 40L, big);
+        put.setCellVisibility(new CellVisibility(SECRET));
+        table.put(put);
+        TEST_UTIL.getAdmin().flush(tableName);
+        // SECRET DeleteColumn at ts=50 shadows the SECRET put.
+        Delete dSecret = new Delete(row1);
+        dSecret.setCellVisibility(new CellVisibility(SECRET));
+        dSecret.addColumns(fam, qual, 50L);
+        table.delete(dSecret);
+        TEST_UTIL.getAdmin().flush(tableName);
+        // Newer CONFIDENTIAL DeleteColumn at ts=100 shadows disjoint (CONFIDENTIAL) cells.
+        Delete dConf = new Delete(row1);
+        dConf.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+        dConf.addColumns(fam, qual, 100L);
+        table.delete(dConf);
+        TEST_UTIL.getAdmin().flush(tableName);
+      }
+      return null;
+    });
+
+    // Before compaction the SECRET put is correctly hidden by the SECRET delete.
+    assertEquals(0, countCells(tableName, SECRET));
+
+    // Synchronously minor-compact the two small delete files (the big put file is excluded).
+    HRegion region = TEST_UTIL.getHBaseCluster().getRegions(tableName).get(0);
+    region.compact(false);
+    // Two files remain: the untouched big put file plus the single merged delete file. This both
+    // confirms a minor compaction happened and that the big file was not swept into a major one.
+    await().atMost(Duration.ofSeconds(60))
+      .untilAsserted(() -> assertEquals(2, region.getStore(fam).getStorefilesCount()));
+
+    // The SECRET delete must still shadow the SECRET put: no resurrection.
+    assertEquals(0, countCells(tableName, SECRET));
+  }
+
+  private int countCells(TableName tableName, String... auths) throws Exception {
+    return SUPERUSER.runAs((PrivilegedExceptionAction<Integer>) () -> {
+      try (Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName)) {
+        Scan s = new Scan();
+        s.readVersions(5);
+        s.setAuthorizations(new Authorizations(auths));
+        try (ResultScanner scanner = table.getScanner(s)) {
+          int count = 0;
+          for (Result r : scanner) {
+            count += r.size();
+          }
+          return count;
+        }
+      }
+    });
   }
 
   @Test
