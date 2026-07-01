@@ -94,7 +94,7 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
 
   @Override
   public double getStoreFileCompressionRatio() {
-    return 0.5;
+    return 2;
   }
 
   @Override

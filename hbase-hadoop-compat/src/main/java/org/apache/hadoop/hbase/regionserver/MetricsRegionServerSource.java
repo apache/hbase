@@ -248,8 +248,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Bytes per second by which the size of storefiles being served grows.";
   String STOREFILE_UNCOMPRESSED_SIZE_DESC = "Total uncompressed size of storefiles being served.";
   String STOREFILE_COMPRESSION_RATIO_DESC =
-    "Compression ratio of storefiles (compressed/uncompressed). Lower values indicate better"
-      + " compression. Returns 1.0 when there is no data.";
+    "Compression ratio of storefiles (uncompressed/compressed). Higher values indicate better"
+      + " compression. Returns 0.0 when there is no data.";
   String TOTAL_REQUEST_COUNT = "totalRequestCount";
   String TOTAL_REQUEST_COUNT_DESC =
     "Total number of requests this RegionServer has answered; increments the count once for "

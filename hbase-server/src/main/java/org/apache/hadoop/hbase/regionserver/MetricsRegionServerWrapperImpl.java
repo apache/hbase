@@ -542,9 +542,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   public double getStoreFileCompressionRatio() {
     long uncompressed = aggregate.storeFileUncompressedSize;
     if (uncompressed == 0) {
-      return 1.0;
+      return 0.0;
     }
-    return (double) aggregate.storeFileSize / uncompressed;
+    return (double) uncompressed / aggregate.storeFileSize;
   }
 
   @Override
