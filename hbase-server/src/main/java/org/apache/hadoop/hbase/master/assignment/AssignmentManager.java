@@ -235,8 +235,7 @@ public class AssignmentManager {
 
   private final int forceRegionRetainmentRetries;
 
-  private final RegionInTransitionTracker regionInTransitionTracker =
-    new RegionInTransitionTracker();
+  private final RegionInTransitionTracker regionInTransitionTracker;
 
   public AssignmentManager(MasterServices master, MasterRegion masterRegion) {
     this(master, masterRegion, new RegionStateStore(master, masterRegion));
@@ -246,6 +245,7 @@ public class AssignmentManager {
     this.master = master;
     this.regionStateStore = stateStore;
     this.metrics = new MetricsAssignmentManager();
+    this.regionInTransitionTracker = new RegionInTransitionTracker(metrics::updateRitDuration);
     this.masterRegion = masterRegion;
 
     final Configuration conf = master.getConfiguration();
@@ -1713,7 +1713,7 @@ public class AssignmentManager {
       if (state == null) {
         return false;
       }
-      return (statTimestamp - state.getStamp()) > (ritThreshold * 2);
+      return (statTimestamp - state.getStamp()) > (ritThreshold * 2L);
     }
 
     protected void update(final AssignmentManager am) {
@@ -1743,7 +1743,7 @@ public class AssignmentManager {
             ritsOverThreshold = new HashMap<String, RegionState>();
           }
           ritsOverThreshold.put(state.getRegion().getEncodedName(), state);
-          totalRITsTwiceThreshold += (ritTime > (ritThreshold * 2)) ? 1 : 0;
+          totalRITsTwiceThreshold += (ritTime > (ritThreshold * 2L)) ? 1 : 0;
         }
         if (oldestRITTime < ritTime) {
           oldestRITTime = ritTime;
@@ -1899,7 +1899,7 @@ public class AssignmentManager {
         if (timeOfCrash != 0) {
           regionNode.crashed(timeOfCrash);
         }
-        regionInTransitionTracker.regionCrashed(regionNode);
+        regionInTransitionTracker.regionCrashed(regionNode, timeOfCrash);
       }
     }
   };
@@ -2107,7 +2107,7 @@ public class AssignmentManager {
    * Get the number of regions in transition.
    */
   public int getRegionsInTransitionCount() {
-    return regionInTransitionTracker.getRegionsInTransition().size();
+    return regionInTransitionTracker.getRegionsInTransitionCount();
   }
 
   public SortedSet<RegionState> getRegionsStateInTransition() {
@@ -2336,7 +2336,7 @@ public class AssignmentManager {
       RegionStateNode node = regionStates.getOrCreateRegionStateNode(regionInfo);
       if (crashedServerName.equals(node.getRegionLocation())) {
         node.crashed(scp.getSubmittedTime());
-        regionInTransitionTracker.regionCrashed(node);
+        regionInTransitionTracker.regionCrashed(node, scp.getSubmittedTime());
       } else {
         LOG.warn("Region {} should be on crashed region server {} but is recorded on {}",
           regionInfo, crashedServerName, node.getRegionLocation());
