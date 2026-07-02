@@ -102,6 +102,7 @@ fi
 init_locale
 init_java
 #set java 17 for spotless
+set_java8_home
 set_java17_home
 init_mvn
 init_python
