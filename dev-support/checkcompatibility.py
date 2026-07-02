@@ -44,6 +44,7 @@ import sys
 import urllib.request
 import urllib.error
 import urllib.parse
+import xml.etree.ElementTree as xml
 from collections import namedtuple
 try:
     import argparse
@@ -135,7 +136,33 @@ def get_repo_name(remote_name="origin"):
     return remote[:-4] if remote.endswith(".git") else remote
 
 
-def build_tree(java_path, verbose):
+def select_java_home(java_path, java8_home, java17_home):
+    pom = xml.parse(os.path.join(java_path, "pom.xml"))
+    root = pom.getroot()
+    ns = ""
+    if root.tag.startswith("{"):
+        ns = root.tag.split("}")[0] + "}"   # e.g. "{http://maven.apache.org/POM/4.0.0}"
+    version_elem = root.find(f"{ns}version")
+    if version_elem is not None and version_elem.text:
+        version = version_elem.text.strip()
+    else:
+        raise ValueError("Could not find project version")
+    if version == "${revision}":
+        properties_elem = root.find(f"{ns}properties")
+        if properties_elem is None:
+            raise ValueError("Could not find properties")
+        revision_elem = properties_elem.find(f"{ns}revision")
+        if revision_elem is not None and revision_elem.text:
+            version = revision_elem.text.strip()
+        else:
+            raise ValueError("Could not find project revision")
+    if version.startswith("3."):
+        return java17_home
+    else:
+        return java8_home
+
+
+def build_tree(java_path, verbose, java8_home, java17_home):
     """ Run the Java build within 'path'. """
     logging.info("Building in %s ", java_path)
     # special hack for comparing with rel/2.0.0, see HBASE-26063 for more details
@@ -144,7 +171,10 @@ def build_tree(java_path, verbose):
                "-Dmaven.javadoc.skip=true", "--threads=1.0C", "package"]
     if not verbose:
         mvn_cmd.insert(-1, "--quiet")
-    subprocess.check_call(mvn_cmd, cwd=java_path)
+    env = os.environ.copy()
+    if java8_home is not None and java17_home is not None:
+        env["JAVA_HOME"] = select_java_home(java_path, java8_home, java17_home)
+    subprocess.check_call(mvn_cmd, cwd=java_path, env=env)
 
 
 def checkout_java_acc(force):
@@ -444,6 +474,14 @@ def main():
     parser.add_argument("--skip-build",
                         action="store_true",
                         help="Skip building the projects.")
+    parser.add_argument("--java8_home",
+                        default=None,
+                        help="Path to Java 8 installation. "
+                        "Used for building projects with version < 3.0.")
+    parser.add_argument("--java17_home",
+                        default=None,
+                        help="Path to Java 17 installation. "
+                        "Used for building projects with version >= 3.0.")
     parser.add_argument("--verbose",
                         action="store_true",
                         help="more output")
@@ -516,8 +554,8 @@ def main():
     if args.skip_build:
         logging.info("Skipping the build")
     else:
-        build_tree(src_dir, args.verbose)
-        build_tree(dst_dir, args.verbose)
+        build_tree(src_dir, args.verbose, args.java8_home, args.java17_home)
+        build_tree(dst_dir, args.verbose, args.java8_home, args.java17_home)
 
     # Find the JARs.
     src_jars = find_jars(src_dir)

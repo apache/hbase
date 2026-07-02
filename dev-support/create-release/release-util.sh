@@ -609,6 +609,8 @@ function generate_api_report {
     org.apache.yetus.audience.InterfaceAudience.Public  \
     -e "original-hbase.*.jar" \
     -e "hbase-shaded-testing-util.*.jar" \
+    --java8_home "${JAVA8_HOME}" \
+    --java17_home "${JAVA17_HOME}" \
     "$previous_tag" "$release_tag"
   previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
   cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
