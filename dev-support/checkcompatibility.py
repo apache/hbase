@@ -172,7 +172,7 @@ def build_tree(java_path, verbose, java8_home, java17_home):
     if not verbose:
         mvn_cmd.insert(-1, "--quiet")
     env = os.environ.copy()
-    if java8_home is not None and java17_home is not None:
+    if java8_home and java17_home:
         env["JAVA_HOME"] = select_java_home(java_path, java8_home, java17_home)
     subprocess.check_call(mvn_cmd, cwd=java_path, env=env)
 
