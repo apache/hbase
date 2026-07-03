@@ -101,7 +101,9 @@ fi
 
 init_locale
 init_java
-#set java 17 for spotless
+# always set java 8 for generating api report
+set_java8_home
+# set java 17 for spotless
 set_java17_home
 init_mvn
 init_python
