@@ -29,6 +29,7 @@ import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -193,12 +194,15 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               // Added to support migration
               try {
                 mobCell = resolveMobCell(c);
-              } catch (FileNotFoundException fnfe) {
-                if (discardMobMiss) {
-                  LOG.error("Missing MOB cell: file={} not found", fName);
+              } catch (DoNotRetryIOException e) {
+                if (
+                  discardMobMiss && e.getCause() != null
+                    && e.getCause() instanceof FileNotFoundException
+                ) {
+                  LOG.error("Missing MOB cell: file={} not found cell={}", fName, c);
                   continue;
                 } else {
-                  throw fnfe;
+                  throw e;
                 }
               }
 
