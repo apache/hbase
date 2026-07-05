@@ -36,11 +36,10 @@ import org.junit.jupiter.api.Test;
 /**
  * Tests that {@link VisibilityScanDeleteTracker} never reports a delete marker as redundant.
  * <p>
- * HBASE-30036 added {@link DeleteTracker#isRedundantDelete(Cell)} so that minor compaction
- * can drop a delete marker already covered by a previously tracked delete of equal or broader
- * scope. The base {@link org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker}
- * implements it purely from delete type / timestamp / qualifier, with no regard to visibility
- * labels.
+ * HBASE-30036 added {@link DeleteTracker#isRedundantDelete(Cell)} so that minor compaction can drop
+ * a delete marker already covered by a previously tracked delete of equal or broader scope. The
+ * base {@link org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker} implements it
+ * purely from delete type / timestamp / qualifier, with no regard to visibility labels.
  * <p>
  * On cell-visibility tables a delete marker only shadows cells whose visibility expression matches
  * (see {@link VisibilityScanDeleteTracker#isDeleted}). Two markers carrying different labels cover
