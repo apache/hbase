@@ -22,8 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.ArrayBackedTag;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
@@ -36,7 +36,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Tests that {@link VisibilityScanDeleteTracker} never reports a delete marker as redundant.
  * <p>
- * HBASE-30036 added {@link DeleteTracker#isRedundantDelete(ExtendedCell)} so that minor compaction
+ * HBASE-30036 added {@link DeleteTracker#isRedundantDelete(Cell)} so that minor compaction
  * can drop a delete marker already covered by a previously tracked delete of equal or broader
  * scope. The base {@link org.apache.hadoop.hbase.regionserver.querymatcher.ScanDeleteTracker}
  * implements it purely from delete type / timestamp / qualifier, with no regard to visibility
@@ -130,8 +130,7 @@ public class TestVisibilityScanDeleteTracker {
       tracker.isRedundantDelete(deleteMarker(QUALIFIER, 50L, KeyValue.Type.DeleteColumn, null)));
   }
 
-  private static ExtendedCell deleteMarker(byte[] qualifier, long ts, KeyValue.Type type,
-    byte[] label) {
+  private static Cell deleteMarker(byte[] qualifier, long ts, KeyValue.Type type, byte[] label) {
     List<Tag> tags = label == null
       ? null
       : Collections.singletonList(new ArrayBackedTag(TagType.VISIBILITY_TAG_TYPE, label));
