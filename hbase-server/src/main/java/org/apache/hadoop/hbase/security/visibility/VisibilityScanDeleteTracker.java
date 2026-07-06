@@ -328,6 +328,20 @@ public class VisibilityScanDeleteTracker extends ScanDeleteTracker {
     return DeleteResult.NOT_DELETED;
   }
 
+  /**
+   * The inherited {@link ScanDeleteTracker#isRedundantDelete(Cell)} is label-blind: it tracks
+   * deleteCell/deleteType/deleteTimestamp (and familyStamp) without regard to the visibility tags
+   * of the delete markers. Reusing it during minor compaction could drop a delete marker that only
+   * shadows differently-labeled data, resurrecting cells that should stay deleted. So on
+   * cell-visibility tables we conservatively report no delete as redundant (matching the
+   * {@link org.apache.hadoop.hbase.regionserver.querymatcher.DeleteTracker} default), keeping every
+   * marker (tracked + included).
+   */
+  @Override
+  public boolean isRedundantDelete(Cell cell) {
+    return false;
+  }
+
   @Override
   public void reset() {
     super.reset();
