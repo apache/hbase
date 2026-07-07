@@ -139,7 +139,9 @@ pageContext.setAttribute("pageTitle", "Process info for PID: " + JSONMetricUtil.
   <% } %>
 </div>
 <% for(MemoryPoolMXBean mp:mPools) {
-if(mp.getName().contains("Cache")) continue;%>
+// Skip code cache pools: "Code Cache" (JDK 8) and the segmented
+// "CodeHeap '...'" pools introduced by JEP 197 in JDK 9+.
+if(mp.getName().contains("Cache") || mp.getName().contains("CodeHeap")) continue;%>
 <div class="container-fluid content">
   <div class="row">
       <div class="page-header">
@@ -148,7 +150,7 @@ if(mp.getName().contains("Cache")) continue;%>
   </div>
   <table class="table table-striped" width="90%" >
     <tr>
-        <th>Commited</th>
+        <th>Committed</th>
         <th>Init</th>
         <th>Max</th>
         <th>Used</th>
