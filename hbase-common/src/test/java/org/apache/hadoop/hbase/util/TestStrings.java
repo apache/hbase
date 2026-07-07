@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -55,6 +56,21 @@ public class TestStrings {
     assertEquals("foo.com", Strings.domainNamePointerToHostName("foo.com"));
     assertEquals("foo.bar.com", Strings.domainNamePointerToHostName("foo.bar.com"));
     assertEquals("foo.bar.com", Strings.domainNamePointerToHostName("foo.bar.com."));
+  }
+
+  @Test
+  public void testHostnamesEqual() {
+    assertTrue(Strings.hostnamesEqual("HOST.example.com", "host.example.com"));
+    assertTrue(Strings.hostnamesEqual("rs1", "RS1"));
+    assertFalse(Strings.hostnamesEqual("host-a.example.com", "host-b.example.com"));
+    assertTrue(Strings.hostnamesEqual("10.0.0.1", "10.0.0.1"));
+    assertFalse(Strings.hostnamesEqual("10.0.0.1", "10.0.0.2"));
+    assertFalse(Strings.hostnamesEqual("HOST.example.com", "10.0.0.1"));
+    assertTrue(Strings.hostnamesEqual("::1", "0:0:0:0:0:0:0:1"));
+    assertTrue(Strings.hostnamesEqual("[2001:0db8:85a3:0000:0000:8a2e:0370:7334]",
+      "2001:0db8:85a3:0000:0000:8a2e:0370:7334"));
+    assertThrows(NullPointerException.class, () -> Strings.hostnamesEqual(null, "host"));
+    assertThrows(NullPointerException.class, () -> Strings.hostnamesEqual("host", null));
   }
 
   @Test
