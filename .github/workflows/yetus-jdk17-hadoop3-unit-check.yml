@@ -132,7 +132,7 @@ jobs:
           SET_JAVA_HOME: "/usr/lib/jvm/java-17"
           SOURCEDIR: "${{ github.workspace }}/src"
           YETUSDIR: "${{ github.workspace }}/yetus"
-          AUTHOR_IGNORE_LIST: "hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/building-and-developing/developer-guidelines.mdx,hbase-website/public/book.html"
+          AUTHOR_IGNORE_LIST: "dev-support/hbase-personality.sh,hbase-website/app/pages/_docs/docs/_mdx/(multi-page)/building-and-developing/developer-guidelines.mdx,hbase-website/public/book.html"
           BLANKS_EOL_IGNORE_FILE: "dev-support/blanks-eol-ignore.txt"
           BLANKS_TABS_IGNORE_FILE: "dev-support/blanks-tabs-ignore.txt"
           EXCLUDE_TESTS_URL: "https://ci-hbase.apache.org/job/HBase-Find-Flaky-Tests/job/${{ github.base_ref }}/lastSuccessfulBuild/artifact/output/excludes"
