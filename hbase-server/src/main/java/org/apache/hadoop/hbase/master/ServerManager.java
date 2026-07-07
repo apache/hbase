@@ -978,11 +978,14 @@ public class ServerManager implements ConfigurationObserver {
   /**
    * Check if a server is unknown. A server can be online, or known to be dead, or unknown to this
    * manager (i.e, not online, not known to be dead either; it is simply not tracked by the master
-   * any more, for example, a very old previous instance).
+   * anymore, for example, a very old previous instance). A serverName with value null should not be
+   * considered unknown. We set value of regionLocation to null just before finding the assign
+   * candidate (in-between region transition) or while marking it OFFLINE/FAILED_OPEN. Refer
+   * HBASE-30142.
    */
   public boolean isServerUnknown(ServerName serverName) {
-    return serverName == null
-      || (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
+    return serverName != null
+      && (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
   }
 
   public void shutdownCluster() {
