@@ -65,7 +65,7 @@ public class TestEncodedNameCollisionDetection {
   }
 
   /**
-   *  Verifies that duplicate encoded region names within candidate regions are rejected.
+   * Verifies that duplicate encoded region names within candidate regions are rejected.
    */
   @Test
   public void testDetectsDuplicatesInCandidates() {
