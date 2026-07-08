@@ -21,7 +21,10 @@ import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CompletionService;
 import java.util.concurrent.ExecutionException;
@@ -30,10 +33,12 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -80,6 +85,29 @@ public abstract class ModifyRegionUtils {
       }
     }
     return hRegionInfos;
+  }
+
+  /**
+   * Checks candidate regions for encoded\-name collisions. Ensures there are no duplicates in the
+   * input and no conflicts with existing region states.
+   */
+  public static void checkForEncodedNameCollisions(final Collection<RegionInfo> candidates,
+    final RegionStates regionStates) throws IOException {
+    if (candidates == null || candidates.isEmpty()) {
+      return;
+    }
+    Objects.requireNonNull(regionStates, "regionStates is null");
+    Set<String> candidateNames = new HashSet<>();
+    for (RegionInfo ri : candidates) {
+      String encoded = ri.getEncodedName();
+      if (
+        !candidateNames.add(encoded)
+          || regionStates.getRegionStateNodeFromEncodedRegionName(encoded) != null
+      ) {
+        throw new DoNotRetryIOException("Encoded region name collision detected: '" + encoded
+          + "' for table " + ri.getTable() + ". Refusing to proceed.");
+      }
+    }
   }
 
   /**
