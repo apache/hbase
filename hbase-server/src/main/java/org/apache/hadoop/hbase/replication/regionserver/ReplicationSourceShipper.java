@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.OFFSET_UPDATE_INTERVAL_MS_KEY;
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.OFFSET_UPDATE_SIZE_THRESHOLD_KEY;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.getAdaptiveTimeout;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.sleepForRetries;
 
@@ -80,10 +82,6 @@ public class ReplicationSourceShipper extends Thread {
   private final long offsetUpdateSizeThresholdBytes;
   private WALEntryBatch lastShippedBatch;
 
-  private static final String OFFSET_UPDATE_INTERVAL_MS_KEY =
-    "hbase.replication.shipper.offset.update.interval.ms";
-  private static final String OFFSET_UPDATE_SIZE_THRESHOLD_KEY =
-    "hbase.replication.shipper.offset.update.size.threshold";
   private static final long DEFAULT_OFFSET_UPDATE_INTERVAL_MS = Long.MAX_VALUE;
   private static final long DEFAULT_OFFSET_UPDATE_SIZE_THRESHOLD = -1L;
 
@@ -288,6 +286,10 @@ public class ReplicationSourceShipper extends Thread {
   }
 
   private boolean shouldPersistLogPosition() {
+    LOG.debug(
+      "Persist decision: accumulatedSizeSinceLastUpdate={} threshold={} elapsed={} interval={}",
+      accumulatedSizeSinceLastUpdate, offsetUpdateSizeThresholdBytes,
+      EnvironmentEdgeManager.currentTime() - lastOffsetUpdateTime, offsetUpdateIntervalMs);
     if (lastShippedBatch == null) {
       return false;
     }

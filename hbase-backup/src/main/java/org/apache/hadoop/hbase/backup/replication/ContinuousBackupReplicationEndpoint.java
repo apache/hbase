@@ -25,8 +25,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.Executors;
-import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.stream.Collectors;
@@ -46,8 +44,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.BaseReplicationEndpoint;
-import org.apache.hadoop.hbase.replication.EmptyEntriesPolicy;
-import org.apache.hadoop.hbase.replication.ReplicationResult;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSourceInterface;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -69,16 +65,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     LoggerFactory.getLogger(ContinuousBackupReplicationEndpoint.class);
   public static final String CONF_PEER_UUID = "hbase.backup.wal.replication.peerUUID";
   public static final String CONF_BACKUP_ROOT_DIR = "hbase.backup.root.dir";
-  public static final String CONF_BACKUP_MAX_WAL_SIZE = "hbase.backup.max.wal.size";
-  public static final long DEFAULT_MAX_WAL_SIZE = 128 * 1024 * 1024;
-
-  public static final String CONF_STAGED_WAL_FLUSH_INITIAL_DELAY =
-    "hbase.backup.staged.wal.flush.initial.delay.seconds";
-  public static final int DEFAULT_STAGED_WAL_FLUSH_INITIAL_DELAY_SECONDS = 5 * 60; // 5 minutes
-  public static final String CONF_STAGED_WAL_FLUSH_INTERVAL =
-    "hbase.backup.staged.wal.flush.interval.seconds";
-  public static final int DEFAULT_STAGED_WAL_FLUSH_INTERVAL_SECONDS = 5 * 60; // 5 minutes
-  public static final int EXECUTOR_TERMINATION_TIMEOUT_SECONDS = 60; // TODO: configurable??
 
   private final Map<Long, FSHLogProvider.Writer> walWriters = new ConcurrentHashMap<>();
   private final ReentrantLock lock = new ReentrantLock();
@@ -88,7 +74,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   private BackupFileSystemManager backupFileSystemManager;
   private UUID peerUUID;
   private String peerId;
-  private ScheduledExecutorService flushExecutor;
 
   private long latestWALEntryTimestamp = -1L;
 
@@ -104,7 +89,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
     initializePeerUUID();
     initializeBackupFileSystemManager();
-    startWalFlushExecutor();
     LOG.info("{} Initialization complete", Utils.logPeerId(peerId));
   }
 
@@ -134,34 +118,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
         Utils.logPeerId(peerId), backupRootDir);
     } catch (IOException e) {
       throw new IOException("Failed to initialize BackupFileSystemManager", e);
-    }
-  }
-
-  private void startWalFlushExecutor() {
-    int initialDelay = conf.getInt(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY,
-      DEFAULT_STAGED_WAL_FLUSH_INITIAL_DELAY_SECONDS);
-    int flushInterval =
-      conf.getInt(CONF_STAGED_WAL_FLUSH_INTERVAL, DEFAULT_STAGED_WAL_FLUSH_INTERVAL_SECONDS);
-
-    flushExecutor = Executors.newSingleThreadScheduledExecutor();
-    flushExecutor.scheduleAtFixedRate(this::flushAndBackupSafely, initialDelay, flushInterval,
-      TimeUnit.SECONDS);
-    LOG.info("{} Scheduled WAL flush executor started with initial delay {}s and interval {}s",
-      Utils.logPeerId(peerId), initialDelay, flushInterval);
-  }
-
-  private void flushAndBackupSafely() {
-    lock.lock();
-    try {
-      LOG.info("{} Periodic WAL flush triggered", Utils.logPeerId(peerId));
-      flushWriters();
-      replicationSource.persistOffsets();
-      LOG.info("{} Periodic WAL flush and offset persistence completed successfully",
-        Utils.logPeerId(peerId));
-    } catch (IOException e) {
-      LOG.error("{} Error during WAL flush: {}", Utils.logPeerId(peerId), e.getMessage(), e);
-    } finally {
-      lock.unlock();
     }
   }
 
@@ -212,19 +168,11 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
   }
 
   @Override
-  public EmptyEntriesPolicy getEmptyEntriesPolicy() {
-    // Since this endpoint writes to S3 asynchronously, an empty entry batch
-    // does not guarantee that all previously submitted entries were persisted.
-    // Hence, avoid committing the WAL position.
-    return EmptyEntriesPolicy.SUBMIT;
-  }
-
-  @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
+  public boolean replicate(ReplicateContext replicateContext) {
     final List<WAL.Entry> entries = replicateContext.getEntries();
     if (entries.isEmpty()) {
       LOG.debug("{} No WAL entries to replicate", Utils.logPeerId(peerId));
-      return ReplicationResult.SUBMITTED;
+      return false;
     }
 
     LOG.debug("{} Received {} WAL entries for replication", Utils.logPeerId(peerId),
@@ -248,20 +196,12 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       // occurred.
       latestWALEntryTimestamp = entries.get(entries.size() - 1).getKey().getWriteTime();
 
-      if (isAnyWriterFull()) {
-        LOG.debug("{} Some WAL writers reached max size, triggering flush",
-          Utils.logPeerId(peerId));
-        flushWriters();
-        LOG.debug("{} Replication committed after WAL flush", Utils.logPeerId(peerId));
-        return ReplicationResult.COMMITTED;
-      }
-
       LOG.debug("{} Replication submitted successfully", Utils.logPeerId(peerId));
-      return ReplicationResult.SUBMITTED;
+      return true;
     } catch (IOException e) {
       LOG.error("{} Replication failed. Error details: {}", Utils.logPeerId(peerId), e.getMessage(),
         e);
-      return ReplicationResult.FAILED;
+      return false;
     } finally {
       lock.unlock();
     }
@@ -286,15 +226,6 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
     return entries.stream().collect(
       Collectors.groupingBy(entry -> (entry.getKey().getWriteTime() / ONE_DAY_IN_MILLISECONDS)
         * ONE_DAY_IN_MILLISECONDS));
-  }
-
-  private boolean isAnyWriterFull() {
-    return walWriters.values().stream().anyMatch(this::isWriterFull);
-  }
-
-  private boolean isWriterFull(FSHLogProvider.Writer writer) {
-    long maxWalSize = conf.getLong(CONF_BACKUP_MAX_WAL_SIZE, DEFAULT_MAX_WAL_SIZE);
-    return writer.getLength() >= maxWalSize;
   }
 
   private void backupWalEntries(long day, List<WAL.Entry> walEntries) throws IOException {
@@ -375,11 +306,9 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
 
   private void close() {
     LOG.info("{} Closing WAL replication component...", Utils.logPeerId(peerId));
-    shutdownFlushExecutor();
     lock.lock();
     try {
       flushWriters();
-      replicationSource.persistOffsets();
     } catch (IOException e) {
       LOG.error("{} Failed to Flush Open Wal Writers: {}", Utils.logPeerId(peerId), e.getMessage(),
         e);
@@ -529,25 +458,13 @@ public class ContinuousBackupReplicationEndpoint extends BaseReplicationEndpoint
       + new Path(baseNamespaceDir, filePath) + " or " + new Path(hFileArchiveDir, filePath));
   }
 
-  private void shutdownFlushExecutor() {
-    if (flushExecutor != null) {
-      LOG.info("{} Initiating WAL flush executor shutdown.", Utils.logPeerId(peerId));
-
-      flushExecutor.shutdown();
-      try {
-        if (
-          !flushExecutor.awaitTermination(EXECUTOR_TERMINATION_TIMEOUT_SECONDS, TimeUnit.SECONDS)
-        ) {
-          LOG.warn("{} Flush executor did not terminate within timeout, forcing shutdown.",
-            Utils.logPeerId(peerId));
-          flushExecutor.shutdownNow();
-        }
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        flushExecutor.shutdownNow();
-        LOG.warn("{} Flush executor shutdown was interrupted.", Utils.logPeerId(peerId), e);
-      }
-      LOG.info("{} WAL flush thread stopped.", Utils.logPeerId(peerId));
+  @Override
+  public void beforePersistingReplicationOffset() throws IOException {
+    lock.lock();
+    try {
+      flushWriters();
+    } finally {
+      lock.unlock();
     }
   }
 }

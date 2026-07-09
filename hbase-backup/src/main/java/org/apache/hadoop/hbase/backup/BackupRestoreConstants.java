@@ -156,6 +156,13 @@ public interface BackupRestoreConstants {
   String CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS = "hbase.backup.continuous.pitr.window.days";
   long DEFAULT_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS = 30;
 
+  String CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS =
+    "hbase.backup.continuous.offset.update.interval.ms";
+  String CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD =
+    "hbase.backup.continuous.offset.update.size.threshold";
+  long DEFAULT_CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS = 5 * 60 * 1000L; // 5 minutes
+  long DEFAULT_CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD = 128 * 1024 * 1024L; // 128 MB
+
   enum BackupCommand {
     CREATE,
     CANCEL,

@@ -19,23 +19,20 @@ package org.apache.hadoop.hbase.backup.replication;
 
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
 import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_PEER_UUID;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.WAL_FILE_PREFIX;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.copyWithCleanup;
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.mockStatic;
@@ -62,7 +59,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupFileSystemManager;
@@ -84,20 +80,17 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestContinuousBackupReplicationEndpoint {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestContinuousBackupReplicationEndpoint.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestContinuousBackupReplicationEndpoint.class);
@@ -112,7 +105,7 @@ public class TestContinuousBackupReplicationEndpoint {
   static FileSystem fs = null;
   static Path root;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Set the configuration properties as required
     conf.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
@@ -125,7 +118,7 @@ public class TestContinuousBackupReplicationEndpoint {
     admin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (fs != null) {
       fs.close();
@@ -327,11 +320,11 @@ public class TestContinuousBackupReplicationEndpoint {
       }
     }
 
-    assertEquals("WALs should be stored in exactly two directories", 2, walDirectories.size());
-    assertTrue("Expected previous day's WAL directory missing",
-      walDirectories.contains(expectedPrevDayDir));
-    assertTrue("Expected current day's WAL directory missing",
-      walDirectories.contains(expectedCurrentDayDir));
+    assertEquals(2, walDirectories.size(), "WALs should be stored in exactly two directories");
+    assertTrue(walDirectories.contains(expectedPrevDayDir),
+      "Expected previous day's WAL directory missing");
+    assertTrue(walDirectories.contains(expectedCurrentDayDir),
+      "Expected current day's WAL directory missing");
 
     deleteTable(tableName);
   }
@@ -563,9 +556,6 @@ public class TestContinuousBackupReplicationEndpoint {
     Map<String, String> additionalArgs = new HashMap<>();
     additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
     additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupRootDir.toString());
-    additionalArgs.put(CONF_BACKUP_MAX_WAL_SIZE, "10240");
-    additionalArgs.put(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
-    additionalArgs.put(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
 
     ReplicationPeerConfig peerConfig = ReplicationPeerConfig.newBuilder()
       .setReplicationEndpointImpl(customReplicationEndpointImpl).setReplicateAllUserTables(false)
@@ -677,7 +667,7 @@ public class TestContinuousBackupReplicationEndpoint {
 
   private void verifyWALBackup(String backupRootDir) throws IOException {
     Path walDir = new Path(backupRootDir, WALS_DIR);
-    assertTrue("WAL directory does not exist!", fs.exists(walDir));
+    assertTrue(fs.exists(walDir), "WAL directory does not exist!");
 
     RemoteIterator<LocatedFileStatus> fileStatusIterator = fs.listFiles(walDir, true);
     List<Path> walFiles = new ArrayList<>();
@@ -692,17 +682,17 @@ public class TestContinuousBackupReplicationEndpoint {
       }
     }
 
-    assertNotNull("No WAL files found!", walFiles);
-    assertFalse("Expected some WAL files but found none!", walFiles.isEmpty());
+    assertNotNull(walFiles, "No WAL files found!");
+    assertFalse(walFiles.isEmpty(), "Expected some WAL files but found none!");
   }
 
   private void verifyBulkLoadBackup(String backupRootDir) throws IOException {
     Path bulkLoadFilesDir = new Path(backupRootDir, BULKLOAD_FILES_DIR);
-    assertTrue("BulkLoad Files directory does not exist!", fs.exists(bulkLoadFilesDir));
+    assertTrue(fs.exists(bulkLoadFilesDir), "BulkLoad Files directory does not exist!");
 
     FileStatus[] bulkLoadFiles = fs.listStatus(bulkLoadFilesDir);
-    assertNotNull("No Bulk load files found!", bulkLoadFiles);
-    assertTrue("Expected some Bulk load files but found none!", bulkLoadFiles.length > 0);
+    assertNotNull(bulkLoadFiles, "No Bulk load files found!");
+    assertTrue(bulkLoadFiles.length > 0, "Expected some Bulk load files but found none!");
   }
 
   private void replayWALs(String walDir, TableName tableName) {

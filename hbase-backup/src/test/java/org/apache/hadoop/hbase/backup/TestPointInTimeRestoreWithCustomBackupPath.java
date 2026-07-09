@@ -19,29 +19,24 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestPointInTimeRestoreWithCustomBackupPath extends TestBackupBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPointInTimeRestoreWithCustomBackupPath.class);
 
   private static final String backupWalDirName = "TestCustomBackupWalDir";
   private static final String customBackupDirName = "CustomBackupRoot";
@@ -50,7 +45,7 @@ public class TestPointInTimeRestoreWithCustomBackupPath extends TestBackupBase {
   private static Path customBackupDir;
   private static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     backupWalDir = new Path(root, backupWalDirName);
@@ -75,7 +70,7 @@ public class TestPointInTimeRestoreWithCustomBackupPath extends TestBackupBase {
     String[] args =
       PITRTestUtil.buildBackupArgs("full", new TableName[] { table1 }, true, BACKUP_ROOT_DIR);
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertEquals("Backup should succeed", 0, ret);
+    assertEquals(0, ret, "Backup should succeed");
 
     PITRTestUtil.waitForReplication();
 
@@ -89,7 +84,7 @@ public class TestPointInTimeRestoreWithCustomBackupPath extends TestBackupBase {
     EnvironmentEdgeManager.reset();
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupAfterClass() throws IOException {
     if (fs.exists(backupWalDir)) {
       fs.delete(backupWalDir, true);
@@ -111,11 +106,10 @@ public class TestPointInTimeRestoreWithCustomBackupPath extends TestBackupBase {
       new TableName[] { restoredTable }, restoreTime, customBackupDir.toString());
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertEquals("PITR should succeed with custom backup root dir", 0, ret);
+    assertEquals(0, ret, "PITR should succeed with custom backup root dir");
 
     // Validate that the restored table has same row count
-    assertEquals("Restored table should match row count",
-      PITRTestUtil.getRowCount(TEST_UTIL, table1),
-      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable));
+    assertEquals(PITRTestUtil.getRowCount(TEST_UTIL, table1),
+      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable), "Restored table should match row count");
   }
 }

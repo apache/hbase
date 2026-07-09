@@ -18,8 +18,9 @@
 package org.apache.hadoop.hbase.backup.impl;
 
 import static org.apache.hadoop.hbase.backup.BackupInfo.withRoot;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anySet;
 import static org.mockito.ArgumentMatchers.eq;
@@ -46,7 +47,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
@@ -54,10 +54,9 @@ import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 import org.mockito.MockedStatic;
 
@@ -67,16 +66,12 @@ import org.mockito.MockedStatic;
  * This class improves test coverage by validating the behavior of key methods in BackupAdminImpl.
  * Some methods are made package-private to enable testing.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestBackupAdminImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupAdminImpl.class);
-
   private BackupAdminImpl backupAdminImpl;
   private BackupSystemTable mockTable;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     backupAdminImpl = new BackupAdminImpl(null);
     mockTable = mock(BackupSystemTable.class);
@@ -225,7 +220,7 @@ public class TestBackupAdminImpl {
    * This test simulates an exception while trying to obtain the FileSystem, and expects the method
    * to propagate the exception.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCleanupBackupDir_throwsIOException() throws Exception {
     // Setup test input
     String backupId = "backup_003";
@@ -244,7 +239,8 @@ public class TestBackupAdminImpl {
       eq(conf));
 
     // Call method and expect IOException
-    backupAdminImpl.cleanupBackupDir(mockBackupInfo, table, conf);
+    assertThrows(IOException.class,
+      () -> backupAdminImpl.cleanupBackupDir(mockBackupInfo, table, conf));
   }
 
   /**
@@ -645,7 +641,7 @@ public class TestBackupAdminImpl {
   /**
    * Verifies that checkIfValidForMerge fails if a FULL backup is included.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCheckIfValidForMerge_failsWithFullBackup() throws IOException {
     String[] ids = { "b1" };
     TableName t1 = TableName.valueOf("ns", "t1");
@@ -656,27 +652,29 @@ public class TestBackupAdminImpl {
     BackupSystemTable table = mock(BackupSystemTable.class);
     when(table.readBackupInfo("b1")).thenReturn(b1);
 
-    new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table);
+    assertThrows(IOException.class,
+      () -> new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table));
   }
 
   /**
    * Verifies that checkIfValidForMerge fails if one of the provided backup IDs is not found in the
    * system table (i.e., null is returned).
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCheckIfValidForMerge_failsWhenBackupInfoNotFound() throws IOException {
     String[] ids = { "b_missing" };
 
     BackupSystemTable table = mock(BackupSystemTable.class);
     when(table.readBackupInfo("b_missing")).thenReturn(null);
 
-    new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table);
+    assertThrows(IOException.class,
+      () -> new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table));
   }
 
   /**
    * Verifies that checkIfValidForMerge fails when backups come from different destinations.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCheckIfValidForMerge_failsWithDifferentDestinations() throws IOException {
     String[] ids = { "b1", "b2" };
     TableName t1 = TableName.valueOf("ns", "t1");
@@ -690,13 +688,14 @@ public class TestBackupAdminImpl {
     when(table.readBackupInfo("b1")).thenReturn(b1);
     when(table.readBackupInfo("b2")).thenReturn(b2);
 
-    new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table);
+    assertThrows(IOException.class,
+      () -> new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table));
   }
 
   /**
    * Verifies that checkIfValidForMerge fails if any backup is not in COMPLETE state.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCheckIfValidForMerge_failsWithNonCompleteState() throws IOException {
     String[] ids = { "b1" };
     TableName t1 = TableName.valueOf("ns", "t1");
@@ -707,14 +706,15 @@ public class TestBackupAdminImpl {
     BackupSystemTable table = mock(BackupSystemTable.class);
     when(table.readBackupInfo("b1")).thenReturn(b1);
 
-    new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table);
+    assertThrows(IOException.class,
+      () -> new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(ids, table));
   }
 
   /**
    * Verifies that checkIfValidForMerge fails when there is a "hole" in the backup sequence — i.e.,
    * a required image from the full backup history is missing in the input list.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCheckIfValidForMerge_failsWhenHoleInImages() throws IOException {
     TableName t1 = TableName.valueOf("ns", "t1");
     String dest = "/backup/root";
@@ -735,7 +735,8 @@ public class TestBackupAdminImpl {
 
     // Simulate a "hole" by omitting b2 from images
     String[] idsWithHole = { "b1", "b3" };
-    new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(idsWithHole, table);
+    assertThrows(IOException.class,
+      () -> new BackupAdminImpl(mock(Connection.class)).checkIfValidForMerge(idsWithHole, table));
   }
 
   private BackupInfo createBackupInfo(String id, BackupType type, BackupInfo.BackupState state,

@@ -20,20 +20,18 @@ package org.apache.hadoop.hbase.backup;
 import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_PITR_WINDOW_DAYS;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -52,11 +50,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * <li><b>fe</b>: Full backup end time (used as conservative proxy for fm)</li>
  * </ul>
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupDeleteWithContinuousBackupAndPITR.class);
 
   private BackupSystemTable backupSystemTable;
 
@@ -242,13 +237,13 @@ public class TestBackupDeleteWithContinuousBackupAndPITR extends TestBackupBase 
     boolean isForceDelete) throws Exception {
     int ret = deleteBackup(backupId, isForceDelete);
     assertEquals(0, ret);
-    assertFalse("Backup should be deleted but still exists!", backupExists(table, backupId));
+    assertFalse(backupExists(table, backupId), "Backup should be deleted but still exists!");
   }
 
   private void assertDeletionFails(BackupSystemTable table, String backupId) throws Exception {
     int ret = deleteBackup(backupId, false);
     assertNotEquals(0, ret);
-    assertTrue("Backup should still exist after failed deletion!", backupExists(table, backupId));
+    assertTrue(backupExists(table, backupId), "Backup should still exist after failed deletion!");
   }
 
   private boolean backupExists(BackupSystemTable table, String backupId) throws Exception {

@@ -42,8 +42,8 @@ public class DummyReplicationEndpoint extends BaseReplicationEndpoint {
   }
 
   @Override
-  public ReplicationResult replicate(ReplicateContext replicateContext) {
-    return ReplicationResult.COMMITTED;
+  public boolean replicate(ReplicateContext replicateContext) {
+    return true;
   }
 
   @Override

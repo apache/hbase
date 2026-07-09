@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.backup;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_ENABLE_CONTINUOUS_BACKUP;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -32,7 +32,6 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -40,28 +39,23 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestContinuousBackup extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestContinuousBackup.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestContinuousBackup.class);
 
   String backupWalDirName = "TestContinuousBackupWalDir";
 
-  @Before
+  @BeforeEach
   public void beforeTest() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
@@ -70,7 +64,7 @@ public class TestContinuousBackup extends TestBackupBase {
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
   }
 
-  @After
+  @AfterEach
   public void afterTest() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
@@ -97,11 +91,11 @@ public class TestContinuousBackup extends TestBackupBase {
       // Run backup
       String[] args = buildBackupArgs("full", new TableName[] { tableName }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertEquals("Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Backup should succeed");
 
       // Verify backup history increased and all the backups are succeeded
       List<BackupInfo> backups = table.getBackupHistory();
-      assertEquals("Backup history should increase", before + 1, backups.size());
+      assertEquals(before + 1, backups.size(), "Backup history should increase");
       for (BackupInfo data : List.of(backups.get(0))) {
         String backupId = data.getBackupId();
         assertTrue(checkSucceeded(backupId));
@@ -109,8 +103,8 @@ public class TestContinuousBackup extends TestBackupBase {
 
       // Verify backup manifest contains the correct tables
       BackupManifest manifest = getLatestBackupManifest(backups);
-      assertEquals("Backup should contain the expected tables", Sets.newHashSet(tableName),
-        new HashSet<>(manifest.getTableList()));
+      assertEquals(Sets.newHashSet(tableName), new HashSet<>(manifest.getTableList()),
+        "Backup should contain the expected tables");
     }
 
     // Verify replication peer subscription
@@ -135,16 +129,16 @@ public class TestContinuousBackup extends TestBackupBase {
       // Create full backup for table1
       String[] args = buildBackupArgs("full", new TableName[] { tableName1 }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertEquals("Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Backup should succeed");
 
       // Create full backup for table2
       args = buildBackupArgs("full", new TableName[] { tableName2 }, true);
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertEquals("Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Backup should succeed");
 
       // Verify backup history increased and all the backups are succeeded
       List<BackupInfo> backups = table.getBackupHistory();
-      assertEquals("Backup history should increase", before + 2, backups.size());
+      assertEquals(before + 2, backups.size(), "Backup history should increase");
       for (BackupInfo data : List.of(backups.get(0), backups.get(1))) {
         String backupId = data.getBackupId();
         assertTrue(checkSucceeded(backupId));
@@ -152,8 +146,8 @@ public class TestContinuousBackup extends TestBackupBase {
 
       // Verify backup manifest contains the correct tables
       BackupManifest manifest = getLatestBackupManifest(backups);
-      assertEquals("Backup should contain the expected tables", Sets.newHashSet(tableName2),
-        new HashSet<>(manifest.getTableList()));
+      assertEquals(Sets.newHashSet(tableName2), new HashSet<>(manifest.getTableList()),
+        "Backup should contain the expected tables");
     }
 
     // Verify replication peer subscription for each table
@@ -180,21 +174,21 @@ public class TestContinuousBackup extends TestBackupBase {
       // Create full backup for table1 with continuous backup enabled
       String[] args = buildBackupArgs("full", new TableName[] { tableName1 }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertEquals("Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Backup should succeed");
 
       // Create full backup for table2 without continuous backup enabled
       args = buildBackupArgs("full", new TableName[] { tableName2 }, false);
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertEquals("Backup should succeed", 0, ret);
+      assertEquals(0, ret, "Backup should succeed");
 
       // Attempt full backup for both tables without continuous backup enabled (should fail)
       args = buildBackupArgs("full", new TableName[] { tableName1, tableName2 }, false);
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertTrue("Backup should fail due to mismatch in continuous backup settings", ret != 0);
+      assertTrue(ret != 0, "Backup should fail due to mismatch in continuous backup settings");
 
       // Verify backup history size is unchanged after the failed backup
       int after = table.getBackupHistory().size();
-      assertEquals("Backup history should remain unchanged on failure", before + 2, after);
+      assertEquals(before + 2, after, "Backup history should remain unchanged on failure");
     }
   }
 
@@ -215,11 +209,11 @@ public class TestContinuousBackup extends TestBackupBase {
       String[] args = buildBackupArgs("full", new TableName[] { tableName }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
 
-      assertTrue("Backup should fail when WAL directory is not specified", ret != 0);
+      assertTrue(ret != 0, "Backup should fail when WAL directory is not specified");
 
       List<BackupInfo> backups = table.getBackupHistory();
       int after = backups.size();
-      assertEquals("Backup history should increase", before + 1, after);
+      assertEquals(before + 1, after, "Backup history should increase");
 
       // last backup should be a failure
       assertFalse(checkSucceeded(backups.get(0).getBackupId()));
@@ -240,11 +234,11 @@ public class TestContinuousBackup extends TestBackupBase {
       String[] args = buildBackupArgs("incremental", new TableName[] { tableName }, true);
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
 
-      assertTrue("Backup should fail when using continuous backup with incremental mode", ret != 0);
+      assertTrue(ret != 0, "Backup should fail when using continuous backup with incremental mode");
 
       // Backup history should remain unchanged
       int after = table.getBackupHistory().size();
-      assertEquals("Backup history should remain unchanged on failure", before, after);
+      assertEquals(before, after, "Backup history should remain unchanged on failure");
     }
   }
 
@@ -254,8 +248,8 @@ public class TestContinuousBackup extends TestBackupBase {
         .filter(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER)).findFirst()
         .orElseThrow(() -> new AssertionError("Replication peer not found"));
 
-      assertTrue("Table should be subscribed to the replication peer",
-        peerDesc.getPeerConfig().getTableCFsMap().containsKey(table));
+      assertTrue(peerDesc.getPeerConfig().getTableCFsMap().containsKey(table),
+        "Table should be subscribed to the replication peer");
     }
   }
 
@@ -275,10 +269,10 @@ public class TestContinuousBackup extends TestBackupBase {
     try (BackupSystemTable backupTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
       Map<TableName, Long> tableBackupMap = backupTable.getContinuousBackupTableSet();
 
-      assertTrue("Table is missing in the continuous backup table set",
-        tableBackupMap.containsKey(table));
+      assertTrue(tableBackupMap.containsKey(table),
+        "Table is missing in the continuous backup table set");
 
-      assertTrue("Timestamp for table should be greater than 0", tableBackupMap.get(table) > 0);
+      assertTrue(tableBackupMap.get(table) > 0, "Timestamp for table should be greater than 0");
     }
   }
 

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.mapreduce;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -165,6 +166,7 @@ public class TestWALInputFormat {
 
     return inputFormat.getSplits(jobContext, "", "");
   }
+
   /**
    * Test that an empty WAL file (which causes WALHeaderEOFException) is gracefully handled and
    * skipped rather than causing the job to fail.

@@ -18,6 +18,8 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_DEFAULT;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -78,6 +80,8 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
     Path backupWalDir = new Path(root, backupWalDirName);
     conf1.set(CONF_CONTINUOUS_BACKUP_WAL_DIR, backupWalDir.toString());
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
+    conf1.setLong(CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS, 2000L); // 2 seconds
+    conf1.setLong(CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD, 1024L); // 1 KB
     fs = FileSystem.get(conf1);
   }
 
@@ -88,6 +92,8 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
     if (fs.exists(backupWalDir)) {
       fs.delete(backupWalDir, true);
     }
+    conf1.unset(CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS);
+    conf1.unset(CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD);
     conf1.unset(CONF_CONTINUOUS_BACKUP_WAL_DIR);
     conf1.setBoolean(REPLICATION_MARKER_ENABLED_KEY, REPLICATION_MARKER_ENABLED_DEFAULT);
     deleteContinuousBackupReplicationPeerIfExists(TEST_UTIL.getAdmin());

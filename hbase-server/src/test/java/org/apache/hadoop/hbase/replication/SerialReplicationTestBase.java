@@ -81,7 +81,7 @@ public class SerialReplicationTestBase {
     }
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) {
       synchronized (WRITER) {
         try {
           for (Entry entry : replicateContext.getEntries()) {
@@ -92,7 +92,7 @@ public class SerialReplicationTestBase {
           throw new UncheckedIOException(e);
         }
       }
-      return ReplicationResult.COMMITTED;
+      return true;
     }
 
     @Override

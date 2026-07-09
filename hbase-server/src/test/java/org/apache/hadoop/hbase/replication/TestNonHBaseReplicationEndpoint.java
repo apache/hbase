@@ -122,9 +122,9 @@ public class TestNonHBaseReplicationEndpoint {
     }
 
     @Override
-    public ReplicationResult replicate(ReplicateContext replicateContext) {
+    public boolean replicate(ReplicateContext replicateContext) {
       REPLICATED.set(true);
-      return ReplicationResult.COMMITTED;
+      return true;
     }
 
     @Override
