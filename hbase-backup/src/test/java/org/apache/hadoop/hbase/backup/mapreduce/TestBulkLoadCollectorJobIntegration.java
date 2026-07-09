@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -37,7 +37,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BulkLoadProcessor;
@@ -56,12 +55,11 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -79,12 +77,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
  * <p>
  * - Verifies the job emits the expected store-file path.
  */
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBulkLoadCollectorJobIntegration {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadCollectorJobIntegration.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBulkLoadCollectorJobIntegration.class);
@@ -103,13 +98,13 @@ public class TestBulkLoadCollectorJobIntegration {
     return "TestBulkLoadCollectorJobIntegration";
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     if (hbaseDir != null && fs != null) fs.delete(hbaseDir, true);
     mvcc = new MultiVersionConcurrencyControl();
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.setInt("dfs.blocksize", 1024 * 1024);
@@ -128,7 +123,7 @@ public class TestBulkLoadCollectorJobIntegration {
     fs.mkdirs(logDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (fs != null && hbaseDir != null) fs.delete(hbaseDir, true);
     TEST_UTIL.shutdownMiniDFSCluster();
@@ -150,8 +145,8 @@ public class TestBulkLoadCollectorJobIntegration {
       BulkLoadProcessor.processBulkLoadFiles(entry.getKey(), entry.getEdit());
     LOG.debug("BulkLoadProcessor returned {} relative path(s): {}", relativePaths.size(),
       relativePaths);
-    assertEquals("Expected exactly one relative path from BulkLoadProcessor", 1,
-      relativePaths.size());
+    assertEquals(1, relativePaths.size(),
+      "Expected exactly one relative path from BulkLoadProcessor");
 
     // Build WAL file path and write WAL using ProtobufLogWriter into logDir
     String walFileName = "wal-" + EnvironmentEdgeManager.currentTime();
@@ -179,8 +174,8 @@ public class TestBulkLoadCollectorJobIntegration {
     // Assert WAL file exists and has content
     boolean exists = fs.exists(walFilePath);
     long len = exists ? fs.getFileStatus(walFilePath).getLen() : -1L;
-    assertTrue("WAL file should exist at " + walFilePath, exists);
-    assertTrue("WAL file should have non-zero length, actual=" + len, len > 0);
+    assertTrue(exists, "WAL file should exist at " + walFilePath);
+    assertTrue(len > 0, "WAL file should have non-zero length, actual=" + len);
 
     // Run the MR job
     Path walInputDir = logDir;
@@ -189,16 +184,16 @@ public class TestBulkLoadCollectorJobIntegration {
     int res = ToolRunner.run(TEST_UTIL.getConfiguration(),
       new BulkLoadCollectorJob(TEST_UTIL.getConfiguration()),
       new String[] { walInputDir.toString(), outDir.toString() });
-    assertEquals("BulkLoadCollectorJob should exit with code 0", 0, res);
+    assertEquals(0, res, "BulkLoadCollectorJob should exit with code 0");
 
     // Inspect job output
     FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
-    assertTrue("Output directory should exist", dfs.exists(outDir));
+    assertTrue(dfs.exists(outDir), "Output directory should exist");
 
     List<Path> partFiles = Arrays.stream(dfs.listStatus(outDir)).map(FileStatus::getPath)
       .filter(p -> p.getName().startsWith("part-")).toList();
 
-    assertFalse("Expect at least one part file in output", partFiles.isEmpty());
+    assertFalse(partFiles.isEmpty(), "Expect at least one part file in output");
 
     // Read all lines (collect while stream is open)
     List<String> lines = partFiles.stream().flatMap(p -> {
@@ -211,12 +206,11 @@ public class TestBulkLoadCollectorJobIntegration {
       }
     }).toList();
 
-    assertFalse("Job should have emitted at least one storefile path", lines.isEmpty());
+    assertFalse(lines.isEmpty(), "Job should have emitted at least one storefile path");
 
     boolean found = lines.stream().anyMatch(l -> l.contains(storeFileName));
-    assertTrue(
-      "Expected emitted path to contain store file name: " + storeFileName + " ; got: " + lines,
-      found);
+    assertTrue(found,
+      "Expected emitted path to contain store file name: " + storeFileName + " ; got: " + lines);
 
     // cleanup
     dfs.delete(outDir, true);

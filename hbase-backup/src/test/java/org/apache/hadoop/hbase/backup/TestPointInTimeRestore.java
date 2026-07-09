@@ -19,23 +19,21 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Integration-style tests for Point-in-Time Restore (PITR).
@@ -52,17 +50,14 @@ import org.junit.experimental.categories.Category;
  * WAL bulk-load descriptors) is exercised by the test suite.
  * </p>
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestPointInTimeRestore extends TestBackupBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPointInTimeRestore.class);
 
   private static final String backupWalDirName = "TestPointInTimeRestoreWalDir";
   static Path backupWalDir;
   static FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     backupWalDir = new Path(root, backupWalDirName);
@@ -90,7 +85,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
     String[] args =
       PITRTestUtil.buildBackupArgs("full", new TableName[] { table1 }, true, BACKUP_ROOT_DIR);
     int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertEquals("Backup should succeed", 0, ret);
+    assertEquals(0, ret, "Backup should succeed");
 
     // Move time forward to simulate 15 days ago
     EnvironmentEdgeManager
@@ -109,7 +104,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
     // Perform a full backup for table2 with continuous backup enabled
     args = PITRTestUtil.buildBackupArgs("full", new TableName[] { table2 }, true, BACKUP_ROOT_DIR);
     ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertEquals("Backup should succeed", 0, ret);
+    assertEquals(0, ret, "Backup should succeed");
 
     // Move time forward to simulate 10 days ago
     EnvironmentEdgeManager
@@ -121,7 +116,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
     args = PITRTestUtil.buildBackupArgs("full", new TableName[] { table3, table4 }, false,
       BACKUP_ROOT_DIR);
     ret = ToolRunner.run(conf1, new BackupDriver(), args);
-    assertEquals("Backup should succeed", 0, ret);
+    assertEquals(0, ret, "Backup should succeed");
 
     PITRTestUtil.waitForReplication(); // Ensure replication is complete before concluding setup
 
@@ -129,7 +124,7 @@ public class TestPointInTimeRestore extends TestBackupBase {
     EnvironmentEdgeManager.reset();
   }
 
-  @AfterClass
+  @AfterAll
   public static void setupAfterClass() throws IOException {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     Path backupWalDir = new Path(root, backupWalDirName);
@@ -154,8 +149,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
       EnvironmentEdgeManager.currentTime() + ONE_DAY_IN_MILLISECONDS, null);
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertNotEquals("Restore should fail since the requested restore time is in the future", 0,
-      ret);
+    assertNotEquals(0, ret,
+      "Restore should fail since the requested restore time is in the future");
 
     // Case 2: Requested restore time is too old (beyond the retention window, should fail)
     args = PITRTestUtil.buildPITRArgs(new TableName[] { table1 },
@@ -163,9 +158,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
       EnvironmentEdgeManager.currentTime() - 40 * ONE_DAY_IN_MILLISECONDS, null);
 
     ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertNotEquals(
-      "Restore should fail since the requested restore time is outside the retention window", 0,
-      ret);
+    assertNotEquals(0, ret,
+      "Restore should fail since the requested restore time is outside the retention window");
   }
 
   /**
@@ -179,8 +173,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
       EnvironmentEdgeManager.currentTime() - 10 * ONE_DAY_IN_MILLISECONDS, null);
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertNotEquals("Restore should fail since continuous backup is not enabled for the table", 0,
-      ret);
+    assertNotEquals(0, ret,
+      "Restore should fail since continuous backup is not enabled for the table");
   }
 
   /**
@@ -193,9 +187,8 @@ public class TestPointInTimeRestore extends TestBackupBase {
       EnvironmentEdgeManager.currentTime() - 16 * ONE_DAY_IN_MILLISECONDS, null);
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertNotEquals(
-      "Restore should fail since the requested restore point is before the start of continuous backup",
-      0, ret);
+    assertNotEquals(0, ret,
+      "Restore should fail since the requested restore point is before the start of continuous backup");
   }
 
   /**
@@ -211,12 +204,12 @@ public class TestPointInTimeRestore extends TestBackupBase {
         EnvironmentEdgeManager.currentTime() - 5 * ONE_DAY_IN_MILLISECONDS, null);
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertEquals("Restore should succeed", 0, ret);
+    assertEquals(0, ret, "Restore should succeed");
 
     // Validate that the restored table contains the same number of rows as the original table
-    assertEquals("Restored table should have the same row count as the original",
-      PITRTestUtil.getRowCount(TEST_UTIL, table1),
-      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable));
+    assertEquals(PITRTestUtil.getRowCount(TEST_UTIL, table1),
+      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable),
+      "Restored table should have the same row count as the original");
   }
 
   /**
@@ -233,14 +226,14 @@ public class TestPointInTimeRestore extends TestBackupBase {
       EnvironmentEdgeManager.currentTime() - 5 * ONE_DAY_IN_MILLISECONDS, null);
 
     int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
-    assertEquals("Restore should succeed", 0, ret);
+    assertEquals(0, ret, "Restore should succeed");
 
     // Validate that the restored tables contain the same number of rows as the originals
-    assertEquals("Restored table1 should have the same row count as the original",
-      PITRTestUtil.getRowCount(TEST_UTIL, table1),
-      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable1));
-    assertEquals("Restored table2 should have the same row count as the original",
-      PITRTestUtil.getRowCount(TEST_UTIL, table2),
-      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable2));
+    assertEquals(PITRTestUtil.getRowCount(TEST_UTIL, table1),
+      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable1),
+      "Restored table1 should have the same row count as the original");
+    assertEquals(PITRTestUtil.getRowCount(TEST_UTIL, table2),
+      PITRTestUtil.getRowCount(TEST_UTIL, restoredTable2),
+      "Restored table2 should have the same row count as the original");
   }
 }

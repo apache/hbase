@@ -25,9 +25,9 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -42,23 +42,17 @@ import java.util.Set;
 import java.util.TimeZone;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupType;
 import org.apache.hadoop.hbase.backup.TestBackupBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestBackupCommands extends TestBackupBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupCommands.class);
-
   String backupWalDirName = "TestBackupWalDir";
 
   /**
@@ -94,7 +88,7 @@ public class TestBackupCommands extends TestBackupBase {
     long cutoff = command.determineWALCleanupCutoffTime(sysTable);
 
     // THEN
-    assertEquals("Expected oldest FULL backup timestamp", 1111L, cutoff);
+    assertEquals(1111L, cutoff, "Expected oldest FULL backup timestamp");
   }
 
   @Test
@@ -167,11 +161,11 @@ public class TestBackupCommands extends TestBackupBase {
       Path bulkPath = new Path(bulkLoadDir, dayDir);
 
       if (dayTime + ONE_DAY_IN_MILLISECONDS - 1 < cutoffTime) {
-        assertFalse("Old WAL dir should be deleted: " + walPath, fs.exists(walPath));
-        assertFalse("Old BulkLoad dir should be deleted: " + bulkPath, fs.exists(bulkPath));
+        assertFalse(fs.exists(walPath), "Old WAL dir should be deleted: " + walPath);
+        assertFalse(fs.exists(bulkPath), "Old BulkLoad dir should be deleted: " + bulkPath);
       } else {
-        assertTrue("Recent WAL dir should exist: " + walPath, fs.exists(walPath));
-        assertTrue("Recent BulkLoad dir should exist: " + bulkPath, fs.exists(bulkPath));
+        assertTrue(fs.exists(walPath), "Recent WAL dir should exist: " + walPath);
+        assertTrue(fs.exists(bulkPath), "Recent BulkLoad dir should exist: " + bulkPath);
       }
     }
   }

@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.mock;
@@ -32,7 +33,6 @@ import java.util.Arrays;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BulkLoadProcessor;
@@ -49,33 +49,29 @@ import org.apache.hadoop.mapreduce.Mapper;
 import org.apache.hadoop.mapreduce.Reducer;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.MockedStatic;
 import org.mockito.Mockito;
 
 /**
  * Unit tests for BulkLoadCollectorJob (mapper, reducer and job creation/validation).
  */
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBulkLoadCollectorJob {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadCollectorJob.class);
 
   private Configuration conf;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     // fresh configuration for each test
     conf = HBaseConfiguration.create();
   }
 
-  @After
+  @AfterEach
   public void tearDown() {
     // nothing for now
   }
@@ -115,18 +111,19 @@ public class TestBulkLoadCollectorJob {
    * Verifies that {@link BulkLoadCollectorJob#createSubmittableJob(String[])} throws an IOException
    * when called with insufficient or null arguments.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testCreateSubmittableJob_throwsForInsufficientArgs() throws Exception {
     BulkLoadCollectorJob jobDriver = new BulkLoadCollectorJob(conf);
     // this call must throw IOException for the test to pass
-    jobDriver.createSubmittableJob(new String[] { "file:/only/one/arg" });
+    assertThrows(IOException.class,
+      () -> jobDriver.createSubmittableJob(new String[] { "file:/only/one/arg" }));
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testCreateSubmittableJob_throwsForNullArgs() throws Exception {
     BulkLoadCollectorJob jobDriver = new BulkLoadCollectorJob(conf);
     // this call must throw IOException for the test to pass
-    jobDriver.createSubmittableJob(null);
+    assertThrows(IOException.class, () -> jobDriver.createSubmittableJob(null));
   }
 
   /**

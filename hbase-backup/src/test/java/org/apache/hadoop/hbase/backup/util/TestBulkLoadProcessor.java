@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.backup.util;
 
 import static org.apache.hadoop.hbase.wal.WALEdit.METAFAMILY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -29,16 +29,14 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -57,11 +55,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
  * <li>Entries containing multiple column families</li>
  * </ul>
  */
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestBulkLoadProcessor {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadProcessor.class);
 
   /**
    * Creates a WAL.Entry containing a {@link WALProtos.BulkLoadDescriptor} with the given

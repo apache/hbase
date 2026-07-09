@@ -17,36 +17,29 @@
  */
 package org.apache.hadoop.hbase.backup.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import java.io.File;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TemporaryFolder;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 
 /**
  * Unit tests for {@link BackupFileSystemManager}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestBackupFileSystemManager {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupFileSystemManager.class);
-
-  @Rule
-  public TemporaryFolder tmp = new TemporaryFolder();
+  @TempDir
+  java.nio.file.Path tmp;
 
   /**
    * extractWalPathInfo: happy path where WALs dir has a prefix. e.g.
@@ -58,7 +51,7 @@ public class TestBackupFileSystemManager {
       new Path("/some/prefix/" + BackupFileSystemManager.WALS_DIR + "/2025-09-14/wal-000");
     BackupFileSystemManager.WalPathInfo info = BackupFileSystemManager.extractWalPathInfo(walPath);
 
-    assertNotNull("WalPathInfo should not be null", info);
+    assertNotNull(info, "WalPathInfo should not be null");
     // prefixBeforeWALs should be "/some/prefix"
     assertEquals("/some/prefix", info.getPrefixBeforeWALs().toString());
     assertEquals("2025-09-14", info.getDateSegment());
@@ -76,8 +69,8 @@ public class TestBackupFileSystemManager {
     assertNotNull(info);
     // parent of "/WALs" in Hadoop Path is "/" (root). Ensure date segment parsed.
     assertEquals("2025-09-14", info.getDateSegment());
-    assertNotNull("prefixBeforeWALs should not be null for root-style path",
-      info.getPrefixBeforeWALs());
+    assertNotNull(info.getPrefixBeforeWALs(),
+      "prefixBeforeWALs should not be null for root-style path");
     // prefix might be "/" (expected), be tolerant: assert it ends with "/" or equals "/"
     assertTrue(info.getPrefixBeforeWALs().toString().equals("/")
       || !info.getPrefixBeforeWALs().toString().isEmpty());
@@ -86,30 +79,31 @@ public class TestBackupFileSystemManager {
   /**
    * extractWalPathInfo: null input should throw IllegalArgumentException.
    */
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testExtractWalPathInfo_nullPath() throws Exception {
-    BackupFileSystemManager.extractWalPathInfo(null);
+    assertThrows(IllegalArgumentException.class,
+      () -> BackupFileSystemManager.extractWalPathInfo(null));
   }
 
   /**
    * extractWalPathInfo: missing date directory -> should throw IOException. Example: path that has
    * no parent for the wal file.
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testExtractWalPathInfo_missingDateDir() throws Exception {
     // A single segment path (no parents) e.g. "walfile"
     Path walPath = new Path("walfile");
-    BackupFileSystemManager.extractWalPathInfo(walPath);
+    assertThrows(IOException.class, () -> BackupFileSystemManager.extractWalPathInfo(walPath));
   }
 
   /**
    * extractWalPathInfo: WALs segment name mismatch -> should throw IOException. e.g.
    * /prefix/NOT_WALs/2025/wal
    */
-  @Test(expected = IOException.class)
+  @Test
   public void testExtractWalPathInfo_wrongWALsegment() throws Exception {
     Path walPath = new Path("/prefix/NOT_WALS/2025/wal");
-    BackupFileSystemManager.extractWalPathInfo(walPath);
+    assertThrows(IOException.class, () -> BackupFileSystemManager.extractWalPathInfo(walPath));
   }
 
   /**
@@ -148,8 +142,9 @@ public class TestBackupFileSystemManager {
    */
   @Test
   public void testConstructorCreatesDirectories() throws Exception {
-    File root = tmp.newFolder("backupRoot");
-    String rootPath = root.getAbsolutePath();
+    java.nio.file.Path root = tmp.resolve("backupRoot");
+    java.nio.file.Files.createDirectories(root);
+    String rootPath = root.toString();
 
     Configuration conf = HBaseConfiguration.create();
     BackupFileSystemManager mgr = new BackupFileSystemManager("peer-1", conf, rootPath);
@@ -158,7 +153,7 @@ public class TestBackupFileSystemManager {
     Path wals = mgr.getWalsDir();
     Path bulk = mgr.getBulkLoadFilesDir();
 
-    assertTrue("WALs dir should exist", fs.exists(wals));
-    assertTrue("bulk-load-files dir should exist", fs.exists(bulk));
+    assertTrue(fs.exists(wals), "WALs dir should exist");
+    assertTrue(fs.exists(bulk), "bulk-load-files dir should exist");
   }
 }

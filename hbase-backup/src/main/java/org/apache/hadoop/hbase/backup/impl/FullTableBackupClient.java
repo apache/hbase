@@ -22,13 +22,19 @@ import static org.apache.hadoop.hbase.HConstants.REPLICATION_SCOPE_GLOBAL;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_ATTEMPTS_PAUSE_MS_KEY;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUP_MAX_ATTEMPTS_KEY;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_ATTEMPTS_PAUSE_MS;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_BACKUP_MAX_ATTEMPTS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.DEFAULT_CONTINUOUS_BACKUP_REPLICATION_ENDPOINT;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.JOB_NAME_CONF_KEY;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_ROOT_DIR;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_PEER_UUID;
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.OFFSET_UPDATE_INTERVAL_MS_KEY;
+import static org.apache.hadoop.hbase.replication.ReplicationUtils.OFFSET_UPDATE_SIZE_THRESHOLD_KEY;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -311,6 +317,13 @@ public class FullTableBackupClient extends TableBackupClient {
     Map<String, String> additionalArgs = new HashMap<>();
     additionalArgs.put(CONF_PEER_UUID, UUID.randomUUID().toString());
     additionalArgs.put(CONF_BACKUP_ROOT_DIR, backupWalDir);
+    additionalArgs.put(OFFSET_UPDATE_INTERVAL_MS_KEY,
+      String.valueOf(conf.getLong(CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS,
+        DEFAULT_CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS)));
+
+    additionalArgs.put(OFFSET_UPDATE_SIZE_THRESHOLD_KEY,
+      String.valueOf(conf.getLong(CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD,
+        DEFAULT_CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD)));
 
     Map<TableName, List<String>> tableMap = tableList.stream()
       .collect(Collectors.toMap(tableName -> tableName, tableName -> new ArrayList<>()));

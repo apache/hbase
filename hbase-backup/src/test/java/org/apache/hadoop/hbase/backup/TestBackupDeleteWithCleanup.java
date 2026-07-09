@@ -23,9 +23,9 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.BULKLOAD_FILES_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupFileSystemManager.WALS_DIR;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -38,7 +38,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
@@ -46,20 +45,15 @@ import org.apache.hadoop.hbase.backup.util.BackupFileSystemManager;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestBackupDeleteWithCleanup extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBackupDeleteWithCleanup.class);
 
   String backupWalDirName = "TestBackupDeleteWithCleanup";
 
@@ -67,7 +61,7 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
   private Path backupWalDir;
   private BackupSystemTable backupSystemTable;
 
-  @Before
+  @BeforeEach
   public void setUpTest() throws Exception {
     Path root = TEST_UTIL.getDataTestDirOnTestFS();
     backupWalDir = new Path(root, backupWalDirName);
@@ -77,7 +71,7 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     backupSystemTable = new BackupSystemTable(TEST_UTIL.getConnection());
   }
 
-  @After
+  @AfterEach
   public void tearDownTest() throws Exception {
     if (backupSystemTable != null) {
       backupSystemTable.close();
@@ -145,8 +139,8 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     String backupId = fullTableBackupWithContinuous(Lists.newArrayList(table1));
     assertTrue(checkSucceeded(backupId));
 
-    assertTrue("Backup replication peer should be enabled after the backup",
-      continuousBackupReplicationPeerExistsAndEnabled());
+    assertTrue(continuousBackupReplicationPeerExistsAndEnabled(),
+      "Backup replication peer should be enabled after the backup");
 
     // Step 3: Run Delete Command
     deleteBackup(backupId);
@@ -155,29 +149,29 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     logDirectoryStructure(fs, backupWalDir, "Directory structure AFTER cleanup:");
 
     // Step 4: Verify CONTINUOUS_BACKUP_REPLICATION_PEER is disabled
-    assertFalse("Backup replication peer should be disabled or removed",
-      continuousBackupReplicationPeerExistsAndEnabled());
+    assertFalse(continuousBackupReplicationPeerExistsAndEnabled(),
+      "Backup replication peer should be disabled or removed");
 
     // Step 5: Verify that system table is updated to remove all the tables
     Set<TableName> remainingTables = backupSystemTable.getContinuousBackupTableSet().keySet();
-    assertTrue("System table should have no tables after all full backups are clear",
-      remainingTables.isEmpty());
+    assertTrue(remainingTables.isEmpty(),
+      "System table should have no tables after all full backups are clear");
 
     // Step 6: Verify that the backup WAL directory is empty
-    assertTrue("WAL backup directory should be empty after force delete",
-      areWalAndBulkloadDirsEmpty(conf1, backupWalDir.toString()));
+    assertTrue(areWalAndBulkloadDirsEmpty(conf1, backupWalDir.toString()),
+      "WAL backup directory should be empty after force delete");
 
     // Step 7: Take new full backup with continuous backup enabled
     String backupIdContinuous = fullTableBackupWithContinuous(Lists.newArrayList(table1));
 
     // Step 8: Verify CONTINUOUS_BACKUP_REPLICATION_PEER is enabled again
-    assertTrue("Backup replication peer should be re-enabled after new backup",
-      continuousBackupReplicationPeerExistsAndEnabled());
+    assertTrue(continuousBackupReplicationPeerExistsAndEnabled(),
+      "Backup replication peer should be re-enabled after new backup");
 
     // And system table has new entry
     Set<TableName> newTables = backupSystemTable.getContinuousBackupTableSet().keySet();
-    assertTrue("System table should contain the table after new backup",
-      newTables.contains(table1));
+    assertTrue(newTables.contains(table1),
+      "System table should contain the table after new backup");
 
     // Cleanup
     deleteBackup(backupIdContinuous);
@@ -215,10 +209,10 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
       String oldDateStr = dateFormat.format(new Date(currentTime - (i * ONE_DAY_IN_MILLISECONDS)));
       Path walPath = new Path(walsDir, oldDateStr);
       Path bulkLoadPath = new Path(bulkLoadDir, oldDateStr);
-      assertFalse("Old WAL directory (" + walPath + ") should be deleted, but it exists!",
-        fs.exists(walPath));
-      assertFalse("Old BulkLoad directory (" + bulkLoadPath + ") should be deleted, but it exists!",
-        fs.exists(bulkLoadPath));
+      assertFalse(fs.exists(walPath),
+        "Old WAL directory (" + walPath + ") should be deleted, but it exists!");
+      assertFalse(fs.exists(bulkLoadPath),
+        "Old BulkLoad directory (" + bulkLoadPath + ") should be deleted, but it exists!");
     }
 
     // Expect folders within the last 3 days to exist
@@ -228,11 +222,10 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
       Path walPath = new Path(walsDir, recentDateStr);
       Path bulkLoadPath = new Path(bulkLoadDir, recentDateStr);
 
-      assertTrue("Recent WAL directory (" + walPath + ") should exist, but it is missing!",
-        fs.exists(walPath));
-      assertTrue(
-        "Recent BulkLoad directory (" + bulkLoadPath + ") should exist, but it is missing!",
-        fs.exists(bulkLoadPath));
+      assertTrue(fs.exists(walPath),
+        "Recent WAL directory (" + walPath + ") should exist, but it is missing!");
+      assertTrue(fs.exists(bulkLoadPath),
+        "Recent BulkLoad directory (" + bulkLoadPath + ") should exist, but it is missing!");
     }
   }
 
@@ -244,8 +237,8 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
       long updatedStartTime = entry.getValue();
 
       // Ensure that the updated start time is not earlier than the expected cutoff time
-      assertTrue("System table update failed!",
-        updatedStartTime >= (currentTime - (3 * ONE_DAY_IN_MILLISECONDS)));
+      assertTrue(updatedStartTime >= (currentTime - (3 * ONE_DAY_IN_MILLISECONDS)),
+        "System table update failed!");
     }
   }
 
