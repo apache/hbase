@@ -3532,8 +3532,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         AbstractReadOnlyController.isAnotherClusterActive(getFileSystem(), getDataRootDir(),
           localSuffix)
       ) {
+        String activeClusterId =
+          FSUtils.getClusterIdFromActiveClusterFile(getFileSystem(), getDataRootDir());
         // Revert read-only mode here
-        confForCoprocessors = this.blockReadOnlyTransition(updatedConf);
+        confForCoprocessors = this.blockReadOnlyTransition(updatedConf, activeClusterId);
       }
     }
 

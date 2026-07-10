@@ -9017,10 +9017,11 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         if (clusterId != null) {
           ActiveClusterSuffix localSuffix = ActiveClusterSuffix.fromConfig(updatedConf, clusterId);
           if (AbstractReadOnlyController.isAnotherClusterActive(regionFs, rootDir, localSuffix)) {
+            String activeClusterId = FSUtils.getClusterIdFromActiveClusterFile(regionFs, rootDir);
             LOG.error(
-              "Cannot disable read-only mode for region {}. Another cluster is already "
+              "Cannot disable read-only mode for region {}. Another cluster with ID {} is already "
                 + "the active cluster on this storage location. Reverting {} to true.",
-              this, HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
+              this, activeClusterId, HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
             // Revert read-only mode here
             confForCoprocessors =
               ConfigurationUtil.getReadOnlyEnabledConfigurationCopy(updatedConf);

@@ -261,6 +261,7 @@ import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -4543,8 +4544,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
         AbstractReadOnlyController.isAnotherClusterActive(mfs.getFileSystem(), mfs.getRootDir(),
           mfs.getActiveClusterSuffix())
       ) {
+        String activeClusterId =
+          FSUtils.getClusterIdFromActiveClusterFile(mfs.getFileSystem(), mfs.getRootDir());
         // Revert read-only mode here
-        confForCoprocessors = this.blockReadOnlyTransition(updatedConf);
+        confForCoprocessors = this.blockReadOnlyTransition(updatedConf, activeClusterId);
       }
     }
 

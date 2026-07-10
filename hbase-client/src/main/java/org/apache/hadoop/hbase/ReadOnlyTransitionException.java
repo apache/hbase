@@ -28,8 +28,11 @@ public class ReadOnlyTransitionException extends DoNotRetryIOException {
 
   private static final long serialVersionUID = 1L;
 
+  private final String activeClusterId;
+
   public ReadOnlyTransitionException() {
     super();
+    this.activeClusterId = null;
   }
 
   /**
@@ -37,6 +40,16 @@ public class ReadOnlyTransitionException extends DoNotRetryIOException {
    */
   public ReadOnlyTransitionException(String message) {
     super(message);
+    this.activeClusterId = null;
+  }
+
+  /**
+   * @param message         the message for this exception
+   * @param activeClusterId the ID of the cluster that is currently active
+   */
+  public ReadOnlyTransitionException(String message, String activeClusterId) {
+    super(message);
+    this.activeClusterId = activeClusterId;
   }
 
   /**
@@ -45,6 +58,7 @@ public class ReadOnlyTransitionException extends DoNotRetryIOException {
    */
   public ReadOnlyTransitionException(String message, Throwable throwable) {
     super(message, throwable);
+    this.activeClusterId = null;
   }
 
   /**
@@ -52,5 +66,19 @@ public class ReadOnlyTransitionException extends DoNotRetryIOException {
    */
   public ReadOnlyTransitionException(Throwable throwable) {
     super(throwable);
+    this.activeClusterId = null;
+  }
+
+  /** Returns the ID of the cluster that is currently active, or null if unknown */
+  public String getActiveClusterId() {
+    return activeClusterId;
+  }
+
+  @Override
+  public String getMessage() {
+    if (activeClusterId != null) {
+      return super.getMessage() + " Current active cluster ID: " + activeClusterId;
+    }
+    return super.getMessage();
   }
 }
