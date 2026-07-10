@@ -293,6 +293,14 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
       return false;
     }
 
+    try {
+      ModifyRegionUtils.checkForEncodedNameCollisions(newRegions,
+        env.getAssignmentManager().getRegionStates());
+    } catch (DoNotRetryIOException e) {
+      setFailure("master-create-table", e);
+      return false;
+    }
+
     // check for store file tracker configurations
     StoreFileTrackerValidationUtils.checkForCreateTable(env.getMasterConfiguration(),
       tableDescriptor);

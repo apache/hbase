@@ -72,6 +72,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
+import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
@@ -142,6 +143,8 @@ public class SplitTableRegionProcedure
         .setEndKey(bestSplitRow).setSplit(false).setRegionId(rid).build();
     this.daughterTwoRI = RegionInfoBuilder.newBuilder(table).setStartKey(bestSplitRow)
       .setEndKey(regionToSplit.getEndKey()).setSplit(false).setRegionId(rid).build();
+    ModifyRegionUtils.checkForEncodedNameCollisions(Arrays.asList(daughterOneRI, daughterTwoRI),
+      env.getAssignmentManager().getRegionStates());
 
     if (tableDescriptor.getRegionSplitPolicyClassName() != null) {
       // Since we don't have region reference here, creating the split policy instance without it.
