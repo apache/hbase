@@ -1,0 +1,205 @@
+---
+title: "Read Replica Cluster"
+description: "Running a secondary HBase cluster in read-only mode against shared cloud storage to scale read workloads."
+---
+
+## Background [#read-replica-cluster-background]
+
+A _Read Replica Cluster_ is an entire HBase cluster running in global read-only mode against the same shared
+storage (`hbase.rootdir`) as an active read-write cluster. Both clusters list the same HFiles in the same
+HDFS / cloud-object-store location; no data is copied. Reads can be served from either cluster, letting the
+read workload be fanned out across multiple clusters without doubling storage cost.
+
+Typical use cases:
+
+- Fan out heavy scan / analytical workloads off the primary cluster.
+- Add cross-availability-zone read capacity backed by a single shared bucket.
+- Stand up an isolated cluster for read-mostly experiments without copying data.
+
+<Callout type="info">
+  **Eventual consistency.** A replica only sees data once (a) the active cluster has flushed the data to
+  HFiles in shared storage, and (b) the replica has been told to re-read shared storage via the
+  `refresh_meta` and `refresh_hfiles` commands. MemStore data on the active cluster is invisible to the
+  replica until flushed.
+</Callout>
+
+The parent design lives on [HBASE-29081](https://issues.apache.org/jira/browse/HBASE-29081).
+
+## Design
+
+The feature has three parts.
+
+### Custom `hbase:meta` per cluster
+
+Every cluster sharing a `hbase.rootdir` needs its own `hbase:meta` and its own master local region
+directory, because region assignments and master-local state are node-scoped and cannot be shared. Other
+system tables (`hbase:acl`, `hbase:replication`) _are_ safe to share because their contents are storage-wide
+and the replica never writes to them.
+
+The configuration key `hbase.meta.table.suffix` selects a per-cluster suffix; the meta table becomes
+`hbase:meta_<suffix>` and the master's local store directory becomes `MasterData_<suffix>`. Each cluster
+sharing the same `hbase.rootdir` must be configured with a distinct suffix so its `hbase:meta` and
+`MasterData` directory do not collide with any other cluster's. The suffix must match `[a-zA-Z0-9]+`.
+
+### Global read-only mode
+
+`hbase.global.readonly.enabled=true` puts a cluster into read-only mode. Five coprocessor controllers under
+`org.apache.hadoop.hbase.security.access` intercept every user-table mutation path and throw
+`WriteAttemptedOnReadOnlyClusterException` (a `DoNotRetryIOException`) with the message
+`Operation not allowed in Read-Only Mode`:
+
+| Class                            | Coprocessor host | Blocks                                                                                                |
+| -------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------- |
+| `MasterReadOnlyController`       | Master           | DDL, snapshots, splits, merges, namespace ops, ACL/quota ops, replication-peer ops                    |
+| `RegionReadOnlyController`       | Region           | put, delete, batchMutate, checkAnd\*, append, increment, flush, compaction, WAL append, commit/replay |
+| `RegionServerReadOnlyController` | RegionServer     | WAL roll, replication sink mutations, log replay                                                      |
+| `BulkLoadReadOnlyController`     | Region           | bulk-load prepare/cleanup                                                                             |
+| `EndpointReadOnlyController`     | Region           | all coprocessor endpoint invocations                                                                  |
+
+Operators do not load these classes manually. `CoprocessorConfigurationUtil.syncReadOnlyConfigurations`
+adds them to `hbase.coprocessor.master.classes`, `hbase.coprocessor.regionserver.classes`, and
+`hbase.coprocessor.region.classes` at startup and on every dynamic
+`ConfigurationManager.notifyAllObservers` event — so the flag can be flipped at runtime with
+`update_all_config` (see Case 3).
+
+### Preventing Multiple Active Clusters (active.cluster.suffix.id)
+
+Two clusters writing to the same `hbase.rootdir` would corrupt shared storage. To enforce a single writer, an
+active master creates a protobuf-serialized sentinel at `<hbase.rootdir>/active.cluster.suffix.id` recording
+its cluster ID and meta suffix. `MasterFileSystem.negotiateActiveClusterSuffixFile` runs at master startup:
+
+- An **active** cluster (`hbase.global.readonly.enabled=false`) creates the file if absent, or verifies its
+  contents match its own identity. If the file belongs to another cluster, startup aborts with an
+  `IOException`.
+- A **replica** cluster (`hbase.global.readonly.enabled=true`) does not read or write the file; it logs
+  `[Read-replica feature] Replica cluster is being started in Read Only Mode` and continues.
+
+`AbstractReadOnlyController.manageActiveClusterIdFile` handles the dynamic toggle: switching to read-only
+deletes the file if this cluster owns it, and switching back to read-write creates the file if absent.
+
+## Configuration
+
+On every node of the **read replica cluster**, add the following to `hbase-site.xml`:
+
+```xml
+<property>
+  <name>hbase.global.readonly.enabled</name>
+  <value>true</value>
+  <description>
+    Put this cluster into global read-only mode. All user-table writes, flushes,
+    compactions, splits, and merges are blocked. The five ReadOnly coprocessor
+    controllers are loaded automatically.
+  </description>
+</property>
+<property>
+  <name>hbase.meta.table.suffix</name>
+  <value>replica1</value>
+  <description>
+    Optional. If set, the meta table is named hbase:meta_<suffix> and the
+    master's local store directory is MasterData_<suffix>. Value must match
+    [a-zA-Z0-9]+. Each cluster sharing the same hbase.rootdir MUST be
+    configured with a distinct suffix so its hbase:meta and MasterData
+    directory do not collide with any other cluster's.
+  </description>
+</property>
+```
+
+The **active cluster** uses the same `hbase.rootdir` but its own `hbase.meta.table.suffix` (distinct from
+every replica's suffix), and leaves `hbase.global.readonly.enabled` unset or `false`.
+
+`hbase.global.readonly.enabled` is a dynamic configuration — a config-change event reloads the read-only
+coprocessors without restarting the process. All nodes must agree on the value; operators are responsible for
+keeping every `hbase-site.xml` in sync before issuing `update_all_config`.
+
+## Operation and maintenance
+
+### Case 1. Bring up a new read replica cluster
+
+1. Provision the replica cluster on hardware that can reach the active cluster's `hbase.rootdir` (typically
+   the same HDFS or object store).
+2. Set `hbase.global.readonly.enabled=true` in the replica's `hbase-site.xml`. And set up
+   `hbase.meta.table.suffix`, to distinguish the replica cluster's meta table on the shared storage.
+3. Start the cluster and verify if the Master log shows
+   `[Read-replica feature] Replica cluster is being started in Read Only Mode`.
+4. From the replica shell, run `refresh_meta` and then `refresh_hfiles` to materialize the active cluster's
+   current state on the replica.
+
+### Case 2. Routine sync after writes on the active cluster
+
+```ruby
+# On the active cluster
+hbase> flush 'my_namespace:my_table'
+```
+
+```ruby
+# On the read replica cluster
+hbase> refresh_meta
+hbase> refresh_hfiles 'TABLE_NAME' => 'my_namespace:my_table'
+```
+
+Always run `refresh_meta` first, then `refresh_hfiles`. `refresh_hfiles` only refreshes regions that are open
+on the replica, so newly discovered regions must be in meta (and assigned) before their HFiles can be picked
+up. `refresh_hfiles` supports three scopes:
+
+```ruby
+hbase> refresh_hfiles                              # all user tables
+hbase> refresh_hfiles 'TABLE_NAME' => 'ns:table'   # one table
+hbase> refresh_hfiles 'NAMESPACE'  => 'ns'         # one namespace
+```
+
+Passing both `TABLE_NAME` and `NAMESPACE` to `refresh_hfiles` is rejected. Both commands return a procedure
+ID that can be tracked through the master UI or `Admin.getProcedures()`.
+
+If the replica's block cache holds stale entries for a table that has just been refreshed, evict them with
+the pre-existing `clear_block_cache 'my_namespace:my_table'` shell command.
+
+`Admin` and `AsyncAdmin` expose the same operations programmatically:
+
+```java
+long pid;
+pid = admin.refreshMeta();
+pid = admin.refreshHFiles();                              // all user tables
+pid = admin.refreshHFiles(TableName.valueOf("ns:table")); // one table
+pid = admin.refreshHFiles("ns");                          // one namespace
+```
+
+### Case 3. Dynamically toggle read-only mode
+
+`hbase.global.readonly.enabled` can be changed without a restart. Edit `hbase-site.xml` then
+trigger a configuration refresh (for example, `update_all_config` from the shell). `ConfigurationManager`
+notifies its observers, which load or unload the read-only coprocessors and call
+`AbstractReadOnlyController.manageActiveClusterIdFile`:
+
+- **false → true (becoming a replica):** the `active.cluster.suffix.id` file is deleted only if its contents
+  match this cluster; if another cluster owns the file, it is left in place.
+- **true → false (becoming active):** the file is recreated with this cluster's identity, unless it already
+  exists.
+
+In-flight batch operations are not interrupted; write operations submitted _after_ the toggle throw
+`WriteAttemptedOnReadOnlyClusterException`. The caller is responsible for handling and (if desired) resubmitting the failed
+mutations.
+
+### Case 4. Promote a replica when the active cluster is lost
+
+1. Confirm the original active cluster is fully down.
+2. If a stale `active.cluster.suffix.id` from the previous active is still present, remove it manually
+   (e.g. `hdfs dfs -rm <hbase.rootdir>/active.cluster.suffix.id`, or the equivalent CLI for your object
+   store). The new active master will refuse to start while a foreign sentinel file is in place.
+3. Set `hbase.global.readonly.enabled=false` on the replica and apply the change (dynamic update or
+   restart). The master writes a fresh sentinel file with this cluster's identity.
+
+## Configurations and Commands
+
+### New configs
+
+| Config                          | Default | Description                                                                                    |
+| ------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| `hbase.meta.table.suffix`       | `""`    | Adds a suffix to the meta table name. `value='test'` produces the table name `hbase:meta_test`. |
+| `hbase.global.readonly.enabled` | `false` | Puts the entire cluster into read-only mode.                                                    |
+
+### New commands
+
+| Command          | Usage                                                                                                                                                                                                                | Description                                                                    |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
+| `refresh_hfiles` | `refresh_hfiles`<br />`refresh_hfiles 'TABLE_NAME' => 'tablename'`<br />`refresh_hfiles 'TABLE_NAME' => 'namespace:test_table'`<br />`refresh_hfiles 'NAMESPACE' => 'namespace'` | Refreshes HFiles from disk. Used to pick up new edits on the read replica.     |
+| `refresh_meta`   | `refresh_meta`                                                                                                                                                                                                       | Syncs the meta table with the backing storage. Used to pick up new tables and regions. |
