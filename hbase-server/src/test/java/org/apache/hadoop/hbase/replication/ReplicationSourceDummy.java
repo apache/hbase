@@ -146,7 +146,7 @@ public class ReplicationSourceDummy implements ReplicationSourceInterface {
   }
 
   @Override
-  public void tryThrottle(int batchSize) throws InterruptedException {
+  public void tryThrottle(long batchSize) throws InterruptedException {
   }
 
   @Override

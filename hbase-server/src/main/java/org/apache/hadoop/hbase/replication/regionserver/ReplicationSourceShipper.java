@@ -204,7 +204,7 @@ public class ReplicationSourceShipper extends Thread {
   void shipEdits(WALEntryBatch entryBatch) throws IOException {
     List<Entry> entries = entryBatch.getWalEntries();
     int sleepMultiplier = 0;
-    int currentSize = (int) entryBatch.getHeapSize();
+    long currentSize = entryBatch.getHeapSize();
     MetricsSource metrics = source.getSourceMetrics();
     if (metrics != null && !entries.isEmpty()) {
       metrics.setTimeStampNextToReplicate(entries.get(entries.size() - 1).getKey().getWriteTime());
