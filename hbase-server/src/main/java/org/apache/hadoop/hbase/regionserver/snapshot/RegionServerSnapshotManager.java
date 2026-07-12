@@ -101,6 +101,17 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
   private ProcedureMemberRpcs memberRpcs;
   private ProcedureMember member;
 
+  static long getSnapshotTimeoutMillis(Configuration conf) {
+    long timeoutMillis =
+      conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    if (timeoutMillis > 0) {
+      return timeoutMillis;
+    }
+    LOG.warn("{} must be greater than 0, but is {}. Using default value {}",
+      SNAPSHOT_TIMEOUT_MILLIS_KEY, timeoutMillis, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    return SNAPSHOT_TIMEOUT_MILLIS_DEFAULT;
+  }
+
   /**
    * Exposed for testing.
    * @param conf       HBase configuration.
@@ -176,7 +187,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
       + snapshot.getTable() + " type " + snapshot.getType());
     ForeignExceptionDispatcher exnDispatcher = new ForeignExceptionDispatcher(snapshot.getName());
     Configuration conf = rss.getConfiguration();
-    long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    long timeoutMillis = getSnapshotTimeoutMillis(conf);
     long wakeMillis =
       conf.getLong(SNAPSHOT_REQUEST_WAKE_MILLIS_KEY, SNAPSHOT_REQUEST_WAKE_MILLIS_DEFAULT);
 
@@ -267,8 +278,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
     SnapshotSubprocedurePool(String name, Configuration conf, Abortable abortable) {
       this.abortable = abortable;
       // configure the executor service
-      long keepAlive = conf.getLong(RegionServerSnapshotManager.SNAPSHOT_TIMEOUT_MILLIS_KEY,
-        RegionServerSnapshotManager.SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+      long keepAlive = getSnapshotTimeoutMillis(conf);
       int threads = conf.getInt(CONCURENT_SNAPSHOT_TASKS_KEY, DEFAULT_CONCURRENT_SNAPSHOT_TASKS);
       this.name = name;
       executor = Threads.getBoundedCachedThreadPool(threads, keepAlive, TimeUnit.MILLISECONDS,
@@ -383,7 +393,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
 
     // read in the snapshot request configuration properties
     Configuration conf = rss.getConfiguration();
-    long keepAlive = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    long keepAlive = getSnapshotTimeoutMillis(conf);
     int opThreads = conf.getInt(SNAPSHOT_REQUEST_THREADS_KEY, SNAPSHOT_REQUEST_THREADS_DEFAULT);
 
     // create the actual snapshot procedure member
