@@ -23,16 +23,26 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Function;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheUtil;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -40,6 +50,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.RAMQueueEntry;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.WriterThread;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
@@ -48,6 +59,9 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterruptibles;
 
 @Tag(IOTests.TAG)
 @Tag(SmallTests.TAG)
@@ -306,6 +320,261 @@ public class TestBucketCacheRefCnt {
     }
   }
 
+  @Test
+  public void testShutdownReleasesBackingMapReferenceWhileCallerRetainsBlock() throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, alloc);
+    HFileBlock blockFromCache = null;
+    try {
+      cache = create(1, 1000);
+      BlockCacheKey key =
+        createKey("testShutdownReleasesBackingMapReferenceWhileCallerRetainsBlock", 200);
+      cache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(cache, key);
+
+      blockFromCache = (HFileBlock) cache.getBlock(key, false, false, false);
+      assertNotNull(blockFromCache);
+      assertEquals(2, blockFromCache.refCnt());
+
+      cache.shutdown();
+      cache = null;
+
+      assertEquals(1, blockFromCache.refCnt(),
+        "shutdown must release only the reference owned by backingMap");
+      assertTrue(blockFromCache.release());
+      assertEquals(0, blockFromCache.refCnt());
+    } finally {
+      if (cache != null) {
+        cache.shutdown();
+        cache = null;
+      }
+      if (blockFromCache != null) {
+        while (blockFromCache.refCnt() > 0) {
+          blockFromCache.release();
+        }
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      alloc.clean();
+    }
+  }
+
+  @Test
+  public void testHBaseIOExceptionReleasesBackingMapReference(@TempDir File testDir)
+    throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, alloc);
+    BucketEntry bucketEntry = null;
+    String cachePath = new File(testDir, "bucket.cache").getAbsolutePath();
+    String persistencePath = new File(testDir, "bucket.persistence").getAbsolutePath();
+    BucketCache bucketCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+      BLOCK_SIZE_ARRAY, 1, 1000, persistencePath);
+    try {
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      BlockCacheKey key = createKey("testHBaseIOExceptionReleasesBackingMapReference", 200);
+      bucketCache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(bucketCache, key);
+
+      bucketEntry = bucketCache.backingMap.get(key);
+      assertNotNull(bucketEntry);
+      assertEquals(1, bucketEntry.refCnt());
+
+      ByteBuffer invalidCachedTime = ByteBuffer.allocate(Long.BYTES);
+      invalidCachedTime.putLong(bucketEntry.getCachedTime() + 1).flip();
+      bucketCache.ioEngine.write(invalidCachedTime, bucketEntry.offset());
+      bucketCache.ioEngine.sync();
+
+      assertNull(bucketCache.getBlock(key, false, false, false));
+      assertFalse(bucketCache.backingMap.containsKey(key));
+      assertEquals(0, bucketEntry.refCnt(),
+        "removing a corrupt entry must release the reference owned by backingMap");
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+    } finally {
+      bucketCache.shutdown();
+      if (bucketEntry != null && bucketEntry.refCnt() > 0) {
+        bucketEntry.markAsEvicted();
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      alloc.clean();
+    }
+  }
+
+  @Test
+  public void testHBaseIOExceptionThroughReferenceReleasesBackingMapReference(@TempDir File testDir)
+    throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, alloc);
+    BucketEntry bucketEntry = null;
+    String cachePath = new File(testDir, "bucket.cache").getAbsolutePath();
+    String persistencePath = new File(testDir, "bucket.persistence").getAbsolutePath();
+    BucketCache bucketCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+      BLOCK_SIZE_ARRAY, 1, 1000, persistencePath);
+    try {
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      String hfileName = "0123456789abcdef";
+      String regionName = "region";
+      BlockCacheKey storedKey =
+        new BlockCacheKey(hfileName, "cf", regionName, 200, true, BlockType.DATA, false);
+      BlockCacheKey referenceKey = createKey(hfileName + ".parent", 200);
+      bucketCache.cacheBlock(storedKey, blockToCache);
+      waitUntilFlushedToCache(bucketCache, storedKey);
+
+      bucketEntry = bucketCache.backingMap.get(storedKey);
+      assertNotNull(bucketEntry);
+      assertEquals(1, bucketEntry.refCnt());
+      assertTrue(bucketCache.regionCachedSize.containsKey(regionName));
+
+      ByteBuffer invalidCachedTime = ByteBuffer.allocate(Long.BYTES);
+      invalidCachedTime.putLong(bucketEntry.getCachedTime() + 1).flip();
+      bucketCache.ioEngine.write(invalidCachedTime, bucketEntry.offset());
+      bucketCache.ioEngine.sync();
+
+      assertNull(bucketCache.getBlock(referenceKey, false, false, false));
+      assertFalse(bucketCache.backingMap.containsKey(storedKey));
+      assertEquals(0, bucketEntry.refCnt(),
+        "removing a corrupt referred entry must release the reference owned by backingMap");
+      assertFalse(bucketCache.regionCachedSize.containsKey(regionName));
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+    } finally {
+      bucketCache.shutdown();
+      if (bucketEntry != null && bucketEntry.refCnt() > 0) {
+        bucketEntry.markAsEvicted();
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      alloc.clean();
+    }
+  }
+
+  @Test
+  public void testIoErrorDisableReleasesBackingMapReference() throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, alloc);
+    BucketCache bucketCache = new BucketCache(IO_ENGINE, CAPACITY_SIZE, BLOCK_SIZE,
+      BLOCK_SIZE_ARRAY, 1, 1000, PERSISTENCE_PATH, 0, HBaseConfiguration.create());
+    try {
+      BlockCacheKey key = createKey("testIoErrorDisableReleasesBackingMapReference", 200);
+      bucketCache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(bucketCache, key);
+
+      BucketEntry bucketEntry = bucketCache.backingMap.get(key);
+      assertNotNull(bucketEntry);
+      assertEquals(1, bucketEntry.refCnt());
+
+      BlockCacheKey failingKey = createKey("failing", 400);
+      RAMQueueEntry failingEntry = new FailingRAMQueueEntry(failingKey, blockToCache);
+      bucketCache.doDrain(Arrays.asList(failingEntry),
+        ByteBuffer.allocate(HFileBlock.BLOCK_METADATA_SPACE));
+      assertFalse(bucketCache.isCacheEnabled());
+
+      bucketCache.shutdown();
+      assertEquals(0, bucketEntry.refCnt());
+      assertTrue(bucketCache.backingMap.isEmpty());
+    } finally {
+      bucketCache.shutdown();
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      alloc.clean();
+    }
+  }
+
+  @Test
+  public void testShutdownCleansEntryAddedByInFlightWriter() throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, alloc);
+    PausingPutBucketCache bucketCache = new PausingPutBucketCache(IO_ENGINE, CAPACITY_SIZE,
+      BLOCK_SIZE, BLOCK_SIZE_ARRAY, 1, 1000, PERSISTENCE_PATH);
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Future<?> shutdownFuture = null;
+    try {
+      BlockCacheKey key = createKey("testShutdownCleansEntryAddedByInFlightWriter", 200);
+      bucketCache.cacheBlock(key, blockToCache);
+      assertTrue(bucketCache.entryAdded.await(10, TimeUnit.SECONDS));
+
+      BucketEntry bucketEntry = bucketCache.addedEntry.get();
+      assertNotNull(bucketEntry);
+      assertEquals(1, bucketEntry.refCnt());
+
+      shutdownFuture = executor.submit(bucketCache::shutdown);
+      Waiter.waitFor(HBaseConfiguration.create(), 10000, () -> !bucketCache.isCacheEnabled());
+      assertFalse(shutdownFuture.isDone(),
+        "shutdown must wait for a writer that can still update backingMap");
+
+      bucketCache.continueWriter.countDown();
+      shutdownFuture.get(10, TimeUnit.SECONDS);
+
+      assertFalse(bucketCache.writerThreads[0].isAlive());
+      assertTrue(bucketCache.backingMap.isEmpty());
+      assertTrue(bucketCache.ramCache.isEmpty());
+      assertEquals(0, bucketEntry.refCnt());
+    } finally {
+      bucketCache.continueWriter.countDown();
+      bucketCache.shutdown();
+      bucketCache.writerThreads[0].join(TimeUnit.SECONDS.toMillis(10));
+      executor.shutdownNow();
+      assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+      BucketEntry addedEntry = bucketCache.addedEntry.get();
+      if (addedEntry != null && addedEntry.refCnt() > 0) {
+        addedEntry.markAsEvicted();
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      alloc.clean();
+    }
+  }
+
+  @Test
+  public void testConcurrentAndRepeatedShutdownReleaseBackingMapReferenceOnce() throws Exception {
+    ByteBuffAllocator alloc = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, alloc);
+    BlockingCleanupBucketCache bucketCache = new BlockingCleanupBucketCache(IO_ENGINE,
+      CAPACITY_SIZE, BLOCK_SIZE, BLOCK_SIZE_ARRAY, 1, 1000, PERSISTENCE_PATH);
+    ExecutorService executor = Executors.newFixedThreadPool(2);
+    BucketEntry bucketEntry = null;
+    try {
+      BlockCacheKey key =
+        createKey("testConcurrentAndRepeatedShutdownReleaseBackingMapReferenceOnce", 200);
+      bucketCache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(bucketCache, key);
+      bucketEntry = bucketCache.backingMap.get(key);
+      assertNotNull(bucketEntry);
+      assertEquals(1, bucketEntry.refCnt());
+
+      Future<?> firstShutdown = executor.submit(bucketCache::shutdown);
+      assertTrue(bucketCache.firstFree.await(10, TimeUnit.SECONDS));
+
+      Future<?> secondShutdown = executor.submit(bucketCache::shutdown);
+      assertTrue(bucketCache.secondShutdownStarted.await(10, TimeUnit.SECONDS));
+      bucketCache.continueFree.countDown();
+
+      firstShutdown.get(10, TimeUnit.SECONDS);
+      secondShutdown.get(10, TimeUnit.SECONDS);
+      bucketCache.shutdown();
+
+      assertEquals(1, bucketCache.freeBucketEntryCount.get());
+      assertEquals(0, bucketEntry.refCnt());
+      assertTrue(bucketCache.backingMap.isEmpty());
+    } finally {
+      bucketCache.continueFree.countDown();
+      bucketCache.shutdown();
+      executor.shutdownNow();
+      assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+      if (bucketEntry != null && bucketEntry.refCnt() > 0) {
+        bucketEntry.markAsEvicted();
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      alloc.clean();
+    }
+  }
+
   /**
    * <pre>
    * This test is for HBASE-26281,
@@ -483,6 +752,79 @@ public class TestBucketCacheRefCnt {
       myBucketCache2.shutdown();
     }
 
+  }
+
+  private static final class PausingPutBucketCache extends BucketCache {
+    private final CountDownLatch entryAdded = new CountDownLatch(1);
+    private final CountDownLatch continueWriter = new CountDownLatch(1);
+    private final AtomicReference<BucketEntry> addedEntry = new AtomicReference<>();
+
+    private PausingPutBucketCache(String ioEngineName, long capacity, int blockSize,
+      int[] bucketSizes, int writerThreadNum, int writerQLen, String persistencePath)
+      throws IOException {
+      super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+        persistencePath);
+    }
+
+    @Override
+    protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
+      super.putIntoBackingMap(key, bucketEntry);
+      addedEntry.set(bucketEntry);
+      entryAdded.countDown();
+      if (!Uninterruptibles.awaitUninterruptibly(continueWriter, 10, TimeUnit.SECONDS)) {
+        throw new AssertionError("Timed out waiting to resume the bucket cache writer");
+      }
+    }
+  }
+
+  private static final class FailingRAMQueueEntry extends RAMQueueEntry {
+    private FailingRAMQueueEntry(BlockCacheKey key, Cacheable data) {
+      super(key, data, 0, false, false, false);
+    }
+
+    @Override
+    public BucketEntry writeToCache(IOEngine ioEngine, BucketAllocator alloc,
+      LongAdder realCacheSize, Function<BucketEntry, Recycler> createRecycler, ByteBuffer metaBuff,
+      Long acceptableSize) throws IOException {
+      Uninterruptibles.sleepUninterruptibly(1, TimeUnit.MILLISECONDS);
+      throw new IOException("Mocked!");
+    }
+  }
+
+  private static final class BlockingCleanupBucketCache extends BucketCache {
+    private final CountDownLatch firstFree = new CountDownLatch(1);
+    private final CountDownLatch continueFree = new CountDownLatch(1);
+    private final CountDownLatch secondShutdownStarted = new CountDownLatch(1);
+    private final AtomicBoolean blockFirstFree = new AtomicBoolean(true);
+    private final AtomicInteger freeBucketEntryCount = new AtomicInteger();
+    private final AtomicInteger shutdownCount = new AtomicInteger();
+
+    private BlockingCleanupBucketCache(String ioEngineName, long capacity, int blockSize,
+      int[] bucketSizes, int writerThreadNum, int writerQLen, String persistencePath)
+      throws IOException {
+      super(ioEngineName, capacity, blockSize, bucketSizes, writerThreadNum, writerQLen,
+        persistencePath);
+    }
+
+    @Override
+    public void shutdown() {
+      if (shutdownCount.incrementAndGet() == 2) {
+        secondShutdownStarted.countDown();
+      }
+      super.shutdown();
+    }
+
+    @Override
+    void freeBucketEntry(BucketEntry bucketEntry) {
+      freeBucketEntryCount.incrementAndGet();
+      if (blockFirstFree.compareAndSet(true, false)) {
+        firstFree.countDown();
+        if (!Uninterruptibles.awaitUninterruptibly(continueFree, 10, TimeUnit.SECONDS)) {
+          throw new AssertionError("Timed out waiting to resume backingMap cleanup");
+        }
+      }
+      super.freeBucketEntry(bucketEntry);
+    }
   }
 
   static class MyBucketCache extends BucketCache {

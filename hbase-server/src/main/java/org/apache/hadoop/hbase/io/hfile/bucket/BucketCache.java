@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -205,6 +206,9 @@ public class BucketCache implements BlockCache, HeapSize {
    * that Bucket IO exceptions/errors don't bring down the HBase server.
    */
   private volatile CacheState cacheState;
+
+  /** The single cleanup thread shared by disable and explicit shutdown calls. */
+  private volatile Thread cacheCleanupThread;
 
   /**
    * A list of writer queues. We have a queue per {@link WriterThread} we have running. In other
@@ -690,6 +694,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (bucketEntry != null) {
       long start = System.nanoTime();
       ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
+      boolean failedBucketEntryRead = false;
       try {
         lock.readLock().lock();
         // We can not read here even if backingMap does contain the given key because its offset
@@ -722,8 +727,7 @@ public class BucketCache implements BlockCache, HeapSize {
         // When using file io engine persistent cache,
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
-        backingMap.remove(key);
-        fileNotFullyCached(key, bucketEntry);
+        failedBucketEntryRead = true;
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -731,9 +735,36 @@ public class BucketCache implements BlockCache, HeapSize {
       } finally {
         lock.readLock().unlock();
       }
+      if (failedBucketEntryRead) {
+        removeFailedBucketEntry(bucketEntry);
+      }
     }
     if (!repeat && updateCacheMetrics) {
       cacheStats.miss(caching, key.isPrimary(), key.getBlockType());
+    }
+    return null;
+  }
+
+  private void removeFailedBucketEntry(BucketEntry bucketEntry) {
+    BlockCacheKey cacheKey = findBackingMapKey(bucketEntry);
+    if (cacheKey == null) {
+      return;
+    }
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.remove(cacheKey, bucketEntry)) {
+        blockEvicted(cacheKey, bucketEntry, true, false);
+      }
+      return null;
+    });
+  }
+
+  private BlockCacheKey findBackingMapKey(BucketEntry bucketEntry) {
+    // Reference file lookups use a different key from the one stored in backingMap. This only runs
+    // after a failed read, so find the stored key to preserve its region metadata during eviction.
+    for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
+      if (entry.getValue() == bucketEntry) {
+        return entry.getKey();
+      }
     }
     return null;
   }
@@ -1798,7 +1829,7 @@ public class BucketCache implements BlockCache, HeapSize {
       if (isCacheEnabled() && (now - ioErrorStartTimeTmp) > this.ioErrorsTolerationDuration) {
         LOG.error("IO errors duration time has exceeded " + ioErrorsTolerationDuration
           + "ms, disabling cache, please check your IOEngine");
-        disableCache();
+        disableCache(false);
       }
     } else {
       this.ioErrorStartTime = now;
@@ -1806,9 +1837,11 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   /**
-   * Used to shut down the cache -or- turn it off in the case of something broken.
+   * Used to shut down the cache -or- turn it off in the case of something broken. Cleanup runs
+   * separately because IO errors can invoke this method from a writer thread or while holding an
+   * offset read lock.
    */
-  private void disableCache() {
+  private synchronized void disableCache(boolean persistOnCleanup) {
     if (!isCacheEnabled()) {
       return;
     }
@@ -1816,50 +1849,88 @@ public class BucketCache implements BlockCache, HeapSize {
     cacheState = CacheState.DISABLED;
     ioEngine.shutdown();
     this.scheduleThreadPool.shutdown();
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].interrupt();
-    this.ramCache.clear();
-    if (!ioEngine.isPersistent() || persistencePath == null) {
-      // If persistent ioengine and a path, we will serialize out the backingMap.
-      this.backingMap.clear();
-      this.blocksByHFile.clear();
-      this.fullyCachedFiles.clear();
-      this.regionCachedSize.clear();
+    for (WriterThread writerThread : writerThreads) {
+      writerThread.interrupt();
     }
+    ramCache.clear();
     if (cacheStats.getMetricsRollerScheduler() != null) {
       cacheStats.getMetricsRollerScheduler().shutdownNow();
     }
+    cacheCleanupThread =
+      Threads.setDaemonThreadRunning(new Thread(() -> cleanupCache(persistOnCleanup)),
+        "BucketCacheCleanup-" + System.identityHashCode(this), Threads.LOGGING_EXCEPTION_HANDLER);
   }
 
-  private void join() throws InterruptedException {
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].join();
+  private void cleanupCache(boolean persistOnCleanup) {
+    try {
+      joinWriterThreads();
+      stopCachePersister();
+      if (persistOnCleanup && isCachePersistent()) {
+        try {
+          persistToFile();
+        } catch (IOException ex) {
+          LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
+        }
+      }
+    } finally {
+      releaseBackingMapReferences();
+    }
+  }
+
+  private void joinWriterThreads() {
+    for (WriterThread writerThread : writerThreads) {
+      Threads.shutdown(writerThread);
+    }
+  }
+
+  private void stopCachePersister() {
+    if (cachePersister != null) {
+      LOG.info("Shutting down cache persister thread.");
+      cachePersister.shutdown();
+      Threads.shutdown(cachePersister);
+    }
+  }
+
+  private void releaseBackingMapReferences() {
+    for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
+      BlockCacheKey cacheKey = entry.getKey();
+      BucketEntry bucketEntry = entry.getValue();
+      bucketEntry.withWriteLock(offsetLock, () -> {
+        if (backingMap.remove(cacheKey, bucketEntry)) {
+          bucketEntry.markAsEvicted();
+        }
+        return null;
+      });
+    }
+    blocksByHFile.clear();
+    fullyCachedFiles.clear();
+    regionCachedSize.clear();
+  }
+
+  private void waitForCacheCleanup() {
+    Thread cleanupThread = cacheCleanupThread;
+    if (cleanupThread == null || cleanupThread == Thread.currentThread()) {
+      return;
+    }
+    boolean interrupted = false;
+    while (cleanupThread.isAlive()) {
+      try {
+        cleanupThread.join();
+      } catch (InterruptedException e) {
+        interrupted = true;
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
   }
 
   @Override
   public void shutdown() {
-    if (isCacheEnabled()) {
-      disableCache();
-      LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent()
-        + "; path to write=" + persistencePath);
-      if (ioEngine.isPersistent() && persistencePath != null) {
-        try {
-          join();
-          if (cachePersister != null) {
-            LOG.info("Shutting down cache persister thread.");
-            cachePersister.shutdown();
-            while (cachePersister.isAlive()) {
-              Thread.sleep(10);
-            }
-          }
-          persistToFile();
-        } catch (IOException ex) {
-          LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
-        } catch (InterruptedException e) {
-          LOG.warn("Failed to persist data on exit", e);
-        }
-      }
-    }
+    disableCache(true);
+    waitForCacheCleanup();
+    LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
+      + persistencePath);
   }
 
   /**

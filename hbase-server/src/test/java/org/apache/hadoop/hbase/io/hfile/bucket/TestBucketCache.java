@@ -841,10 +841,15 @@ public class TestBucketCache {
         cacheAndWaitUntilFlushedToBucket(bucketCache, hfileBlockPair.getBlockName(),
           hfileBlockPair.getBlock(), false);
       }
+      BucketEntry bucketEntryBeforeShutdown =
+        bucketCache.backingMap.get(hfileBlockPairs[0].getBlockName());
+      assertNotNull(bucketEntryBeforeShutdown);
+      assertEquals(1, bucketEntryBeforeShutdown.refCnt());
       usedByteSize = bucketCache.getAllocator().getUsedSize();
       assertNotEquals(0, usedByteSize);
       // persist cache to file
       bucketCache.shutdown();
+      assertEquals(0, bucketEntryBeforeShutdown.refCnt());
       assertTrue(new File(persistencePath).exists());
 
       // restore cache from file
