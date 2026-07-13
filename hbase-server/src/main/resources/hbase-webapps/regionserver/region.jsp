@@ -22,9 +22,11 @@
   import="java.util.Collection"
   import="java.util.Date"
   import="java.util.List"
-  import="org.apache.hadoop.fs.FileStatus"
+  import="java.util.Map"
   import="org.apache.hadoop.fs.FileSystem"
+  import="org.apache.hadoop.fs.FileStatus"
   import="org.apache.hadoop.fs.Path"
+  import="org.apache.hadoop.hbase.TableName"
   import="org.apache.hadoop.hbase.client.RegionInfo"
   import="org.apache.hadoop.hbase.client.RegionInfoDisplay"
   import="org.apache.hadoop.hbase.mob.MobUtils"
@@ -33,6 +35,7 @@
   import="org.apache.hadoop.hbase.regionserver.HRegion"
   import="org.apache.hadoop.hbase.regionserver.HStore"
   import="org.apache.hadoop.hbase.regionserver.HStoreFile"
+  import="org.apache.hadoop.hbase.util.CommonFSUtils"
 %>
 <%@ page import="java.nio.charset.StandardCharsets" %>
 <%
@@ -116,6 +119,7 @@
 
          <%
          int mobCnt = 0;
+         HMobStore mobStore = (HMobStore) store;
          for (HStoreFile sf : storeFiles) {
            try {
              byte[] value = sf.getMetadataValue(HStoreFile.MOB_FILE_REFS);
@@ -123,11 +127,30 @@
                continue;
              }
 
-             Collection<String> fileNames = MobUtils.deserializeMobFileRefs(value).build().values();
-             mobCnt += fileNames.size();
-             for (String fileName : fileNames) {
-               Path mobPath = new Path(((HMobStore) store).getPath(), fileName);
-               FileStatus status = fs.getFileStatus(mobPath);
+             for (Map.Entry<TableName, String> mobRef :
+               MobUtils.deserializeMobFileRefs(value).build().entries()) {
+               TableName mobTable = mobRef.getKey();
+               String fileName = mobRef.getValue();
+               Path mobPath = null;
+               FileStatus status = null;
+               for (Path candidate : mobStore.getLocations(mobTable)) {
+                 Path p = new Path(candidate, fileName);
+                 FileStatus[] fileStatuses = CommonFSUtils.listStatus(fs, p);
+                 if (fileStatuses == null) {
+                   continue;
+                 }
+                 mobPath = p;
+                 status = fileStatuses[0];
+                 break;
+               }
+
+               if (mobPath == null) {
+                 // File not found in any known location (working dir or archive dir) for the referenced table.
+                 // Nothing to show on the UI, so skip it.
+                 continue;
+               }
+
+               mobCnt ++;
                String mobPathStr = mobPath.toString();
                String encodedStr = URLEncoder.encode(mobPathStr, StandardCharsets.UTF_8.toString()); %>
 
