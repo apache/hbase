@@ -19,10 +19,10 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.IntegrationTestingUtility.createPreSplitLoadTestTable;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.nio.charset.Charset;
@@ -57,8 +57,8 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Assert;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Assertions;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -143,7 +143,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     LOG.info("Cleaning up after test.");
     if (util.isDistributedCluster()) {
@@ -333,7 +333,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       restore(createRestoreRequest(backupRootDir, incrementalBackupId, false, tablesToRestoreFrom,
         null, true), client);
       Table hTable = conn.getTable(tableName);
-      Assert.assertEquals(rowsInIteration * (numIterations + 1),
+      Assertions.assertEquals(rowsInIteration * (numIterations + 1),
         HBaseTestingUtil.countRows(hTable));
       hTable.close();
 
@@ -427,9 +427,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   private Path verifyWALsDirectoryExists() throws IOException {
     String backupWALDir = conf.get(CONF_CONTINUOUS_BACKUP_WAL_DIR);
     Path backupWALs = new Path(backupWALDir, "WALs");
-    assertTrue(
-      "There should be a WALs directory inside of the backup WAL directory at: " + backupWALDir,
-      fs.exists(backupWALs));
+    assertTrue(fs.exists(backupWALs),
+      "There should be a WALs directory inside of the backup WAL directory at: " + backupWALDir);
     return backupWALs;
   }
 
@@ -450,8 +449,8 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     int waitTimeSec = 30;
     while (true) {
       try {
-        assertTrue("A backup WALs subdirectory with today's date should exist: " + walPartitionDir,
-          fs.exists(walPartitionDir));
+        assertTrue(fs.exists(walPartitionDir),
+          "A backup WALs subdirectory with today's date should exist: " + walPartitionDir);
         // The directory exists - stop waiting
         break;
       } catch (AssertionError e) {
@@ -574,7 +573,7 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
       createRestoreRequest(backupRootDir, backupId, false, tablesRestoreIncMultiple, null, true),
       client);
     Table hTable = conn.getTable(table);
-    Assert.assertEquals(expectedRows, HBaseTestingUtil.countRows(hTable));
+    Assertions.assertEquals(expectedRows, HBaseTestingUtil.countRows(hTable));
     hTable.close();
   }
 
@@ -684,13 +683,13 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
   }
 
   private void verifyBackupExists(String backupId) throws IOException {
-    assertTrue("Backup " + backupId + " should exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, backupId)));
+    assertTrue(fs.exists(new Path(backupRootDir, backupId)),
+      "Backup " + backupId + " should exist inside of " + backupRootDir);
   }
 
   private void verifyBackupDoesNotExist(String backupId) throws IOException {
-    assertFalse("Backup " + backupId + " should not exist inside of " + backupRootDir,
-      fs.exists(new Path(backupRootDir, backupId)));
+    assertFalse(fs.exists(new Path(backupRootDir, backupId)),
+      "Backup " + backupId + " should not exist inside of " + backupRootDir);
   }
 
   @Override

@@ -25,9 +25,9 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,13 +37,13 @@ import org.slf4j.LoggerFactory;
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-7912">HBASE-7912</a>
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-14123">HBASE-14123</a>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestBackupRestore extends IntegrationTestBackupRestoreBase {
   private static final String CLASS_NAME = IntegrationTestBackupRestore.class.getSimpleName();
   protected static final Logger LOG = LoggerFactory.getLogger(IntegrationTestBackupRestore.class);
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = new IntegrationTestingUtility();
     conf = util.getConfiguration();

@@ -32,9 +32,9 @@ import org.apache.hadoop.hbase.IntegrationTestingUtility;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ import org.slf4j.LoggerFactory;
  * verify data.
  * @see <a href="https://issues.apache.org/jira/browse/HBASE-28957">HBASE-28957</a>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestContinuousBackupRestore extends IntegrationTestBackupRestoreBase {
   private static final String CLASS_NAME =
     IntegrationTestContinuousBackupRestore.class.getSimpleName();
@@ -52,7 +52,7 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
     LoggerFactory.getLogger(IntegrationTestContinuousBackupRestore.class);
 
   @Override
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     util = new IntegrationTestingUtility();
     conf = util.getConfiguration();
