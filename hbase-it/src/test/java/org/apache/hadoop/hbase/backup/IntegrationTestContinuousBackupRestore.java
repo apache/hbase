@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
-import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
+//import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_BACKUP_MAX_WAL_SIZE;
+//import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INITIAL_DELAY;
+//import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.CONF_STAGED_WAL_FLUSH_INTERVAL;
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_MISSING_FILES;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
@@ -57,9 +57,9 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
     util = new IntegrationTestingUtility();
     conf = util.getConfiguration();
     BackupTestUtil.enableBackup(conf);
-    conf.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
-    conf.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
-    conf.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
+//    conf.set(CONF_BACKUP_MAX_WAL_SIZE, "10240");
+//    conf.set(CONF_STAGED_WAL_FLUSH_INITIAL_DELAY, "10");
+//    conf.set(CONF_STAGED_WAL_FLUSH_INTERVAL, "10");
     conf.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     conf.setBoolean(IGNORE_EMPTY_FILES, true);
     conf.setBoolean(IGNORE_MISSING_FILES, true);
