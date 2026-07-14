@@ -38,9 +38,13 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 
 /**
- * This class drives the Integration test suite execution. Executes all tests
- * having @Category(IntegrationTests.class) annotation against an already deployed distributed
- * cluster.
+ * This class drives the Integration test suite execution. Executes all tests having
+ *
+ * <pre>
+ * &#64;Tag(IntegrationTests.TAG)
+ * </pre>
+ *
+ * annotation against an already deployed distributed cluster.
  */
 public class IntegrationTestsDriver extends AbstractHBaseTool {
   private static final String SHORT_REGEX_ARG = "r";
