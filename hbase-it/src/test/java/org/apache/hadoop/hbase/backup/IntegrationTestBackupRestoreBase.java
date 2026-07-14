@@ -478,12 +478,10 @@ public abstract class IntegrationTestBackupRestoreBase extends IntegrationTestBa
     for (FileStatus fileStatus : fileStatuses) {
       String walFileName = fileStatus.getPath().getName();
       String[] splitName = walFileName.split("\\.");
-      assertEquals("The WAL partition directory should only have files that start with 'wal_file'",
-        "wal_file", splitName[0]);
-      assertEquals(
-        "The timestamp in the WAL file's name should match the "
-          + "date for the WAL partition directory",
-        walPartitionDir.getName(), BackupUtils.formatToDateString(Long.parseLong(splitName[1])));
+      assertEquals("wal_file", splitName[0],
+        "The WAL partition directory should only have files that start with 'wal_file'");
+      assertEquals(walPartitionDir.getName(), BackupUtils.formatToDateString(Long.parseLong(splitName[1])),
+        "The timestamp in the WAL file's name should match the date for the WAL partition directory");
     }
   }
 
