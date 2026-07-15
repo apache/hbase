@@ -86,5 +86,17 @@ module Hbase
       assert_not_nil(res['x:a'])
     end
 
+    define_test "list_labels should return an Array of readable label Strings" do
+      label = 'TEST_LIST_LABELS'
+      command(:add_labels, label)
+      $TEST_CLUSTER.waitLabelAvailable(10000, label)
+
+      labels = command(:list_labels, 'TEST_.*')
+      assert_kind_of(Array, labels)
+      labels.each { |l| assert_kind_of(String, l) }
+      assert(labels.include?(label),
+             "list_labels should include the created label #{label}")
+    end
+
   end
 end
