@@ -9023,8 +9023,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
                 + "the active cluster on this storage location. Reverting {} to true.",
               this, activeClusterId, HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
             // Revert read-only mode here
-            confForCoprocessors =
-              ConfigurationUtil.copyWithReadOnlyModeEnabled(updatedConf);
+            confForCoprocessors = ConfigurationUtil.copyWithReadOnlyModeEnabled(updatedConf);
             newReadOnlyEnabled = true;
           }
         }
