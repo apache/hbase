@@ -667,7 +667,7 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
       HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, this.blockingActiveClusterId.get(),
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
     this.readOnlyTransitionBlocked.set(true);
-    return ConfigurationUtil.getReadOnlyEnabledConfigurationCopy(updatedConf);
+    return ConfigurationUtil.copyWithReadOnlyModeEnabled(updatedConf);
   }
 
   protected void checkForBlockedReadOnlyTransition() throws ReadOnlyTransitionException {

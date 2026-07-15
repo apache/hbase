@@ -129,7 +129,7 @@ public final class ConfigurationUtil {
    * Returns a copied version of the provided Configuration object that has
    * {@link HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY} set to true.
    */
-  public static Configuration getReadOnlyEnabledConfigurationCopy(Configuration conf) {
+  public static Configuration copyWithReadOnlyModeEnabled(Configuration conf) {
     Configuration readOnlyConf = new Configuration(conf);
     readOnlyConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
     return readOnlyConf;

@@ -87,7 +87,7 @@ public abstract class AbstractReadOnlyController implements Coprocessor {
       }
       return !localClusterSuffix.equals(fileData);
     } catch (IOException e) {
-      LOG.error(
+      LOG.warn(
         "Failed to read active cluster suffix file from {} at {}. "
           + "Assuming another cluster is active to prevent potential data corruption.",
         HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, rootDir, e);

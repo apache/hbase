@@ -9024,7 +9024,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
               this, activeClusterId, HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
             // Revert read-only mode here
             confForCoprocessors =
-              ConfigurationUtil.getReadOnlyEnabledConfigurationCopy(updatedConf);
+              ConfigurationUtil.copyWithReadOnlyModeEnabled(updatedConf);
             newReadOnlyEnabled = true;
           }
         }
@@ -9032,7 +9032,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         LOG.error("Failed to check active cluster status for region {}. "
           + "Blocking read-only mode transition to prevent potential data corruption.", this, e);
         // Revert read-only mode here
-        confForCoprocessors = ConfigurationUtil.getReadOnlyEnabledConfigurationCopy(updatedConf);
+        confForCoprocessors = ConfigurationUtil.copyWithReadOnlyModeEnabled(updatedConf);
         newReadOnlyEnabled = true;
       }
     }

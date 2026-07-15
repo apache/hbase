@@ -51,8 +51,8 @@ sharing the same `hbase.rootdir` must be configured with a distinct suffix so it
 | Class                            | Coprocessor host | Blocks                                                                                                |
 | -------------------------------- | ---------------- | ----------------------------------------------------------------------------------------------------- |
 | `MasterReadOnlyController`       | Master           | DDL, snapshots, splits, merges, namespace ops, ACL/quota ops, replication-peer ops                    |
-| `RegionReadOnlyController`       | Region           | put, delete, batchMutate, checkAnd\*, append, increment, flush, compaction, WAL append, commit/replay |
 | `RegionServerReadOnlyController` | RegionServer     | WAL roll, replication sink mutations, log replay                                                      |
+| `RegionReadOnlyController`       | Region           | put, delete, batchMutate, checkAnd\*, append, increment, flush, compaction, WAL append, commit/replay |
 | `BulkLoadReadOnlyController`     | Region           | bulk-load prepare/cleanup                                                                             |
 | `EndpointReadOnlyController`     | Region           | all coprocessor endpoint invocations                                                                  |
 
@@ -187,6 +187,52 @@ mutations.
    store). The new active master will refuse to start while a foreign sentinel file is in place.
 3. Set `hbase.global.readonly.enabled=false` on the replica and apply the change (dynamic update or
    restart). The master writes a fresh sentinel file with this cluster's identity.
+
+### Case 5. Recover from a blocked read-only transition
+
+If you attempt to promote a replica to active (`hbase.global.readonly.enabled=false` + `update_all_config`)
+while a different cluster's `active.cluster.suffix.id` file is still present, the transition is blocked. The
+shell returns a `ReadOnlyTransitionException` and the cluster remains in read-only mode — writes continue to be
+rejected with `WriteAttemptedOnReadOnlyClusterException`.
+
+The server ERROR log includes the foreign cluster's ID:
+
+```
+Cannot disable read-only mode. The active.cluster.suffix.id file contains a different
+cluster ID (<foreign-id>), which means that cluster is already the active cluster.
+Reverting hbase.global.readonly.enabled to true.
+```
+
+<Callout type="info">
+  A cluster whose promotion was blocked is still a replica — the read-only coprocessors remain loaded and
+  writes are still rejected — even though its `hbase-site.xml` has `hbase.global.readonly.enabled=false`.
+</Callout>
+
+To recover, choose one of the following paths depending on whether the existing active cluster is still
+running.
+
+**Path A — the active cluster is still running:**
+
+1. On the currently active cluster, set `hbase.global.readonly.enabled=true` in `hbase-site.xml` and run
+   `update_all_config`. This converts it to a replica and deletes its `active.cluster.suffix.id` file.
+2. On the cluster you want to promote, re-run `update_all_config`. The transition will now succeed — the
+   cluster writes a fresh sentinel file with its own identity and unloads the read-only coprocessors.
+
+**Path B — the active cluster is down or has already been converted to a replica:**
+
+1. Confirm the cluster that owns the sentinel file is fully stopped or has already been converted to a replica.
+2. Remove the foreign sentinel file:
+   ```bash
+   hdfs dfs -rm <hbase.rootdir>/active.cluster.suffix.id
+   ```
+3. On the cluster you want to promote, re-run `update_all_config`. The transition will now succeed — the
+   cluster writes a fresh sentinel file with its own identity and unloads the read-only coprocessors.
+
+<Callout type="warning">
+  **Do not remove the sentinel file while the cluster that wrote it is still running as an active cluster.**
+  Doing so would allow two clusters to write to the same shared storage simultaneously, risking data
+  corruption.
+</Callout>
 
 ## Configurations and Commands
 
