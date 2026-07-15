@@ -17,15 +17,15 @@ Typical use cases:
 - Stand up an isolated cluster for read-mostly experiments without copying data.
 
 <Callout type="info">
-  **Eventual consistency.** A replica only sees data once (a) the active cluster has flushed the data to
-  HFiles in shared storage, and (b) the replica has been told to re-read shared storage via the
-  `refresh_meta` and `refresh_hfiles` commands. MemStore data on the active cluster is invisible to the
-  replica until flushed.
+  **Eventual consistency.** A replica only sees data once (a) the active cluster has flushed the
+  data to HFiles in shared storage, and (b) the replica has been told to re-read shared storage via
+  the `refresh_meta` and `refresh_hfiles` commands. MemStore data on the active cluster is invisible
+  to the replica until flushed.
 </Callout>
 
 The parent design lives on [HBASE-29081](https://issues.apache.org/jira/browse/HBASE-29081).
 
-## Design
+## Design [#read-replica-cluster-design]
 
 The feature has three parts.
 
@@ -77,7 +77,7 @@ its cluster ID and meta suffix. `MasterFileSystem.negotiateActiveClusterSuffixFi
 `AbstractReadOnlyController.manageActiveClusterIdFile` handles the dynamic toggle: switching to read-only
 deletes the file if this cluster owns it, and switching back to read-write creates the file if absent.
 
-## Configuration
+## Configuration [#read-replica-cluster-configuration]
 
 On every node of the **read replica cluster**, add the following to `hbase-site.xml`:
 
@@ -111,7 +111,7 @@ every replica's suffix), and leaves `hbase.global.readonly.enabled` unset or `fa
 coprocessors without restarting the process. All nodes must agree on the value; operators are responsible for
 keeping every `hbase-site.xml` in sync before issuing `update_all_config`.
 
-## Operation and maintenance
+## Operation and maintenance [#read-replica-cluster-operation-and-maintenance]
 
 ### Case 1. Bring up a new read replica cluster
 
@@ -190,16 +190,16 @@ mutations.
 
 ## Configurations and Commands
 
-### New configs
+### New configs [#read-replica-cluster-new-configs]
 
-| Config                          | Default | Description                                                                                    |
-| ------------------------------- | ------- | ---------------------------------------------------------------------------------------------- |
+| Config                          | Default | Description                                                                                     |
+| ------------------------------- | ------- | ----------------------------------------------------------------------------------------------- |
 | `hbase.meta.table.suffix`       | `""`    | Adds a suffix to the meta table name. `value='test'` produces the table name `hbase:meta_test`. |
 | `hbase.global.readonly.enabled` | `false` | Puts the entire cluster into read-only mode.                                                    |
 
 ### New commands
 
-| Command          | Usage                                                                                                                                                                                                                | Description                                                                    |
-| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------ |
-| `refresh_hfiles` | `refresh_hfiles`<br />`refresh_hfiles 'TABLE_NAME' => 'tablename'`<br />`refresh_hfiles 'TABLE_NAME' => 'namespace:test_table'`<br />`refresh_hfiles 'NAMESPACE' => 'namespace'` | Refreshes HFiles from disk. Used to pick up new edits on the read replica.     |
-| `refresh_meta`   | `refresh_meta`                                                                                                                                                                                                       | Syncs the meta table with the backing storage. Used to pick up new tables and regions. |
+| Command          | Usage                                                                                                                                                                            | Description                                                                            |
+| ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| `refresh_hfiles` | `refresh_hfiles`<br />`refresh_hfiles 'TABLE_NAME' => 'tablename'`<br />`refresh_hfiles 'TABLE_NAME' => 'namespace:test_table'`<br />`refresh_hfiles 'NAMESPACE' => 'namespace'` | Refreshes HFiles from disk. Used to pick up new edits on the read replica.             |
+| `refresh_meta`   | `refresh_meta`                                                                                                                                                                   | Syncs the meta table with the backing storage. Used to pick up new tables and regions. |
