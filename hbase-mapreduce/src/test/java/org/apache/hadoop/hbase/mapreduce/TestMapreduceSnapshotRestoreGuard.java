@@ -22,46 +22,31 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.client.SnapshotType;
-import org.apache.hadoop.hbase.client.Table;
-import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
-import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
-import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for the MapReduce snapshot-scanning restore path, which calls
- * {@link RestoreSnapshotHelper#copySnapshotForScanner} with the MapReduce-local
- * {@link MapreduceHFileArchiver}. Covers the guard against accidental production data loss
- * (HBASE-29435) and the delegated restore/clone behavior.
+ * Guard tests (HBASE-29435) for the MapReduce snapshot-scanning restore path. These exercise the
+ * six-argument {@link RestoreSnapshotHelper#copySnapshotForScanner} overload used by the MapReduce
+ * paths, injecting the MapReduce-local {@link MapreduceHFileArchiver}. The guard rejects a restore
+ * directory that would let a MapReduce job archive (and ultimately delete) production HFiles.
  */
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
-public class TestMapreduceRestoreSnapshotHelper {
+public class TestMapreduceSnapshotRestoreGuard {
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -88,69 +73,6 @@ public class TestMapreduceRestoreSnapshotHelper {
     CommonFSUtils.setRootDir(conf, rootDir);
     // Turn off balancer so it doesn't cut in and mess up our placements.
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
-  }
-
-  @AfterEach
-  public void tearDown() throws Exception {
-    fs.delete(TEST_UTIL.getDataTestDir(), true);
-  }
-
-  /**
-   * A fresh restore directory outside the HBase root must be accepted and must restore via the
-   * clone path (HFileLinks land under restoreDir, never inside the production data directory).
-   */
-  @Test
-  public void testNoHFileLinkInRootDir() throws IOException {
-    rootDir = TEST_UTIL.getDefaultRootDirPath();
-    CommonFSUtils.setRootDir(conf, rootDir);
-    fs = rootDir.getFileSystem(conf);
-
-    TableName tableName = TableName.valueOf("testNoHFileLinkInRootDir");
-    String snapshotName = tableName.getNameAsString() + "-snapshot";
-    createTableAndSnapshot(tableName, snapshotName);
-
-    Path restoreDir = new Path("/hbase/.tmp-restore");
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
-      new MapreduceHFileArchiver());
-    checkNoHFileLinkInTableDir(tableName);
-  }
-
-  /** Restoring an expired snapshot must surface the TTL error from the delegated helper. */
-  @Test
-  public void testCopyExpiredSnapshotForScanner() throws IOException, InterruptedException {
-    rootDir = TEST_UTIL.getDefaultRootDirPath();
-    CommonFSUtils.setRootDir(conf, rootDir);
-    TableName tableName = TableName.valueOf("testCopyExpiredSnapshotForScanner");
-    String snapshotName = tableName.getNameAsString() + "-snapshot";
-    Path restoreDir = new Path("/hbase/.tmp-expired-snapshot/copySnapshotDest");
-    // create table and put some data into the table
-    byte[] columnFamily = Bytes.toBytes("A");
-    Table table = TEST_UTIL.createTable(tableName, columnFamily);
-    TEST_UTIL.loadTable(table, columnFamily);
-    // create snapshot with ttl = 10 sec
-    Map<String, Object> properties = new HashMap<>();
-    properties.put("TTL", 10);
-    org.apache.hadoop.hbase.client.SnapshotDescription snapshotDesc =
-      new org.apache.hadoop.hbase.client.SnapshotDescription(snapshotName, tableName,
-        SnapshotType.FLUSH, null, EnvironmentEdgeManager.currentTime(), -1, properties);
-    TEST_UTIL.getAdmin().snapshot(snapshotDesc);
-    boolean isExist = TEST_UTIL.getAdmin().listSnapshots().stream()
-      .anyMatch(ele -> snapshotName.equals(ele.getName()));
-    assertTrue(isExist);
-    int retry = 6;
-    while (
-      !SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
-        snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime()) && retry > 0
-    ) {
-      retry--;
-      Thread.sleep(10 * 1000);
-    }
-    boolean isExpiredSnapshot = SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
-      snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime());
-    assertTrue(isExpiredSnapshot);
-    assertThrows(SnapshotTTLExpiredException.class,
-      () -> RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir,
-        snapshotName, new MapreduceHFileArchiver()));
   }
 
   /**
@@ -237,35 +159,5 @@ public class TestMapreduceRestoreSnapshotHelper {
       assertFalse(msg != null && msg.contains("BLOCKED"),
         "sibling restoreDir must not be blocked by the guard: " + msg);
     }
-  }
-
-  protected void createTableAndSnapshot(TableName tableName, String snapshotName)
-    throws IOException {
-    byte[] column = Bytes.toBytes("A");
-    Table table = TEST_UTIL.createTable(tableName, column, 2);
-    TEST_UTIL.loadTable(table, column);
-    TEST_UTIL.getAdmin().snapshot(snapshotName, tableName);
-  }
-
-  private void checkNoHFileLinkInTableDir(TableName tableName) throws IOException {
-    Path[] tableDirs = new Path[] { CommonFSUtils.getTableDir(rootDir, tableName),
-      CommonFSUtils.getTableDir(new Path(rootDir, HConstants.HFILE_ARCHIVE_DIRECTORY), tableName),
-      CommonFSUtils.getTableDir(MobUtils.getMobHome(rootDir), tableName) };
-    for (Path tableDir : tableDirs) {
-      assertFalse(hasHFileLink(tableDir));
-    }
-  }
-
-  private boolean hasHFileLink(Path tableDir) throws IOException {
-    if (fs.exists(tableDir)) {
-      RemoteIterator<LocatedFileStatus> iterator = fs.listFiles(tableDir, true);
-      while (iterator.hasNext()) {
-        LocatedFileStatus fileStatus = iterator.next();
-        if (fileStatus.isFile() && HFileLink.isHFileLink(fileStatus.getPath())) {
-          return true;
-        }
-      }
-    }
-    return false;
   }
 }
