@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.mob.MobUtils;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTTLExpiredException;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -52,9 +54,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
 /**
- * Tests for {@link MapreduceRestoreSnapshotHelper}, the thin MapReduce wrapper that guards against
- * accidental production data loss (HBASE-29435) and then delegates the actual restore/clone to
- * {@code RestoreSnapshotHelper} using the MapReduce-local archiver.
+ * Tests for the MapReduce snapshot-scanning restore path, which calls
+ * {@link RestoreSnapshotHelper#copySnapshotForScanner} with the MapReduce-local
+ * {@link MapreduceHFileArchiver}. Covers the guard against accidental production data loss
+ * (HBASE-29435) and the delegated restore/clone behavior.
  */
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
@@ -107,8 +110,8 @@ public class TestMapreduceRestoreSnapshotHelper {
     createTableAndSnapshot(tableName, snapshotName);
 
     Path restoreDir = new Path("/hbase/.tmp-restore");
-    MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir,
-      snapshotName);
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
+      new MapreduceHFileArchiver());
     checkNoHFileLinkInTableDir(tableName);
   }
 
@@ -145,8 +148,9 @@ public class TestMapreduceRestoreSnapshotHelper {
     boolean isExpiredSnapshot = SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
       snapshotDesc.getCreationTime(), EnvironmentEdgeManager.currentTime());
     assertTrue(isExpiredSnapshot);
-    assertThrows(SnapshotTTLExpiredException.class, () -> MapreduceRestoreSnapshotHelper
-      .copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName));
+    assertThrows(SnapshotTTLExpiredException.class,
+      () -> RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir,
+        snapshotName, new MapreduceHFileArchiver()));
   }
 
   /**
@@ -156,39 +160,62 @@ public class TestMapreduceRestoreSnapshotHelper {
   @Test
   public void testRejectRestoreDirEqualToRootDir() {
     Path root = new Path("/hbase");
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
-      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, root, "snap"));
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+      () -> RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, root, "snap",
+        new MapreduceHFileArchiver()));
     assertTrue(e.getMessage().contains("BLOCKED"), e.getMessage());
     assertTrue(e.getMessage().contains("cannot be the HBase root directory"), e.getMessage());
   }
 
   /**
-   * Guard (HBASE-29435): a restore directory nested under the HBase root directory must be
-   * rejected.
+   * Guard (HBASE-29435): a restore directory nested under the HBase root directory must be rejected
+   * by the path check (the sub-directory branch).
    */
   @Test
   public void testRejectRestoreDirUnderRootDir() {
     Path root = new Path("/hbase");
     Path restoreDir = new Path(root, "data/.tmp-restore");
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
-      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, restoreDir, "snap"));
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+      () -> RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, root, restoreDir, "snap",
+        new MapreduceHFileArchiver()));
     assertTrue(e.getMessage().contains("BLOCKED"), e.getMessage());
-    assertTrue(e.getMessage().contains("cannot be the HBase root directory"), e.getMessage());
+    assertTrue(e.getMessage().contains("cannot be the HBase root directory or a sub"),
+      e.getMessage());
   }
 
   /**
-   * Guard (HBASE-29435): a filesystem that does not host the HBase root directory must be rejected,
-   * so a restore can never archive files across filesystems.
+   * Guard (HBASE-29435): the operation filesystem must host the HBase root directory. Validates the
+   * first filesystem check (the passed-in {@code fs} vs rootDir). A sibling restoreDir is used so
+   * only this check can fire.
    */
   @Test
   public void testRejectMismatchedFilesystem() throws IOException {
     Path hdfsRoot = TEST_UTIL.getDefaultRootDirPath();
     FileSystem localFs = FileSystem.getLocal(conf);
-    Path restoreDir = new Path(hdfsRoot, "data/.tmp-restore");
-    IllegalArgumentException e = assertThrows(IllegalArgumentException.class, () ->
-      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, localFs, hdfsRoot, restoreDir,
-        "snap"));
-    assertTrue(e.getMessage().contains("BLOCKED"), e.getMessage());
+    Path restoreDir = new Path(hdfsRoot.getParent(), "mr-restore-fs");
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+      () -> RestoreSnapshotHelper.copySnapshotForScanner(conf, localFs, hdfsRoot, restoreDir,
+        "snap", new MapreduceHFileArchiver()));
+    assertTrue(e.getMessage().contains("does not match the HBase root directory filesystem"),
+      e.getMessage());
+  }
+
+  /**
+   * Guard (HBASE-29435): the restore directory must live on the same filesystem as the HBase root
+   * directory, even when the operation filesystem already matches root. Validates the second,
+   * distinct filesystem check (restoreDir vs rootDir), which is not covered by the operation-fs
+   * check above.
+   */
+  @Test
+  public void testRejectRestoreDirOnDifferentFilesystem() throws IOException {
+    Path hdfsRoot = TEST_UTIL.getDefaultRootDirPath();
+    FileSystem rootFs = hdfsRoot.getFileSystem(conf);
+    // Operation fs matches root, but restoreDir is explicitly on the local filesystem.
+    Path localRestore = new Path("file:///tmp/mr-restore-" + System.nanoTime());
+    IllegalArgumentException e = assertThrows(IllegalArgumentException.class,
+      () -> RestoreSnapshotHelper.copySnapshotForScanner(conf, rootFs, hdfsRoot, localRestore,
+        "snap", new MapreduceHFileArchiver()));
+    assertTrue(e.getMessage().contains("Filesystems for restore directory"), e.getMessage());
   }
 
   /**
@@ -203,8 +230,8 @@ public class TestMapreduceRestoreSnapshotHelper {
     fs = rootDir.getFileSystem(conf);
     Path siblingRestore = new Path("/hbase/.tmp-sibling-restore");
     try {
-      MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, siblingRestore,
-        "nonexistent-snapshot");
+      RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, siblingRestore,
+        "nonexistent-snapshot", new MapreduceHFileArchiver());
     } catch (Exception e) {
       String msg = e.getMessage();
       assertFalse(msg != null && msg.contains("BLOCKED"),

@@ -904,14 +904,34 @@ public class RestoreSnapshotHelper {
   public static RestoreMetaChanges copySnapshotForScanner(Configuration conf, FileSystem fs,
     Path rootDir, Path restoreDir, String snapshotName, RestoreSnapshotArchiver archiver)
     throws IOException {
-    // ensure that restore dir is not under root dir
-    if (!restoreDir.getFileSystem(conf).getUri().equals(rootDir.getFileSystem(conf).getUri())) {
-      throw new IllegalArgumentException(
-        "Filesystems for restore directory and HBase root " + "directory should be the same");
+    // The operation filesystem, the HBase root directory, and the restore directory must all live
+    // on the same filesystem: archiving/rename runs on `fs`, and the path comparison below is only
+    // meaningful when the paths share a filesystem (HBASE-29435). The next two checks validate
+    // distinct operands - the passed-in `fs` and the `restoreDir` - so neither is redundant.
+    FileSystem rootDirFs = rootDir.getFileSystem(conf);
+    if (!fs.getUri().equals(rootDirFs.getUri())) {
+      throw new IllegalArgumentException("BLOCKED: MapReduce restore filesystem " + fs.getUri()
+        + " does not match the HBase root directory filesystem " + rootDirFs.getUri()
+        + ". Use the HBase root filesystem for MR snapshot scanning.");
     }
-    if (restoreDir.toUri().getPath().startsWith(rootDir.toUri().getPath() + "/")) {
-      throw new IllegalArgumentException("Restore directory cannot be a sub directory of HBase "
-        + "root directory. RootDir: " + rootDir + ", restoreDir: " + restoreDir);
+    if (!restoreDir.getFileSystem(conf).getUri().equals(rootDirFs.getUri())) {
+      throw new IllegalArgumentException(
+        "Filesystems for restore directory and HBase root directory should be the same. RootDir: "
+          + rootDir + ", restoreDir: " + restoreDir);
+    }
+    // Reject a restoreDir that equals or is nested under rootDir, to avoid accidentally archiving
+    // (and, after the HFileCleaner TTL elapses, permanently deleting) production data
+    // (HBASE-29435). Compare fully-qualified paths (scheme + authority + path) so that trailing
+    // slashes or authority differences cannot slip a production path past the guard.
+    String rootPath = fs.makeQualified(rootDir).toString();
+    String restorePath = fs.makeQualified(restoreDir).toString();
+    if (restorePath.equals(rootPath) || restorePath.startsWith(rootPath + "/")) {
+      throw new IllegalArgumentException(
+        "BLOCKED: MapReduce restore directory cannot be the HBase root directory or a sub "
+          + "directory of it. This could lead to accidental archival and permanent data loss if "
+          + "the path falls under " + rootDir + "/data/. Use a temporary directory outside of "
+          + "hbase.rootdir for MR snapshot scanning. RootDir: " + rootDir + ", restoreDir: "
+          + restoreDir);
     }
 
     Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(snapshotName, rootDir);

@@ -107,15 +107,6 @@ public class TestMapreduceHFileArchiver {
       "store file should be moved to the region archive");
   }
 
-  @Test
-  public void testExistsReflectsFilesystem() throws IOException {
-    TableName tableName = TableName.valueOf("testExists");
-    RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
-    assertFalse(MapreduceHFileArchiver.exists(conf, fs, region));
-    fs.mkdirs(FSUtils.getRegionDirFromRootDir(rootDir, region));
-    assertTrue(MapreduceHFileArchiver.exists(conf, fs, region));
-  }
-
   private void writeFile(Path path) throws IOException {
     fs.mkdirs(path.getParent());
     try (FSDataOutputStream out = fs.create(path)) {

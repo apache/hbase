@@ -51,12 +51,11 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
- * MapReduce-local archiver used by {@link
- * org.apache.hadoop.hbase.mapreduce.MapreduceRestoreSnapshotHelper}. It mirrors the server-side
+ * MapReduce-local archiver for the snapshot-scanning restore path. It mirrors the server-side
  * {@code HFileArchiver} but lives in the MapReduce module so the snapshot-scanning path can be
  * evolved independently. It is injected into the shared {@link
- * org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper} restore/clone logic via {@link
- * RestoreSnapshotArchiver}.
+ * org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper#copySnapshotForScanner} restore/clone
+ * logic via {@link RestoreSnapshotArchiver}.
  */
 @InterfaceAudience.Private
 public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
@@ -73,14 +72,6 @@ public class MapreduceHFileArchiver implements RestoreSnapshotArchiver {
       return file == null ? null : file.getPath();
     }
   };
-
-  /** Returns True if the Region exits in the filesystem. */
-  public static boolean exists(Configuration conf, FileSystem fs, RegionInfo info)
-    throws IOException {
-    Path rootDir = CommonFSUtils.getRootDir(conf);
-    Path regionDir = FSUtils.getRegionDirFromRootDir(rootDir, info);
-    return fs.exists(regionDir);
-  }
 
   /**
    * Cleans up all the files for a HRegion by archiving the HFiles to the archive directory

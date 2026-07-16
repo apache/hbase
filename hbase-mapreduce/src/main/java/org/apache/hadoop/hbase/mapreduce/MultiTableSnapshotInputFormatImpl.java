@@ -28,9 +28,11 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.ConfigurationUtil;
+import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 import org.slf4j.Logger;
@@ -225,8 +227,8 @@ public class MultiTableSnapshotInputFormatImpl {
 
   void restoreSnapshot(Configuration conf, String snapshotName, Path rootDir, Path restoreDir,
     FileSystem fs) throws IOException {
-    MapreduceRestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir,
-      snapshotName);
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
+      new MapreduceHFileArchiver());
   }
 
 }
