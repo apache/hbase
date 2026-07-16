@@ -204,8 +204,9 @@ Reverting hbase.global.readonly.enabled to true.
 ```
 
 <Callout type="info">
-  A cluster whose promotion was blocked is still a replica — the read-only coprocessors remain loaded and
-  writes are still rejected — even though its `hbase-site.xml` has `hbase.global.readonly.enabled=false`.
+  A cluster whose promotion was blocked is still a replica — the read-only coprocessors remain
+  loaded and writes are still rejected — even though its `hbase-site.xml` has
+  `hbase.global.readonly.enabled=false`.
 </Callout>
 
 To recover, choose one of the following paths depending on whether the existing active cluster is still
@@ -229,9 +230,9 @@ running.
    cluster writes a fresh sentinel file with its own identity and unloads the read-only coprocessors.
 
 <Callout type="warning">
-  **Do not remove the sentinel file while the cluster that wrote it is still running as an active cluster.**
-  Doing so would allow two clusters to write to the same shared storage simultaneously, risking data
-  corruption.
+  **Do not remove the sentinel file while the cluster that wrote it is still running as an active
+  cluster.** Doing so would allow two clusters to write to the same shared storage simultaneously,
+  risking data corruption.
 </Callout>
 
 ## Configurations and Commands
