@@ -116,8 +116,22 @@ public final class ConfigurationUtil {
     return rtn;
   }
 
+  /**
+   * Returns true if the provided Configuration object has
+   * {@link HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY} set to true; false otherwise.
+   */
   public static boolean isReadOnlyModeEnabledInConf(Configuration conf) {
     return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
       HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Returns a copied version of the provided Configuration object that has
+   * {@link HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY} set to true.
+   */
+  public static Configuration copyWithReadOnlyModeEnabled(Configuration conf) {
+    Configuration readOnlyConf = new Configuration(conf);
+    readOnlyConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+    return readOnlyConf;
   }
 }

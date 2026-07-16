@@ -65,6 +65,7 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.StorageType;
 import org.apache.hadoop.fs.permission.FsPermission;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.ClusterIdFile;
 import org.apache.hadoop.hbase.ClusterIdFileParser;
 import org.apache.hadoop.hbase.HConstants;
@@ -608,6 +609,20 @@ public final class FSUtils {
       LOG.warn("Cluster file does not exist at {}", idPath);
     }
     return cs;
+  }
+
+  public static String getClusterIdFromActiveClusterFile(FileSystem fs, Path rootDir) {
+    String activeClusterId = null;
+    try {
+      ActiveClusterSuffix parsedClusterIdFile =
+        FSUtils.getClusterIdFile(fs, rootDir, new ActiveClusterSuffix.Parser());
+      if (parsedClusterIdFile != null) {
+        activeClusterId = parsedClusterIdFile.toString();
+      }
+    } catch (IOException e) {
+      LOG.debug("Failed to read active cluster ID from file", e);
+    }
+    return activeClusterId;
   }
 
   private static <T extends ClusterIdFile> void rewriteAsPb(final FileSystem fs, final Path rootdir,
