@@ -32,6 +32,7 @@ import java.net.BindException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import javax.servlet.http.HttpServlet;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.SystemUtils;
@@ -73,6 +74,7 @@ import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
@@ -102,15 +104,22 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   protected final AtomicBoolean abortRequested = new AtomicBoolean(false);
 
   // Set when a report to the master comes back with a message asking us to
-  // shutdown. Also set by call to stop when debugging or running unit tests
+  // shut down. Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation.
   protected volatile boolean stopped = false;
+
+  // Flag set when a read-only to read-write transition is blocked because another active cluster
+  // exists
+  protected final AtomicBoolean readOnlyTransitionBlocked;
+
+  // Tracks the active cluster in a read-replica setup when a ReadOnlyTransitionException occurs
+  private final AtomicReference<String> blockingActiveClusterId;
 
   // Only for testing
   private boolean isShutdownHookInstalled = false;
 
   /**
-   * This servers startcode.
+   * This server's startcode.
    */
   protected final long startcode;
 
@@ -249,6 +258,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   public HBaseServerBase(Configuration conf, String name) throws IOException {
     super(name); // thread name
+    this.readOnlyTransitionBlocked = new AtomicBoolean(false);
+    this.blockingActiveClusterId = new AtomicReference<>(null);
     final Span span = TraceUtil.createSpan("HBaseServerBase.cxtor");
     try (Scope ignored = span.makeCurrent()) {
       this.conf = conf;
@@ -639,9 +650,33 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     LOG.info("Reloading the configuration from disk.");
     // Reload the configuration from disk.
     preUpdateConfiguration();
+    this.readOnlyTransitionBlocked.set(false);
+    this.blockingActiveClusterId.set(null);
     conf.reloadConfiguration();
     configurationManager.notifyAllObservers(conf);
+    this.checkForBlockedReadOnlyTransition();
     postUpdateConfiguration();
+  }
+
+  protected Configuration blockReadOnlyTransition(Configuration updatedConf,
+    String activeClusterId) {
+    this.blockingActiveClusterId.set(activeClusterId);
+    LOG.error(
+      "Cannot disable read-only mode. The {} file contains a different cluster ID ({}), which means "
+        + "that cluster is already the active cluster. Reverting {} to true",
+      HConstants.ACTIVE_CLUSTER_SUFFIX_FILE_NAME, this.blockingActiveClusterId.get(),
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
+    this.readOnlyTransitionBlocked.set(true);
+    return ConfigurationUtil.copyWithReadOnlyModeEnabled(updatedConf);
+  }
+
+  protected void checkForBlockedReadOnlyTransition() throws ReadOnlyTransitionException {
+    if (this.readOnlyTransitionBlocked.get()) {
+      throw new ReadOnlyTransitionException(
+        "Cannot disable read-only mode because another active cluster already exists on this "
+          + "storage location. The read-only coprocessors have not been removed.",
+        this.blockingActiveClusterId.get());
+    }
   }
 
   @Override

@@ -261,6 +261,7 @@ import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.HBaseFsck;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -4528,11 +4529,33 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
+    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
 
-    // updatedConf and this.conf reference the same Configuration object in an actual HBase
-    // deployment. However, in unit test cases they reference different Configuration objects, so
-    // this.conf needs to be updated.
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+    // The updatedConf is potentially a shared Configuration object, so we do not want to directly
+    // revert its read-only value if another active cluster already exists. For now, we reference
+    // updatedConf and create a copy for modification below if necessary.
+    Configuration confForCoprocessors = updatedConf;
+
+    if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
+      // Changing this cluster from a replica to an active cluster. There should not be another
+      // active cluster already.
+      MasterFileSystem mfs = this.getMasterFileSystem();
+      if (
+        AbstractReadOnlyController.isAnotherClusterActive(mfs.getFileSystem(), mfs.getRootDir(),
+          mfs.getActiveClusterSuffix())
+      ) {
+        String activeClusterId =
+          FSUtils.getClusterIdFromActiveClusterFile(mfs.getFileSystem(), mfs.getRootDir());
+        // Revert read-only mode here
+        confForCoprocessors = this.blockReadOnlyTransition(updatedConf, activeClusterId);
+      }
+    }
+
+    // In a real HBase deployment, confForCoprocessors may reference the same object as this.conf.
+    // This is assuming confForCoprocessors still references updatedConf, as mentioned in a previous
+    // comment. For unit tests, this Configuration object is not shared, so we need to make sure to
+    // update the coprocessors specifically for this.conf.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(confForCoprocessors, this.conf,
       originalIsReadOnlyEnabled, this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
       this.maintenanceMode, this.toString(), this::initializeCoprocessorHost);
 
