@@ -19,11 +19,20 @@ package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -31,6 +40,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -58,7 +68,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.WALKey;
 public class TestReplicationSinkBulkLoadDedup {
 
   private static final String CLUSTER_ID_A = "cluster-A";
-  private static final String CLUSTER_ID_B = "cluster-B";
   private static final byte[] REGION_NAME = Bytes.toBytes("regionXYZ");
   private static final long SEQ_NUM = 100L;
   private static final TableName TABLE = TableName.valueOf("testDedup");
@@ -75,7 +84,7 @@ public class TestReplicationSinkBulkLoadDedup {
       TestSourceFSConfigurationProvider.class.getCanonicalName());
     TEST_UTIL.startMiniZKCluster();
     zkw = new ZKWatcher(conf, "replication-sink-bulkload-dedup", null);
-    sink = new ReplicationSink(conf, null);
+    sink = new ReplicationSink(conf, null, zkw);
   }
 
   @AfterAll
@@ -87,97 +96,42 @@ public class TestReplicationSinkBulkLoadDedup {
   }
 
   /**
-   * Verify that manually adding a key to inProgressBulkLoads blocks a second add for the same key,
-   * and that remove restores it — core Set semantics that the dedup logic relies on.
-   */
-  @Test
-  public void testInProgressSetAddAndRemove() {
-    String key = CLUSTER_ID_A + "#" + Bytes.toString(REGION_NAME) + "#" + SEQ_NUM;
-
-    assertTrue(sink.getInProgressBulkLoads().add(key), "First add should succeed");
-    assertFalse(sink.getInProgressBulkLoads().add(key),
-      "Second add should fail (already in progress)");
-
-    sink.getInProgressBulkLoads().remove(key);
-    assertTrue(sink.getInProgressBulkLoads().add(key),
-      "Add after remove should succeed (retry allowed)");
-    sink.getInProgressBulkLoads().remove(key); // cleanup
-  }
-
-  /**
-   * Verify that keys from different source clusters with the same region/seqNum are treated as
-   * distinct entries and do not block each other.
-   */
-  @Test
-  public void testDifferentClustersDontConflict() {
-    String keyA = CLUSTER_ID_A + "#" + Bytes.toString(REGION_NAME) + "#" + SEQ_NUM;
-    String keyB = CLUSTER_ID_B + "#" + Bytes.toString(REGION_NAME) + "#" + SEQ_NUM;
-
-    assertTrue(sink.getInProgressBulkLoads().add(keyA));
-    assertTrue(sink.getInProgressBulkLoads().add(keyB),
-      "Same region/seqNum from different cluster should not conflict");
-
-    sink.getInProgressBulkLoads().remove(keyA);
-    sink.getInProgressBulkLoads().remove(keyB);
-    assertEquals(0, sink.getInProgressBulkLoads().size());
-  }
-
-  /**
    * End-to-end: replicateEntries() with a bulkload WAL cell that has replicate=false should not
-   * register any key in inProgressBulkLoads.
+   * create any replicated bulk load event marker.
    */
   @Test
   public void testNonReplicateBulkLoadNotTracked() throws Exception {
     WALProtos.BulkLoadDescriptor bld = buildBulkLoadDescriptor(REGION_NAME, SEQ_NUM, false);
     WALEdit edit = buildWALEdit(bld);
-    List<WALEntry> entries = buildWALEntries(edit);
+    long writeTime = System.currentTimeMillis();
+    List<WALEntry> entries = buildWALEntries(TABLE, REGION_NAME, edit, writeTime);
+    ReplicationBulkLoadEventTracker tracker =
+      new ZKReplicationBulkLoadEventTracker(TEST_UTIL.getConfiguration(), zkw);
+    ReplicationBulkLoadEventTracker.Event event =
+      tracker.newEvent(CLUSTER_ID_A, TABLE, REGION_NAME, SEQ_NUM, writeTime);
 
-    int before = sink.getInProgressBulkLoads().size();
+    assertFalse(tracker.isInProgress(event));
+    assertFalse(tracker.isDone(event));
     sink.replicateEntries(entries,
       PrivateCellUtil
         .createExtendedCellScanner(WALEditInternalHelper.getExtendedCells(edit).iterator()),
       CLUSTER_ID_A, "/dummy/namespace", "/dummy/archive");
 
-    assertEquals(before, sink.getInProgressBulkLoads().size(),
-      "Non-replicate bulkload should not add key to inProgressBulkLoads");
-  }
-
-  /**
-   * Simulate a concurrent retry: manually pre-populate the key to mimic a first call still in
-   * progress, then verify replicateEntries() skips the bulkload cell without throwing.
-   */
-  @Test
-  public void testConcurrentRetryIsSkipped() throws Exception {
-    WALProtos.BulkLoadDescriptor bld = buildBulkLoadDescriptor(REGION_NAME, SEQ_NUM + 1, true);
-    String key = CLUSTER_ID_A + "#" + Bytes.toString(REGION_NAME) + "#" + (SEQ_NUM + 1);
-
-    // Simulate first call still in progress
-    sink.getInProgressBulkLoads().add(key);
-
-    WALEdit edit = buildWALEdit(bld);
-    List<WALEntry> entries = buildWALEntries(edit);
-
-    // Second call (retry) should skip without exception
-    sink.replicateEntries(entries,
-      PrivateCellUtil
-        .createExtendedCellScanner(WALEditInternalHelper.getExtendedCells(edit).iterator()),
-      CLUSTER_ID_A, "/dummy/namespace", "/dummy/archive");
-
-    // Key still held by the "first call"
-    assertTrue(sink.getInProgressBulkLoads().contains(key));
-    sink.getInProgressBulkLoads().remove(key); // cleanup
+    assertFalse(tracker.isInProgress(event));
+    assertFalse(tracker.isDone(event));
   }
 
   @Test
   public void testCompletedZkBulkLoadEventIsSkippedBySink() throws Exception {
     WALProtos.BulkLoadDescriptor bld = buildBulkLoadDescriptor(REGION_NAME, SEQ_NUM + 2, true);
     WALEdit edit = buildWALEdit(bld);
-    List<WALEntry> entries = buildWALEntries(edit);
+    long writeTime = System.currentTimeMillis();
+    List<WALEntry> entries = buildWALEntries(TABLE, REGION_NAME, edit, writeTime);
 
     ReplicationBulkLoadEventTracker tracker =
-      new ReplicationBulkLoadEventTracker(TEST_UTIL.getConfiguration(), zkw);
-    ReplicationBulkLoadEventTracker.Event event = tracker.newEvent(CLUSTER_ID_A, TABLE, REGION_NAME,
-      SEQ_NUM + 2, entries.get(0).getKey().getWriteTime());
+      new ZKReplicationBulkLoadEventTracker(TEST_UTIL.getConfiguration(), zkw);
+    ReplicationBulkLoadEventTracker.Event event =
+      tracker.newEvent(CLUSTER_ID_A, TABLE, REGION_NAME, SEQ_NUM + 2, writeTime);
     tracker.markDone(event);
 
     ReplicationSink zkSink = new ReplicationSink(TEST_UTIL.getConfiguration(), null, zkw);
@@ -190,29 +144,90 @@ public class TestReplicationSinkBulkLoadDedup {
     assertFalse(tracker.isInProgress(event));
   }
 
+  @Test
+  public void testLoadedEventIsMarkedDoneButFailedEventStaysInProgress() throws Exception {
+    TableName loadedTable = TableName.valueOf("testLoadedEvent");
+    TableName failedTable = TableName.valueOf("testFailedEvent");
+    long loadedSeqNum = SEQ_NUM + 3;
+    long failedSeqNum = SEQ_NUM + 4;
+    long writeTime = System.currentTimeMillis();
+    RecordingBulkLoadEventTracker tracker = new RecordingBulkLoadEventTracker();
+    HFileReplicator hFileReplicator = mock(HFileReplicator.class);
+    doAnswer(invocation -> {
+      HFileReplicator.BulkLoadTableLoadListener listener = invocation.getArgument(0);
+      listener.tableLoaded(loadedTable.getNameWithNamespaceInclAsString());
+      listener.tableLoadFailed(failedTable.getNameWithNamespaceInclAsString());
+      throw new IOException("failed after loading started");
+    }).when(hFileReplicator).replicate(any(HFileReplicator.BulkLoadTableLoadListener.class));
+    ReplicationSink testSink =
+      new TestableReplicationSink(TEST_UTIL.getConfiguration(), tracker, hFileReplicator);
+
+    WALProtos.BulkLoadDescriptor loadedBld =
+      buildBulkLoadDescriptor(loadedTable, REGION_NAME, loadedSeqNum, true);
+    WALProtos.BulkLoadDescriptor failedBld =
+      buildBulkLoadDescriptor(failedTable, REGION_NAME, failedSeqNum, true);
+    WALEdit loadedEdit = buildWALEdit(loadedTable, loadedBld);
+    WALEdit failedEdit = buildWALEdit(failedTable, failedBld);
+    List<WALEntry> entries = new ArrayList<>();
+    entries.add(buildWALEntry(loadedTable, REGION_NAME, loadedEdit, writeTime));
+    entries.add(buildWALEntry(failedTable, REGION_NAME, failedEdit, writeTime));
+    List<ExtendedCell> cells = new ArrayList<>();
+    cells.addAll(WALEditInternalHelper.getExtendedCells(loadedEdit));
+    cells.addAll(WALEditInternalHelper.getExtendedCells(failedEdit));
+
+    IOException error = assertThrows(IOException.class,
+      () -> testSink.replicateEntries(entries,
+        PrivateCellUtil.createExtendedCellScanner(cells.iterator()), CLUSTER_ID_A,
+        "/dummy/namespace", "/dummy/archive"));
+
+    assertEquals("failed after loading started", error.getMessage());
+    ReplicationBulkLoadEventTracker.Event loadedEvent =
+      tracker.getEvent(loadedTable, REGION_NAME, loadedSeqNum);
+    ReplicationBulkLoadEventTracker.Event failedEvent =
+      tracker.getEvent(failedTable, REGION_NAME, failedSeqNum);
+    assertTrue(tracker.doneEvents.contains(loadedEvent));
+    assertTrue(tracker.releasedEvents.contains(loadedEvent));
+    assertFalse(tracker.doneEvents.contains(failedEvent));
+    assertFalse(tracker.releasedEvents.contains(failedEvent));
+  }
+
   // ---- helpers ----
 
   private WALProtos.BulkLoadDescriptor buildBulkLoadDescriptor(byte[] regionName, long seqNum,
     boolean replicate) {
+    return buildBulkLoadDescriptor(TABLE, regionName, seqNum, replicate);
+  }
+
+  private WALProtos.BulkLoadDescriptor buildBulkLoadDescriptor(TableName table, byte[] regionName,
+    long seqNum, boolean replicate) {
     WALProtos.StoreDescriptor store =
       WALProtos.StoreDescriptor.newBuilder().setFamilyName(UnsafeByteOperations.unsafeWrap(FAMILY))
         .setStoreHomeDir(Bytes.toString(FAMILY)).addStoreFile("hfile-0").setStoreFileSizeBytes(1024)
         .build();
     return WALProtos.BulkLoadDescriptor.newBuilder()
-      .setTableName(ProtobufUtil.toProtoTableName(TABLE))
+      .setTableName(ProtobufUtil.toProtoTableName(table))
       .setEncodedRegionName(UnsafeByteOperations.unsafeWrap(regionName)).addStores(store)
       .setBulkloadSeqNum(seqNum).setReplicate(replicate).build();
   }
 
   private WALEdit buildWALEdit(WALProtos.BulkLoadDescriptor bld) {
+    return buildWALEdit(TABLE, bld);
+  }
+
+  private WALEdit buildWALEdit(TableName table, WALProtos.BulkLoadDescriptor bld) {
     // RegionInfo is only used to construct the WAL cell row key; dedup logic reads
     // encodedRegionName from BulkLoadDescriptor directly, so any RegionInfo works here.
     org.apache.hadoop.hbase.client.RegionInfo ri =
-      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(TABLE).build();
+      org.apache.hadoop.hbase.client.RegionInfoBuilder.newBuilder(table).build();
     return WALEdit.createBulkLoadEvent(ri, bld);
   }
 
-  private List<WALEntry> buildWALEntries(WALEdit edit) {
+  private List<WALEntry> buildWALEntries(TableName table, byte[] regionName, WALEdit edit,
+    long writeTime) {
+    return Collections.singletonList(buildWALEntry(table, regionName, edit, writeTime));
+  }
+
+  private WALEntry buildWALEntry(TableName table, byte[] regionName, WALEdit edit, long writeTime) {
     WALEntry.Builder builder = WALEntry.newBuilder();
     builder.setAssociatedCellCount(edit.getCells().size());
     WALKey.Builder keyBuilder = WALKey.newBuilder();
@@ -220,11 +235,86 @@ public class TestReplicationSinkBulkLoadDedup {
     uuidBuilder.setLeastSigBits(HConstants.DEFAULT_CLUSTER_ID.getLeastSignificantBits());
     uuidBuilder.setMostSigBits(HConstants.DEFAULT_CLUSTER_ID.getMostSignificantBits());
     keyBuilder.setClusterId(uuidBuilder.build());
-    keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(TABLE.getName()));
-    keyBuilder.setWriteTime(System.currentTimeMillis());
-    keyBuilder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(REGION_NAME));
+    keyBuilder.setTableName(UnsafeByteOperations.unsafeWrap(table.getName()));
+    keyBuilder.setWriteTime(writeTime);
+    keyBuilder.setEncodedRegionName(UnsafeByteOperations.unsafeWrap(regionName));
     keyBuilder.setLogSequenceNumber(-1);
     builder.setKey(keyBuilder.build());
-    return Collections.singletonList(builder.build());
+    return builder.build();
+  }
+
+  private static final class TestableReplicationSink extends ReplicationSink {
+    private final HFileReplicator hFileReplicator;
+
+    TestableReplicationSink(Configuration conf, ReplicationBulkLoadEventTracker tracker,
+      HFileReplicator hFileReplicator) throws IOException {
+      super(conf, null, tracker);
+      this.hFileReplicator = hFileReplicator;
+    }
+
+    @Override
+    HFileReplicator createHFileReplicator(Configuration providerConf,
+      String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath,
+      Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, List<String> sourceClusterIds)
+      throws IOException {
+      return hFileReplicator;
+    }
+  }
+
+  private static final class RecordingBulkLoadEventTracker
+    implements ReplicationBulkLoadEventTracker {
+    private final Map<String, ReplicationBulkLoadEventTracker.Event> events = new HashMap<>();
+    private final List<ReplicationBulkLoadEventTracker.Event> doneEvents = new ArrayList<>();
+    private final List<ReplicationBulkLoadEventTracker.Event> releasedEvents = new ArrayList<>();
+
+    @Override
+    public ReplicationBulkLoadEventTracker.Event newEvent(String replicationClusterId,
+      TableName table, byte[] encodedRegionName, long bulkLoadSeqNum, long writeTime) {
+      ReplicationBulkLoadEventTracker.Event event = new ReplicationBulkLoadEventTracker.Event("0",
+        table.getNameWithNamespaceInclAsString() + '#' + bulkLoadSeqNum, null);
+      events.put(key(table, encodedRegionName, bulkLoadSeqNum), event);
+      return event;
+    }
+
+    @Override
+    public ReplicationBulkLoadEventTracker.ClaimResult
+      claim(ReplicationBulkLoadEventTracker.Event event) {
+      return ReplicationBulkLoadEventTracker.ClaimResult.CLAIMED;
+    }
+
+    @Override
+    public void markDone(ReplicationBulkLoadEventTracker.Event event) {
+      doneEvents.add(event);
+    }
+
+    @Override
+    public void release(ReplicationBulkLoadEventTracker.Event event) {
+      releasedEvents.add(event);
+    }
+
+    @Override
+    public boolean isInProgress(ReplicationBulkLoadEventTracker.Event event) {
+      return false;
+    }
+
+    @Override
+    public boolean isDone(ReplicationBulkLoadEventTracker.Event event) {
+      return doneEvents.contains(event);
+    }
+
+    @Override
+    public int cleanDoneMarkers(long ttlMs) {
+      return 0;
+    }
+
+    ReplicationBulkLoadEventTracker.Event getEvent(TableName table, byte[] encodedRegionName,
+      long bulkLoadSeqNum) {
+      return events.get(key(table, encodedRegionName, bulkLoadSeqNum));
+    }
+
+    private String key(TableName table, byte[] encodedRegionName, long bulkLoadSeqNum) {
+      return table.getNameWithNamespaceInclAsString() + '#'
+        + Bytes.toStringBinary(encodedRegionName) + '#' + bulkLoadSeqNum;
+    }
   }
 }

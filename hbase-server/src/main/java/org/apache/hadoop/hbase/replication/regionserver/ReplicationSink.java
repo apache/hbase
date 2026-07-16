@@ -134,15 +134,19 @@ public class ReplicationSink implements ConfigurationObserver {
    */
   public ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost)
     throws IOException {
-    this(conf, rsServerHost, null);
+    this(conf, rsServerHost, (ZKWatcher) null);
   }
 
   public ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost,
     ZKWatcher zkw) throws IOException {
+    this(conf, rsServerHost, createBulkLoadEventTracker(conf, zkw));
+  }
+
+  ReplicationSink(Configuration conf, RegionServerCoprocessorHost rsServerHost,
+    ReplicationBulkLoadEventTracker bulkLoadEventTracker) throws IOException {
     this.conf = HBaseConfiguration.create(conf);
     this.rsServerHost = rsServerHost;
-    this.bulkLoadEventTracker =
-      zkw == null ? null : new ReplicationBulkLoadEventTracker(this.conf, zkw);
+    this.bulkLoadEventTracker = bulkLoadEventTracker;
     rowSizeWarnThreshold =
       conf.getInt(HConstants.BATCH_ROWS_THRESHOLD_NAME, HConstants.BATCH_ROWS_THRESHOLD_DEFAULT);
     replicationSinkTrackerEnabled = conf.getBoolean(REPLICATION_SINK_TRACKER_ENABLED_KEY,
@@ -163,17 +167,14 @@ public class ReplicationSink implements ConfigurationObserver {
     updateBulkLoadCopyBandwidth(conf);
   }
 
+  private static ReplicationBulkLoadEventTracker createBulkLoadEventTracker(Configuration conf,
+    ZKWatcher zkw) {
+    return zkw == null ? null : new ZKReplicationBulkLoadEventTracker(conf, zkw);
+  }
+
   @Override
   public void onConfigurationChange(Configuration newConf) {
     updateBulkLoadCopyBandwidth(newConf);
-  }
-
-  double getBulkLoadCopyRateLimiterRate() {
-    return bulkLoadCopyRateLimiter.getRate();
-  }
-
-  Set<String> getInProgressBulkLoads() {
-    return inProgressBulkLoads;
   }
 
   private void updateBulkLoadCopyBandwidth(Configuration conf) {
@@ -251,8 +252,8 @@ public class ReplicationSink implements ConfigurationObserver {
       Map<TableName, Map<List<UUID>, List<Row>>> rowMap = new TreeMap<>();
 
       Map<List<String>, Map<String, List<Pair<byte[], List<String>>>>> bulkLoadsPerClusters = null;
-      Map<List<String>, List<ReplicationBulkLoadEventTracker.Event>> bulkLoadEventsPerClusters =
-        null;
+      Map<List<String>, Map<String,
+        List<ReplicationBulkLoadEventTracker.Event>>> bulkLoadEventsPerClustersAndTables = null;
       Pair<List<Mutation>, List<WALEntry>> mutationsToWalEntriesPairs =
         new Pair<>(new ArrayList<>(), new ArrayList<>());
       for (WALEntry entry : entries) {
@@ -322,10 +323,11 @@ public class ReplicationSink implements ConfigurationObserver {
                 bulkLoadsPerClusters.computeIfAbsent(clusterIds, k -> new HashMap<>());
               buildBulkLoadHFileMap(bulkLoadHFileMap, table, bld);
               if (bulkLoadEvent != null) {
-                if (bulkLoadEventsPerClusters == null) {
-                  bulkLoadEventsPerClusters = new HashMap<>();
+                if (bulkLoadEventsPerClustersAndTables == null) {
+                  bulkLoadEventsPerClustersAndTables = new HashMap<>();
                 }
-                bulkLoadEventsPerClusters.computeIfAbsent(clusterIds, k -> new ArrayList<>())
+                bulkLoadEventsPerClustersAndTables.computeIfAbsent(clusterIds, k -> new HashMap<>())
+                  .computeIfAbsent(table.getNameWithNamespaceInclAsString(), k -> new ArrayList<>())
                   .add(bulkLoadEvent);
               }
             }
@@ -397,13 +399,28 @@ public class ReplicationSink implements ConfigurationObserver {
           if (bulkLoadHFileMap != null && !bulkLoadHFileMap.isEmpty()) {
             LOG.debug("Replicating {} bulk loaded data", entry.getKey().toString());
             Configuration providerConf = this.provider.getConf(this.conf, replicationClusterId);
-            try (HFileReplicator hFileReplicator = new HFileReplicator(providerConf,
-              sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, bulkLoadHFileMap, conf,
-              getConnection(), entry.getKey(), bulkLoadCopyRateLimiter)) {
-              hFileReplicator.replicate();
-              markBulkLoadEventsDone(bulkLoadEventsPerClusters == null
+            Map<String, List<ReplicationBulkLoadEventTracker.Event>> bulkLoadEventsPerTable =
+              bulkLoadEventsPerClustersAndTables == null
                 ? null
-                : bulkLoadEventsPerClusters.get(entry.getKey()), claimedBulkLoadEvents);
+                : bulkLoadEventsPerClustersAndTables.get(entry.getKey());
+            List<ReplicationBulkLoadEventTracker.Event> releasableBulkLoadEvents =
+              claimedBulkLoadEvents;
+            try (HFileReplicator hFileReplicator =
+              createHFileReplicator(providerConf, sourceBaseNamespaceDirPath,
+                sourceHFileArchiveDirPath, bulkLoadHFileMap, entry.getKey())) {
+              hFileReplicator.replicate(new HFileReplicator.BulkLoadTableLoadListener() {
+                @Override
+                public void tableLoaded(String tableName) throws IOException {
+                  markBulkLoadEventsDone(eventsForTable(bulkLoadEventsPerTable, tableName),
+                    releasableBulkLoadEvents);
+                }
+
+                @Override
+                public void tableLoadFailed(String tableName) {
+                  keepBulkLoadEventsInProgress(eventsForTable(bulkLoadEventsPerTable, tableName),
+                    releasableBulkLoadEvents);
+                }
+              });
               LOG.debug("Finished replicating {} bulk loaded data", entry.getKey().toString());
             }
           }
@@ -424,6 +441,19 @@ public class ReplicationSink implements ConfigurationObserver {
       }
       releaseBulkLoadEvents(claimedBulkLoadEvents);
     }
+  }
+
+  HFileReplicator createHFileReplicator(Configuration providerConf,
+    String sourceBaseNamespaceDirPath, String sourceHFileArchiveDirPath,
+    Map<String, List<Pair<byte[], List<String>>>> bulkLoadHFileMap, List<String> sourceClusterIds)
+    throws IOException {
+    return new HFileReplicator(providerConf, sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath,
+      bulkLoadHFileMap, conf, getConnection(), sourceClusterIds, bulkLoadCopyRateLimiter);
+  }
+
+  private List<ReplicationBulkLoadEventTracker.Event> eventsForTable(
+    Map<String, List<ReplicationBulkLoadEventTracker.Event>> eventsPerTable, String tableName) {
+    return eventsPerTable == null ? null : eventsPerTable.get(tableName);
   }
 
   private void markBulkLoadEventsDone(List<ReplicationBulkLoadEventTracker.Event> events,
@@ -447,11 +477,17 @@ public class ReplicationSink implements ConfigurationObserver {
   private void keepUnmarkedBulkLoadEventsInProgress(
     List<ReplicationBulkLoadEventTracker.Event> events,
     List<ReplicationBulkLoadEventTracker.Event> releasableEvents, int firstUnmarkedIndex) {
-    if (releasableEvents == null) {
+    keepBulkLoadEventsInProgress(events.subList(firstUnmarkedIndex, events.size()),
+      releasableEvents);
+  }
+
+  private void keepBulkLoadEventsInProgress(List<ReplicationBulkLoadEventTracker.Event> events,
+    List<ReplicationBulkLoadEventTracker.Event> releasableEvents) {
+    if (events == null || releasableEvents == null) {
       return;
     }
-    for (int i = firstUnmarkedIndex; i < events.size(); i++) {
-      releasableEvents.remove(events.get(i));
+    for (ReplicationBulkLoadEventTracker.Event event : events) {
+      releasableEvents.remove(event);
     }
   }
 

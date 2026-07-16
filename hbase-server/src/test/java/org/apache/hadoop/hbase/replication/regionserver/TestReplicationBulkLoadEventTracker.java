@@ -67,11 +67,11 @@ public class TestReplicationBulkLoadEventTracker {
   @Test
   public void testSecondSinkWaitsForDoneFromFirstSink() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setLong(ReplicationBulkLoadEventTracker.WAIT_TIMEOUT_MS_KEY, 5000);
-    conf.setLong(ReplicationBulkLoadEventTracker.WAIT_INTERVAL_MS_KEY, 50);
+    conf.setLong(ZKReplicationBulkLoadEventTracker.WAIT_TIMEOUT_MS_KEY, 5000);
+    conf.setLong(ZKReplicationBulkLoadEventTracker.WAIT_INTERVAL_MS_KEY, 50);
 
-    ReplicationBulkLoadEventTracker tracker1 = new ReplicationBulkLoadEventTracker(conf, zkw1);
-    ReplicationBulkLoadEventTracker tracker2 = new ReplicationBulkLoadEventTracker(conf, zkw2);
+    ReplicationBulkLoadEventTracker tracker1 = new ZKReplicationBulkLoadEventTracker(conf, zkw1);
+    ReplicationBulkLoadEventTracker tracker2 = new ZKReplicationBulkLoadEventTracker(conf, zkw2);
     ReplicationBulkLoadEventTracker.Event event =
       tracker1.newEvent("cluster-A", TABLE, REGION_NAME, SEQ_NUM, WRITE_TIME);
 
@@ -99,8 +99,8 @@ public class TestReplicationBulkLoadEventTracker {
   @Test
   public void testDoneMarkerUsesStableBucketFromWalWriteTime() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setLong(ReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
-    ReplicationBulkLoadEventTracker tracker = new ReplicationBulkLoadEventTracker(conf, zkw1);
+    conf.setLong(ZKReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
+    ReplicationBulkLoadEventTracker tracker = new ZKReplicationBulkLoadEventTracker(conf, zkw1);
 
     ReplicationBulkLoadEventTracker.Event first =
       tracker.newEvent("cluster-A", TABLE, REGION_NAME, SEQ_NUM, WRITE_TIME);

@@ -91,7 +91,17 @@ public class HFileReplicator implements Closeable {
   private static final String UNDERSCORE = "_";
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
   private static final int COPY_BUFFER_SIZE = 65536;
-  // null means no throttling
+  private static final BulkLoadTableLoadListener NO_OP_TABLE_LOAD_LISTENER =
+    new BulkLoadTableLoadListener() {
+      @Override
+      public void tableLoaded(String tableName) {
+      }
+
+      @Override
+      public void tableLoadFailed(String tableName) {
+      }
+    };
+  // Double.MAX_VALUE means no throttling.
   private volatile RateLimiter rateLimiter;
 
   private Configuration sourceClusterConf;
@@ -152,7 +162,17 @@ public class HFileReplicator implements Closeable {
     }
   }
 
+  interface BulkLoadTableLoadListener {
+    void tableLoaded(String tableName) throws IOException;
+
+    void tableLoadFailed(String tableName);
+  }
+
   public Void replicate() throws IOException {
+    return replicate(NO_OP_TABLE_LOAD_LISTENER);
+  }
+
+  Void replicate(BulkLoadTableLoadListener tableLoadListener) throws IOException {
     // Copy all the hfiles to the local file system
     Map<String, Path> tableStagingDirsMap = copyHFilesToStagingDir();
 
@@ -174,10 +194,16 @@ public class HFileReplicator implements Closeable {
       }
       fsDelegationToken.acquireDelegationToken(sinkFs);
       try {
-        doBulkLoad(conf, tableName, stagingDir, queue, maxRetries);
+        try {
+          doBulkLoad(conf, tableName, stagingDir, queue, maxRetries);
+        } catch (IOException e) {
+          tableLoadListener.tableLoadFailed(tableNameString);
+          throw e;
+        }
       } finally {
         cleanup(stagingDir);
       }
+      tableLoadListener.tableLoaded(tableNameString);
     }
     return null;
   }

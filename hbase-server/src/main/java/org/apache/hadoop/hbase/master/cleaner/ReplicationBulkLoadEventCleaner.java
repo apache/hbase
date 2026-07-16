@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
+import java.io.IOException;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationBulkLoadEventTracker;
+import org.apache.hadoop.hbase.replication.regionserver.ZKReplicationBulkLoadEventTracker;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +49,7 @@ public class ReplicationBulkLoadEventCleaner extends ScheduledChore {
   public ReplicationBulkLoadEventCleaner(Configuration conf, Stoppable stopper, ZKWatcher zkw) {
     super("ReplicationBulkLoadEventCleaner", stopper,
       conf.getInt(PERIOD_MS_KEY, PERIOD_MS_DEFAULT));
-    this.tracker = new ReplicationBulkLoadEventTracker(conf, zkw);
+    this.tracker = new ZKReplicationBulkLoadEventTracker(conf, zkw);
     this.doneTtlMs = conf.getLong(DONE_TTL_MS_KEY, DONE_TTL_MS_DEFAULT);
   }
 
@@ -59,12 +60,8 @@ public class ReplicationBulkLoadEventCleaner extends ScheduledChore {
       if (deleted > 0) {
         LOG.info("Cleaned {} replicated bulkload event marker(s)", deleted);
       }
-    } catch (KeeperException e) {
+    } catch (IOException e) {
       LOG.warn("Failed to clean replicated bulkload event markers", e);
     }
-  }
-
-  public void choreForTesting() {
-    chore();
   }
 }

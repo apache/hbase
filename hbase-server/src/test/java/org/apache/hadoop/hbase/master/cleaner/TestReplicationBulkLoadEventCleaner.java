@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -26,6 +25,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationBulkLoadEventTracker;
+import org.apache.hadoop.hbase.replication.regionserver.ZKReplicationBulkLoadEventTracker;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -66,19 +66,18 @@ public class TestReplicationBulkLoadEventCleaner {
   @Test
   public void testCleanerRemovesExpiredDoneWithoutInProgress() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setLong(ReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
-    conf.setLong(ReplicationBulkLoadEventCleaner.DONE_TTL_MS_KEY, 1);
+    conf.setLong(ZKReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
+    conf.setLong(ReplicationBulkLoadEventCleaner.DONE_TTL_MS_KEY, 0);
 
-    ReplicationBulkLoadEventTracker tracker = new ReplicationBulkLoadEventTracker(conf, zkw);
+    ReplicationBulkLoadEventTracker tracker = new ZKReplicationBulkLoadEventTracker(conf, zkw);
     ReplicationBulkLoadEventTracker.Event event =
       tracker.newEvent("cluster-A", TABLE, REGION_NAME, SEQ_NUM, WRITE_TIME);
     tracker.markDone(event);
     assertTrue(tracker.isDone(event));
 
-    Thread.sleep(5);
     ReplicationBulkLoadEventCleaner cleaner =
       new ReplicationBulkLoadEventCleaner(conf, new NeverStopped(), zkw);
-    cleaner.choreForTesting();
+    cleaner.chore();
 
     assertFalse(tracker.isDone(event));
   }
@@ -86,19 +85,18 @@ public class TestReplicationBulkLoadEventCleaner {
   @Test
   public void testCleanerKeepsDoneWhileInProgressExists() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setLong(ReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
-    conf.setLong(ReplicationBulkLoadEventCleaner.DONE_TTL_MS_KEY, 1);
+    conf.setLong(ZKReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
+    conf.setLong(ReplicationBulkLoadEventCleaner.DONE_TTL_MS_KEY, 0);
 
-    ReplicationBulkLoadEventTracker tracker = new ReplicationBulkLoadEventTracker(conf, zkw);
+    ReplicationBulkLoadEventTracker tracker = new ZKReplicationBulkLoadEventTracker(conf, zkw);
     ReplicationBulkLoadEventTracker.Event event =
       tracker.newEvent("cluster-A", TABLE, REGION_NAME, SEQ_NUM + 1, WRITE_TIME);
     assertTrue(tracker.claim(event).isClaimed());
     tracker.markDone(event);
 
-    Thread.sleep(5);
     ReplicationBulkLoadEventCleaner cleaner =
       new ReplicationBulkLoadEventCleaner(conf, new NeverStopped(), zkw);
-    cleaner.choreForTesting();
+    cleaner.chore();
 
     assertTrue(tracker.isDone(event));
     tracker.release(event);
@@ -107,10 +105,10 @@ public class TestReplicationBulkLoadEventCleaner {
   @Test
   public void testCleanerRemovesEmptyBucketsAfterExpiredDone() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    conf.setLong(ReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
-    conf.setLong(ReplicationBulkLoadEventCleaner.DONE_TTL_MS_KEY, 1);
+    conf.setLong(ZKReplicationBulkLoadEventTracker.BUCKET_WIDTH_MS_KEY, 1000);
+    conf.setLong(ReplicationBulkLoadEventCleaner.DONE_TTL_MS_KEY, 0);
 
-    ReplicationBulkLoadEventTracker tracker = new ReplicationBulkLoadEventTracker(conf, zkw);
+    ReplicationBulkLoadEventTracker tracker = new ZKReplicationBulkLoadEventTracker(conf, zkw);
     ReplicationBulkLoadEventTracker.Event event =
       tracker.newEvent("cluster-A", TABLE, REGION_NAME, SEQ_NUM + 2, WRITE_TIME);
     assertTrue(tracker.claim(event).isClaimed());
@@ -118,22 +116,19 @@ public class TestReplicationBulkLoadEventCleaner {
     tracker.release(event);
 
     String eventsRoot = ZNodePaths.joinZNode(zkw.getZNodePaths().replicationZNode,
-      ReplicationBulkLoadEventTracker.ZNODE_DEFAULT);
-    String doneBucketPath =
-      ZNodePaths.joinZNode(ZNodePaths.joinZNode(eventsRoot, "done"), event.getBucket());
-    String inProgressBucketPath =
-      ZNodePaths.joinZNode(ZNodePaths.joinZNode(eventsRoot, "in-progress"), event.getBucket());
+      ZKReplicationBulkLoadEventTracker.ZNODE_DEFAULT);
+    String doneRootPath = ZNodePaths.joinZNode(eventsRoot, "done");
+    String inProgressRootPath = ZNodePaths.joinZNode(eventsRoot, "in-progress");
 
-    assertTrue(ZKUtil.checkExists(zkw, doneBucketPath) != -1);
-    assertTrue(ZKUtil.checkExists(zkw, inProgressBucketPath) != -1);
+    assertFalse(ZKUtil.listChildrenNoWatch(zkw, doneRootPath).isEmpty());
+    assertFalse(ZKUtil.listChildrenNoWatch(zkw, inProgressRootPath).isEmpty());
 
-    Thread.sleep(5);
     ReplicationBulkLoadEventCleaner cleaner =
       new ReplicationBulkLoadEventCleaner(conf, new NeverStopped(), zkw);
-    cleaner.choreForTesting();
+    cleaner.chore();
 
-    assertEquals(-1, ZKUtil.checkExists(zkw, doneBucketPath));
-    assertEquals(-1, ZKUtil.checkExists(zkw, inProgressBucketPath));
+    assertTrue(ZKUtil.listChildrenNoWatch(zkw, doneRootPath).isEmpty());
+    assertTrue(ZKUtil.listChildrenNoWatch(zkw, inProgressRootPath).isEmpty());
   }
 
   private static final class NeverStopped implements Stoppable {
