@@ -18,48 +18,194 @@
 package org.apache.hadoop.hbase.trace;
 
 import io.opentelemetry.api.common.AttributeKey;
-import io.opentelemetry.semconv.SemanticAttributes;
+import io.opentelemetry.semconv.DbAttributes;
+import io.opentelemetry.semconv.ExceptionAttributes;
+import io.opentelemetry.semconv.NetworkAttributes;
 import java.nio.ByteBuffer;
 import java.util.List;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * The constants in this class correspond with the guidance outlined by the OpenTelemetry <a href=
- * "https://github.com/open-telemetry/opentelemetry-specification/tree/main/specification/trace/semantic_conventions">Semantic
- * Conventions</a>.
+ * "https://github.com/open-telemetry/semantic-conventions">Semantic Conventions</a>.
+ *
+ * <p>This class is in a migration phase from experimental (1.29.0-alpha) to stable (1.42.0)
+ * semantic conventions. Deprecated attributes are aliased to their stable equivalents and will be
+ * removed in HBase 5.x. Use the non-deprecated attribute names for new code.
  */
 @InterfaceAudience.Private
 public final class HBaseSemanticAttributes {
-  public static final AttributeKey<String> DB_SYSTEM = SemanticAttributes.DB_SYSTEM;
-  public static final String DB_SYSTEM_VALUE = SemanticAttributes.DbSystemValues.HBASE;
+  // ========== DATABASE ATTRIBUTES ==========
+
+  /**
+   * Stable database system attribute from OpenTelemetry semconv 1.42.0.
+   * @see DbAttributes#DB_SYSTEM_NAME
+   */
+  public static final AttributeKey<String> DB_SYSTEM_NAME = DbAttributes.DB_SYSTEM_NAME;
+
+  /**
+   * HBase system identifier. HBase is not in the stable enum, so we use a custom value.
+   */
+  public static final String DB_SYSTEM_NAME_VALUE = "hbase";
+
+  /**
+   * Stable database namespace attribute from OpenTelemetry semconv 1.42.0.
+   * @see DbAttributes#DB_NAMESPACE
+   */
+  public static final AttributeKey<String> DB_NAMESPACE = DbAttributes.DB_NAMESPACE;
+
+  /**
+   * Stable database operation attribute from OpenTelemetry semconv 1.42.0.
+   * @see DbAttributes#DB_OPERATION_NAME
+   */
+  public static final AttributeKey<String> DB_OPERATION_NAME = DbAttributes.DB_OPERATION_NAME;
+
+  /**
+   * @deprecated Use {@link #DB_SYSTEM_NAME} instead. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<String> DB_SYSTEM = DB_SYSTEM_NAME;
+
+  /**
+   * @deprecated Use {@link #DB_SYSTEM_NAME_VALUE} instead. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final String DB_SYSTEM_VALUE = DB_SYSTEM_NAME_VALUE;
+
+  /**
+   * @deprecated This attribute was removed from stable OpenTelemetry semantic conventions for
+   *             security/PII concerns. HBase continues emitting it as a custom attribute for
+   *             backward compatibility. Will be removed in HBase 5.x.
+   */
+  @Deprecated
   public static final AttributeKey<String> DB_CONNECTION_STRING =
-    SemanticAttributes.DB_CONNECTION_STRING;
-  public static final AttributeKey<String> DB_USER = SemanticAttributes.DB_USER;
-  public static final AttributeKey<String> DB_NAME = SemanticAttributes.DB_NAME;
-  public static final AttributeKey<String> DB_OPERATION = SemanticAttributes.DB_OPERATION;
+    AttributeKey.stringKey("db.connection_string");
+
+  /**
+   * @deprecated This attribute was removed from stable OpenTelemetry semantic conventions for PII
+   *             concerns. HBase continues emitting it as a custom attribute for backward
+   *             compatibility. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<String> DB_USER = AttributeKey.stringKey("db.user");
+
+  /**
+   * @deprecated Use {@link #DB_NAMESPACE} instead. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<String> DB_NAME = DB_NAMESPACE;
+
+  /**
+   * @deprecated Use {@link #DB_OPERATION_NAME} instead. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<String> DB_OPERATION = DB_OPERATION_NAME;
+
+  /**
+   * HBase-specific attribute for table names.
+   */
   public static final AttributeKey<String> TABLE_KEY = AttributeKey.stringKey("db.hbase.table");
+
   /**
    * For operations that themselves ship one or more operations, such as {@link Operation#BATCH} and
    * {@link Operation#CHECK_AND_MUTATE}.
    */
   public static final AttributeKey<List<String>> CONTAINER_DB_OPERATIONS_KEY =
     AttributeKey.stringArrayKey("db.hbase.container_operations");
+
+  /**
+   * HBase-specific attribute for region names.
+   */
   public static final AttributeKey<List<String>> REGION_NAMES_KEY =
     AttributeKey.stringArrayKey("db.hbase.regions");
-  public static final AttributeKey<String> RPC_SYSTEM = SemanticAttributes.RPC_SYSTEM;
-  public static final AttributeKey<String> RPC_SERVICE = SemanticAttributes.RPC_SERVICE;
-  public static final AttributeKey<String> RPC_METHOD = SemanticAttributes.RPC_METHOD;
+
+  // ========== RPC ATTRIBUTES ==========
+
+  /**
+   * RPC system attribute. RPC conventions are stable in the OpenTelemetry specification but not yet
+   * present in the semconv 1.42.0 JAR, so we define this directly.
+   */
+  public static final AttributeKey<String> RPC_SYSTEM = AttributeKey.stringKey("rpc.system");
+
+  /**
+   * @deprecated RPC service attribute was removed from stable OpenTelemetry semantic conventions
+   *             (merged into rpc.method). HBase continues emitting it for backward compatibility.
+   *             Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<String> RPC_SERVICE = AttributeKey.stringKey("rpc.service");
+
+  /**
+   * RPC method attribute. RPC conventions are stable in the OpenTelemetry specification but not yet
+   * present in the semconv 1.42.0 JAR, so we define this directly.
+   */
+  public static final AttributeKey<String> RPC_METHOD = AttributeKey.stringKey("rpc.method");
+
+  /**
+   * HBase-specific attribute for server names.
+   */
   public static final AttributeKey<String> SERVER_NAME_KEY =
     AttributeKey.stringKey("db.hbase.server.name");
-  public static final AttributeKey<String> NET_PEER_NAME = SemanticAttributes.NET_PEER_NAME;
-  public static final AttributeKey<Long> NET_PEER_PORT = SemanticAttributes.NET_PEER_PORT;
+
+  // ========== NETWORK ATTRIBUTES ==========
+
+  /**
+   * Stable network peer address attribute from OpenTelemetry semconv 1.42.0.
+   * @see NetworkAttributes#NETWORK_PEER_ADDRESS
+   */
+  public static final AttributeKey<String> NETWORK_PEER_ADDRESS =
+    NetworkAttributes.NETWORK_PEER_ADDRESS;
+
+  /**
+   * Stable network peer port attribute from OpenTelemetry semconv 1.42.0.
+   * @see NetworkAttributes#NETWORK_PEER_PORT
+   */
+  public static final AttributeKey<Long> NETWORK_PEER_PORT = NetworkAttributes.NETWORK_PEER_PORT;
+
+  /**
+   * @deprecated Use {@link #NETWORK_PEER_ADDRESS} instead. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<String> NET_PEER_NAME = NETWORK_PEER_ADDRESS;
+
+  /**
+   * @deprecated Use {@link #NETWORK_PEER_PORT} instead. Will be removed in HBase 5.x.
+   */
+  @Deprecated
+  public static final AttributeKey<Long> NET_PEER_PORT = NETWORK_PEER_PORT;
+
+  /**
+   * HBase-specific attribute for row lock types.
+   */
   public static final AttributeKey<Boolean> ROW_LOCK_READ_LOCK_KEY =
     AttributeKey.booleanKey("db.hbase.rowlock.readlock");
+
+  /**
+   * HBase-specific attribute for WAL implementation.
+   */
   public static final AttributeKey<String> WAL_IMPL = AttributeKey.stringKey("db.hbase.wal.impl");
 
-  public static final AttributeKey<String> EXCEPTION_TYPE = SemanticAttributes.EXCEPTION_TYPE;
-  public static final AttributeKey<String> EXCEPTION_MESSAGE = SemanticAttributes.EXCEPTION_MESSAGE;
-  public static final String EXCEPTION_EVENT_NAME = SemanticAttributes.EXCEPTION_EVENT_NAME;
+  // ========== EXCEPTION ATTRIBUTES ==========
+
+  /**
+   * Stable exception type attribute from OpenTelemetry semconv 1.42.0.
+   * @see ExceptionAttributes#EXCEPTION_TYPE
+   */
+  public static final AttributeKey<String> EXCEPTION_TYPE = ExceptionAttributes.EXCEPTION_TYPE;
+
+  /**
+   * Stable exception message attribute from OpenTelemetry semconv 1.42.0.
+   * @see ExceptionAttributes#EXCEPTION_MESSAGE
+   */
+  public static final AttributeKey<String> EXCEPTION_MESSAGE =
+    ExceptionAttributes.EXCEPTION_MESSAGE;
+
+  /**
+   * The name to use for exception events. This is a string literal, not an AttributeKey.
+   */
+  public static final String EXCEPTION_EVENT_NAME = "exception";
+
+  // ========== HFILE / IO ATTRIBUTES ==========
 
   /**
    * Indicates the amount of data was read into a {@link ByteBuffer} of type
@@ -101,7 +247,7 @@ public final class HBaseSemanticAttributes {
   public static final AttributeKey<String> HFILE_NAME_KEY =
     AttributeKey.stringKey("db.hbase.io.hfile.file_name");
   /**
-   * Indicated the type of read.
+   * Indicates the type of read.
    */
   public static final AttributeKey<String> READ_TYPE_KEY =
     AttributeKey.stringKey("db.hbase.io.hfile.read_type");
@@ -110,6 +256,8 @@ public final class HBaseSemanticAttributes {
    */
   public static final AttributeKey<String> BLOCK_CACHE_KEY_KEY =
     AttributeKey.stringKey("db.hbase.io.hfile.block_cache_key");
+
+  // ========== ENUMS ==========
 
   /**
    * These values represent the different IO read strategies HBase may employ for accessing
@@ -122,8 +270,8 @@ public final class HBaseSemanticAttributes {
   }
 
   /**
-   * These are values used with {@link #DB_OPERATION}. They correspond with the implementations of
-   * {@code org.apache.hadoop.hbase.client.Operation}, as well as
+   * These are values used with {@link #DB_OPERATION_NAME}. They correspond with the implementations
+   * of {@code org.apache.hadoop.hbase.client.Operation}, as well as
    * {@code org.apache.hadoop.hbase.client.CheckAndMutate}, and "MULTI", meaning a batch of multiple
    * operations.
    */
