@@ -169,10 +169,9 @@ public class RegionStateStore {
       final long openSeqNum = hrl.getSeqNum();
 
       LOG.debug(
-        "Load {} entry region={}, regionState={}, lastHost={}, "
+        "Load hbase:meta entry region={}, regionState={}, lastHost={}, "
           + "regionLocation={}, openSeqNum={}",
-        TableName.META_TABLE_NAME, regionInfo.getEncodedName(), state, lastHost, regionLocation,
-        openSeqNum);
+        regionInfo.getEncodedName(), state, lastHost, regionLocation, openSeqNum);
       visitor.visitRegionState(result, regionInfo, state, regionLocation, lastHost, openSeqNum);
     }
   }
@@ -191,8 +190,8 @@ public class RegionStateStore {
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
     final StringBuilder info =
-      new StringBuilder("pid=").append(pid).append(" updating ").append(TableName.META_TABLE_NAME)
-        .append(" row=").append(regionInfo.getEncodedName()).append(", regionState=").append(state);
+      new StringBuilder("pid=").append(pid).append(" updating hbase:meta row=")
+        .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
         "Open region should be on a server");
@@ -695,7 +694,7 @@ public class RegionStateStore {
       return State.valueOf(state);
     } catch (IllegalArgumentException e) {
       LOG.warn(
-        "BAD value {} in " + TableName.META_TABLE_NAME + " info:state column for region {} , "
+        "BAD value {} in hbase:meta info:state column for region {} , "
           + "Consider using HBCK2 setRegionState ENCODED_REGION_NAME STATE",
         state, regionInfo.getEncodedName());
       return null;

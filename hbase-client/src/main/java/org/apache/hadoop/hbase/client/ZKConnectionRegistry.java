@@ -117,7 +117,7 @@ class ZKConnectionRegistry implements ConnectionRegistry {
       return null;
     }
     data = removeMetaData(data);
-    return new ClusterId.Parser().parseFrom(data).toString();
+    return ClusterId.parseFrom(data).toString();
   }
 
   @Override

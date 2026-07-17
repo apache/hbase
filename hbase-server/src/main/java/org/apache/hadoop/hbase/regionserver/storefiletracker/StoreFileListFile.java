@@ -298,9 +298,4 @@ class StoreFileListFile {
         trackFiles[nextTrackFile], e);
     }
   }
-
-  synchronized void resetWriteState() {
-    nextTrackFile = -1;
-    prevTimestamp = -1;
-  }
 }

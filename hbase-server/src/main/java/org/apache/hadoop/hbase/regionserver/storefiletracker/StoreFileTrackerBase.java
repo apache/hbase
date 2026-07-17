@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -49,7 +48,6 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
-import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -83,24 +81,14 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     this.ctx = ctx;
   }
 
-  private boolean isReadOnlyEnabled() {
-    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
-      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
-  }
-
-  private boolean isNonWritableTableWhenReadOnlyMode() {
-    return isReadOnlyEnabled()
-      && !AbstractReadOnlyController.isWritableInReadOnlyMode(ctx.getTableName());
-  }
-
   @Override
   public final List<StoreFileInfo> load() throws IOException {
-    return doLoadStoreFiles(!isPrimaryReplica || isNonWritableTableWhenReadOnlyMode());
+    return doLoadStoreFiles(!isPrimaryReplica);
   }
 
   @Override
   public final void add(Collection<StoreFileInfo> newFiles) throws IOException {
-    if (isPrimaryReplica && !isNonWritableTableWhenReadOnlyMode()) {
+    if (isPrimaryReplica) {
       doAddNewStoreFiles(newFiles);
     }
   }
@@ -108,14 +96,14 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   @Override
   public final void replace(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException {
-    if (isPrimaryReplica && !isNonWritableTableWhenReadOnlyMode()) {
+    if (isPrimaryReplica) {
       doAddCompactionResults(compactedFiles, newFiles);
     }
   }
 
   @Override
   public final void set(List<StoreFileInfo> files) throws IOException {
-    if (isPrimaryReplica && !isNonWritableTableWhenReadOnlyMode()) {
+    if (isPrimaryReplica) {
       doSetStoreFiles(files);
     }
   }
@@ -150,9 +138,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException {
-    if (!isPrimaryReplica || isNonWritableTableWhenReadOnlyMode()) {
-      throw new IllegalStateException(
-        "Should not call create writer on secondary replicas or in read-only mode");
+    if (!isPrimaryReplica) {
+      throw new IllegalStateException("Should not call create writer on secondary replicas");
     }
     // creating new cache config for each new writer
     final CacheConfig cacheConf = ctx.getCacheConf();

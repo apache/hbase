@@ -176,12 +176,4 @@ class FileBasedStoreFileTracker extends StoreFileTrackerBase {
       }
     }
   }
-
-  public void onTransitionToActive() {
-    if (backedFile != null) {
-      synchronized (storefiles) {
-        backedFile.resetWriteState();
-      }
-    }
-  }
 }

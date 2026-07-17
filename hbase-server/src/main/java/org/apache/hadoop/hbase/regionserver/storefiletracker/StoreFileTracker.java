@@ -146,7 +146,4 @@ public interface StoreFileTracker {
   String createFromHFileLink(final String hfileName, final boolean createBackRef)
     throws IOException;
 
-  default void onTransitionToActive() {
-    // no op by default
-  }
 }

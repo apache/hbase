@@ -57,8 +57,7 @@ public enum ExecutorType {
   RS_SNAPSHOT_OPERATIONS(36),
   RS_FLUSH_OPERATIONS(37),
   RS_RELOAD_QUOTAS_OPERATIONS(38),
-  RS_LOG_ROLL(39),
-  RS_REFRESH_HFILES(40);
+  RS_LOG_ROLL(39);
 
   ExecutorType(int value) {
   }

@@ -78,11 +78,4 @@ public interface TableDescriptors extends Closeable {
 
   /** Returns Instance of table descriptor or null if none found. */
   TableDescriptor remove(TableName tablename) throws IOException;
-
-  /**
-   * Invalidates the table descriptor cache.
-   */
-  default void invalidateTableDescriptorCache() {
-    // do nothing by default
-  }
 }

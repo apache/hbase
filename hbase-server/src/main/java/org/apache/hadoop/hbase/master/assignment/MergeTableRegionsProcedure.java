@@ -718,10 +718,8 @@ public class MergeTableRegionsProcedure
           RegionInfo.parseRegionName(p.getRow());
         }
       } catch (IOException e) {
-        LOG.error(
-          "Row key of mutation from coprocessor is not parsable as region name. "
-            + "Mutations from coprocessor should only be for {} table.",
-          TableName.META_TABLE_NAME, e);
+        LOG.error("Row key of mutation from coprocessor is not parsable as region name. "
+          + "Mutations from coprocessor should only be for hbase:meta table.", e);
         throw e;
       }
     }

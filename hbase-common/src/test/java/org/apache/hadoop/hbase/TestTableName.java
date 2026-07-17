@@ -25,7 +25,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -161,29 +160,5 @@ public class TestTableName {
     assertEquals(expected.getNamespaceAsString(), names.ns);
     assertArrayEquals(expected.getNamespace(), names.nsb);
     return expected;
-  }
-
-  @Test
-  public void testValidMetaTableSuffix() {
-    String[] validSuffixes = { "REPL1", "123", "123abc" };
-    for (String suffix : validSuffixes) {
-      Configuration conf = HBaseConfiguration.create();
-      conf.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
-      TableName metaTableName = TableName.initializeHbaseMetaTableName(conf);
-      assertEquals("hbase:meta_" + suffix, metaTableName.getNameAsString());
-    }
-  }
-
-  @Test
-  public void testInvalidMetaTableSuffix() {
-    String[] invalidSuffixes = { "test_1", "test-1", "test.1", "test 1", "_test", "-test", ".test",
-      "has!special", "has:colon", " " };
-    for (String suffix : invalidSuffixes) {
-      Configuration conf = HBaseConfiguration.create();
-      conf.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
-      assertThrows(IllegalArgumentException.class,
-        () -> TableName.initializeHbaseMetaTableName(conf),
-        "Expected IllegalArgumentException for suffix: " + suffix);
-    }
   }
 }
