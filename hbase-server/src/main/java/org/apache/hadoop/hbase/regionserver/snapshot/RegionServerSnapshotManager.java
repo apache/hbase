@@ -102,8 +102,7 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
   private ProcedureMember member;
 
   static long getSnapshotTimeoutMillis(Configuration conf) {
-    long timeoutMillis =
-      conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
+    long timeoutMillis = conf.getLong(SNAPSHOT_TIMEOUT_MILLIS_KEY, SNAPSHOT_TIMEOUT_MILLIS_DEFAULT);
     if (timeoutMillis > 0) {
       return timeoutMillis;
     }
