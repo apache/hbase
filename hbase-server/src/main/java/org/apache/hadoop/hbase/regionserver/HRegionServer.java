@@ -473,7 +473,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private FileSystemUtilizationChore fsUtilizationChore;
 
-  private BootstrapNodeManager bootstrapNodeManager;
+  private volatile BootstrapNodeManager bootstrapNodeManager;
 
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master; means it needs to
@@ -3729,7 +3729,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   public Iterator<ServerName> getBootstrapNodes() {
-    return bootstrapNodeManager.getBootstrapNodes().iterator();
+    BootstrapNodeManager manager = bootstrapNodeManager;
+    return manager != null
+      ? manager.getBootstrapNodes().iterator()
+      : Collections.<ServerName> emptyList().iterator();
   }
 
   @Override
