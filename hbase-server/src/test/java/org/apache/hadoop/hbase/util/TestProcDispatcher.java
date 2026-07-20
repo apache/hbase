@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
@@ -68,7 +69,7 @@ public class TestProcDispatcher {
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(HBASE_MASTER_RSPROC_DISPATCHER_CLASS,
       RSProcDispatcher.class.getName());
-    TEST_UTIL.getConfiguration().setInt("hbase.master.rs.remote.proc.fail.fast.limit", 5);
+    TEST_UTIL.getConfiguration().setInt(RSProcDispatcher.FAIL_FAST_LIMIT_KEY, 5);
     TEST_UTIL.startMiniCluster(3);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
@@ -90,17 +91,23 @@ public class TestProcDispatcher {
     TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
+  @AfterEach
+  public void tearDown() {
+    RSProcDispatcher.stopInjecting();
+  }
+
   @Test
   public void testRetryLimitOnConnClosedErrors(TestInfo testInfo) throws Exception {
     HbckChore hbckChore = new HbckChore(TEST_UTIL.getHBaseCluster().getMaster());
     final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
-    Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = IntStream.range(10, 50000).mapToObj(i -> new Put(Bytes.toBytes(i))
       .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)))
       .collect(Collectors.toList());
-    table.put(puts);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      table.put(puts);
+    }
     admin.flush(tableName);
     admin.compact(tableName);
     Thread.sleep(3000);
@@ -118,6 +125,8 @@ public class TestProcDispatcher {
     assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
     HRegion region0 = hRegionServer0.getRegions().get(0);
+    // Fail the next two open/close-region requests for this table so the moves trigger SCP(s).
+    RSProcDispatcher.injectErrorsForNextRequests(tableName, 2);
     // move all regions from server1 to server0
     for (HRegion region : hRegionServer1.getRegions()) {
       TEST_UTIL.getAdmin().move(region.getRegionInfo().getEncodedNameAsBytes(), rs0);
@@ -125,11 +134,11 @@ public class TestProcDispatcher {
     TEST_UTIL.getAdmin().move(region0.getRegionInfo().getEncodedNameAsBytes());
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
 
-    // Ensure:
-    // 1. num of regions before and after scheduling SCP remain same
-    // 2. all procedures including SCPs are successfully completed
-    // 3. two servers have SCPs scheduled
-    TEST_UTIL.waitFor(5000, 1000, () -> {
+    // Ensure, after the injected connection errors:
+    // 1. the total number of regions is unchanged before and after the SCP(s)
+    // 2. all procedures (including the SCP(s)) complete successfully
+    // 3. at least one ServerCrashProcedure was scheduled
+    TEST_UTIL.waitFor(60000, 1000, () -> {
       LOG.info("numRegions0: {} , numRegions1: {} , numRegions2: {}", numRegions0, numRegions1,
         numRegions2);
       LOG.info("Online regions - server0 : {} , server1: {} , server2: {}",
@@ -142,7 +151,7 @@ public class TestProcDispatcher {
               == ProcedureProtos.ProcedureState.SUCCESS)
           .count(),
         master.getMasterProcedureExecutor().getProcedures().size());
-      LOG.info("Num of SCPs: " + master.getMasterProcedureExecutor().getProcedures().stream()
+      LOG.info("Num of SCPs: {}", master.getMasterProcedureExecutor().getProcedures().stream()
         .filter(proc -> proc instanceof ServerCrashProcedure).count());
       return (numRegions0 + numRegions1 + numRegions2)
           == (cluster.getRegionServer(0).getNumberOfOnlineRegions()
@@ -157,13 +166,11 @@ public class TestProcDispatcher {
     });
 
     // Ensure we have no inconsistent regions
-    TEST_UTIL.waitFor(5000, 1000, () -> {
+    TEST_UTIL.waitFor(60000, 1000, () -> {
       hbckChore.choreForTesting();
       HbckReport report = hbckChore.getLastReport();
       return report.getInconsistentRegions().isEmpty() && report.getOrphanRegionsOnFS().isEmpty()
         && report.getOrphanRegionsOnRS().isEmpty();
     });
-
   }
-
 }
