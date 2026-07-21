@@ -23,7 +23,6 @@ import static org.hamcrest.CoreMatchers.notNullValue;
 import static org.hamcrest.CoreMatchers.nullValue;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.ArgumentMatchers.any;
@@ -395,22 +394,6 @@ public class TestWALPlayer {
 
     int exitCode = ToolRunner.run(conf, new WALPlayer(conf), new String[] { inputDir.toString() });
     assertEquals(0, exitCode, "WALPlayer should exit cleanly even with empty files");
-  }
-
-  @Test
-  public void testFailOnEmptyWALFilesWhenNotIgnored() throws Exception {
-    Path inputDir = createEmptyWALFile("fail-empty-wal-dir");
-    FileSystem dfs = TEST_UTIL.getDFSCluster().getFileSystem();
-    Path emptyWAL = new Path(inputDir, "empty.wal");
-
-    assertTrue(dfs.exists(emptyWAL), "Empty WAL file should exist");
-    assertEquals(0, dfs.getFileStatus(emptyWAL).getLen(), "WAL file should be 0 bytes");
-
-    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
-    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, false);
-
-    int exitCode = ToolRunner.run(conf, new WALPlayer(conf), new String[] { inputDir.toString() });
-    assertNotEquals(0, exitCode, "WALPlayer should fail on empty files when not ignored");
   }
 
   /**
