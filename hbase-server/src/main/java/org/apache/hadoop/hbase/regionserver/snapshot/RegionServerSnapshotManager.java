@@ -86,7 +86,10 @@ public class RegionServerSnapshotManager extends RegionServerProcedureManager {
   /** # of threads for snapshotting regions on the rs. */
   public static final int SNAPSHOT_REQUEST_THREADS_DEFAULT = 10;
 
-  /** Conf key for max time to keep threads in snapshot request pool waiting */
+  /**
+   * Conf key for max time to keep threads in snapshot request pool waiting. The configured value
+   * must be greater than 0.
+   */
   public static final String SNAPSHOT_TIMEOUT_MILLIS_KEY = "hbase.snapshot.region.timeout";
   /** Keep threads alive in request pool for max of 300 seconds */
   public static final long SNAPSHOT_TIMEOUT_MILLIS_DEFAULT = 5 * 60000;
