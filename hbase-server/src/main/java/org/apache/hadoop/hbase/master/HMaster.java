@@ -3761,6 +3761,12 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   @Override
+  public List<TableName> listTableNames() throws IOException {
+    checkInitialized();
+    return listTableNames(null, null, false);
+  }
+
+  @Override
   public List<TableDescriptor> listTableDescriptorsByNamespace(String name) throws IOException {
     checkInitialized();
     return listTableDescriptors(name, null, null, true);
