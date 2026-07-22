@@ -382,7 +382,14 @@ public class RegionStates {
   // ============================================================================================
 
   private void setServerState(ServerName serverName, ServerState state) {
-    ServerStateNode serverNode = getServerNode(serverName);
+    // The ServerStateNode is only kept in memory and is rebuilt on Master startup for the 'live'
+    // servers (RegionServerTracker#upgrade) and for servers still referenced as a region location
+    // in hbase:meta (AssignmentManager#loadMeta). A ServerCrashProcedure persisted before a Master
+    // restart can resume for a server that is no longer 'live' and is not referenced by any region
+    // in meta, so no node was recreated for it. See HBASE-28659. These split helpers only ever run
+    // for a crashed server inside an SCP, so recreate the node rather than NPE; the SCP will remove
+    // it again via removeServer at SERVER_CRASH_FINISH.
+    ServerStateNode serverNode = createServer(serverName);
     synchronized (serverNode) {
       serverNode.setState(state);
     }
