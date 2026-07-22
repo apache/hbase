@@ -159,6 +159,9 @@ public class TableDescriptorBuilder {
   public static final String NORMALIZATION_ENABLED = "NORMALIZATION_ENABLED";
   private static final Bytes NORMALIZATION_ENABLED_KEY =
     new Bytes(Bytes.toBytes(NORMALIZATION_ENABLED));
+  @InterfaceAudience.Private
+  @Deprecated
+  public static final boolean DEFAULT_NORMALIZATION_ENABLED = false;
 
   @InterfaceAudience.Private
   public static final String NORMALIZER_TARGET_REGION_COUNT = "NORMALIZER_TARGET_REGION_COUNT";
