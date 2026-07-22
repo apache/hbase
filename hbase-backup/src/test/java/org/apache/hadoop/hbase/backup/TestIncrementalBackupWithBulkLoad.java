@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -27,12 +28,16 @@ import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.BulkLoad;
+import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
@@ -40,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.junit.jupiter.api.Tag;
@@ -234,6 +240,60 @@ public class TestIncrementalBackupWithBulkLoad extends TestBackupBase {
         // Expected
       }
       systemTable.finishBackupExclusiveOperation();
+    }
+  }
+
+  @Test
+  public void testFailedFullBackupKeepsTrackedBulkLoads() throws Exception {
+    TableName tableName = TableName.valueOf("bulk-load-full-failure-" + System.nanoTime());
+    TEST_UTIL.createTable(tableName, famName).close();
+
+    try (BackupSystemTable systemTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      String backupId = backupTables(BackupType.FULL, List.of(tableName), BACKUP_ROOT_DIR);
+      assertTrue(checkSucceeded(backupId));
+
+      String keyPrefix = "full-backup-failure";
+      FileSystem fs = TEST_UTIL.getTestFileSystem();
+      Path baseDirectory = new Path(TEST_UTIL.getDataTestDirOnTestFS(TEST_NAME),
+        tableName.getNameWithNamespaceInclAsString().replace(':', '_') + "_" + keyPrefix);
+      Path hfilePath =
+        new Path(baseDirectory, Bytes.toString(famName) + Path.SEPARATOR + "hfile_" + keyPrefix);
+
+      HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), fs, hfilePath, famName, qualName,
+        Bytes.toBytes(keyPrefix), Bytes.toBytes(keyPrefix + "z"), ROWS_IN_BULK_LOAD);
+
+      Map<BulkLoadHFiles.LoadQueueItem, ByteBuffer> bulkLoadResult =
+        BulkLoadHFiles.create(TEST_UTIL.getConfiguration()).bulkLoad(tableName, baseDirectory);
+      assertFalse(bulkLoadResult.isEmpty());
+      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName)).size());
+
+      BackupRequest request = createBackupRequest(BackupType.FULL, List.of(tableName),
+        BACKUP_ROOT_DIR);
+      long failingBackupTs = EnvironmentEdgeManager.currentTime();
+      String failingBackupId = BackupRestoreConstants.BACKUPID_PREFIX + failingBackupTs;
+      while (failingBackupId.equals(backupId)) {
+        failingBackupId = BackupRestoreConstants.BACKUPID_PREFIX + (++failingBackupTs);
+      }
+      Path targetTableBackupDir =
+        new Path(BackupUtils.getTableBackupDir(BACKUP_ROOT_DIR, failingBackupId, tableName));
+      FileSystem.get(targetTableBackupDir.toUri(), conf1).mkdirs(targetTableBackupDir);
+
+      try (Connection conn = ConnectionFactory.createConnection(conf1)) {
+        FullTableBackupClient failingClient =
+          new FullTableBackupClient(conn, failingBackupId, request) {
+            @Override
+            protected void completeBackup(final Connection conn, BackupInfo backupInfo,
+              BackupType type, Configuration conf) throws IOException {
+              throw new IOException("Injected failure before completing backup");
+            }
+          };
+
+        assertThrows(IOException.class, failingClient::execute);
+      }
+      assertTrue(checkFailed(failingBackupId));
+      assertEquals(1, systemTable.readBulkloadRows(List.of(tableName)).size());
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
     }
   }
 
