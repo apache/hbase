@@ -31,8 +31,12 @@ import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -45,7 +49,9 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TestTableSnapshotScanner;
+import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionRecordReader;
 import org.apache.hadoop.hbase.mapreduce.TableSnapshotInputFormat.TableSnapshotRegionSplit;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
@@ -139,6 +145,97 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
 
     assertEquals(Lists.newArrayList("h2", "h3", "h4"),
       TableSnapshotInputFormatImpl.getBestLocations(conf, blockDistribution));
+  }
+
+  @Test
+  public void testTableSnapshotRegionRecordReaderGetFilesRead() throws Exception {
+    final TableName tableName = TableName.valueOf(name);
+    String snapshotName = name + "_snapshot";
+    try {
+      // Setup: create table, load data, snapshot, and configure job with restore dir
+      createTableAndSnapshot(UTIL, tableName, snapshotName, getStartRow(), getEndRow(), 1);
+
+      Configuration conf = UTIL.getConfiguration();
+      Job job = new Job(conf);
+      Path tmpTableDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+      Scan scan = new Scan().withStartRow(getStartRow()).withStopRow(getEndRow());
+      TableMapReduceUtil.initTableSnapshotMapperJob(snapshotName, scan,
+        TestTableSnapshotMapper.class, ImmutableBytesWritable.class, NullWritable.class, job, false,
+        tmpTableDir);
+
+      // Get splits (one per region) and extract delegate split for restore path and region info
+      TableSnapshotInputFormat tsif = new TableSnapshotInputFormat();
+      List<InputSplit> splits = tsif.getSplits(job);
+      assertEquals(1, splits.size());
+
+      InputSplit split = splits.get(0);
+      assertTrue(split instanceof TableSnapshotRegionSplit);
+      TableSnapshotRegionSplit snapshotRegionSplit = (TableSnapshotRegionSplit) split;
+      TableSnapshotInputFormatImpl.InputSplit implSplit = snapshotRegionSplit.getDelegate();
+
+      // Collect expected store file paths from the restored region directory
+      Set<String> expectedFiles = new HashSet<>();
+      Path restorePath = new Path(implSplit.getRestoreDir());
+      FileSystem fs = restorePath.getFileSystem(conf);
+      Path tableDir =
+        CommonFSUtils.getTableDir(restorePath, implSplit.getTableDescriptor().getTableName());
+      Path regionPath = new Path(tableDir, implSplit.getRegionInfo().getEncodedName());
+      FileStatus[] familyDirs = fs.listStatus(regionPath);
+      if (familyDirs != null) {
+        for (FileStatus fam : familyDirs) {
+          if (fam.isDirectory()) {
+            FileStatus[] files = fs.listStatus(fam.getPath());
+            if (files != null) {
+              for (FileStatus f : files) {
+                if (f.isFile()) {
+                  String referenceFileName = f.getPath().getName();
+                  expectedFiles.add(HFileLink.getReferencedHFileName(referenceFileName));
+                }
+              }
+            }
+          }
+        }
+      }
+      assertFalse(expectedFiles.isEmpty(),
+        "Should have at least one store file after snapshot restore");
+
+      // Create record reader, initialize with split (opens underlying ClientSideRegionScanner)
+      TaskAttemptContext taskAttemptContext = mock(TaskAttemptContext.class);
+      when(taskAttemptContext.getConfiguration()).thenReturn(job.getConfiguration());
+
+      RecordReader<ImmutableBytesWritable, Result> rr =
+        tsif.createRecordReader(split, taskAttemptContext);
+      assertTrue(rr instanceof TableSnapshotRegionRecordReader);
+      TableSnapshotRegionRecordReader recordReader = (TableSnapshotRegionRecordReader) rr;
+      recordReader.initialize(split, taskAttemptContext);
+
+      // Before close: getFilesRead() must be empty
+      Set<Path> filesReadBeforeClose = recordReader.getFilesRead();
+      assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing");
+
+      // Read a few key-values; getFilesRead() must still be empty until close
+      int count = 0;
+      while (count < 3 && recordReader.nextKeyValue()) {
+        count++;
+      }
+
+      filesReadBeforeClose = recordReader.getFilesRead();
+      assertTrue(filesReadBeforeClose.isEmpty(),
+        "Should return empty set before closing even after reading");
+
+      // Close reader so underlying scanner reports files successfully read
+      recordReader.close();
+
+      // After close: getFilesRead() must match expected store file set
+      Set<String> filesReadAfterClose =
+        recordReader.getFilesRead().stream().map(Path::getName).collect(Collectors.toSet());
+
+      assertEquals(expectedFiles, filesReadAfterClose,
+        "Should contain all expected file paths");
+    } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+    }
   }
 
   public static enum TestTableSnapshotCounters {
