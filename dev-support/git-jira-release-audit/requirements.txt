@@ -23,7 +23,7 @@ cryptography==48.0.1
 defusedxml==0.6.0
 enlighten==1.4.0
 gitdb2==2.0.6
-GitPython==3.1.50
+GitPython==3.1.52
 idna==3.15
 jira==2.0.0
 oauthlib==3.1.0
