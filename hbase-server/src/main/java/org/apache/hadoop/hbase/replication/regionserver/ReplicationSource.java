@@ -318,8 +318,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (server instanceof HRegionServer) {
       tableDescriptors = ((HRegionServer) server).getTableDescriptors();
     }
-    replicationEndpoint
-      .init(new ReplicationEndpoint.Context(server, conf, replicationPeer.getConfiguration(), fs,
+    replicationEndpoint.init(
+      new ReplicationEndpoint.Context(this, server, conf, replicationPeer.getConfiguration(), fs,
         replicationPeer.getId(), clusterId, replicationPeer, metrics, tableDescriptors, server));
     replicationEndpoint.start();
     replicationEndpoint.awaitRunning(waitOnEndpointSeconds, TimeUnit.SECONDS);
@@ -877,5 +877,4 @@ public class ReplicationSource implements ReplicationSourceInterface {
 
     tryStartNewShipper(walGroupId);
   }
-
 }

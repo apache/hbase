@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,23 +15,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
--->
-<project version="4">
-  <component name="VcsDirectoryMappings">
-    <mapping directory="" vcs="Git" />
-  </component>
-  <component name="IssueNavigationConfiguration">
-    <option name="links">
-      <list>
-        <IssueNavigationLink>
-          <option name="issueRegexp" value="HBASE\-\d+" />
-          <option name="linkRegexp" value="https://issues.apache.org/jira/browse/$0" />
-        </IssueNavigationLink>
-        <IssueNavigationLink>
-          <option name="issueRegexp" value="#(\d+)"/>
-          <option name="linkRegexp" value="https://github.com/apache/hbase/pull/$1"/>
-        </IssueNavigationLink>
-      </list>
-    </option>
-  </component>
-</project>
+package org.apache.hadoop.hbase.replication;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
+/**
+ * Policy that defines what a replication endpoint should do when the entry batch is empty. This is
+ * used to determine whether the replication source should consider an empty batch as: -
+ * {@code COMMIT}: Consider the position as fully committed, and update the WAL position. -
+ * {@code SUBMIT}: Treat it as submitted but not committed, i.e., do not advance the WAL position.
+ * Some endpoints may buffer entries (e.g., in open files on S3) and delay actual persistence. In
+ * such cases, an empty batch should not result in WAL position commit.
+ */
+@InterfaceAudience.Private
+public enum EmptyEntriesPolicy {
+  COMMIT,
+  SUBMIT
+}
