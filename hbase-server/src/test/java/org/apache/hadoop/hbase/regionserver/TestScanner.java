@@ -163,11 +163,11 @@ public class TestScanner {
     byte[] qualifier = Bytes.toBytes("qualifier");
     byte[] regionStartKey = new byte[] { 1 };
     byte[] row = new byte[] { 1, 0, 1 };
-    TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf("testFilterComparatorOnlySeesActualRows"))
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
-        .setBloomFilterType(BloomType.ROWCOL).build())
-      .build();
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("testFilterComparatorOnlySeesActualRows"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+          .setBloomFilterType(BloomType.ROWCOL).build())
+        .build();
     TrackingRowComparator comparator = new TrackingRowComparator(row);
 
     StoreScanner.enableLazySeekGlobally(true);
@@ -236,9 +236,8 @@ public class TestScanner {
     StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
     try {
       HStore store = createLazySeekTestStore();
-      try (
-        RecordingStoreScanner scanner =
-          new RecordingStoreScanner(store, scan, scan.getFamilyMap().get(LAZY_SEEK_FAMILY))) {
+      try (RecordingStoreScanner scanner =
+        new RecordingStoreScanner(store, scan, scan.getFamilyMap().get(LAZY_SEEK_FAMILY))) {
         assertEquals(expected, scanner.initialSeekWasLazy);
       }
     } finally {

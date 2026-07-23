@@ -281,8 +281,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
 
       // Filters must only see real Cells. A lazy seek can expose a synthetic Cell
       // for the scan start row, so disable it for non-Get filters.
-      boolean useLazySeek = explicitColumnQuery && lazySeekEnabledGlobally
-        && !(scan.hasFilter() && !scan.isGetScan());
+      boolean useLazySeek =
+        explicitColumnQuery && lazySeekEnabledGlobally && !(scan.hasFilter() && !scan.isGetScan());
       seekScanners(scanners, matcher.getStartKey(), useLazySeek, parallelSeekEnabled);
 
       // set storeLimit
