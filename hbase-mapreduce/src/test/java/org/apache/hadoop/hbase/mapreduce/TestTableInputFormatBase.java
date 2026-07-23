@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyBoolean;
@@ -27,6 +28,7 @@ import java.io.IOException;
 import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.ExecutorService;
@@ -52,6 +54,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -61,6 +64,24 @@ import org.mockito.stubbing.Answer;
 
 @Tag(SmallTests.TAG)
 public class TestTableInputFormatBase {
+
+  @Test
+  public void testCreateNInputSplitsUniformPreservesOriginalBoundaries() throws IOException {
+    TableInputFormat inputFormat = new TableInputFormat();
+    for (byte[] startRow : new byte[][] { HConstants.EMPTY_START_ROW, Bytes.toBytes("start") }) {
+      TableSplit split =
+        new TableSplit(TableName.valueOf("test"), startRow, HConstants.EMPTY_END_ROW, "localhost");
+
+      List<InputSplit> splits = inputFormat.createNInputSplitsUniform(split, 2);
+
+      assertEquals(2, splits.size());
+      TableSplit first = (TableSplit) splits.get(0);
+      TableSplit last = (TableSplit) splits.get(1);
+      assertArrayEquals(startRow, first.getStartRow());
+      assertArrayEquals(first.getEndRow(), last.getStartRow());
+      assertArrayEquals(HConstants.EMPTY_END_ROW, last.getEndRow());
+    }
+  }
 
   @Test
   public void testReuseRegionSizeCalculator() throws IOException {
