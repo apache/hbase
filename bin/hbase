@@ -84,6 +84,7 @@ show_usage() {
     echo "  wal              Write-ahead-log analyzer"
     echo "  hfile            Store file analyzer"
     echo "  sft              Store file tracker viewer"
+    echo "  sftrecover       Offline store file tracker (FILE) manifest recover tool"
     echo "  zkcli            Run the ZooKeeper shell"
     echo "  master           Run an HBase HMaster node"
     echo "  regionserver     Run an HBase HRegionServer node"
@@ -608,6 +609,8 @@ elif [ "$COMMAND" = "hfile" ] ; then
   CLASS='org.apache.hadoop.hbase.io.hfile.HFilePrettyPrinter'
 elif [ "$COMMAND" = "sft" ] ; then
   CLASS='org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileListFilePrettyPrinter'
+elif [ "$COMMAND" = "sftrecover" ] ; then
+  CLASS='org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileListRecoverTool'
 elif [ "$COMMAND" = "zkcli" ] ; then
   CLASS="org.apache.hadoop.hbase.zookeeper.ZKMainServer"
   for f in $HBASE_HOME/lib/zkcli/*.jar; do
