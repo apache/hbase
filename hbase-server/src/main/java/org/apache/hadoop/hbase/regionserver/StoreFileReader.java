@@ -78,6 +78,7 @@ public class StoreFileReader {
   private KeyValue.KeyOnlyKeyValue lastBloomKeyOnlyKV = null;
   private boolean skipResetSeqId = true;
   private int prefixLength = -1;
+  private int prefixStartOffset = 0;
   protected Configuration conf;
 
   /**
@@ -339,19 +340,24 @@ public class StoreFileReader {
 
     byte[] row = scan.getStartRow();
     byte[] rowPrefix;
+    if (row.length <= prefixStartOffset) {
+      return true;
+    }
     if (scan.isGetScan()) {
-      rowPrefix = Bytes.copy(row, 0, Math.min(prefixLength, row.length));
+      int len = Math.min(prefixLength, row.length - prefixStartOffset);
+      rowPrefix = Bytes.copy(row, prefixStartOffset, len);
     } else {
-      // For non-get scans
-      // Find out the common prefix of startRow and stopRow.
+      // We find common prefix from the beginning of the row, not from prefixStartOffset,
+      // because if the bytes before the offset differ, rows in between could have any
+      // prefix after offset.
       int commonLength = Bytes.findCommonPrefix(scan.getStartRow(), scan.getStopRow(),
         scan.getStartRow().length, scan.getStopRow().length, 0, 0);
       // startRow and stopRow don't have the common prefix.
       // Or the common prefix length is less than prefixLength
-      if (commonLength <= 0 || commonLength < prefixLength) {
+      if (commonLength <= 0 || commonLength < prefixStartOffset + prefixLength) {
         return true;
       }
-      rowPrefix = Bytes.copy(row, 0, prefixLength);
+      rowPrefix = Bytes.copy(row, prefixStartOffset, prefixLength);
     }
     return checkGeneralBloomFilter(rowPrefix, null, bloomFilter);
   }
@@ -466,6 +472,7 @@ public class StoreFileReader {
     byte[] p = fi.get(BLOOM_FILTER_PARAM_KEY);
     if (bloomFilterType == BloomType.ROWPREFIX_FIXED_LENGTH) {
       prefixLength = Bytes.toInt(p);
+      prefixStartOffset = p.length >= 8 ? Bytes.toInt(p, 4) : 0;
     }
 
     lastBloomKey = fi.get(LAST_BLOOM_KEY);

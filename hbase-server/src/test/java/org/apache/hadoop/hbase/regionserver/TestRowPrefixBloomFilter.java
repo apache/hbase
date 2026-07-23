@@ -294,6 +294,178 @@ public class TestRowPrefixBloomFilter {
   }
 
   @Test
+  public void testRowPrefixBloomFilterWithStartOffset() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    int startOffset = 2;
+    int offsetPrefixLength = 4;
+    conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, offsetPrefixLength);
+    conf.setInt(BloomFilterUtil.PREFIX_START_OFFSET_KEY, startOffset);
+    try {
+      if (!fs.exists(testDir)) {
+        fs.mkdirs(testDir);
+      }
+      Path f = StoreFileWriter.getUniqueFile(fs, testDir);
+
+      // Write rows with 2-byte salt + 4-byte meaningful prefix + suffix.
+      // Use two different salts ("AA" and "AB") with the same meaningful prefixes
+      // to verify the bloom filter correctly skips the salt bytes.
+      int expKeys = 50;
+      HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
+        .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
+      StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(f)
+        .withBloomType(bt).withMaxKeyCount(expKeys).withFileContext(meta).build();
+      long now = EnvironmentEdgeManager.currentTime();
+      try {
+        // Write rows with two salts ("AA" and "AB") sharing the same meaningful
+        // prefixes. Assign non-overlapping prefix ranges per salt so bloom keys
+        // (the meaningful prefix after offset) stay sorted across the file.
+        for (int i = 0; i < 50; i += 2) {
+          String prefix = String.format("%04d", i);
+          for (int j = 0; j < 3; j++) {
+            String row = "AA" + prefix + String.format("_%03d", j);
+            KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+              Bytes.toBytes("col"), now, Bytes.toBytes("value"));
+            writer.append(kv);
+          }
+        }
+        for (int i = 50; i < 100; i += 2) {
+          String prefix = String.format("%04d", i);
+          for (int j = 0; j < 3; j++) {
+            String row = "AB" + prefix + String.format("_%03d", j);
+            KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+              Bytes.toBytes("col"), now, Bytes.toBytes("value"));
+            writer.append(kv);
+          }
+        }
+      } finally {
+        writer.close();
+      }
+
+      ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
+      StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, f, true);
+      storeFileInfo.initHFileInfo(context);
+      StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+      storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+      reader.loadFileInfo();
+      reader.loadBloomfilter();
+
+      StoreFileScanner scanner = getStoreFileScanner(reader);
+      HStore store = mock(HStore.class);
+      when(store.getColumnFamilyDescriptor())
+        .thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
+
+      // "AA" salt, even prefix written under "AA" range - in bloom
+      Scan scan = new Scan(new Get(Bytes.toBytes("AA0002_000")));
+      assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      // "AA" salt, odd prefix - NOT in bloom
+      scan = new Scan(new Get(Bytes.toBytes("AA0003_000")));
+      assertFalse(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      // "AB" salt, even prefix written under "AB" range - in bloom
+      scan = new Scan(new Get(Bytes.toBytes("AB0050_000")));
+      assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      // "AB" salt, odd prefix - NOT in bloom
+      scan = new Scan(new Get(Bytes.toBytes("AB0051_000")));
+      assertFalse(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      // Prefix "0002" was written under salt "AA". Query with salt "AB" but same
+      // meaningful prefix. Since bloom only hashes the prefix after offset,
+      // this should still match the bloom.
+      scan = new Scan(new Get(Bytes.toBytes("AB0002_000")));
+      assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      reader.close(true);
+      fs.delete(f, true);
+    } finally {
+      conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, prefixLength);
+      conf.unset(BloomFilterUtil.PREFIX_START_OFFSET_KEY);
+    }
+  }
+
+  @Test
+  public void testRowPrefixBloomFilterWithStartOffsetScan() throws Exception {
+    FileSystem fs = FileSystem.getLocal(conf);
+    int startOffset = 2;
+    int offsetPrefixLength = 4;
+    conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, offsetPrefixLength);
+    conf.setInt(BloomFilterUtil.PREFIX_START_OFFSET_KEY, startOffset);
+    try {
+      if (!fs.exists(testDir)) {
+        fs.mkdirs(testDir);
+      }
+      Path f = StoreFileWriter.getUniqueFile(fs, testDir);
+
+      int expKeys = 50;
+      HFileContext meta = new HFileContextBuilder().withBlockSize(BLOCKSIZE_SMALL)
+        .withChecksumType(CKTYPE).withBytesPerCheckSum(CKBYTES).build();
+      StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withFilePath(f)
+        .withBloomType(bt).withMaxKeyCount(expKeys).withFileContext(meta).build();
+      long now = EnvironmentEdgeManager.currentTime();
+      try {
+        // Write rows with two salts ("AA" and "AB") sharing the same meaningful
+        // prefixes. Assign non-overlapping prefix ranges per salt so bloom keys
+        // (the meaningful prefix after offset) stay sorted across the file.
+        for (int i = 0; i < 50; i += 2) {
+          String prefix = String.format("%04d", i);
+          for (int j = 0; j < 3; j++) {
+            String row = "AA" + prefix + String.format("_%03d", j);
+            KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+              Bytes.toBytes("col"), now, Bytes.toBytes("value"));
+            writer.append(kv);
+          }
+        }
+        for (int i = 50; i < 100; i += 2) {
+          String prefix = String.format("%04d", i);
+          for (int j = 0; j < 3; j++) {
+            String row = "AB" + prefix + String.format("_%03d", j);
+            KeyValue kv = new KeyValue(Bytes.toBytes(row), Bytes.toBytes("family"),
+              Bytes.toBytes("col"), now, Bytes.toBytes("value"));
+            writer.append(kv);
+          }
+        }
+      } finally {
+        writer.close();
+      }
+
+      ReaderContext context = new ReaderContextBuilder().withFileSystemAndPath(fs, f).build();
+      StoreFileInfo storeFileInfo = StoreFileInfo.createStoreFileInfoForHFile(conf, fs, f, true);
+      storeFileInfo.initHFileInfo(context);
+      StoreFileReader reader = storeFileInfo.createReader(context, cacheConf);
+      storeFileInfo.getHFileInfo().initMetaAndIndex(reader.getHFileReader());
+      reader.loadFileInfo();
+      reader.loadBloomfilter();
+
+      StoreFileScanner scanner = getStoreFileScanner(reader);
+      HStore store = mock(HStore.class);
+      when(store.getColumnFamilyDescriptor())
+        .thenReturn(ColumnFamilyDescriptorBuilder.of("family"));
+
+      // Scan with even prefix under "AB" range (in bloom)
+      Scan scan = new Scan().withStartRow(Bytes.toBytes("AB0050_000"))
+        .withStopRow(Bytes.toBytes("AB0050_002"));
+      assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      // Scan with odd prefix under "AB" range (NOT in bloom)
+      scan = new Scan().withStartRow(Bytes.toBytes("AB0051_000"))
+        .withStopRow(Bytes.toBytes("AB0051_002"));
+      assertFalse(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      // Scan where common prefix is less than offset + prefixLength (should pass through)
+      scan = new Scan().withStartRow(Bytes.toBytes("AB0050_000"))
+        .withStopRow(Bytes.toBytes("AB0052_000"));
+      assertTrue(scanner.shouldUseScanner(scan, store, Long.MIN_VALUE));
+
+      reader.close(true);
+      fs.delete(f, true);
+    } finally {
+      conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, prefixLength);
+      conf.unset(BloomFilterUtil.PREFIX_START_OFFSET_KEY);
+    }
+  }
+
+  @Test
   public void testRowPrefixBloomFilterWithScan() throws Exception {
     FileSystem fs = FileSystem.getLocal(conf);
     int expKeys = fixedLengthExpKeys;
