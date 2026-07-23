@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.replication.ReplicationStorageFactory;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.zookeeper.ZKConfig;
@@ -435,8 +436,10 @@ public class VerifyReplication extends Configured implements Tool {
     FileSystem.setDefaultUri(peerConf, peerFSAddress);
     CommonFSUtils.setRootDir(peerConf, new Path(peerFSAddress, peerHBaseRootAddress));
     FileSystem fs = FileSystem.get(peerConf);
-    RestoreSnapshotHelper.copySnapshotForScanner(peerConf, fs, CommonFSUtils.getRootDir(peerConf),
-      new Path(peerFSAddress, peerSnapshotTmpDir), peerSnapshotName);
+    Path peerRootDir = CommonFSUtils.getRootDir(peerConf);
+    Path peerRestoreDir = new Path(peerFSAddress, peerSnapshotTmpDir);
+    RestoreSnapshotHelper.copySnapshotForScanner(peerConf, fs, peerRootDir, peerRestoreDir,
+      peerSnapshotName, new MapreduceHFileArchiver());
   }
 
   /**

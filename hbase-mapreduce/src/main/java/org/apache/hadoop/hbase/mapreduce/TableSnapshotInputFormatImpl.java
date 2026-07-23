@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.Job;
@@ -616,7 +617,8 @@ public class TableSnapshotInputFormatImpl {
 
     restoreDir = new Path(restoreDir, UUID.randomUUID().toString());
 
-    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+    RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName,
+      new MapreduceHFileArchiver());
     conf.set(RESTORE_DIR_KEY, restoreDir.toString());
   }
 
