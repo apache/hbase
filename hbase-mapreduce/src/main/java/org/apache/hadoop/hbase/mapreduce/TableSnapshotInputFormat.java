@@ -95,10 +95,33 @@ public class TableSnapshotInputFormat extends InputFormat<ImmutableBytesWritable
       this.delegate = delegate;
     }
 
+    /**
+     * @deprecated since 3.0.0 and will be removed in 4.0.0.
+     * Use {@link #TableSnapshotRegionSplit(TableSnapshotInputFormatImpl.InputSplit)} instead.
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-29272">HBASE-29272</a>
+     */
+    @Deprecated
     public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
       List<String> locations, Scan scan, Path restoreDir) {
+      this(htd, regionInfo, locations, scan, restoreDir, 1);
+    }
+
+    /**
+     * Creates a TableSnapshotRegionSplit with the given region information and the estimated length
+     * of the region in bytes. The length is used by the MapReduce framework to balance the
+     * distribution of splits; a value of 0 may cause the framework to skip the split.
+     * @param htd the table descriptor
+     * @param regionInfo the region info
+     * @param locations the locations of the region
+     * @param scan the scan to use
+     * @param restoreDir the directory to restore the snapshot to
+     * @param length the estimated size of the region in bytes
+     * @see <a href="https://issues.apache.org/jira/browse/HBASE-29272">HBASE-29272</a>
+     */
+    public TableSnapshotRegionSplit(TableDescriptor htd, RegionInfo regionInfo,
+      List<String> locations, Scan scan, Path restoreDir, long length) {
       this.delegate =
-        new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir);
+        new TableSnapshotInputFormatImpl.InputSplit(htd, regionInfo, locations, scan, restoreDir, length);
     }
 
     @Override
