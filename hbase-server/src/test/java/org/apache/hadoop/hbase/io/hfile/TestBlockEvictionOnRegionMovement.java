@@ -27,6 +27,7 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -126,20 +127,26 @@ public class TestBlockEvictionOnRegionMovement {
         : cluster.getRegionServer(0);
 
     assertTrue(regionServingRS.getBlockCache().isPresent());
-    long oldUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
-    assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    BlockCache oldBucketCache = regionServingRS.getBlockCache().get().getBlockCaches()[1];
+    long oldUsedCacheSize = oldBucketCache.getCurrentSize();
+    assertNotEquals(0, oldUsedCacheSize);
+    assertNotEquals(0, oldBucketCache.getBlockCount());
 
-    cluster.stopRegionServer(regionServingRS.getServerName());
-    Thread.sleep(500);
-    cluster.startRegionServer();
-    Thread.sleep(500);
+    ServerName serverName = regionServingRS.getServerName();
+    cluster.stopRegionServer(serverName);
+    cluster.waitForRegionServerToStop(serverName, 10000);
 
-    regionServingRS.getBlockCache().get().waitForCacheInitialization(10000);
-    long newUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
-    assertEquals(oldUsedCacheSize, newUsedCacheSize);
-    assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    // Persistent state is restored into a new cache; the stopped cache must release its
+    // references.
+    assertEquals(0, oldBucketCache.getCurrentSize());
+
+    HRegionServer restartedRegionServer = cluster.startRegionServer().getRegionServer();
+    assertTrue(restartedRegionServer.getBlockCache().isPresent());
+    BlockCache restoredBucketCache =
+      restartedRegionServer.getBlockCache().get().getBlockCaches()[1];
+    assertTrue(restoredBucketCache.waitForCacheInitialization(10000));
+    assertEquals(oldUsedCacheSize, restoredBucketCache.getCurrentSize());
+    assertNotEquals(0, restoredBucketCache.getBlockCount());
   }
 
   public TableName writeDataToTable(String testName) throws IOException, InterruptedException {
