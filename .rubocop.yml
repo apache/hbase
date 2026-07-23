@@ -9,3 +9,6 @@ Layout/LineLength:
 
 Metrics/MethodLength:
   Max: 75
+
+Style/FrozenStringLiteralComment:
+  Enabled: false
