@@ -424,74 +424,76 @@ public class TableSnapshotInputFormatImpl {
 
     Connection connection = null;
     RegionLocator regionLocator = null;
-    if (localityEnabled && useRegionLoc) {
-      Configuration newConf = new Configuration(conf);
-      newConf.setInt("hbase.hconnection.threads.max", 1);
-      try {
+    List<InputSplit> splits = new ArrayList<>();
+    try {
+      if (localityEnabled && useRegionLoc) {
+        Configuration newConf = new Configuration(conf);
+        newConf.setInt("hbase.hconnection.threads.max", 1);
+
         connection = ConnectionFactory.createConnection(newConf);
         regionLocator = connection.getRegionLocator(htd.getTableName());
 
         /* Get all locations for the table and cache it */
         regionLocator.getAllRegionLocations();
-      } finally {
-        if (connection != null) {
-          connection.close();
-        }
-      }
-    }
-
-    List<InputSplit> splits = new ArrayList<>();
-    for (RegionInfo hri : regionManifests) {
-      // load region descriptor
-      List<String> hosts = null;
-      if (localityEnabled) {
-        if (regionLocator != null) {
-          /* Get Location from the local cache */
-          HRegionLocation location = regionLocator.getRegionLocation(hri.getStartKey(), false);
-
-          hosts = new ArrayList<>(1);
-          hosts.add(location.getHostname());
-        } else {
-          hosts = calculateLocationsForInputSplit(conf, htd, hri, tableDir);
-        }
       }
 
-      if (numSplits > 1) {
-        byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
-        for (int i = 0; i < sp.length - 1; i++) {
-          if (
-            PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i], sp[i + 1])
-          ) {
+      for (RegionInfo hri : regionManifests) {
+        // load region descriptor
+        List<String> hosts = null;
+        if (localityEnabled) {
+          if (regionLocator != null) {
+            /* Get Location from the local cache */
+            HRegionLocation location = regionLocator.getRegionLocation(hri.getStartKey(), false);
 
-            Scan boundedScan = new Scan(scan);
-            if (scan.getStartRow().length == 0) {
-              boundedScan.withStartRow(sp[i]);
-            } else {
-              boundedScan.withStartRow(
-                Bytes.compareTo(scan.getStartRow(), sp[i]) > 0 ? scan.getStartRow() : sp[i]);
-            }
-
-            if (scan.getStopRow().length == 0) {
-              boundedScan.withStopRow(sp[i + 1]);
-            } else {
-              boundedScan.withStopRow(
-                Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0 ? scan.getStopRow() : sp[i + 1]);
-            }
-
-            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
+            hosts = new ArrayList<>(1);
+            hosts.add(location.getHostname());
+          } else {
+            hosts = calculateLocationsForInputSplit(conf, htd, hri, tableDir);
           }
         }
-      } else {
-        if (
-          PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
-            hri.getEndKey())
-        ) {
 
-          splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
+        if (numSplits > 1) {
+          byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
+          for (int i = 0; i < sp.length - 1; i++) {
+            if (
+              PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), sp[i],
+                sp[i + 1])
+            ) {
+
+              Scan boundedScan = new Scan(scan);
+              if (scan.getStartRow().length == 0) {
+                boundedScan.withStartRow(sp[i]);
+              } else {
+                boundedScan.withStartRow(
+                  Bytes.compareTo(scan.getStartRow(), sp[i]) > 0 ? scan.getStartRow() : sp[i]);
+              }
+
+              if (scan.getStopRow().length == 0) {
+                boundedScan.withStopRow(sp[i + 1]);
+              } else {
+                boundedScan.withStopRow(Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0
+                  ? scan.getStopRow()
+                  : sp[i + 1]);
+              }
+
+              splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
+            }
+          }
+        } else {
+          if (
+            PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(),
+              hri.getStartKey(), hri.getEndKey())
+          ) {
+
+            splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
+          }
         }
       }
+    } finally {
+      if (connection != null) {
+        connection.close();
+      }
     }
-
     return splits;
   }
 
