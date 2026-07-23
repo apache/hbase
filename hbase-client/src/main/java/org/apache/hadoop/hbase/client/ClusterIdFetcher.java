@@ -67,15 +67,18 @@ class ClusterIdFetcher {
 
   private final RpcControllerFactory rpcControllerFactory;
 
+  private final int rpcTimeoutMs;
+
   private final CompletableFuture<String> future;
 
   ClusterIdFetcher(Configuration conf, User user, RpcControllerFactory rpcControllerFactory,
-    Set<ServerName> bootstrapServers) {
+    Set<ServerName> bootstrapServers, int rpcTimeoutMs) {
     this.user = user;
     // use null cluster id here as we do not know the cluster id yet, we will fetch it through this
     // rpc client
     this.rpcClient = RpcClientFactory.createClient(conf, null);
     this.rpcControllerFactory = rpcControllerFactory;
+    this.rpcTimeoutMs = rpcTimeoutMs;
     this.bootstrapServers = new ArrayList<ServerName>(bootstrapServers);
     // shuffle the bootstrap servers so we will not always fetch from the same one
     Collections.shuffle(this.bootstrapServers);
@@ -88,10 +91,9 @@ class ClusterIdFetcher {
   private void getClusterId(int index) {
     ServerName server = bootstrapServers.get(index);
     LOG.debug("Going to request {} for getting cluster id", server);
-    // user and rpcTimeout are both not important here, as we will not actually send any rpc calls
-    // out, only a preamble connection header, but if we pass null as user, there will be NPE in
-    // some code paths...
-    RpcChannel channel = rpcClient.createRpcChannel(server, user, 0);
+    // The preamble exchange still requires TCP connect and potentially TLS negotiation, so we use
+    // the configured rpc timeout to bound the connection attempt.
+    RpcChannel channel = rpcClient.createRpcChannel(server, user, rpcTimeoutMs);
     ConnectionRegistryService.Interface stub = ConnectionRegistryService.newStub(channel);
     HBaseRpcController controller = rpcControllerFactory.newController();
     stub.getConnectionRegistry(controller, GetConnectionRegistryRequest.getDefaultInstance(),
