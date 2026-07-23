@@ -80,6 +80,15 @@ public class ConnectionConfiguration {
   // toggle for async/sync prefetch
   private final boolean clientScannerAsyncPrefetch;
 
+  private static int getNonNegativeInt(Configuration conf, String key, int defaultValue) {
+    int value = conf.getInt(key, defaultValue);
+    if (value < 0) {
+      throw new IllegalArgumentException(
+        "The " + key + " must be non-negative, current value is " + value);
+    }
+    return value;
+  }
+
   /**
    * Constructor
    * @param conf Configuration object
@@ -93,12 +102,11 @@ public class ConnectionConfiguration {
     this.writeBufferPeriodicFlushTimerTickMs = conf.getLong(
       WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS, WRITE_BUFFER_PERIODIC_FLUSH_TIMERTICK_MS_DEFAULT);
 
-    this.metaOperationTimeout = conf.getInt(HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT,
-      conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
-        HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT));
-
-    this.operationTimeout = conf.getInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
+    this.operationTimeout = getNonNegativeInt(conf, HConstants.HBASE_CLIENT_OPERATION_TIMEOUT,
       HConstants.DEFAULT_HBASE_CLIENT_OPERATION_TIMEOUT);
+
+    this.metaOperationTimeout = getNonNegativeInt(conf,
+      HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT, operationTimeout);
 
     this.scannerCaching = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_CACHING,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_CACHING);
@@ -106,15 +114,15 @@ public class ConnectionConfiguration {
     this.scannerMaxResultSize = conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
 
-    this.primaryCallTimeoutMicroSecond =
-      conf.getInt(PRIMARY_CALL_TIMEOUT_MICROSECOND, PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT);
+    this.primaryCallTimeoutMicroSecond = getNonNegativeInt(conf, PRIMARY_CALL_TIMEOUT_MICROSECOND,
+      PRIMARY_CALL_TIMEOUT_MICROSECOND_DEFAULT);
 
-    this.replicaCallTimeoutMicroSecondScan =
-      conf.getInt(PRIMARY_SCAN_TIMEOUT_MICROSECOND, PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT);
+    this.replicaCallTimeoutMicroSecondScan = getNonNegativeInt(conf, PRIMARY_SCAN_TIMEOUT_MICROSECOND,
+      PRIMARY_SCAN_TIMEOUT_MICROSECOND_DEFAULT);
 
-    this.metaReplicaCallTimeoutMicroSecondScan =
-      conf.getInt(HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
-        HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT);
+    this.metaReplicaCallTimeoutMicroSecondScan = getNonNegativeInt(conf,
+      HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT,
+      HConstants.HBASE_CLIENT_META_REPLICA_SCAN_TIMEOUT_DEFAULT);
 
     this.retries = conf.getInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER,
       HConstants.DEFAULT_HBASE_CLIENT_RETRIES_NUMBER);
@@ -127,16 +135,17 @@ public class ConnectionConfiguration {
     this.bufferedMutatorMaxMutations =
       conf.getInt(BUFFERED_MUTATOR_MAX_MUTATIONS_KEY, BUFFERED_MUTATOR_MAX_MUTATIONS_DEFAULT);
 
-    this.rpcTimeout =
-      conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
+    this.rpcTimeout = getNonNegativeInt(conf, HConstants.HBASE_RPC_TIMEOUT_KEY,
+      HConstants.DEFAULT_HBASE_RPC_TIMEOUT);
 
-    this.readRpcTimeout = conf.getInt(HConstants.HBASE_RPC_READ_TIMEOUT_KEY,
-      conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    this.readRpcTimeout =
+      getNonNegativeInt(conf, HConstants.HBASE_RPC_READ_TIMEOUT_KEY, rpcTimeout);
 
-    this.metaReadRpcTimeout = conf.getInt(HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, readRpcTimeout);
+    this.metaReadRpcTimeout =
+      getNonNegativeInt(conf, HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, readRpcTimeout);
 
-    this.writeRpcTimeout = conf.getInt(HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-      conf.getInt(HConstants.HBASE_RPC_TIMEOUT_KEY, HConstants.DEFAULT_HBASE_RPC_TIMEOUT));
+    this.writeRpcTimeout =
+      getNonNegativeInt(conf, HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, rpcTimeout);
   }
 
   /**
