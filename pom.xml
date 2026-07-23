@@ -1877,6 +1877,25 @@
         <scope>import</scope>
       </dependency>
       <dependency>
+        <groupId>io.netty</groupId>
+        <artifactId>netty-all</artifactId>
+        <version>${netty4.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-classes-macos</artifactId>
+          </exclusion>
+          <exclusion>
+            <groupId>io.netty</groupId>
+            <artifactId>netty-resolver-dns-native-macos</artifactId>
+          </exclusion>
+        </exclusions>
+      </dependency>
+      <dependency>
         <groupId>com.fasterxml.jackson</groupId>
         <artifactId>jackson-bom</artifactId>
         <version>${jackson.version}</version>
@@ -3666,6 +3685,10 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-resolver-dns</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3841,6 +3864,10 @@
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-resolver-dns</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3897,6 +3924,10 @@
               <exclusion>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-resolver-dns</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
