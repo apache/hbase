@@ -32,6 +32,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -53,9 +54,12 @@ import org.apache.hadoop.hbase.coprocessor.MasterObserver;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
+import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -859,5 +863,32 @@ public class SecureTestUtil {
         }
       }
     }
+  }
+
+  public static void enableReadOnlyMode(Configuration conf, HMaster hMaster,
+    HRegionServer hRegionServer) {
+    if (!ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
+      LOG.info("Dynamically enabling Read-Only mode by setting {} to true",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
+      conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+      notifyReadOnlyObservers(conf, hMaster, hRegionServer);
+    }
+  }
+
+  public static void disableReadOnlyMode(Configuration conf, HMaster hMaster,
+    HRegionServer hRegionServer) {
+    if (ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
+      LOG.info("Dynamically disabling Read-Only mode by setting {} to false",
+        HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY);
+      conf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, false);
+      notifyReadOnlyObservers(conf, hMaster, hRegionServer);
+    }
+  }
+
+  public static void notifyReadOnlyObservers(Configuration conf, HMaster hMaster,
+    HRegionServer hRegionServer) {
+    LOG.info("Notifying observers about configuration changes");
+    hMaster.getConfigurationManager().notifyAllObservers(conf);
+    hRegionServer.getConfigurationManager().notifyAllObservers(conf);
   }
 }

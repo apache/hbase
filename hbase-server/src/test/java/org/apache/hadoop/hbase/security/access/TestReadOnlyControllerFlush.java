@@ -22,18 +22,16 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
-import org.apache.hadoop.hbase.client.Row;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -44,15 +42,16 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 
 @Tag(SecurityTests.TAG)
 @Tag(LargeTests.TAG)
 @SuppressWarnings("deprecation")
-public class TestReadOnlyController {
+public class TestReadOnlyControllerFlush {
 
   private final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
-  private static final TableName TEST_TABLE = TableName.valueOf("read_only_test_table");
-  private static final byte[] TEST_FAMILY = Bytes.toBytes("read_only_table_col_fam");
+  private static final TableName TEST_TABLE = TableName.valueOf("read_only_flush_test_table");
+  private static final byte[] TEST_FAMILY = Bytes.toBytes("read_only_flush_col_fam");
   private static HRegionServer hRegionServer;
   private static HMaster hMaster;
   private static Configuration conf;
@@ -81,14 +80,17 @@ public class TestReadOnlyController {
       hRegionServer = cluster.getRegionServerThreads().get(0).getRegionServer();
       connection = ConnectionFactory.createConnection(conf);
 
-      // Create a test table
+      // Create a test table and insert a row so the memstore has data to flush
       testTable = TEST_UTIL.createTable(TEST_TABLE, TEST_FAMILY);
+      Put put = new Put(Bytes.toBytes("row1"));
+      put.addColumn(TEST_FAMILY, null, Bytes.toBytes("value1"));
+      testTable.put(put);
     } catch (Exception e) {
-      // Delete the created table, and clean up the connection and cluster before throwing an
-      // exception
       disableReadOnlyMode();
       TEST_UTIL.deleteTable(TEST_TABLE);
-      connection.close();
+      if (connection != null) {
+        connection.close();
+      }
       TEST_UTIL.shutdownMiniCluster();
       throw new RuntimeException(e);
     }
@@ -110,66 +112,23 @@ public class TestReadOnlyController {
     SecureTestUtil.disableReadOnlyMode(conf, hMaster, hRegionServer);
   }
 
-  // The test case for successfully creating a table with Read-Only mode disabled happens when
-  // setting up the test class, so we only need a test function for a failed table creation.
   @Test
-  public void testCannotCreateTableWithReadOnlyEnabled() throws IOException {
-    enableReadOnlyMode();
-    TableName newTable = TableName.valueOf("bad_read_only_test_table");
-
-    IOException exception = assertThrows(IOException.class, () -> {
-      TEST_UTIL.createTable(newTable, TEST_FAMILY);
-    });
-    assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
-  }
-
-  @Test
-  public void testPutWithReadOnlyDisabled() throws IOException {
-    // Successfully put a row in the table since Read-Only mode is disabled
+  public void testFlushTableWithReadOnlyDisabled() throws IOException {
     disableReadOnlyMode();
-    final byte[] row2 = Bytes.toBytes("row2");
-    final byte[] value = Bytes.toBytes("efgh");
-    Put put = new Put(row2);
-    put.addColumn(TEST_FAMILY, null, value);
-    testTable.put(put);
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      admin.flush(TEST_TABLE);
+    }
   }
 
   @Test
-  public void testCannotPutWithReadOnlyEnabled() throws IOException {
-    // Prepare a Put command with Read-Only mode enabled
+  @Timeout(value = 60, unit = TimeUnit.SECONDS)
+  public void testCannotFlushTableWithReadOnlyEnabled() throws IOException {
     enableReadOnlyMode();
-    final byte[] row1 = Bytes.toBytes("row1");
-    final byte[] value = Bytes.toBytes("abcd");
-    Put put = new Put(row1);
-    put.addColumn(TEST_FAMILY, null, value);
-
-    IOException exception = assertThrows(IOException.class, () -> {
-      testTable.put(put);
-    });
-    assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
-  }
-
-  @Test
-  public void testBatchPutWithReadOnlyDisabled() throws IOException, InterruptedException {
-    // Successfully create and run a batch Put operation with Read-Only mode disabled
-    disableReadOnlyMode();
-    List<Row> actions = new ArrayList<>();
-    actions.add(new Put(Bytes.toBytes("row10")).addColumn(TEST_FAMILY, null, Bytes.toBytes("10")));
-    actions.add(new Delete(Bytes.toBytes("row10")));
-    testTable.batch(actions, null);
-  }
-
-  @Test
-  public void testCannotBatchPutWithReadOnlyEnabled() throws IOException, InterruptedException {
-    // Create a batch Put operation that is expected to fail with Read-Only mode enabled
-    enableReadOnlyMode();
-    List<Row> actions = new ArrayList<>();
-    actions.add(new Put(Bytes.toBytes("row11")).addColumn(TEST_FAMILY, null, Bytes.toBytes("11")));
-    actions.add(new Delete(Bytes.toBytes("row11")));
-
-    IOException exception = assertThrows(IOException.class, () -> {
-      testTable.batch(actions, null);
-    });
-    assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
+    try (Admin admin = TEST_UTIL.getAdmin()) {
+      IOException exception = assertThrows(IOException.class, () -> {
+        admin.flush(TEST_TABLE);
+      });
+      assertTrue(exception.getMessage().contains("Operation not allowed in Read-Only Mode"));
+    }
   }
 }

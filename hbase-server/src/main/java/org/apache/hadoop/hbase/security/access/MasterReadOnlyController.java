@@ -263,6 +263,13 @@ public class MasterReadOnlyController extends AbstractReadOnlyController
   }
 
   @Override
+  public void preTableFlush(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final TableName tableName) throws IOException {
+    internalReadOnlyGuard();
+    MasterObserver.super.preTableFlush(ctx, tableName);
+  }
+
+  @Override
   public void preSetUserQuota(ObserverContext<MasterCoprocessorEnvironment> ctx, String userName,
     GlobalQuotaSettings quotas) throws IOException {
     internalReadOnlyGuard();
