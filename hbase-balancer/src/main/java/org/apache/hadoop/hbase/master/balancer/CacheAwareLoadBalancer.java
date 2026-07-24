@@ -116,7 +116,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       configuration.getFloat(MIN_FREE_CACHE_SPACE_FACTOR_KEY, MIN_FREE_CACHE_SPACE_FACTOR_DEFAULT);
     float bucketCacheSizeMB = configuration.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
     float acceptableFactor = configuration.getFloat("hbase.bucketcache.acceptfactor", 0.95f);
-    cachePrefetchOverheadBytes = (long) (bucketCacheSizeMB * 1024L * 1024L * (1 - acceptableFactor));
+    cachePrefetchOverheadBytes =
+      (long) (bucketCacheSizeMB * 1024L * 1024L * (1 - acceptableFactor));
     cacheSpaceTrackingEnabled = bucketCacheSizeMB > 0;
     if (!cacheSpaceTrackingEnabled) {
       LOG.warn("{} is not configured on the master. The free-space relocation heuristic cannot "
@@ -279,15 +280,15 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     }
 
     if (rsRatio != null) {
-        LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
-          plan.getRegionInfo().getEncodedName(), plan.getDestination(),
-          plan.getDestination().equals(rsRatio.getFirst()) ? rsRatio.getSecond() : "unknown",
-          sleepTime);
+      LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(),
+        plan.getDestination().equals(rsRatio.getFirst()) ? rsRatio.getSecond() : "unknown",
+        sleepTime);
     } else {
-        LOG.debug(
-          "Moving region {} to server {} with no cache ratio info for the region. "
-            + "Throttling move for {}ms.",
-          plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
+      LOG.debug(
+        "Moving region {} to server {} with no cache ratio info for the region. "
+          + "Throttling move for {}ms.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
     }
     return sleepTime;
   }
@@ -445,8 +446,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
       if (!serverHasCacheSpaceForRegion(cluster, regionIndex, oldServerIndex)) {
         if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "Region {} not moved from {} to {} as destination server lacks cache space",
+          LOG.debug("Region {} not moved from {} to {} as destination server lacks cache space",
             cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
             cluster.servers[oldServerIndex]);
         }
@@ -719,10 +719,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
           cluster.getRegionSizeMinusColdDataMB(region) * potentialCacheRatioAfterMove;
         long potentialCachedBytesOnNewServer =
           (long) (potentialCachedSizeOnNewServer * 1024L * 1024L);
-        boolean simulateCacheBasedOnFreeSpace =
-          cluster.serverBlockCacheFreeSize != null
-            && cluster.getOrComputeRegionCacheRatio(region, oldServer) < lowCacheRatioThreshold
-            && cluster.serverBlockCacheFreeSize[newServer] >= potentialCachedBytesOnNewServer;
+        boolean simulateCacheBasedOnFreeSpace = cluster.serverBlockCacheFreeSize != null
+          && cluster.getOrComputeRegionCacheRatio(region, oldServer) < lowCacheRatioThreshold
+          && cluster.serverBlockCacheFreeSize[newServer] >= potentialCachedBytesOnNewServer;
         double regionCacheRatioOnNewServer = simulateCacheBasedOnFreeSpace
           ? potentialCachedSizeOnNewServer
           : cluster.getOrComputeWeightedRegionCacheRatio(region, newServer);

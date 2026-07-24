@@ -430,11 +430,14 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
       LOG.debug("plan region: {}, target server: {}", plan.getRegionInfo().getEncodedName(),
         plan.getDestination().getServerName());
       float ratio = 0f;
-      if (oldCachedRegions1.contains(plan.getRegionInfo()) && server1.equals(plan.getDestination())) {
+      if (
+        oldCachedRegions1.contains(plan.getRegionInfo()) && server1.equals(plan.getDestination())
+      ) {
         ratio = 1.0f;
         oldCached1Count++;
-      } else if (oldCachedRegions2.contains(plan.getRegionInfo())
-        && server2.equals(plan.getDestination())) {
+      } else if (
+        oldCachedRegions2.contains(plan.getRegionInfo()) && server2.equals(plan.getDestination())
+      ) {
         ratio = 0.8f;
         oldCached2Count++;
       }
@@ -616,10 +619,9 @@ public class TestRSGroupBasedLoadBalancerWithCacheAwareLoadBalancerAsInternal
     assertEquals(5, targetServers.get(server1).size());
     // The cache-aware generator should move at least some old-cached regions to server1.
     // Due to stochastic walk non-determinism, not all are guaranteed.
-    long oldCachedOnServer1 = targetServers.get(server1).stream()
-      .filter(oldCachedRegions::contains).count();
-    assertTrue(oldCachedOnServer1 > 0,
-      "At least some old-cached regions should move to server1");
+    long oldCachedOnServer1 =
+      targetServers.get(server1).stream().filter(oldCachedRegions::contains).count();
+    assertTrue(oldCachedOnServer1 > 0, "At least some old-cached regions should move to server1");
   }
 
   @Timeout(60)

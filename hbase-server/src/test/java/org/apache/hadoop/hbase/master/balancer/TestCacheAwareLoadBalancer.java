@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase.master.balancer;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -150,13 +150,13 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
 
     // Mock cluster metrics — give only server1 free cache so moves are directed there
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    ServerMetrics sm0 = mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10);
+    ServerMetrics sm0 = mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0, 0.0f,
+      new ArrayList<>(), 0, 10);
     when(sm0.getCacheFreeSize()).thenReturn(0L);
-    ServerMetrics sm1 = mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, new ArrayList<>(), 0, 10);
-    ServerMetrics sm2 = mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, new ArrayList<>(), 0, 10);
+    ServerMetrics sm1 = mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1, 0.0f,
+      new ArrayList<>(), 0, 10);
+    ServerMetrics sm2 = mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2, 0.0f,
+      new ArrayList<>(), 0, 10);
     when(sm2.getCacheFreeSize()).thenReturn(0L);
     serverMetricsMap.put(server0, sm0);
     serverMetricsMap.put(server1, sm1);
@@ -180,7 +180,8 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       }
     }
     // should move at least 5 regions from server0 to balance cluster (10/0/5 -> ~5/5/5)
-    assertTrue(regionsMovedFromServer0.size() >= 5 ,"Expected at least 5 moves from server0, got " + regionsMovedFromServer0.size());
+    assertTrue(regionsMovedFromServer0.size() >= 5,
+      "Expected at least 5 moves from server0, got " + regionsMovedFromServer0.size());
   }
 
   /**
@@ -439,11 +440,14 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       LOG.debug("plan region: {}, target server: {}", plan.getRegionInfo().getEncodedName(),
         plan.getDestination().getServerName());
       float ratio = 0f;
-      if (oldCachedRegions1.contains(plan.getRegionInfo()) && server1.equals(plan.getDestination())) {
+      if (
+        oldCachedRegions1.contains(plan.getRegionInfo()) && server1.equals(plan.getDestination())
+      ) {
         ratio = 1.0f;
         oldCached1Count++;
-      } else if (oldCachedRegions2.contains(plan.getRegionInfo())
-        && server2.equals(plan.getDestination())) {
+      } else if (
+        oldCachedRegions2.contains(plan.getRegionInfo()) && server2.equals(plan.getDestination())
+      ) {
         ratio = 0.8f;
         oldCached2Count++;
       }
@@ -635,10 +639,9 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // The cache-aware generator should move at least some old-cached regions to server1
     // (where they have better cache). Due to stochastic walk non-determinism, not all 4
     // are guaranteed to be picked over equally-viable alternatives.
-    long oldCachedOnServer1 = targetServers.get(server1).stream()
-      .filter(oldCachedRegions::contains).count();
-    assertTrue(oldCachedOnServer1 > 0,
-      "At least some old-cached regions should move to server1");
+    long oldCachedOnServer1 =
+      targetServers.get(server1).stream().filter(oldCachedRegions::contains).count();
+    assertTrue(oldCachedOnServer1 > 0, "At least some old-cached regions should move to server1");
   }
 
   @Test
