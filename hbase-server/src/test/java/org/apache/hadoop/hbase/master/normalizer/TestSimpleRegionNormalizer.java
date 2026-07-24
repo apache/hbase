@@ -750,4 +750,26 @@ public class TestSimpleRegionNormalizer {
     }
     return ret;
   }
+
+  @Test
+  public void itIgnoresSecondaryReplicasForMergeAndSplitPlanning() {
+    conf.setBoolean(SPLIT_ENABLED_KEY, true);
+    conf.setBoolean(MERGE_ENABLED_KEY, true);
+    conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
+    conf.setInt(MERGE_MIN_REGION_SIZE_MB_KEY, 0);
+
+    final List<RegionInfo> primaryRegions = createRegionInfos(tableName, 5);
+    final List<RegionInfo> allRegions = new ArrayList<>(primaryRegions);
+    for (RegionInfo primary : primaryRegions) {
+      allRegions.add(RegionInfoBuilder.newBuilder(tableName).setStartKey(primary.getStartKey())
+        .setEndKey(primary.getEndKey()).setRegionId(primary.getRegionId()).setReplicaId(1).build());
+    }
+
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(primaryRegions, 15, 5, 5, 15, 16);
+    setupMocksForNormalizer(regionSizes, allRegions);
+
+    assertThat(normalizer.computePlansForTable(tableDescriptor),
+      contains(new MergeNormalizationPlan.Builder().addTarget(primaryRegions.get(1), 5)
+        .addTarget(primaryRegions.get(2), 5).build()));
+  }
 }
