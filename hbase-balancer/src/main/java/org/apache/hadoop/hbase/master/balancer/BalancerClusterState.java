@@ -400,8 +400,8 @@ class BalancerClusterState {
         serversPerRack);
     }
 
-    this.serverBlockCacheFreeSize = new long[numServers];
     if (serverBlockCacheFreeByServer != null) {
+      this.serverBlockCacheFreeSize = new long[numServers];
       for (int i = 0; i < numServers; i++) {
         ServerName sn = servers[i];
         this.serverBlockCacheFreeSize[i] =
@@ -908,6 +908,20 @@ class BalancerClusterState {
       numRegionsPerServerPerTable[tableIndex][oldServer]--;
     }
     numRegionsPerServerPerTable[tableIndex][newServer]++;
+
+    // Update server block cache free size to reflect the region move. The destination server
+    // will need to cache this region (reducing its free space), and the source server frees
+    // space when blocks are evicted on region close.
+    if (serverBlockCacheFreeSize != null) {
+      long regionSizeBytes = (long) getRegionSizeMinusColdDataMB(region) * 1024L * 1024L;
+      if (regionSizeBytes > 0) {
+        serverBlockCacheFreeSize[newServer] =
+          Math.max(0, serverBlockCacheFreeSize[newServer] - regionSizeBytes);
+        if (oldServer >= 0) {
+          serverBlockCacheFreeSize[oldServer] += regionSizeBytes;
+        }
+      }
+    }
 
     // update for servers
     int primary = regionIndexToPrimaryIndex[region];
