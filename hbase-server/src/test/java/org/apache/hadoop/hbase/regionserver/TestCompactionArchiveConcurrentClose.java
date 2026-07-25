@@ -64,7 +64,6 @@ public class TestCompactionArchiveConcurrentClose {
   private HBaseTestingUtil testUtil;
 
   private Path testDir;
-  private AtomicBoolean archived = new AtomicBoolean();
 
   // Static field to track archived state for the static inner class
   private static final AtomicBoolean STATIC_ARCHIVED = new AtomicBoolean();

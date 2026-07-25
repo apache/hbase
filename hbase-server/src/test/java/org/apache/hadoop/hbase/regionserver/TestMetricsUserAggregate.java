@@ -47,7 +47,6 @@ public class TestMetricsUserAggregate {
   private MetricsRegionServerWrapperStub wrapper;
   private MetricsRegionServer rsm;
   private MetricsUserAggregate userAgg;
-  private TableName tableName = TableName.valueOf("testUserAggregateMetrics");
 
   @BeforeAll
   public static void classSetUp() {

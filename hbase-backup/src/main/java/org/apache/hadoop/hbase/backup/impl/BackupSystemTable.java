@@ -167,7 +167,6 @@ public final class BackupSystemTable implements Closeable {
   private final Connection connection;
 
   private final static String BACKUP_INFO_PREFIX = "session:";
-  private final static String START_CODE_ROW = "startcode:";
   private final static byte[] ACTIVE_SESSION_ROW = Bytes.toBytes("activesession:");
   private final static byte[] ACTIVE_SESSION_COL = Bytes.toBytes("c");
 

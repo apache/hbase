@@ -45,7 +45,6 @@ public class MasterQuotasObserver implements MasterCoprocessor, MasterObserver {
   public static final String REMOVE_QUOTA_ON_TABLE_DELETE = "hbase.quota.remove.on.table.delete";
   public static final boolean REMOVE_QUOTA_ON_TABLE_DELETE_DEFAULT = true;
 
-  private CoprocessorEnvironment cpEnv;
   private Configuration conf;
   private boolean quotasEnabled = false;
   private MasterServices masterServices;

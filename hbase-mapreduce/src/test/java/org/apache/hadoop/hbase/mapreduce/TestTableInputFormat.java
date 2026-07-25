@@ -79,8 +79,6 @@ public class TestTableInputFormat {
   private static MiniMRCluster mrCluster;
   static final byte[] FAMILY = Bytes.toBytes("family");
 
-  private static final byte[][] columns = new byte[][] { FAMILY };
-
   @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL.startMiniCluster();

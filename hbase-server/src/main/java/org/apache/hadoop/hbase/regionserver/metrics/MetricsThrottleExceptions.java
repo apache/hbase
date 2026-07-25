@@ -29,15 +29,6 @@ public class MetricsThrottleExceptions {
    */
   private static final String METRICS_NAME = "ThrottleExceptions";
 
-  /**
-   * The name of the metrics context that metrics will be under.
-   */
-  private static final String METRICS_CONTEXT = "regionserver";
-
-  /**
-   * Description
-   */
-  private static final String METRICS_DESCRIPTION = "Metrics about RPC throttling exceptions";
 
   /**
    * The name of the metrics context that metrics will be under in jmx
