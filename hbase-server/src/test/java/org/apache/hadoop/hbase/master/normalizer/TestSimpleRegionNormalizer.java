@@ -752,7 +752,7 @@ public class TestSimpleRegionNormalizer {
   }
 
   @Test
-  public void itIgnoresSecondaryReplicasForMergeAndSplitPlanning() {
+  public void testIgnoresSecondaryReplicasForMergeAndSplitPlanning() {
     conf.setBoolean(SPLIT_ENABLED_KEY, true);
     conf.setBoolean(MERGE_ENABLED_KEY, true);
     conf.setInt(MERGE_MIN_REGION_COUNT_KEY, 1);
@@ -768,8 +768,9 @@ public class TestSimpleRegionNormalizer {
     final Map<byte[], Integer> regionSizes = createRegionSizesMap(primaryRegions, 15, 5, 5, 15, 16);
     setupMocksForNormalizer(regionSizes, allRegions);
 
-    assertThat(normalizer.computePlansForTable(tableDescriptor),
-      contains(new MergeNormalizationPlan.Builder().addTarget(primaryRegions.get(1), 5)
-        .addTarget(primaryRegions.get(2), 5).build()));
+    final List<NormalizationPlan> plans = normalizer.computePlansForTable(tableDescriptor);
+    assertThat(plans, hasSize(1));
+    assertThat(plans, contains(new MergeNormalizationPlan.Builder()
+      .addTarget(primaryRegions.get(1), 5).addTarget(primaryRegions.get(2), 5).build()));
   }
 }
