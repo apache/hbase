@@ -300,4 +300,19 @@ public class TestSerialReplicationChecker {
     updatePushedSeqId(region, 99);
     assertTrue(checker.canPush(createEntry(region, 100), cell));
   }
+
+  @Test
+  public void testCanPushEqualsToBarrierWithGapOne() throws IOException, ReplicationException {
+    RegionInfo region = RegionInfoBuilder.newBuilder(tableName).build();
+    Cell cell = createCell(region);
+
+    addStateAndBarrier(region, RegionState.State.OPEN, 10, 100, 101);
+    assertFalse(checker.canPush(createEntry(region, 101), cell));
+    updatePushedSeqId(region, 99);
+    assertTrue(checker.canPush(createEntry(region, 101), cell));
+
+    addStateAndBarrier(region, RegionState.State.OPEN, 9, 17, 25, 28, 31, 34, 38, 39);
+    updatePushedSeqId(region, 37);
+    assertTrue(checker.canPush(createEntry(region, 39), cell));
+  }
 }

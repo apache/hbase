@@ -202,6 +202,13 @@ class SerialReplicationChecker {
     // start from 1. Here we choose the latter one.
     if (index < 0) {
       index = -index - 1;
+    } else if (index > 0 && barriers[index] - barriers[index - 1] == 1) {
+      // The range [barriers[index-1], barriers[index]) is exactly one seqId wide, containing only
+      // the openSeqNum which is never a real WAL entry (mvcc.advanceTo sets the base, mvcc.begin
+      // increments before the first write). This range is guaranteed empty, so don't increment —
+      // check isRangeFinished against the range before the empty one.
+      LOG.debug("{} matches barrier {} with gap-1 empty range, checking prior range", entry,
+        barriers[index]);
     } else {
       index++;
     }
