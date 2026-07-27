@@ -92,6 +92,7 @@ import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -205,6 +206,12 @@ public class BucketCache implements BlockCache, HeapSize {
    * that Bucket IO exceptions/errors don't bring down the HBase server.
    */
   private volatile CacheState cacheState;
+
+  /** The single cleanup thread shared by disable and explicit shutdown calls. */
+  private volatile Thread cacheCleanupThread;
+
+  /** The thread restoring the persistent cache index during initialization. */
+  private volatile Thread persistenceRetrieverThread;
 
   /**
    * A list of writer queues. We have a queue per {@link WriterThread} we have running. In other
@@ -416,12 +423,17 @@ public class BucketCache implements BlockCache, HeapSize {
           LOG.error("Exception during Bucket Allocation", allocatorException);
         }
       } finally {
-        this.cacheState = CacheState.ENABLED;
-        startWriterThreads();
+        synchronized (BucketCache.this) {
+          if (cacheState == CacheState.INITIALIZING) {
+            cacheState = CacheState.ENABLED;
+            startWriterThreads();
+          }
+        }
       }
     };
-    Thread t = new Thread(persistentCacheRetriever);
-    t.start();
+    persistenceRetrieverThread = new Thread(persistentCacheRetriever,
+      "BucketCachePersistenceRetriever-" + System.identityHashCode(this));
+    persistenceRetrieverThread.start();
   }
 
   private void sanityCheckConfigs() {
@@ -643,19 +655,22 @@ public class BucketCache implements BlockCache, HeapSize {
    *         the passed key doesn't relate to a reference.
    */
   public BucketEntry getBlockForReference(BlockCacheKey key) {
-    BucketEntry foundEntry = null;
-    String referredFileName = null;
-    if (StoreFileInfo.isReference(key.getHfileName())) {
-      referredFileName = StoreFileInfo.getReferredToRegionAndFile(key.getHfileName()).getSecond();
-    }
-    if (referredFileName != null) {
-      // Since we just need this key for a lookup, it's enough to use only name and offset
-      BlockCacheKey convertedCacheKey = new BlockCacheKey(referredFileName, key.getOffset());
-      foundEntry = backingMap.get(convertedCacheKey);
+    BlockCacheKey referredKey = getBlockKeyForReference(key);
+    BucketEntry foundEntry = referredKey != null ? backingMap.get(referredKey) : null;
+    if (referredKey != null) {
       LOG.debug("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
-        convertedCacheKey, foundEntry);
+        referredKey, foundEntry);
     }
     return foundEntry;
+  }
+
+  private BlockCacheKey getBlockKeyForReference(BlockCacheKey key) {
+    if (!StoreFileInfo.isReference(key.getHfileName())) {
+      return null;
+    }
+    String referredFileName =
+      StoreFileInfo.getReferredToRegionAndFile(key.getHfileName()).getSecond();
+    return referredFileName != null ? new BlockCacheKey(referredFileName, key.getOffset()) : null;
   }
 
   /**
@@ -681,23 +696,28 @@ public class BucketCache implements BlockCache, HeapSize {
       re.access(accessCount.incrementAndGet());
       return re.getData();
     }
-    BucketEntry bucketEntry = backingMap.get(key);
+    BlockCacheKey backingMapLookupKey = key;
+    BucketEntry bucketEntry = backingMap.get(backingMapLookupKey);
     LOG.debug("bucket entry for key {}: {}", key,
       bucketEntry == null ? null : bucketEntry.offset());
     if (bucketEntry == null) {
-      bucketEntry = getBlockForReference(key);
+      backingMapLookupKey = getBlockKeyForReference(key);
+      if (backingMapLookupKey != null) {
+        bucketEntry = backingMap.get(backingMapLookupKey);
+        LOG.debug("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
+          backingMapLookupKey, bucketEntry);
+      }
     }
     if (bucketEntry != null) {
       long start = System.nanoTime();
       ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
+      boolean inconsistentEntry = false;
       try {
         lock.readLock().lock();
         // We can not read here even if backingMap does contain the given key because its offset
         // maybe changed. If we lock BlockCacheKey instead of offset, then we can only check
         // existence here.
-        if (
-          bucketEntry.equals(backingMap.get(key)) || bucketEntry.equals(getBlockForReference(key))
-        ) {
+        if (bucketEntry.equals(backingMap.get(backingMapLookupKey))) {
           // Read the block from IOEngine based on the bucketEntry's offset and length, NOTICE: the
           // block will use the refCnt of bucketEntry, which means if two HFileBlock mapping to
           // the same BucketEntry, then all of the three will share the same refCnt.
@@ -719,11 +739,9 @@ public class BucketCache implements BlockCache, HeapSize {
           return cachedBlock;
         }
       } catch (HBaseIOException hioex) {
-        // When using file io engine persistent cache,
-        // the cache map state might differ from the actual cache. If we reach this block,
-        // we should remove the cache key entry from the backing map
-        backingMap.remove(key);
-        fileNotFullyCached(key, bucketEntry);
+        // FileIOEngine throws this when its cached time differs from the persisted index. A plain
+        // IOException still follows the configured tolerance policy below.
+        inconsistentEntry = true;
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -731,11 +749,27 @@ public class BucketCache implements BlockCache, HeapSize {
       } finally {
         lock.readLock().unlock();
       }
+      if (inconsistentEntry) {
+        evictInconsistentEntry(backingMapLookupKey, bucketEntry);
+      }
     }
     if (!repeat && updateCacheMetrics) {
       cacheStats.miss(caching, key.isPrimary(), key.getBlockType());
     }
     return null;
+  }
+
+  private void evictInconsistentEntry(BlockCacheKey lookupKey, BucketEntry bucketEntry) {
+    BlockCacheKey storedKey = blocksByHFile.ceiling(lookupKey);
+    if (storedKey == null || !storedKey.equals(lookupKey)) {
+      return;
+    }
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.remove(storedKey, bucketEntry)) {
+        blockEvicted(storedKey, bucketEntry, true, false);
+      }
+      return null;
+    });
   }
 
   /**
@@ -1350,13 +1384,20 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
     BucketEntry previousEntry = backingMap.put(key, bucketEntry);
-    blocksByHFile.add(key);
     updateRegionCachedSize(key, bucketEntry.getLength());
     if (previousEntry != null && previousEntry != bucketEntry) {
       previousEntry.withWriteLock(offsetLock, () -> {
         blockEvicted(key, previousEntry, false, false);
         return null;
       });
+      bucketEntry.withWriteLock(offsetLock, () -> {
+        if (backingMap.get(key) == bucketEntry) {
+          blocksByHFile.add(key);
+        }
+        return null;
+      });
+    } else {
+      blocksByHFile.add(key);
     }
   }
 
@@ -1551,6 +1592,12 @@ public class BucketCache implements BlockCache, HeapSize {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
   void persistToFile() throws IOException {
+    persistToFile(entry -> {
+    });
+  }
+
+  private void persistToFile(Consumer<Map.Entry<BlockCacheKey, BucketEntry>> entryCopiedAction)
+    throws IOException {
     LOG.debug("Thread {} started persisting bucket cache to file",
       Thread.currentThread().getName());
     if (!isCachePersistent()) {
@@ -1560,7 +1607,7 @@ public class BucketCache implements BlockCache, HeapSize {
     try (FileOutputStream fos = new FileOutputStream(tempPersistencePath, false)) {
       LOG.debug("Persist in new chunked persistence format.");
 
-      persistChunkedBackingMap(fos);
+      persistChunkedBackingMap(fos, entryCopiedAction);
 
       LOG.debug(
         "PersistToFile: after persisting backing map size: {}, fullycachedFiles size: {},"
@@ -1740,13 +1787,14 @@ public class BucketCache implements BlockCache, HeapSize {
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
   }
 
-  private void persistChunkedBackingMap(FileOutputStream fos) throws IOException {
+  private void persistChunkedBackingMap(FileOutputStream fos,
+    Consumer<Map.Entry<BlockCacheKey, BucketEntry>> entryCopiedAction) throws IOException {
     LOG.debug(
       "persistToFile: before persisting backing map size: {}, "
         + "fullycachedFiles size: {}, chunkSize: {}",
       backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize);
 
-    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize);
+    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize, entryCopiedAction);
 
     LOG.debug(
       "persistToFile: after persisting backing map size: {}, " + "fullycachedFiles size: {}",
@@ -1807,59 +1855,106 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Used to shut down the cache -or- turn it off in the case of something broken.
+   * @return whether explicit shutdown should wait for cleanup
    */
-  private void disableCache() {
-    if (!isCacheEnabled()) {
-      return;
+  private synchronized boolean disableCache() {
+    if (cacheState == CacheState.DISABLED) {
+      return false;
     }
+    boolean waitForCleanup = cacheState == CacheState.ENABLED && isCachePersistent();
     LOG.info("Disabling cache");
     cacheState = CacheState.DISABLED;
-    ioEngine.shutdown();
     this.scheduleThreadPool.shutdown();
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].interrupt();
-    this.ramCache.clear();
-    if (!ioEngine.isPersistent() || persistencePath == null) {
-      // If persistent ioengine and a path, we will serialize out the backingMap.
-      this.backingMap.clear();
-      this.blocksByHFile.clear();
-      this.fullyCachedFiles.clear();
-      this.regionCachedSize.clear();
+    for (WriterThread writerThread : writerThreads) {
+      writerThread.interrupt();
     }
+    // Closing the IO engine helps unblock an in-flight writer before the cleanup thread joins it.
+    // FileIOEngine can reopen a channel, so cleanup closes the engine again after writers stop.
+    ioEngine.shutdown();
     if (cacheStats.getMetricsRollerScheduler() != null) {
       cacheStats.getMetricsRollerScheduler().shutdownNow();
     }
+    cacheCleanupThread = Threads.setDaemonThreadRunning(new Thread(this::cleanupCache),
+      "BucketCacheCleanup-" + System.identityHashCode(this), Threads.LOGGING_EXCEPTION_HANDLER);
+    return waitForCleanup;
   }
 
-  private void join() throws InterruptedException {
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].join();
+  private void cleanupCache() {
+    try {
+      Threads.shutdown(persistenceRetrieverThread);
+      for (WriterThread writerThread : writerThreads) {
+        Threads.shutdown(writerThread);
+      }
+      for (BlockingQueue<RAMQueueEntry> writerQueue : writerQueues) {
+        writerQueue.clear();
+      }
+      ramCache.clear();
+      if (cachePersister != null) {
+        LOG.info("Shutting down cache persister thread.");
+        cachePersister.shutdown();
+        Threads.shutdown(cachePersister);
+      }
+      if (isCachePersistent()) {
+        try {
+          // The serializer already visits every entry. Release owner references in the same pass.
+          persistToFile(this::cleanupBackingMapEntry);
+        } catch (IOException ex) {
+          LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
+        }
+      }
+    } finally {
+      try {
+        cleanupCacheIndex();
+      } finally {
+        ioEngine.shutdown();
+      }
+    }
+  }
+
+  private void cleanupCacheIndex() {
+    // A successful persistent cleanup emptied the map during serialization. Avoid creating a
+    // second iterator over a large ConcurrentHashMap in that case.
+    if (!backingMap.isEmpty()) {
+      for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
+        cleanupBackingMapEntry(entry);
+      }
+    }
+    blocksByHFile.clear();
+    fullyCachedFiles.clear();
+    regionCachedSize.clear();
+  }
+
+  private void cleanupBackingMapEntry(Map.Entry<BlockCacheKey, BucketEntry> entry) {
+    BlockCacheKey cacheKey = entry.getKey();
+    BucketEntry bucketEntry = entry.getValue();
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.remove(cacheKey, bucketEntry)) {
+        bucketEntry.markAsEvicted();
+      }
+      return null;
+    });
+  }
+
+  private void waitForCacheCleanup() throws InterruptedException {
+    Thread cleanupThread = cacheCleanupThread;
+    if (cleanupThread == null || cleanupThread == Thread.currentThread()) {
+      return;
+    }
+    cleanupThread.join();
   }
 
   @Override
   public void shutdown() {
-    if (isCacheEnabled()) {
-      disableCache();
-      LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent()
-        + "; path to write=" + persistencePath);
-      if (ioEngine.isPersistent() && persistencePath != null) {
-        try {
-          join();
-          if (cachePersister != null) {
-            LOG.info("Shutting down cache persister thread.");
-            cachePersister.shutdown();
-            while (cachePersister.isAlive()) {
-              Thread.sleep(10);
-            }
-          }
-          persistToFile();
-        } catch (IOException ex) {
-          LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
-        } catch (InterruptedException e) {
-          LOG.warn("Failed to persist data on exit", e);
-        }
+    if (disableCache()) {
+      try {
+        waitForCacheCleanup();
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        LOG.warn("Interrupted while waiting for bucket cache cleanup", e);
       }
     }
+    LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
+      + persistencePath);
   }
 
   /**

@@ -17,19 +17,29 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
+import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
+import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CyclicBarrier;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -45,9 +55,15 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.mockito.Mockito;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.BucketCacheProtos;
 
 @Tag(IOTests.TAG)
 @Tag(SmallTests.TAG)
@@ -306,6 +322,280 @@ public class TestBucketCacheRefCnt {
     }
   }
 
+  @Test
+  public void testShutdownReleasesOnlyBackingMapReference() throws Exception {
+    ByteBuffAllocator allocator = ByteBuffAllocator.create(HBaseConfiguration.create(), true);
+    HFileBlock blockToCache = createBlock(200, 1020, allocator);
+    HFileBlock retainedBlock = null;
+    try {
+      cache = create(1, 1000);
+      BlockCacheKey key = createKey("testShutdownReleasesOnlyBackingMapReference", 200);
+      cache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(cache, key);
+
+      retainedBlock = (HFileBlock) cache.getBlock(key, false, false, false);
+      assertNotNull(retainedBlock);
+      assertEquals(2, retainedBlock.refCnt());
+
+      HFileBlock callerReference = retainedBlock;
+      cache.shutdown();
+      cache.shutdown();
+
+      Waiter.waitFor(HBaseConfiguration.create(), 10000,
+        () -> cache.backingMap.isEmpty() && callerReference.refCnt() == 1);
+      assertEquals(1, retainedBlock.refCnt());
+      assertTrue(retainedBlock.release());
+      assertEquals(0, retainedBlock.refCnt());
+    } finally {
+      if (cache != null) {
+        cache.shutdown();
+        cache = null;
+      }
+      if (retainedBlock != null) {
+        while (retainedBlock.refCnt() > 0) {
+          retainedBlock.release();
+        }
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+      allocator.clean();
+    }
+  }
+
+  @Test
+  public void testShutdownPersistsEmptyMapOverPreviousCheckpoint(@TempDir File testDir)
+    throws Exception {
+    HFileBlock blockToCache = createBlock(200, 1020);
+    BucketCache bucketCache = null;
+    BucketCache recoveredCache = null;
+    String cachePath = new File(testDir, "bucket.cache").getAbsolutePath();
+    String persistencePath = new File(testDir, "bucket.persistence").getAbsolutePath();
+    BlockCacheKey key = createKey("testShutdownPersistsEmptyMapOverPreviousCheckpoint", 200);
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
+    try {
+      bucketCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+        BLOCK_SIZE_ARRAY, 1, 1000, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      bucketCache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(bucketCache, key);
+
+      bucketCache.persistToFile();
+      assertTrue(new File(persistencePath).isFile());
+      assertTrue(bucketCache.backingMap.containsKey(key));
+      assertTrue(bucketCache.evictBlock(key));
+      assertTrue(bucketCache.backingMap.isEmpty());
+      bucketCache.shutdown();
+      try (
+        DataInputStream in = new DataInputStream(new FileInputStream(new File(persistencePath)))) {
+        byte[] magic = new byte[BucketProtoUtils.PB_MAGIC_V2.length];
+        in.readFully(magic);
+        assertArrayEquals(BucketProtoUtils.PB_MAGIC_V2, magic);
+        assertNotNull(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
+        assertEquals(-1, in.read());
+      }
+      bucketCache = null;
+
+      recoveredCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+        BLOCK_SIZE_ARRAY, 1, 1000, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(recoveredCache.waitForCacheInitialization(10000));
+      assertTrue(recoveredCache.backingMap.isEmpty());
+      assertEquals(0, recoveredCache.getAllocator().getUsedSize());
+      assertEquals(0, recoveredCache.getBlockCount());
+      Cacheable staleBlock = recoveredCache.getBlock(key, false, false, false);
+      if (staleBlock != null) {
+        staleBlock.release();
+      }
+      assertNull(staleBlock);
+    } finally {
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
+      if (recoveredCache != null) {
+        recoveredCache.shutdown();
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+    }
+  }
+
+  @Test
+  public void testFinalPersistFailureReleasesEntriesAndKeepsPreviousCheckpoint(
+    @TempDir File testDir) throws Exception {
+    HFileBlock firstBlock = createBlock(200, 1020);
+    HFileBlock secondBlock = createBlock(400, 1020);
+    BucketCache bucketCache = null;
+    BucketCache recoveredCache = null;
+    String cachePath = new File(testDir, "bucket.cache").getAbsolutePath();
+    String persistencePath = new File(testDir, "bucket.persistence").getAbsolutePath();
+    BlockCacheKey firstKey = createKey("first", 200);
+    BlockCacheKey secondKey = createKey("second", 400);
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
+    try {
+      bucketCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+        BLOCK_SIZE_ARRAY, 1, 1000, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      bucketCache.cacheBlock(firstKey, firstBlock);
+      waitUntilFlushedToCache(bucketCache, firstKey);
+      bucketCache.persistToFile();
+      byte[] previousCheckpoint = Files.readAllBytes(new File(persistencePath).toPath());
+
+      bucketCache.cacheBlock(secondKey, secondBlock);
+      waitUntilFlushedToCache(bucketCache, secondKey);
+      BucketEntry firstEntry = bucketCache.backingMap.get(firstKey);
+      BucketEntry secondEntry = bucketCache.backingMap.get(secondKey);
+      assertNotNull(firstEntry);
+      assertNotNull(secondEntry);
+      assertEquals(1, firstEntry.refCnt());
+      assertEquals(1, secondEntry.refCnt());
+
+      long failureTime = 123456789L;
+      File tempPersistencePath = new File(persistencePath + failureTime);
+      assertTrue(tempPersistencePath.mkdir());
+      ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+      edge.setValue(failureTime);
+      EnvironmentEdgeManager.injectEdge(edge);
+      try {
+        bucketCache.shutdown();
+      } finally {
+        EnvironmentEdgeManager.reset();
+      }
+
+      assertTrue(bucketCache.backingMap.isEmpty());
+      assertEquals(0, firstEntry.refCnt());
+      assertEquals(0, secondEntry.refCnt());
+      assertArrayEquals(previousCheckpoint, Files.readAllBytes(new File(persistencePath).toPath()));
+      bucketCache = null;
+
+      recoveredCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+        BLOCK_SIZE_ARRAY, 1, 1000, persistencePath, DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(recoveredCache.waitForCacheInitialization(10000));
+      BucketCache cacheToValidate = recoveredCache;
+      Waiter.waitFor(HBaseConfiguration.create(), 10000,
+        () -> cacheToValidate.getBackingMapValidated().get());
+      assertEquals(1, recoveredCache.backingMap.size());
+      Cacheable recoveredBlock = recoveredCache.getBlock(firstKey, false, false, false);
+      assertNotNull(recoveredBlock);
+      recoveredBlock.release();
+      Cacheable uncheckpointedBlock = recoveredCache.getBlock(secondKey, false, false, false);
+      if (uncheckpointedBlock != null) {
+        uncheckpointedBlock.release();
+      }
+      assertNull(uncheckpointedBlock);
+    } finally {
+      EnvironmentEdgeManager.reset();
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
+      if (recoveredCache != null) {
+        recoveredCache.shutdown();
+      }
+      while (firstBlock.refCnt() > 0) {
+        firstBlock.release();
+      }
+      while (secondBlock.refCnt() > 0) {
+        secondBlock.release();
+      }
+    }
+  }
+
+  @Test
+  public void testHBaseIOExceptionThroughReferenceEvictsStoredEntry(@TempDir File testDir)
+    throws Exception {
+    HFileBlock blockToCache = createBlock(200, 1020);
+    BucketEntry bucketEntry = null;
+    String cachePath = new File(testDir, "bucket.cache").getAbsolutePath();
+    String persistencePath = new File(testDir, "bucket.persistence").getAbsolutePath();
+    BucketCache bucketCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+      BLOCK_SIZE_ARRAY, 1, 1000, persistencePath);
+    try {
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      String hfileName = "0123456789abcdef";
+      String regionName = "region";
+      BlockCacheKey storedKey =
+        new BlockCacheKey(hfileName, "cf", regionName, 200, true, BlockType.DATA, false);
+      BlockCacheKey referenceKey = createKey(hfileName + ".parent", 200);
+      bucketCache.cacheBlock(storedKey, blockToCache);
+      waitUntilFlushedToCache(bucketCache, storedKey);
+      bucketCache.fileCacheCompleted(new Path("/table/" + regionName + "/cf/" + hfileName), 1020);
+
+      bucketEntry = bucketCache.backingMap.get(storedKey);
+      assertNotNull(bucketEntry);
+      assertTrue(bucketCache.regionCachedSize.containsKey(regionName));
+      assertTrue(bucketCache.fullyCachedFiles.containsKey(hfileName));
+
+      ByteBuffer invalidCachedTime = ByteBuffer.allocate(Long.BYTES);
+      invalidCachedTime.putLong(bucketEntry.getCachedTime() + 1).flip();
+      bucketCache.ioEngine.write(invalidCachedTime, bucketEntry.offset());
+      bucketCache.ioEngine.sync();
+
+      assertNull(bucketCache.getBlock(referenceKey, false, false, false));
+      assertFalse(bucketCache.backingMap.containsKey(storedKey));
+      assertFalse(bucketCache.blocksByHFile.contains(storedKey));
+      assertFalse(bucketCache.regionCachedSize.containsKey(regionName));
+      assertFalse(bucketCache.fullyCachedFiles.containsKey(hfileName));
+      assertEquals(0, bucketEntry.refCnt());
+      assertEquals(0, bucketCache.getAllocator().getUsedSize());
+    } finally {
+      bucketCache.shutdown();
+      if (bucketEntry != null && bucketEntry.refCnt() > 0) {
+        bucketEntry.markAsEvicted();
+      }
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+    }
+  }
+
+  @Test
+  public void testPlainIOExceptionKeepsEntryAndCacheMetadata(@TempDir File testDir)
+    throws Exception {
+    HFileBlock blockToCache = createBlock(200, 1020);
+    String cachePath = new File(testDir, "bucket.cache").getAbsolutePath();
+    String persistencePath = new File(testDir, "bucket.persistence").getAbsolutePath();
+    BucketCache bucketCache = new BucketCache("file:" + cachePath, CAPACITY_SIZE, BLOCK_SIZE,
+      BLOCK_SIZE_ARRAY, 1, 1000, persistencePath);
+    FileChannel originalChannel = null;
+    try {
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      String hfileName = "testPlainIOExceptionKeepsEntryAndCacheMetadata";
+      String regionName = "region";
+      BlockCacheKey key =
+        new BlockCacheKey(hfileName, "cf", regionName, 200, true, BlockType.DATA, false);
+      bucketCache.cacheBlock(key, blockToCache);
+      waitUntilFlushedToCache(bucketCache, key);
+      bucketCache.fileCacheCompleted(new Path("/table/" + regionName + "/cf/" + hfileName), 1020);
+
+      BucketEntry bucketEntry = bucketCache.backingMap.get(key);
+      assertNotNull(bucketEntry);
+      FileIOEngine fileIOEngine = (FileIOEngine) bucketCache.ioEngine;
+      originalChannel = fileIOEngine.getFileChannels()[0];
+      FileChannel failingChannel = Mockito.mock(FileChannel.class);
+      Mockito.when(failingChannel.read(Mockito.any(ByteBuffer.class), Mockito.anyLong()))
+        .thenThrow(new IOException("Injected read failure"));
+      fileIOEngine.getFileChannels()[0] = failingChannel;
+
+      assertNull(bucketCache.getBlock(key, false, false, false));
+      assertTrue(bucketCache.isCacheEnabled());
+      assertEquals(bucketEntry, bucketCache.backingMap.get(key));
+      assertTrue(bucketCache.blocksByHFile.contains(key));
+      assertTrue(bucketCache.regionCachedSize.containsKey(regionName));
+      assertTrue(bucketCache.fullyCachedFiles.containsKey(hfileName));
+      assertEquals(1, bucketEntry.refCnt());
+    } finally {
+      if (originalChannel != null) {
+        ((FileIOEngine) bucketCache.ioEngine).getFileChannels()[0] = originalChannel;
+      }
+      bucketCache.shutdown();
+      while (blockToCache.refCnt() > 0) {
+        blockToCache.release();
+      }
+    }
+  }
+
   /**
    * <pre>
    * This test is for HBASE-26281,
@@ -372,6 +662,7 @@ public class TestBucketCacheRefCnt {
 
       cacheBlockThread.join();
       assertTrue(exceptionRef.get() == null);
+      assertTrue(myBucketCache.blocksByHFile.contains(blockCacheKey));
       assertEquals(1, gotHFileBlock.refCnt());
       assertTrue(gotHFileBlock.equals(hfileBlock));
       assertTrue(myBucketCache.overwiteByteBuff == null);

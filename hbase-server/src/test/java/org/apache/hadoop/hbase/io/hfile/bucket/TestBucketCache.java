@@ -385,7 +385,11 @@ public class TestBucketCache {
       }
       usedSize = bucketCache.getAllocator().getUsedSize();
       assertNotEquals(0, usedSize);
+      BucketEntry persistedEntry = bucketCache.backingMap.values().iterator().next();
+      assertEquals(1, persistedEntry.refCnt());
       bucketCache.shutdown();
+      assertEquals(0, persistedEntry.refCnt());
+      assertTrue(bucketCache.backingMap.isEmpty());
       assertTrue(new File(persistencePath).exists());
       bucketCache = new BucketCache(ioEngineName, capacitySize, constructedBlockSize,
         constructedBlockSizes, writeThreads, writerQLen, persistencePath);
