@@ -35,7 +35,12 @@ import java.nio.channels.FileChannel;
 import java.nio.file.Files;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
@@ -592,6 +597,59 @@ public class TestBucketCacheRefCnt {
       bucketCache.shutdown();
       while (blockToCache.refCnt() > 0) {
         blockToCache.release();
+      }
+    }
+  }
+
+  @Test
+  public void testInitialPublicationDoesNotRestoreIndexAfterConcurrentEviction() throws Exception {
+    BucketCache bucketCache = create(1, 1000);
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    CountDownLatch entryPublished = new CountDownLatch(1);
+    CountDownLatch continuePublication = new CountDownLatch(1);
+    BucketEntry publishedEntry = null;
+    try {
+      BlockCacheKey key =
+        createKey("testInitialPublicationDoesNotRestoreIndexAfterConcurrentEviction", 200);
+      publishedEntry = new BucketEntry(8192, 1020, 1020, 0, false, entry -> ByteBuffAllocator.NONE,
+        ByteBuffAllocator.HEAP);
+      BucketEntry entryToPublish = publishedEntry;
+      bucketCache.backingMap = Mockito.spy(bucketCache.backingMap);
+      Mockito.doAnswer(invocation -> {
+        Object previousEntry = invocation.callRealMethod();
+        entryPublished.countDown();
+        if (!continuePublication.await(10, TimeUnit.SECONDS)) {
+          throw new AssertionError("Timed out waiting to resume publication");
+        }
+        return previousEntry;
+      }).when(bucketCache.backingMap).put(key, entryToPublish);
+      Future<?> publication =
+        executor.submit(() -> bucketCache.putIntoBackingMap(key, entryToPublish));
+
+      assertTrue(entryPublished.await(10, TimeUnit.SECONDS));
+      assertTrue(entryToPublish.withWriteLock(bucketCache.offsetLock, () -> {
+        if (bucketCache.backingMap.remove(key, entryToPublish)) {
+          bucketCache.blockEvicted(key, entryToPublish, false, false);
+          return true;
+        }
+        return false;
+      }));
+      continuePublication.countDown();
+      publication.get(10, TimeUnit.SECONDS);
+
+      assertFalse(bucketCache.backingMap.containsKey(key));
+      assertFalse(bucketCache.blocksByHFile.contains(key));
+      assertEquals(0, publishedEntry.refCnt());
+    } finally {
+      continuePublication.countDown();
+      executor.shutdownNow();
+      try {
+        assertTrue(executor.awaitTermination(10, TimeUnit.SECONDS));
+      } finally {
+        bucketCache.shutdown();
+        if (publishedEntry != null && publishedEntry.refCnt() > 0) {
+          publishedEntry.markAsEvicted();
+        }
       }
     }
   }

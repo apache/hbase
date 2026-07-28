@@ -1390,15 +1390,13 @@ public class BucketCache implements BlockCache, HeapSize {
         blockEvicted(key, previousEntry, false, false);
         return null;
       });
-      bucketEntry.withWriteLock(offsetLock, () -> {
-        if (backingMap.get(key) == bucketEntry) {
-          blocksByHFile.add(key);
-        }
-        return null;
-      });
-    } else {
-      blocksByHFile.add(key);
     }
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.get(key) == bucketEntry) {
+        blocksByHFile.add(key);
+      }
+      return null;
+    });
   }
 
   /**
