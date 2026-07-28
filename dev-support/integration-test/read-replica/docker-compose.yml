@@ -1,0 +1,29 @@
+# version: '3.8'
+
+# Variables are created in .env file
+services:
+  hbase:
+    image: ${HBASE_IMAGE}
+    container_name: ${HBASE_CONTAINER_NAME}
+    hostname: ${HBASE_CONTAINER_NAME}
+    ports:
+      - ${ACTIVE_CLUSTER_PORT}:16010 # Master UI
+    volumes:
+      - ./utils:${CONTAINER_UTILS_DIR}
+      - ${HBASE_DATA_STORE_ROOT}/data-store/hbase:/data-store/hbase
+      - ${ACTIVE_CLUSTER_CONF_DIR}/hbase-site.xml:${HBASE_CONF_DIR}/hbase-site.xml
+      - ${ACTIVE_CLUSTER_CONF_DIR}/zoo.cfg:${HBASE_CONF_DIR}/zoo.cfg
+      - ${ACTIVE_CLUSTER_CONF_DIR}/log4j2.properties:${HBASE_CONF_DIR}/log4j2.properties
+
+  hbase2:
+    image: ${HBASE_IMAGE}
+    container_name: ${HBASE_CONTAINER_NAME}-2
+    hostname: ${HBASE_CONTAINER_NAME}-2
+    ports:
+      - ${REPLICA_CLUSTER_PORT}:16010 # Master UI
+    volumes:
+      - ./utils:${CONTAINER_UTILS_DIR}
+      - ${HBASE_DATA_STORE_ROOT}/data-store/hbase:/data-store/hbase
+      - ${REPLICA_CLUSTER_CONF_DIR}/hbase-site.xml:${HBASE_CONF_DIR}/hbase-site.xml
+      - ${REPLICA_CLUSTER_CONF_DIR}/zoo.cfg:${HBASE_CONF_DIR}/zoo.cfg
+      - ${REPLICA_CLUSTER_CONF_DIR}/log4j2.properties:${HBASE_CONF_DIR}/log4j2.properties
