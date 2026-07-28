@@ -35,4 +35,13 @@ public class TestTableInputFormatScanEmptyToOPP extends TestTableInputFormatScan
     throws IOException, InterruptedException, ClassNotFoundException {
     testScan(null, "opp", "opo");
   }
+
+  /**
+   * Tests a MR reverse scan using specific start and stop rows.
+   */
+  @Test
+  public void testReverseScanEmptyToOPP()
+    throws IOException, InterruptedException, ClassNotFoundException {
+    testReverseScan(null, "opp", "opq");
+  }
 }
