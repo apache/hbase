@@ -649,6 +649,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       regionStates =
         SimpleRegionNormalizer.this.masterServices.getAssignmentManager().getRegionStates();
       tableRegions = regionStates.getRegionsOfTable(tableName);
+
+      tableRegions.removeIf(r -> r.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID);
       // The list of regionInfo from getRegionsOfTable() is ordered by regionName.
       // regionName does not necessary guarantee the order by STARTKEY (let's say 'aa1', 'aa1!',
       // in order by regionName, it will be 'aa1!' followed by 'aa1').
