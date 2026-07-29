@@ -35,6 +35,7 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 import static org.mockito.Mockito.mock;
@@ -275,23 +276,36 @@ public class TestBucketCache {
     final BlockCacheKey cacheKey = new BlockCacheKey("dummy", 1L);
     cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
       new CacheTestUtils.ByteArrayCacheable(new byte[10]), true);
-    long lockId = cache.backingMap.get(cacheKey).offset();
+    BucketEntry oldEntry = cache.backingMap.get(cacheKey);
+    long lockId = oldEntry.offset();
     ReentrantReadWriteLock lock = cache.offsetLock.getLock(lockId);
-    lock.writeLock().lock();
     Thread evictThread = new Thread("evict-block") {
       @Override
       public void run() {
         cache.evictBlock(cacheKey);
       }
     };
-    evictThread.start();
-    cache.offsetLock.waitForWaiters(lockId, 1);
-    cache.blockEvicted(cacheKey, cache.backingMap.remove(cacheKey), true, true);
-    assertEquals(0, cache.getBlockCount());
-    cacheAndWaitUntilFlushedToBucket(cache, cacheKey,
-      new CacheTestUtils.ByteArrayCacheable(new byte[10]), true);
+    BucketEntry replacementEntry;
+    lock.writeLock().lock();
+    try {
+      evictThread.start();
+      cache.offsetLock.waitForWaiters(lockId, 1);
+      assertTrue(cache.backingMap.remove(cacheKey, oldEntry));
+      cache.blockEvicted(cacheKey, oldEntry, true, true);
+      assertEquals(0, cache.getBlockCount());
+      cache.cacheBlock(cacheKey, new CacheTestUtils.ByteArrayCacheable(new byte[10]), false, true);
+      // The replacement is published before taking its offset lock. Full flush must wait until the
+      // old entry's lock is released.
+      Waiter.waitFor(HBaseConfiguration.create(), 10000, () -> {
+        BucketEntry currentEntry = cache.backingMap.get(cacheKey);
+        return currentEntry != null && currentEntry != oldEntry;
+      });
+      replacementEntry = cache.backingMap.get(cacheKey);
+    } finally {
+      lock.writeLock().unlock();
+    }
+    waitUntilFlushedToBucket(cache, cacheKey);
     assertEquals(1, cache.getBlockCount());
-    lock.writeLock().unlock();
     evictThread.join();
     /**
      * <pre>
@@ -310,6 +324,8 @@ public class TestBucketCache {
      * it had seen should not be evicted.
      * </pre>
      */
+    assertSame(replacementEntry, cache.backingMap.get(cacheKey));
+    assertTrue(cache.blocksByHFile.contains(cacheKey));
     assertEquals(1L, cache.getBlockCount());
     assertTrue(cache.getCurrentSize() > 0L);
     assertTrue(cache.iterator().hasNext(), "We should have a block!");
