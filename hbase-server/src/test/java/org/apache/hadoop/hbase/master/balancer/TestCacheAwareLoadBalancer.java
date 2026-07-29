@@ -92,9 +92,9 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     return tds;
   }
 
-  private ServerMetrics mockServerMetricsWithRegionCacheInfo(ServerName server,
-    List<RegionInfo> regionsOnServer, float currentCacheRatio, List<RegionInfo> oldRegionCacheInfo,
-    int oldRegionCachedSize, int regionSize) {
+  private ServerMetrics mockServerMetricsWithRegionCacheInfo(List<RegionInfo> regionsOnServer,
+    float currentCacheRatio, List<RegionInfo> oldRegionCacheInfo, int oldRegionCachedSize,
+    int regionSize) {
     ServerMetrics serverMetrics = mock(ServerMetrics.class);
     Map<byte[], RegionMetrics> regionLoadMap = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (RegionInfo info : regionsOnServer) {
@@ -150,13 +150,13 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
 
     // Mock cluster metrics — give only server1 free cache so moves are directed there
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    ServerMetrics sm0 = mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0, 0.0f,
-      new ArrayList<>(), 0, 10);
+    ServerMetrics sm0 =
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.0f, new ArrayList<>(), 0, 10);
     when(sm0.getCacheFreeSize()).thenReturn(0L);
-    ServerMetrics sm1 = mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1, 0.0f,
-      new ArrayList<>(), 0, 10);
-    ServerMetrics sm2 = mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2, 0.0f,
-      new ArrayList<>(), 0, 10);
+    ServerMetrics sm1 =
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, new ArrayList<>(), 0, 10);
+    ServerMetrics sm2 =
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 0.0f, new ArrayList<>(), 0, 10);
     when(sm2.getCacheFreeSize()).thenReturn(0L);
     serverMetricsMap.put(server0, sm0);
     serverMetricsMap.put(server1, sm1);
@@ -207,15 +207,15 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     clusterState.put(server2, regionsOnServer2);
 
     // Below LOW_CACHE_RATIO_FOR_RELOCATION_DEFAULT (0.35);
-    ServerMetrics sm0 = mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0, 0.1f,
-      new ArrayList<>(), 0, 10);
+    ServerMetrics sm0 =
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.1f, new ArrayList<>(), 0, 10);
     when(sm0.getCacheFreeSize()).thenReturn(0L);
-    ServerMetrics sm1 = mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1, 0.0f,
-      new ArrayList<>(), 0, 10);
+    ServerMetrics sm1 =
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, new ArrayList<>(), 0, 10);
     // Simulates 1GB free cache space on server1
     when(sm1.getCacheFreeSize()).thenReturn(1024L * 1024 * 1024);
-    ServerMetrics sm2 = mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2, 1.0f,
-      new ArrayList<>(), 0, 10);
+    ServerMetrics sm2 =
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 1.0f, new ArrayList<>(), 0, 10);
     when(sm2.getCacheFreeSize()).thenReturn(0L);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
@@ -273,12 +273,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions, 6, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server0,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, oldCachedRegions, 6, 10));
+    serverMetricsMap.put(server2,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 0.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.updateClusterMetrics(clusterMetrics);
@@ -413,14 +413,14 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     List<RegionInfo> oldCachedRegions2 = regionsOnServer0.subList(10, regionsOnServer0.size());
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     // mock server metrics to set cache ratio as 0 in the RS 0
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server0,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.0f, new ArrayList<>(), 0, 10));
     // mock server metrics to set cache ratio as 1 in the RS 1
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions1, 10, 10));
+    serverMetricsMap.put(server1,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, oldCachedRegions1, 10, 10));
     // mock server metrics to set cache ratio as .8 in the RS 2
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, oldCachedRegions2, 8, 10));
+    serverMetricsMap.put(server2,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 0.0f, oldCachedRegions2, 8, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.updateClusterMetrics(clusterMetrics);
@@ -486,12 +486,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions, 10, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server0,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, oldCachedRegions, 10, 10));
+    serverMetricsMap.put(server2,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 0.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.updateClusterMetrics(clusterMetrics);
@@ -550,12 +550,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      1.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      1.0f, oldCachedRegions, 10, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      1.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server0,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 1.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 1.0f, oldCachedRegions, 10, 10));
+    serverMetricsMap.put(server2,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 1.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.updateClusterMetrics(clusterMetrics);
@@ -608,12 +608,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.2f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, oldCachedRegions, 6, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      1.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server0,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.2f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, oldCachedRegions, 6, 10));
+    serverMetricsMap.put(server2,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 1.0f, new ArrayList<>(), 0, 10));
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
     loadBalancer.updateClusterMetrics(clusterMetrics);
@@ -661,12 +661,12 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
 
     // Mock cluster metrics
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
-    serverMetricsMap.put(server0, mockServerMetricsWithRegionCacheInfo(server0, regionsOnServer0,
-      0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server1, mockServerMetricsWithRegionCacheInfo(server1, regionsOnServer1,
-      0.0f, new ArrayList<>(), 0, 10));
-    serverMetricsMap.put(server2, mockServerMetricsWithRegionCacheInfo(server2, regionsOnServer2,
-      0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server0,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer0, 0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server1,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer1, 0.0f, new ArrayList<>(), 0, 10));
+    serverMetricsMap.put(server2,
+      mockServerMetricsWithRegionCacheInfo(regionsOnServer2, 0.0f, new ArrayList<>(), 0, 10));
 
     ClusterMetrics clusterMetrics = mock(ClusterMetrics.class);
     when(clusterMetrics.getLiveServerMetrics()).thenReturn(serverMetricsMap);
