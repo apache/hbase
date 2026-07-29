@@ -270,7 +270,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
     // Mock cluster metrics
 
     // Mock 5 regions from server0 were previously hosted on server1
-    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size() - 1);
+    List<RegionInfo> oldCachedRegions = regionsOnServer0.subList(5, regionsOnServer0.size());
 
     Map<ServerName, ServerMetrics> serverMetricsMap = new TreeMap<>();
     serverMetricsMap.put(server0,
@@ -298,7 +298,7 @@ public class TestCacheAwareLoadBalancer extends BalancerTestBase {
       }
     }
     // should move regions from server0 to server1 (old-cached regions should be among them)
-    assertTrue(regionsMovedFromServer0.size() >= 4);
+    assertEquals(5, regionsMovedFromServer0.size());
     assertNotNull(targetServers.get(server1));
     int oldCachedOnServer1 = 0;
     for (RegionInfo ri : oldCachedRegions) {
