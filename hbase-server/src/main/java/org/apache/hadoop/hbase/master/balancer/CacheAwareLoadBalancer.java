@@ -322,12 +322,15 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
   @Override
   public void throttle(RegionPlan plan) {
-    synchronized (this) {
-      try {
-        // Release the monitor while waiting to avoid blocking other threads.
-        wait(getThrottleDurationMs(plan));
-      } catch (InterruptedException e) {
-        throw new RuntimeException(e);
+    long throttlingTime = getThrottleDurationMs(plan);
+    if (throttlingTime > 0) {
+      synchronized (this) {
+        try {
+          // Release the monitor while waiting to avoid blocking other threads.
+          wait(getThrottleDurationMs(plan));
+        } catch (InterruptedException e) {
+          throw new RuntimeException(e);
+        }
       }
     }
   }
