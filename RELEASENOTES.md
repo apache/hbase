@@ -16,6 +16,53 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 -->
+# HBASE  2.6.7 Release Notes
+
+These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
+
+
+---
+
+* [HBASE-30300](https://issues.apache.org/jira/browse/HBASE-30300) | *Major* | **CacheAwareLoadBalancer disproportionally favouring cache ratio over skewness**
+
+This change fixes some miss calculations of regions cache ratio and available cache space on target servers.
+
+These changes require that hbase.bucketcache.size be defined on masters configuration as well.
+
+
+---
+
+* [HBASE-30195](https://issues.apache.org/jira/browse/HBASE-30195) | *Major* | **Update Thrift gateway to use new hbase-shaded-thrift in thirdparty**
+
+The HBase Thrift gateway no longer depends on upstream libthrift. The Thrift runtime is now provided by org.apache.hbase.thirdparty:hbase-shaded-thrift, shipped in hbase-thirdparty 4.1.14 or later. Decoupling from upstream libthrift lets HBase stay current with Thrift CVE fixes on its own cadence and preserves 2.5.x/2.6.x Java 8 compatibility regardless of upstream libthrift's evolving requirements. As part of this change the Thrift runtime is upgraded from 0.14.1 to 0.23.0. Generated Java sources now reference the new shaded thirdparty namespace. During build, the bannedDependencies enforcer rule rejects any direct or transitive dependency on upstream libthrift and the restrict-imports enforcer rule rejects any accidental import of org.apache.thrift.\* in HBase sources.
+
+Wire compatibility is preserved. The Thrift IDL, RPC wire format, server endpoints, configuration keys, and CLI behavior of the HBase Thrift 1 and Thrift 2 servers are unchanged. Existing external Thrift clients in any language continue to interoperate with the HBase Thrift gateway with no changes required.
+
+
+---
+
+* [HBASE-29289](https://issues.apache.org/jira/browse/HBASE-29289) | *Major* | **Make hbase master ui & hbtop client view show cluster client connections info**
+
+This adds a new "Client Connections" view on Master UI and hbtop, listing all current client connections information to the cluster's region servers.
+
+We need to set following property to true in hbase-site.xml in order to render these metrics in master UI or hbtop client view.
+
+  \<property\>
+    \<name\>hbase.regionserver.user.metrics.enabled\</name\>
+    \<value\>true\</value\>
+  \</property\>
+
+
+---
+
+* [HBASE-30200](https://issues.apache.org/jira/browse/HBASE-30200) | *Major* | **Cleanup all junit4 references in hbase code base**
+
+Cleanup all the junit4 reference in HBase code base and ban junit4 dependencies and imports.
+
+Hadoop mini cluster related code still references junit4 Assert, so we add a org.junit.Assert class in hbase-common which delegates all calls to junit5 Assertions. You should never use this class in HBase code.
+
+
+
 # HBASE  2.6.6 Release Notes
 
 These release notes cover new developer and user-facing incompatibilities, important issues, features, and major improvements.
