@@ -27,6 +27,7 @@ package org.apache.hadoop.hbase.master.balancer;
  */
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_PERSISTENT_PATH_KEY;
+import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 
 import java.math.BigDecimal;
 import java.text.DecimalFormat;
@@ -111,6 +112,8 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   private float lowCacheRatioThreshold;
   private float potentialCacheRatioAfterMove;
   private float minFreeCacheSpaceFactor;
+  private long cachePrefetchOverheadBytes;
+  private boolean cacheSpaceTrackingEnabled;
 
   private BigDecimal simulatedRatio = BigDecimal.ZERO;
 
@@ -141,6 +144,16 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       POTENTIAL_CACHE_RATIO_AFTER_MOVE_DEFAULT);
     minFreeCacheSpaceFactor =
       configuration.getFloat(MIN_FREE_CACHE_SPACE_FACTOR_KEY, MIN_FREE_CACHE_SPACE_FACTOR_DEFAULT);
+    float bucketCacheSizeMB = configuration.getFloat(BUCKET_CACHE_SIZE_KEY, 0F);
+    float acceptableFactor = configuration.getFloat("hbase.bucketcache.acceptfactor", 0.95f);
+    cachePrefetchOverheadBytes =
+      (long) (bucketCacheSizeMB * 1024L * 1024L * (1 - acceptableFactor));
+    cacheSpaceTrackingEnabled = bucketCacheSizeMB > 0;
+    if (!cacheSpaceTrackingEnabled) {
+      LOG.warn("{} is not configured on the master. The free-space relocation heuristic cannot "
+        + "account for the prefetch threshold and may move regions to servers where prefetch "
+        + "will be blocked.", BUCKET_CACHE_SIZE_KEY);
+    }
   }
 
   /**
@@ -207,11 +220,14 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
   }
 
   protected Map<ServerName, Long> getServerBlockCacheFreeBytes() {
-    if (clusterStatus == null) {
+    if (clusterStatus == null || !cacheSpaceTrackingEnabled) {
       return null;
     }
     Map<ServerName, Long> map = new HashMap<>();
-    clusterStatus.getLiveServerMetrics().forEach((sn, sm) -> map.put(sn, sm.getCacheFreeSize()));
+    clusterStatus.getLiveServerMetrics().forEach((sn, sm) -> {
+      long effectiveFree = Math.max(0, sm.getCacheFreeSize() - cachePrefetchOverheadBytes);
+      map.put(sn, effectiveFree);
+    });
     return map;
   }
 
@@ -291,8 +307,32 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     return null;
   }
 
+  private boolean serverHasCacheSpaceForRegion(BalancerClusterState cluster, int region,
+    int server) {
+    if (cluster.serverBlockCacheFreeSize == null) {
+      return true;
+    }
+    int regionSizeMb = cluster.getRegionSizeMinusColdDataMB(region);
+    if (regionSizeMb <= 0) {
+      return true;
+    }
+    long bytesNeeded = (long) regionSizeMb * 1024L * 1024L;
+    return cluster.serverBlockCacheFreeSize[server] >= bytesNeeded;
+  }
+
   @Override
   public void throttle(RegionPlan plan) {
+    synchronized (this) {
+      try {
+        // Release the monitor while waiting to avoid blocking other threads.
+        wait(getThrottleDurationMs(plan));
+      } catch (InterruptedException e) {
+        throw new RuntimeException(e);
+      }
+    }
+  }
+
+  public long getThrottleDurationMs(RegionPlan plan) {
     Pair<ServerName, Float> rsRatio = this.regionCacheRatioOnOldServerMap.get(plan.getRegionName());
     if (
       rsRatio != null && plan.getDestination().equals(rsRatio.getFirst())
@@ -300,27 +340,38 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     ) {
       LOG.debug("Moving region {} to server {} with cache ratio {}. No throttling needed.",
         plan.getRegionInfo().getEncodedName(), plan.getDestination(), rsRatio.getSecond());
-    } else {
-      if (rsRatio != null) {
-        LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
-          plan.getRegionInfo().getEncodedName(), plan.getDestination(),
-          plan.getDestination().equals(rsRatio.getFirst()) ? rsRatio.getSecond() : "unknown",
-          sleepTime);
-      } else {
-        LOG.debug(
-          "Moving region {} to server {} with no cache ratio info for the region. "
-            + "Throttling move for {}ms.",
-          plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
-      }
-      synchronized (this) {
-        try {
-          // Release the monitor while waiting to avoid blocking other threads.
-          wait(sleepTime);
-        } catch (InterruptedException e) {
-          throw new RuntimeException(e);
-        }
-      }
+      return 0L;
     }
+    // Skip throttling for regions with low cache ratio on their source server — there is
+    // negligible cached data to lose, so no warm-up delay is needed on the destination.
+    float cacheRatioOnSource = getRegionCacheRatioOnSource(plan);
+    if (cacheRatioOnSource < lowCacheRatioThreshold) {
+      LOG.debug(
+        "Moving region {} to server {} with low cache ratio {} on source. No throttling needed.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(), cacheRatioOnSource);
+      return 0L;
+    }
+    if (rsRatio != null) {
+      LOG.debug("Moving region {} to server {} with cache ratio: {}. Throttling move for {}ms.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(),
+        plan.getDestination().equals(rsRatio.getFirst()) ? rsRatio.getSecond() : "unknown",
+        sleepTime);
+    } else {
+      LOG.debug(
+        "Moving region {} to server {} with no cache ratio info for the region. "
+          + "Throttling move for {}ms.",
+        plan.getRegionInfo().getEncodedName(), plan.getDestination(), sleepTime);
+    }
+    return sleepTime;
+  }
+
+  private float getRegionCacheRatioOnSource(RegionPlan plan) {
+    Deque<BalancerRegionLoad> regionLoad = loads.get(plan.getRegionName());
+    if (regionLoad != null && !regionLoad.isEmpty()) {
+      return regionLoad.getFirst().getCurrentRegionCacheRatio();
+    }
+    // Unknown cache ratio — assume it may be cached and require throttling
+    return 1.0f;
   }
 
   @Override
@@ -452,6 +503,28 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
         return false;
       }
 
+      // If the region is already well-cached on its current server, don't disrupt it.
+      // The old server's historical cache data may be stale, and moving a hot region
+      // causes unnecessary cache churn.
+      if (cacheRatioOnCurrentServer >= ratioThreshold) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug(
+            "Region {} not moved from {} to {} as it is already well-cached ({}) on current server",
+            cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
+            cluster.servers[oldServerIndex], cacheRatioOnCurrentServer);
+        }
+        return false;
+      }
+
+      if (!serverHasCacheSpaceForRegion(cluster, regionIndex, oldServerIndex)) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Region {} not moved from {} to {} as destination server lacks cache space",
+            cluster.regions[regionIndex].getEncodedName(), cluster.servers[currentServerIndex],
+            cluster.servers[oldServerIndex]);
+        }
+        return false;
+      }
+
       DecimalFormat df = new DecimalFormat("#");
       df.setMaximumFractionDigits(4);
 
@@ -512,60 +585,6 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
     @Override
     BalanceAction pickRandomRegions(BalancerClusterState cluster, int thisServer, int otherServer) {
       simulatedRatio = BigDecimal.ZERO;
-      // First move all the regions which were hosted previously on some other server back to their
-      // old servers
-      if (
-        !regionCacheRatioOnOldServerMap.isEmpty()
-          && regionCacheRatioOnOldServerMap.entrySet().iterator().hasNext()
-      ) {
-        // Get the first region index in the historical cache ratio list
-        Map.Entry<String, Pair<ServerName, Float>> regionEntry =
-          regionCacheRatioOnOldServerMap.entrySet().iterator().next();
-        String regionEncodedName = regionEntry.getKey();
-
-        RegionInfo regionInfo = getRegionInfoByEncodedName(cluster, regionEncodedName);
-        if (regionInfo == null) {
-          LOG.warn("Region {} does not exist", regionEncodedName);
-          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
-          return BalanceAction.NULL_ACTION;
-        }
-        if (regionInfo.isMetaRegion() || regionInfo.getTable().isSystemTable()) {
-          regionCacheRatioOnOldServerMap.remove(regionEncodedName);
-          return BalanceAction.NULL_ACTION;
-        }
-
-        int regionIndex = cluster.regionsToIndex.get(regionInfo);
-
-        // Get the current host name for this region
-        thisServer = cluster.regionIndexToServerIndex[regionIndex];
-
-        // Get the old server index
-        otherServer = cluster.serversToIndex.get(regionEntry.getValue().getFirst().getAddress());
-
-        regionCacheRatioOnOldServerMap.remove(regionEncodedName);
-
-        if (otherServer < 0) {
-          // The old server has been moved to other host and hence, the region cannot be moved back
-          // to the old server
-          if (LOG.isDebugEnabled()) {
-            LOG.debug(
-              "CacheAwareSkewnessCandidateGenerator: Region {} not moved to the old "
-                + "server {} as the server does not exist",
-              regionEncodedName, regionEntry.getValue().getFirst().getHostname());
-          }
-          return BalanceAction.NULL_ACTION;
-        }
-
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "CacheAwareSkewnessCandidateGenerator: Region {} moved from {} to {} as it "
-              + "was hosted their earlier",
-            regionEncodedName, cluster.servers[thisServer].getHostname(),
-            cluster.servers[otherServer].getHostname());
-        }
-
-        return getAction(thisServer, regionIndex, otherServer, -1);
-      }
 
       if (thisServer < 0 || otherServer < 0) {
         return BalanceAction.NULL_ACTION;
@@ -642,7 +661,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
     @Override
     public final void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
-      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
+      weights.merge(CacheAwareSkewnessCandidateGenerator.class, cost(), Double::sum);
     }
   }
 
@@ -739,6 +758,9 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
      * from low ratios when capacity exists somewhere in the cluster.
      */
     private double potentialBestWeightedFromFreeCache(BalancerClusterState cluster, int region) {
+      if (cluster.serverBlockCacheFreeSize == null) {
+        return 0.0;
+      }
       float observedRatio = cluster.getSumRegionCacheAndColdDataRatio(region);
       if (observedRatio >= lowCacheRatioThreshold) {
         return 0.0;
@@ -769,9 +791,11 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
       if (simulatedRatio.equals(BigDecimal.ZERO)) {
         double potentialCachedSizeOnNewServer =
           cluster.getRegionSizeMinusColdDataMB(region) * potentialCacheRatioAfterMove;
-        boolean simulateCacheBasedOnFreeSpace =
-          cluster.getOrComputeRegionCacheRatio(region, oldServer) < lowCacheRatioThreshold
-            && cluster.serverBlockCacheFreeSize[newServer] >= potentialCachedSizeOnNewServer;
+        long potentialCachedBytesOnNewServer =
+          (long) (potentialCachedSizeOnNewServer * 1024L * 1024L);
+        boolean simulateCacheBasedOnFreeSpace = cluster.serverBlockCacheFreeSize != null
+          && cluster.getOrComputeRegionCacheRatio(region, oldServer) < lowCacheRatioThreshold
+          && cluster.serverBlockCacheFreeSize[newServer] >= potentialCachedBytesOnNewServer;
         double regionCacheRatioOnNewServer = simulateCacheBasedOnFreeSpace
           ? potentialCachedSizeOnNewServer
           : cluster.getOrComputeWeightedRegionCacheRatio(region, newServer);
@@ -808,7 +832,7 @@ public class CacheAwareLoadBalancer extends StochasticLoadBalancer {
 
     @Override
     public void updateWeight(Map<Class<? extends CandidateGenerator>, Double> weights) {
-      weights.merge(LoadCandidateGenerator.class, cost(), Double::sum);
+      weights.merge(CacheAwareCandidateGenerator.class, cost(), Double::sum);
     }
   }
 }
