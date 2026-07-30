@@ -319,6 +319,13 @@ public class TestReadOnlyControllerMasterObserver {
   }
 
   @Test
+  public void testPreTableFlushReadOnlyException() {
+    assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
+      MasterReadOnlyController.preTableFlush(ctx, tableName);
+    });
+  }
+
+  @Test
   public void testPreSetUserQuotaReadOnlyException() {
     assertThrows(WriteAttemptedOnReadOnlyClusterException.class, () -> {
       MasterReadOnlyController.preSetUserQuota(ctx, userName, quotas);
