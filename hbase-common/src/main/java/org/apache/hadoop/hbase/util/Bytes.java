@@ -646,7 +646,7 @@ public class Bytes implements Comparable<Bytes> {
     int size = 0;
     for (int i = 0; i < in.length(); ++i) {
       char ch = in.charAt(i);
-      if (ch == '\\' && in.length() > i + 1 && in.charAt(i + 1) == 'x') {
+      if (ch == '\\' && in.length() > i + 3 && in.charAt(i + 1) == 'x') {
         // ok, take next 2 hex digits.
         char hd1 = in.charAt(i + 2);
         char hd2 = in.charAt(i + 3);

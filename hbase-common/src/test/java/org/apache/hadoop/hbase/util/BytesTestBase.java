@@ -423,9 +423,11 @@ public class BytesTestBase {
   }
 
   @Test
-  public void testToBytesBinaryTrailingBackslashes() {
+  public void testToBytesBinaryTruncatedHexDigit() {
     try {
       Bytes.toBytesBinary("abc\\x00\\x01\\");
+      Bytes.toBytesBinary("abc\\x00\\x01\\x");
+      Bytes.toBytesBinary("abc\\x00\\x01\\x0");
     } catch (StringIndexOutOfBoundsException ex) {
       fail("Illegal string access: " + ex.getMessage());
     }
