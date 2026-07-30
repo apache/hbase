@@ -407,6 +407,9 @@ public abstract class TableInputFormatBase extends InputFormat<ImmutableBytesWri
 
     // Split Region into n chunks evenly
     byte[][] splitKeys = Bytes.split(startRow, endRow, true, n - 1);
+    // Restore the original boundaries after using synthetic ones to calculate the split keys.
+    splitKeys[0] = ts.getStartRow();
+    splitKeys[splitKeys.length - 1] = ts.getEndRow();
     for (int i = 0; i < splitKeys.length - 1; i++) {
       // In the table input format for single table we do not need to
       // store the scan object in table split because it can be memory intensive and redundant
