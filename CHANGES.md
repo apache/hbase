@@ -18,6 +18,87 @@
 -->
 # HBASE Changelog
 
+## Release 2.5.16 - 2026-08-07
+
+
+
+### IMPROVEMENTS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30286](https://issues.apache.org/jira/browse/HBASE-30286) | HTTP ERROR 500 when opening master ui if active master is not yet available during startup |  Minor | UI |
+| [HBASE-30283](https://issues.apache.org/jira/browse/HBASE-30283) | list\_labels shell command should return readable labels |  Minor | shell |
+| [HBASE-30261](https://issues.apache.org/jira/browse/HBASE-30261) | Hide segmented CodeHeap memory pools on process info JSP pages for JDK 9+ |  Minor | UI |
+| [HBASE-29733](https://issues.apache.org/jira/browse/HBASE-29733) | Use ServerName instead of hostname in unloadRegions log message |  Minor | util |
+| [HBASE-30260](https://issues.apache.org/jira/browse/HBASE-30260) | Polish X509TestContext to make it more stable |  Major | security, test |
+| [HBASE-30252](https://issues.apache.org/jira/browse/HBASE-30252) | \`hbase snapshot info\` display inaccurate snapshot TTL information messages |  Major | snapshots |
+| [HBASE-30259](https://issues.apache.org/jira/browse/HBASE-30259) | Async WAL archiving causes TestMasterRegionWALCleaner flaky |  Major | . |
+| [HBASE-30254](https://issues.apache.org/jira/browse/HBASE-30254) | Update GitHub Actions |  Major | build |
+| [HBASE-30244](https://issues.apache.org/jira/browse/HBASE-30244) | Use static imports for JUnit 5 Assertions and Hamcrest MatcherAssert in tests |  Trivial | test |
+| [HBASE-30239](https://issues.apache.org/jira/browse/HBASE-30239) | Use hamcrest instead of deprecated hamcrest-core and hamcrest-library |  Major | test |
+| [HBASE-30243](https://issues.apache.org/jira/browse/HBASE-30243) | Split TestMajorCompaction |  Major | test |
+| [HBASE-30177](https://issues.apache.org/jira/browse/HBASE-30177) | Make block caching configurable for MOB compaction reads |  Major | mob, regionserver |
+| [HBASE-30227](https://issues.apache.org/jira/browse/HBASE-30227) | Disallow JUnit4 imports in source code |  Minor | pom, test |
+| [HBASE-30217](https://issues.apache.org/jira/browse/HBASE-30217) | Remove dead code getRegionId and isTemporaryDirectoryName in HRegionFileSystem |  Major | . |
+| [HBASE-30209](https://issues.apache.org/jira/browse/HBASE-30209) | MobFileCleanerChore is not registered for online configuration updates |  Major | master, mob |
+| [HBASE-30214](https://issues.apache.org/jira/browse/HBASE-30214) | Add m2e.disableTestClasspathFlag=true to fix Eclipse test classpath for workspace projects |  Minor | build |
+| [HBASE-30046](https://issues.apache.org/jira/browse/HBASE-30046) | Make minHFileSize and jitter configurable in DecreaseMaxHFileSizeAction |  Major | integration tests |
+| [HBASE-29995](https://issues.apache.org/jira/browse/HBASE-29995) | Improve existing hash implementations by reading 4 bytes at once |  Minor | regionserver |
+| [HBASE-30204](https://issues.apache.org/jira/browse/HBASE-30204) | Split TestClearRegionBlockCache by cache type to avoid per-method mini cluster restart |  Major | regionserver, test |
+| [HBASE-28419](https://issues.apache.org/jira/browse/HBASE-28419) | Allow Action and Policies of ServerKillingMonkey to be configurable |  Major | test |
+| [HBASE-30150](https://issues.apache.org/jira/browse/HBASE-30150) | Propagate filter hints through composite filters |  Major | Filters, Scanners |
+| [HBASE-29974](https://issues.apache.org/jira/browse/HBASE-29974) | Filter seek hints underutilized due to early circuit breaks in scan pipeline, causing unnecessary cell-level iteration |  Major | Filters, Scanners |
+
+
+### BUG FIXES:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-29696](https://issues.apache.org/jira/browse/HBASE-29696) | TableInputFormatBase with NUM\_MAPPERS\_PER\_REGION produces incorrect last InputSplit |  Major | mapreduce |
+| [HBASE-30304](https://issues.apache.org/jira/browse/HBASE-30304) | Bytes.toBytesBinary throws StringIndexOutOfBoundsException on truncated \\x escape |  Minor | . |
+| [HBASE-30248](https://issues.apache.org/jira/browse/HBASE-30248) | Negative hbase.snapshot.region.timeout causes RegionServer abort during snapshot procedure initialization |  Major | regionserver |
+| [HBASE-30265](https://issues.apache.org/jira/browse/HBASE-30265) | Fix flaky TestProcDispatcher.testRetryLimitOnConnClosedErrors |  Major | test |
+| [HBASE-30284](https://issues.apache.org/jira/browse/HBASE-30284) | FNFE when viewing MOB Files of a MOB table restored from snapshot in HBase UI |  Major | UI |
+| [HBASE-30163](https://issues.apache.org/jira/browse/HBASE-30163) | IntegrationTestsDriver is broken after we upgrade hbase-it to junit5 |  Major | integration tests, test |
+| [HBASE-30142](https://issues.apache.org/jira/browse/HBASE-30142) | Resolve NPE while running recoverUnknown command because null RegionLocation |  Minor | hbck2, master |
+| [HBASE-30273](https://issues.apache.org/jira/browse/HBASE-30273) | Backport HBASE-26107 MOB compaction with missing files catches incorrect exception to branch-2.x |  Major | mob |
+| [HBASE-30272](https://issues.apache.org/jira/browse/HBASE-30272) | Compatiblity checker can not compile rel/2.0.0 when releasing 3.0.0-beta-2 |  Blocker | scripts |
+| [HBASE-30274](https://issues.apache.org/jira/browse/HBASE-30274) | Nexus-staging-maven-plugin can not work with java 17 |  Blocker | build |
+| [HBASE-30256](https://issues.apache.org/jira/browse/HBASE-30256) | FuzzyRowFilter mishandles the fuzzy-mask encoding on the no-unsafe path |  Major | Filters |
+| [HBASE-27380](https://issues.apache.org/jira/browse/HBASE-27380) | RitDuration histogram metric is broken |  Minor | . |
+| [HBASE-24923](https://issues.apache.org/jira/browse/HBASE-24923) | Running InitMetaProcedures are missed if Hmaster startup happens after Meta assign |  Major | . |
+| [HBASE-30246](https://issues.apache.org/jira/browse/HBASE-30246) | MOB compaction does not close MobCell after resolving reference cells |  Major | Compaction, mob |
+| [HBASE-30169](https://issues.apache.org/jira/browse/HBASE-30169) | Split completed parent region added to RIT list on host RS and master crash |  Minor | . |
+| [HBASE-30235](https://issues.apache.org/jira/browse/HBASE-30235) | Fix Javadoc syntax errors |  Minor | . |
+| [HBASE-30226](https://issues.apache.org/jira/browse/HBASE-30226) | Reverse FuzzyRowFilter can stop making progress when the reverse seek hint is equal to the current row |  Major | . |
+| [HBASE-30221](https://issues.apache.org/jira/browse/HBASE-30221) | FNFE may occur when executing \`hbase snapshot info --list-snapshots\` |  Major | snapshots |
+| [HBASE-30223](https://issues.apache.org/jira/browse/HBASE-30223) | TestRegionMover2.testWithMergedRegions may merge disjoint regions and cause tests to fail |  Major | test |
+| [HBASE-29909](https://issues.apache.org/jira/browse/HBASE-29909) | RegionMover ignores configuration properties passed via -D on the command line |  Minor | . |
+| [HBASE-30058](https://issues.apache.org/jira/browse/HBASE-30058) | Snapshot operations create unnecessary short-lived connections causing excessive KDC requests in Kerberos environments |  Major | security, snapshots |
+
+
+### SUB-TASKS:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30267](https://issues.apache.org/jira/browse/HBASE-30267) | Backport HBASE-30266 Do not drop visibility delete markers as redundant during minor compaction to branch-2 |  Major | . |
+| [HBASE-30241](https://issues.apache.org/jira/browse/HBASE-30241) | TestMobCloneSnapshotFromClientAfterSplittingRegion is flaky because a split may build whole-file HFileLinks instead of References |  Major | regionserver, test |
+| [HBASE-30258](https://issues.apache.org/jira/browse/HBASE-30258) | Run getAllRegionLocations more times in TestMetaRegionReplicaReplication to make it more stable |  Major | meta replicas, test |
+| [HBASE-30255](https://issues.apache.org/jira/browse/HBASE-30255) | Async archiving wal file causes TestLogRolling flaky |  Major | test, wal |
+| [HBASE-30253](https://issues.apache.org/jira/browse/HBASE-30253) | Do not add/remove peer between tests in TestBulkLoadReplication |  Major | Replication, test |
+| [HBASE-30159](https://issues.apache.org/jira/browse/HBASE-30159) | Make hash algorithm configurable for HashTable/SyncTable |  Major | . |
+| [HBASE-30190](https://issues.apache.org/jira/browse/HBASE-30190) | Upgrade hbase-server to use junit5 Part21 |  Major | Replication, test |
+
+
+### OTHER:
+
+| JIRA | Summary | Priority | Component |
+|:---- |:---- | :--- |:---- |
+| [HBASE-30264](https://issues.apache.org/jira/browse/HBASE-30264) | Validate bulkToken path in SecureBulkLoadManager.cleanupBulkLoad |  Major | regionserver |
+| [HBASE-30195](https://issues.apache.org/jira/browse/HBASE-30195) | Update Thrift gateway to use new hbase-shaded-thrift in thirdparty |  Major | . |
+| [HBASE-30200](https://issues.apache.org/jira/browse/HBASE-30200) | Cleanup all junit4 references in hbase code base |  Major | test |
+
+
 ## Release 2.5.15 - 2026-06-08
 
 
