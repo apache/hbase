@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
@@ -64,6 +65,12 @@ final class BucketProtoUtils {
 
   public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize)
     throws IOException {
+    serializeAsPB(cache, fos, chunkSize, entry -> {
+    });
+  }
+
+  static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize,
+    Consumer<Map.Entry<BlockCacheKey, BucketEntry>> entryCopiedAction) throws IOException {
     // Write the new version of magic number.
     fos.write(PB_MAGIC_V2);
 
@@ -79,6 +86,7 @@ final class BucketProtoUtils {
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
       addEntryToBuilder(entry, entryBuilder, builder);
+      entryCopiedAction.accept(entry);
       if (blockCount % chunkSize == 0) {
         builder.build().writeDelimitedTo(fos);
         builder.clear();
