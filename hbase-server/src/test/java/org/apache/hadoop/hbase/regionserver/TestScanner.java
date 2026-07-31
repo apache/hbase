@@ -51,6 +51,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
@@ -190,6 +191,46 @@ public class TestScanner {
       assertTrue(CellUtil.matchingRows(results.get(0), row));
       assertEquals(1, comparator.comparedRows.size());
       assertTrue(Bytes.equals(row, comparator.comparedRows.get(0)));
+    } finally {
+      StoreScanner.enableLazySeekGlobally(StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
+    }
+  }
+
+  @Test
+  public void testWhileMatchFilterOnlySeesActualRows() throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("testWhileMatchFilterOnlySeesActualRows"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).build()).build();
+
+    StoreScanner.enableLazySeekGlobally(true);
+    try {
+      this.region = TEST_UTIL.createLocalHRegion(tableDescriptor, null, null);
+      List<String> rows = List.of("row1", "row2", "row3");
+      for (String row : rows) {
+        Put put = new Put(Bytes.toBytes(row)).addColumn(family, qualifier, Bytes.toBytes("value"));
+        region.put(put);
+      }
+      region.flush(true);
+
+      Scan scan = new Scan().addColumn(family, qualifier)
+        .setFilter(new WhileMatchFilter(new RowFilter(CompareOperator.NOT_EQUAL,
+          new BinaryComparator(HConstants.EMPTY_START_ROW))));
+      int scannedRows = 0;
+      try (InternalScanner scanner = region.getScanner(scan)) {
+        boolean hasMoreRows;
+        do {
+          List<Cell> results = new ArrayList<>();
+          hasMoreRows = scanner.next(results);
+          if (!results.isEmpty()) {
+            ++scannedRows;
+          }
+        } while (hasMoreRows);
+      }
+
+      assertEquals(rows.size(), scannedRows);
     } finally {
       StoreScanner.enableLazySeekGlobally(StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
       HBaseTestingUtil.closeRegionAndWAL(this.region);
