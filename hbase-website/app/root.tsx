@@ -83,7 +83,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
       <body className="font-base">
         <ThemeProvider defaultTheme="light">
           {children}
-
           <ScrollRestoration />
           <Scripts />
         </ThemeProvider>
