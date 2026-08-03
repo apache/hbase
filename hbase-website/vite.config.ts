@@ -39,6 +39,9 @@ logger.warn = (msg, options) => {
 
 export default defineConfig({
   plugins: [mdx(MdxConfig), tailwindcss(), reactRouter(), tsconfigPaths()],
+  optimizeDeps: {
+    include: ["@orama/orama", "debug"]
+  },
   resolve: {
     alias: {
       "@/.source": resolve(__dirname, ".source"),
