@@ -22,6 +22,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
 import java.util.zip.GZIPOutputStream;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.JVM;
 import org.apache.hadoop.io.compress.CompressionOutputStream;
 import org.apache.hadoop.io.compress.CompressorStream;
@@ -35,7 +36,7 @@ import org.slf4j.LoggerFactory;
  * Fixes an inefficiency in Hadoop's Gzip codec, allowing to reuse compression streams.
  */
 @InterfaceAudience.Private
-public class ReusableStreamGzipCodec extends GzipCodec {
+public class ReusableStreamGzipCodec extends GzipCodec implements ByteBuffDecompressionCodec {
 
   private static final Logger LOG = LoggerFactory.getLogger(Compression.class);
 
@@ -183,6 +184,22 @@ public class ReusableStreamGzipCodec extends GzipCodec {
       return super.createOutputStream(out);
     }
     return new ReusableGzipOutputStream(out);
+  }
+
+  @Override
+  public ByteBuffDecompressor createByteBuffDecompressor() {
+    return new GzipByteBuffDecompressor();
+  }
+
+  @Override
+  public Class<? extends ByteBuffDecompressor> getByteBuffDecompressorType() {
+    return GzipByteBuffDecompressor.class;
+  }
+
+  @Override
+  public Compression.HFileDecompressionContext
+    getDecompressionContextFromConfiguration(Configuration conf) {
+    return GzipHFileDecompressionContext.fromConfiguration(conf);
   }
 
 }
