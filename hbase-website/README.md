@@ -59,9 +59,9 @@ Legacy documentation is preserved for those users who have old bookmarked links 
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js version 22** - JavaScript runtime (like the JVM for Java)
+- **Node.js version 24** - JavaScript runtime (like the JVM for Java)
   - Download from [nodejs.org](https://nodejs.org/)
-  - Verify installation: `node --version` (should show v22.12+)
+  - Verify installation: `node --version` (should show v24.18.1+)
 
 - **NPM** - Node Package Manager (like Maven for Java)
   - Comes bundled with Node.js
@@ -454,7 +454,7 @@ When you run `mvn site`, the website module automatically:
    - Removes `node_modules/` directory
    - Ensures a fresh build environment
 
-2. **Installs Node.js v22.20.0 and npm 11.6.2** (if not already available)
+2. **Installs Node.js v24.18.1 and npm 11.6.2** (if not already available)
    - Installed to `target/` directory
    - Does not affect your system Node/npm installation
 
