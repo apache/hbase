@@ -856,7 +856,9 @@ public class TableMapReduceUtil {
       com.codahale.metrics.MetricRegistry.class, // metrics-core
       org.apache.commons.lang3.ArrayUtils.class, // commons-lang
       io.opentelemetry.api.trace.Span.class, // opentelemetry-api
-      io.opentelemetry.semconv.SemanticAttributes.class, // opentelemetry-semconv
+      io.opentelemetry.semconv.DbAttributes.class, // opentelemetry-semconv
+      io.opentelemetry.semconv.ExceptionAttributes.class, // opentelemetry-semconv
+      io.opentelemetry.semconv.NetworkAttributes.class, // opentelemetry-semconv
       io.opentelemetry.context.Context.class); // opentelemetry-context
   }
 

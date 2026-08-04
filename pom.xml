@@ -913,7 +913,7 @@
     <awaitility.version>4.3.0</awaitility.version>
     <hamcrest.version>3.0</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
-    <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
+    <opentelemetry-semconv.version>1.42.0</opentelemetry-semconv.version>
     <opentelemetry-javaagent.version>2.26.1</opentelemetry-javaagent.version>
     <log4j2.version>2.25.4</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
