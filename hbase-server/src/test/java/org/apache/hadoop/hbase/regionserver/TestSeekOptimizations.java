@@ -134,7 +134,8 @@ public class TestSeekOptimizations {
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setCompressionType(comprAlgo)
         .setBloomFilterType(bloomType).setMaxVersions(3).build();
 
-    region = TEST_UTIL.createTestRegion(testInfo.getTestMethod().get().getName(), columnFamilyDescriptor);
+    region =
+      TEST_UTIL.createTestRegion(testInfo.getTestMethod().get().getName(), columnFamilyDescriptor);
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;
@@ -179,8 +180,9 @@ public class TestSeekOptimizations {
         + String.format("%.2f%%", expectedSeekSavings * 100));
   }
 
-  private ScanResult testScan(final int[] columnArr, final boolean lazySeekEnabled, final int startRow,
-    final int endRow, final int maxVersions, final boolean filtered) throws IOException {
+  private ScanResult testScan(final int[] columnArr, final boolean lazySeekEnabled,
+    final int startRow, final int endRow, final int maxVersions, final boolean filtered)
+    throws IOException {
     StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
     final Scan scan = new Scan();
     final Set<String> qualSet = new HashSet<>();
@@ -463,7 +465,8 @@ public class TestSeekOptimizations {
     ScanResult filteredEagerResults = testScan(new int[] { 0 }, false, 0, 2, 1, true);
     assertKVListsEqual("Filtered explicit column scan results differ with lazy seeking enabled",
       filteredEagerResults.cells, filteredLazyResults.cells);
-    assertEquals(filteredEagerResults.scannerOpenSeekCount, filteredLazyResults.scannerOpenSeekCount,
+    assertEquals(filteredEagerResults.scannerOpenSeekCount,
+      filteredLazyResults.scannerOpenSeekCount,
       "Filtered explicit column scans must always eagerly seek");
   }
 
