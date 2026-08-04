@@ -26,6 +26,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -44,10 +45,9 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -118,9 +118,6 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
     compactReadLatch = new CountDownLatch(1);
   }
 
-  /**
-   * @throws java.lang.Exception
-   */
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
@@ -368,7 +365,6 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       try (ScanPerNextResultScanner scanner =
         new ScanPerNextResultScanner(TEST_UTIL.getAsyncConnection().getTable(tableName), s)) {
         Thread evictorThread = new Thread() {
-          @SuppressWarnings("unchecked")
           @Override
           public void run() {
             List<BlockCacheKey> cacheList = new ArrayList<>();
@@ -439,7 +435,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
           count++;
           if (count == 2) {
             evictorThread.start();
-            latch.await();
+            assertTrue(latch.await(30, TimeUnit.SECONDS), "Evictor thread did not complete");
           }
         }
       }
@@ -451,17 +447,15 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
    * For {@link BucketCache},we only evict Block if there is no rpc referenced.
    */
   private void evictBlock(CacheAccessService cache, BlockCacheKey blockCacheKey) {
-    // TODO: will be refactored later once we get CacheEngine refactoring done
-    BlockCache blockCache = ((BlockCacheBackedCacheAccessService) cache).getBlockCache();
-    assertTrue(blockCache instanceof CombinedBlockCache);
-    BlockCache[] blockCaches = blockCache.getBlockCaches();
-    for (BlockCache currentBlockCache : blockCaches) {
-      if (currentBlockCache instanceof BucketCache) {
-        ((BucketCache) currentBlockCache).evictBlockIfNoRpcReferenced(blockCacheKey);
-      } else {
-        currentBlockCache.evictBlock(blockCacheKey);
-      }
-    }
+    BlockCache l1Cache = CacheAccessServiceTestFactory.getFirstLevelBlockCache(cache);
+    BlockCache l2Cache = CacheAccessServiceTestFactory.getSecondLevelBlockCache(cache);
 
+    l1Cache.evictBlock(blockCacheKey);
+
+    if (l2Cache instanceof BucketCache) {
+      ((BucketCache) l2Cache).evictBlockIfNoRpcReferenced(blockCacheKey);
+    } else {
+      l2Cache.evictBlock(blockCacheKey);
+    }
   }
 }

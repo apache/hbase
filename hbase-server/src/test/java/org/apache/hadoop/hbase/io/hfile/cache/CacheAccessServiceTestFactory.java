@@ -669,4 +669,98 @@ public final class CacheAccessServiceTestFactory {
     throw new IllegalArgumentException("CacheAccessService is not backed by a legacy BlockCache: "
       + cacheAccessService.getClass().getName());
   }
+
+  /**
+   * Returns whether the supplied cache access service represents a cache layout that is equivalent
+   * to the legacy {@link CombinedBlockCache} L1/L2 organization.
+   * <p>
+   * During the block cache migration, {@link CombinedBlockCache} may no longer be the object used
+   * by HFile readers and writers directly. The active cache access path may instead be a
+   * {@link TopologyBackedCacheAccessService} backed by a {@link TieredExclusiveTopology}. That
+   * topology models the same combined-cache style of exclusive L1/L2 orchestration where the
+   * participating engines correspond to the legacy L1 and L2 block caches.
+   * </p>
+   * <p>
+   * This helper is intentionally based on {@link CacheAccessService}, not on the legacy
+   * {@link BlockCache} field, so callers can reason about the active cache access path during the
+   * migration away from {@link BlockCache}-centric APIs.
+   * </p>
+   * @param cacheAccessService cache access service to inspect
+   * @return {@code true} when the supplied service represents a CombinedBlockCache-compatible
+   *         topology; {@code false} otherwise
+   */
+  public static boolean isCombinedBlockCacheEquivalent(CacheAccessService cacheAccessService) {
+    if (!(cacheAccessService instanceof TopologyBackedCacheAccessService)) {
+      return false;
+    }
+
+    TopologyBackedCacheAccessService topologyBackedService =
+      (TopologyBackedCacheAccessService) cacheAccessService;
+    return topologyBackedService.getTopology().getType() == CacheTopologyType.TIERED_EXCLUSIVE;
+  }
+
+  /**
+   * Returns the legacy first-level {@link BlockCache} from a topology-backed cache access service.
+   * <p>
+   * This helper is intended only for tests that need to verify compatibility with the legacy
+   * {@code CombinedBlockCache} L1/L2 layout after the runtime path has moved to
+   * {@link TopologyBackedCacheAccessService}. Production code should not unwrap
+   * {@link CacheAccessService} back to {@link BlockCache}.
+   * </p>
+   * @param cacheAccessService cache access service to inspect
+   * @return first-level block cache
+   */
+  public static BlockCache getFirstLevelBlockCache(CacheAccessService cacheAccessService) {
+    return getBlockCache(cacheAccessService, CacheTier.L1);
+  }
+
+  /**
+   * Returns the legacy second-level {@link BlockCache} from a topology-backed cache access service.
+   * <p>
+   * This helper is intended only for tests that need to verify compatibility with the legacy
+   * {@code CombinedBlockCache} L1/L2 layout after the runtime path has moved to
+   * {@link TopologyBackedCacheAccessService}. Production code should not unwrap
+   * {@link CacheAccessService} back to {@link BlockCache}.
+   * </p>
+   * @param cacheAccessService cache access service to inspect
+   * @return second-level block cache
+   */
+  public static BlockCache getSecondLevelBlockCache(CacheAccessService cacheAccessService) {
+    return getBlockCache(cacheAccessService, CacheTier.L2);
+  }
+
+  /**
+   * Returns the legacy {@link BlockCache} backing the requested topology tier.
+   * <p>
+   * This method expects the supplied {@link CacheAccessService} to be a
+   * {@link TopologyBackedCacheAccessService} and the requested tier to be backed by a
+   * {@link BlockCacheBackedCacheEngine}. It is deliberately strict so tests fail clearly when the
+   * cache access service is not using the expected CombinedBlockCache-compatible topology-backed
+   * wiring.
+   * </p>
+   * @param cacheAccessService cache access service to inspect
+   * @param tier               topology tier to unwrap
+   * @return block cache backing the requested tier
+   */
+  public static BlockCache getBlockCache(CacheAccessService cacheAccessService, CacheTier tier) {
+    Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
+    Objects.requireNonNull(tier, "tier must not be null");
+
+    if (!(cacheAccessService instanceof TopologyBackedCacheAccessService)) {
+      throw new IllegalArgumentException(
+        "cacheAccessService must be a TopologyBackedCacheAccessService");
+    }
+
+    TopologyBackedCacheAccessService topologyBackedService =
+      (TopologyBackedCacheAccessService) cacheAccessService;
+    CacheEngine engine = topologyBackedService.getTopology().getEngine(tier)
+      .orElseThrow(() -> new IllegalArgumentException("No cache engine found for tier " + tier));
+
+    if (!(engine instanceof BlockCacheBackedCacheEngine)) {
+      throw new IllegalArgumentException(
+        "Cache engine for tier " + tier + " must be a BlockCacheBackedCacheEngine");
+    }
+
+    return ((BlockCacheBackedCacheEngine) engine).getBlockCache();
+  }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -26,7 +27,11 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.FirstLevelBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -184,9 +189,13 @@ public class BlockCacheBackedCacheEngine implements CacheEngine {
   }
 
   @Override
-  public Optional<Boolean> isAlreadyCached(BlockCacheKey key) {
-    Objects.requireNonNull(key, "key must not be null");
-    return blockCache.isAlreadyCached(key);
+  public Optional<Boolean> isAlreadyCached(BlockCacheKey cacheKey) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    if (blockCache instanceof FirstLevelBlockCache) {
+      FirstLevelBlockCache firstLevelBlockCache = (FirstLevelBlockCache) blockCache;
+      return Optional.of(firstLevelBlockCache.containsBlock(cacheKey));
+    }
+    return blockCache.isAlreadyCached(cacheKey);
   }
 
   @Override
@@ -216,5 +225,30 @@ public class BlockCacheBackedCacheEngine implements CacheEngine {
     long size) {
     Objects.requireNonNull(fileName, "fileName must not be null");
     blockCache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    Objects.requireNonNull(hFileInfo, "hFileInfo must not be null");
+    Objects.requireNonNull(conf, "conf must not be null");
+    return blockCache.shouldCacheFile(hFileInfo, conf);
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
+    Configuration conf) {
+    Objects.requireNonNull(key, "key must not be null");
+    Objects.requireNonNull(conf, "conf must not be null");
+    return blockCache.shouldCacheBlock(key, maxTimeStamp, conf);
+  }
+
+  @Override
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return blockCache.getFullyCachedFiles();
+  }
+
+  @Override
+  public Optional<Iterable<CachedBlock>> asCachedBlockIterable() {
+    return Optional.of(blockCache);
   }
 }

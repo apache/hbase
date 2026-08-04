@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Objects;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.io.hfile.FirstLevelBlockCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,15 +32,56 @@ import org.apache.yetus.audience.InterfaceAudience;
  * {@link TieredExclusiveTopology}, and exposed through {@link TopologyBackedCacheAccessService}.
  * </p>
  * <p>
- * This class does not change production cache wiring by itself. It only provides a reusable
- * construction path for tests and later migration steps that need a CombinedBlockCache-compatible
- * topology-backed service.
+ * This class does not create or remove any concrete cache implementation by itself. It only
+ * provides a reusable construction path for tests and migration steps that need a
+ * CombinedBlockCache-compatible topology-backed service.
  * </p>
  */
 @InterfaceAudience.Private
 public final class TopologyBackedCacheAccessServices {
 
+  private static final int COMBINED_BLOCK_CACHE_TIER_COUNT = 2;
+
   private TopologyBackedCacheAccessServices() {
+  }
+
+  /**
+   * Creates a topology-backed cache access service from an existing combined block cache.
+   * <p>
+   * The supplied {@link CombinedBlockCache} is used only as a legacy holder for the participating
+   * L1 and L2 {@link BlockCache} instances. The returned service uses
+   * {@link TieredExclusiveTopology} as the actual orchestration model.
+   * </p>
+   * @param combinedBlockCache combined block cache containing L1 and L2 caches
+   * @return topology-backed cache access service
+   */
+  public static TopologyBackedCacheAccessService
+    fromCombinedBlockCache(CombinedBlockCache combinedBlockCache) {
+    return fromCombinedBlockCache(combinedBlockCache,
+      new DefaultHBaseCachePlacementAdmissionPolicy());
+  }
+
+  /**
+   * Creates a topology-backed cache access service from an existing combined block cache.
+   * <p>
+   * This overload allows tests and future wiring code to provide an explicit policy while still
+   * extracting L1 and L2 caches from the supplied {@link CombinedBlockCache}.
+   * </p>
+   * @param combinedBlockCache combined block cache containing L1 and L2 caches
+   * @param policy             placement and admission policy
+   * @return topology-backed cache access service
+   */
+  public static TopologyBackedCacheAccessService fromCombinedBlockCache(
+    CombinedBlockCache combinedBlockCache, CachePlacementAdmissionPolicy policy) {
+    Objects.requireNonNull(combinedBlockCache, "combinedBlockCache must not be null");
+    Objects.requireNonNull(policy, "policy must not be null");
+
+    BlockCache[] blockCaches = combinedBlockCache.getBlockCaches();
+    if (blockCaches.length != COMBINED_BLOCK_CACHE_TIER_COUNT) {
+      throw new IllegalArgumentException("combinedBlockCache must expose exactly two block caches");
+    }
+
+    return fromTieredExclusiveBlockCaches("combined", blockCaches[0], blockCaches[1], policy);
   }
 
   /**
@@ -60,10 +103,31 @@ public final class TopologyBackedCacheAccessServices {
     Objects.requireNonNull(l1, "l1 must not be null");
     Objects.requireNonNull(l2, "l2 must not be null");
     Objects.requireNonNull(policy, "policy must not be null");
-
+    wireVictimCache(l1, l2);
     CacheEngine l1Engine = CacheEngines.fromBlockCache(l1);
     CacheEngine l2Engine = CacheEngines.fromBlockCache(l2);
     CacheTopology topology = new TieredExclusiveTopology(name, l1Engine, l2Engine);
     return new TopologyBackedCacheAccessService(topology, policy);
+  }
+
+  /**
+   * Configures the legacy L1 to L2 victim-cache relationship used by CombinedBlockCache.
+   * <p>
+   * The topology-backed service owns lookup and placement orchestration, but existing
+   * {@link FirstLevelBlockCache} implementations still use a direct victim-cache reference to move
+   * evicted blocks from L1 to L2. Keep this wiring while L1 and L2 are still legacy
+   * {@link BlockCache} implementations.
+   * </p>
+   * @param l1 first-level block cache
+   * @param l2 second-level block cache
+   */
+  private static void wireVictimCache(BlockCache l1, BlockCache l2) {
+    if (l1 instanceof FirstLevelBlockCache) {
+      try {
+        ((FirstLevelBlockCache) l1).setVictimCache(l2);
+      } catch (IllegalArgumentException e) {
+        // ignore if already wired
+      }
+    }
   }
 }

@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Consumer;
@@ -29,6 +30,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -123,6 +125,7 @@ public interface CacheAccessService extends ConfigurationObserver {
    */
   default Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     CacheRequestContext context = CacheRequestContext.newBuilder().withCaching(caching)
       .withRepeat(repeat).withUpdateCacheMetrics(updateCacheMetrics).build();
     return getBlock(cacheKey, context);
@@ -144,6 +147,7 @@ public interface CacheAccessService extends ConfigurationObserver {
    */
   default Cacheable getBlock(BlockCacheKey cacheKey, boolean caching, boolean repeat,
     boolean updateCacheMetrics, BlockType blockType) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     CacheRequestContext context =
       CacheRequestContext.newBuilder().withCaching(caching).withRepeat(repeat)
         .withUpdateCacheMetrics(updateCacheMetrics).withBlockType(blockType).build();
@@ -183,7 +187,10 @@ public interface CacheAccessService extends ConfigurationObserver {
    * @param inMemory whether the block should be treated as in-memory
    */
   default void cacheBlock(BlockCacheKey cacheKey, Cacheable block, boolean inMemory) {
-    CacheWriteContext context = CacheWriteContext.newBuilder().withInMemory(inMemory).build();
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(block, "block must not be null");
+    CacheWriteContext context = CacheWriteContext.newBuilder().withInMemory(inMemory)
+      .withBlockCategory(block.getBlockType().getCategory()).build();
     cacheBlock(cacheKey, block, context);
   }
 
@@ -199,10 +206,14 @@ public interface CacheAccessService extends ConfigurationObserver {
    * @param inMemory      whether the block should be treated as in-memory
    * @param waitWhenCache whether to wait for the cache operation to be accepted/flushed
    */
+
   default void cacheBlock(BlockCacheKey cacheKey, Cacheable block, boolean inMemory,
     boolean waitWhenCache) {
-    CacheWriteContext context = CacheWriteContext.newBuilder().withInMemory(inMemory)
-      .withWaitWhenCache(waitWhenCache).build();
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(block, "block must not be null");
+    CacheWriteContext context =
+      CacheWriteContext.newBuilder().withInMemory(inMemory).withWaitWhenCache(waitWhenCache)
+        .withBlockCategory(block.getBlockType().getCategory()).build();
     cacheBlock(cacheKey, block, context);
   }
 
@@ -215,7 +226,11 @@ public interface CacheAccessService extends ConfigurationObserver {
    * @param block    block contents
    */
   default void cacheBlock(BlockCacheKey cacheKey, Cacheable block) {
-    cacheBlock(cacheKey, block, CacheWriteContext.newBuilder().build());
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(block, "block must not be null");
+    CacheWriteContext context =
+      CacheWriteContext.newBuilder().withBlockCategory(block.getBlockType().getCategory()).build();
+    cacheBlock(cacheKey, block, context);
   }
 
   /**
@@ -524,4 +539,19 @@ public interface CacheAccessService extends ConfigurationObserver {
     Configuration conf) {
     return Optional.empty();
   }
+
+  /**
+   * Returns the files that are fully cached by this cache implementation.
+   * <p>
+   * A file is considered fully cached when all of its cacheable blocks are present in the cache.
+   * Not all cache implementations track this information. Implementations that do not support this
+   * capability should return {@link Optional#empty()}.
+   * </p>
+   * @return an {@link Optional} containing a map of fully cached files when this capability is
+   *         supported; otherwise {@link Optional#empty()}
+   */
+  default Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return Optional.empty();
+  }
+
 }

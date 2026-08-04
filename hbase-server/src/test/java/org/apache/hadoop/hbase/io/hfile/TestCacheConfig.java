@@ -21,6 +21,8 @@ import static org.junit.Assert.assertSame;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -28,12 +30,14 @@ import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.lang.management.MemoryUsage;
 import java.nio.ByteBuffer;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
@@ -48,7 +52,6 @@ import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Threads;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -104,7 +107,7 @@ public class TestCacheConfig {
   }
 
   static class DataCacheEntry implements Cacheable {
-    private static final int SIZE = 1;
+    private static final int SIZE = 1 << 20; // 1MB
     private static DataCacheEntry SINGLETON = new DataCacheEntry();
     final CacheableDeserializer<Cacheable> deserializer;
 
@@ -307,27 +310,58 @@ public class TestCacheConfig {
     CacheConfig cc = new CacheConfig(this.conf);
     CacheAccessService service = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
     basicBlockCacheOps(service, cc, false, false);
-    assertTrue(CacheAccessServiceTestFactory.blockCache(service) instanceof CombinedBlockCache);
+    assertTrue(CacheAccessServiceTestFactory.isCombinedBlockCacheEquivalent(service));
     // TODO: Assert sizes allocated are right and proportions.
-    CombinedBlockCache cbc = (CombinedBlockCache) CacheAccessServiceTestFactory.blockCache(service);
-    BlockCache[] bcs = cbc.getBlockCaches();
-    assertTrue(bcs[0] instanceof LruBlockCache);
-    LruBlockCache lbc = (LruBlockCache) bcs[0];
+    LruBlockCache lbc =
+      (LruBlockCache) CacheAccessServiceTestFactory.getFirstLevelBlockCache(service);
+    ;
     assertEquals(MemorySizeUtil.getOnHeapCacheSize(this.conf), lbc.getMaxSize());
-    assertTrue(bcs[1] instanceof BucketCache);
-    BucketCache bc = (BucketCache) bcs[1];
+    BucketCache bc = (BucketCache) CacheAccessServiceTestFactory.getSecondLevelBlockCache(service);
     // getMaxSize comes back in bytes but we specified size in MB
     assertEquals(bcSize, bc.getMaxSize() / (1024 * 1024));
   }
 
   /**
-   * Assert that when BUCKET_CACHE_COMBINED_KEY is false, the non-default, that we deploy
-   * LruBlockCache as L1 with a BucketCache for L2.
+   * Verifies the legacy two-tier block cache layout used when bucket cache is enabled but the
+   * combined-cache mode is disabled.
+   * <p>
+   * In this configuration HBase should deploy an {@link LruBlockCache} as the first-level in-memory
+   * cache and a {@link BucketCache} as the second-level victim cache. Blocks are inserted into L1
+   * first. When L1 evicts blocks under memory pressure, the evicted blocks should be passed to the
+   * configured L2 victim cache.
+   * </p>
+   * <p>
+   * This test intentionally verifies the L1-to-L2 victim-cache relationship without relying on an
+   * exact final L1 block count or on a specific block key being evicted. {@link LruBlockCache}
+   * eviction policy does not guarantee which block will be selected for eviction, only that some
+   * blocks may be evicted when cache pressure exceeds the configured threshold.
+   * </p>
+   * <p>
+   * The previous version of this test attempted to force eviction by inserting a single synthetic
+   * block whose size was {@code acceptableSize() + 1}, and then waited until the L1 block count
+   * returned to its original value. That approach was flawed for two reasons:
+   * </p>
+   * <ol>
+   * <li>{@link LruBlockCache} rejects any block larger than its maximum cacheable block size before
+   * eviction can run. Since {@code acceptableSize()} depends on the JVM heap size while the maximum
+   * cacheable block size is fixed by configuration, {@code acceptableSize() + 1} may be larger than
+   * the maximum cacheable block size. In that case the block is rejected and no eviction is
+   * triggered.</li>
+   * <li>If the synthetic block is small enough to be accepted, eviction runs only after the block
+   * is inserted. The eviction policy is not required to restore the exact previous block count, nor
+   * is it required to evict the originally inserted block. Waiting for an exact L1 block count can
+   * therefore hang indefinitely.</li>
+   * </ol>
+   * <p>
+   * The test now creates cache pressure using normal cacheable blocks and waits with a timeout
+   * until L2 receives at least one block from L1 eviction. This directly verifies the intended
+   * contract: L1 is wired with L2 as its victim cache.
+   * </p>
    */
   @Test
-  public void testBucketCacheConfigL1L2Setup() {
+  public void testBucketCacheConfigL1L2Setup() throws Exception {
     this.conf.set(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
-    // Make lru size is smaller than bcSize for sure. Need this to be true so when eviction
+    // this.conf.setLong("hbase.lru.max.block.size", 1L << 30);
     // from L1 happens, it does not fail because L2 can't take the eviction because block too big.
     this.conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.001f);
     MemoryUsage mu = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage();
@@ -339,12 +373,12 @@ public class TestCacheConfig {
     CacheConfig cc = new CacheConfig(this.conf);
     CacheAccessService service = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
     basicBlockCacheOps(service, cc, false, false);
-    assertTrue(CacheAccessServiceTestFactory.blockCache(service) instanceof CombinedBlockCache);
+    assertTrue(CacheAccessServiceTestFactory.isCombinedBlockCacheEquivalent(service));
     // TODO: Assert sizes allocated are right and proportions.
-    CombinedBlockCache cbc = (CombinedBlockCache) CacheAccessServiceTestFactory.blockCache(service);
-    FirstLevelBlockCache lbc = cbc.l1Cache;
+    FirstLevelBlockCache lbc =
+      (FirstLevelBlockCache) CacheAccessServiceTestFactory.getFirstLevelBlockCache(service);
     assertEquals(lruExpectedSize, lbc.getMaxSize());
-    BlockCache bc = cbc.l2Cache;
+    BlockCache bc = CacheAccessServiceTestFactory.getSecondLevelBlockCache(service);
     // getMaxSize comes back in bytes but we specified size in MB
     assertEquals(bcExpectedSize, ((BucketCache) bc).getMaxSize());
     // Test the L1+L2 deploy works as we'd expect with blocks evicted from L1 going to L2.
@@ -355,24 +389,48 @@ public class TestCacheConfig {
     lbc.cacheBlock(bck, c, false);
     assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
     assertEquals(initialL2BlockCount, bc.getBlockCount());
-    // Force evictions by putting in a block too big.
-    final long justTooBigSize = ((LruBlockCache) lbc).acceptableSize() + 1;
-    lbc.cacheBlock(new BlockCacheKey("bck2", 0), new DataCacheEntry() {
-      @Override
-      public long heapSize() {
-        return justTooBigSize;
-      }
 
-      @Override
-      public int getSerializedLength() {
-        return (int) heapSize();
-      }
+    assertNotNull(lbc.getBlock(bck, true, false, true));
+    assertNull(bc.getBlock(bck, true, false, true));
+    waitForAnyBlockToMoveFromL1ToL2(lbc, bc, initialL2BlockCount);
+    assertTrue(bc.getBlockCount() > initialL2BlockCount);
+  }
+
+  /**
+   * Adds cacheable blocks to L1 until L1 eviction moves at least one block into L2.
+   * <p>
+   * The helper does not wait for a particular key to appear in L2. {@link LruBlockCache} eviction
+   * is policy-driven and does not guarantee that the first inserted block, or any specific later
+   * block, will be evicted first. The observable contract needed by this test is only that an L1
+   * eviction is forwarded to the configured L2 victim cache.
+   * </p>
+   * <p>
+   * This helper also avoids using a single oversized block to force eviction. Oversized blocks may
+   * be rejected by {@link LruBlockCache} before eviction can run. Instead, it inserts regular
+   * cacheable blocks and relies on cumulative cache pressure.
+   * </p>
+   * @param l1Cache             first-level cache
+   * @param l2Cache             second-level victim cache
+   * @param initialL2BlockCount L2 block count before creating L1 pressure
+   * @throws Exception if the expected L1-to-L2 movement does not happen before the wait timeout
+   */
+  private void waitForAnyBlockToMoveFromL1ToL2(FirstLevelBlockCache l1Cache, BlockCache l2Cache,
+    long initialL2BlockCount) throws Exception {
+    AtomicInteger blockIndex = new AtomicInteger();
+
+    /*
+     * Do not try to force eviction with one block of size acceptableSize() + 1. LruBlockCache
+     * rejects blocks larger than maxBlockSize before eviction can run. For accepted blocks,
+     * eviction runs after insertion and does not guarantee which block will be evicted. Therefore
+     * this test should not wait for a particular block key to appear in L2. The intended contract
+     * is only that an L1 eviction moves some evicted block into the configured L2 victim cache.
+     */
+    Waiter.waitFor(this.conf, 10000, () -> {
+      BlockCacheKey evictionKey = new BlockCacheKey("eviction-" + blockIndex.getAndIncrement(), 0);
+      l1Cache.cacheBlock(evictionKey, new DataCacheEntry(), false);
+
+      return l2Cache.getBlockCount() > initialL2BlockCount;
     });
-    // The eviction thread in lrublockcache needs to run.
-    while (initialL1BlockCount != lbc.getBlockCount()) {
-      Threads.sleep(10);
-    }
-    assertEquals(initialL1BlockCount, lbc.getBlockCount());
   }
 
   @Test

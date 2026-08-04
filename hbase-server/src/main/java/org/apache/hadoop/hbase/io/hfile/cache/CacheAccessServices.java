@@ -23,6 +23,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -46,18 +47,26 @@ public final class CacheAccessServices {
   }
 
   /**
-   * Creates a {@link CacheAccessService} backed by an existing {@link BlockCache}.
+   * Creates a cache access service backed by an existing block cache.
    * <p>
-   * This is the default compatibility path during migration from {@code BlockCache} to
-   * {@code CacheAccessService}. The returned service delegates to the supplied block cache and
-   * should preserve existing behavior.
+   * For regular {@link BlockCache} implementations, this returns a legacy
+   * {@link BlockCacheBackedCacheAccessService}. For {@link CombinedBlockCache}, this returns a
+   * topology-backed service using {@link TieredExclusiveTopology}. This moves combined L1/L2
+   * orchestration to the new topology layer while keeping the existing combined block cache object
+   * available for legacy {@link BlockCache}-facing APIs.
    * </p>
-   * @param blockCache block cache to wrap
-   * @return cache access service backed by {@code blockCache}
+   * @param blockCache block cache to expose through {@link CacheAccessService}
+   * @return cache access service
    */
+
   public static CacheAccessService fromBlockCache(BlockCache blockCache) {
-    return new BlockCacheBackedCacheAccessService(
-      Objects.requireNonNull(blockCache, "blockCache must not be null"));
+    Objects.requireNonNull(blockCache, "blockCache must not be null");
+    if (blockCache instanceof CombinedBlockCache) {
+      return TopologyBackedCacheAccessServices
+        .fromCombinedBlockCache((CombinedBlockCache) blockCache);
+    }
+    return new BlockCacheBackedCacheAccessService(blockCache);
+
   }
 
   /**
@@ -132,13 +141,26 @@ public final class CacheAccessServices {
    * @throws NullPointerException if {@code cacheAccessService} is {@code null}
    */
   @SuppressWarnings("unchecked")
-  public static Optional<Iterable<CachedBlock>>
-    asCachedBlockIterable(CacheAccessService cacheAccessService) {
-    Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
-    if (cacheAccessService instanceof Iterable) {
-      return Optional.of((Iterable<CachedBlock>) cacheAccessService);
+  // public static Optional<Iterable<CachedBlock>>
+  // asCachedBlockIterable(CacheAccessService cacheAccessService) {
+  // Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
+  // if (cacheAccessService instanceof Iterable) {
+  // return Optional.of((Iterable<CachedBlock>) cacheAccessService);
+  // }
+  // return Optional.empty();
+  // }
+
+  public static Optional<Iterable<CachedBlock>> asCachedBlockIterable(CacheAccessService service) {
+    Objects.requireNonNull(service, "service must not be null");
+
+    if (service instanceof TopologyBackedCacheAccessService) {
+      return ((TopologyBackedCacheAccessService) service).asCachedBlockIterable();
     }
+
+    if (service instanceof BlockCacheBackedCacheAccessService) {
+      return Optional.of(((BlockCacheBackedCacheAccessService) service).getBlockCache());
+    }
+
     return Optional.empty();
   }
-
 }

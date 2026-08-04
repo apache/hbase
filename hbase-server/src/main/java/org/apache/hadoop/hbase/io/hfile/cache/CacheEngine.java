@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
@@ -24,7 +25,10 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -301,5 +305,30 @@ public interface CacheEngine {
   default void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
     // noop
+  }
+
+  default Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    return Optional.empty();
+  }
+
+  default Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
+    Configuration conf) {
+    return Optional.empty();
+  }
+
+  default Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns an iterable view of cached blocks exposed by this cache engine.
+   * <p>
+   * Not all cache engines expose their internal cached block list. Implementations that do not
+   * support this capability should return {@link Optional#empty()}.
+   * </p>
+   * @return an iterable over cached blocks when supported; otherwise {@link Optional#empty()}
+   */
+  default Optional<Iterable<CachedBlock>> asCachedBlockIterable() {
+    return Optional.empty();
   }
 }

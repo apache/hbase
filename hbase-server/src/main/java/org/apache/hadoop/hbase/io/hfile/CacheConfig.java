@@ -27,6 +27,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTopologyType;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -527,7 +529,20 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   }
 
   public boolean isCombinedBlockCache() {
-    return blockCache instanceof CombinedBlockCache;
+    if (blockCache instanceof CombinedBlockCache) {
+      return true;
+    }
+    return isCombinedBlockCacheCompatible(cacheAccessService);
+  }
+
+  private static boolean isCombinedBlockCacheCompatible(CacheAccessService cacheAccessService) {
+    if (!(cacheAccessService instanceof TopologyBackedCacheAccessService)) {
+      return false;
+    }
+
+    TopologyBackedCacheAccessService service =
+      (TopologyBackedCacheAccessService) cacheAccessService;
+    return service.getTopology().getType() == CacheTopologyType.TIERED_EXCLUSIVE;
   }
 
   public ByteBuffAllocator getByteBuffAllocator() {
