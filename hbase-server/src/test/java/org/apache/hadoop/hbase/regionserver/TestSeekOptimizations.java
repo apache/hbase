@@ -213,12 +213,16 @@ public class TestSeekOptimizations {
     // Such a clumsy do-while loop appears to be the official way to use an
     // internalScanner. scanner.next() return value refers to the _next_
     // result, not to the one already returned in results.
-    boolean hasNext;
-    do {
-      hasNext = scanner.next(results);
-      actualKVs.addAll(results);
-      results.clear();
-    } while (hasNext);
+    try {
+      boolean hasNext;
+      do {
+        hasNext = scanner.next(results);
+        actualKVs.addAll(results);
+        results.clear();
+      } while (hasNext);
+    } finally {
+      scanner.close();
+    }
 
     List<Cell> filteredKVs =
       filterExpectedResults(qualSet, rowBytes(startRow), rowBytes(endRow), maxVersions);
