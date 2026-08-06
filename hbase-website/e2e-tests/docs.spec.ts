@@ -164,12 +164,12 @@ test.describe("Documentation Page - Search Functionality", () => {
     await expect(searchDialog).not.toBeVisible();
   });
 
-  test("keyboard shortcut Cmd+K opens search", async ({ page }) => {
+  test("keyboard shortcut opens search", async ({ page }) => {
     await page.goto("/docs");
     await page.waitForLoadState("networkidle");
 
-    // Press Cmd+K (or Ctrl+K)
-    await page.keyboard.press(process.platform === "darwin" ? "Meta+k" : "Control+k");
+    // Use Playwright's platform-aware modifier: Cmd on macOS, Ctrl elsewhere.
+    await page.keyboard.press("ControlOrMeta+k");
     await page.waitForTimeout(500);
 
     // Verify dialog opened

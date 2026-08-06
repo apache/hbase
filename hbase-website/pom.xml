@@ -32,7 +32,7 @@
   <description>Apache HBase Website built with React and TypeScript</description>
 
   <properties>
-    <node.version>v22.20.0</node.version>
+    <node.version>v24.18.1</node.version>
     <npm.version>11.6.2</npm.version>
     <website.ci.command>ci</website.ci.command>
   </properties>
@@ -77,15 +77,15 @@
               <npmVersion>${npm.version}</npmVersion>
             </configuration>
           </execution>
-          <!-- Run npm install -->
+          <!-- Install exact dependencies from package-lock.json -->
           <execution>
-            <id>npm-install</id>
+            <id>npm-ci</id>
             <goals>
               <goal>npm</goal>
             </goals>
             <phase>pre-site</phase>
             <configuration>
-              <arguments>install</arguments>
+              <arguments>ci</arguments>
             </configuration>
           </execution>
           <!-- Run website CI command -->
@@ -128,7 +128,7 @@
                 <phase>none</phase>
               </execution>
               <execution>
-                <id>npm-install</id>
+                <id>npm-ci</id>
                 <phase>none</phase>
               </execution>
               <execution>

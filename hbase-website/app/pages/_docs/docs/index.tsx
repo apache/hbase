@@ -27,7 +27,7 @@ import {
 } from "@/components/docs/layout/docs/page";
 import defaultMdxComponents from "fumadocs-ui/mdx";
 import type * as PageTree from "fumadocs-core/page-tree";
-import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
+import type { BaseLayoutProps } from "@/components/docs/layout/shared";
 import { useParams } from "react-router";
 import { useEffect } from "react";
 import { getPageTreePeers } from "fumadocs-core/page-tree";

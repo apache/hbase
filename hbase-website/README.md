@@ -59,9 +59,9 @@ Legacy documentation is preserved for those users who have old bookmarked links 
 
 Before you begin, ensure you have the following installed:
 
-- **Node.js version 22** - JavaScript runtime (like the JVM for Java)
+- **Node.js version 24** - JavaScript runtime (like the JVM for Java)
   - Download from [nodejs.org](https://nodejs.org/)
-  - Verify installation: `node --version` (should show v22.12+)
+  - Verify installation: `node --version` (should show v24.18.1+)
 
 - **NPM** - Node Package Manager (like Maven for Java)
   - Comes bundled with Node.js
@@ -254,13 +254,14 @@ The ESLint configuration includes a custom rule (`custom/no-react-router-link`) 
 
 #### 1. Install Dependencies
 
-Think of this as `mvn install`:
+Install the exact dependency versions recorded in `package-lock.json`:
 
 ```bash
-npm install
+npm ci
 ```
 
-This downloads all required packages from npm (similar to Maven Central).
+This is the right command when you are working with the existing dependency set. It removes any existing `node_modules/` directory and recreates it from `package-lock.json`, so local installs match CI and Maven site generation.
+Use `npm install` only when you intentionally add, remove, or update dependencies and need to update `package.json` or `package-lock.json`.
 
 #### 2. Generate Developers and Config Data
 
@@ -453,12 +454,13 @@ When you run `mvn site`, the website module automatically:
    - Removes `node_modules/` directory
    - Ensures a fresh build environment
 
-2. **Installs Node.js v22.20.0 and npm 11.6.2** (if not already available)
+2. **Installs Node.js v24.18.1 and npm 11.6.2** (if not already available)
    - Installed to `target/` directory
    - Does not affect your system Node/npm installation
 
-3. **Runs `npm install`** to install all dependencies
-   - Reads from `package.json`
+3. **Runs `npm ci`** to install all dependencies
+   - Reads exact dependency versions from `package-lock.json`
+   - Removes and recreates `node_modules/`
    - Installs to `node_modules/`
 
 4. **Extracts developers data** from the parent `pom.xml`

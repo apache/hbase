@@ -167,13 +167,7 @@ export const asfLinks: LinkType[] = [
 ];
 
 type DocumentationOptions =
-  | "ref"
-  | "refPdf"
-  | "refPdfOld"
-  | "userApi"
-  | "userApiTest"
-  | "devApi"
-  | "devApiTest";
+  "ref" | "refPdf" | "refPdfOld" | "userApi" | "userApiTest" | "devApi" | "devApiTest";
 
 const documentationOptionLabels: Record<DocumentationOptions, string> = {
   ref: "Reference Guide",

@@ -21,7 +21,8 @@ import globals from "globals";
 import reactHooks from "eslint-plugin-react-hooks";
 import tseslint from "typescript-eslint";
 import { defineConfig, globalIgnores } from "eslint/config";
-import importPlugin from "eslint-plugin-import";
+import { importX } from "eslint-plugin-import-x";
+import { createTypeScriptImportResolver } from "eslint-import-resolver-typescript";
 import prettier from "eslint-plugin-prettier";
 
 // Custom rule to enforce Apache License header
@@ -89,7 +90,7 @@ const noReactRouterLinkRule = {
     return {
       ImportDeclaration(node) {
         // Allow the custom Link component file itself to import from react-router
-        const filename = context.getFilename();
+        const filename = context.filename;
         if (filename.endsWith('components/link.tsx')) {
           return;
         }
@@ -129,8 +130,7 @@ export default defineConfig([
     files: ["**/*.{ts,tsx}"],
     extends: [
       js.configs.recommended,
-      tseslint.configs.recommended,
-      reactHooks.configs["recommended-latest"],
+      tseslint.configs.recommended
     ],
     languageOptions: {
       ecmaVersion: 2020,
@@ -138,7 +138,8 @@ export default defineConfig([
     },
     plugins: {
       prettier,
-      import: importPlugin,
+      "react-hooks": reactHooks,
+      "import-x": importX,
       custom: {
         rules: {
           "apache-license": apacheLicenseRule,
@@ -147,16 +148,19 @@ export default defineConfig([
       }
     },
     settings: {
-      // so import/no-unresolved understands TS paths and "@/*"
-      "import/resolver": {
-        typescript: {
-          project: ['./tsconfig.app.json', './tsconfig.node.json'],
-        },
-      },
+      // so import-x/no-unresolved understands TS paths and "@/*"
+      "import-x/resolver-next": [
+        createTypeScriptImportResolver({
+          project: ["./tsconfig.app.json", "./tsconfig.node.json"]
+        })
+      ]
     },
     rules: {
-      "import/no-unresolved": "error",
-      "import/no-duplicates": "warn",
+      "import-x/no-unresolved": "error",
+      "import-x/no-duplicates": "warn",
+
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
 
       "no-implicit-globals": "off",
       "no-empty-pattern": "off",
