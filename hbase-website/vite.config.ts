@@ -48,5 +48,8 @@ export default defineConfig({
       "@": resolve(__dirname, "app")
     }
   },
-  customLogger: logger
+  customLogger: logger,
+  preview: {
+    host: "127.0.0.1"
+  }
 });
