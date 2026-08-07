@@ -66,6 +66,9 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
       throw new IllegalStateException(
         "At least one buffer is not a SingleByteBuff, this is not supported");
     }
+    if (inputLen < GZIP_HEADER_LENGTH + GZIP_TRAILER_LENGTH) {
+      throw new IOException("Input of length " + inputLen + " is too short to be a gzip member");
+    }
 
     ByteBuffer nioInput = input.nioByteBuffers()[0];
     ByteBuffer nioOutput = output.nioByteBuffers()[0];
@@ -76,6 +79,8 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
 
     int inputStart = nioInput.position();
     int outputStart = nioOutput.position();
+
+
     ByteBuffer gzipMember = nioInput.duplicate();
     gzipMember.limit(inputStart + inputLen);
 
