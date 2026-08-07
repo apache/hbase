@@ -150,8 +150,8 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
       }
       int n;
       try {
-        n = inflater.inflate(nioOutput.array(), nioOutput.arrayOffset() + outputStart + totalDecompressed,
-          remaining);
+        n = inflater.inflate(nioOutput.array(),
+          nioOutput.arrayOffset() + outputStart + totalDecompressed, remaining);
       } catch (DataFormatException e) {
         throw new IOException("Invalid gzip stream: " + e.getMessage(), e);
       }
