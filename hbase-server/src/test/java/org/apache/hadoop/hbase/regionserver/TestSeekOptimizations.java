@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
 import org.junit.jupiter.api.TestTemplate;
 import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
@@ -119,19 +122,17 @@ public class TestSeekOptimizations {
   }
 
   @BeforeEach
-  public void setUp() {
+  public void setUp(TestInfo testInfo) throws IOException {
     RNG.setSeed(91238123L);
     expectedKVs.clear();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-  }
 
-  @TestTemplate
-  public void testMultipleTimestampRanges() throws IOException {
     // enable seek counting
     StoreFileScanner.instrument();
 
-    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges", new HColumnDescriptor(FAMILY)
-      .setCompressionType(comprAlgo).setBloomFilterType(bloomType).setMaxVersions(3));
+    region = TEST_UTIL.createTestRegion(testInfo.getTestMethod().get().getName(),
+      new HColumnDescriptor(FAMILY).setCompressionType(comprAlgo).setBloomFilterType(bloomType)
+        .setMaxVersions(3));
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;
@@ -147,12 +148,15 @@ public class TestSeekOptimizations {
     }
 
     prepareExpectedKVs(latestDelTS);
+  }
 
+  @TestTemplate
+  public void testMultipleTimestampRanges() throws IOException {
     for (int[] columnArr : COLUMN_SETS) {
       for (int[] rowRange : ROW_RANGES) {
         for (int maxVersions : MAX_VERSIONS_VALUES) {
           for (boolean lazySeekEnabled : new boolean[] { false, true }) {
-            testScan(columnArr, lazySeekEnabled, rowRange[0], rowRange[1], maxVersions);
+            testScan(columnArr, lazySeekEnabled, rowRange[0], rowRange[1], maxVersions, false);
           }
         }
       }
@@ -173,8 +177,9 @@ public class TestSeekOptimizations {
         + String.format("%.2f%%", expectedSeekSavings * 100));
   }
 
-  private void testScan(final int[] columnArr, final boolean lazySeekEnabled, final int startRow,
-    final int endRow, int maxVersions) throws IOException {
+  private ScanResult testScan(final int[] columnArr, final boolean lazySeekEnabled,
+    final int startRow, final int endRow, final int maxVersions, final boolean filtered)
+    throws IOException {
     StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
     final Scan scan = new Scan();
     final Set<String> qualSet = new HashSet<>();
@@ -182,6 +187,9 @@ public class TestSeekOptimizations {
       String qualStr = getQualStr(iColumn);
       scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualStr));
       qualSet.add(qualStr);
+    }
+    if (filtered) {
+      scan.setFilter(new PrefixFilter(Bytes.toBytes("row")));
     }
     scan.setMaxVersions(maxVersions);
     scan.setStartRow(rowBytes(startRow));
@@ -194,18 +202,23 @@ public class TestSeekOptimizations {
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();
     final InternalScanner scanner = region.getScanner(scan);
+    final long scannerOpenSeekCount = StoreFileScanner.getSeekCount() - initialSeekCount;
     final List<Cell> results = new ArrayList<>();
     final List<Cell> actualKVs = new ArrayList<>();
 
     // Such a clumsy do-while loop appears to be the official way to use an
     // internalScanner. scanner.next() return value refers to the _next_
     // result, not to the one already returned in results.
-    boolean hasNext;
-    do {
-      hasNext = scanner.next(results);
-      actualKVs.addAll(results);
-      results.clear();
-    } while (hasNext);
+    try {
+      boolean hasNext;
+      do {
+        hasNext = scanner.next(results);
+        actualKVs.addAll(results);
+        results.clear();
+      } while (hasNext);
+    } finally {
+      scanner.close();
+    }
 
     List<Cell> filteredKVs =
       filterExpectedResults(qualSet, rowBytes(startRow), rowBytes(endRow), maxVersions);
@@ -230,6 +243,7 @@ public class TestSeekOptimizations {
       totalSeekDiligent += seekCount;
     }
     assertKVListsEqual(testDesc, filteredKVs, actualKVs);
+    return new ScanResult(actualKVs, scannerOpenSeekCount);
   }
 
   private List<Cell> filterExpectedResults(Set<String> qualSet, byte[] startRow, byte[] endRow,
@@ -442,6 +456,27 @@ public class TestSeekOptimizations {
       throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": "
         + HBaseTestingUtility.safeGetAsStr(expected, i) + " (length " + eLen + ") vs. "
         + HBaseTestingUtility.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+    }
+  }
+
+  @TestTemplate
+  public void testSeeksEagerlyWhenFiltered() throws IOException {
+    ScanResult filteredLazyResults = testScan(new int[] { 0 }, true, 0, 2, 1, true);
+    ScanResult filteredEagerResults = testScan(new int[] { 0 }, false, 0, 2, 1, true);
+    assertKVListsEqual("Filtered explicit column scan results differ with lazy seeking enabled",
+      filteredEagerResults.cells, filteredLazyResults.cells);
+    assertEquals(filteredEagerResults.scannerOpenSeekCount,
+      filteredLazyResults.scannerOpenSeekCount,
+      "Filtered explicit column scans must always eagerly seek");
+  }
+
+  private static final class ScanResult {
+    private final List<Cell> cells;
+    private final long scannerOpenSeekCount;
+
+    private ScanResult(List<Cell> cells, long scannerOpenSeekCount) {
+      this.cells = cells;
+      this.scannerOpenSeekCount = scannerOpenSeekCount;
     }
   }
 }

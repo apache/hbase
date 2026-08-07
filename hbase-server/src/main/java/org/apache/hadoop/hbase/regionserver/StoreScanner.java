@@ -269,8 +269,12 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       // key does not exist, then to the start of the next matching Row).
       // Always check bloom filter to optimize the top row seek for delete
       // family marker.
-      seekScanners(scanners, matcher.getStartKey(), explicitColumnQuery && lazySeekEnabledGlobally,
-        parallelSeekEnabled);
+
+      // Filters must only see real Cells. A lazy seek can expose a synthetic Cell
+      // for the scan start row, so disable it for non-Get filters.
+      boolean useLazySeek =
+        explicitColumnQuery && lazySeekEnabledGlobally && !(scan.hasFilter() && !scan.isGetScan());
+      seekScanners(scanners, matcher.getStartKey(), useLazySeek, parallelSeekEnabled);
 
       // set storeLimit
       this.storeLimit = scan.getMaxResultsPerColumnFamily();
