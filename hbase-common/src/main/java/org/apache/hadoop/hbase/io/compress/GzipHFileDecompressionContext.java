@@ -33,6 +33,9 @@ public final class GzipHFileDecompressionContext extends Compression.HFileDecomp
   public static final long FIXED_OVERHEAD =
     ClassSize.estimateBase(GzipHFileDecompressionContext.class, false);
 
+  public static final String ALLOW_BYTE_BUFF_DECOMPRESSION_KEY =
+    "hbase.io.compress.gz.allowByteBuffDecompression";
+
   private final boolean allowByteBuffDecompression;
 
   private GzipHFileDecompressionContext(boolean allowByteBuffDecompression) {
@@ -45,7 +48,7 @@ public final class GzipHFileDecompressionContext extends Compression.HFileDecomp
 
   public static GzipHFileDecompressionContext fromConfiguration(Configuration conf) {
     return new GzipHFileDecompressionContext(
-      conf.getBoolean("hbase.io.compress.gz.allowByteBuffDecompression", true));
+      conf.getBoolean(ALLOW_BYTE_BUFF_DECOMPRESSION_KEY, true));
   }
 
   @Override

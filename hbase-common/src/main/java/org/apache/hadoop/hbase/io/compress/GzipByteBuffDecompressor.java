@@ -19,8 +19,8 @@ package org.apache.hadoop.hbase.io.compress;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.zip.CRC32;
+import java.nio.ByteBuffer;
 import java.util.zip.DataFormatException;
 import java.util.zip.Inflater;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -42,6 +42,8 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
   private final ZlibDecompressor.ZlibDirectDecompressor decompressor;
 
   private final Inflater inflater = new Inflater(true);
+
+  private final CRC32 crc32 = new CRC32();
 
   private boolean allowByteBuffDecompression;
 
@@ -173,11 +175,11 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
   // Inflater runs in nowrap (raw DEFLATE) mode and is unaware of the gzip envelope, so it never
   // checks the trailer. ZlibDirectDecompressor handles this automatically via GZIP_FORMAT, but
   // for heap buffers we must verify the CRC32 and ISIZE fields ourselves.
-  private static void verifyGzipTrailer(byte[] inputData, int inputDataOffset, int inputLen,
+  private void verifyGzipTrailer(byte[] inputData, int inputDataOffset, int inputLen,
     byte[] outputData, int outputDataOffset, int decompressedLen) throws IOException {
     long expectedCrc = readLittleEndianUInt32(inputData, inputDataOffset + inputLen - 8);
     long expectedSize = readLittleEndianUInt32(inputData, inputDataOffset + inputLen - 4);
-    CRC32 crc32 = new CRC32();
+    crc32.reset();
     crc32.update(outputData, outputDataOffset, decompressedLen);
     if (crc32.getValue() != expectedCrc) {
       throw new IOException("Gzip CRC32 mismatch");
