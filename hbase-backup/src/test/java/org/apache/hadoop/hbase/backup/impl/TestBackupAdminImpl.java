@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
-import static org.apache.hadoop.hbase.backup.BackupInfo.withRoot;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -263,8 +262,7 @@ public class TestBackupAdminImpl {
     BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
     BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory(withRoot("/backup/root")))
-      .thenReturn(List.of(b4, b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(any())).thenReturn(List.of(b4, b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -291,7 +289,7 @@ public class TestBackupAdminImpl {
     BackupInfo b2 = createBackupInfo("backup_002", 2000L, BackupType.FULL, table);
     BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory(withRoot("/backup/root"))).thenReturn(List.of(b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(any())).thenReturn(List.of(b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -318,8 +316,7 @@ public class TestBackupAdminImpl {
       TableName.valueOf("other_table"));
     BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory(withRoot("/backup/root")))
-      .thenReturn(List.of(b4, b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(any())).thenReturn(List.of(b4, b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 
@@ -348,8 +345,7 @@ public class TestBackupAdminImpl {
     BackupInfo b3 = createBackupInfo("backup_003", 3000L, BackupType.INCREMENTAL, table);
     BackupInfo b4 = createBackupInfo("backup_004", 4000L, BackupType.INCREMENTAL, table);
 
-    when(mockTable.getBackupHistory(withRoot("/backup/root")))
-      .thenReturn(List.of(b4, b3, b2, b1, b0));
+    when(mockTable.getBackupHistory(any())).thenReturn(List.of(b4, b3, b2, b1, b0));
 
     List<BackupInfo> result = backupAdminImpl.getAffectedBackupSessions(current, table, mockTable);
 

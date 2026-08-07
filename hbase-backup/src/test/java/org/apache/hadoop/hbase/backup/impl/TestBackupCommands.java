@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
-import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
 import static org.apache.hadoop.hbase.backup.TestBackupDeleteWithCleanup.logDirectoryStructure;
 import static org.apache.hadoop.hbase.backup.TestBackupDeleteWithCleanup.setupBackupFolders;
@@ -28,6 +27,7 @@ import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -80,8 +80,7 @@ public class TestBackupCommands extends TestBackupBase {
 
     // Ordered as newest to oldest, will be reversed in the method
     List<BackupInfo> backupInfos = List.of(full2, inc, full1);
-    when(sysTable.getBackupHistory(withState(BackupInfo.BackupState.COMPLETE)))
-      .thenReturn(new ArrayList<>(backupInfos));
+    when(sysTable.getBackupHistory(any())).thenReturn(new ArrayList<>(backupInfos));
 
     // WHEN
     BackupCommands.DeleteCommand command = new BackupCommands.DeleteCommand(conf1, null);
