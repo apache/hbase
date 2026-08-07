@@ -66,7 +66,7 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
     if (inputDirect && outputDirect) {
       return decompressor != null;
     }
-    return true;
+    return !inputDirect && !outputDirect;
   }
 
   @Override
