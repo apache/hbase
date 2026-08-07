@@ -435,6 +435,18 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setTotalBytesCopied(totalBytesCopied);
+    builder.setNoChecksumVerify(noChecksumVerify);
+    if (incrBackupFileList != null) {
+      builder.addAllIncrBackupFileList(incrBackupFileList);
+    }
+    if (incrTimestampMap != null) {
+      for (Entry<TableName, Map<String, Long>> entry : incrTimestampMap.entrySet()) {
+        builder.putIncrTimestampMap(entry.getKey().getNameAsString(),
+          BackupProtos.BackupInfo.RSTimestampMap.newBuilder().putAllRsTimestamp(entry.getValue())
+            .build());
+      }
+    }
     return builder.build();
   }
 
@@ -507,7 +519,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     BackupInfo context = new BackupInfo();
     context.setBackupId(proto.getBackupId());
     context.setBackupTableInfoMap(toMap(proto.getBackupTableInfoList()));
-    context.setTableSetTimestampMap(getTableSetTimestampMap(proto.getTableSetTimestampMap()));
+    context.setTableSetTimestampMap(toTableTimestampMap(proto.getTableSetTimestampMap()));
     context.setCompleteTs(proto.getCompleteTs());
     if (proto.hasFailedMessage()) {
       context.setFailedMsg(proto.getFailedMessage());
@@ -516,8 +528,13 @@ public class BackupInfo implements Comparable<BackupInfo> {
       context.setState(BackupInfo.BackupState.valueOf(proto.getBackupState().name()));
     }
 
-    context
-      .setHLogTargetDir(BackupUtils.getLogBackupDir(proto.getBackupRootDir(), proto.getBackupId()));
+    // Only incremental backups have a WAL target directory. Setting this unconditionally would
+    // hand FULL backups a non-null path that never existed, which cleanupHLogDir() would then
+    // try to delete.
+    if (BackupType.valueOf(proto.getBackupType().name()) == BackupType.INCREMENTAL) {
+      context.setHLogTargetDir(
+        BackupUtils.getLogBackupDir(proto.getBackupRootDir(), proto.getBackupId()));
+    }
 
     if (proto.hasBackupPhase()) {
       context.setPhase(BackupPhase.valueOf(proto.getBackupPhase().name()));
@@ -530,6 +547,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setTotalBytesCopied(proto.getTotalBytesCopied());
+    context.setNoChecksumVerify(proto.getNoChecksumVerify());
+    if (proto.getIncrBackupFileListCount() > 0) {
+      context.setIncrBackupFileList(new ArrayList<>(proto.getIncrBackupFileListList()));
+    }
+    if (proto.getIncrTimestampMapCount() > 0) {
+      context.setIncrTimestampMap(toTableTimestampMap(proto.getIncrTimestampMapMap()));
+    }
     return context;
   }
 
@@ -542,14 +567,13 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   private static Map<TableName, Map<String, Long>>
-    getTableSetTimestampMap(Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
-    Map<TableName, Map<String, Long>> tableSetTimestampMap = new HashMap<>();
+    toTableTimestampMap(Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
+    Map<TableName, Map<String, Long>> result = new HashMap<>();
     for (Entry<String, BackupProtos.BackupInfo.RSTimestampMap> entry : map.entrySet()) {
-      tableSetTimestampMap.put(TableName.valueOf(entry.getKey()),
-        entry.getValue().getRsTimestampMap());
+      result.put(TableName.valueOf(entry.getKey()), entry.getValue().getRsTimestampMap());
     }
 
-    return tableSetTimestampMap;
+    return result;
   }
 
   public String getShortDescription() {
