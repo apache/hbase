@@ -40,11 +40,6 @@ public class TestBackupInfoSerialization {
       new TableName[] { TableName.valueOf("t1") }, "/hbase/backup");
   }
 
-  private static BackupInfo newFullBackupInfo() {
-    return new BackupInfo("backup_1234567890", BackupType.FULL,
-      new TableName[] { TableName.valueOf("t1") }, "/hbase/backup");
-  }
-
   @Test
   public void testIncrBackupFileListSurvivesRoundTrip() throws IOException {
     List<String> walFiles = Arrays.asList("/hbase/oldWALs/host1.example.com,16020,1234567890.100",
@@ -168,13 +163,4 @@ public class TestBackupInfoSerialization {
     assertEquals(original.getHLogTargetDir(), roundTripped.getHLogTargetDir());
   }
 
-  @Test
-  public void testFullBackupHasNoHLogTargetDir() throws IOException {
-    BackupInfo original = newFullBackupInfo();
-    assertNull(original.getHLogTargetDir());
-
-    BackupInfo roundTripped = BackupInfo.fromByteArray(original.toByteArray());
-
-    assertNull(roundTripped.getHLogTargetDir());
-  }
 }

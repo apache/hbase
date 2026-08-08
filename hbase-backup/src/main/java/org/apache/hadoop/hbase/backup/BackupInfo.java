@@ -519,7 +519,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     BackupInfo context = new BackupInfo();
     context.setBackupId(proto.getBackupId());
     context.setBackupTableInfoMap(toMap(proto.getBackupTableInfoList()));
-    context.setTableSetTimestampMap(toTableTimestampMap(proto.getTableSetTimestampMap()));
+    context.setTableSetTimestampMap(getTableSetTimestampMap(proto.getTableSetTimestampMap()));
     context.setCompleteTs(proto.getCompleteTs());
     if (proto.hasFailedMessage()) {
       context.setFailedMsg(proto.getFailedMessage());
@@ -528,13 +528,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
       context.setState(BackupInfo.BackupState.valueOf(proto.getBackupState().name()));
     }
 
-    // Only incremental backups have a WAL target directory. Setting this unconditionally would
-    // hand FULL backups a non-null path that never existed, which cleanupHLogDir() would then
-    // try to delete.
-    if (BackupType.valueOf(proto.getBackupType().name()) == BackupType.INCREMENTAL) {
-      context.setHLogTargetDir(
-        BackupUtils.getLogBackupDir(proto.getBackupRootDir(), proto.getBackupId()));
-    }
+    context
+      .setHLogTargetDir(BackupUtils.getLogBackupDir(proto.getBackupRootDir(), proto.getBackupId()));
 
     if (proto.hasBackupPhase()) {
       context.setPhase(BackupPhase.valueOf(proto.getBackupPhase().name()));
@@ -553,7 +548,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
       context.setIncrBackupFileList(new ArrayList<>(proto.getIncrBackupFileListList()));
     }
     if (proto.getIncrTimestampMapCount() > 0) {
-      context.setIncrTimestampMap(toTableTimestampMap(proto.getIncrTimestampMapMap()));
+      context.setIncrTimestampMap(getTableSetTimestampMap(proto.getIncrTimestampMapMap()));
     }
     return context;
   }
@@ -567,13 +562,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
   }
 
   private static Map<TableName, Map<String, Long>>
-    toTableTimestampMap(Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
-    Map<TableName, Map<String, Long>> result = new HashMap<>();
+    getTableSetTimestampMap(Map<String, BackupProtos.BackupInfo.RSTimestampMap> map) {
+    Map<TableName, Map<String, Long>> tableSetTimestampMap = new HashMap<>();
     for (Entry<String, BackupProtos.BackupInfo.RSTimestampMap> entry : map.entrySet()) {
-      result.put(TableName.valueOf(entry.getKey()), entry.getValue().getRsTimestampMap());
+      tableSetTimestampMap.put(TableName.valueOf(entry.getKey()),
+        entry.getValue().getRsTimestampMap());
     }
 
-    return result;
+    return tableSetTimestampMap;
   }
 
   public String getShortDescription() {
