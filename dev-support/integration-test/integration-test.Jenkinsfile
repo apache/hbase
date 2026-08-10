@@ -33,6 +33,7 @@ pipeline {
   environment {
     HADOOP_VERSIONS = "2.10.2,3.2.4,3.3.5,3.3.6,3.4.0,3.4.1,3.4.2,3.4.3"
     BASEDIR = "${env.WORKSPACE}/component"
+    ASF_NIGHTLIES = 'https://nightlies.apache.org'
   }
   parameters {
     booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
@@ -107,7 +108,7 @@ pipeline {
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
                     sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
-                      sourceFiles: srcFile
+                      sourceFiles: "output-srctarball/hbase-src.tar.gz"
                     )
                   ]
                 )
@@ -117,7 +118,7 @@ pipeline {
                 SRC_TAR="${WORKSPACE}/output-srctarball/hbase-src.tar.gz"
                 echo "Remove ${SRC_TAR} for saving space"
                 rm -rf "${SRC_TAR}"
-                python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES_BASE}/output-srctarball" > "${WORKSPACE}/output-srctarball/hbase-src.html"
+                python3 ${BASEDIR}/dev-support/gen_redirect_html.py "${ASF_NIGHTLIES}/hbase/${JOB_NAME}/${BUILD_NUMBER}/output-srctarball/hbase-src.tar.gz" > "${WORKSPACE}/output-srctarball/hbase-src.html"
               '''
             }
           }
