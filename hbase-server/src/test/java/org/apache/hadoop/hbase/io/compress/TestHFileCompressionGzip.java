@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.io.compress;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.BeforeAll;
@@ -49,8 +49,8 @@ public class TestHFileCompressionGzip extends HFileTestBase {
     conf.setBoolean("hbase.io.compress.gz.allowByteBuffDecompression", false);
     Compression.Algorithm.GZ.reload(conf);
 
-    Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+    Path path =
+      new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.GZ);
   }
 
@@ -59,8 +59,8 @@ public class TestHFileCompressionGzip extends HFileTestBase {
     conf.setBoolean("hbase.io.compress.gz.allowByteBuffDecompression", true);
     Compression.Algorithm.GZ.reload(conf);
 
-    Path path = new Path(TEST_UTIL.getDataTestDir(),
-      HBaseTestingUtility.getRandomUUID().toString() + ".hfile");
+    Path path =
+      new Path(TEST_UTIL.getDataTestDir(), HBaseTestingUtil.getRandomUUID().toString() + ".hfile");
     doTest(conf, path, Compression.Algorithm.GZ);
   }
 
