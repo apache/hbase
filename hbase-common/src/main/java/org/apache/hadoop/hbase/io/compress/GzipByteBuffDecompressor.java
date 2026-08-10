@@ -27,7 +27,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Glue for ByteBuffDecompressor on top of Hadoop's native
- * {@link ZlibDecompressor.ZlibDirectDecompressor}.
+ * {@link ZlibDecompressor.ZlibDirectDecompressor}. Only direct-to-direct decompression is
+ * supported, which is zero-copy; callers with on-heap buffers fall back to the stream path.
  */
 @InterfaceAudience.Private
 public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
@@ -35,14 +36,8 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
   private static final int GZIP_HEADER_LENGTH = 10;
   private static final int GZIP_TRAILER_LENGTH = 8;
 
-  // Size of the on-heap ZlibDecompressor's internal staging buffers
-  private static final int HEAP_DECOMPRESSOR_BUFFER_SIZE = 64 * 1024;
-
   @Nullable
   private final ZlibDecompressor.ZlibDirectDecompressor decompressor;
-
-  @Nullable
-  private final ZlibDecompressor heapDecompressor;
 
   private boolean allowByteBuffDecompression;
 
@@ -50,10 +45,6 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
     decompressor = nativeZlibLoaded
       ? new ZlibDecompressor.ZlibDirectDecompressor(ZlibDecompressor.CompressionHeader.GZIP_FORMAT,
         0)
-      : null;
-    heapDecompressor = nativeZlibLoaded
-      ? new ZlibDecompressor(ZlibDecompressor.CompressionHeader.GZIP_FORMAT,
-        HEAP_DECOMPRESSOR_BUFFER_SIZE)
       : null;
     allowByteBuffDecompression = true;
   }
@@ -66,15 +57,9 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
     if (!(output instanceof SingleByteBuff) || !(input instanceof SingleByteBuff)) {
       return false;
     }
-    boolean inputDirect = input.nioByteBuffers()[0].isDirect();
-    boolean outputDirect = output.nioByteBuffers()[0].isDirect();
-    if (inputDirect && outputDirect) {
-      return decompressor != null;
-    }
-    if (inputDirect != outputDirect) {
-      return false;
-    }
-    return !inputDirect && !outputDirect && heapDecompressor != null;
+    // Only direct-to-direct decompression is supported.
+    return input.nioByteBuffers()[0].isDirect() && output.nioByteBuffers()[0].isDirect()
+      && decompressor != null;
   }
 
   @Override
@@ -89,25 +74,12 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
 
     ByteBuffer nioInput = input.nioByteBuffers()[0];
     ByteBuffer nioOutput = output.nioByteBuffers()[0];
-    boolean inputDirect = nioInput.isDirect();
-    boolean outputDirect = nioOutput.isDirect();
-
-    if (inputDirect && outputDirect) {
-      if (decompressor == null) {
-        throw new IllegalStateException(
-          "GzipByteBuffDecompressor#decompress() was called with direct buffers but Hadoop's "
-            + "native zlib library is not loaded, this should never happen since "
-            + "canDecompress() would have returned false");
-      }
-      return decompressOffHeap(nioInput, nioOutput, inputLen);
-    }
-    if (heapDecompressor == null) {
+    if (!nioInput.isDirect() || !nioOutput.isDirect() || decompressor == null) {
       throw new IllegalStateException(
-        "GzipByteBuffDecompressor#decompress() was called with heap buffers but Hadoop's "
-          + "native zlib library is not loaded, this should never happen since "
-          + "canDecompress() would have returned false");
+        "GzipByteBuffDecompressor only supports direct-to-direct decompression with native zlib "
+          + "loaded, this should never happen since canDecompress() would have returned false");
     }
-    return decompressOnHeap(nioInput, nioOutput, inputLen);
+    return decompressOffHeap(nioInput, nioOutput, inputLen);
   }
 
   private int decompressOffHeap(ByteBuffer nioInput, ByteBuffer nioOutput, int inputLen)
@@ -139,59 +111,23 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
     return nioOutput.position() - outputStart;
   }
 
-  private int decompressOnHeap(ByteBuffer nioInput, ByteBuffer nioOutput, int inputLen)
-    throws IOException {
-    if (!nioInput.hasArray() || !nioOutput.hasArray()) {
-      throw new IllegalStateException(
-        "decompressOnHeap() requires heap ByteBuffers with backing arrays");
-    }
-    int inputStart = nioInput.position();
-    int outputStart = nioOutput.position();
-    int outputCapacity = nioOutput.remaining();
-
-    heapDecompressor.reset();
-    heapDecompressor.setInput(nioInput.array(), nioInput.arrayOffset() + inputStart, inputLen);
-    int totalDecompressed = 0;
-    while (!heapDecompressor.finished()) {
-      int remaining = outputCapacity - totalDecompressed;
-      if (remaining == 0) {
-        throw new IOException("Output buffer is too small for the decompressed gzip stream");
-      }
-      int n = heapDecompressor.decompress(nioOutput.array(),
-        nioOutput.arrayOffset() + outputStart + totalDecompressed, remaining);
-      if (n == 0 && !heapDecompressor.finished()) {
-        if (heapDecompressor.needsInput()) {
-          throw new IOException("Unexpected end of gzip stream");
-        }
-        throw new IOException(
-          "Gzip decompressor made no progress and is not finished; aborting to avoid an "
-            + "infinite loop");
-      }
-      totalDecompressed += n;
-    }
-    nioOutput.position(outputStart + totalDecompressed);
-    nioInput.position(inputStart + inputLen);
-    return totalDecompressed;
-  }
-
   @Override
   public void reinit(@Nullable Compression.HFileDecompressionContext newHFileDecompressionContext) {
     if (newHFileDecompressionContext == null) {
       return;
     }
-    if (!(newHFileDecompressionContext instanceof GzipHFileDecompressionContext gzipContext)) {
+    if (!(newHFileDecompressionContext instanceof GzipHFileDecompressionContext)) {
       throw new IllegalArgumentException(
         "GzipByteBuffDecompressor#reinit() was given an HFileDecompressionContext that was not "
           + "a GzipHFileDecompressionContext, this should never happen");
     }
+    GzipHFileDecompressionContext gzipContext =
+      (GzipHFileDecompressionContext) newHFileDecompressionContext;
     allowByteBuffDecompression = gzipContext.isAllowByteBuffDecompression();
   }
 
   @Override
   public void close() {
-    if (heapDecompressor != null) {
-      heapDecompressor.end();
-    }
     if (decompressor != null) {
       decompressor.end();
     }

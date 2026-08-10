@@ -62,7 +62,7 @@ public class TestGzipByteBuffDecompressor {
       assertFalse(decompressor.canDecompress(emptySingleDirectBuff, emptySingleDirectBuff),
         "Without native zlib, direct-to-direct decompression is not available");
       assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff),
-        "Without native zlib, heap decompression is not available");
+        "Heap decompression is not supported; only direct-to-direct");
     }
   }
 
@@ -77,10 +77,8 @@ public class TestGzipByteBuffDecompressor {
 
     try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
       assertTrue(decompressor.canDecompress(emptySingleDirectBuff, emptySingleDirectBuff));
-      assertTrue(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff),
-        "On-heap decompression is supported when both buffers are heap SingleByteBuffs");
-      // Mixed (one direct, one heap) is not supported: decompressOnHeap() requires both to have
-      // backing arrays, and decompressOffHeap() requires both to be direct.
+      // Only direct-to-direct is supported; heap and mixed buffers return false.
+      assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptySingleHeapBuff));
       assertFalse(decompressor.canDecompress(emptySingleHeapBuff, emptySingleDirectBuff));
       assertFalse(decompressor.canDecompress(emptySingleDirectBuff, emptySingleHeapBuff));
       assertFalse(decompressor.canDecompress(emptyMultiHeapBuff, emptyMultiHeapBuff));
@@ -380,198 +378,6 @@ public class TestGzipByteBuffDecompressor {
       fail("Expected an IllegalStateException when output is a MultiByteBuff");
     } catch (IllegalStateException e) {
       assertTrue(e.getMessage().contains("not a SingleByteBuff"));
-    }
-  }
-
-  // On-heap (heap -> heap) decompression tests; these also require native zlib.
-
-  @Test
-  public void itDecompressesHeapToHeapSuccessfully() throws IOException {
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(COMPRESSED_PAYLOAD);
-      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-      assertEquals("HBase is fun to use and very fast",
-        Bytes.toString(output.toBytes(0, decompressedSize)));
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapSuccessfullyWhenNativeZlibIsAlsoAvailable()
-    throws IOException {
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(COMPRESSED_PAYLOAD);
-      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-      assertEquals("HBase is fun to use and very fast",
-        Bytes.toString(output.toBytes(0, decompressedSize)));
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapFailsWhenOutputBufferTooSmall() throws IOException {
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(10));
-      ByteBuff input = heapBuffWith(COMPRESSED_PAYLOAD);
-      decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-      fail("Expected an IOException because the output buffer is too small");
-    } catch (IOException e) {
-      assertTrue(e.getMessage().contains("Output buffer is too small"));
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapFailsOnTooShortInput() throws IOException {
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(false)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = new SingleByteBuff(ByteBuffer.allocate(10));
-      decompressor.decompress(output, input, 10);
-      fail("Expected an IOException because the input is too short to be a gzip member");
-    } catch (IOException e) {
-      assertTrue(e.getMessage().contains("too short to be a gzip member"));
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapFailsOnCorruptedDeflateBody() throws IOException {
-    // Corrupt a byte inside the DEFLATE payload (bytes 10 through len-9). ZlibDecompressor with
-    // GZIP_FORMAT will reject the corrupted data via native zlib's CRC/format checks.
-    byte[] corrupted = Arrays.copyOf(COMPRESSED_PAYLOAD, COMPRESSED_PAYLOAD.length);
-    corrupted[15] ^= (byte) 0xff;
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(corrupted);
-      decompressor.decompress(output, input, corrupted.length);
-      fail("Expected an IOException because the DEFLATE payload is corrupted");
-    } catch (IOException e) {
-      // Expected; the exact message depends on native zlib internals
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapFailsOnCrc32Mismatch() throws IOException {
-    // Corrupt the first 4 bytes of the 8-byte trailer (CRC32), leaving ISIZE intact.
-    // ZlibDecompressor with GZIP_FORMAT verifies the CRC32 field via native zlib.
-    byte[] corrupted = Arrays.copyOf(COMPRESSED_PAYLOAD, COMPRESSED_PAYLOAD.length);
-    corrupted[corrupted.length - 8] ^= (byte) 0xff;
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(corrupted);
-      decompressor.decompress(output, input, corrupted.length);
-      fail("Expected an IOException due to a CRC32 mismatch in the gzip trailer");
-    } catch (IOException e) {
-      // Expected; ZlibDecompressor delegates CRC32 verification to native zlib
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapFailsOnIsizeMismatch() throws IOException {
-    // Corrupt the last 4 bytes of the 8-byte trailer (ISIZE), leaving CRC32 intact.
-    // ZlibDecompressor with GZIP_FORMAT verifies the ISIZE field via native zlib.
-    byte[] corrupted = Arrays.copyOf(COMPRESSED_PAYLOAD, COMPRESSED_PAYLOAD.length);
-    corrupted[corrupted.length - 4] ^= (byte) 0xff;
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(corrupted);
-      decompressor.decompress(output, input, corrupted.length);
-      fail("Expected an IOException due to an ISIZE mismatch in the gzip trailer");
-    } catch (IOException e) {
-      // Expected; ZlibDecompressor delegates ISIZE verification to native zlib
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapSucceedsRepeatedly() throws IOException {
-    // ZlibDecompressor must be reset between calls; verify multiple sequential decompressions on
-    // the same instance all produce correct output.
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      for (int i = 0; i < 3; i++) {
-        ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-        ByteBuff input = heapBuffWith(COMPRESSED_PAYLOAD);
-        int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-        assertEquals("HBase is fun to use and very fast",
-          Bytes.toString(output.toBytes(0, decompressedSize)));
-      }
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapIsStillUsableAfterAPreviousCallThrows() throws IOException {
-    byte[] corrupted = Arrays.copyOf(COMPRESSED_PAYLOAD, COMPRESSED_PAYLOAD.length);
-    corrupted[corrupted.length - 8] ^= (byte) 0xff;
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff badOutput = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff badInput = heapBuffWith(corrupted);
-      try {
-        decompressor.decompress(badOutput, badInput, corrupted.length);
-        fail("Expected an IOException because the CRC32 is corrupted");
-      } catch (IOException e) {
-        // Expected
-      }
-
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(COMPRESSED_PAYLOAD);
-      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-      assertEquals("HBase is fun to use and very fast",
-        Bytes.toString(output.toBytes(0, decompressedSize)));
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapSuccessfullyWithNonZeroBufferPosition() throws IOException {
-    assumeNativeZlibLoaded();
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuffer rawOutput = ByteBuffer.allocate(128);
-      rawOutput.position(32);
-
-      ByteBuffer rawInput = ByteBuffer.allocate(16 + COMPRESSED_PAYLOAD.length);
-      rawInput.put(new byte[16]);
-      rawInput.put(COMPRESSED_PAYLOAD);
-      rawInput.position(16);
-
-      ByteBuff output = new SingleByteBuff(rawOutput);
-      ByteBuff input = new SingleByteBuff(rawInput);
-      int decompressedSize = decompressor.decompress(output, input, COMPRESSED_PAYLOAD.length);
-
-      assertEquals("HBase is fun to use and very fast",
-        Bytes.toString(rawOutput.array(), rawOutput.arrayOffset() + 32, decompressedSize));
-    }
-  }
-
-  @Test
-  public void itDecompressesHeapToHeapFailsOnTruncatedGzipStream() throws IOException {
-    assumeNativeZlibLoaded();
-    byte[] truncated = Arrays.copyOf(COMPRESSED_PAYLOAD, COMPRESSED_PAYLOAD.length - 4);
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(truncated);
-      decompressor.decompress(output, input, truncated.length);
-      fail("Expected an IOException because the gzip stream is truncated");
-    } catch (IOException e) {
-      // Expected: the decompressor must not report finished() on an incomplete stream
-    }
-  }
-
-  @Test
-  public void itDecompressesOnlyTheDelimitedMemberFromAMultiMemberPayloadOnHeap()
-    throws IOException {
-    assumeNativeZlibLoaded();
-    // Two distinct members concatenated, on the on-heap path: decode only the delimited one.
-    byte[] firstMember = gzip("first member");
-    byte[] secondMember = gzip("second member");
-    try (GzipByteBuffDecompressor decompressor = new GzipByteBuffDecompressor(true)) {
-      ByteBuff output = new SingleByteBuff(ByteBuffer.allocate(64));
-      ByteBuff input = heapBuffWith(concat(firstMember, secondMember));
-      int decompressedSize = decompressor.decompress(output, input, firstMember.length);
-      assertEquals("first member", Bytes.toString(output.toBytes(0, decompressedSize)));
     }
   }
 
