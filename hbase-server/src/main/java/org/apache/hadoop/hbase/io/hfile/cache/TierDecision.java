@@ -112,4 +112,9 @@ public final class TierDecision {
   public boolean isEmpty() {
     return tiers.isEmpty();
   }
+
+  @Override
+  public String toString() {
+    return "TierDecision{" + "tiers=" + tiers + '}';
+  }
 }

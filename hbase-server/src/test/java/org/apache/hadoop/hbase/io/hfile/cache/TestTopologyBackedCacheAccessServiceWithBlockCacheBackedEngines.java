@@ -27,6 +27,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 import java.util.Arrays;
+import java.util.Optional;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -45,13 +46,14 @@ public class TestTopologyBackedCacheAccessServiceWithBlockCacheBackedEngines {
     BlockCache l2 = mock(BlockCache.class);
     BlockCacheKey key = new BlockCacheKey("file", 1L);
     Cacheable block = mock(Cacheable.class);
+    when(l1.isAlreadyCached(key)).thenReturn(Optional.of(true));
 
     when(l1.getBlock(key, true, false, true)).thenReturn(block);
 
     TopologyBackedCacheAccessService service = service(l1, l2, noPromotionPolicy());
 
     assertSame(block, service.getBlock(key, requestContext()));
-
+    verify(l1).isAlreadyCached(key);
     verify(l1).getBlock(key, true, false, true);
     verify(l2, never()).getBlock(any(), any(Boolean.class), any(Boolean.class), any(Boolean.class));
   }
@@ -62,7 +64,7 @@ public class TestTopologyBackedCacheAccessServiceWithBlockCacheBackedEngines {
     BlockCache l2 = mock(BlockCache.class);
     BlockCacheKey key = new BlockCacheKey("file", 1L);
     Cacheable block = mock(Cacheable.class);
-
+    when(l1.isAlreadyCached(key)).thenReturn(Optional.of(false));
     when(l1.getBlock(key, true, false, true)).thenReturn(null);
     when(l2.getBlock(key, true, false, true)).thenReturn(block);
 
@@ -70,7 +72,8 @@ public class TestTopologyBackedCacheAccessServiceWithBlockCacheBackedEngines {
 
     assertSame(block, service.getBlock(key, requestContext()));
 
-    verify(l1).getBlock(key, true, false, true);
+    verify(l1, never()).getBlock(any(), any(Boolean.class), any(Boolean.class), any(Boolean.class));
+    verify(l1).isAlreadyCached(key);
     verify(l2).getBlock(key, true, false, true);
     verify(l1).cacheBlock(key, block);
     verify(l2).evictBlock(key);
@@ -81,15 +84,15 @@ public class TestTopologyBackedCacheAccessServiceWithBlockCacheBackedEngines {
     BlockCache l1 = mock(BlockCache.class);
     BlockCache l2 = mock(BlockCache.class);
     BlockCacheKey key = new BlockCacheKey("file", 1L);
-
+    when(l1.isAlreadyCached(key)).thenReturn(Optional.of(false));
     when(l1.getBlock(key, true, false, true)).thenReturn(null);
     when(l2.getBlock(key, true, false, true)).thenReturn(null);
 
     TopologyBackedCacheAccessService service = service(l1, l2, noPromotionPolicy());
 
     assertNull(service.getBlock(key, requestContext()));
-
-    verify(l1).getBlock(key, true, false, true);
+    verify(l1, never()).getBlock(any(), any(Boolean.class), any(Boolean.class), any(Boolean.class));
+    verify(l1).isAlreadyCached(key);
     verify(l2).getBlock(key, true, false, true);
   }
 

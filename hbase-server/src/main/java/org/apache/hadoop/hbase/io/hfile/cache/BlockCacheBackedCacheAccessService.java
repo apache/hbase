@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -308,6 +310,11 @@ public class BlockCacheBackedCacheAccessService
     long size) {
     Objects.requireNonNull(fileName, "fileName must not be null");
     blockCache.notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
+  }
+
+  @Override
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    return blockCache.getFullyCachedFiles();
   }
 
   @Override

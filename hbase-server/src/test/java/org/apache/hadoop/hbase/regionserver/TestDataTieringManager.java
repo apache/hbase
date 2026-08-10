@@ -773,7 +773,6 @@ public class TestDataTieringManager {
     int numHotBlocks = 0, numColdBlocks = 0;
 
     Waiter.waitFor(defaultConf, 10000, 100, () -> (expectedTotalKeys == keys.size()));
-    int iter = 0;
     for (BlockCacheKey key : keys) {
       try {
         if (dataTieringManager.isHotData(key)) {
@@ -803,11 +802,6 @@ public class TestDataTieringManager {
       }
       assertEquals(exception.getMessage(), e.getMessage());
     }
-  }
-
-  private void testDataTieringMethodWithKeyExpectingException(DataTieringMethodCallerWithKey caller,
-    BlockCacheKey key, DataTieringException exception) {
-    testDataTieringMethodWithKey(caller, key, false, exception);
   }
 
   private void testDataTieringMethodWithKeyNoException(DataTieringMethodCallerWithKey caller,

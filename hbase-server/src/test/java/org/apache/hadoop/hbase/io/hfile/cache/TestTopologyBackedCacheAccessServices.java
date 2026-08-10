@@ -22,9 +22,11 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.util.Optional;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
@@ -73,5 +75,57 @@ public class TestTopologyBackedCacheAccessServices {
       .fromTieredExclusiveBlockCaches("combined", l1, null, policy));
     assertThrows(NullPointerException.class, () -> TopologyBackedCacheAccessServices
       .fromTieredExclusiveBlockCaches("combined", l1, l2, null));
+  }
+
+  @Test
+  void testFromCombinedBlockCacheCreatesExpectedService() {
+    BlockCache l1 = mock(BlockCache.class);
+    BlockCache l2 = mock(BlockCache.class);
+    CombinedBlockCache combinedBlockCache = mock(CombinedBlockCache.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+
+    when(combinedBlockCache.getBlockCaches()).thenReturn(new BlockCache[] { l1, l2 });
+
+    TopologyBackedCacheAccessService service =
+      TopologyBackedCacheAccessServices.fromCombinedBlockCache(combinedBlockCache, policy);
+
+    assertEquals("combined", service.getName());
+    assertSame(policy, service.getPolicy());
+    assertTrue(service.getTopology() instanceof TieredExclusiveTopology);
+    assertEquals(CacheTopologyType.TIERED_EXCLUSIVE, service.getTopology().getType());
+
+    Optional<CacheEngine> l1Engine = service.getTopology().getEngine(CacheTier.L1);
+    Optional<CacheEngine> l2Engine = service.getTopology().getEngine(CacheTier.L2);
+
+    assertTrue(l1Engine.isPresent());
+    assertTrue(l2Engine.isPresent());
+    assertTrue(l1Engine.get() instanceof BlockCacheBackedCacheEngine);
+    assertTrue(l2Engine.get() instanceof BlockCacheBackedCacheEngine);
+    assertSame(l1, ((BlockCacheBackedCacheEngine) l1Engine.get()).getBlockCache());
+    assertSame(l2, ((BlockCacheBackedCacheEngine) l2Engine.get()).getBlockCache());
+  }
+
+  @Test
+  void testFromCombinedBlockCacheRejectsNullCombinedBlockCache() {
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    assertThrows(NullPointerException.class,
+      () -> TopologyBackedCacheAccessServices.fromCombinedBlockCache(null, policy));
+  }
+
+  @Test
+  void testFromCombinedBlockCacheRejectsNullPolicy() {
+    CombinedBlockCache combinedBlockCache = mock(CombinedBlockCache.class);
+    assertThrows(NullPointerException.class,
+      () -> TopologyBackedCacheAccessServices.fromCombinedBlockCache(combinedBlockCache, null));
+  }
+
+  @Test
+  void testFromCombinedBlockCacheRejectsUnexpectedTierCount() {
+    BlockCache l1 = mock(BlockCache.class);
+    CombinedBlockCache combinedBlockCache = mock(CombinedBlockCache.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    when(combinedBlockCache.getBlockCaches()).thenReturn(new BlockCache[] { l1 });
+    assertThrows(IllegalArgumentException.class,
+      () -> TopologyBackedCacheAccessServices.fromCombinedBlockCache(combinedBlockCache, policy));
   }
 }

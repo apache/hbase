@@ -353,7 +353,7 @@ public class TestHFile {
     that.set(BLOCKCACHE_POLICY_KEY, l1CachePolicy);
     CacheAccessService bc = CacheAccessServiceTestFactory.fromConfiguration(that);
     assertNotNull(bc);
-    assertTrue(CacheAccessServiceTestFactory.blockCache(bc) instanceof CombinedBlockCache);
+    assertTrue(CacheAccessServiceTestFactory.isCombinedBlockCacheEquivalent(bc));
     return bc;
   }
 

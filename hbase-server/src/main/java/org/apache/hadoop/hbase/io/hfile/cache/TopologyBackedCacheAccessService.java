@@ -17,14 +17,23 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
+import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -121,7 +130,57 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
    * @return cached block, or {@code null} if not present in any tier
    */
   @Override
+
   public Cacheable getBlock(BlockCacheKey cacheKey, CacheRequestContext context) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(context, "context must not be null");
+    if (topology.getType() == CacheTopologyType.TIERED_EXCLUSIVE) {
+      return getBlockFromTieredExclusiveTopology(cacheKey, context);
+    }
+    return getBlockFromAllTiers(cacheKey, context);
+
+  }
+
+  private Cacheable getBlockFromTieredExclusiveTopology(BlockCacheKey cacheKey,
+    CacheRequestContext context) {
+    Optional<CacheEngine> l1 = topology.getEngine(CacheTier.L1);
+    Optional<CacheEngine> l2 = topology.getEngine(CacheTier.L2);
+
+    if (!l1.isPresent() && !l2.isPresent()) {
+      return null;
+    }
+
+    if (!l1.isPresent()) {
+      return getBlockFromEngine(l2.get(), cacheKey, context);
+    }
+
+    if (!l2.isPresent()) {
+      return getBlockFromEngine(l1.get(), cacheKey, context);
+    }
+
+    CacheEngine selectedEngine = l1.get();
+    CacheTier selectedTier = CacheTier.L1;
+
+    Optional<Boolean> existsInL1 = l1.get().isAlreadyCached(cacheKey);
+    if (!existsInL1.orElse(false)) {
+      selectedEngine = l2.get();
+      selectedTier = CacheTier.L2;
+    }
+
+    Cacheable block = getBlockFromEngine(selectedEngine, cacheKey, context);
+    boolean updateCacheMetrics = context.isUpdateCacheMetrics();
+    boolean caching = context.isCaching();
+    if (updateCacheMetrics) {
+      updateBlockMetrics(block, cacheKey, selectedEngine, caching);
+    }
+
+    if (block != null) {
+      maybePromote(cacheKey, block, selectedTier, selectedEngine, context);
+    }
+    return block;
+  }
+
+  private Cacheable getBlockFromAllTiers(BlockCacheKey cacheKey, CacheRequestContext context) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     Objects.requireNonNull(context, "context must not be null");
 
@@ -141,6 +200,19 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
     return null;
   }
 
+  private void updateBlockMetrics(Cacheable block, BlockCacheKey key, CacheEngine engine,
+    boolean caching) {
+    CacheStats stats = engine.getStats();
+    if (stats == null) {
+      return;
+    }
+    if (block == null) {
+      stats.miss(caching, key.isPrimary(), key.getBlockType());
+    } else {
+      stats.hit(caching, key.isPrimary(), key.getBlockType());
+    }
+  }
+
   /**
    * Adds a block to the cache using policy-selected target tiers.
    * <p>
@@ -156,6 +228,7 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
    * @param block    block contents
    * @param context  cache write context
    */
+
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable block, CacheWriteContext context) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
@@ -177,15 +250,28 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
     }
   }
 
-  /**
-   * Evicts a single block from all engines participating in the topology.
-   * @param cacheKey block to remove
-   * @return {@code true} if at least one engine removed the block, {@code false} otherwise
-   */
   @Override
   public boolean evictBlock(BlockCacheKey cacheKey) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
 
+    if (topology.getType() == CacheTopologyType.TIERED_EXCLUSIVE) {
+      return evictBlockFromFirstMatchingTier(cacheKey);
+    }
+
+    return evictBlockFromAllTiers(cacheKey);
+  }
+
+  private boolean evictBlockFromFirstMatchingTier(BlockCacheKey cacheKey) {
+    for (CacheTier tier : topology.getTiers()) {
+      Optional<CacheEngine> engine = topology.getEngine(tier);
+      if (engine.isPresent() && engine.get().evictBlock(cacheKey)) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private boolean evictBlockFromAllTiers(BlockCacheKey cacheKey) {
     boolean evicted = false;
     for (CacheEngine engine : topology.getEngines()) {
       evicted |= engine.evictBlock(cacheKey);
@@ -456,6 +542,37 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
     }
   }
 
+  @Override
+  public Optional<Boolean> shouldCacheFile(HFileInfo hFileInfo, Configuration conf) {
+    Objects.requireNonNull(hFileInfo, "hFileInfo must not be null");
+    Objects.requireNonNull(conf, "conf must not be null");
+
+    boolean shouldCache = true;
+    for (CacheEngine engine : topology.getEngines()) {
+      Optional<Boolean> result = engine.shouldCacheFile(hFileInfo, conf);
+      if (result.isPresent()) {
+        shouldCache = shouldCache && result.get();
+      }
+    }
+    return Optional.of(shouldCache);
+  }
+
+  @Override
+  public Optional<Boolean> shouldCacheBlock(BlockCacheKey key, long maxTimeStamp,
+    Configuration conf) {
+    Objects.requireNonNull(key, "key must not be null");
+    Objects.requireNonNull(conf, "conf must not be null");
+
+    boolean shouldCache = true;
+    for (CacheEngine engine : topology.getEngines()) {
+      Optional<Boolean> result = engine.shouldCacheBlock(key, maxTimeStamp, conf);
+      if (result.isPresent()) {
+        shouldCache = shouldCache && result.get();
+      }
+    }
+    return Optional.of(shouldCache);
+  }
+
   private Cacheable getBlockFromEngine(CacheEngine engine, BlockCacheKey cacheKey,
     CacheRequestContext context) {
     Optional<BlockType> blockType = context.getBlockType();
@@ -482,5 +599,47 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
     }
 
     topology.promote(cacheKey, block, sourceEngine, targetEngine.get());
+  }
+
+  @Override
+  public Optional<Map<String, Pair<String, Long>>> getFullyCachedFiles() {
+    Map<String, Pair<String, Long>> fullyCachedFiles = new HashMap<>();
+    boolean found = false;
+
+    for (CacheEngine engine : topology.getEngines()) {
+      Optional<Map<String, Pair<String, Long>>> result = engine.getFullyCachedFiles();
+      if (result.isPresent()) {
+        found = true;
+        fullyCachedFiles.putAll(result.get());
+      }
+    }
+
+    return found ? Optional.of(fullyCachedFiles) : Optional.empty();
+  }
+
+  @Override
+  public void notifyFileCachingCompleted(Path path, int blockCount, int dataBlockCount, long size) {
+    Objects.requireNonNull(path, "path must not be null");
+
+    for (CacheEngine engine : topology.getEngines()) {
+      engine.notifyFileCachingCompleted(path, blockCount, dataBlockCount, size);
+    }
+  }
+
+  public Optional<Iterable<CachedBlock>> asCachedBlockIterable() {
+    List<Iterable<CachedBlock>> iterables = new ArrayList<>();
+
+    for (CacheEngine engine : topology.getEngines()) {
+      engine.asCachedBlockIterable().ifPresent(iterables::add);
+    }
+
+    if (iterables.isEmpty()) {
+      return Optional.empty();
+    }
+
+    Iterable<CachedBlock> cachedBlocks = () -> iterables.stream()
+      .flatMap(iterable -> StreamSupport.stream(iterable.spliterator(), false)).iterator();
+
+    return Optional.of(cachedBlocks);
   }
 }
