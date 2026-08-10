@@ -108,7 +108,7 @@ pipeline {
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
                     sshTransfer(remoteDirectory: "hbase/${JOB_NAME}/${BUILD_NUMBER}",
-                      sourceFiles: output-srctarball/hbase-src.tar.gz
+                      sourceFiles: "output-srctarball/hbase-src.tar.gz"
                     )
                   ]
                 )
