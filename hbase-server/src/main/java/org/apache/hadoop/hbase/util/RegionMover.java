@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import com.google.protobuf.ServiceException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
@@ -31,6 +32,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -67,6 +69,14 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
+import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
+import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -457,7 +467,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       try {
         // Get Online RegionServers
         List<ServerName> regionServers = new ArrayList<>();
-        regionServers.addAll(admin.getRegionServers());
+        RSGroupInfo rsgroup = getRSGroupInfo(hostname, port);
+        if (rsgroup != null) {
+          LOG.info("{} belongs to RSGroup {}", hostname, rsgroup.getName());
+          regionServers.addAll(filterRSGroupServers(rsgroup, admin.getRegionServers()));
+        } else {
+          regionServers.addAll(admin.getRegionServers());
+        }
         // Remove the host Region server from target Region Servers list
         ServerName server = stripServer(regionServers, hostname, port);
         if (server == null) {
@@ -501,6 +517,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         if (regionServers.isEmpty()) {
           LOG.warn("No Regions were moved - no servers available");
           return false;
+        } else {
+          LOG.info("Available servers {}", regionServers);
         }
         unloadRegions(server, regionServers, movedRegions, isolateRegionIdArray);
       } catch (Exception e) {
@@ -836,6 +854,51 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       }
     }
     return servers;
+  }
+
+  /**
+   * Returns the {@link RSGroupInfo} for the given host:port if the RSGroup coprocessor is enabled
+   * on the cluster, or {@code null} if RSGroups are not in use.
+   */
+  private RSGroupInfo getRSGroupInfo(String host, int port) throws IOException {
+    if (!admin.getMasterCoprocessorNames().contains("RSGroupAdminEndpoint")) {
+      return null;
+    }
+    RSGroupAdminService.BlockingInterface stub =
+      RSGroupAdminService.newBlockingStub(admin.coprocessorService());
+    GetRSGroupInfoOfServerRequest request = GetRSGroupInfoOfServerRequest.newBuilder()
+      .setServer(HBaseProtos.ServerName.newBuilder().setHostName(host).setPort(port).build())
+      .build();
+    try {
+      GetRSGroupInfoOfServerResponse resp = stub.getRSGroupInfoOfServer(null, request);
+      if (!resp.hasRSGroupInfo()) {
+        LOG.debug("No RSGroup found for {}:{} — server may not be registered or address form "
+          + "(hostname vs IP) may not match what the RS registered with", host, port);
+        return null;
+      }
+      RSGroupProtos.RSGroupInfo proto = resp.getRSGroupInfo();
+      // Only name and server membership are needed for filtering; tables/configuration are omitted.
+      RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
+      for (HBaseProtos.ServerName sn : proto.getServersList()) {
+        rsGroupInfo.addServer(Address.fromParts(sn.getHostName(), sn.getPort()));
+      }
+      return rsGroupInfo;
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  @InterfaceAudience.Private
+  Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
+    Collection<ServerName> onlineServers) {
+    List<ServerName> result = new ArrayList<>(rsgroup.getServers().size());
+    for (ServerName server : onlineServers) {
+      Address address = Address.fromParts(server.getHostname(), server.getPort());
+      if (rsgroup.containsServer(address)) {
+        result.add(server);
+      }
+    }
+    return result;
   }
 
   /**
