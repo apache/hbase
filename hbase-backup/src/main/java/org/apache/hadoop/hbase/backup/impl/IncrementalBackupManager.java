@@ -191,10 +191,10 @@ public class IncrementalBackupManager extends BackupManager {
     }
 
     // Include the .oldlogs files too.
-    FileStatus[] oldlogs = fs.listStatus(oldLogDir);
-    for (FileStatus oldlog : oldlogs) {
-      p = oldlog.getPath();
-      currentLogFile = p.toString();
+    List<String> oldlogs = BackupUtils.getFiles(fs, oldLogDir, new ArrayList<>(), path -> true);
+    for (String oldlog : oldlogs) {
+      p = new Path(oldlog);
+      currentLogFile = oldlog;
       if (AbstractFSWALProvider.isMetaFile(p)) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("Skip .meta log file: " + currentLogFile);

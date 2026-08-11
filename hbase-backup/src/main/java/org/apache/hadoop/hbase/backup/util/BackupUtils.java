@@ -328,6 +328,10 @@ public final class BackupUtils {
     if (p.getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)) {
       return null;
     }
+    Path parent = p.getParent();
+    if (parent != null && ServerName.isFullServerName(parent.getName())) {
+      return ServerName.valueOf(parent.getName()).getAddress().toString();
+    }
     try {
       String urlDecodedName = URLDecoder.decode(p.getName(), "UTF8");
       Iterable<String> nameSplitsOnComma = Splitter.on(",").split(urlDecodedName);
