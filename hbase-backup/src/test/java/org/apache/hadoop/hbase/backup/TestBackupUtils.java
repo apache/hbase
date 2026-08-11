@@ -111,6 +111,11 @@ public class TestBackupUtils {
           + "regiongroup-0" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
       assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
         BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
+
+      Path testOldWalInServerDirPath = new Path(new Path(oldLogDir, serverName.toString()),
+        "wal" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
+      assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
+        BackupUtils.parseHostFromOldLog(testOldWalInServerDirPath));
     }
 
   }
