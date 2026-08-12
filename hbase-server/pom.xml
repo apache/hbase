@@ -190,6 +190,11 @@
       <groupId>javax.servlet.jsp</groupId>
       <artifactId>javax.servlet.jsp-api</artifactId>
     </dependency>
+    <!-- Jersey need this, as javax.annotation.Priority is not included in JDK8 -->
+    <dependency>
+      <groupId>javax.annotation</groupId>
+      <artifactId>javax.annotation-api</artifactId>
+    </dependency>
     <!-- General dependencies -->
     <dependency>
       <groupId>com.github.stephenc.findbugs</groupId>
