@@ -329,12 +329,19 @@ public class TestMemStoreLAB {
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,
     ExtendedCell cellToCopyInto) {
+    // Reserve 20% of max heap as safety margin to prevent OOM on fast hardware where threads can
+    // allocate many GB of chunks within the 1-second test window.
+    final long maxMemory = ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax();
+    final long memoryLimit = (long) (maxMemory * 0.8);
     Thread thread = new Thread() {
       volatile boolean stopped = false;
 
       @Override
       public void run() {
         while (!stopped) {
+          if (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getUsed() > memoryLimit) {
+            break;
+          }
           // keep triggering chunk retirement
           mslab.copyCellInto(cellToCopyInto);
         }
