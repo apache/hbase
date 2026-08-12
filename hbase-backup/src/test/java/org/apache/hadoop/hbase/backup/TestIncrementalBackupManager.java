@@ -76,7 +76,7 @@ public class TestIncrementalBackupManager extends TestBackupBase {
 
       try (IncrementalBackupManager manager = new IncrementalBackupManager(conn, testConf)) {
         BackupInfo backupInfo = manager.createBackupInfo("backup_test", BackupType.INCREMENTAL,
-          tables, BACKUP_ROOT_DIR, -1, -1, false);
+          tables, BACKUP_ROOT_DIR, -1, -1, false, false);
         Map<String, Long> previousTimestamps =
           BackupUtils.getRSLogTimestampMins(manager.readLogTimestampMap());
         ServerName serverName = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
