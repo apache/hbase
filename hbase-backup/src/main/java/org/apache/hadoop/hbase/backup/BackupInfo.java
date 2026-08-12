@@ -435,6 +435,18 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setTotalBytesCopied(totalBytesCopied);
+    builder.setNoChecksumVerify(noChecksumVerify);
+    if (incrBackupFileList != null) {
+      builder.addAllIncrBackupFileList(incrBackupFileList);
+    }
+    if (incrTimestampMap != null) {
+      for (Entry<TableName, Map<String, Long>> entry : incrTimestampMap.entrySet()) {
+        builder.putIncrTimestampMap(entry.getKey().getNameAsString(),
+          BackupProtos.BackupInfo.RSTimestampMap.newBuilder().putAllRsTimestamp(entry.getValue())
+            .build());
+      }
+    }
     return builder.build();
   }
 
@@ -530,6 +542,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setTotalBytesCopied(proto.getTotalBytesCopied());
+    context.setNoChecksumVerify(proto.getNoChecksumVerify());
+    if (proto.getIncrBackupFileListCount() > 0) {
+      context.setIncrBackupFileList(new ArrayList<>(proto.getIncrBackupFileListList()));
+    }
+    if (proto.getIncrTimestampMapCount() > 0) {
+      context.setIncrTimestampMap(getTableSetTimestampMap(proto.getIncrTimestampMapMap()));
+    }
     return context;
   }
 
