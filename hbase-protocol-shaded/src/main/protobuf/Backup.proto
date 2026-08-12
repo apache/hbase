@@ -93,6 +93,10 @@ message BackupInfo {
   optional uint32 workers_number = 11;
   optional uint64 bandwidth = 12;
   map<string, RSTimestampMap> table_set_timestamp = 13;
+  repeated string incr_backup_file_list = 14;
+  optional uint64 total_bytes_copied = 15;
+  optional bool no_checksum_verify = 16;
+  map<string, RSTimestampMap> incr_timestamp_map = 17;
 
   message RSTimestampMap {
     map<string, uint64> rs_timestamp = 1;
