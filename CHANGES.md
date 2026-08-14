@@ -18,7 +18,7 @@
 -->
 # HBASE Changelog
 
-## Release 2.6.7 - 2026-08-07
+## Release 2.6.7 - 2026-08-28
 
 
 
@@ -60,6 +60,12 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-30322](https://issues.apache.org/jira/browse/HBASE-30322) | Some fields in BackupInfo do not save to the backup:system table |  Minor | backup&restore |
+| [HBASE-30328](https://issues.apache.org/jira/browse/HBASE-30328) | Missing javax.annotation dependency causes webui start up error when building with hadoop2 |  Major | dependencies, hadoop2, monitoring |
+| [HBASE-30285](https://issues.apache.org/jira/browse/HBASE-30285) | BucketCache shutdown/disable does not release backingMap-owned BucketEntry references |  Minor | BucketCache |
+| [HBASE-30324](https://issues.apache.org/jira/browse/HBASE-30324) | Uploading hbase-src.tar.gz is broken in integration test |  Major | jenkins |
+| [HBASE-27691](https://issues.apache.org/jira/browse/HBASE-27691) | Fake Cell is being passed to Filters and comparators during StoreFileScans |  Major | scan, Scanners |
+| [HBASE-30311](https://issues.apache.org/jira/browse/HBASE-30311) | Bump at.yawk.lz4:lz4-java from 1.10.4 to 1.11.1 |  Major | dependabot, dependencies, security |
 | [HBASE-30300](https://issues.apache.org/jira/browse/HBASE-30300) | CacheAwareLoadBalancer disproportionally favouring cache ratio over skewness |  Major | Balancer |
 | [HBASE-29696](https://issues.apache.org/jira/browse/HBASE-29696) | TableInputFormatBase with NUM\_MAPPERS\_PER\_REGION produces incorrect last InputSplit |  Major | mapreduce |
 | [HBASE-30304](https://issues.apache.org/jira/browse/HBASE-30304) | Bytes.toBytesBinary throws StringIndexOutOfBoundsException on truncated \\x escape |  Minor | . |
@@ -108,6 +114,10 @@
 
 | JIRA | Summary | Priority | Component |
 |:---- |:---- | :--- |:---- |
+| [HBASE-30325](https://issues.apache.org/jira/browse/HBASE-30325) | Bump gitpython from 3.1.57 to 3.1.58 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+| [HBASE-30315](https://issues.apache.org/jira/browse/HBASE-30315) | Bump opentelemetry-javaagent to 2.30.0 |  Major | dependencies, security, tracing |
+| [HBASE-30318](https://issues.apache.org/jira/browse/HBASE-30318) | Bump gitpython from 3.1.54 to 3.1.57 in /dev-support/flaky-tests |  Major | dependabot, scripts, security |
+| [HBASE-30307](https://issues.apache.org/jira/browse/HBASE-30307) | Bump gitpython from 3.1.50 to 3.1.54 in /dev-support/flaky-tests |  Major | dependabot, jenkins, scripts, security |
 | [HBASE-30264](https://issues.apache.org/jira/browse/HBASE-30264) | Validate bulkToken path in SecureBulkLoadManager.cleanupBulkLoad |  Major | regionserver |
 | [HBASE-30195](https://issues.apache.org/jira/browse/HBASE-30195) | Update Thrift gateway to use new hbase-shaded-thrift in thirdparty |  Major | . |
 | [HBASE-30200](https://issues.apache.org/jira/browse/HBASE-30200) | Cleanup all junit4 references in hbase code base |  Major | test |
