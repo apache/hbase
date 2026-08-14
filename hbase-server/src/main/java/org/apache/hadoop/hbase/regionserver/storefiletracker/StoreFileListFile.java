@@ -303,4 +303,38 @@ class StoreFileListFile {
     nextTrackFile = -1;
     prevTimestamp = -1;
   }
+
+  /**
+   * Repair-only write path: write a brand new tracker generation under {@link #TRACK_FILE_DIR}
+   * without consulting (and without trusting) any existing generation. The new file is written with
+   * a strictly newer sequence id than any existing tracker file so a subsequent {@code load(false)}
+   * will pick it as the winner and prune the older (possibly corrupted) generations via
+   * {@link #cleanUpTrackFiles}.
+   * <p>
+   * The caller is expected to have decided that an offline repair is required, e.g. because the
+   * normal {@link #load(boolean)} fails on the latest generation due to checksum, parse or version
+   * corruption.
+   * <p>
+   * This method intentionally does NOT delete older tracker files. They are pruned by the next
+   * regular {@code load(false)} once a region opens, which is the point at which HBase already
+   * owns a consistent view of the new generation.
+   */
+  Path writeNew(StoreFileList.Builder builder) throws IOException {
+    NavigableMap<Long, List<Path>> seqId2TrackFiles = listFiles();
+    long highestSeqId = seqId2TrackFiles.isEmpty() ? -1L : seqId2TrackFiles.firstKey();
+    long seqId = Math.max(EnvironmentEdgeManager.currentTime(), highestSeqId + 1);
+    FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+    if (!fs.exists(trackFileDir)) {
+      fs.mkdirs(trackFileDir);
+    }
+    Path file = new Path(trackFileDir, TRACK_FILE_PREFIX + TRACK_FILE_SEPARATOR + seqId);
+    long timestamp = Math.max(prevTimestamp + 1, EnvironmentEdgeManager.currentTime());
+    write(fs, file, builder.setTimestamp(timestamp).setVersion(VERSION).build());
+    // Reset internal state so that this StoreFileListFile instance is not silently reused for a
+    // subsequent update() without re-loading. A subsequent caller must run load(false) which will
+    // see the new generation as the winner and clean up older files.
+    prevTimestamp = -1;
+    nextTrackFile = -1;
+    return file;
+  }
 }
