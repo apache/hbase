@@ -67,7 +67,10 @@
   <% for (TableDescriptor desc : tables) { %>
     <%
       TableName tableName = desc.getTableName();
-      TableState tableState = master.getTableStateManager().getTableState(tableName);
+      TableState tableState = master.getTableStateManager().getTableState(tableName, true);
+      if (null == tableState) {
+        continue; // table creation might be in progress, skip this table.
+      }
       Map<RegionState.State, List<RegionInfo>> tableRegions =
           master.getAssignmentManager().getRegionStates()
             .getRegionByStateOfTable(tableName);
