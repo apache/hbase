@@ -42,7 +42,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq -y update \
     patch='2.7.6-*' \
   && apt-get clean \
   && rm -rf /var/lib/apt/lists/* \
-  && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-amd64/jre/bin/java \
+  && update-alternatives --set java /usr/lib/jvm/java-8-openjdk-`uname -m | sed -e s/aarch64/arm64/ | sed -e s/x86_64/amd64/`/jre/bin/java \
   && pip3 install --no-cache-dir python-dateutil==2.8.2
 
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
