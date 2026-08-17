@@ -115,7 +115,9 @@ public class TestRegionMoverWithRSGroupEnable {
     modifiable.remove(rsContainMeta);
     int i = 0;
     for (ServerName server : modifiable) {
-      if (i == 2) break;
+      if (i == 2) {
+        break;
+      }
       rsservers.add(Address.fromParts(server.getHostname(), server.getPort()));
       i++;
     }
@@ -164,8 +166,16 @@ public class TestRegionMoverWithRSGroupEnable {
    */
   @Test
   public void testUnloadRegionsRespectsRSGroup() throws Exception {
-    Address decommission = rsservers.get(0);
-    Address online = rsservers.get(1);
+    // Regions are placed via randomAssignment across the test group's servers, so pick the
+    // decommission target as whichever rsservers member actually hosts a TABLE_NAME region —
+    // otherwise the test could pass without ever exercising the move/filter path.
+    HRegionServer hostingRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+      .map(JVMClusterUtil.RegionServerThread::getRegionServer)
+      .filter(rs -> rsservers.contains(rs.getServerName().getAddress()))
+      .filter(rs -> !rs.getRegions(TABLE_NAME).isEmpty()).findFirst().get();
+    Address decommission = hostingRS.getServerName().getAddress();
+    Address online =
+      rsservers.stream().filter(addr -> !addr.equals(decommission)).findFirst().get();
     String filename = new Path(TEST_UTIL.getDataTestDir(), "testRSGroupUnload").toString();
 
     RegionMoverBuilder builder =
@@ -188,7 +198,9 @@ public class TestRegionMoverWithRSGroupEnable {
       HRegionServer defaultRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
         .map(JVMClusterUtil.RegionServerThread::getRegionServer)
         .filter(rs -> rs.getServerName().equals(defaultSN)).findFirst().orElse(null);
-      if (defaultRS == null) continue;
+      if (defaultRS == null) {
+        continue;
+      }
       List<HRegion> tableRegions = defaultRS.getRegions(TABLE_NAME);
       assertTrue(tableRegions.isEmpty(), "Default-group server " + defaultSN
         + " must not hold any regions of " + TABLE_NAME + " but had: " + tableRegions);
@@ -197,7 +209,8 @@ public class TestRegionMoverWithRSGroupEnable {
 
   /**
    * Unloading a server that is in the default RSGroup must still succeed end-to-end when RSGroups
-   * are enabled. The server's regions should be spread across all available servers (not filtered).
+   * are enabled. Destinations must be filtered to the default group: regions may spread across the
+   * other default-group servers, but must not land on any test-group server.
    */
   @Test
   public void testUnloadDefaultGroupServerWithRSGroupEnabled() throws Exception {

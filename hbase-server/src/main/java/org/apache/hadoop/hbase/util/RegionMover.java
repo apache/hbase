@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import com.google.protobuf.ServiceException;
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.Closeable;
@@ -57,6 +56,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.RSGroupTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -70,12 +70,6 @@ import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.net.Address;
-import org.apache.hadoop.hbase.protobuf.ProtobufUtil;
-import org.apache.hadoop.hbase.protobuf.generated.HBaseProtos;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerRequest;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoOfServerResponse;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupAdminProtos.RSGroupAdminService;
-import org.apache.hadoop.hbase.protobuf.generated.RSGroupProtos;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -857,35 +851,23 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   }
 
   /**
-   * Returns the {@link RSGroupInfo} for the given host:port if the RSGroup coprocessor is enabled
-   * on the cluster, or {@code null} if RSGroups are not in use.
+   * Returns the {@link RSGroupInfo} for the given host:port, or {@code null} if RSGroups are not in
+   * use on this cluster. If RSGroups are enabled but the server cannot be matched to any group,
+   * throws {@link IOException}.
    */
   private RSGroupInfo getRSGroupInfo(String host, int port) throws IOException {
-    if (!admin.getMasterCoprocessorNames().contains("RSGroupAdminEndpoint")) {
+    if (!RSGroupTableAccessor.isRSGroupsEnabled(conn)) {
       return null;
     }
-    RSGroupAdminService.BlockingInterface stub =
-      RSGroupAdminService.newBlockingStub(admin.coprocessorService());
-    GetRSGroupInfoOfServerRequest request = GetRSGroupInfoOfServerRequest.newBuilder()
-      .setServer(HBaseProtos.ServerName.newBuilder().setHostName(host).setPort(port).build())
-      .build();
-    try {
-      GetRSGroupInfoOfServerResponse resp = stub.getRSGroupInfoOfServer(null, request);
-      if (!resp.hasRSGroupInfo()) {
-        LOG.debug("No RSGroup found for {}:{} — server may not be registered or address form "
-          + "(hostname vs IP) may not match what the RS registered with", host, port);
-        return null;
+    Address address = Address.fromParts(host, port);
+    for (RSGroupInfo rsGroupInfo : RSGroupTableAccessor.getAllRSGroupInfo(conn)) {
+      if (rsGroupInfo.containsServer(address)) {
+        return rsGroupInfo;
       }
-      RSGroupProtos.RSGroupInfo proto = resp.getRSGroupInfo();
-      // Only name and server membership are needed for filtering; tables/configuration are omitted.
-      RSGroupInfo rsGroupInfo = new RSGroupInfo(proto.getName());
-      for (HBaseProtos.ServerName sn : proto.getServersList()) {
-        rsGroupInfo.addServer(Address.fromParts(sn.getHostName(), sn.getPort()));
-      }
-      return rsGroupInfo;
-    } catch (ServiceException e) {
-      throw ProtobufUtil.handleRemoteException(e);
     }
+    throw new IOException("RSGroups are enabled but no RSGroup contains " + host + ":" + port
+      + " — the server may not be registered, or its address form (hostname vs IP) may not "
+      + "match what the RS registered with");
   }
 
   @InterfaceAudience.Private
