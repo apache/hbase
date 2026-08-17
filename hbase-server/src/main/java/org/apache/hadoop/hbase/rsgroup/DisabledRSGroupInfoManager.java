@@ -64,6 +64,11 @@ class DisabledRSGroupInfoManager implements RSGroupInfoManager {
     throw new DoNotRetryIOException("RSGroup is disabled");
   }
 
+  @Override
+  public void moveAllServers(String sourceGroupName, String targetGroupName) throws IOException {
+    throw new DoNotRetryIOException("RSGroup is disabled");
+  }
+
   private SortedSet<Address> getOnlineServers() {
     SortedSet<Address> onlineServers = new TreeSet<Address>();
     serverManager.getOnlineServers().keySet().stream().map(ServerName::getAddress)

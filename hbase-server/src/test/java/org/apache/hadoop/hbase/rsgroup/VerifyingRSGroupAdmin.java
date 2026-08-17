@@ -870,6 +870,12 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     verify();
   }
 
+  public void moveAllServersFromOneRSGroupToOther(String sourceGroup, String targetGroup)
+    throws IOException {
+    admin.moveAllServersFromOneRSGroupToOther(sourceGroup, targetGroup);
+    verify();
+  }
+
   public void setRSGroup(Set<TableName> tables, String groupName) throws IOException {
     admin.setRSGroup(tables, groupName);
     verify();
