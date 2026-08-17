@@ -23,6 +23,9 @@ import java.io.OutputStream;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressionCodec;
+import org.apache.hadoop.hbase.io.compress.ByteBuffDecompressor;
+import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.io.compress.BlockCompressorStream;
 import org.apache.hadoop.io.compress.BlockDecompressorStream;
 import org.apache.hadoop.io.compress.CompressionCodec;
@@ -41,7 +44,7 @@ import org.xerial.snappy.Snappy;
  * This is data format compatible with Hadoop's native snappy codec.
  */
 @InterfaceAudience.Private
-public class SnappyCodec implements Configurable, CompressionCodec {
+public class SnappyCodec implements Configurable, CompressionCodec, ByteBuffDecompressionCodec {
 
   public static final String SNAPPY_BUFFER_SIZE_KEY = "hbase.io.compress.snappy.buffersize";
 
@@ -131,6 +134,22 @@ public class SnappyCodec implements Configurable, CompressionCodec {
   @Override
   public String getDefaultExtension() {
     return ".snappy";
+  }
+
+  @Override
+  public ByteBuffDecompressor createByteBuffDecompressor() {
+    return new SnappyByteBuffDecompressor();
+  }
+
+  @Override
+  public Class<? extends ByteBuffDecompressor> getByteBuffDecompressorType() {
+    return SnappyByteBuffDecompressor.class;
+  }
+
+  @Override
+  public Compression.HFileDecompressionContext
+    getDecompressionContextFromConfiguration(Configuration conf) {
+    return SnappyHFileDecompressionContext.fromConfiguration(conf);
   }
 
   // Package private
