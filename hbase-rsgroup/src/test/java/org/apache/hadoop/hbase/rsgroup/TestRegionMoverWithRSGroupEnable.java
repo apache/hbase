@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.rsgroup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -88,6 +90,7 @@ public class TestRegionMoverWithRSGroupEnable {
   // Addresses of the servers that remain in the default group (excludes meta RS).
   private final List<ServerName> defaultGroupServers = new ArrayList<>();
   private RSGroupAdminClient rsGroupAdmin;
+  private ServerName rsContainMeta;
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -98,7 +101,7 @@ public class TestRegionMoverWithRSGroupEnable {
     Collection<ServerName> allServers = TEST_UTIL.getAdmin().getRegionServers();
 
     // Exclude the RS that hosts hbase:meta to keep the test stable.
-    ServerName rsContainMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+    rsContainMeta = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
       .map(JVMClusterUtil.RegionServerThread::getRegionServer)
       .filter(rs -> !rs.getRegions(TableName.META_TABLE_NAME).isEmpty()).findFirst().get()
       .getServerName();
@@ -158,6 +161,7 @@ public class TestRegionMoverWithRSGroupEnable {
     }
     rsservers.clear();
     defaultGroupServers.clear();
+    rsContainMeta = null;
   }
 
   /**
@@ -214,21 +218,32 @@ public class TestRegionMoverWithRSGroupEnable {
    */
   @Test
   public void testUnloadDefaultGroupServerWithRSGroupEnabled() throws Exception {
-    ServerName defaultSN = defaultGroupServers.get(0);
+    Admin admin = TEST_UTIL.getAdmin();
+    // Avoid unloading the meta-carrying server here too, for the same stability reason setUp()
+    // avoids it when picking rsservers.
+    ServerName defaultSN =
+      defaultGroupServers.stream().filter(sn -> !sn.equals(rsContainMeta)).findFirst().get();
     Address decommission = defaultSN.getAddress();
     String filename = new Path(TEST_UTIL.getDataTestDir(), "testDefaultGroupUnload").toString();
 
-    // Create a table in the default group; the balancer will distribute its 6 regions naturally
-    // across the 3 default-group servers, so defaultSN will hold at least some.
+    // Create a table in the default group; the balancer will distribute its regions naturally
+    // across the default-group servers, so defaultSN will hold at least some.
     TableName defaultTable = TableName.valueOf("testDefaultGroupTable");
-    if (TEST_UTIL.getAdmin().tableExists(defaultTable)) {
+    if (admin.tableExists(defaultTable)) {
       TEST_UTIL.deleteTable(defaultTable);
     }
     try {
       TableDescriptor td = TableDescriptorBuilder.newBuilder(defaultTable)
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f")).build();
-      TEST_UTIL.getAdmin().createTable(td, Bytes.toBytes("a"), Bytes.toBytes("z"), 6);
+      admin.createTable(td, Bytes.toBytes("a"), Bytes.toBytes("z"), 6);
       TEST_UTIL.waitTableAvailable(defaultTable);
+
+      HRegionServer decommRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
+        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
+        .filter(rs -> rs.getServerName().equals(defaultSN)).findFirst().get();
+      assertFalse(decommRS.getRegions(defaultTable).isEmpty(),
+        "Precondition: decommissioned server must actually host some regions of the default "
+          + "table, otherwise the post-unload check below is vacuous");
 
       RegionMoverBuilder builder =
         new RegionMoverBuilder(decommission.toString(), TEST_UTIL.getConfiguration());
@@ -238,9 +253,6 @@ public class TestRegionMoverWithRSGroupEnable {
       }
 
       // After unload, the decommissioned server must hold no regions of the default table.
-      HRegionServer decommRS = TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().stream()
-        .map(JVMClusterUtil.RegionServerThread::getRegionServer)
-        .filter(rs -> rs.getServerName().equals(defaultSN)).findFirst().get();
       assertEquals(0, decommRS.getRegions(defaultTable).size(),
         "Decommissioned default-group server must hold no regions after unload");
 
@@ -257,7 +269,7 @@ public class TestRegionMoverWithRSGroupEnable {
         }
       }
     } finally {
-      if (TEST_UTIL.getAdmin().tableExists(defaultTable)) {
+      if (admin.tableExists(defaultTable)) {
         TEST_UTIL.deleteTable(defaultTable);
       }
     }
