@@ -85,10 +85,6 @@ public class SnappyByteBuffDecompressor implements ByteBuffDecompressor {
 
   private int decompressRawDirect(ByteBuffer nioInput, ByteBuffer nioOutput, int inputLen)
     throws IOException {
-    if (!nioInput.isDirect() || !nioOutput.isDirect()) {
-      throw new IllegalStateException(
-        "decompressRawDirect called with non-direct buffers, this should never happen");
-    }
     int savedInputLimit = nioInput.limit();
     nioInput.limit(nioInput.position() + inputLen);
     try {
@@ -102,10 +98,6 @@ public class SnappyByteBuffDecompressor implements ByteBuffDecompressor {
 
   private int decompressRawHeap(ByteBuffer nioInput, ByteBuffer nioOutput, int inputLen)
     throws IOException {
-    if (!nioInput.hasArray() || !nioOutput.hasArray()) {
-      throw new IllegalStateException(
-        "decompressRawHeap called with non-heap buffers, this should never happen");
-    }
     try {
       return Snappy.uncompress(nioInput.array(), nioInput.arrayOffset() + nioInput.position(),
         inputLen, nioOutput.array(), nioOutput.arrayOffset() + nioOutput.position());
