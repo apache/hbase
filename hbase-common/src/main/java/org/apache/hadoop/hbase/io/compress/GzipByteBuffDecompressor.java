@@ -43,8 +43,8 @@ public class GzipByteBuffDecompressor implements ByteBuffDecompressor {
 
   GzipByteBuffDecompressor(boolean nativeZlibLoaded) {
     decompressor = nativeZlibLoaded
-      ? new ZlibDecompressor.ZlibDirectDecompressor(ZlibDecompressor.CompressionHeader.GZIP_FORMAT,
-        0)
+      ? new ZlibDecompressor.ZlibDirectDecompressor(
+        ZlibDecompressor.CompressionHeader.AUTODETECT_GZIP_ZLIB, 0)
       : null;
     allowByteBuffDecompression = true;
   }
