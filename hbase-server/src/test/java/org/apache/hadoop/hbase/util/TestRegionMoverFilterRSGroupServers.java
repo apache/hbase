@@ -86,7 +86,7 @@ public class TestRegionMoverFilterRSGroupServers {
   public void testDefaultGroupFiltersToActualMembers() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     List<ServerName> allServers = new ArrayList<>(admin.getRegionServers());
-    assertEquals(2, allServers.size());
+    assertEquals(2, allServers.size(), "Mini cluster should have started with 2 region servers");
 
     ServerName movedOut = allServers.get(0);
     ServerName inDefault = allServers.get(1);
@@ -97,14 +97,20 @@ public class TestRegionMoverFilterRSGroupServers {
     try {
       // Master-computed membership, not something we constructed ourselves.
       RSGroupInfo defaultGroup = admin.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
-      assertEquals(1, defaultGroup.getServers().size());
-      assertTrue(defaultGroup.containsServer(addressOf(inDefault)));
+      assertEquals(1, defaultGroup.getServers().size(),
+        "Master-computed default group should shrink to 1 member after moving the other "
+          + "server out");
+      assertTrue(defaultGroup.containsServer(addressOf(inDefault)),
+        "Server that was not moved out must remain in the default group's real membership");
 
       try (RegionMover rm = buildMover()) {
         Collection<ServerName> result = rm.filterRSGroupServers(defaultGroup, allServers);
 
-        assertEquals(1, result.size());
-        assertTrue(result.contains(inDefault));
+        assertEquals(1, result.size(),
+          "filterRSGroupServers should return only the default group's actual members");
+        assertTrue(result.contains(inDefault),
+          "Server that is an actual member of the default group must be returned as a "
+            + "destination");
         assertFalse(result.contains(movedOut),
           "Server moved out of default must not be returned as a destination just because the "
             + "group being filtered is named 'default'");
@@ -125,7 +131,7 @@ public class TestRegionMoverFilterRSGroupServers {
   public void testNonDefaultGroupFiltersToMembers() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     List<ServerName> allServers = new ArrayList<>(admin.getRegionServers());
-    assertEquals(2, allServers.size());
+    assertEquals(2, allServers.size(), "Mini cluster should have started with 2 region servers");
 
     ServerName member = allServers.get(0);
     ServerName other = allServers.get(1);
@@ -135,14 +141,19 @@ public class TestRegionMoverFilterRSGroupServers {
     admin.moveServersToRSGroup(new HashSet<>(List.of(addressOf(member))), groupName);
     try {
       RSGroupInfo group = admin.getRSGroup(groupName);
-      assertEquals(1, group.getServers().size());
-      assertTrue(group.containsServer(addressOf(member)));
+      assertEquals(1, group.getServers().size(),
+        "Master-computed group should have exactly the one server moved into it");
+      assertTrue(group.containsServer(addressOf(member)),
+        "Server moved into the group must be part of its real membership");
 
       try (RegionMover rm = buildMover()) {
         Collection<ServerName> result = rm.filterRSGroupServers(group, allServers);
-        assertEquals(1, result.size());
-        assertTrue(result.contains(member));
-        assertFalse(result.contains(other));
+        assertEquals(1, result.size(),
+          "filterRSGroupServers should return only the non-default group's actual members");
+        assertTrue(result.contains(member),
+          "Server that is an actual member of the group must be returned as a destination");
+        assertFalse(result.contains(other),
+          "Server that is not a member of the group must not be returned as a destination");
       }
     } finally {
       admin.moveServersToRSGroup(new HashSet<>(List.of(addressOf(member))),
@@ -161,7 +172,7 @@ public class TestRegionMoverFilterRSGroupServers {
   public void testGroupMemberAbsentFromOnlineServersReturnsEmpty() throws Exception {
     Admin admin = TEST_UTIL.getAdmin();
     List<ServerName> allServers = new ArrayList<>(admin.getRegionServers());
-    assertEquals(2, allServers.size());
+    assertEquals(2, allServers.size(), "Mini cluster should have started with 2 region servers");
 
     ServerName member = allServers.get(0);
     ServerName other = allServers.get(1);
@@ -171,14 +182,18 @@ public class TestRegionMoverFilterRSGroupServers {
     admin.moveServersToRSGroup(new HashSet<>(List.of(addressOf(member))), groupName);
     try {
       RSGroupInfo group = admin.getRSGroup(groupName);
-      assertEquals(1, group.getServers().size());
-      assertTrue(group.containsServer(addressOf(member)));
+      assertEquals(1, group.getServers().size(),
+        "Master-computed group should have exactly the one server moved into it");
+      assertTrue(group.containsServer(addressOf(member)),
+        "Server moved into the group must be part of its real membership");
 
       try (RegionMover rm = buildMover()) {
         // The group's only member is not part of the online-servers snapshot passed in.
         Collection<ServerName> result =
           rm.filterRSGroupServers(group, Collections.singletonList(other));
-        assertTrue(result.isEmpty());
+        assertTrue(result.isEmpty(),
+          "Group member absent from the online-servers snapshot must not be returned as a "
+            + "destination");
       }
     } finally {
       admin.moveServersToRSGroup(new HashSet<>(List.of(addressOf(member))),
