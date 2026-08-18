@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.metrics.TableMetrics;
 import org.apache.hadoop.hbase.filter.CompareFilter;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.io.TimeRange;
@@ -1009,5 +1010,23 @@ public interface Table extends Closeable {
    */
   default Map<String, byte[]> getRequestAttributes() {
     throw new NotImplementedException("Add an implementation!");
+  }
+
+  /**
+   * Get the table level metrics.
+   * @return table level metrics.
+
+   */
+  default TableMetrics getTableMetrics() {
+    throw new NotImplementedException("Add an implementation!");
+  }
+
+  /**
+   * Check if the table supports table level metrics. Override this method to return true if the
+   * table supports table level metrics.
+   * @return true if the table supports table level metrics.
+   */
+  default boolean hasTableMetrics() {
+    return false;
   }
 }
