@@ -124,6 +124,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
           setNextState(CreateTableState.CREATE_TABLE_ASSIGN_REGIONS);
           break;
         case CREATE_TABLE_ASSIGN_REGIONS:
+          env.getMasterServices().getTableStateManager().updateCreating(getTableName());
           setEnablingState(env, getTableName());
           addChildProcedure(
             env.getAssignmentManager().createRoundRobinAssignProcedures(newRegions));
@@ -133,6 +134,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
           // XXX: this stage should be named as set table enabled, as now we will cache the
           // descriptor after writing fs layout.
           setEnabledState(env, getTableName());
+          env.getMasterServices().getTableStateManager().finishCreating(getTableName());
           setNextState(CreateTableState.CREATE_TABLE_POST_OPERATION);
           break;
         case CREATE_TABLE_POST_OPERATION:
