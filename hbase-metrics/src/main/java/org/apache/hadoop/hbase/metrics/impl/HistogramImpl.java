@@ -78,7 +78,7 @@ public class HistogramImpl implements Histogram {
 
   @Override
   public Snapshot snapshot() {
-    return histogram.snapshotAndReset();
+    return histogram.snapshot();
   }
 
   public long[] getQuantiles(double[] quantiles) {
