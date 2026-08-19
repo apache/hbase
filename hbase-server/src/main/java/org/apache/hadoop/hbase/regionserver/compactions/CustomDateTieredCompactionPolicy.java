@@ -129,6 +129,12 @@ public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy
           return true;
         }
         byte[] timeRangeBytes = f.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
+        // this means this file has not been major compacted by manually triggered compaction at
+        // the time of enabling Custom Time Based Priority, so it needs compaction to have its rows
+        // separated according to the cutOffTimestamp.
+        if (timeRangeBytes == null) {
+          return true;
+        }
         TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(timeRangeBytes);
         if (timeRangeTracker.getMin() < cutOffTimestamp) {
           if (timeRangeTracker.getMax() > cutOffTimestamp) {

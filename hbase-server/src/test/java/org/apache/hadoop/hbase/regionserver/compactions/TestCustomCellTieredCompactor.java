@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
+import static org.apache.hadoop.hbase.HConstants.MAJOR_COMPACTION_PERIOD;
 import static org.apache.hadoop.hbase.regionserver.CustomTieringMultiFileWriter.CUSTOM_TIERING_TIME_RANGE;
 import static org.apache.hadoop.hbase.regionserver.compactions.CustomCellTieringValueProvider.TIERING_CELL_QUALIFIER;
 import static org.apache.hadoop.hbase.regionserver.compactions.CustomTieredCompactor.TIERING_VALUE_PROVIDER;
@@ -24,6 +25,8 @@ import static org.apache.hadoop.hbase.regionserver.compactions.RowKeyDateTiering
 import static org.apache.hadoop.hbase.regionserver.compactions.RowKeyDateTieringValueProvider.TIERING_KEY_DATE_PATTERN;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -41,6 +44,8 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.CustomTieredStoreEngine;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.TimeRangeTracker;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -64,6 +69,7 @@ public class TestCustomCellTieredCompactor {
   public void setUp() throws Exception {
     utility = new HBaseTestingUtility();
     utility.getConfiguration().setInt("hbase.hfile.compaction.discharger.interval", 10);
+    utility.getConfiguration().setLong(MAJOR_COMPACTION_PERIOD, 10L);
     utility.startMiniCluster();
   }
 
@@ -315,5 +321,38 @@ public class TestCustomCellTieredCompactor {
           fail(e.getMessage());
         }
       });
+  }
+
+  @Test
+  public void testShouldPerformMajorCompactionWhenTimeRangeMetadataIsNull() throws Exception {
+    ColumnFamilyDescriptorBuilder clmBuilder = ColumnFamilyDescriptorBuilder.newBuilder(FAMILY);
+    clmBuilder.setValue("hbase.hstore.engine.class", CustomTieredStoreEngine.class.getName());
+    clmBuilder.setValue(TIERING_CELL_QUALIFIER, "date");
+    TableName tableName = TableName.valueOf("testShouldCompactWhenNoTimeRangeMetadata");
+    TableDescriptorBuilder tblBuilder = TableDescriptorBuilder.newBuilder(tableName);
+    tblBuilder.setColumnFamily(clmBuilder.build());
+    utility.getAdmin().createTable(tblBuilder.build());
+    utility.waitTableAvailable(tableName);
+    Connection connection = utility.getConnection();
+    Table table = connection.getTable(tableName);
+    long recordTime = System.currentTimeMillis();
+    // Write data and flush to create store files without CUSTOM_TIERING_TIME_RANGE metadata
+    for (int i = 0; i < 2; i++) {
+      Put put = new Put(Bytes.toBytes(i));
+      put.addColumn(FAMILY, Bytes.toBytes("val"), Bytes.toBytes("v" + i));
+      put.addColumn(FAMILY, Bytes.toBytes("date"), Bytes.toBytes(recordTime));
+      table.put(put);
+      utility.flush(tableName);
+    }
+    table.close();
+
+    HStore store =
+      (HStore) utility.getMiniHBaseCluster().getRegions(tableName).get(0).getStore(FAMILY);
+    // Verify that flushed files do not have CUSTOM_TIERING_TIME_RANGE metadata
+    for (HStoreFile sf : store.getStorefiles()) {
+      assertNull(sf.getMetadataValue(CUSTOM_TIERING_TIME_RANGE));
+    }
+    // shouldPerformMajorCompaction must return true due to null timeRangeBytes
+    assertTrue(store.shouldPerformMajorCompaction());
   }
 }
