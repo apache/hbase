@@ -30,6 +30,7 @@ import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashSet;
@@ -54,6 +55,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
+import org.apache.hadoop.hbase.RSGroupTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -66,6 +68,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.net.Address;
+import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
@@ -444,7 +448,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       try {
         // Get Online RegionServers
         List<ServerName> regionServers = new ArrayList<>();
-        regionServers.addAll(admin.getRegionServers());
+        RSGroupInfo rsgroup = getRSGroupInfo(hostname, port);
+        if (rsgroup != null) {
+          LOG.info("{} belongs to RSGroup {}", hostname, rsgroup.getName());
+          regionServers.addAll(filterRSGroupServers(rsgroup, admin.getRegionServers()));
+        } else {
+          regionServers.addAll(admin.getRegionServers());
+        }
         // Remove the host Region server from target Region Servers list
         ServerName server = stripServer(regionServers, hostname, port);
         if (server == null) {
@@ -488,6 +498,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         if (regionServers.isEmpty()) {
           LOG.warn("No Regions were moved - no servers available");
           return false;
+        } else {
+          LOG.info("Available servers {}", regionServers);
         }
         unloadRegions(server, regionServers, movedRegions, isolateRegionIdArray);
       } catch (Exception e) {
@@ -823,6 +835,39 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       }
     }
     return servers;
+  }
+
+  /**
+   * Returns the {@link RSGroupInfo} for the given host:port, or {@code null} if RSGroups are not in
+   * use on this cluster. If RSGroups are enabled but the server cannot be matched to any group,
+   * throws {@link IOException}.
+   */
+  private RSGroupInfo getRSGroupInfo(String host, int port) throws IOException {
+    if (!RSGroupTableAccessor.isRSGroupsEnabled(conn)) {
+      return null;
+    }
+    Address address = Address.fromParts(host, port);
+    for (RSGroupInfo rsGroupInfo : RSGroupTableAccessor.getAllRSGroupInfo(conn)) {
+      if (rsGroupInfo.containsServer(address)) {
+        return rsGroupInfo;
+      }
+    }
+    throw new IOException("RSGroups are enabled but no RSGroup contains " + host + ":" + port
+      + " — the server may not be registered, or its address form (hostname vs IP) may not "
+      + "match what the RS registered with");
+  }
+
+  @InterfaceAudience.Private
+  Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
+    Collection<ServerName> onlineServers) {
+    List<ServerName> result = new ArrayList<>(rsgroup.getServers().size());
+    for (ServerName server : onlineServers) {
+      Address address = Address.fromParts(server.getHostname(), server.getPort());
+      if (rsgroup.containsServer(address)) {
+        result.add(server);
+      }
+    }
+    return result;
   }
 
   /**
