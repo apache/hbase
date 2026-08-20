@@ -1387,7 +1387,10 @@ public final class ProtobufUtil {
 
     Cell[] cells = result.rawCells();
     if (cells == null || cells.length == 0) {
-      return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
+      ClientProtos.Result emptyResult = result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
+      return result.getMetrics() == null
+        ? emptyResult
+        : emptyResult.toBuilder().setMetrics(toQueryMetrics(result.getMetrics())).build();
     }
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
@@ -1427,7 +1430,12 @@ public final class ProtobufUtil {
   public static ClientProtos.Result toResultNoData(final Result result) {
     if (result.getExists() != null) return toResult(result.getExists(), result.isStale());
     int size = result.size();
-    if (size == 0) return result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
+    if (size == 0) {
+      ClientProtos.Result emptyResult = result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
+      return result.getMetrics() == null
+        ? emptyResult
+        : emptyResult.toBuilder().setMetrics(toQueryMetrics(result.getMetrics())).build();
+    }
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(size);
     builder.setStale(result.isStale());
@@ -1465,7 +1473,7 @@ public final class ProtobufUtil {
     }
 
     List<CellProtos.Cell> values = proto.getCellList();
-    if (values.isEmpty()) {
+    if (values.isEmpty() && !proto.hasMetrics()) {
       return proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT;
     }
 
@@ -1523,9 +1531,14 @@ public final class ProtobufUtil {
       }
     }
 
-    Result r = (cells == null || cells.isEmpty())
-      ? (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT)
-      : Result.create(cells, null, proto.getStale());
+    Result r;
+    if (cells == null || cells.isEmpty()) {
+      r = proto.hasMetrics()
+        ? Result.create(EMPTY_CELL_ARRAY, null, proto.getStale())
+        : (proto.getStale() ? EMPTY_RESULT_STALE : EMPTY_RESULT);
+    } else {
+      r = Result.create(cells, null, proto.getStale());
+    }
 
     if (proto.hasMetrics()) {
       r.setMetrics(toQueryMetrics(proto.getMetrics()));
