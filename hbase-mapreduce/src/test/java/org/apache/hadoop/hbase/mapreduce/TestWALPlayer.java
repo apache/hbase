@@ -137,16 +137,23 @@ public class TestWALPlayer {
   /**
    * Tests that when you write multiple cells with the same timestamp they are properly sorted by
    * their sequenceId in WALPlayer/CellSortReducer so that the correct one wins when querying from
-   * the resulting bulkloaded HFiles. See HBASE-27649
+   * the resulting bulkloaded HFiles. Also verifies that bulk output honors source-to-target table
+   * mappings. See HBASE-27649 and HBASE-30288.
    */
   @Test
-  public void testWALPlayerBulkLoadWithOverriddenTimestamps(TestInfo testInfo) throws Exception {
-    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+  public void testWALPlayerBulkLoadWithTableMappingAndOverriddenTimestamps(TestInfo testInfo)
+    throws Exception {
+    final TableName sourceTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "Source");
+    final TableName targetTableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "Target");
     final byte[] family = Bytes.toBytes("family");
     final byte[] column1 = Bytes.toBytes("c1");
     final byte[] column2 = Bytes.toBytes("c2");
     final byte[] row = Bytes.toBytes("row");
-    final Table table = TEST_UTIL.createTable(tableName, family);
+    final Table sourceTable = TEST_UTIL.createTable(sourceTableName, family);
+    final Table targetTable =
+      TEST_UTIL.createTable(targetTableName, family, new byte[][] { Bytes.toBytes("row0") });
 
     long now = EnvironmentEdgeManager.currentTime();
     // put a row into the first table
@@ -154,7 +161,7 @@ public class TestWALPlayer {
     p.addColumn(family, column1, now, column1);
     p.addColumn(family, column2, now, column2);
 
-    table.put(p);
+    sourceTable.put(p);
 
     byte[] lastVal = null;
 
@@ -163,7 +170,7 @@ public class TestWALPlayer {
       p = new Put(row);
       p.addColumn(family, column1, now, lastVal);
 
-      table.put(p);
+      sourceTable.put(p);
 
       // wal rolling is necessary to trigger the bug. otherwise no sorting
       // needs to occur in the reducer because it's all sorted and coming from a single file.
@@ -187,24 +194,24 @@ public class TestWALPlayer {
     final byte[] finalLastVal = lastVal;
 
     runWithDiskBasedSortingDisabledAndEnabled(() -> {
-      assertEquals(0, ToolRunner.run(configuration, player,
-        new String[] { walInputDir, tableName.getNameAsString() }));
+      assertEquals(0, ToolRunner.run(configuration, player, new String[] { walInputDir,
+        sourceTableName.getNameAsString(), targetTableName.getNameAsString() }));
 
       Get g = new Get(row);
-      Result result = table.get(g);
+      Result result = sourceTable.get(g);
       byte[] value = CellUtil.cloneValue(result.getColumnLatestCell(family, column1));
       assertThat(Bytes.toStringBinary(value), equalTo(Bytes.toStringBinary(finalLastVal)));
 
-      TEST_UTIL.truncateTable(tableName);
+      TEST_UTIL.truncateTable(targetTableName);
       g = new Get(row);
-      result = table.get(g);
+      result = targetTable.get(g);
       assertThat(result.listCells(), nullValue());
 
-      BulkLoadHFiles.create(configuration).bulkLoad(tableName,
-        new Path(outPath, tableName.getNamespaceAsString() + "/" + tableName.getNameAsString()));
+      BulkLoadHFiles.create(configuration).bulkLoad(targetTableName, new Path(outPath,
+        targetTableName.getNamespaceAsString() + "/" + targetTableName.getNameAsString()));
 
       g = new Get(row);
-      result = table.get(g);
+      result = targetTable.get(g);
       value = CellUtil.cloneValue(result.getColumnLatestCell(family, column1));
 
       assertThat(result.listCells(), notNullValue());

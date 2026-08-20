@@ -21,11 +21,8 @@ import java.io.IOException;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
@@ -99,7 +96,7 @@ public class WALPlayer extends Configured implements Tool {
    * {@link CellSortReducer}
    */
   static class WALKeyValueMapper extends Mapper<WALKey, WALEdit, WritableComparable<?>, Cell> {
-    private Set<String> tableSet = new HashSet<String>();
+    private final Map<TableName, TableName> tables = new TreeMap<>();
     private boolean multiTableSupport = false;
     private boolean diskBasedSortingEnabled = false;
 
@@ -107,8 +104,8 @@ public class WALPlayer extends Configured implements Tool {
     public void map(WALKey key, WALEdit value, Context context) throws IOException {
       try {
         // skip all other tables
-        TableName table = key.getTableName();
-        if (tableSet.contains(table.getNameAsString())) {
+        TableName targetTable = tables.get(key.getTableName());
+        if (targetTable != null) {
           for (Cell cell : value.getCells()) {
             if (WALEdit.isMetaEditFamily(cell)) {
               continue;
@@ -121,7 +118,8 @@ public class WALPlayer extends Configured implements Tool {
             PrivateCellUtil.setSequenceId(cell, key.getSequenceId());
 
             byte[] outKey = multiTableSupport
-              ? Bytes.add(table.getName(), Bytes.toBytes(tableSeparator), CellUtil.cloneRow(cell))
+              ? Bytes.add(targetTable.getName(), Bytes.toBytes(tableSeparator),
+                CellUtil.cloneRow(cell))
               : CellUtil.cloneRow(cell);
             ExtendedCell extendedCell = PrivateCellUtil.ensureExtendedCell(cell);
             context.write(wrapKey(outKey, extendedCell), new MapReduceExtendedCell(extendedCell));
@@ -136,10 +134,19 @@ public class WALPlayer extends Configured implements Tool {
     @Override
     public void setup(Context context) throws IOException {
       Configuration conf = context.getConfiguration();
-      String[] tables = conf.getStrings(TABLES_KEY);
+      String[] tableMap = conf.getStrings(TABLE_MAP_KEY);
+      String[] tablesToUse = conf.getStrings(TABLES_KEY);
+      if (tableMap == null) {
+        tableMap = tablesToUse;
+      }
+      if (tablesToUse.length != tableMap.length) {
+        throw new IOException("Incorrect table mapping specified.");
+      }
+      for (int i = 0; i < tablesToUse.length; i++) {
+        tables.put(TableName.valueOf(tablesToUse[i]), TableName.valueOf(tableMap[i]));
+      }
       this.multiTableSupport = conf.getBoolean(MULTI_TABLES_SUPPORT, false);
       this.diskBasedSortingEnabled = HFileOutputFormat2.diskBasedSortingEnabled(conf);
-      Collections.addAll(tableSet, tables);
     }
 
     private WritableComparable<?> wrapKey(byte[] key, ExtendedCell cell) {
@@ -349,7 +356,7 @@ public class WALPlayer extends Configured implements Tool {
         true);
 
       // the bulk HFile case
-      List<TableName> tableNames = getTableNameList(tables);
+      List<TableName> tableNames = getTableNameList(tableMap);
 
       job.setMapperClass(WALKeyValueMapper.class);
       if (diskBasedSortingEnabled) {
