@@ -526,9 +526,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   @InterfaceAudience.Private
   Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
     Collection<ServerName> onlineServers) {
-    if (rsgroup.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-      return onlineServers;
-    }
     List<ServerName> serverLists = new ArrayList<>(rsgroup.getServers().size());
     for (ServerName server : onlineServers) {
       Address address = Address.fromParts(server.getHostname(), server.getPort());
