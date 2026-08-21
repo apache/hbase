@@ -70,7 +70,7 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   private RegionRemoteProcedureBaseState state =
     RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_DISPATCH;
 
-  private TransitionCode transitionCode;
+  protected TransitionCode transitionCode;
 
   private long seqId;
 
