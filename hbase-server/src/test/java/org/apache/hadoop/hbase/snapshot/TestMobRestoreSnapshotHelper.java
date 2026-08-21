@@ -103,9 +103,8 @@ public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
     assertTrue(MobUtils.hasMobColumns(TEST_UTIL.getAdmin().getDescriptor(mobTableName)));
     mobRegionPath = MobUtils.getMobTableDir(hbaseRootDir, mobTableName);
     assertTrue(fs.exists(mobRegionPath));
-    errorMobRegionPathInTableDir =
-      new Path(CommonFSUtils.getTableDir(hbaseRootDir, mobTableName),
-        MobUtils.getMobRegionInfo(mobTableName).getEncodedName());
+    errorMobRegionPathInTableDir = new Path(CommonFSUtils.getTableDir(hbaseRootDir, mobTableName),
+      MobUtils.getMobRegionInfo(mobTableName).getEncodedName());
     assertFalse(fs.exists(errorMobRegionPathInTableDir));
   }
 }
