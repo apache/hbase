@@ -2770,6 +2770,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public MasterProtos.AssignsResponse assigns(RpcController controller,
     MasterProtos.AssignsRequest request) throws ServiceException {
+    rpcPreCheck("assigns");
     checkMasterProcedureExecutor();
     final ProcedureExecutor<MasterProcedureEnv> pe = server.getMasterProcedureExecutor();
     final AssignmentManager am = server.getAssignmentManager();
@@ -2798,6 +2799,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public MasterProtos.UnassignsResponse unassigns(RpcController controller,
     MasterProtos.UnassignsRequest request) throws ServiceException {
+    rpcPreCheck("unassigns");
     checkMasterProcedureExecutor();
     final ProcedureExecutor<MasterProcedureEnv> pe = server.getMasterProcedureExecutor();
     final AssignmentManager am = server.getAssignmentManager();
@@ -2830,6 +2832,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   @Override
   public MasterProtos.BypassProcedureResponse bypassProcedure(RpcController controller,
     MasterProtos.BypassProcedureRequest request) throws ServiceException {
+    rpcPreCheck("bypassProcedure");
     try {
       LOG.info("{} bypass procedures={}, waitTime={}, override={}, recursive={}",
         server.getClientIdAuditPrefix(), request.getProcIdList(), request.getWaitTime(),
@@ -2847,6 +2850,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public MasterProtos.ScheduleServerCrashProcedureResponse scheduleServerCrashProcedure(
     RpcController controller, MasterProtos.ScheduleServerCrashProcedureRequest request)
     throws ServiceException {
+    rpcPreCheck("scheduleServerCrashProcedure");
     List<Long> pids = new ArrayList<>();
     for (HBaseProtos.ServerName sn : request.getServerNameList()) {
       ServerName serverName = ProtobufUtil.toServerName(sn);
@@ -2865,6 +2869,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public MasterProtos.ScheduleSCPsForUnknownServersResponse scheduleSCPsForUnknownServers(
     RpcController controller, MasterProtos.ScheduleSCPsForUnknownServersRequest request)
     throws ServiceException {
+    rpcPreCheck("scheduleSCPsForUnknownServers");
     List<Long> pids = new ArrayList<>();
     final Set<ServerName> serverNames = server.getAssignmentManager().getRegionStates()
       .getRegionStates().stream().map(RegionState::getServerName).collect(Collectors.toSet());
@@ -2993,7 +2998,10 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         byte[] cq =
           request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
         Type permissionType = request.hasType() ? request.getType() : null;
-        server.getMasterCoprocessorHost().preGetUserPermissions(userName, namespace, table, cf, cq);
+        Permission.Scope permissionScope =
+          ShadedAccessControlUtil.toPermissionScope(permissionType);
+        server.getMasterCoprocessorHost().preGetUserPermissions(userName, namespace, table, cf, cq,
+          permissionScope);
 
         List<UserPermission> perms = null;
         if (permissionType == Type.Table) {
@@ -3018,8 +3026,8 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
           }
         }
 
-        server.getMasterCoprocessorHost().postGetUserPermissions(userName, namespace, table, cf,
-          cq);
+        server.getMasterCoprocessorHost().postGetUserPermissions(userName, namespace, table, cf, cq,
+          permissionScope);
         AccessControlProtos.GetUserPermissionsResponse response =
           ShadedAccessControlUtil.buildGetUserPermissionsResponse(perms);
         return response;
@@ -3436,6 +3444,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
     HBaseProtos.LogRequest request) throws ServiceException {
     try {
+      requirePermission("getLogEntries", Permission.Action.ADMIN);
       final String logClassName = request.getLogClassName();
       Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
       Method method = logClass.getMethod("parseFrom", ByteString.class);
@@ -3457,7 +3466,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
           .setLogMessage(balancerRejectionsResponse.toByteString()).build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
-      | InvocationTargetException e) {
+      | InvocationTargetException | IOException e) {
       LOG.error("Error while retrieving log entries.", e);
       throw new ServiceException(e);
     }
