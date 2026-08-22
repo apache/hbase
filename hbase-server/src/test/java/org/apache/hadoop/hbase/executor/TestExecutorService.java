@@ -98,7 +98,8 @@ public class TestExecutorService {
     ExecutorStatus status = executor.getStatus();
     assertTrue(status.queuedEvents.isEmpty());
     assertEquals(5, status.running.size());
-    checkStatusDump(status);
+    Waiter.waitFor(mockedServer.getConfiguration(), 10000,
+      () -> checkStatusDump(executor.getStatus()));
 
     // Now interrupt the running Executor
     synchronized (lock) {
@@ -141,13 +142,13 @@ public class TestExecutorService {
       .submit(new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN, lock, counter));
   }
 
-  private void checkStatusDump(ExecutorStatus status) throws IOException {
+  private boolean checkStatusDump(ExecutorStatus status) throws IOException {
     StringWriter sw = new StringWriter();
     status.dumpTo(sw, "");
     String dump = sw.toString();
     LOG.info("Got status dump:\n" + dump);
 
-    assertTrue(dump.contains("Waiting on java.util.concurrent.atomic.AtomicBoolean"));
+    return dump.contains("Waiting on java.util.concurrent.atomic.AtomicBoolean");
   }
 
   public static class TestEventHandler extends EventHandler {
