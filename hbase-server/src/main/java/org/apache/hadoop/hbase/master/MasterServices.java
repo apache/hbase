@@ -255,6 +255,11 @@ public interface MasterServices extends Server, KeyManagementService {
   /** Returns Return table descriptors implementation. */
   TableDescriptors getTableDescriptors();
 
+  /** Return the list of table names, should be used at local HMaster end only */
+  default List<TableName> listTableNames() throws IOException {
+    return null;
+  }
+
   /**
    * Registers a new protocol buffer {@link Service} subclass as a master coprocessor endpoint.
    * <p/>

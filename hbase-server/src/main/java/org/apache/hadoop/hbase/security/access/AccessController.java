@@ -2123,15 +2123,18 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     if (regex == null && tableNamesList != null && !tableNamesList.isEmpty()) {
       // Otherwise, if the requestor has ADMIN or CREATE privs for all listed tables, the
       // request can be granted.
-      try (Admin admin = ctx.getEnvironment().getConnection().getAdmin()) {
-        for (TableName tableName : tableNamesList) {
-          // Skip checks for a table that does not exist
-          if (!admin.tableExists(tableName)) {
-            continue;
-          }
-          requirePermission(ctx, "getTableDescriptors", tableName, null, null, Action.ADMIN,
-            Action.CREATE);
+      List<TableName> sns = null;
+      if (ctx.getEnvironment() instanceof HasMasterServices) {
+        sns = (((HasMasterServices) ctx.getEnvironment()).getMasterServices().listTableNames());
+      }
+      if (sns == null) return;
+      for (TableName tableName : tableNamesList) {
+        // Skip checks for a table that does not exist
+        if (!sns.contains(tableName)) {
+          continue;
         }
+        requirePermission(ctx, "getTableDescriptors", tableName, null, null, Action.ADMIN,
+          Action.CREATE);
       }
     }
   }
