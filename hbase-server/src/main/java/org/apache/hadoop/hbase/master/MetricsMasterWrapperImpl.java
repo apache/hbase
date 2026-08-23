@@ -29,8 +29,11 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -178,6 +181,18 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   @Override
   public long getNumWALFiles() {
     return master.getNumWALFiles();
+  }
+
+  @Override
+  public long getOldestProcedureAge() {
+    ProcedureExecutor<MasterProcedureEnv> procedureExecutor = master.getMasterProcedureExecutor();
+    if (procedureExecutor == null) {
+      return 0L;
+    }
+    long now = EnvironmentEdgeManager.currentTime();
+    return procedureExecutor.getActiveProceduresNoCopy().stream()
+      .filter(procedure -> !procedure.isFinished())
+      .mapToLong(procedure -> Math.max(0L, now - procedure.getSubmittedTime())).max().orElse(0L);
   }
 
   @Override
