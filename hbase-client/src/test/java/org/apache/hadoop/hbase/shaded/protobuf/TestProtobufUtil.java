@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.IOException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -137,22 +138,27 @@ public class TestProtobufUtil {
   @Test
   public void testEmptyResultWithQueryMetrics() throws IOException {
     long blockBytesScanned = 123L;
-    Result result = Result.create(Collections.emptyList());
-    result.setMetrics(new QueryMetrics(blockBytesScanned));
+    for (Boolean exists : Arrays.asList(null, false, true)) {
+      Result result = Result.create(Collections.emptyList(), exists);
+      result.setMetrics(new QueryMetrics(blockBytesScanned));
 
-    for (ClientProtos.Result proto : List.of(ProtobufUtil.toResult(result),
-      ProtobufUtil.toResultNoData(result))) {
-      assertTrue(proto.hasMetrics());
-      assertEquals(blockBytesScanned, proto.getMetrics().getBlockBytesScanned());
+      for (ClientProtos.Result proto : List.of(ProtobufUtil.toResult(result),
+        ProtobufUtil.toResultNoData(result))) {
+        assertEquals(exists, proto.hasExists() ? proto.getExists() : null);
+        assertTrue(proto.hasMetrics());
+        assertEquals(blockBytesScanned, proto.getMetrics().getBlockBytesScanned());
 
-      Result roundTrip = ProtobufUtil.toResult(proto);
-      assertNotNull(roundTrip.getMetrics());
-      assertEquals(blockBytesScanned, roundTrip.getMetrics().getBlockBytesScanned());
+        Result roundTrip = ProtobufUtil.toResult(proto);
+        assertEquals(exists, roundTrip.getExists());
+        assertNotNull(roundTrip.getMetrics());
+        assertEquals(blockBytesScanned, roundTrip.getMetrics().getBlockBytesScanned());
 
-      roundTrip = ProtobufUtil.toResult(proto,
-        PrivateCellUtil.createExtendedCellScanner(Collections.<ExtendedCell> emptyList()));
-      assertNotNull(roundTrip.getMetrics());
-      assertEquals(blockBytesScanned, roundTrip.getMetrics().getBlockBytesScanned());
+        roundTrip = ProtobufUtil.toResult(proto,
+          PrivateCellUtil.createExtendedCellScanner(Collections.<ExtendedCell> emptyList()));
+        assertEquals(exists, roundTrip.getExists());
+        assertNotNull(roundTrip.getMetrics());
+        assertEquals(blockBytesScanned, roundTrip.getMetrics().getBlockBytesScanned());
+      }
     }
 
     ClientProtos.Result emptyProto = ClientProtos.Result.getDefaultInstance();
