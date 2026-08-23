@@ -1423,15 +1423,13 @@ public final class ProtobufUtil {
    */
   public static ClientProtos.Result toResult(final Result result, boolean encodeTags) {
     if (result.getExists() != null) {
-      return toResult(result.getExists(), result.isStale());
+      return toResult(result.getExists(), result.isStale(), result.getMetrics());
     }
 
     ExtendedCell[] cells = ClientInternalHelper.getExtendedRawCells(result);
     if (cells == null || cells.length == 0) {
-      ClientProtos.Result emptyResult = result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
-      return result.getMetrics() == null
-        ? emptyResult
-        : emptyResult.toBuilder().setMetrics(toQueryMetrics(result.getMetrics())).build();
+      return withMetrics(result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB,
+        result.getMetrics());
     }
 
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
@@ -1463,19 +1461,37 @@ public final class ProtobufUtil {
   }
 
   /**
+   * Convert a client Result to a protocol buffer Result
+   * @param existence the client existence to send
+   * @param stale     whether the result is stale
+   * @param metrics   query metrics associated with the result
+   * @return the converted protocol buffer Result
+   */
+  public static ClientProtos.Result toResult(final boolean existence, boolean stale,
+    QueryMetrics metrics) {
+    return withMetrics(toResult(existence, stale), metrics);
+  }
+
+  private static ClientProtos.Result withMetrics(ClientProtos.Result result, QueryMetrics metrics) {
+    return metrics == null
+      ? result
+      : result.toBuilder().setMetrics(toQueryMetrics(metrics)).build();
+  }
+
+  /**
    * Convert a client Result to a protocol buffer Result. The pb Result does not include the Cell
    * data. That is for transport otherwise.
    * @param result the client Result to convert
    * @return the converted protocol buffer Result
    */
   public static ClientProtos.Result toResultNoData(final Result result) {
-    if (result.getExists() != null) return toResult(result.getExists(), result.isStale());
+    if (result.getExists() != null) {
+      return toResult(result.getExists(), result.isStale(), result.getMetrics());
+    }
     int size = result.size();
     if (size == 0) {
-      ClientProtos.Result emptyResult = result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB;
-      return result.getMetrics() == null
-        ? emptyResult
-        : emptyResult.toBuilder().setMetrics(toQueryMetrics(result.getMetrics())).build();
+      return withMetrics(result.isStale() ? EMPTY_RESULT_PB_STALE : EMPTY_RESULT_PB,
+        result.getMetrics());
     }
     ClientProtos.Result.Builder builder = ClientProtos.Result.newBuilder();
     builder.setAssociatedCellCount(size);
@@ -1507,6 +1523,11 @@ public final class ProtobufUtil {
    */
   public static Result toResult(final ClientProtos.Result proto, boolean decodeTags) {
     if (proto.hasExists()) {
+      if (proto.hasMetrics()) {
+        Result result = Result.create((Cell[]) null, proto.getExists(), proto.getStale());
+        result.setMetrics(toQueryMetrics(proto.getMetrics()));
+        return result;
+      }
       if (proto.getStale()) {
         return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE : EMPTY_RESULT_EXISTS_FALSE_STALE;
       }
@@ -1547,10 +1568,7 @@ public final class ProtobufUtil {
       ) {
         throw new IllegalArgumentException("bad proto: exists with cells is no allowed " + proto);
       }
-      if (proto.getStale()) {
-        return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE_STALE : EMPTY_RESULT_EXISTS_FALSE_STALE;
-      }
-      return proto.getExists() ? EMPTY_RESULT_EXISTS_TRUE : EMPTY_RESULT_EXISTS_FALSE;
+      return toResult(proto);
     }
 
     // TODO: Unit test that has some Cells in scanner and some in the proto.
