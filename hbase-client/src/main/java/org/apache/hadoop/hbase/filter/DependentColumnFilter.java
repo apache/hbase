@@ -117,7 +117,7 @@ public class DependentColumnFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     // Check if the column and qualifier match
     if (!CellUtil.matchingColumn(c, this.columnFamily, this.columnQualifier)) {
       // include non-matches for the time being, they'll be discarded afterwards
