@@ -643,27 +643,28 @@ public class RestoreSnapshotHelper {
     final RegionInfo region) throws IOException {
     // clone region info (change embedded tableName with the new one)
     Path clonedRegionPath = MobUtils.getMobRegionPath(rootDir, tableDesc.getTableName());
-    cloneRegion(MobUtils.getMobRegionInfo(tableDesc.getTableName()), clonedRegionPath, region,
-      regionManifests.get(region.getEncodedName()));
+    cloneRegularOrMobRegion(MobUtils.getMobRegionInfo(tableDesc.getTableName()), clonedRegionPath,
+      region, regionManifests.get(region.getEncodedName()));
   }
 
   /**
-   * Clone region directory content from the snapshot info. Each region is encoded with the table
-   * name, so the cloned region will have a different region name. Instead of copying the hfiles a
-   * HFileLink is created.
+   * Clone region directory content from a snapshot manifest. This method is used for both regular
+   * regions and MOB regions. Instead of copying the hfiles a HFileLink is created.
    * @param regionDir {@link Path} cloned dir
    */
-  private void cloneRegion(final RegionInfo newRegionInfo, final Path regionDir,
+  private void cloneRegularOrMobRegion(final RegionInfo newRegionInfo, final Path regionDir,
     final RegionInfo snapshotRegionInfo, final SnapshotRegionManifest manifest) throws IOException {
     final String tableName = tableDesc.getTableName().getNameAsString();
     final String snapshotName = snapshotDesc.getName();
+    final boolean isMobRegion = MobUtils.isMobRegionInfo(newRegionInfo);
+    final Path parentDir =
+      isMobRegion ? MobUtils.getMobTableDir(rootDir, tableDesc.getTableName()) : tableDir;
     for (SnapshotRegionManifest.FamilyFiles familyFiles : manifest.getFamilyFilesList()) {
       Path familyDir = new Path(regionDir, familyFiles.getFamilyName().toStringUtf8());
       List<StoreFileInfo> clonedFiles = new ArrayList<>();
-      Path regionPath = new Path(tableDir, newRegionInfo.getEncodedName());
-      HRegionFileSystem regionFS = (fs.exists(regionPath))
-        ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, tableDir, newRegionInfo, false)
-        : HRegionFileSystem.createRegionOnFileSystem(conf, fs, tableDir, newRegionInfo);
+      HRegionFileSystem regionFS = fs.exists(regionDir)
+        ? HRegionFileSystem.openRegionFromFileSystem(conf, fs, parentDir, newRegionInfo, false)
+        : HRegionFileSystem.createRegionOnFileSystem(conf, fs, parentDir, newRegionInfo);
 
       Configuration sftConf = StoreUtils.createStoreConfiguration(conf, tableDesc,
         tableDesc.getColumnFamily(familyFiles.getFamilyName().toByteArray()));
@@ -673,7 +674,7 @@ public class RestoreSnapshotHelper {
       for (SnapshotRegionManifest.StoreFile storeFile : familyFiles.getStoreFilesList()) {
         LOG.info("Adding HFileLink " + storeFile.getName() + " from cloned region " + "in snapshot "
           + snapshotName + " to table=" + tableName);
-        if (MobUtils.isMobRegionInfo(newRegionInfo)) {
+        if (isMobRegion) {
           String mobFileName =
             HFileLink.createHFileLinkName(snapshotRegionInfo, storeFile.getName());
           Path mobPath = new Path(familyDir, mobFileName);
@@ -703,8 +704,8 @@ public class RestoreSnapshotHelper {
    */
   private void cloneRegion(final HRegion region, final RegionInfo snapshotRegionInfo,
     final SnapshotRegionManifest manifest) throws IOException {
-    cloneRegion(region.getRegionInfo(), new Path(tableDir, region.getRegionInfo().getEncodedName()),
-      snapshotRegionInfo, manifest);
+    cloneRegularOrMobRegion(region.getRegionInfo(),
+      new Path(tableDir, region.getRegionInfo().getEncodedName()), snapshotRegionInfo, manifest);
   }
 
   /**
