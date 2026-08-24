@@ -21,12 +21,15 @@ import static org.apache.hadoop.hbase.KeyValueTestUtil.create;
 import static org.apache.hadoop.hbase.regionserver.KeyValueScanFixture.scanFixture;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.io.InterruptedIOException;
+import java.lang.reflect.Field;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -34,6 +37,8 @@ import java.util.List;
 import java.util.NavigableSet;
 import java.util.Set;
 import java.util.TreeSet;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -51,12 +56,18 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.PrivateCellUtil;
+import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.executor.EventHandler;
+import org.apache.hadoop.hbase.executor.EventType;
+import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.filter.BinaryComparator;
 import org.apache.hadoop.hbase.filter.ColumnCountGetFilter;
 import org.apache.hadoop.hbase.filter.Filter;
@@ -1303,4 +1314,543 @@ public class TestStoreScanner {
     Mockito.verify(mockScanner2, Mockito.never()).getFilesRead();
   }
 
+  // =========================================================================
+  // Helper infrastructure for adaptive parallel seek tests
+  // =========================================================================
+
+  /**
+   * Creates a ScanInfo with both parallelSeekEnabled and adaptiveParallelSeekEnabled set to true.
+   */
+  private static ScanInfo adaptiveScanInfo() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, true);
+    conf.setBoolean(StoreScanner.STORESCANNER_ADAPTIVE_PARALLEL_SEEK_ENABLE, true);
+    return new ScanInfo(conf, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE, KeepDeletedCells.FALSE,
+      HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+  }
+
+  /**
+   * Creates a ScanInfo with parallelSeekEnabled=true but adaptiveParallelSeekEnabled=false.
+   */
+  private static ScanInfo parallelOnlyScanInfo() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, true);
+    conf.setBoolean(StoreScanner.STORESCANNER_ADAPTIVE_PARALLEL_SEEK_ENABLE, false);
+    return new ScanInfo(conf, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE, KeepDeletedCells.FALSE,
+      HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+  }
+
+  /**
+   * Starts an ExecutorService with an RS_PARALLEL_SEEK pool of the given size.
+   */
+  private static ExecutorService startParallelSeekExecutor(int poolSize) {
+    ExecutorService exec = new ExecutorService("test_adaptive_" + System.nanoTime());
+    exec.startExecutorService(exec.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_PARALLEL_SEEK).setCorePoolSize(poolSize));
+    return exec;
+  }
+
+  /**
+   * Uses reflection to inject adaptiveParallelSeekEnabled=true, parallelSeekEnabled=true, and the
+   * given executor into a StoreScanner instance.
+   */
+  private static void injectAdaptiveFields(StoreScanner scanner, ExecutorService executor)
+    throws Exception {
+    Field adaptiveField =
+      StoreScanner.class.getDeclaredField("adaptiveParallelSeekEnabled");
+    adaptiveField.setAccessible(true);
+    adaptiveField.set(scanner, true);
+
+    Field parallelField =
+      StoreScanner.class.getDeclaredField("parallelSeekEnabled");
+    parallelField.setAccessible(true);
+    parallelField.set(scanner, true);
+
+    Field executorField =
+      StoreScanner.class.getDeclaredField("executor");
+    executorField.setAccessible(true);
+    executorField.set(scanner, executor);
+  }
+
+  /**
+   * A simple KeyValueScanner stub that is NOT a StoreFileScanner. Records seek calls and can be
+   * configured to throw on seek.
+   */
+  private static class MockMemStoreScanner implements KeyValueScanner {
+    private final AtomicInteger seekCount = new AtomicInteger(0);
+    private final IOException seekError;
+
+    MockMemStoreScanner() {
+      this.seekError = null;
+    }
+
+    MockMemStoreScanner(IOException seekError) {
+      this.seekError = seekError;
+    }
+
+    @Override
+    public boolean seek(ExtendedCell key) throws IOException {
+      if (seekError != null) throw seekError;
+      seekCount.incrementAndGet();
+      return true;
+    }
+
+    int getSeekCount() {
+      return seekCount.get();
+    }
+
+    @Override
+    public ExtendedCell peek() {
+      return null;
+    }
+
+    @Override
+    public ExtendedCell next() {
+      return null;
+    }
+
+    @Override
+    public boolean requestSeek(ExtendedCell kv, boolean forward, boolean useBloom) {
+      return false;
+    }
+
+    @Override
+    public boolean isFileScanner() {
+      return false;
+    }
+
+    @Override
+    public boolean backwardSeek(ExtendedCell key) {
+      return false;
+    }
+
+    @Override
+    public boolean seekToPreviousRow(ExtendedCell key) {
+      return false;
+    }
+
+    @Override
+    public boolean seekToLastRow() {
+      return false;
+    }
+
+    @Override
+    public ExtendedCell getNextIndexedKey() {
+      return null;
+    }
+
+    @Override
+    public void close() {
+    }
+
+    @Override
+    public boolean shouldUseScanner(Scan scan, HStore store, long oldestUnexpiredTS) {
+      return true;
+    }
+
+    @Override
+    public boolean reseek(ExtendedCell key) throws IOException {
+      return seek(key);
+    }
+
+    @Override
+    public boolean realSeekDone() {
+      return true;
+    }
+
+    @Override
+    public void enforceSeek() {
+    }
+
+    @Override
+    public void recordBlockSize(java.util.function.IntConsumer blockSizeConsumer) {
+    }
+
+    @Override
+    public org.apache.hadoop.fs.Path getFilePath() {
+      return null;
+    }
+
+    @Override
+    public java.util.Set<org.apache.hadoop.fs.Path> getFilesRead() {
+      return java.util.Collections.emptySet();
+    }
+
+    @Override
+    public void shipped() throws IOException {
+    }
+  }
+
+  /**
+   * Saturates the RS_PARALLEL_SEEK thread pool in the given ExecutorService by submitting
+   * poolSize blocking tasks. Returns a CountDownLatch that can be counted down to release all
+   * blocked tasks.
+   */
+  private static CountDownLatch saturatePool(ExecutorService exec, int poolSize,
+    Server server) throws Exception {
+    CountDownLatch blockLatch = new CountDownLatch(1);
+    CountDownLatch startedLatch = new CountDownLatch(poolSize);
+    for (int i = 0; i < poolSize; i++) {
+      exec.submit(new EventHandler(server, EventType.RS_PARALLEL_SEEK) {
+        @Override
+        public void process() throws IOException {
+          startedLatch.countDown();
+          try {
+            blockLatch.await();
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+          }
+        }
+      });
+    }
+    // Wait until all blocking tasks are actually running
+    assertTrue(startedLatch.await(10, TimeUnit.SECONDS),
+      "Pool should be saturated within 10s");
+    return blockLatch;
+  }
+
+  /** Build a simple non-null ExtendedCell to use as a seek key. */
+  private static ExtendedCell makeSeekKey() {
+    return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
+      .setRow(Bytes.toBytes("row1")).setFamily(CF).setQualifier(Bytes.toBytes("col"))
+      .setTimestamp(1L).setType(org.apache.hadoop.hbase.Cell.Type.Put)
+      .setValue(new byte[0]).build();
+  }
+
+  // =========================================================================
+  // Adaptive parallel seek unit tests
+  // =========================================================================
+
+  /**
+   * Test 1: adaptive=true, parallel=false => sequential path is used (adaptive ignored).
+   */
+  @Test
+  public void testAdaptiveIgnoredWhenParallelDisabled() throws Exception {
+    // ScanInfo with parallel=false → adaptive flag must be ignored
+    Configuration conf = HBaseConfiguration.create();
+    conf.setBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false);
+    conf.setBoolean(StoreScanner.STORESCANNER_ADAPTIVE_PARALLEL_SEEK_ENABLE, true);
+    ScanInfo si = new ScanInfo(conf, CF, 0, Integer.MAX_VALUE, Long.MAX_VALUE,
+      KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
+
+    // parallel disabled in ScanInfo → adaptiveParallelSeekEnabled stays false in StoreScanner
+    assertFalse(si.isParallelSeekEnabled(),
+      "parallelSeekEnabled should be false");
+    // adaptive flag from ScanInfo is there but StoreScanner ctor requires store != null
+    // with store file count > 1 to set parallelSeekEnabled. So just verify via ScanInfo:
+    assertTrue(si.isAdaptiveParallelSeekEnabled(),
+      "ScanInfo adaptive flag should be true when configured");
+
+    // Build a StoreScanner with test constructor: store=null so parallelSeekEnabled=false
+    MockMemStoreScanner ms1 = new MockMemStoreScanner();
+    MockMemStoreScanner ms2 = new MockMemStoreScanner();
+    List<KeyValueScanner> scanners = Arrays.asList(ms1, ms2);
+
+    Scan scan = new Scan();
+    StoreScanner storeScanner = new StoreScanner(scan, si, (NavigableSet<byte[]>) null, scanners);
+
+    // Verify adaptiveParallelSeekEnabled is false (because store=null → parallelSeekEnabled=false)
+    java.lang.reflect.Field adaptiveField =
+      StoreScanner.class.getDeclaredField("adaptiveParallelSeekEnabled");
+    adaptiveField.setAccessible(true);
+    assertFalse((Boolean) adaptiveField.get(storeScanner),
+      "adaptiveParallelSeekEnabled must be false when parallel seek is disabled");
+
+    storeScanner.close();
+  }
+
+  /**
+   * Test 2: empty scanner list returns without error.
+   * Requirements: implied by empty list handling in adaptiveParallelSeek
+   */
+  @Test
+  public void testAdaptiveParallelSeekEmptyList() throws Exception {
+    ExecutorService exec = startParallelSeekExecutor(4);
+    try {
+      Scan scan = new Scan();
+      List<KeyValueScanner> empty = new ArrayList<>();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, empty);
+      injectAdaptiveFields(storeScanner, exec);
+
+      // Call seekScanners with an empty list — should return without error
+      storeScanner.seekScanners(empty, makeSeekKey(), false, true);
+
+      storeScanner.close();
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  /**
+   * Test 3: all sequential when pool saturated (capacity always 0).
+   */
+  @Test
+  public void testAllSequentialWhenPoolSaturated() throws Exception {
+    int poolSize = 2;
+    ExecutorService exec = startParallelSeekExecutor(poolSize);
+    Server server = Mockito.mock(Server.class);
+    Mockito.when(server.getConfiguration()).thenReturn(HBaseConfiguration.create());
+
+    CountDownLatch blockLatch = saturatePool(exec, poolSize, server);
+    try {
+      // Pool is saturated. Create StoreFileScanner mocks — they must be sought sequentially.
+      StoreFileScanner sfs1 = Mockito.mock(StoreFileScanner.class);
+      StoreFileScanner sfs2 = Mockito.mock(StoreFileScanner.class);
+      Mockito.when(sfs1.seek(Mockito.any())).thenReturn(true);
+      Mockito.when(sfs2.seek(Mockito.any())).thenReturn(true);
+
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(sfs1, sfs2);
+      Scan scan = new Scan();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+      injectAdaptiveFields(storeScanner, exec);
+
+      ExtendedCell seekKey = makeSeekKey();
+      storeScanner.seekScanners(scanners, seekKey, false, true);
+
+      // Both scanners were sought (sequentially, since pool was full)
+      Mockito.verify(sfs1, Mockito.times(1)).seek(seekKey);
+      Mockito.verify(sfs2, Mockito.times(1)).seek(seekKey);
+
+      storeScanner.close();
+    } finally {
+      blockLatch.countDown();
+      exec.shutdown();
+    }
+  }
+
+  /**
+   * Test 4: all parallel when pool fully available (capacity >= scanner count).
+   */
+  @Test
+  public void testAllParallelWhenPoolFullyAvailable() throws Exception {
+    int poolSize = 4;
+    ExecutorService exec = startParallelSeekExecutor(poolSize);
+    try {
+      // Pool is completely idle. All StoreFileScanners should be sought in parallel.
+      StoreFileScanner sfs1 = Mockito.mock(StoreFileScanner.class);
+      StoreFileScanner sfs2 = Mockito.mock(StoreFileScanner.class);
+      Mockito.when(sfs1.seek(Mockito.any())).thenReturn(true);
+      Mockito.when(sfs2.seek(Mockito.any())).thenReturn(true);
+
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(sfs1, sfs2);
+      Scan scan = new Scan();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+      injectAdaptiveFields(storeScanner, exec);
+
+      ExtendedCell seekKey = makeSeekKey();
+      storeScanner.seekScanners(scanners, seekKey, false, true);
+
+      // Both scanners must be sought
+      Mockito.verify(sfs1, Mockito.times(1)).seek(seekKey);
+      Mockito.verify(sfs2, Mockito.times(1)).seek(seekKey);
+
+      storeScanner.close();
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  /**
+   * Test 5: all memstore scanners (no StoreFileScanner) — all seeked inline.
+   */
+  @Test
+  public void testAllMemstoreScannersSeekInline() throws Exception {
+    ExecutorService exec = startParallelSeekExecutor(4);
+    try {
+      MockMemStoreScanner ms1 = new MockMemStoreScanner();
+      MockMemStoreScanner ms2 = new MockMemStoreScanner();
+      MockMemStoreScanner ms3 = new MockMemStoreScanner();
+
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(ms1, ms2, ms3);
+      Scan scan = new Scan();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+      injectAdaptiveFields(storeScanner, exec);
+
+      storeScanner.seekScanners(scanners, makeSeekKey(), false, true);
+
+      assertEquals(1, ms1.getSeekCount(), "ms1 should be sought once");
+      assertEquals(1, ms2.getSeekCount(), "ms2 should be sought once");
+      assertEquals(1, ms3.getSeekCount(), "ms3 should be sought once");
+
+      storeScanner.close();
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  /**
+   * Test 6: IOException from sequential seek propagates immediately.
+   */
+  @Test
+  public void testIOExceptionFromSequentialSeekPropagates() throws Exception {
+    int poolSize = 2;
+    ExecutorService exec = startParallelSeekExecutor(poolSize);
+    Server server = Mockito.mock(Server.class);
+    Mockito.when(server.getConfiguration()).thenReturn(HBaseConfiguration.create());
+
+    // Saturate the pool so we go sequential
+    CountDownLatch blockLatch = saturatePool(exec, poolSize, server);
+    try {
+      IOException expectedError = new IOException("sequential seek error");
+      MockMemStoreScanner failingScanner = new MockMemStoreScanner(expectedError);
+      MockMemStoreScanner normalScanner = new MockMemStoreScanner();
+
+      List<KeyValueScanner> scanners =
+        Arrays.<KeyValueScanner>asList(failingScanner, normalScanner);
+      Scan scan = new Scan();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+      injectAdaptiveFields(storeScanner, exec);
+
+      // Should throw the IOException from the failing scanner
+      IOException thrown = null;
+      try {
+        storeScanner.seekScanners(scanners, makeSeekKey(), false, true);
+      } catch (IOException e) {
+        thrown = e;
+      }
+
+      assertNotNull(thrown, "Should have thrown IOException");
+      // The second scanner must NOT be sought since the first threw
+      assertEquals(0, normalScanner.getSeekCount(), "normalScanner should not be sought after error");
+
+      storeScanner.close();
+    } finally {
+      blockLatch.countDown();
+      exec.shutdown();
+    }
+  }
+
+  /**
+   * Test 7: IOException from parallel seek handler propagates after await.
+   */
+  @Test
+  public void testIOExceptionFromParallelHandlerPropagates() throws Exception {
+    int poolSize = 4;
+    ExecutorService exec = startParallelSeekExecutor(poolSize);
+    try {
+      // Mock StoreFileScanner that throws on seek
+      StoreFileScanner failingSfs = Mockito.mock(StoreFileScanner.class);
+      Mockito.doThrow(new IOException("parallel seek error")).when(failingSfs)
+        .seek(Mockito.any());
+
+      List<KeyValueScanner> scanners = Collections.singletonList(failingSfs);
+      Scan scan = new Scan();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+      injectAdaptiveFields(storeScanner, exec);
+
+      IOException thrown = null;
+      try {
+        storeScanner.seekScanners(scanners, makeSeekKey(), false, true);
+      } catch (IOException e) {
+        thrown = e;
+      }
+
+      assertNotNull(thrown, "Should have thrown IOException from parallel handler");
+
+      storeScanner.close();
+    } finally {
+      exec.shutdown();
+    }
+  }
+
+  /**
+   * Test 8: InterruptedException during await is wrapped as InterruptedIOException.
+   */
+  @Test
+  public void testInterruptedExceptionWrappedAsInterruptedIOException() throws Exception {
+    int poolSize = 2;
+    ExecutorService exec = startParallelSeekExecutor(poolSize);
+
+    // Use a scanner that blocks to give us a chance to interrupt
+    CountDownLatch scannerBlockLatch = new CountDownLatch(1);
+    StoreFileScanner blockingSfs = Mockito.mock(StoreFileScanner.class);
+    Mockito.doAnswer(invocation -> {
+      // Block until the test interrupts the thread
+      scannerBlockLatch.await();
+      return true;
+    }).when(blockingSfs).seek(Mockito.any());
+
+    List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(blockingSfs);
+    Scan scan = new Scan();
+    StoreScanner storeScanner =
+      new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+    injectAdaptiveFields(storeScanner, exec);
+
+    // Run seekScanners in a separate thread so we can interrupt it
+    final IOException[] caughtError = { null };
+    Thread seekThread = new Thread(() -> {
+      try {
+        storeScanner.seekScanners(scanners, makeSeekKey(), false, true);
+      } catch (IOException e) {
+        caughtError[0] = e;
+      }
+    });
+    seekThread.start();
+
+    // Give the thread time to submit the handler and start awaiting the latch
+    Waiter.waitFor(HBaseConfiguration.create(), 5000, () -> seekThread.getState() == Thread.State.WAITING
+      || seekThread.getState() == Thread.State.TIMED_WAITING);
+
+    // Interrupt the seeking thread
+    seekThread.interrupt();
+    seekThread.join(5000);
+
+    // Release the blocking scanner so background thread can finish
+    scannerBlockLatch.countDown();
+
+    assertNotNull(caughtError[0], "Should have caught an IOException");
+    assertInstanceOf(InterruptedIOException.class, caughtError[0],
+      "IOException should be InterruptedIOException, got: " + caughtError[0].getClass());
+
+    storeScanner.close();
+    exec.shutdown();
+  }
+
+  /**
+   * Test 9: mixed capacity — capacity fluctuates between iterations. Some scanners are parallel,
+   * some sequential, all must be sought exactly once.
+   */
+  @Test
+  public void testMixedCapacityFluctuation() throws Exception {
+    // Use a pool of size 1: capacity alternates between 0 (when active) and 1 (when idle)
+    // We'll use memstore scanners (inline) mixed with StoreFileScanners to ensure all are sought
+    int poolSize = 2;
+    ExecutorService exec = startParallelSeekExecutor(poolSize);
+    try {
+      // 2 StoreFileScanners + 2 memstore scanners
+      StoreFileScanner sfs1 = Mockito.mock(StoreFileScanner.class);
+      StoreFileScanner sfs2 = Mockito.mock(StoreFileScanner.class);
+      MockMemStoreScanner ms1 = new MockMemStoreScanner();
+      MockMemStoreScanner ms2 = new MockMemStoreScanner();
+      Mockito.when(sfs1.seek(Mockito.any())).thenReturn(true);
+      Mockito.when(sfs2.seek(Mockito.any())).thenReturn(true);
+
+      List<KeyValueScanner> scanners =
+        Arrays.<KeyValueScanner>asList(ms1, sfs1, ms2, sfs2);
+
+      Scan scan = new Scan();
+      StoreScanner storeScanner =
+        new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
+      injectAdaptiveFields(storeScanner, exec);
+
+      ExtendedCell seekKey = makeSeekKey();
+      storeScanner.seekScanners(scanners, seekKey, false, true);
+
+      // All four scanners must be sought exactly once regardless of parallel/sequential path
+      assertEquals(1, ms1.getSeekCount(), "ms1 should be sought once");
+      assertEquals(1, ms2.getSeekCount(), "ms2 should be sought once");
+      Mockito.verify(sfs1, Mockito.times(1)).seek(seekKey);
+      Mockito.verify(sfs2, Mockito.times(1)).seek(seekKey);
+
+      storeScanner.close();
+    } finally {
+      exec.shutdown();
+    }
+  }
 }

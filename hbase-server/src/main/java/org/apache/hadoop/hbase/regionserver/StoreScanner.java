@@ -27,6 +27,7 @@ import java.util.NavigableSet;
 import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 import java.util.function.IntConsumer;
@@ -46,6 +47,7 @@ import org.apache.hadoop.hbase.client.IsolationLevel;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.conf.ConfigKey;
 import org.apache.hadoop.hbase.executor.ExecutorService;
+import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -95,6 +97,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * A flag that enables StoreFileScanner parallel-seeking
    */
   private boolean parallelSeekEnabled = false;
+  private boolean adaptiveParallelSeekEnabled = false;
   private ExecutorService executor;
   private final Scan scan;
   private final long oldestUnexpiredTS;
@@ -129,6 +132,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
   static final boolean LAZY_SEEK_ENABLED_BY_DEFAULT = true;
   public static final String STORESCANNER_PARALLEL_SEEK_ENABLE =
     "hbase.storescanner.parallel.seek.enable";
+  public static final String STORESCANNER_ADAPTIVE_PARALLEL_SEEK_ENABLE =
+    "hbase.storescanner.adaptive.parallel.seek.enable";
 
   /** Used during unit testing to ensure that lazy seek does save seek ops */
   private static boolean lazySeekEnabledGlobally = LAZY_SEEK_ENABLED_BY_DEFAULT;
@@ -232,6 +237,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       RegionServerServices rsService = store.getHRegion().getRegionServerServices();
       if (rsService != null && scanInfo.isParallelSeekEnabled()) {
         this.parallelSeekEnabled = true;
+        this.adaptiveParallelSeekEnabled =
+          this.parallelSeekEnabled && scanInfo.isAdaptiveParallelSeekEnabled();
         this.executor = rsService.getExecutorService();
       }
     }
@@ -441,6 +448,8 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
             totalScannersSoughtBytes += PrivateCellUtil.estimatedSerializedSizeOf(c);
           }
         }
+      } else if (adaptiveParallelSeekEnabled) {
+        adaptiveParallelSeek(scanners, seekKey);
       } else {
         parallelSeek(scanners, seekKey);
       }
@@ -1265,6 +1274,135 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       if (handler.getErr() != null) {
         throw new IOException(handler.getErr());
       }
+    }
+  }
+
+  /**
+   * Returns the number of threads available for immediate execution in the parallel seek thread
+   * pool. Uses a conservative approach: only reports capacity when the task queue is empty AND
+   * active threads < pool size.
+   * @return number of threads available for immediate execution, or 0 if saturated
+   */
+  private int getAvailableParallelSeekCapacity() {
+    ThreadPoolExecutor pool = executor.getExecutorThreadPool(ExecutorType.RS_PARALLEL_SEEK);
+    if (!pool.getQueue().isEmpty()) {
+      return 0; // Conservative: any queued work means saturated
+    }
+    return Math.max(0, pool.getCorePoolSize() - pool.getActiveCount());
+  }
+
+  /**
+   * Seeks scanners using an adaptive strategy that switches between parallel and sequential
+   * execution based on thread pool availability.
+   * <p>
+   * When the parallel seek thread pool is saturated, falls back to sequential seeking. After each
+   * sequential seek, re-checks capacity and opportunistically submits remaining scanners for
+   * parallel execution when slots become available.
+   * <p>
+   * If an IOException occurs during an inline seek, we must wait for any already-submitted handlers
+   * to complete before propagating the error. This prevents the caller from closing scanners that
+   * are still being used by worker threads.
+   *
+   * @param scanners list of KeyValueScanners to seek
+   * @param kv       the key to seek to
+   * @throws IOException if any seek operation fails
+   */
+  private void adaptiveParallelSeek(final List<? extends KeyValueScanner> scanners,
+    final ExtendedCell kv) throws IOException {
+    if (scanners.isEmpty()) return;
+
+    int scannerCount = scanners.size();
+    // Pre-count StoreFileScanners to size the latch correctly
+    int storeFileScannerCount = 0;
+    for (KeyValueScanner scanner : scanners) {
+      if (scanner instanceof StoreFileScanner) {
+        storeFileScannerCount++;
+      }
+    }
+    CountDownLatch latch = new CountDownLatch(storeFileScannerCount);
+    List<ParallelSeekHandler> handlers = new ArrayList<>(storeFileScannerCount);
+    int index = 0;
+    IOException inlineSeekError = null;
+
+    while (index < scannerCount) {
+      int capacity = getAvailableParallelSeekCapacity();
+
+      if (capacity == 0) {
+        // Sequential fallback: process one scanner on calling thread
+        KeyValueScanner scanner = scanners.get(index);
+        try {
+          scanner.seek(kv);
+        } catch (IOException e) {
+          // Must wait for already-submitted handlers before propagating error
+          inlineSeekError = e;
+          if (scanner instanceof StoreFileScanner) {
+            latch.countDown();
+          }
+          index++;
+          break;
+        }
+        if (scanner instanceof StoreFileScanner) {
+          latch.countDown();
+        }
+        index++;
+      } else {
+        // Opportunistic parallel: submit batch up to available capacity
+        int batchEnd = Math.min(index + capacity, scannerCount);
+        for (int i = index; i < batchEnd; i++) {
+          KeyValueScanner scanner = scanners.get(i);
+          if (scanner instanceof StoreFileScanner) {
+            ParallelSeekHandler seekHandler =
+              new ParallelSeekHandler(scanner, kv, this.readPt, latch);
+            executor.submit(seekHandler);
+            handlers.add(seekHandler);
+          } else {
+            try {
+              scanner.seek(kv);
+            } catch (IOException e) {
+              // Must wait for already-submitted handlers before propagating error
+              inlineSeekError = e;
+              // Count down latch for remaining StoreFileScanners in this batch that won't be
+              // processed
+              for (int j = i + 1; j < batchEnd; j++) {
+                if (scanners.get(j) instanceof StoreFileScanner) {
+                  latch.countDown();
+                }
+              }
+              index = batchEnd;
+              break;
+            }
+          }
+        }
+        if (inlineSeekError != null) {
+          break;
+        }
+        index = batchEnd;
+      }
+    }
+
+    // Count down latch for any remaining unprocessed StoreFileScanners
+    for (int i = index; i < scannerCount; i++) {
+      if (scanners.get(i) instanceof StoreFileScanner) {
+        latch.countDown();
+      }
+    }
+
+    try {
+      latch.await();
+    } catch (InterruptedException ie) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(ie);
+    }
+
+    // Check for errors from parallel handlers first
+    for (ParallelSeekHandler handler : handlers) {
+      if (handler.getErr() != null) {
+        throw new IOException(handler.getErr());
+      }
+    }
+
+    // Propagate inline seek error after all handlers have completed
+    if (inlineSeekError != null) {
+      throw inlineSeekError;
     }
   }
 
