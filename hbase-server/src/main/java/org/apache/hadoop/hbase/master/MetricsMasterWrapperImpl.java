@@ -30,6 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
@@ -184,15 +185,20 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
   }
 
   @Override
-  public long getOldestProcedureAge() {
+  public Map<String, Long> getOldestProcedureAgeByType() {
     ProcedureExecutor<MasterProcedureEnv> procedureExecutor = master.getMasterProcedureExecutor();
     if (procedureExecutor == null) {
-      return 0L;
+      return Collections.emptyMap();
     }
     long now = EnvironmentEdgeManager.currentTime();
-    return procedureExecutor.getActiveProceduresNoCopy().stream()
-      .filter(procedure -> !procedure.isFinished())
-      .mapToLong(procedure -> Math.max(0L, now - procedure.getSubmittedTime())).max().orElse(0L);
+    Map<String, Long> oldestProcedureAgeByType = new HashMap<>();
+    for (Procedure<MasterProcedureEnv> procedure : procedureExecutor.getActiveProceduresNoCopy()) {
+      if (!procedure.isFinished()) {
+        long age = Math.max(0L, now - procedure.getSubmittedTime());
+        oldestProcedureAgeByType.merge(procedure.getClass().getSimpleName(), age, Math::max);
+      }
+    }
+    return oldestProcedureAgeByType;
   }
 
   @Override
