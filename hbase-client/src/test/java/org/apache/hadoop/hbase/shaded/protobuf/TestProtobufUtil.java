@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellComparatorImpl;
+import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.HConstants;
@@ -142,7 +143,7 @@ public class TestProtobufUtil {
       Result result = Result.create(Collections.emptyList(), exists);
       result.setMetrics(new QueryMetrics(blockBytesScanned));
 
-      for (ClientProtos.Result proto : List.of(ProtobufUtil.toResult(result),
+      for (ClientProtos.Result proto : Arrays.asList(ProtobufUtil.toResult(result),
         ProtobufUtil.toResultNoData(result))) {
         assertEquals(exists, proto.hasExists() ? proto.getExists() : null);
         assertTrue(proto.hasMetrics());
@@ -153,8 +154,8 @@ public class TestProtobufUtil {
         assertNotNull(roundTrip.getMetrics());
         assertEquals(blockBytesScanned, roundTrip.getMetrics().getBlockBytesScanned());
 
-        roundTrip = ProtobufUtil.toResult(proto,
-          PrivateCellUtil.createExtendedCellScanner(Collections.<ExtendedCell> emptyList()));
+        roundTrip =
+          ProtobufUtil.toResult(proto, CellUtil.createCellScanner(Collections.<Cell> emptyList()));
         assertEquals(exists, roundTrip.getExists());
         assertNotNull(roundTrip.getMetrics());
         assertEquals(blockBytesScanned, roundTrip.getMetrics().getBlockBytesScanned());
@@ -163,10 +164,9 @@ public class TestProtobufUtil {
 
     ClientProtos.Result emptyProto = ClientProtos.Result.getDefaultInstance();
     assertNull(ProtobufUtil.toResult(emptyProto).getMetrics());
-    assertNull(ProtobufUtil
-      .toResult(emptyProto,
-        PrivateCellUtil.createExtendedCellScanner(Collections.<ExtendedCell> emptyList()))
-      .getMetrics());
+    assertNull(
+      ProtobufUtil.toResult(emptyProto, CellUtil.createCellScanner(Collections.<Cell> emptyList()))
+        .getMetrics());
   }
 
   /**

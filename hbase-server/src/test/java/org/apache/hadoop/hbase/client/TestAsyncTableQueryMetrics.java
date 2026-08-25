@@ -121,7 +121,7 @@ public class TestAsyncTableQueryMetrics {
     bbs += result.getMetrics().getBlockBytesScanned();
     assertEquals(getClusterBlockBytesScanned(), bbs);
 
-    futures = CONN.getTable(TABLE_NAME).get(List.of(g1, g2, g3));
+    futures = CONN.getTable(TABLE_NAME).get(ImmutableList.of(g1, g2, g3));
     for (CompletableFuture<Result> future : futures) {
       result = future.join();
       assertEquals(Boolean.TRUE, result.getExists());
