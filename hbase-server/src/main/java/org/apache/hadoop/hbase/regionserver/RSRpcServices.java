@@ -2617,8 +2617,8 @@ public class RSRpcServices implements HBaseRPCErrorHandler, AdminService.Blockin
         }
       }
       if (existence != null) {
-        ClientProtos.Result pbr =
-          ProtobufUtil.toResult(existence, region.getRegionInfo().getReplicaId() != 0);
+        ClientProtos.Result pbr = ProtobufUtil.toResult(existence,
+          region.getRegionInfo().getReplicaId() != 0, r != null ? r.getMetrics() : null);
         builder.setResult(pbr);
       } else if (r != null) {
         ClientProtos.Result pbr;
