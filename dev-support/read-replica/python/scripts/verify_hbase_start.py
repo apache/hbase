@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 
 
 def main():
-    log_script_start(__file__, logger)
+    start_time = log_script_start(__file__, logger)
 
     parser = argparse.ArgumentParser()
     parser = add_common_skip_container_stop_or_restart_arg(parser)
@@ -33,7 +33,7 @@ def main():
 
     HBaseDockerClient.wait_for_clusters_to_start([active_cluster, replica_cluster])
 
-    log_script_end(__file__, logger)
+    log_script_end(__file__, logger, start_time)
 
 
 if __name__ == "__main__":

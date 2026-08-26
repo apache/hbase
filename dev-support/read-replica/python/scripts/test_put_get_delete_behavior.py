@@ -87,7 +87,7 @@ def test_put_delete_behavior(active_cluster, replica_cluster, table_name, column
 
 
 def main():
-    log_script_start(__file__, logger)
+    start_time = log_script_start(__file__, logger)
 
     parser = argparse.ArgumentParser()
     parser = add_common_skip_table_cleanup_arg(parser)
@@ -108,7 +108,7 @@ def main():
 
     test_put_delete_behavior(active_cluster, replica_cluster, table_name, column)
 
-    log_script_end(__file__, logger)
+    log_script_end(__file__, logger, start_time)
 
 
 if __name__ == '__main__':

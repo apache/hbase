@@ -4,6 +4,8 @@ Compiles all *.proto files in the 'python/proto' directory. The compiled output 
 This script removes any existing 'generated' directory and creates a new one every time.
 """
 import os
+import shutil
+
 from grpc_tools import protoc
 from python.src.logger_config import get_logger
 
@@ -15,7 +17,7 @@ if __name__ == '__main__':
     generated_dir = os.path.join(proto_dir, 'generated')
 
     if os.path.exists(generated_dir):
-        os.rmdir(generated_dir)
+        shutil.rmtree(generated_dir)
     os.mkdir(generated_dir)
 
     proto_files = [file for file in os.listdir(proto_dir) if file.endswith('.proto')]

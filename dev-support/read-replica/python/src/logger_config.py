@@ -14,13 +14,25 @@ def configure_logging(level=get_env('LOG_LEVEL')):
     """
     Centralized logging configuration for HBase testing scripts.
     """
+    # Convert string level ('DEBUG', 'INFO') to integer level (10, 20)
+    if isinstance(level, str):
+        numeric_level = logging.getLevelName(level.upper())
+    else:
+        numeric_level = level
+
     logging.basicConfig(
-        format='%(asctime)s %(levelname)-5s %(module)s.%(funcName)s(%(lineno)d): %(message)s',
-        level=level,
+        format=LOG_FORMAT,
+        level=numeric_level,
         handlers=[
-            logging.StreamHandler(sys.stdout)  # Ensures logs show up in GH Actions console
+            logging.StreamHandler(sys.stdout)
         ]
     )
+
+    # Suppress verbose HTTP connection logs from Python Docker SDK and urllib3
+    # when the root logger is set to DEBUG or more verbose.
+    if numeric_level <= logging.DEBUG:
+        logging.getLogger("urllib3").setLevel(logging.INFO)
+        logging.getLogger("docker").setLevel(logging.INFO)
 
 
 def get_logger(name):

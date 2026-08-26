@@ -2,6 +2,9 @@
 import ast
 import logging
 import re
+from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
+
+import docker
 import requests
 import subprocess
 import time
@@ -26,13 +29,16 @@ class DockerExecCommandTimeoutError(DockerExecCommandError):
 
 class HBaseDockerClient:
     def __init__(self, container_name: str, local_conf: str, hbase_ui_port: int = 16010,
-                 cluster_name: str = "HBase Cluster", max_retries: int = 12, sleep_time: int = 5) -> None:
+                 cluster_name: str = "HBase Cluster", max_retries: int = 12, sleep_time: int = 5,
+                 hbase_host: str = "localhost") -> None:
         self._container_name = container_name
         self._local_conf = local_conf
         self._hbase_ui_port = hbase_ui_port
         self._cluster_name = cluster_name
         self._max_retries = max_retries
         self._sleep_time = sleep_time
+        self._hbase_host = hbase_host
+        self._docker_client = docker.from_env()
 
     @property
     def name(self) -> str:
@@ -40,31 +46,48 @@ class HBaseDockerClient:
 
     def run_docker_exec_command(self, bash_cmd: str, timeout: int | None = None) -> str:
         """
-        Uses 'docker exec' to run the provided Bash command in the object's Docker container.
-        The command looks like: docker exec <container> bash -c <bash_cmd>
-        Note: In the Terminal, we usually put double quotes around everything after "-c",
-        but doing that with subprocess.run() results in a failure.
+        Uses the Docker SDK to exec a Bash command in the object's Docker container.
+        Equivalent to: docker exec <container> bash -c <bash_cmd>
         """
-        cmd = ["docker", "exec", self._container_name, "bash", "-c", f'''{bash_cmd}''']
-        cmd_str = ' '.join(cmd)
+        cmd = ["bash", "-c", bash_cmd]
+        cmd_str = f"docker exec {self._container_name} bash -c {bash_cmd}"
         logger.debug(f"Running command on {self._cluster_name}: {cmd_str}")
+
         try:
-            process = subprocess.run(cmd, capture_output=True, timeout=timeout)
-        except subprocess.TimeoutExpired:
-            raise DockerExecCommandTimeoutError(
-                f"Command timed out after {timeout}s on {self._cluster_name} "
-                f"({self._container_name}): {bash_cmd}\n"
-                f"The command used to run this was: {cmd_str}\n"
-            )
-        stdout = process.stdout.decode('utf-8')
-        if process.returncode != 0:
+            container = self._docker_client.containers.get(self._container_name)
+
+            if timeout is not None:
+                with ThreadPoolExecutor(max_workers=1) as pool:
+                    future = pool.submit(container.exec_run, cmd, demux=True)
+                    try:
+                        result = future.result(timeout=timeout)
+                    except FuturesTimeoutError:
+                        raise DockerExecCommandTimeoutError(
+                            f"Command timed out after {timeout}s on {self._cluster_name} "
+                            f"({self._container_name}): {bash_cmd}\n"
+                            f"The command used to run this was: {cmd_str}\n"
+                        )
+            else:
+                result = container.exec_run(cmd, demux=True)
+        except DockerExecCommandError:
+            raise
+        except docker.errors.DockerException as e:
             raise DockerExecCommandError(
                 f"The following command failed on {self._cluster_name} ({self._container_name}): {bash_cmd}\n"
                 f"The command used to run this was: {cmd_str}\n"
-                f"The command's STDERR was:\n{process.stderr.decode('utf-8')}\n"
-                f"The command's STDOUT was:\n{stdout}\n"
+                f"Docker error: {e}\n"
             )
-        return stdout
+
+        exit_code, (stdout, stderr) = result
+        stdout_str = (stdout or b'').decode('utf-8')
+        if exit_code != 0:
+            raise DockerExecCommandError(
+                f"The following command failed on {self._cluster_name} ({self._container_name}): {bash_cmd}\n"
+                f"The command used to run this was: {cmd_str}\n"
+                f"The command's STDERR was:\n{(stderr or b'').decode('utf-8')}\n"
+                f"The command's STDOUT was:\n{stdout_str}\n"
+            )
+        return stdout_str
 
     def run_hbase_shell_command(self, hbase_cmd: str, timeout: int | None = None) -> str:
         """
@@ -81,9 +104,22 @@ class HBaseDockerClient:
         except DockerExecCommandError as e:
             raise HBaseShellCommandError(e)
 
+    def _get_pid_from_jps(self, process_name: str) -> int | None:
+        """Runs jps inside the container and returns the PID of the named process, or None."""
+        try:
+            output = self.run_docker_exec_command("jps")
+            for line in output.strip().splitlines():
+                parts = line.split()
+                if len(parts) == 2 and parts[1] == process_name:
+                    return int(parts[0])
+        except DockerExecCommandError:
+            pass
+        return None
+
     def wait_for_hbase_ui(self) -> bool:
         """Checks for a 200 OK on the HBase Master UI."""
-        url = f"http://localhost:{self._hbase_ui_port}"
+        # Read HBASE_HOST from environment, falling back to 'localhost' for host-native execution
+        url = f"http://{self._hbase_host}:{self._hbase_ui_port}"
         logger.info(f"Waiting for HBase UI: {self._cluster_name} on {url}")
         last_exception = None
         for attempt in range(1, self._max_retries + 1):
@@ -100,6 +136,54 @@ class HBaseDockerClient:
         raise RuntimeError(f"\nTIMEOUT: {self._cluster_name} UI failed to respond after "
                            f"{self._max_retries} attempts. "
                            f"Last raised exception was: {last_exception}")
+
+    def wait_for_master_initialization(self) -> bool:
+        """Waits for the current HMaster process to log 'Master has completed initialization'."""
+        logger.info(f"Waiting for Master initialization: {self._cluster_name} ({self._container_name})")
+        for attempt in range(1, self._max_retries + 1):
+            pid = self._get_pid_from_jps("HMaster")
+            if pid is not None:
+                awk_cmd = (
+                    f"awk '/env:JVM_PID={pid}/{{seen=1; found=0}} "
+                    f"seen && /Master has completed initialization/{{found=1}} "
+                    f"END{{exit !found}}' /opt/hbase/logs/hbase-*-master-*.log"
+                )
+                try:
+                    self.run_docker_exec_command(awk_cmd)
+                    logger.info(f"SUCCESS: {self._cluster_name} Master has completed initialization.")
+                    return True
+                except DockerExecCommandError:
+                    pass
+            logging.info(f"Waiting {self._sleep_time} seconds before checking Master initialization again")
+            time.sleep(self._sleep_time)
+
+        raise RuntimeError(
+            f"\nTIMEOUT: {self._cluster_name} Master failed to initialize after "
+            f"{self._max_retries} attempts.")
+
+    def wait_for_region_server_initialization(self) -> bool:
+        """Waits for the current HRegionServer process to log 'Serving as' message."""
+        logger.info(f"Waiting for RegionServer initialization: {self._cluster_name} ({self._container_name})")
+        for attempt in range(1, self._max_retries + 1):
+            pid = self._get_pid_from_jps("HRegionServer")
+            if pid is not None:
+                awk_cmd = (
+                    f"awk '/env:JVM_PID={pid}/{{seen=1; found=0}} "
+                    f"seen && /Serving as {self._container_name},/{{found=1}} "
+                    f"END{{exit !found}}' /opt/hbase/logs/hbase-*-regionserver-*.log"
+                )
+                try:
+                    self.run_docker_exec_command(awk_cmd)
+                    logger.info(f"SUCCESS: {self._cluster_name} RegionServer is serving.")
+                    return True
+                except DockerExecCommandError:
+                    pass
+            logging.info(f"Waiting {self._sleep_time} seconds before checking RegionServer initialization again")
+            time.sleep(self._sleep_time)
+
+        raise RuntimeError(
+            f"\nTIMEOUT: {self._cluster_name} RegionServer failed to initialize after "
+            f"{self._max_retries} attempts.")
 
     def check_server_status(self, desired_status: dict | None = None) -> bool:
         """Runs 'status' inside the HBase shell and validates the output."""
@@ -128,11 +212,10 @@ class HBaseDockerClient:
                                    f"components are ready...")
                     logger.info(f"HBase 'status' command output:\n{output}")
 
-            except subprocess.CalledProcessError:
+            except HBaseShellCommandError:
                 pass
 
-            logging.info(f"Waiting {self._sleep_time} seconds before getting status on "
-                         f"{self.name} again")
+            logging.info(f"Waiting {self._sleep_time} seconds before getting status on {self.name} again")
             time.sleep(self._sleep_time)
 
         raise RuntimeError(
@@ -145,6 +228,8 @@ class HBaseDockerClient:
     def wait_for_cluster_to_start(self) -> None:
         """curls the cluster's HBase UI to make sure it is up and then makes sure all desired servers are up"""
         self.wait_for_hbase_ui()
+        self.wait_for_master_initialization()
+        self.wait_for_region_server_initialization()
         self.check_server_status()
 
     def create_table(self, table_name: str, column_family: str) -> bool:
@@ -511,6 +596,15 @@ class HBaseDockerClient:
 
         HBaseDockerClient.__run_subprocess_command(command, f"docker compose {action} failed")
         logger.info(f"docker compose {action} completed successfully")
+
+    @staticmethod
+    def start_service(service_name: str, docker_compose_file: str | None = None) -> None:
+        logger.info(f"Starting docker compose service: {service_name}")
+        command = ["docker", "compose"]
+        if docker_compose_file:
+            command += ["-f", docker_compose_file]
+        command += ["up", "-d", service_name]
+        HBaseDockerClient.__run_subprocess_command(command, f"Failed to start service '{service_name}'")
 
     @staticmethod
     def stop_containers(docker_compose_file: str | None = None, data_dir: str | None = None,

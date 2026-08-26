@@ -6,6 +6,8 @@ services:
     image: ${HBASE_IMAGE}
     container_name: ${HBASE_CONTAINER_NAME}
     hostname: ${HBASE_CONTAINER_NAME}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - ${ACTIVE_CLUSTER_PORT}:16010 # Master UI
     volumes:
@@ -14,11 +16,14 @@ services:
       - ${ACTIVE_CLUSTER_CONF_DIR}/hbase-site.xml:${HBASE_CONF_DIR}/hbase-site.xml
       - ${ACTIVE_CLUSTER_CONF_DIR}/zoo.cfg:${HBASE_CONF_DIR}/zoo.cfg
       - ${ACTIVE_CLUSTER_CONF_DIR}/log4j2.properties:${HBASE_CONF_DIR}/log4j2.properties
+      - ${ACTIVE_CLUSTER_LOGS_DIR}:/opt/hbase/logs
 
   hbase2:
     image: ${HBASE_IMAGE}
     container_name: ${HBASE_CONTAINER_NAME}-2
     hostname: ${HBASE_CONTAINER_NAME}-2
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - ${REPLICA_CLUSTER_PORT}:16010 # Master UI
     volumes:
@@ -27,3 +32,4 @@ services:
       - ${REPLICA_CLUSTER_CONF_DIR}/hbase-site.xml:${HBASE_CONF_DIR}/hbase-site.xml
       - ${REPLICA_CLUSTER_CONF_DIR}/zoo.cfg:${HBASE_CONF_DIR}/zoo.cfg
       - ${REPLICA_CLUSTER_CONF_DIR}/log4j2.properties:${HBASE_CONF_DIR}/log4j2.properties
+      - ${REPLICA_CLUSTER_LOGS_DIR}:/opt/hbase/logs

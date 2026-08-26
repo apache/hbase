@@ -1,9 +1,9 @@
-<?xml-stylesheet type="text/xsl" href="configuration.xsl"?>
+<?xml version='1.0' encoding='utf-8'?>
 <configuration>
 
   <property>
      <name>hbase.zookeeper.quorum</name>
-     <value>hbase-docker</value>
+     <value>hbase-docker-2</value>
   </property>
   <property>
      <name>hbase.zookeeper.property.dataDir</name>
@@ -24,11 +24,11 @@
 
   <property>
     <name>hbase.master.info.bindAddress</name>
-    <value>hbase-docker</value>
+    <value>hbase-docker-2</value>
   </property>
   <property>
     <name>hbase.regionserver.info.bindAddress</name>
-    <value>hbase-docker</value>
+    <value>hbase-docker-2</value>
   </property>
   <property>
     <name>hbase.unsafe.stream.capability.enforce</name>
@@ -44,8 +44,12 @@
   </property>
 
   <property>
+    <name>hbase.meta.table.suffix</name>
+    <value>replica1</value>
+  </property>
+  <property>
     <name>hbase.global.readonly.enabled</name>
-    <value>false</value>
+    <value>true</value>
   </property>
   <property>
     <name>hbase.master.hbck.chore.interval</name>

@@ -59,7 +59,7 @@ def assert_cannot_split_regions_on_replica(replica_cluster: HBaseDockerClient, t
 
 
 def main():
-    log_script_start(__file__, logger)
+    start_time = log_script_start(__file__, logger)
 
     parser = argparse.ArgumentParser()
     parser = add_common_skip_container_stop_or_restart_arg(parser)
@@ -87,7 +87,7 @@ def main():
 
     reset_cluster_setup(active_cluster=cluster1, replica_cluster=cluster2,
                         skip_container_restart=skip_container_restart, docker_compose_file=docker_compose_file,
-                        data_store_root=data_store_root, sudo=True)
+                        data_store_root=data_store_root)
 
     logger.info(f"The active cluster is {cluster1.name} and the replica cluster is {cluster2.name}")
 
@@ -220,7 +220,7 @@ def main():
         cluster2.refresh_meta_and_hfiles()
         cluster2.assert_region_count_for_table(table, num_regions)
 
-    log_script_end(__file__, logger)
+    log_script_end(__file__, logger, start_time)
 
 
 if __name__ == '__main__':
