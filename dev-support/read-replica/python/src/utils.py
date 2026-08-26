@@ -17,10 +17,17 @@ logger = get_logger(__name__)
 
 def log_script_start(file: str, script_logger=None):
     (script_logger or logger).info(f"========== START {os.path.basename(file)} ==========")
+    return time.time()
 
 
-def log_script_end(file: str, script_logger=None):
-    (script_logger or logger).info(f"========== END {os.path.basename(file)} ==========")
+def log_script_end(file: str, script_logger=None, start_time=None):
+    elapsed = ""
+    if start_time is not None:
+        total_seconds = int(time.time() - start_time)
+        hours, remainder = divmod(total_seconds, 3600)
+        minutes, seconds = divmod(remainder, 60)
+        elapsed = f" ({hours}h {minutes}m {seconds}s)"
+    (script_logger or logger).info(f"========== END {os.path.basename(file)}{elapsed} ==========")
 
 
 def add_common_skip_table_cleanup_arg(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
@@ -43,11 +50,11 @@ def load_env_and_set_up_clients(cluster1_name: str = "Cluster 1",
     active_cluster = HBaseDockerClient(container_name=container_name,
                                        local_conf=f"{get_env('ACTIVE_CLUSTER_CONF_DIR')}/hbase-site.xml",
                                        hbase_ui_port=get_env('ACTIVE_CLUSTER_PORT'),
-                                       cluster_name=cluster1_name)
+                                       cluster_name=cluster1_name, hbase_host=get_env('HBASE_HOST'))
     replica_cluster = HBaseDockerClient(container_name=f'{container_name}-2',
                                         local_conf=f"{get_env('REPLICA_CLUSTER_CONF_DIR')}/hbase-site.xml",
                                         hbase_ui_port=get_env('REPLICA_CLUSTER_PORT'),
-                                        cluster_name=cluster2_name)
+                                        cluster_name=cluster2_name, hbase_host=get_env('HBASE_HOST'))
     return active_cluster, replica_cluster
 
 
