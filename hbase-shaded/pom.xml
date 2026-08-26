@@ -470,6 +470,9 @@
                       <exclude>jnamed*</exclude>
                       <exclude>lookup*</exclude>
                       <exclude>update*</exclude>
+                      <!-- SPI provider ships only under META-INF/versions/18; this jar is not
+                           multi-release, so keeping the service file breaks DNS on JDK18+ -->
+                      <exclude>META-INF/services/java.net.spi.InetAddressResolverProvider</exclude>
                     </excludes>
                   </filter>
                   <filter>
