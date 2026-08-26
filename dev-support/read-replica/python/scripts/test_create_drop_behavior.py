@@ -56,7 +56,7 @@ def test_table_creation_behavior(active_cluster, replica_cluster, table_name, co
 
 
 def main():
-    log_script_start(__file__, logger)
+    start_time = log_script_start(__file__, logger)
 
     parser = argparse.ArgumentParser()
     parser = add_common_skip_table_cleanup_arg(parser)
@@ -74,7 +74,7 @@ def main():
 
     test_table_creation_behavior(active_cluster, replica_cluster, table_name, column_family)
 
-    log_script_end(__file__, logger)
+    log_script_end(__file__, logger, start_time)
 
 
 if __name__ == "__main__":

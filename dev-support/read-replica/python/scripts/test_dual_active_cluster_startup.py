@@ -7,6 +7,7 @@ running, and an error logged to the master log.
 Usage: python3 ./python/scripts/test_dual_active_cluster_startup.py
 """
 import argparse
+import os
 import time
 
 from python.src.environment_loader import get_env
@@ -18,6 +19,8 @@ logger = get_logger(__name__)
 
 STARTUP_WAIT_SECONDS = 60
 EXPECTED_ERROR_MSG = "Another cluster is running in active (read-write) mode on this storage location"
+CLUSTER1_SERVICE_NAME = "hbase"
+CLUSTER2_SERVICE_NAME = "hbase2"
 
 
 def is_process_running(cluster: HBaseDockerClient, process_name: str) -> bool:
@@ -44,8 +47,19 @@ def assert_error_in_master_log(cluster: HBaseDockerClient):
     logger.info(f"  [PASS] Found expected error message in {cluster.name}'s master log")
 
 
+def wait_for_active_cluster_file(data_store_root: str, timeout_seconds: int = 30) -> None:
+    file_path = f"{data_store_root}/data-store/hbase/active.cluster.suffix.id"
+    logger.info(f"Waiting for active cluster suffix id file: {file_path}")
+    start = time.time()
+    while not os.path.exists(file_path):
+        if time.time() - start > timeout_seconds:
+            raise RuntimeError(f"Timed out after {timeout_seconds}s waiting for: {file_path}")
+        time.sleep(1)
+    logger.info(f"Active cluster suffix id file detected: {file_path}")
+
+
 def main():
-    log_script_start(__file__, logger)
+    start_time = log_script_start(__file__, logger)
 
     parser = argparse.ArgumentParser()
     parser.add_argument('-c', '--clean-up-containers', action='store_true',
@@ -57,51 +71,54 @@ def main():
     data_store_root = get_env("HBASE_DATA_STORE_ROOT")
     docker_compose_file = get_env("DOCKER_COMPOSE_FILE")
 
-    test_iterations = 3
+    test_iterations = 4
     for i in range(1, test_iterations+1):
         logger.info(f"---------- Iteration {i} ----------")
 
-        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=f'{data_store_root}/*',
-                                          sudo=True)
+        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=f'{data_store_root}/*')
 
         # Make both clusters an active cluster (read-only disabled)
         cluster1.disable_read_only_mode(run_update_all_config=False)
         cluster2.disable_read_only_mode(run_update_all_config=False)
 
-        # Start or restart containers so both attempt to start as active
-        HBaseDockerClient.start_or_restart_containers(docker_compose_file=docker_compose_file,
-                                                      data_store_root=f'{data_store_root}')
+        HBaseDockerClient.set_up_data_store_dir(data_store_root)
 
-        # Wait for HBase to attempt startup on both containers
-        logger.info(f"Waiting {STARTUP_WAIT_SECONDS}s for clusters to attempt startup...")
+        # Alternate which cluster starts first
+        if i % 2 == 1:
+            first_cluster, second_cluster = cluster1, cluster2
+            first_service, second_service = CLUSTER1_SERVICE_NAME, CLUSTER2_SERVICE_NAME
+        else:
+            first_cluster, second_cluster = cluster2, cluster1
+            first_service, second_service = CLUSTER2_SERVICE_NAME, CLUSTER1_SERVICE_NAME
+
+        # Start the first cluster and wait for it to claim the active role
+        logger.info(f"Starting {first_cluster.name} first (service: {first_service})")
+        HBaseDockerClient.start_service(first_service, docker_compose_file=docker_compose_file)
+        wait_for_active_cluster_file(data_store_root)
+
+        # Start the second cluster — it should detect the existing active cluster and fail
+        logger.info(f"Starting {second_cluster.name} second (service: {second_service})")
+        HBaseDockerClient.start_service(second_service, docker_compose_file=docker_compose_file)
+
+        logger.info(f"Waiting {STARTUP_WAIT_SECONDS}s for {second_cluster.name} to attempt startup...")
         time.sleep(STARTUP_WAIT_SECONDS)
 
-        # Determine which cluster failed
         logger.info("Checking HBase processes on both clusters")
-        cluster1_running = check_cluster_processes(cluster1)
-        cluster2_running = check_cluster_processes(cluster2)
+        first_running = check_cluster_processes(first_cluster)
+        second_running = check_cluster_processes(second_cluster)
 
-        if cluster1_running and not cluster2_running:
-            failed_cluster = cluster2
-            running_cluster = cluster1
-        elif cluster2_running and not cluster1_running:
-            failed_cluster = cluster1
-            running_cluster = cluster2
-        elif not cluster1_running and not cluster2_running:
-            raise RuntimeError("Both clusters appear to be down — this is unexpected")
-        else:
-            raise RuntimeError(
-                "Both clusters appear to be running — the test expects exactly one to have failed. "
-                "This may indicate the clusters are using separate data stores or the feature is not working. "
-                "Note: There is a rare occasion where this may occur due to a race condition, but it should "
-                "not happen often."
-            )
+        assert first_running, (
+            f"Expected {first_cluster.name} (started first) to be running, but HMaster is down"
+        )
+        assert not second_running, (
+            f"Expected {second_cluster.name} (started second) to have failed, "
+            f"but HMaster is still running"
+        )
 
-        logger.info(f"[PASS] {running_cluster.name} is running as the active cluster")
-        logger.info(f"[PASS] {failed_cluster.name} failed to start (HMaster is down)")
+        logger.info(f"[PASS] {first_cluster.name} is running as the active cluster")
+        logger.info(f"[PASS] {second_cluster.name} failed to start (HMaster is down)")
 
-        # Verify the failed cluster's master log contains the expected error
-        assert_error_in_master_log(failed_cluster)
+        assert_error_in_master_log(second_cluster)
 
         logger.info(f"Finished iteration {i} of {test_iterations}")
 
@@ -112,12 +129,11 @@ def main():
     if args.clean_up_containers:
         logger.info("Stopping Docker containers and reverting test environment to having "
                     "one active cluster and one replica cluster")
-        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=f'{data_store_root}/*',
-                                          sudo=True)
+        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=f'{data_store_root}/*')
         cluster1.disable_read_only_mode(run_update_all_config=False)
         cluster2.enable_read_only_mode(run_update_all_config=False)
 
-    log_script_end(__file__, logger)
+    log_script_end(__file__, logger, start_time)
 
 
 if __name__ == '__main__':
