@@ -129,6 +129,12 @@ for artifact in "${artifact_list[@]}"; do
   if [ ${#bad_contents[@]} -eq 0 ] && [ "${class_count}" -lt 1 ]; then
     bad_contents=("The artifact contains no java class files.")
   fi
+  # dnsjava ships its provider class only under META-INF/versions/, which relocation leaves at an
+  # unrelocated path in a jar that is not multi-release, so the declaration names a class the JVM
+  # cannot load and every DNS lookup in the process fails. See HBASE-30211.
+  if "${JAR}" tf "${artifact}" | grep -q '^META-INF/services/java\.net\.spi\.InetAddressResolverProvider$'; then
+    bad_contents+=("Declares java.net.spi.InetAddressResolverProvider, which breaks all DNS resolution on JDK18+")
+  fi
   if [ ${#bad_contents[@]} -gt 0 ]; then
     echo "[ERROR] Found artifact with unexpected contents: '${artifact}'"
     echo "    Please check the following and either correct the build or update"
