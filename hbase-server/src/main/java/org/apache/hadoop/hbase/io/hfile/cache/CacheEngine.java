@@ -216,6 +216,19 @@ public interface CacheEngine {
   long getCurrentDataSize();
 
   /**
+   * Returns the current total size of this cache engine.
+   * <p>
+   * The current size may include cache metadata, allocator overhead, index structures, or other
+   * implementation-specific memory that is not part of the cached block payload. This value is
+   * intentionally distinct from {@link #getCurrentDataSize()}, which reports only cached data size.
+   * </p>
+   * @return current total cache size in bytes
+   */
+  default long getCurrentSize() {
+    return getCurrentDataSize();
+  }
+
+  /**
    * Returns the total number of cached blocks.
    * @return total block count
    */

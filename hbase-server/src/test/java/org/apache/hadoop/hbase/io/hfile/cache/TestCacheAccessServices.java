@@ -39,7 +39,7 @@ public class TestCacheAccessServices {
   void testFromBlockCacheCreatesBlockCacheBackedServiceForRegularBlockCache() {
     BlockCache blockCache = mock(BlockCache.class);
     CacheAccessService service = CacheAccessServices.fromBlockCache(blockCache);
-    assertTrue(service instanceof BlockCacheBackedCacheAccessService);
+    assertTrue(service instanceof TopologyBackedCacheAccessService);
   }
 
   @Test

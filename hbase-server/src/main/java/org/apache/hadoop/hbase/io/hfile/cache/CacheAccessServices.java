@@ -24,6 +24,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.io.hfile.InclusiveCombinedBlockCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -47,26 +48,37 @@ public final class CacheAccessServices {
   }
 
   /**
-   * Creates a cache access service backed by an existing block cache.
+   * Creates a {@link CacheAccessService} for the supplied legacy {@link BlockCache}.
    * <p>
-   * For regular {@link BlockCache} implementations, this returns a legacy
-   * {@link BlockCacheBackedCacheAccessService}. For {@link CombinedBlockCache}, this returns a
-   * topology-backed service using {@link TieredExclusiveTopology}. This moves combined L1/L2
-   * orchestration to the new topology layer while keeping the existing combined block cache object
-   * available for legacy {@link BlockCache}-facing APIs.
+   * All legacy block caches are adapted through {@link TopologyBackedCacheAccessService}. Plain
+   * single-tier block caches are represented by {@link SingleTierTopology}. Exclusive combined
+   * caches are represented by {@link TieredExclusiveTopology}. Inclusive combined caches are
+   * represented by {@link TieredInclusiveTopology}.
    * </p>
-   * @param blockCache block cache to expose through {@link CacheAccessService}
-   * @return cache access service
+   * <p>
+   * {@link InclusiveCombinedBlockCache} is checked before {@link CombinedBlockCache} because the
+   * inclusive variant has different residency, promotion, and eviction semantics. Routing it
+   * through the exclusive topology would be incorrect.
+   * </p>
+   * @param blockCache legacy block cache to adapt
+   * @return topology-backed cache access service for the supplied block cache
+   * @throws NullPointerException if {@code blockCache} is {@code null}
    */
-
   public static CacheAccessService fromBlockCache(BlockCache blockCache) {
     Objects.requireNonNull(blockCache, "blockCache must not be null");
+
+    if (blockCache instanceof InclusiveCombinedBlockCache) {
+      return TopologyBackedCacheAccessServices
+        .fromInclusiveCombinedBlockCache((InclusiveCombinedBlockCache) blockCache);
+    }
+
     if (blockCache instanceof CombinedBlockCache) {
       return TopologyBackedCacheAccessServices
         .fromCombinedBlockCache((CombinedBlockCache) blockCache);
     }
-    return new BlockCacheBackedCacheAccessService(blockCache);
 
+    return TopologyBackedCacheAccessServices.fromSingleBlockCache("single", blockCache,
+      DefaultHBaseCachePlacementAdmissionPolicy.INSTANCE);
   }
 
   /**
@@ -80,7 +92,7 @@ public final class CacheAccessServices {
    * The method delegates block-cache construction to
    * {@link BlockCacheFactory#createBlockCache(Configuration)}. If the legacy factory creates a
    * {@link BlockCache}, the returned service is backed by that cache through
-   * {@link BlockCacheBackedCacheAccessService}. If the legacy factory does not create a cache, this
+   * {@link TopologyBackedCacheAccessService}. If the legacy factory does not create a cache, this
    * method returns the disabled/no-op cache access service.
    * </p>
    * <p>
@@ -140,15 +152,6 @@ public final class CacheAccessServices {
    * @return optional iterable cached-block view
    * @throws NullPointerException if {@code cacheAccessService} is {@code null}
    */
-  @SuppressWarnings("unchecked")
-  // public static Optional<Iterable<CachedBlock>>
-  // asCachedBlockIterable(CacheAccessService cacheAccessService) {
-  // Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
-  // if (cacheAccessService instanceof Iterable) {
-  // return Optional.of((Iterable<CachedBlock>) cacheAccessService);
-  // }
-  // return Optional.empty();
-  // }
 
   public static Optional<Iterable<CachedBlock>> asCachedBlockIterable(CacheAccessService service) {
     Objects.requireNonNull(service, "service must not be null");
@@ -156,11 +159,6 @@ public final class CacheAccessServices {
     if (service instanceof TopologyBackedCacheAccessService) {
       return ((TopologyBackedCacheAccessService) service).asCachedBlockIterable();
     }
-
-    if (service instanceof BlockCacheBackedCacheAccessService) {
-      return Optional.of(((BlockCacheBackedCacheAccessService) service).getBlockCache());
-    }
-
     return Optional.empty();
   }
 }

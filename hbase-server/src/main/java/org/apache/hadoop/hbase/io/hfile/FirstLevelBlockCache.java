@@ -40,4 +40,16 @@ public interface FirstLevelBlockCache extends ResizableBlockCache, HeapSize {
    * @throws IllegalArgumentException if the victim cache had already been set
    */
   void setVictimCache(BlockCache victimCache);
+
+  /**
+   * Removes the configured victim cache from this first-level cache.
+   * <p>
+   * This method is used during the block cache migration when an existing first-level cache is
+   * moved under topology-backed orchestration. Legacy combined-cache construction wires L1 to L2
+   * through a victim cache. Once L1 and L2 are represented as independent topology engines, the
+   * topology must control L2 lookup and promotion directly, so the old victim-cache delegation must
+   * be disabled.
+   * </p>
+   */
+  void unsetVictimCache();
 }

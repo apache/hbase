@@ -28,7 +28,7 @@ public enum CacheTopologyType {
   /**
    * A topology with a single cache engine.
    */
-  SINGLE,
+  SINGLE_TIER,
 
   /**
    * A tiered topology where a block normally resides in only one tier at a time.

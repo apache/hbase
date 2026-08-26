@@ -173,6 +173,11 @@ public class BlockCacheBackedCacheEngine implements CacheEngine {
   }
 
   @Override
+  public long getCurrentSize() {
+    return blockCache.getCurrentSize();
+  }
+
+  @Override
   public long getBlockCount() {
     return blockCache.getBlockCount();
   }

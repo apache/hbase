@@ -417,4 +417,9 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   public long getDataBlockCount() {
     return getBlockCount();
   }
+
+  @Override
+  public void unsetVictimCache() {
+    this.victimCache = null;
+  }
 }

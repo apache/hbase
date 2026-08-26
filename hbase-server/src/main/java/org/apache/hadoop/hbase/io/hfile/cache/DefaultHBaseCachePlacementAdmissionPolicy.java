@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Arrays;
 import java.util.Objects;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
@@ -36,6 +37,9 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class DefaultHBaseCachePlacementAdmissionPolicy implements CachePlacementAdmissionPolicy {
 
+  public static final DefaultHBaseCachePlacementAdmissionPolicy INSTANCE =
+    new DefaultHBaseCachePlacementAdmissionPolicy();
+
   @Override
   public AdmissionDecision shouldAdmit(BlockCacheKey cacheKey, Cacheable block,
     CacheWriteContext context, AdmissionPriority priority, CacheTopologyView topologyView) {
@@ -48,6 +52,24 @@ public class DefaultHBaseCachePlacementAdmissionPolicy implements CachePlacement
     return AdmissionDecision.admit();
   }
 
+  /**
+   * Selects the cache tier or tiers for an admitted block.
+   * <p>
+   * Single-tier topology has only one active cache engine and therefore selects
+   * {@link CacheTier#SINGLE}. Tiered inclusive topology writes to both L1 and L2 because inclusive
+   * residency allows the same block to be present in multiple tiers. Tiered exclusive topology
+   * keeps the legacy combined-cache placement behavior where data blocks and non-data blocks may be
+   * placed in different tiers.
+   * </p>
+   * @param cacheKey     cache key identifying the block
+   * @param block        block being cached
+   * @param context      cache write context
+   * @param topologyView topology view available to the placement policy
+   * @return tier decision for the admitted block
+   * @throws NullPointerException if {@code cacheKey}, {@code block}, {@code context}, or
+   *                              {@code topologyView} is {@code null}
+   */
+
   @Override
   public TierDecision selectTier(BlockCacheKey cacheKey, Cacheable block, CacheWriteContext context,
     CacheTopologyView topologyView) {
@@ -55,13 +77,12 @@ public class DefaultHBaseCachePlacementAdmissionPolicy implements CachePlacement
     Objects.requireNonNull(block, "block must not be null");
     Objects.requireNonNull(context, "context must not be null");
     Objects.requireNonNull(topologyView, "topologyView must not be null");
-    /*
-     * Default compatibility placement prefers metadata/index/bloom blocks in L1 and data blocks in
-     * L2 when both tiers are available, but falls back to any available tier rather than rejecting
-     * placement.
-     */
-    if (topologyView.getType() == CacheTopologyType.SINGLE) {
+    if (topologyView.getType() == CacheTopologyType.SINGLE_TIER) {
       return TierDecision.single(CacheTier.SINGLE);
+    }
+
+    if (topologyView.getType() == CacheTopologyType.TIERED_INCLUSIVE) {
+      return TierDecision.multiple(Arrays.asList(CacheTier.L1, CacheTier.L2));
     }
 
     if (isMetaOrIndexBlock(block)) {

@@ -30,7 +30,12 @@ import org.apache.yetus.audience.InterfaceAudience;
 public enum CacheTier {
 
   /**
-   * Single-tier topology engine.
+   * Single cache tier.
+   * <p>
+   * This tier is used by {@link SingleTierTopology}. It represents a topology with one active cache
+   * engine without assigning L1 or L2 semantics to that engine. A single-tier cache may be backed
+   * by an in-memory cache, a bucket cache, or another cache engine.
+   * </p>
    */
   SINGLE,
 
