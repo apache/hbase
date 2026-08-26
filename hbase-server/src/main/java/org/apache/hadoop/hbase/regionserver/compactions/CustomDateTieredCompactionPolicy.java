@@ -70,6 +70,7 @@ public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy
     long now) {
     MutableLong min = new MutableLong(Long.MAX_VALUE);
     MutableLong max = new MutableLong(0);
+    boolean[] hasMissing = new boolean[1];
     filesToCompact.forEach(f -> {
       byte[] timeRangeBytes = f.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
       long minCurrent = Long.MAX_VALUE;
@@ -82,7 +83,10 @@ public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy
           maxCurrent = timeRangeTracker.getMax();
         } catch (IOException e) {
           LOG.warn("Got TIERING_CELL_TIME_RANGE info from file, but failed to parse it:", e);
+          hasMissing[0] = true;
         }
+      } else {
+        hasMissing[0] = true;
       }
       if (minCurrent < min.getValue()) {
         min.setValue(minCurrent);
@@ -94,6 +98,10 @@ public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy
 
     List<Long> boundaries = new ArrayList<>();
     boundaries.add(Long.MIN_VALUE);
+    if (hasMissing[0]) {
+      boundaries.add(cutOffTimestamp);
+      return boundaries;
+    }
     if (min.getValue() < cutOffTimestamp) {
       boundaries.add(min.getValue());
       if (max.getValue() > cutOffTimestamp) {
