@@ -91,8 +91,8 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
                 Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
             }
             if (store.getAvgStoreFileAge().isPresent()) {
-              mt.totalStoreFileAge =
-                (long) store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount();
+              mt.totalStoreFileAge +=
+                (long) (store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount());
             }
             mt.storeCount += 1;
 
