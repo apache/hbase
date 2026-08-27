@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.hamcrest.CoreMatchers.hasItems;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.Mockito.atLeast;
@@ -85,6 +86,13 @@ public class TestBootstrapNodeManager {
   private void assertListEquals(List<ServerName> expected, List<ServerName> actual) {
     assertEquals(expected.size(), expected.size());
     assertThat(actual, hasItems(expected.toArray(new ServerName[0])));
+  }
+
+  @Test
+  public void testGetBootstrapNodesBeforeInitialization() {
+    HRegionServer regionServer = mock(HRegionServer.class);
+    when(regionServer.getBootstrapNodes()).thenCallRealMethod();
+    assertFalse(regionServer.getBootstrapNodes().hasNext());
   }
 
   @Test
