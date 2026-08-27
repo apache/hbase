@@ -94,8 +94,8 @@ public final class MobFileCleanupUtil {
     Set<String> allActiveMobFileName = new HashSet<String>();
     for (Path regionPath : regionDirs) {
       regionNames.add(regionPath.getName());
-      HRegionFileSystem regionFS =
-        HRegionFileSystem.create(conf, fs, tableDir, MobUtils.getMobRegionInfo(table));
+      HRegionFileSystem regionFS = HRegionFileSystem.create(conf, fs, tableDir,
+        HRegionFileSystem.loadRegionInfoFileContent(fs, regionPath));
       for (ColumnFamilyDescriptor hcd : list) {
         StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, hcd, regionFS, false);
         String family = hcd.getNameAsString();
