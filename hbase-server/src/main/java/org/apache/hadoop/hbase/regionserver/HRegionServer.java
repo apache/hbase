@@ -593,7 +593,7 @@ public class HRegionServer extends Thread
    */
   private NamedQueueRecorder namedQueueRecorder = null;
 
-  private BootstrapNodeManager bootstrapNodeManager;
+  private volatile BootstrapNodeManager bootstrapNodeManager;
 
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master; means it needs to
@@ -4239,7 +4239,8 @@ public class HRegionServer extends Thread
   }
 
   public Iterator<ServerName> getBootstrapNodes() {
-    return bootstrapNodeManager.getBootstrapNodes().iterator();
+    BootstrapNodeManager manager = bootstrapNodeManager;
+    return manager != null ? manager.getBootstrapNodes().iterator() : Collections.emptyIterator();
   }
 
   public MetaRegionLocationCache getMetaRegionLocationCache() {
