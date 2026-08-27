@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import org.apache.commons.lang3.mutable.MutableLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HDFSBlocksDistribution;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
@@ -68,46 +67,14 @@ public class CustomDateTieredCompactionPolicy extends DateTieredCompactionPolicy
   @Override
   protected List<Long> getCompactBoundariesForMajor(Collection<HStoreFile> filesToCompact,
     long now) {
-    MutableLong min = new MutableLong(Long.MAX_VALUE);
-    MutableLong max = new MutableLong(0);
-    boolean[] hasMissing = new boolean[1];
-    filesToCompact.forEach(f -> {
-      byte[] timeRangeBytes = f.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
-      long minCurrent = Long.MAX_VALUE;
-      long maxCurrent = 0;
-      if (timeRangeBytes != null) {
-        try {
-          TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(timeRangeBytes);
-          timeRangeTracker.getMin();
-          minCurrent = timeRangeTracker.getMin();
-          maxCurrent = timeRangeTracker.getMax();
-        } catch (IOException e) {
-          LOG.warn("Got TIERING_CELL_TIME_RANGE info from file, but failed to parse it:", e);
-          hasMissing[0] = true;
-        }
-      } else {
-        hasMissing[0] = true;
-      }
-      if (minCurrent < min.getValue()) {
-        min.setValue(minCurrent);
-      }
-      if (maxCurrent > max.getValue()) {
-        max.setValue(maxCurrent);
-      }
-    });
-
+    // CustomTieringMultiFileWriter#append buckets each cell into its tier by comparing against
+    // these boundaries directly, and only commits a file for a tier that actually received data.
+    // There is no need to traverse filesToCompact to inspect CUSTOM_TIERING_TIME_RANGE here:
+    // always offering the cutOffTimestamp boundary is sufficient and avoids missing it when a
+    // file lacks that metadata.
     List<Long> boundaries = new ArrayList<>();
     boundaries.add(Long.MIN_VALUE);
-    if (hasMissing[0]) {
-      boundaries.add(cutOffTimestamp);
-      return boundaries;
-    }
-    if (min.getValue() < cutOffTimestamp) {
-      boundaries.add(min.getValue());
-      if (max.getValue() > cutOffTimestamp) {
-        boundaries.add(cutOffTimestamp);
-      }
-    }
+    boundaries.add(cutOffTimestamp);
     return boundaries;
   }
 
