@@ -237,6 +237,7 @@ public class TestHRegion {
   public static Configuration CONF;
   private String dir;
   private final int MAX_VERSIONS = 2;
+  private static final long THREAD_JOIN_TIMEOUT_NS = TimeUnit.SECONDS.toNanos(5);
 
   // Test names
   protected TableName tableName;
@@ -253,6 +254,41 @@ public class TestHRegion {
 
   protected final MetricsAssertHelper metricsAssertHelper =
     CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
+
+  private static void interruptAndJoinThreads(Thread... threads) {
+    for (Thread thread : threads) {
+      if (thread != null) {
+        thread.interrupt();
+      }
+    }
+
+    long deadline = System.nanoTime() + THREAD_JOIN_TIMEOUT_NS;
+    boolean interrupted = false;
+    List<String> aliveThreads = new ArrayList<>();
+    for (Thread thread : threads) {
+      if (thread == null) {
+        continue;
+      }
+      while (thread.isAlive()) {
+        long remaining = deadline - System.nanoTime();
+        if (remaining <= 0) {
+          break;
+        }
+        try {
+          TimeUnit.NANOSECONDS.timedJoin(thread, remaining);
+        } catch (InterruptedException e) {
+          interrupted = true;
+        }
+      }
+      if (thread.isAlive()) {
+        aliveThreads.add(thread.getName());
+      }
+    }
+    if (interrupted) {
+      Thread.currentThread().interrupt();
+    }
+    assertTrue(aliveThreads.isEmpty(), "Threads did not stop: " + aliveThreads);
+  }
 
   @BeforeEach
   public void setup(TestInfo testInfo) throws IOException {
@@ -1346,18 +1382,14 @@ public class TestHRegion {
         threads[i].start();
       }
     } finally {
+      done.set(true);
+      interruptAndJoinThreads(threads);
       if (this.region != null) {
         HBaseTestingUtil.closeRegionAndWAL(this.region);
         this.region = null;
       }
     }
-    done.set(true);
     for (GetTillDoneOrException t : threads) {
-      try {
-        t.join();
-      } catch (InterruptedException e) {
-        e.printStackTrace();
-      }
       if (t.e != null) {
         LOG.info("Exception=" + t.e);
         assertFalse(t.e instanceof NullPointerException, "Found a NPE in " + t.getName());
@@ -1385,7 +1417,7 @@ public class TestHRegion {
 
     @Override
     public void run() {
-      while (!this.done.get()) {
+      while (!this.done.get() && !Thread.currentThread().isInterrupted()) {
         try {
           assertTrue(region.get(g).size() > 0);
           this.count.incrementAndGet();
@@ -4531,13 +4563,9 @@ public class TestHRegion {
       }
 
     } finally {
-      try {
-        flushThread.done();
-        flushThread.join();
-        flushThread.checkNoError();
-      } catch (InterruptedException ie) {
-        LOG.warn("Caught exception when joining with flushThread", ie);
-      }
+      flushThread.done();
+      interruptAndJoinThreads(flushThread);
+      flushThread.checkNoError();
       HBaseTestingUtil.closeRegionAndWAL(this.region);
       this.region = null;
     }
@@ -4566,8 +4594,7 @@ public class TestHRegion {
 
     @Override
     public void run() {
-      done = false;
-      while (!done) {
+      while (!done && !Thread.currentThread().isInterrupted()) {
         synchronized (this) {
           try {
             wait();
@@ -4684,16 +4711,11 @@ public class TestHRegion {
       region.flush(true);
 
     } finally {
-      try {
-        flushThread.done();
-        flushThread.join();
-        flushThread.checkNoError();
-
-        putThread.join();
-        putThread.checkNoError();
-      } catch (InterruptedException ie) {
-        LOG.warn("Caught exception when joining with flushThread", ie);
-      }
+      putThread.done();
+      flushThread.done();
+      interruptAndJoinThreads(flushThread, putThread);
+      flushThread.checkNoError();
+      putThread.checkNoError();
 
       try {
         HBaseTestingUtil.closeRegionAndWAL(this.region);
@@ -4782,8 +4804,7 @@ public class TestHRegion {
 
     @Override
     public void run() {
-      done = false;
-      while (!done) {
+      while (!done && !Thread.currentThread().isInterrupted()) {
         try {
           for (int r = 0; r < numRows; r++) {
             byte[] row = Bytes.toBytes("row" + r);
@@ -5294,7 +5315,7 @@ public class TestHRegion {
     @Override
     public void run() {
       int count = 0;
-      while (count < incCounter) {
+      while (count < incCounter && !Thread.currentThread().isInterrupted()) {
         Increment inc = new Increment(incRow);
         inc.addColumn(family, qualifier, ONE);
         count++;
@@ -5320,11 +5341,13 @@ public class TestHRegion {
     Runnable flusher = new Runnable() {
       @Override
       public void run() {
-        while (!incrementDone.get()) {
+        while (!incrementDone.get() && !Thread.currentThread().isInterrupted()) {
           try {
             region.flush(true);
           } catch (Exception e) {
-            e.printStackTrace();
+            if (!incrementDone.get()) {
+              LOG.warn("Failed to flush region", e);
+            }
           }
         }
       }
@@ -5334,30 +5357,39 @@ public class TestHRegion {
     int threadNum = 20;
     int incCounter = 100;
     long expected = (long) threadNum * incCounter;
-    Thread[] incrementers = new Thread[threadNum];
-    Thread flushThread = new Thread(flusher);
-    for (int i = 0; i < threadNum; i++) {
-      incrementers[i] = new Thread(new Incrementer(this.region, incCounter));
-      incrementers[i].start();
+    List<Thread> incrementers = new ArrayList<>(threadNum);
+    Thread flushThread = new Thread(flusher, "FlushThread-" + method);
+    try {
+      for (int i = 0; i < threadNum; i++) {
+        Thread incrementer =
+          new Thread(new Incrementer(this.region, incCounter), "Incrementer-" + i + "-" + method);
+        incrementers.add(incrementer);
+        incrementer.start();
+      }
+      flushThread.start();
+      for (Thread incrementer : incrementers) {
+        incrementer.join();
+      }
+
+      incrementDone.set(true);
+      TimeUnit.NANOSECONDS.timedJoin(flushThread, THREAD_JOIN_TIMEOUT_NS);
+      assertFalse(flushThread.isAlive(), "Flush thread did not stop");
+
+      Get get = new Get(Incrementer.incRow);
+      get.addColumn(Incrementer.family, Incrementer.qualifier);
+      get.readVersions(1);
+      Result res = this.region.get(get);
+      List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
+
+      // we just got the latest version
+      assertEquals(1, kvs.size());
+      Cell kv = kvs.get(0);
+      assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
+    } finally {
+      incrementDone.set(true);
+      incrementers.add(flushThread);
+      interruptAndJoinThreads(incrementers.toArray(new Thread[0]));
     }
-    flushThread.start();
-    for (int i = 0; i < threadNum; i++) {
-      incrementers[i].join();
-    }
-
-    incrementDone.set(true);
-    flushThread.join();
-
-    Get get = new Get(Incrementer.incRow);
-    get.addColumn(Incrementer.family, Incrementer.qualifier);
-    get.readVersions(1);
-    Result res = this.region.get(get);
-    List<Cell> kvs = res.getColumnCells(Incrementer.family, Incrementer.qualifier);
-
-    // we just got the latest version
-    assertEquals(1, kvs.size());
-    Cell kv = kvs.get(0);
-    assertEquals(expected, Bytes.toLong(kv.getValueArray(), kv.getValueOffset()));
   }
 
   /**
@@ -5379,7 +5411,7 @@ public class TestHRegion {
     @Override
     public void run() {
       int count = 0;
-      while (count < appendCounter) {
+      while (count < appendCounter && !Thread.currentThread().isInterrupted()) {
         Append app = new Append(appendRow);
         app.addColumn(family, qualifier, CHAR);
         count++;
@@ -5405,11 +5437,13 @@ public class TestHRegion {
     Runnable flusher = new Runnable() {
       @Override
       public void run() {
-        while (!appendDone.get()) {
+        while (!appendDone.get() && !Thread.currentThread().isInterrupted()) {
           try {
             region.flush(true);
           } catch (Exception e) {
-            e.printStackTrace();
+            if (!appendDone.get()) {
+              LOG.warn("Failed to flush region", e);
+            }
           }
         }
       }
@@ -5423,32 +5457,42 @@ public class TestHRegion {
     for (int i = 0; i < threadNum * appendCounter; i++) {
       System.arraycopy(Appender.CHAR, 0, expected, i, 1);
     }
-    Thread[] appenders = new Thread[threadNum];
-    Thread flushThread = new Thread(flusher);
-    for (int i = 0; i < threadNum; i++) {
-      appenders[i] = new Thread(new Appender(this.region, appendCounter));
-      appenders[i].start();
+    List<Thread> appenders = new ArrayList<>(threadNum);
+    Thread flushThread = new Thread(flusher, "FlushThread-" + method);
+    try {
+      for (int i = 0; i < threadNum; i++) {
+        Thread appender =
+          new Thread(new Appender(this.region, appendCounter), "Appender-" + i + "-" + method);
+        appenders.add(appender);
+        appender.start();
+      }
+      flushThread.start();
+      for (Thread appender : appenders) {
+        appender.join();
+      }
+
+      appendDone.set(true);
+      TimeUnit.NANOSECONDS.timedJoin(flushThread, THREAD_JOIN_TIMEOUT_NS);
+      assertFalse(flushThread.isAlive(), "Flush thread did not stop");
+
+      Get get = new Get(Appender.appendRow);
+      get.addColumn(Appender.family, Appender.qualifier);
+      get.readVersions(1);
+      Result res = this.region.get(get);
+      List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
+
+      // we just got the latest version
+      assertEquals(1, kvs.size());
+      Cell kv = kvs.get(0);
+      byte[] appendResult = new byte[kv.getValueLength()];
+      System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0,
+        kv.getValueLength());
+      assertArrayEquals(expected, appendResult);
+    } finally {
+      appendDone.set(true);
+      appenders.add(flushThread);
+      interruptAndJoinThreads(appenders.toArray(new Thread[0]));
     }
-    flushThread.start();
-    for (int i = 0; i < threadNum; i++) {
-      appenders[i].join();
-    }
-
-    appendDone.set(true);
-    flushThread.join();
-
-    Get get = new Get(Appender.appendRow);
-    get.addColumn(Appender.family, Appender.qualifier);
-    get.readVersions(1);
-    Result res = this.region.get(get);
-    List<Cell> kvs = res.getColumnCells(Appender.family, Appender.qualifier);
-
-    // we just got the latest version
-    assertEquals(1, kvs.size());
-    Cell kv = kvs.get(0);
-    byte[] appendResult = new byte[kv.getValueLength()];
-    System.arraycopy(kv.getValueArray(), kv.getValueOffset(), appendResult, 0, kv.getValueLength());
-    assertArrayEquals(expected, appendResult);
   }
 
   /**
@@ -7474,11 +7518,12 @@ public class TestHRegion {
       .addColumn(fam1, q3, Bytes.toBytes(1L)).addColumn(fam1, q4, Bytes.toBytes("a")) });
 
     final AtomicReference<AssertionError> assertionError = new AtomicReference<>();
+    List<Thread> threads = new ArrayList<>(numReaderThreads + 1);
 
     // Writer thread
     Thread writerThread = new Thread(() -> {
       try {
-        while (true) {
+        while (!Thread.currentThread().isInterrupted()) {
           // If all the reader threads finish, then stop the writer thread
           if (latch.await(0, TimeUnit.MILLISECONDS)) {
             return;
@@ -7503,50 +7548,63 @@ public class TestHRegion {
             .addColumn(fam1, q3, tsIncrement + 1, Bytes.toBytes(1L))
             .addColumn(fam1, q4, tsAppend + 1, Bytes.toBytes("a")) });
         }
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
       } catch (Exception e) {
-        assertionError.set(new AssertionError(e));
+        assertionError.compareAndSet(null, new AssertionError(e));
       }
-    });
-    writerThread.start();
+    }, "WriterThread-" + method);
+    threads.add(writerThread);
 
-    // Reader threads
-    for (int i = 0; i < numReaderThreads; i++) {
-      new Thread(() -> {
-        try {
-          for (int j = 0; j < 10000; j++) {
-            // Verify the values
-            Result result = region.get(new Get(row));
+    try {
+      writerThread.start();
 
-            // The values should be equals to either the initial values or the values after
-            // executing the mutations
-            String q1Value = Bytes.toString(result.getValue(fam1, q1));
-            if (v1.equals(q1Value)) {
-              assertEquals(v2, Bytes.toString(result.getValue(fam1, q2)));
-              assertEquals(1L, Bytes.toLong(result.getValue(fam1, q3)));
-              assertEquals("a", Bytes.toString(result.getValue(fam1, q4)));
-            } else if (v2.equals(q1Value)) {
-              assertNull(Bytes.toString(result.getValue(fam1, q2)));
-              assertEquals(2L, Bytes.toLong(result.getValue(fam1, q3)));
-              assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
-            } else {
-              fail("the qualifier " + Bytes.toString(q1) + " should be " + v1 + " or " + v2
-                + ", but " + q1Value);
+      // Reader threads
+      for (int i = 0; i < numReaderThreads; i++) {
+        Thread readerThread = new Thread(() -> {
+          try {
+            for (int j = 0;
+              j < 10000 && assertionError.get() == null
+                && !Thread.currentThread().isInterrupted();
+              j++) {
+              // Verify the values
+              Result result = region.get(new Get(row));
+
+              // The values should be equals to either the initial values or the values after
+              // executing the mutations
+              String q1Value = Bytes.toString(result.getValue(fam1, q1));
+              if (v1.equals(q1Value)) {
+                assertEquals(v2, Bytes.toString(result.getValue(fam1, q2)));
+                assertEquals(1L, Bytes.toLong(result.getValue(fam1, q3)));
+                assertEquals("a", Bytes.toString(result.getValue(fam1, q4)));
+              } else if (v2.equals(q1Value)) {
+                assertNull(Bytes.toString(result.getValue(fam1, q2)));
+                assertEquals(2L, Bytes.toLong(result.getValue(fam1, q3)));
+                assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
+              } else {
+                fail("the qualifier " + Bytes.toString(q1) + " should be " + v1 + " or " + v2
+                  + ", but " + q1Value);
+              }
             }
+          } catch (Exception e) {
+            assertionError.compareAndSet(null, new AssertionError(e));
+          } catch (AssertionError e) {
+            assertionError.compareAndSet(null, e);
+          } finally {
+            latch.countDown();
           }
-        } catch (Exception e) {
-          assertionError.set(new AssertionError(e));
-        } catch (AssertionError e) {
-          assertionError.set(e);
-        }
+        }, "ReaderThread-" + i + "-" + method);
+        threads.add(readerThread);
+        readerThread.start();
+      }
 
-        latch.countDown();
-      }).start();
-    }
+      writerThread.join();
 
-    writerThread.join();
-
-    if (assertionError.get() != null) {
-      throw assertionError.get();
+      if (assertionError.get() != null) {
+        throw assertionError.get();
+      }
+    } finally {
+      interruptAndJoinThreads(threads.toArray(new Thread[0]));
     }
   }
 
