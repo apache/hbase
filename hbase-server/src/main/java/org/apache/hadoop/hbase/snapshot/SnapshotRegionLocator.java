@@ -72,6 +72,9 @@ public final class SnapshotRegionLocator implements RegionLocator {
 
     for (SnapshotProtos.SnapshotRegionManifest region : manifest.getRegionManifests()) {
       HBaseProtos.RegionInfo ri = region.getRegionInfo();
+      if (ri.getOffline() || ri.getSplit()) {
+        continue;
+      }
       byte[] key = ri.getStartKey().toByteArray();
 
       SnapshotHRegionLocation location = toLocation(ri, tableName);
