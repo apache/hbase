@@ -84,7 +84,7 @@ public class TestBootstrapNodeManager {
   }
 
   private void assertListEquals(List<ServerName> expected, List<ServerName> actual) {
-    assertEquals(expected.size(), expected.size());
+    assertEquals(expected.size(), actual.size());
     assertThat(actual, hasItems(expected.toArray(new ServerName[0])));
   }
 
