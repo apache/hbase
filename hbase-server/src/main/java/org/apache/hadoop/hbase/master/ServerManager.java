@@ -1092,6 +1092,22 @@ public class ServerManager implements ConfigurationObserver {
     flushedSequenceIdByRegion.remove(encodedName);
   }
 
+  /**
+   * Called on region OPEN to seed {@link #flushedSequenceIdByRegion} with the region's
+   * {@code openSeqNum}. Without this, the entry stays absent until the hosting server's next
+   * heartbeat, so {@link #getLastFlushedSequenceId} returns {@link HConstants#NO_SEQNUM} and
+   * WALSplitter conservatively treats already-durable edits as unflushed - producing orphaned
+   * recovered.edits when the source server crashes soon after a drain-move. Uses
+   * {@code putIfAbsent} so a heartbeat-supplied value (which may reflect flushes after open) is
+   * never regressed. See HBASE-30335.
+   */
+  public void reportRegionOpen(final RegionInfo regionInfo, final long openSeqNum) {
+    if (openSeqNum == HConstants.NO_SEQNUM || openSeqNum < 0) {
+      return;
+    }
+    flushedSequenceIdByRegion.putIfAbsent(regionInfo.getEncodedNameAsBytes(), openSeqNum);
+  }
+
   public boolean isRegionInServerManagerStates(final RegionInfo hri) {
     final byte[] encodedName = hri.getEncodedNameAsBytes();
     return (storeFlushedSequenceIdsByRegion.containsKey(encodedName)
