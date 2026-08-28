@@ -23,6 +23,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.regex.Pattern;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -74,8 +75,15 @@ public final class TableName implements Comparable<TableName> {
 
   /**
    * The name of hbase meta table could either be hbase:meta_xxx or 'hbase:meta' otherwise. Config
-   * hbase.meta.table.suffix will govern the decision of adding suffix to the habase:meta
+   * hbase.meta.table.suffix will govern the decision of adding suffix to the habase:meta.
+   *
+   * @deprecated Prefer discovering the meta table name dynamically via
+   *             {@code ConnectionRegistry#getMetaTableName()} /
+   *             {@code Connection#getMetaTableName()} so that each connection can resolve its own
+   *             cluster's meta table name (e.g. for read-replica clusters with cluster-specific
+   *             meta tables).
    */
+  @Deprecated
   public static final TableName META_TABLE_NAME;
   static {
     Configuration conf = HBaseConfiguration.create();
@@ -123,9 +131,32 @@ public final class TableName implements Comparable<TableName> {
   /** One globally disallowed name */
   public static final String DISALLOWED_TABLE_NAME = "zookeeper";
 
-  /** Returns True if <code>tn</code> is the hbase:meta table name. */
+  /**
+   * Pattern that the qualifier of a meta table must match. Either the literal {@code meta} (the
+   * default meta table) or {@code meta_<suffix>} where {@code <suffix>} is one or more lowercase
+   * alphanumeric characters (the form used for cluster-specific meta tables, e.g. read replica meta
+   * tables). This is the single source of truth for what qualifies as a meta table name; all
+   * callers should go through {@link #isMetaTableName(TableName)} rather than reproducing the
+   * check.
+   */
+  private static final Pattern META_QUALIFIER_PATTERN = Pattern.compile("meta(_[a-z0-9]+)?");
+
+  /**
+   * Returns True if <code>tn</code> is a meta table. A meta table is a table in the {@code hbase}
+   * system namespace whose qualifier is either exactly {@code meta} or matches
+   * {@code meta_[a-z0-9]+}. The latter form is reserved for cluster-specific meta tables (e.g. read
+   * replica meta tables) generated from a deterministic suffix.
+   * <p>
+   * Names like {@code hbase:metadata} or {@code hbase:meta_} (no suffix characters) are
+   * intentionally <em>not</em> considered meta table names.
+   */
   public static boolean isMetaTableName(final TableName tn) {
-    return tn.equals(TableName.META_TABLE_NAME);
+    if (
+      tn == null || !tn.getNamespaceAsString().equals(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR)
+    ) {
+      return false;
+    }
+    return META_QUALIFIER_PATTERN.matcher(tn.getQualifierAsString()).matches();
   }
 
   /**
@@ -326,8 +357,8 @@ public final class TableName implements Comparable<TableName> {
       throw new IllegalArgumentException(OLD_ROOT_STR + " has been deprecated.");
     }
     if (qualifierAsString.equals(OLD_META_STR)) {
-      throw new IllegalArgumentException(
-        OLD_META_STR + " no longer exists. The table has been " + "renamed to " + META_TABLE_NAME);
+      throw new IllegalArgumentException(OLD_META_STR + " no longer exists. The table has been "
+        + "renamed to hbase:meta (or a cluster-specific meta table name)");
     }
 
     if (Bytes.equals(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME, namespace)) {

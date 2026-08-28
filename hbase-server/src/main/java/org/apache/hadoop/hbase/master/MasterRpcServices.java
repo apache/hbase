@@ -788,6 +788,15 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
     TableDescriptor tableDescriptor = ProtobufUtil.toTableDescriptor(req.getTableSchema());
     byte[][] splitKeys = ProtobufUtil.getSplitKeysArray(req);
     try {
+      TableName tableName = tableDescriptor.getTableName();
+      if (
+        NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR.equals(tableName.getNamespaceAsString())
+          && tableName.getQualifierAsString().startsWith("meta")
+      ) {
+        throw new DoNotRetryIOException(
+          "Table '" + tableName + "' is reserved and cannot be created by users. "
+            + "Meta tables are managed by the system.");
+      }
       long procId =
         server.createTable(tableDescriptor, splitKeys, req.getNonceGroup(), req.getNonce());
       LOG.info(server.getClientIdAuditPrefix() + " procedure request for creating table: "

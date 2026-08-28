@@ -103,13 +103,15 @@ public class TestMetricsConnection {
     String scope = "testScope";
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
 
-    AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
+    AsyncConnectionImpl impl = new AsyncConnectionImpl(conf, null, "foo", TableName.META_TABLE_NAME,
+      null, User.getCurrent());
     Optional<MetricsConnection> metrics = impl.getConnectionMetrics();
     assertTrue(metrics.isPresent(), "Metrics should be present");
     assertEquals(clusterId + "@" + Integer.toHexString(impl.hashCode()),
       metrics.get().getMetricScope());
     conf.set(MetricsConnection.METRICS_SCOPE_KEY, scope);
-    impl = new AsyncConnectionImpl(conf, null, "foo", null, User.getCurrent());
+    impl = new AsyncConnectionImpl(conf, null, "foo", TableName.META_TABLE_NAME, null,
+      User.getCurrent());
 
     metrics = impl.getConnectionMetrics();
     assertTrue(metrics.isPresent(), "Metrics should be present");
@@ -129,7 +131,7 @@ public class TestMetricsConnection {
     AsyncConnectionImpl impl;
     List<AsyncConnectionImpl> connList = new ArrayList<AsyncConnectionImpl>();
     for (int i = 0; i < num; i++) {
-      impl = new AsyncConnectionImpl(conf, null, null, null, user);
+      impl = new AsyncConnectionImpl(conf, null, null, TableName.META_TABLE_NAME, null, user);
       connList.add(impl);
     }
 

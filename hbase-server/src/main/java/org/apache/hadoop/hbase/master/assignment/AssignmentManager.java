@@ -354,7 +354,7 @@ public class AssignmentManager {
             if (RegionReplicaUtil.isDefaultReplica(regionInfo.getReplicaId())) {
               setMetaAssigned(regionInfo, state == State.OPEN);
             }
-            LOG.debug("Loaded {} {}", TableName.META_TABLE_NAME, regionNode);
+            LOG.debug("Loaded {} {}", master.getConnection().getMetaTableName(), regionNode);
           }, result);
       }
     }
@@ -1967,8 +1967,8 @@ public class AssignmentManager {
     boolean meta = isMetaRegion(hri);
     boolean metaLoaded = isMetaLoaded();
     if (!meta && !metaLoaded) {
-      throw new PleaseHoldException("Master not fully online; " + TableName.META_TABLE_NAME + "="
-        + meta + ", metaLoaded=" + metaLoaded);
+      throw new PleaseHoldException("Master not fully online; "
+        + master.getConnection().getMetaTableName() + "=" + meta + ", metaLoaded=" + metaLoaded);
     }
   }
 
