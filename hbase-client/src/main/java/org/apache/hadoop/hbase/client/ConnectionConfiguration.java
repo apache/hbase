@@ -168,8 +168,8 @@ public class ConnectionConfiguration {
     this.metaReadRpcTimeout =
       getNonNegativeInt(conf, HBASE_CLIENT_META_READ_RPC_TIMEOUT_KEY, readRpcTimeout);
 
-    this.writeRpcTimeout = getNonNegativeInt(conf, HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY,
-      rpcTimeout);
+    this.writeRpcTimeout =
+      getNonNegativeInt(conf, HConstants.HBASE_RPC_WRITE_TIMEOUT_KEY, rpcTimeout);
 
     this.scanTimeout = conf.getInt(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD,
       HConstants.DEFAULT_HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD);
