@@ -35,6 +35,8 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
@@ -655,6 +657,52 @@ public class TestCatalogJanitor {
       threads[i].join();
     }
     assertTrue(gcValues.contains(-1), "One janitor.scan() call should have returned -1");
+  }
+
+  @Test
+  public void testAlreadyRunningStatusDoesNotClearLock() throws Exception {
+    CatalogJanitor spy = spy(this.janitor);
+
+    CountDownLatch scanStarted = new CountDownLatch(1);
+    CountDownLatch allowScanToFinish = new CountDownLatch(1);
+
+    doAnswer(invocation -> {
+      scanStarted.countDown();
+      assertTrue(allowScanToFinish.await(15, TimeUnit.SECONDS),
+        "Timed out waiting for the test to release the first catalog janitor scan.");
+      return new CatalogJanitorReport();
+    }).when(spy).scanForReport();
+
+    Thread scanThread = new Thread(() -> {
+      try {
+        spy.scan();
+      } catch (IOException e) {
+        throw new RuntimeException(e);
+      }
+    });
+
+    scanThread.start();
+    try {
+      // First scan acquires the lock and remains running.
+      assertTrue(scanStarted.await(5, TimeUnit.SECONDS));
+      LOG.info("First catalog janitor scan started and waiting to finish.");
+
+      // Second scan detects that another scan is running.
+      assertEquals(-1, spy.scan());
+      LOG.info("Second catalog janitor scan attempt returned -1.");
+
+      // The second scan must not clear the lock.
+      // Therefore, the third scan must also report that a scan is running.
+      int result = spy.scan();
+      LOG.info("Third catalog janitor scan attempt returned {}.", result);
+      assertEquals(-1, result);
+    } finally {
+      // Let the first scan finish.
+      LOG.info("Releasing first catalog janitor scan and waiting for it to complete.");
+      allowScanToFinish.countDown();
+      scanThread.join(5000);
+      LOG.info("First catalog janitor scan thread alive after join: {}", scanThread.isAlive());
+    }
   }
 
   private FileStatus[] addMockStoreFiles(int count, MasterServices services, Path storedir)

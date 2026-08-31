@@ -159,14 +159,14 @@ public class CatalogJanitor extends ScheduledChore {
    */
   public int scan() throws IOException {
     int gcs = 0;
-    try {
-      if (!alreadyRunning.compareAndSet(false, true)) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug("CatalogJanitor already running");
-        }
-        // -1 indicates previous scan is in progress
-        return -1;
+    if (!alreadyRunning.compareAndSet(false, true)) {
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("CatalogJanitor already running");
       }
+      // -1 indicates previous scan is in progress
+      return -1;
+    }
+    try {
       this.lastReport = scanForReport();
       if (!this.lastReport.isEmpty()) {
         LOG.warn(this.lastReport.toString());
