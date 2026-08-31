@@ -284,7 +284,7 @@ final class AssignmentManagerUtil {
     // Remove from in-memory states
     regions.flatMap(hri -> IntStream.range(1, regionReplication)
       .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(hri, i))).forEach(hri -> {
-        env.getAssignmentManager().getRegionStates().deleteRegion(hri);
+        env.getAssignmentManager().deleteRegion(hri);
         env.getMasterServices().getServerManager().removeRegion(hri);
         FavoredNodesManager fnm = env.getMasterServices().getFavoredNodesManager();
         if (fnm != null) {

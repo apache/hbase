@@ -506,7 +506,7 @@ public class RestoreSnapshotProcedure
     int regionReplication) {
     FavoredNodesManager fnm = env.getMasterServices().getFavoredNodesManager();
 
-    env.getAssignmentManager().getRegionStates().deleteRegions(regionInfos);
+    env.getAssignmentManager().deleteRegions(regionInfos);
     env.getMasterServices().getServerManager().removeRegions(regionInfos);
     if (fnm != null) {
       fnm.deleteFavoredNodesForRegions(regionInfos);
@@ -518,7 +518,7 @@ public class RestoreSnapshotProcedure
         for (int i = 1; i < regionReplication; i++) {
           RegionInfo regionInfoForReplica =
             RegionReplicaUtil.getRegionInfoForReplica(regionInfo, i);
-          env.getAssignmentManager().getRegionStates().deleteRegion(regionInfoForReplica);
+          env.getAssignmentManager().deleteRegion(regionInfoForReplica);
           env.getMasterServices().getServerManager().removeRegion(regionInfoForReplica);
           if (fnm != null) {
             fnm.deleteFavoredNodesForRegion(regionInfoForReplica);

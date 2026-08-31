@@ -118,7 +118,7 @@ public class EnableTableProcedure extends AbstractStateMachineTableProcedure<Ena
             for (RegionInfo regionInfo : copyOfRegions) {
               if (regionInfo.getReplicaId() > (configuredReplicaCount - 1)) {
                 // delete the region from the regionStates
-                env.getAssignmentManager().getRegionStates().deleteRegion(regionInfo);
+                env.getAssignmentManager().deleteRegion(regionInfo);
                 // remove it from the list of regions of the table
                 LOG.info("Removed replica={} of {}", regionInfo.getRegionId(), regionInfo);
                 regionsOfTable.remove(regionInfo);

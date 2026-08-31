@@ -111,9 +111,7 @@ public class GCRegionProcedure extends AbstractStateMachineRegionProcedure<GCReg
           // from CatalogJanitor.
           AssignmentManager am = masterServices.getAssignmentManager();
           if (am != null) {
-            if (am.getRegionStates() != null) {
-              am.getRegionStates().deleteRegion(getRegion());
-            }
+            am.deleteRegion(getRegion());
           }
           env.getAssignmentManager().getRegionStateStore().deleteRegion(getRegion());
           masterServices.getServerManager().removeRegion(getRegion());

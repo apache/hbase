@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -130,6 +132,72 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     assertEquals(assignFailedCount, assignProcMetrics.getFailedCounter().getCount());
     assertEquals(unassignSubmittedCount + 1, unassignProcMetrics.getSubmittedCounter().getCount());
     assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
+  }
+
+  @Test
+  public void testDeleteRegionRemovesStaleRegionInTransitionEntry() throws Exception {
+    TableName tableName = TableName.valueOf(testMethodName);
+    RegionInfo hri = createRegionInfo(tableName, 1);
+
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    waitOnFuture(submitProcedure(createAssignProcedure(hri)));
+    // This test table is never registered as ENABLED with the TableStateManager, so the tracker
+    // treats OPEN as a non-terminal state here and keeps the region tracked as in-transition --
+    // mirroring a split/merge parent that is left registered in the tracker (in whatever state it
+    // was last in) but never reaches a state the tracker treats as terminal-and-removable before
+    // being deleted from regionStates.
+    assertEquals(State.OPEN, am.getRegionStates().getRegionState(hri).getState());
+    assertTrue(isTracked(hri));
+
+    // Simulate GCRegionProcedure's cleanup of a no-longer-needed region: it must remove the region
+    // from both regionStates and the RegionInTransitionTracker, not just the former, or the "STUCK
+    // Region-In-Transition" chore will keep reporting an already-deleted region indefinitely.
+    am.deleteRegion(hri);
+    assertNull(am.getRegionStates().getRegionStateNode(hri));
+    assertFalse(isTracked(hri));
+  }
+
+  @Test
+  public void testGCRegionProcedureRemovesStaleRegionInTransitionEntry() throws Exception {
+    TableName tableName = TableName.valueOf(testMethodName);
+    RegionInfo hri = createRegionInfo(tableName, 1);
+
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    waitOnFuture(submitProcedure(createAssignProcedure(hri)));
+    // Same non-terminal-state setup as testDeleteRegionRemovesStaleRegionInTransitionEntry, but
+    // here we run the actual GCRegionProcedure end-to-end instead of calling
+    // AssignmentManager#deleteRegion directly, to prove the real procedure used to GC a
+    // no-longer-needed region (e.g. by CatalogJanitor) also clears the tracker.
+    assertEquals(State.OPEN, am.getRegionStates().getRegionState(hri).getState());
+    assertTrue(isTracked(hri));
+
+    waitOnFuture(submitProcedure(
+      new GCRegionProcedure(master.getMasterProcedureExecutor().getEnvironment(), hri)));
+    assertNull(am.getRegionStates().getRegionStateNode(hri));
+    assertFalse(isTracked(hri));
+  }
+
+  @Test
+  public void testDeleteRegionsRemovesStaleRegionInTransitionEntries() throws Exception {
+    TableName tableName = TableName.valueOf(testMethodName);
+    RegionInfo hri1 = createRegionInfo(tableName, 1);
+    RegionInfo hri2 = createRegionInfo(tableName, 2);
+
+    rsDispatcher.setMockRsExecutor(new GoodRsExecutor());
+    waitOnFuture(submitProcedure(createAssignProcedure(hri1)));
+    waitOnFuture(submitProcedure(createAssignProcedure(hri2)));
+    assertTrue(isTracked(hri1));
+    assertTrue(isTracked(hri2));
+
+    am.deleteRegions(Arrays.asList(hri1, hri2));
+    assertNull(am.getRegionStates().getRegionStateNode(hri1));
+    assertNull(am.getRegionStates().getRegionStateNode(hri2));
+    assertFalse(isTracked(hri1));
+    assertFalse(isTracked(hri2));
+  }
+
+  private boolean isTracked(RegionInfo hri) {
+    return am.getRegionsInTransition().stream().anyMatch(node -> node.getRegionInfo().equals(hri));
   }
 
   private void testAssign(final MockRSExecutor executor) throws Exception {

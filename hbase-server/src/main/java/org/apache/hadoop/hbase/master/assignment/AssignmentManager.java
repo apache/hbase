@@ -1212,7 +1212,7 @@ public class AssignmentManager {
     regionStateStore.deleteRegions(regions);
     for (int i = 0; i < regions.size(); ++i) {
       final RegionInfo regionInfo = regions.get(i);
-      regionStates.deleteRegion(regionInfo);
+      deleteRegion(regionInfo);
     }
   }
 
@@ -2409,8 +2409,7 @@ public class AssignmentManager {
     RegionInfo[] mergeParents) throws IOException {
     final RegionStateNode node = regionStates.getOrCreateRegionStateNode(child);
     for (RegionInfo ri : mergeParents) {
-      regionStates.deleteRegion(ri);
-      regionInTransitionTracker.handleRegionDelete(ri);
+      deleteRegion(ri);
     }
 
     TableDescriptor td = master.getTableDescriptors().get(child.getTable());
@@ -2419,6 +2418,27 @@ public class AssignmentManager {
     if (shouldAssignFavoredNodes(child)) {
       getFavoredNodePromoter().generateFavoredNodesForMergedRegion(child, mergeParents);
     }
+  }
+
+  /**
+   * Remove a region that is no longer needed (split/merged parent GC'd, etc) from all in-memory
+   * assignment tracking. Must remove from both {@link #regionStates} and
+   * {@link #regionInTransitionTracker} -- they are separate maps and are not kept in sync with each
+   * other automatically. A caller that only calls {@code regionStates.deleteRegion(...)} can leave
+   * a stale entry behind in the RIT tracker (visible via the periodic "STUCK Region-In-Transition"
+   * warning) for as long as the master runs, since nothing else removes it short of a full
+   * re-derive of state from hbase:meta on master failover.
+   */
+  public void deleteRegion(final RegionInfo regionInfo) {
+    regionStates.deleteRegion(regionInfo);
+    regionInTransitionTracker.handleRegionDelete(regionInfo);
+  }
+
+  /**
+   * Plural form of {@link #deleteRegion(RegionInfo)}.
+   */
+  public void deleteRegions(final List<RegionInfo> regionInfos) {
+    regionInfos.forEach(this::deleteRegion);
   }
 
   /*
