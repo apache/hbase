@@ -107,4 +107,24 @@ public interface RpcCall extends RpcCallContext {
 
   /** Returns A short string format of this call without possibly lengthy params */
   String toShortString();
+
+  /**
+   * The queue type where the call is located. If {@link RWQueueRpcExecutor} is used, the queue type
+   * can be divided into read, write and scan.
+   */
+  static enum CallQueueType {
+    DEFAULT,
+    WRITE,
+    READ,
+    SCAN
+  }
+
+  /** Returns The queue type of this call. */
+  CallQueueType getQueueType();
+
+  /**
+   * Set the queue type of this call.
+   * @param type The queue type where the call is located.
+   */
+  void setQueueType(CallQueueType type);
 }
