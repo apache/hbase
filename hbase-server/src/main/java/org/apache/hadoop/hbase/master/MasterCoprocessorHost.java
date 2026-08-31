@@ -869,7 +869,7 @@ public class MasterCoprocessorHost
   public void preTruncateRegion(RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
-      public void call(MasterObserver observer) {
+      public void call(MasterObserver observer) throws IOException {
         observer.preTruncateRegion(this, regionInfo);
       }
     });
@@ -882,7 +882,7 @@ public class MasterCoprocessorHost
   public void postTruncateRegion(RegionInfo regionInfo) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
-      public void call(MasterObserver observer) {
+      public void call(MasterObserver observer) throws IOException {
         observer.postTruncateRegion(this, regionInfo);
       }
     });
@@ -2017,22 +2017,46 @@ public class MasterCoprocessorHost
     });
   }
 
+  /**
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
+   *             {@link #preGetUserPermissions(String, String, TableName, byte[], byte[], Permission.Scope)}
+   *             instead.
+   */
+  @Deprecated
   public void preGetUserPermissions(String userName, String namespace, TableName tableName,
     byte[] family, byte[] qualifier) throws IOException {
+    preGetUserPermissions(userName, namespace, tableName, family, qualifier, null);
+  }
+
+  public void preGetUserPermissions(String userName, String namespace, TableName tableName,
+    byte[] family, byte[] qualifier, Permission.Scope permissionScope) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.preGetUserPermissions(this, userName, namespace, tableName, family, qualifier);
+        observer.preGetUserPermissions(this, userName, namespace, tableName, family, qualifier,
+          permissionScope);
       }
     });
   }
 
+  /**
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
+   *             {@link #postGetUserPermissions(String, String, TableName, byte[], byte[], Permission.Scope)}
+   *             instead.
+   */
+  @Deprecated
   public void postGetUserPermissions(String userName, String namespace, TableName tableName,
     byte[] family, byte[] qualifier) throws IOException {
+    postGetUserPermissions(userName, namespace, tableName, family, qualifier, null);
+  }
+
+  public void postGetUserPermissions(String userName, String namespace, TableName tableName,
+    byte[] family, byte[] qualifier, Permission.Scope permissionScope) throws IOException {
     execOperation(coprocEnvironments.isEmpty() ? null : new MasterObserverOperation() {
       @Override
       public void call(MasterObserver observer) throws IOException {
-        observer.postGetUserPermissions(this, userName, namespace, tableName, family, qualifier);
+        observer.postGetUserPermissions(this, userName, namespace, tableName, family, qualifier,
+          permissionScope);
       }
     });
   }
