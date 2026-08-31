@@ -1263,13 +1263,18 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         latch.countDown();
       }
     }
-
-    try {
-      latch.await();
-    } catch (InterruptedException ie) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(ie);
+    InterruptedIOException interruptedException = null;
+    while(true) {
+      try {
+        latch.await();
+        break;
+      } catch (InterruptedException ie) {
+        interruptedException = (InterruptedIOException) new InterruptedIOException().initCause(ie);
+      }
     }
-
+    if (interruptedException != null) {
+      throw interruptedException;
+    }
     for (ParallelSeekHandler handler : handlers) {
       if (handler.getErr() != null) {
         throw new IOException(handler.getErr());
@@ -1338,7 +1343,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
           if (scanner instanceof StoreFileScanner) {
             latch.countDown();
           }
-          index++;
           break;
         }
         if (scanner instanceof StoreFileScanner) {
@@ -1346,37 +1350,33 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         }
         index++;
       } else {
-        // Opportunistic parallel: submit batch up to available capacity
-        int batchEnd = Math.min(index + capacity, scannerCount);
-        for (int i = index; i < batchEnd; i++) {
-          KeyValueScanner scanner = scanners.get(i);
+        // Opportunistic parallel: submit up to 'capacity' StoreFileScanners.
+        // MemStore scanners are seeked inline without consuming a capacity slot,
+        // so we continue until 'remaining' pool slots are actually used up.
+        int remaining = capacity;
+        while (index < scannerCount && remaining > 0) {
+          KeyValueScanner scanner = scanners.get(index);
           if (scanner instanceof StoreFileScanner) {
             ParallelSeekHandler seekHandler =
               new ParallelSeekHandler(scanner, kv, this.readPt, latch);
             executor.submit(seekHandler);
             handlers.add(seekHandler);
+            remaining--;
           } else {
             try {
               scanner.seek(kv);
             } catch (IOException e) {
               // Must wait for already-submitted handlers before propagating error
               inlineSeekError = e;
-              // Count down latch for remaining StoreFileScanners in this batch that won't be
-              // processed
-              for (int j = i + 1; j < batchEnd; j++) {
-                if (scanners.get(j) instanceof StoreFileScanner) {
-                  latch.countDown();
-                }
-              }
-              index = batchEnd;
+              index++;
               break;
             }
           }
+          index++;
         }
         if (inlineSeekError != null) {
           break;
         }
-        index = batchEnd;
       }
     }
 
@@ -1387,10 +1387,18 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
       }
     }
 
-    try {
-      latch.await();
-    } catch (InterruptedException ie) {
-      throw (InterruptedIOException) new InterruptedIOException().initCause(ie);
+    InterruptedIOException interruptedException = null;
+    while(true) {
+      try {
+        latch.await();
+        break;
+      } catch (InterruptedException ie) {
+        interruptedException = (InterruptedIOException) new InterruptedIOException().initCause(ie);
+      }
+    }
+    if (interruptedException != null) {
+      Thread.currentThread().interrupt();
+      throw interruptedException;
     }
 
     // Check for errors from parallel handlers first
