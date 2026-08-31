@@ -2086,7 +2086,7 @@ public class MasterCoprocessorHost
   }
 
   /**
-   * @deprecated Since 2.5.17,2.6.8, 2.7.0, 3.0.1 and 3.10, will be removed in 4.0.0.. Use
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
    *             {@link #preGetUserPermissions(String, String, TableName, byte[], byte[], Permission.Scope)}
    *             instead.
    */
@@ -2108,7 +2108,7 @@ public class MasterCoprocessorHost
   }
 
   /**
-   * @deprecated Since 2.5.17,2.6.8, 2.7.0, 3.0.1 and 3.10, will be removed in 4.0.0. Use
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
    *             {@link #postGetUserPermissions(String, String, TableName, byte[], byte[], Permission.Scope)}
    *             instead.
    */

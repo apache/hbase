@@ -1834,7 +1834,7 @@ public interface MasterObserver {
    * @param family    the table column family, null if don't get table family permission
    * @param qualifier the table column qualifier, null if don't get table qualifier permission
    * @throws IOException if something went wrong
-   * @deprecated Since 2.5.17,2.6.8, 2.7.0, 3.0.1 and 3.10, will be removed in 4.0.0. Use
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
    *             {@link #preGetUserPermissions(ObserverContext, String, String, TableName, byte[], byte[], Permission.Scope)}
    *             instead.
    */
@@ -1871,7 +1871,7 @@ public interface MasterObserver {
    * @param family    the table column family, null if don't get table family permission
    * @param qualifier the table column qualifier, null if don't get table qualifier permission
    * @throws IOException if something went wrong
-   * @deprecated Since 2.5.17,2.6.8, 2.7.0, 3.0.1 and 3.10, will be removed in 4.0.0. Use
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
    *             {@link #postGetUserPermissions(ObserverContext, String, String, TableName, byte[], byte[], Permission.Scope)}
    *             instead.
    */
