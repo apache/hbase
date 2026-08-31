@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -89,10 +90,14 @@ public class TestGetLastFlushedSequenceId {
     Thread.sleep(2000);
     RegionStoreSequenceIds ids = testUtil.getHBaseCluster().getMaster().getServerManager()
       .getLastFlushedSequenceId(region.getRegionInfo().getEncodedNameAsBytes());
-    assertEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
     // This will be the sequenceid just before that of the earliest edit in memstore.
     long storeSequenceId = ids.getStoreSequenceId(0).getSequenceId();
     assertTrue(storeSequenceId > 0);
+    // HBASE-30335: openSeqNum is now seeded on region OPEN, so lastFlushedSequenceId is no
+    // longer NO_SEQNUM before the first flush - it is the region's openSeqNum, which must
+    // still be strictly less than the memstore's earliest unflushed edit.
+    assertNotEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
+    assertTrue(ids.getLastFlushedSequenceId() < storeSequenceId);
     testUtil.getAdmin().flush(tableName);
     Thread.sleep(2000);
     ids = testUtil.getHBaseCluster().getMaster().getServerManager()
