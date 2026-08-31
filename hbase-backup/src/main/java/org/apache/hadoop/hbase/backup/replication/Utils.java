@@ -1,6 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
-<!--
-/**
+/*
  * Licensed to the Apache Software Foundation (ASF) under one
  * or more contributor license agreements.  See the NOTICE file
  * distributed with this work for additional information
@@ -17,23 +15,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
--->
-<project version="4">
-  <component name="VcsDirectoryMappings">
-    <mapping directory="" vcs="Git" />
-  </component>
-  <component name="IssueNavigationConfiguration">
-    <option name="links">
-      <list>
-        <IssueNavigationLink>
-          <option name="issueRegexp" value="HBASE\-\d+" />
-          <option name="linkRegexp" value="https://issues.apache.org/jira/browse/$0" />
-        </IssueNavigationLink>
-        <IssueNavigationLink>
-          <option name="issueRegexp" value="#(\d+)"/>
-          <option name="linkRegexp" value="https://github.com/apache/hbase/pull/$1"/>
-        </IssueNavigationLink>
-      </list>
-    </option>
-  </component>
-</project>
+package org.apache.hadoop.hbase.backup.replication;
+
+import org.apache.yetus.audience.InterfaceAudience;
+
+@InterfaceAudience.Private
+public final class Utils {
+  private Utils() {
+  }
+
+  public static String logPeerId(String peerId) {
+    return "[Source for peer " + peerId + "]:";
+  }
+}
