@@ -3419,6 +3419,68 @@ public class TestAccessController extends SecureTestUtil {
   }
 
   @Test
+  public void testGetUserPermissionsScopeBasedAuthorization() throws Throwable {
+    // Regression test: authorization must be based on permissionScope (derived from
+    // the type field), not on the tableName field. A user with only table-level ADMIN
+    // should not be able to request global permissions by passing tableName with
+    // permissionScope=GLOBAL.
+    AccessTestAction tablePermWithGlobalScope = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetUserPermissions(ObserverContextImpl.createAndPrepare(CP_ENV), null,
+          null, TEST_TABLE, null, null, Permission.Scope.GLOBAL);
+        return null;
+      }
+    };
+
+    // USER_ADMIN has global ADMIN, should be allowed
+    verifyAllowed(tablePermWithGlobalScope, SUPERUSER, USER_ADMIN);
+    // Users with only table-level ADMIN should be denied
+    verifyDenied(tablePermWithGlobalScope, USER_OWNER, USER_ADMIN_CF, USER_CREATE, USER_RW, USER_RO,
+      USER_NONE);
+
+    AccessTestAction tablePermWithNamespaceScope = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetUserPermissions(ObserverContextImpl.createAndPrepare(CP_ENV), null,
+          TEST_TABLE.getNamespaceAsString(), TEST_TABLE, null, null, Permission.Scope.NAMESPACE);
+        return null;
+      }
+    };
+
+    // Users without namespace ADMIN should be denied
+    verifyDenied(tablePermWithNamespaceScope, USER_OWNER, USER_ADMIN_CF, USER_CREATE, USER_RW,
+      USER_RO, USER_NONE);
+
+    AccessTestAction tablePermWithTableScope = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetUserPermissions(ObserverContextImpl.createAndPrepare(CP_ENV), null,
+          null, TEST_TABLE, null, null, Permission.Scope.TABLE);
+        return null;
+      }
+    };
+
+    // Users with table ADMIN should be allowed
+    verifyAllowed(tablePermWithTableScope, SUPERUSER, USER_ADMIN, USER_OWNER);
+    verifyDenied(tablePermWithTableScope, USER_ADMIN_CF, USER_CREATE, USER_RW, USER_RO, USER_NONE);
+
+    AccessTestAction globalPermWithNullScope = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        ACCESS_CONTROLLER.preGetUserPermissions(ObserverContextImpl.createAndPrepare(CP_ENV), null,
+          null, null, null, null, null);
+        return null;
+      }
+    };
+
+    // null scope falls back to old behavior (no tableName -> require global ADMIN)
+    verifyAllowed(globalPermWithNullScope, SUPERUSER, USER_ADMIN);
+    verifyDenied(globalPermWithNullScope, USER_OWNER, USER_ADMIN_CF, USER_CREATE, USER_RW, USER_RO,
+      USER_NONE);
+  }
+
+  @Test
   public void testHasPermission() throws Throwable {
     Connection conn = null;
     try {
