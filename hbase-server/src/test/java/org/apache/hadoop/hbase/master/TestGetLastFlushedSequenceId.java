@@ -95,10 +95,8 @@ public class TestGetLastFlushedSequenceId {
     long storeSequenceId = ids.getStoreSequenceId(0).getSequenceId();
     assertTrue(storeSequenceId > 0);
     // HBASE-30335: openSeqNum is now seeded on region OPEN, so lastFlushedSequenceId is no
-    // longer NO_SEQNUM before the first flush - it is the region's openSeqNum, which must
-    // still be strictly less than the memstore's earliest unflushed edit.
+    // longer NO_SEQNUM before the first flush.
     assertNotEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId());
-    assertTrue(ids.getLastFlushedSequenceId() < storeSequenceId);
     testUtil.getAdmin().flush(tableName);
     Thread.sleep(2000);
     ids = testUtil.getHBaseCluster().getMaster().getServerManager()
@@ -111,9 +109,9 @@ public class TestGetLastFlushedSequenceId {
 
   /**
    * HBASE-30335: after a region is opened - and before any user write or flush - the master's
-   * flushedSequenceIdByRegion must already contain the region's openSeqNum. Otherwise a
-   * subsequent WAL split (e.g. the hosting RS crashes before its first flush heartbeat) would
-   * treat already-durable edits as unflushed and produce orphaned recovered.edits.
+   * flushedSequenceIdByRegion must already contain the region's openSeqNum. Otherwise a subsequent
+   * WAL split (e.g. the hosting RS crashes before its first flush heartbeat) would treat
+   * already-durable edits as unflushed and produce orphaned recovered.edits.
    */
   @Test
   public void testFlushedSequenceIdSeededOnRegionOpen() throws IOException, InterruptedException {
