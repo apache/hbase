@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.io.VersionedWritable;
@@ -62,8 +63,8 @@ public class Permission extends VersionedWritable {
     }
   }
 
-  @InterfaceAudience.Private
-  protected enum Scope {
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
+  public enum Scope {
     GLOBAL('G'),
     NAMESPACE('N'),
     TABLE('T'),

@@ -19,10 +19,8 @@ package org.apache.hadoop.hbase;
 
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -39,9 +37,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
-import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
-import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.security.User;
@@ -58,7 +53,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -67,11 +61,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
@@ -85,7 +76,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMaste
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
  * Base class for Master and RegionServer RpcServices.
@@ -339,50 +329,5 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     ClearSlowLogResponses clearSlowLogResponses =
       ClearSlowLogResponses.newBuilder().setIsCleaned(slowLogsCleaned).build();
     return clearSlowLogResponses;
-  }
-
-  private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
-    NamedQueueRecorder namedQueueRecorder) {
-    if (namedQueueRecorder == null) {
-      return Collections.emptyList();
-    }
-    List<SlowLogPayload> slowLogPayloads;
-    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
-    namedQueueGetRequest.setSlowLogResponseRequest(request);
-    NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    slowLogPayloads = namedQueueGetResponse != null
-      ? namedQueueGetResponse.getSlowLogPayloads()
-      : Collections.emptyList();
-    return slowLogPayloads;
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-    HBaseProtos.LogRequest request) throws ServiceException {
-    try {
-      final String logClassName = request.getLogClassName();
-      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
-      Method method = logClass.getMethod("parseFrom", ByteString.class);
-      if (logClassName.contains("SlowLogResponseRequest")) {
-        SlowLogResponseRequest slowLogResponseRequest =
-          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
-        final NamedQueueRecorder namedQueueRecorder = this.server.getNamedQueueRecorder();
-        final List<SlowLogPayload> slowLogPayloads =
-          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
-        SlowLogResponses slowLogResponses =
-          SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
-        return HBaseProtos.LogEntry.newBuilder()
-          .setLogClassName(slowLogResponses.getClass().getName())
-          .setLogMessage(slowLogResponses.toByteString()).build();
-      }
-    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
-      | InvocationTargetException e) {
-      LOG.error("Error while retrieving log entries.", e);
-      throw new ServiceException(e);
-    }
-    throw new ServiceException("Invalid request params");
   }
 }

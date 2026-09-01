@@ -169,7 +169,7 @@ public class MasterReadOnlyController extends AbstractReadOnlyController
 
   @Override
   public void preTruncateRegion(ObserverContext<MasterCoprocessorEnvironment> c,
-    RegionInfo regionInfo) {
+    RegionInfo regionInfo) throws IOException {
     try {
       internalReadOnlyGuard();
     } catch (IOException e) {
@@ -181,7 +181,7 @@ public class MasterReadOnlyController extends AbstractReadOnlyController
 
   @Override
   public void preTruncateRegionAction(ObserverContext<MasterCoprocessorEnvironment> c,
-    RegionInfo regionInfo) {
+    RegionInfo regionInfo) throws IOException {
     try {
       internalReadOnlyGuard();
     } catch (IOException e) {

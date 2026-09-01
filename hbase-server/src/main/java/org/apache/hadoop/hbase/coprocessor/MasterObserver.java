@@ -593,7 +593,7 @@ public interface MasterObserver {
    */
   @SuppressWarnings("unused")
   default void preTruncateRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
-    final RegionInfo regionInfo) {
+    final RegionInfo regionInfo) throws IOException {
   }
 
   /**
@@ -603,7 +603,7 @@ public interface MasterObserver {
    */
   @SuppressWarnings("unused")
   default void preTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
-    RegionInfo regionInfo) {
+    RegionInfo regionInfo) throws IOException {
   }
 
   /**
@@ -613,7 +613,7 @@ public interface MasterObserver {
    */
   @SuppressWarnings("unused")
   default void postTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> c,
-    RegionInfo regionInfo) {
+    RegionInfo regionInfo) throws IOException {
   }
 
   /**
@@ -623,7 +623,7 @@ public interface MasterObserver {
    */
   @SuppressWarnings("unused")
   default void postTruncateRegionAction(final ObserverContext<MasterCoprocessorEnvironment> c,
-    final RegionInfo regionInfo) {
+    final RegionInfo regionInfo) throws IOException {
   }
 
   /**
@@ -1834,10 +1834,32 @@ public interface MasterObserver {
    * @param family    the table column family, null if don't get table family permission
    * @param qualifier the table column qualifier, null if don't get table qualifier permission
    * @throws IOException if something went wrong
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
+   *             {@link #preGetUserPermissions(ObserverContext, String, String, TableName, byte[], byte[], Permission.Scope)}
+   *             instead.
    */
+  @Deprecated
   default void preGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
     String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier)
     throws IOException {
+  }
+
+  /**
+   * Called before getting user permissions.
+   * @param ctx             the coprocessor instance's environment
+   * @param userName        the user name, null if get all user permissions
+   * @param namespace       the namespace, null if don't get namespace permission
+   * @param tableName       the table name, null if don't get table permission
+   * @param family          the table column family, null if don't get table family permission
+   * @param qualifier       the table column qualifier, null if don't get table qualifier permission
+   * @param permissionScope the scope of permission being requested (GLOBAL, NAMESPACE, or TABLE),
+   *                        may be null for backward compatibility
+   * @throws IOException if something went wrong
+   */
+  default void preGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier,
+    Permission.Scope permissionScope) throws IOException {
+    preGetUserPermissions(ctx, userName, namespace, tableName, family, qualifier);
   }
 
   /**
@@ -1849,10 +1871,32 @@ public interface MasterObserver {
    * @param family    the table column family, null if don't get table family permission
    * @param qualifier the table column qualifier, null if don't get table qualifier permission
    * @throws IOException if something went wrong
+   * @deprecated Since 2.5.17, 2.6.8, 2.7.0, 3.0.1 and 3.1.0, will be removed in 4.0.0. Use
+   *             {@link #postGetUserPermissions(ObserverContext, String, String, TableName, byte[], byte[], Permission.Scope)}
+   *             instead.
    */
+  @Deprecated
   default void postGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
     String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier)
     throws IOException {
+  }
+
+  /**
+   * Called after getting user permissions.
+   * @param ctx             the coprocessor instance's environment
+   * @param userName        the user name, null if get all user permissions
+   * @param namespace       the namespace, null if don't get namespace permission
+   * @param tableName       the table name, null if don't get table permission
+   * @param family          the table column family, null if don't get table family permission
+   * @param qualifier       the table column qualifier, null if don't get table qualifier permission
+   * @param permissionScope the scope of permission being requested (GLOBAL, NAMESPACE, or TABLE),
+   *                        may be null for backward compatibility
+   * @throws IOException if something went wrong
+   */
+  default void postGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier,
+    Permission.Scope permissionScope) throws IOException {
+    postGetUserPermissions(ctx, userName, namespace, tableName, family, qualifier);
   }
 
   /*

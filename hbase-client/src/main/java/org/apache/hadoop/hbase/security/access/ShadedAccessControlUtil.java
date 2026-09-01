@@ -328,4 +328,20 @@ public class ShadedAccessControlUtil {
     }
     return builder.build();
   }
+
+  public static Permission.Scope toPermissionScope(AccessControlProtos.Permission.Type protoType) {
+    if (protoType == null) {
+      return null;
+    }
+    switch (protoType) {
+      case Global:
+        return Permission.Scope.GLOBAL;
+      case Namespace:
+        return Permission.Scope.NAMESPACE;
+      case Table:
+        return Permission.Scope.TABLE;
+      default:
+        return null;
+    }
+  }
 }
