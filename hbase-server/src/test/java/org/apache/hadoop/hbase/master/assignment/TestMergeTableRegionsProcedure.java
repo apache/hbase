@@ -387,24 +387,13 @@ public class TestMergeTableRegionsProcedure {
 
     fs.delete(staleFile, false);
 
-    long elapsed = org.apache.hadoop.hbase.Waiter.waitFor(conf, 30_000, 500, false,
-      new org.apache.hadoop.hbase.Waiter.Predicate<Exception>() {
-        @Override
-        public boolean evaluate() {
-          RegionState.State a =
-            am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState();
-          RegionState.State b =
-            am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
-          return a == RegionState.State.OPEN && b == RegionState.State.OPEN;
-        }
-      });
-
-    assertTrue(elapsed > 0,
-      "Parents must be OPEN after merge rollback (HBASE-30334). Final states: "
-      + regionsToMerge[0].getEncodedName() + "="
-      + am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState() + ", "
-      + regionsToMerge[1].getEncodedName() + "="
-      + am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState());
+    UTIL.waitFor(30_000, 500, () -> {
+      RegionState.State a =
+        am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState();
+      RegionState.State b =
+        am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
+      return a == RegionState.State.OPEN && b == RegionState.State.OPEN;
+    });
   }
 
   @Test
