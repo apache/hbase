@@ -256,6 +256,57 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   @Test
+  public void testRowsSeenMetricWithJoinedHeap() throws Exception {
+    // When Scan#setLoadColumnFamiliesOnDemand is enabled and the filter declares some families
+    // as non essential, a row passing the filter is populated in two steps: the essential
+    // families through the store heap and the remaining ones through the joined heap
+    // (HBASE-5416). Such a row must still be counted only once in the ROWS_SCANNED metric.
+    TableName tableName = TableName.valueOf("testRowsSeenMetricWithJoinedHeap");
+    byte[] essentialFamily = Bytes.toBytes("essential");
+    byte[] joinedFamily = Bytes.toBytes("joined");
+    byte[] otherValue = Bytes.toBytes("otherValue");
+    int numMatchingRows = 5;
+    try (Table table =
+      TEST_UTIL.createTable(tableName, new byte[][] { essentialFamily, joinedFamily })) {
+      List<Put> puts = new ArrayList<>();
+      for (int row = 0; row < NUM_ROWS; row++) {
+        Put put = new Put(ROWS[row]);
+        put.addColumn(essentialFamily, QUALIFIERS[0], row < numMatchingRows ? VALUE : otherValue);
+        put.addColumn(joinedFamily, QUALIFIERS[0], VALUE);
+        puts.add(put);
+      }
+      table.put(puts);
+
+      SingleColumnValueFilter filter =
+        new SingleColumnValueFilter(essentialFamily, QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
+      // Makes the joined family non essential (see SingleColumnValueFilter#isFamilyEssential),
+      // so that it is lazily populated through the joined heap for rows passing the filter.
+      filter.setFilterIfMissing(true);
+      Scan scan = new Scan();
+      scan.setScanMetricsEnabled(true);
+      scan.setLoadColumnFamiliesOnDemand(true);
+      scan.setFilter(filter);
+
+      ResultScanner scanner = table.getScanner(scan);
+      int rowsReturned = 0;
+      for (Result result = scanner.next(); result != null; result = scanner.next()) {
+        // Both the essential and the lazily loaded family must be present in the result.
+        assertEquals(2, result.rawCells().length);
+        rowsReturned++;
+      }
+      scanner.close();
+      assertEquals(numMatchingRows, rowsReturned);
+      ScanMetrics metrics = scanner.getScanMetrics();
+      assertEquals(NUM_ROWS,
+        metrics.getCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME).get());
+      assertEquals(NUM_ROWS - numMatchingRows,
+        metrics.getCounter(ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME).get());
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
   public void testRowsFilteredMetric() throws Exception {
     // Base scan configuration
     Scan baseScan;
