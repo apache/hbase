@@ -358,7 +358,10 @@ public class RegionScannerImpl implements RegionScanner, Shipper, RpcCallback {
 
       nextKv = heap.peek();
       moreCellsInRow = moreCellsInRow(nextKv, currentRowCell);
-      if (!moreCellsInRow) {
+      // A row is scanned once its cells have been read from the store heap. The joined heap only
+      // re-populates rows that already passed the filter with the cells of the non essential
+      // families (HBASE-5416), so counting a completed row there would double count it.
+      if (!moreCellsInRow && heap == this.storeHeap) {
         incrementCountOfRowsScannedMetric(scannerContext);
       }
       if (moreCellsInRow && scannerContext.checkBatchLimit(limitScope)) {
