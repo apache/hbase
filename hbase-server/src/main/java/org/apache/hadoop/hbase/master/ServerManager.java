@@ -1097,10 +1097,10 @@ public class ServerManager implements ConfigurationObserver {
    * {@code openSeqNum}. Without this, the entry stays absent until the hosting server's next
    * heartbeat, so {@link #getLastFlushedSequenceId} returns {@link HConstants#NO_SEQNUM} and
    * WALSplitter conservatively treats already-durable edits as unflushed - producing orphaned
-   * recovered.edits when the source server crashes soon after a drain-move. Uses
-   * {@code merge} with {@link Math#max} so a heartbeat-supplied value (which may reflect flushes
-   * after open) is never regressed - and, unlike {@code putIfAbsent}, a stale-low prior value is
-   * lifted to {@code openSeqNum}. Safe because at OPEN a region cannot have flushed past its own
+   * recovered.edits when the source server crashes soon after a drain-move. Uses {@code merge} with
+   * {@link Math#max} so a heartbeat-supplied value (which may reflect flushes after open) is never
+   * regressed - and, unlike {@code putIfAbsent}, a stale-low prior value is lifted to
+   * {@code openSeqNum}. Safe because at OPEN a region cannot have flushed past its own
    * {@code openSeqNum}. See HBASE-30335.
    */
   public void reportRegionOpen(final RegionInfo regionInfo, final long openSeqNum) {
