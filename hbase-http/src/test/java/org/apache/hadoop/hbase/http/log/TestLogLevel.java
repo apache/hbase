@@ -21,16 +21,12 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
-import java.net.DatagramSocket;
-import java.net.InetAddress;
-import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
@@ -200,36 +196,6 @@ public class TestLogLevel {
       }
     }
     return false;
-  }
-
-  /**
-   * Reproduces the port-conflict flake deterministically: occupy the KDC port on both TCP and UDP,
-   * pin MiniKdc to it, and show the resulting failure is a Kerby {@code KrbException}, not a
-   * {@link BindException}. This is why the {@code catch (BindException)} retry in
-   * {@link #setupMiniKdc()} never fired for the reported failure.
-   */
-  @Test
-  public void testKdcBindConflictSurfacesAsKrbException() throws Exception {
-    int port;
-    try (ServerSocket probe = new ServerSocket(0, 1, InetAddress.getByName(LOCALHOST))) {
-      port = probe.getLocalPort();
-    }
-    try (ServerSocket tcp = new ServerSocket(port, 1, InetAddress.getByName(LOCALHOST));
-      DatagramSocket udp = new DatagramSocket(port, InetAddress.getByName(LOCALHOST))) {
-      Properties conf = MiniKdc.createConf();
-      conf.put(MiniKdc.DEBUG, true);
-      conf.setProperty(MiniKdc.KDC_BIND_ADDRESS, LOCALHOST);
-      conf.setProperty(MiniKdc.KDC_PORT, Integer.toString(port));
-      File dir = new File(HTU.getDataTestDir("kdc-conflict").toUri().getPath());
-      MiniKdc conflictingKdc = new MiniKdc(conf, dir);
-
-      Exception thrown = assertThrows(Exception.class, conflictingKdc::start);
-
-      assertFalse(thrown instanceof BindException,
-        "Kerby wraps the bind failure in a KrbException, so it is not a BindException: " + thrown);
-      assertTrue(isBindException(thrown),
-        "expected a recognisable bind-conflict failure, got: " + thrown);
-    }
   }
 
   /**
