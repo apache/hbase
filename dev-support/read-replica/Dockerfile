@@ -1,5 +1,6 @@
 # Stage 0: Cache Maven dependencies
 ARG BASE_IMAGE=registry.access.redhat.com/ubi8/openjdk-17:1.23
+# hadolint ignore=DL3006
 FROM ${BASE_IMAGE} AS cache-stage
 
 # Switch to user root (UID 0)
@@ -24,6 +25,7 @@ WORKDIR /opt/hbase-src
 RUN mvn clean install -DskipTests -Dskip.license.check=true
 
 # Stage 1: Build the HBase source code
+# hadolint ignore=DL3006
 FROM ${BASE_IMAGE} AS build-stage
 
 # Switch to user root (UID 0)
@@ -51,6 +53,7 @@ WORKDIR /opt/hbase-src
 RUN mvn clean package -DskipTests -Dskip.license.check=true assembly:single -T 1C
 
 # Stage 2: Create the final Docker image
+# hadolint ignore=DL3006
 FROM ${BASE_IMAGE}
 
 # Switch to user root (UID 0)
