@@ -155,7 +155,7 @@ public class QuotaCache implements Stoppable {
    * @return the limiter associated to the specified user/table
    */
   public QuotaLimiter getUserLimiter(final UserGroupInformation ugi, final TableName table) {
-    if (QuotaUtil.isThrottleExempt(table)) {
+    if (table.isSystemTable()) {
       return NoopQuotaLimiter.get();
     }
     return getUserQuotaState(ugi).getTableLimiter(table);
