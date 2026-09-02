@@ -347,6 +347,11 @@ public class LruBlockCache implements FirstLevelBlockCache {
   }
 
   @Override
+  public void unsetVictimCache() {
+    this.victimHandler = null;
+  }
+
+  @Override
   public void setMaxSize(long maxSize) {
     this.maxSize = maxSize;
     if (this.size.get() > acceptableSize() && !evictionInProgress) {

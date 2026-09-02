@@ -50,10 +50,10 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -202,7 +202,7 @@ public class TestCacheOnWrite {
 
   private void clearBlockCache(CacheAccessService cache) throws InterruptedException {
     // TODO: HBASE-30018 refactor later
-    BlockCache blockCache = ((BlockCacheBackedCacheAccessService) cache).getBlockCache();
+    BlockCache blockCache = TopologyBackedCacheAccessServices.getBlockCache(cache);
     if (blockCache instanceof LruBlockCache) {
       ((LruBlockCache) blockCache).clearCache();
     } else {
@@ -240,7 +240,7 @@ public class TestCacheOnWrite {
       cowType.shouldBeCached(BlockType.LEAF_INDEX));
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
       cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
-    cacheConf = new CacheConfig(conf, ((BlockCacheBackedCacheAccessService) cache).getBlockCache());
+    cacheConf = new CacheConfig(conf, TopologyBackedCacheAccessServices.getBlockCache(cache));
     fs = HFileSystem.get(conf);
   }
 
@@ -442,7 +442,7 @@ public class TestCacheOnWrite {
         .setCompressionType(compress).setBloomFilterType(BLOOM_TYPE).setMaxVersions(maxVersions)
         .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding()).build();
       HRegion region = TEST_UTIL.createTestRegion(table, cfd,
-        ((BlockCacheBackedCacheAccessService) cache).getBlockCache());
+        TopologyBackedCacheAccessServices.getBlockCache(cache));
       int rowIdx = 0;
       long ts = EnvironmentEdgeManager.currentTime();
       for (int iFile = 0; iFile < 5; ++iFile) {
@@ -500,7 +500,7 @@ public class TestCacheOnWrite {
       // of testing
       // BucketCache, we cannot verify block type as it is not stored in the cache.
       boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction
-        && !(((BlockCacheBackedCacheAccessService) cache).getBlockCache() instanceof BucketCache);
+        && !(TopologyBackedCacheAccessServices.getBlockCache(cache) instanceof BucketCache);
 
       String assertErrorMessage = "\nTest description: " + testDescription
         + "\ncacheBlocksOnCompaction: " + cacheBlocksOnCompaction + "\n";

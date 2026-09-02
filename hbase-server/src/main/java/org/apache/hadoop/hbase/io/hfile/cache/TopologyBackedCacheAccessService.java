@@ -18,12 +18,14 @@
 package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
-import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -48,19 +50,13 @@ import org.apache.yetus.audience.InterfaceAudience;
  * operations.
  * </p>
  * <p>
- * This class is the topology-backed counterpart to {@link BlockCacheBackedCacheAccessService}. The
- * block-cache-backed implementation is useful for incremental migration with no behavior change.
- * This implementation is useful once callers are ready to exercise the new topology and engine
- * abstractions directly through {@link CacheAccessService}.
- * </p>
- * <p>
  * Representation selection is intentionally not invoked by this initial implementation. Until the
  * service can actually apply representation decisions safely, especially around HFileBlock
  * lifecycle and packed/unpacked storage, representation policy is left to a later integration step.
  * </p>
  */
 @InterfaceAudience.Private
-public class TopologyBackedCacheAccessService implements CacheAccessService {
+public class TopologyBackedCacheAccessService implements CacheAccessService, Iterable<CachedBlock> {
 
   private final CacheTopology topology;
   private final CachePlacementAdmissionPolicy policy;
@@ -130,7 +126,6 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
    * @return cached block, or {@code null} if not present in any tier
    */
   @Override
-
   public Cacheable getBlock(BlockCacheKey cacheKey, CacheRequestContext context) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     Objects.requireNonNull(context, "context must not be null");
@@ -214,23 +209,79 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
   }
 
   /**
-   * Adds a block to the cache using policy-selected target tiers.
+   * Caches a block using the topology-backed cache access service.
    * <p>
-   * This method first asks the configured policy whether the block should be admitted. If admitted,
-   * the policy selects the target tier or tiers. The block is then inserted into each selected
-   * engine using {@link CacheEngine#cacheBlock(BlockCacheKey, Cacheable, boolean, boolean)}.
+   * Single-tier topology preserves the legacy direct block-cache behavior by writing admitted
+   * blocks to the only backing engine. Tiered topologies use the placement policy to select one or
+   * more target tiers.
    * </p>
-   * <p>
-   * The policy's representation decision is intentionally not applied in this initial
-   * implementation. The current block object is passed through unchanged.
-   * </p>
-   * @param cacheKey block cache key
-   * @param block    block contents
+   * @param cacheKey cache key identifying the block
+   * @param block    block to cache
    * @param context  cache write context
+   * @throws NullPointerException if {@code cacheKey}, {@code block}, or {@code context} is
+   *                              {@code null}
    */
-
   @Override
   public void cacheBlock(BlockCacheKey cacheKey, Cacheable block, CacheWriteContext context) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(block, "block must not be null");
+    Objects.requireNonNull(context, "context must not be null");
+
+    if (topology.getType() == CacheTopologyType.SINGLE_TIER) {
+      cacheBlockToSingleTier(cacheKey, block, context);
+      return;
+    }
+
+    cacheBlockToSelectedTiers(cacheKey, block, context);
+  }
+
+  /**
+   * Caches a block into the only engine in a single-tier topology.
+   * <p>
+   * This method preserves the behavior of the legacy {@link BlockCacheBackedCacheAccessService}
+   * path. A single-tier topology has no placement decision to make: admitted blocks are written to
+   * the only available engine, which is exposed as {@link CacheTier#SINGLE}.
+   * </p>
+   * @param cacheKey cache key identifying the block
+   * @param block    block to cache
+   * @param context  cache write context
+   * @throws NullPointerException if {@code cacheKey}, {@code block}, or {@code context} is
+   *                              {@code null}
+   */
+  private void cacheBlockToSingleTier(BlockCacheKey cacheKey, Cacheable block,
+    CacheWriteContext context) {
+    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
+    Objects.requireNonNull(block, "block must not be null");
+    Objects.requireNonNull(context, "context must not be null");
+
+    AdmissionDecision admission =
+      policy.shouldAdmit(cacheKey, block, context, AdmissionPriority.NORMAL, topologyView);
+    if (!admission.isAdmitted()) {
+      return;
+    }
+
+    Optional<CacheEngine> engine = topology.getEngine(CacheTier.SINGLE);
+    if (!engine.isPresent()) {
+      return;
+    }
+
+    engine.get().cacheBlock(cacheKey, block, context.isInMemory(), context.isWaitWhenCache());
+  }
+
+  /**
+   * Caches a block into the tiers selected by the placement policy.
+   * <p>
+   * This method is used for tiered topologies where the placement policy decides whether the block
+   * belongs in L1, L2, or multiple tiers.
+   * </p>
+   * @param cacheKey cache key identifying the block
+   * @param block    block to cache
+   * @param context  cache write context
+   * @throws NullPointerException if {@code cacheKey}, {@code block}, or {@code context} is
+   *                              {@code null}
+   */
+  private void cacheBlockToSelectedTiers(BlockCacheKey cacheKey, Cacheable block,
+    CacheWriteContext context) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     Objects.requireNonNull(block, "block must not be null");
     Objects.requireNonNull(context, "context must not be null");
@@ -386,12 +437,23 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
   }
 
   /**
-   * Returns aggregate occupied size of the block cache, in bytes.
-   * @return occupied space in cache, in bytes
+   * Returns the current total size of all cache engines in this topology.
+   * <p>
+   * This method aggregates {@link CacheEngine#getCurrentSize()} rather than
+   * {@link CacheEngine#getCurrentDataSize()} so topology-backed diagnostics preserve legacy
+   * {@link BlockCache#getCurrentSize()} semantics. For cache implementations such as
+   * {@code LruBlockCache}, current size may include metadata and cache overhead in addition to
+   * cached data bytes.
+   * </p>
+   * @return aggregate current total cache size in bytes
    */
   @Override
   public long getCurrentSize() {
-    return getCurrentDataSize();
+    long currentSize = 0L;
+    for (CacheEngine engine : topology.getEngines()) {
+      currentSize += engine.getCurrentSize();
+    }
+    return currentSize;
   }
 
   /**
@@ -626,6 +688,22 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
     }
   }
 
+  /**
+   * Returns an iterable view over cached blocks exposed by the cache engines in this topology.
+   * <p>
+   * The returned iterable aggregates cached-block iterables from all engines that support this
+   * diagnostic capability. Engines that do not expose cached-block iteration are skipped. If no
+   * engine supports cached-block iteration, this method returns {@link Optional#empty()}.
+   * </p>
+   * <p>
+   * The aggregate iterable uses each underlying iterable's {@link Iterable#iterator()} method
+   * instead of {@link Iterable#spliterator()}. This is intentional because some legacy cache
+   * implementations and Mockito-based test doubles expose iteration through {@code iterator()} but
+   * may not provide a usable {@code spliterator()}.
+   * </p>
+   * @return an aggregated cached-block iterable when at least one engine supports this capability;
+   *         otherwise {@link Optional#empty()}
+   */
   public Optional<Iterable<CachedBlock>> asCachedBlockIterable() {
     List<Iterable<CachedBlock>> iterables = new ArrayList<>();
 
@@ -637,9 +715,32 @@ public class TopologyBackedCacheAccessService implements CacheAccessService {
       return Optional.empty();
     }
 
-    Iterable<CachedBlock> cachedBlocks = () -> iterables.stream()
-      .flatMap(iterable -> StreamSupport.stream(iterable.spliterator(), false)).iterator();
+    Iterable<CachedBlock> cachedBlocks = () -> new Iterator<CachedBlock>() {
+      private final Iterator<Iterable<CachedBlock>> iterableIterator = iterables.iterator();
+      private Iterator<CachedBlock> currentIterator = Collections.emptyIterator();
+
+      @Override
+      public boolean hasNext() {
+        while (!currentIterator.hasNext() && iterableIterator.hasNext()) {
+          currentIterator = iterableIterator.next().iterator();
+        }
+        return currentIterator.hasNext();
+      }
+
+      @Override
+      public CachedBlock next() {
+        if (!hasNext()) {
+          throw new NoSuchElementException();
+        }
+        return currentIterator.next();
+      }
+    };
 
     return Optional.of(cachedBlocks);
+  }
+
+  @Override
+  public Iterator<CachedBlock> iterator() {
+    return asCachedBlockIterable().orElse(Collections.emptyList()).iterator();
   }
 }

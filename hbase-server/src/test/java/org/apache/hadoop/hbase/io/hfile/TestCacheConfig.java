@@ -43,10 +43,11 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
-import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessServices;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -314,7 +315,6 @@ public class TestCacheConfig {
     // TODO: Assert sizes allocated are right and proportions.
     LruBlockCache lbc =
       (LruBlockCache) CacheAccessServiceTestFactory.getFirstLevelBlockCache(service);
-    ;
     assertEquals(MemorySizeUtil.getOnHeapCacheSize(this.conf), lbc.getMaxSize());
     BucketCache bc = (BucketCache) CacheAccessServiceTestFactory.getSecondLevelBlockCache(service);
     // getMaxSize comes back in bytes but we specified size in MB
@@ -381,19 +381,23 @@ public class TestCacheConfig {
     BlockCache bc = CacheAccessServiceTestFactory.getSecondLevelBlockCache(service);
     // getMaxSize comes back in bytes but we specified size in MB
     assertEquals(bcExpectedSize, ((BucketCache) bc).getMaxSize());
-    // Test the L1+L2 deploy works as we'd expect with blocks evicted from L1 going to L2.
+    /*
+     * The topology-backed cache path intentionally clears legacy L1 victim-cache wiring when L1 and
+     * L2 are adapted as independent topology engines. Direct calls to the unwrapped L1 cache should
+     * therefore not be used to verify L1-to-L2 victim movement. Tier placement, promotion, and
+     * lookup are now owned by TopologyBackedCacheAccessService.
+     */
     long initialL1BlockCount = lbc.getBlockCount();
     long initialL2BlockCount = bc.getBlockCount();
     Cacheable c = new DataCacheEntry();
     BlockCacheKey bck = new BlockCacheKey("bck", 0);
+
     lbc.cacheBlock(bck, c, false);
+
     assertEquals(initialL1BlockCount + 1, lbc.getBlockCount());
     assertEquals(initialL2BlockCount, bc.getBlockCount());
-
     assertNotNull(lbc.getBlock(bck, true, false, true));
     assertNull(bc.getBlock(bck, true, false, true));
-    waitForAnyBlockToMoveFromL1ToL2(lbc, bc, initialL2BlockCount);
-    assertTrue(bc.getBlockCount() > initialL2BlockCount);
   }
 
   /**
@@ -491,8 +495,8 @@ public class TestCacheConfig {
 
     CacheAccessService service = cacheConfig.getCacheAccessService();
 
-    assertInstanceOf(BlockCacheBackedCacheAccessService.class, service);
-    assertSame(blockCache, ((BlockCacheBackedCacheAccessService) service).getBlockCache());
+    assertInstanceOf(TopologyBackedCacheAccessService.class, service);
+    assertSame(blockCache, TopologyBackedCacheAccessServices.getBlockCache(service));
   }
 
   @Test

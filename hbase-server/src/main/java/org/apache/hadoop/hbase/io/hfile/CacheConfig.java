@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -24,9 +25,12 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
-import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTopology;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheTopologyType;
 import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -221,10 +225,50 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     initFromConf(conf, family);
     this.byteBuffAllocator = byteBuffAllocator;
     this.cacheAccessService = service != null ? service : CacheAccessServices.disabled();
-    this.blockCache = service instanceof BlockCacheBackedCacheAccessService
-      ? ((BlockCacheBackedCacheAccessService) service).getBlockCache()
-      : null;
+    /*
+     * Preserve the legacy BlockCache reference only when the supplied service is a direct
+     * single-tier BlockCache adapter. Multi-tier combined caches are represented by
+     * TopologyBackedCacheAccessService and intentionally do not expose a single legacy BlockCache
+     * through this field. Callers that need cache behavior or diagnostics should use
+     * cacheAccessService-level capabilities instead of relying on this legacy field.
+     */
+    this.blockCache = unwrapSingleLegacyBlockCache(this.cacheAccessService);
 
+  }
+
+  /**
+   * Extracts the legacy {@link BlockCache} from a cache access service when that service is backed
+   * by a single {@link BlockCacheBackedCacheEngine}.
+   * <p>
+   * This method exists only to preserve compatibility with legacy {@link CacheConfig} callers that
+   * still use the {@link BlockCache} field. The active cache access path remains
+   * {@link CacheAccessService}. Code that needs cache behavior or diagnostics should use
+   * {@link CacheAccessService} capabilities instead of depending on the legacy block cache field.
+   * </p>
+   * @param cacheAccessService cache access service to inspect
+   * @return wrapped legacy block cache when available; otherwise {@code null}
+   * @throws NullPointerException if {@code cacheAccessService} is {@code null}
+   */
+  private static BlockCache unwrapSingleLegacyBlockCache(CacheAccessService cacheAccessService) {
+    Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
+
+    if (!(cacheAccessService instanceof TopologyBackedCacheAccessService)) {
+      return null;
+    }
+
+    TopologyBackedCacheAccessService topologyBackedService =
+      (TopologyBackedCacheAccessService) cacheAccessService;
+    CacheTopology topology = topologyBackedService.getTopology();
+
+    if (topology.getType() != CacheTopologyType.SINGLE_TIER) {
+      return null;
+    }
+
+    Optional<CacheEngine> engine = topology.getEngine(CacheTier.SINGLE);
+    if (!engine.isPresent() || !(engine.get() instanceof BlockCacheBackedCacheEngine)) {
+      return null;
+    }
+    return ((BlockCacheBackedCacheEngine) engine.get()).getBlockCache();
   }
 
   /**

@@ -34,6 +34,7 @@ import java.util.Optional;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.io.hfile.FirstLevelBlockCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
@@ -205,6 +206,50 @@ public class TestCombinedBlockCacheCompatibleTopologyBackedCacheAccessService {
 
     verify(l1).shutdown();
     verify(l2).shutdown();
+  }
+
+  /**
+   * Verifies that topology-backed current-size reporting aggregates current size across tiers.
+   * <p>
+   * Current size includes implementation-specific overhead and is distinct from current data size.
+   * The topology-backed service should therefore aggregate {@link CacheEngine#getCurrentSize()}
+   * from all engines rather than using data-size counters.
+   * </p>
+   */
+  @Test
+  void testCurrentSizeAggregatesAllTiers() {
+    BlockCache l1 = mock(BlockCache.class);
+    BlockCache l2 = mock(BlockCache.class);
+
+    when(l1.getCurrentSize()).thenReturn(100L);
+    when(l2.getCurrentSize()).thenReturn(200L);
+    when(l1.getCurrentDataSize()).thenReturn(10L);
+    when(l2.getCurrentDataSize()).thenReturn(20L);
+
+    TopologyBackedCacheAccessService service = service(l1, l2, noPromotionPolicy());
+
+    assertEquals(300L, service.getCurrentSize());
+    assertEquals(30L, service.getCurrentDataSize());
+  }
+
+  /**
+   * Verifies that tiered topology construction disables legacy L1 victim-cache delegation.
+   * <p>
+   * Legacy combined-cache construction wires the first-level cache to the second-level cache
+   * through a victim cache. Once the caches are adapted as independent topology engines, the
+   * topology-backed service must control L2 lookup directly. The factory therefore removes the
+   * legacy victim-cache wiring before adapting L1.
+   * </p>
+   */
+  @Test
+  void testTieredExclusiveFactoryUnsetsL1VictimCache() {
+    FirstLevelBlockCache l1 = mock(FirstLevelBlockCache.class);
+    BlockCache l2 = mock(BlockCache.class);
+
+    TopologyBackedCacheAccessServices.fromTieredExclusiveBlockCaches("combined", l1, l2,
+      noPromotionPolicy());
+
+    verify(l1).unsetVictimCache();
   }
 
   private static TopologyBackedCacheAccessService service(BlockCache l1, BlockCache l2,
