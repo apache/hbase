@@ -647,20 +647,6 @@ public class QuotaUtil extends QuotaTableUtil {
    * @param conn      connection to re-use
    * @param tableName table name which has moved into space quota violation
    */
-  /**
-   * Returns true if the given table must never be subject to RPC throttling.
-   * <p>
-   * Only {@code hbase:meta} and {@code hbase:quota} are exempt. Throttling either of those risks
-   * deadlock, because the throttling machinery itself depends on them: quotas are loaded from
-   * {@code hbase:quota}, and clients resolve region locations through {@code hbase:meta}, so
-   * delaying those requests could prevent a throttle from ever being lifted. Every other table may
-   * be throttled, including the remaining tables in the {@code hbase} namespace and the backup
-   * tables.
-   */
-  public static boolean isThrottleExempt(final TableName tableName) {
-    return TableName.META_TABLE_NAME.equals(tableName) || QUOTA_TABLE_NAME.equals(tableName);
-  }
-
   public static void disableTableIfNotDisabled(Connection conn, TableName tableName)
     throws IOException {
     try {
