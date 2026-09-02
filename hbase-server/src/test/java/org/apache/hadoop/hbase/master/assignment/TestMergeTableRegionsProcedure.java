@@ -335,10 +335,9 @@ public class TestMergeTableRegionsProcedure {
 
   /**
    * HBASE-30334 repro. Plant a stale recovered.edits file on a parent region so that
-   * MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS throws (the exact failure from the 49-min
-   * stuck-RIT incident). After rollback the parents MUST be OPEN. If they stay stuck
-   * (e.g. CLOSED / MERGING), we've reproduced the incident locally and the rollback path
-   * as-is is broken.
+   * MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS throws (the exact failure from the 49-min stuck-RIT
+   * incident). After rollback the parents MUST be OPEN. If they stay stuck (e.g. CLOSED / MERGING),
+   * we've reproduced the incident locally and the rollback path as-is is broken.
    */
   @Test
   public void testRollbackReopensParentsAfterCheckClosedRegionsFailure() throws Exception {
@@ -380,18 +379,15 @@ public class TestMergeTableRegionsProcedure {
     RegionState.State s1Post =
       am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
     LOG.info("HBASE-30334-DEBUG post-rollback: {} state={} / {} state={}",
-      regionsToMerge[0].getEncodedName(), s0Post,
-      regionsToMerge[1].getEncodedName(), s1Post);
+      regionsToMerge[0].getEncodedName(), s0Post, regionsToMerge[1].getEncodedName(), s1Post);
 
     ProcedureTestingUtility.assertProcFailed(procExec, procId);
 
     fs.delete(staleFile, false);
 
     UTIL.waitFor(30_000, 500, () -> {
-      RegionState.State a =
-        am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState();
-      RegionState.State b =
-        am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
+      RegionState.State a = am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState();
+      RegionState.State b = am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
       return a == RegionState.State.OPEN && b == RegionState.State.OPEN;
     });
   }
