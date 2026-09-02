@@ -1,11 +1,19 @@
 # Stage 0: Cache Maven dependencies
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/openjdk-17
+ARG BASE_IMAGE=registry.access.redhat.com/ubi8/openjdk-17:1.23
 FROM ${BASE_IMAGE} AS cache-stage
 
-USER root
+# Switch to user root (UID 0)
+# hadolint ignore=DL3002
+USER 0
 
 # Install necessary packages for building Maven dependencies
-RUN INITRD=no DEBIAN_FRONTEND=noninteractive microdnf update -y && microdnf install -y maven git hostname diffutils
+# hadolint ignore=DL3041
+RUN microdnf update -y && microdnf install -y \
+        maven \
+        git \
+        hostname \
+        diffutils \
+    && microdnf clean all
 
 # Copy the entire source code to cache dependencies
 COPY ./hbase /opt/hbase-src
@@ -18,10 +26,18 @@ RUN mvn clean install -DskipTests -Dskip.license.check=true
 # Stage 1: Build the HBase source code
 FROM ${BASE_IMAGE} AS build-stage
 
-USER root
+# Switch to user root (UID 0)
+# hadolint ignore=DL3002
+USER 0
 
 # Install necessary build packages
-RUN INITRD=no DEBIAN_FRONTEND=noninteractive microdnf update -y && microdnf install -y maven git hostname diffutils
+# hadolint ignore=DL3041
+RUN microdnf update -y && microdnf install -y \
+        maven \
+        git \
+        hostname \
+        diffutils \
+    && microdnf clean all
 
 # Copy the cached Maven dependencies
 COPY --from=cache-stage /root/.m2 /root/.m2
@@ -37,7 +53,8 @@ RUN mvn clean package -DskipTests -Dskip.license.check=true assembly:single -T 1
 # Stage 2: Create the final Docker image
 FROM ${BASE_IMAGE}
 
-USER root
+# Switch to user root (UID 0)
+USER 0
 
 # Set environment variables
 ENV HBASE_HOME=/opt/hbase
@@ -49,7 +66,20 @@ ENV JAVA_HOME=/usr/lib/jvm/java-17-openjdk \
     DATA_DIR=/data-store
 
 # Install necessary runtime packages
-RUN INITRD=no DEBIAN_FRONTEND=noninteractive microdnf update -y && microdnf install -y unzip gzip wget hostname maven git diffutils vim openssh-clients python3 procps
+# hadolint ignore=DL3041
+RUN microdnf update -y && microdnf install -y \
+        unzip \
+        gzip \
+        wget \
+        hostname \
+        maven \
+        git \
+        diffutils \
+        vim \
+        openssh-clients \
+        python3 \
+        procps \
+    && microdnf clean all
 
 # Copy the built HBase binaries from the build-stage
 COPY --from=build-stage /opt/hbase-src/hbase-assembly/target/hbase-4.0.0-alpha-1-SNAPSHOT-bin.tar.gz /opt/
@@ -65,7 +95,8 @@ COPY --from=build-stage /root/.m2/repository/org/apache/hadoop/hadoop-mapreduce-
 # Apply custom HBase build steps
 RUN sed -i "s,^. export JAVA_HOME.*,export JAVA_HOME=$JAVA_HOME," ${HBASE_CONF_DIR}/hbase-env.sh \
     && sed -E -i 's/(.*)hbase\-daemons\.sh(.*zookeeper)/\1hbase-daemon.sh\2/g' ${HBASE_HOME}/bin/start-hbase.sh \
-    && echo -e "JAVA_HOME=$JAVA_HOME\nexport JAVA_HOME\nexport PATH=$JAVA_HOME/jre/bin:$PATH" > /etc/profile.d/defaults.sh \
+    && printf "JAVA_HOME=%s\nexport JAVA_HOME\nexport PATH=%s/jre/bin:%s\n" "$JAVA_HOME" "$JAVA_HOME" "$PATH" \
+            > /etc/profile.d/defaults.sh \
     && ln -sf ${HBASE_HOME}/bin/* /usr/bin
 
 # Create HBase user and home directory
@@ -85,16 +116,16 @@ EXPOSE 8000 8080 8085 9090 9095 2181 16000 16010 16020 16030
 # Set up the utils directory as a volume
 VOLUME ["/opt/utils"]
 
-# Switch to the HBase user
-USER ${HBASE_USER}
+# Switch to the HBase user (UID 1000)
+USER 1000
 
 # Create necessary directories for HBase to run
-RUN mkdir -p "$DATA_DIR"/hbase "$DATA_DIR"/run "$DATA_DIR"/logs
-RUN chmod -R 777 "$DATA_DIR"
+RUN mkdir -p "$DATA_DIR"/hbase "$DATA_DIR"/run "$DATA_DIR"/logs && \
+    chmod -R 777 "$DATA_DIR"
 
 # Add the 'ls -l' alias
-RUN echo 'alias ll="ls -l"' >> /home/hbase/.bashrc
-RUN echo 'alias ll="ls -l"' >> /home/jboss/.bashrc
+RUN echo 'alias ll="ls -l"' >> /home/hbase/.bashrc && \
+    echo 'alias ll="ls -l"' >> /home/jboss/.bashrc
 
 # Start HBase and keep it running
 ENTRYPOINT ["/bin/bash", "-c", "${HBASE_HOME}/bin/start-hbase.sh && tail -f ${HBASE_LOGS_DIR}/*.log"]
