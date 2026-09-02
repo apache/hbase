@@ -908,7 +908,7 @@
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
-    <jruby.version>9.4.14.0</jruby.version>
+    <jruby.version>9.4.15.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
     <awaitility.version>4.3.0</awaitility.version>
     <hamcrest.version>3.0</hamcrest.version>
