@@ -21,15 +21,20 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.BindException;
+import java.net.DatagramSocket;
+import java.net.InetAddress;
+import java.net.ServerSocket;
 import java.net.SocketException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
+import java.util.Locale;
 import java.util.Properties;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -153,18 +158,99 @@ public class TestLogLevel {
         dir = new File(HTU.getDataTestDir("kdc").toUri().getPath());
         kdc = new MiniKdc(conf, dir);
         kdc.start();
-      } catch (BindException e) {
+      } catch (Exception e) {
+        // Catch Exception, not BindException/KrbException: Kerby wraps the bind failure in a
+        // KrbException whose shape varies by version (see isBindException), so we recognise the
+        // port conflict via that predicate rather than a type. We also avoid importing kerby types
+        // here (see HBASE-29117).
+        if (!isBindException(e)) {
+          throw e; // not a port conflict, do not mask the real failure behind a retry
+        }
         FileUtils.deleteDirectory(dir); // clean directory
         numTries++;
         if (numTries == 3) {
           log.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
           throw e;
         }
-        log.error("BindException encountered when setting up MiniKdc. Trying again.");
+        log.error("Bind conflict encountered when setting up MiniKdc, retrying (attempt " + numTries
+          + ").");
         bindException = true;
       }
     } while (bindException);
     return kdc;
+  }
+
+  /**
+   * The Kerby-backed {@link MiniKdc} wraps a failure to bind the KDC port in a
+   * {@code org.apache.kerby...KrbException} rather than surfacing a {@link BindException} directly,
+   * so we inspect the whole cause chain plus the message to recognise a port conflict. Both checks
+   * are load-bearing across Kerby versions: kerby 1.x preserves the original {@link BindException}
+   * as the cause (caught by the cause-chain check) while kerby 2.x drops the cause and only appends
+   * the bind message (caught by the message check). The message match is lower-cased since the
+   * wording is JDK/OS specific.
+   */
+  static boolean isBindException(Throwable t) {
+    for (Throwable cause = t; cause != null; cause = cause.getCause()) {
+      if (cause instanceof BindException) {
+        return true;
+      }
+      String msg = cause.getMessage();
+      if (msg != null && msg.toLowerCase(Locale.ROOT).contains("address already in use")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  /**
+   * Reproduces the port-conflict flake deterministically: occupy the KDC port on both TCP and UDP,
+   * pin MiniKdc to it, and show the resulting failure is a Kerby {@code KrbException}, not a
+   * {@link BindException}. This is why the {@code catch (BindException)} retry in
+   * {@link #setupMiniKdc()} never fired for the reported failure.
+   */
+  @Test
+  public void testKdcBindConflictSurfacesAsKrbException() throws Exception {
+    int port;
+    try (ServerSocket probe = new ServerSocket(0, 1, InetAddress.getByName(LOCALHOST))) {
+      port = probe.getLocalPort();
+    }
+    try (ServerSocket tcp = new ServerSocket(port, 1, InetAddress.getByName(LOCALHOST));
+      DatagramSocket udp = new DatagramSocket(port, InetAddress.getByName(LOCALHOST))) {
+      Properties conf = MiniKdc.createConf();
+      conf.put(MiniKdc.DEBUG, true);
+      conf.setProperty(MiniKdc.KDC_BIND_ADDRESS, LOCALHOST);
+      conf.setProperty(MiniKdc.KDC_PORT, Integer.toString(port));
+      File dir = new File(HTU.getDataTestDir("kdc-conflict").toUri().getPath());
+      MiniKdc conflictingKdc = new MiniKdc(conf, dir);
+
+      Exception thrown = assertThrows(Exception.class, conflictingKdc::start);
+
+      assertFalse(thrown instanceof BindException,
+        "Kerby wraps the bind failure in a KrbException, so it is not a BindException: " + thrown);
+      assertTrue(isBindException(thrown),
+        "expected a recognisable bind-conflict failure, got: " + thrown);
+    }
+  }
+
+  /**
+   * Deterministic regression test for the retry predicate. A port conflict raised by the
+   * Kerby-backed {@link MiniKdc} must be recognised as a bind failure whether the
+   * {@link BindException} is preserved in the cause chain or only reflected in the message;
+   * unrelated failures must not be. We model the Kerby wrapper with a plain {@link Exception}
+   * rather than constructing a real Kerby exception, so the test does not import kerby types (see
+   * HBASE-29117).
+   */
+  @Test
+  public void testIsBindExceptionRecognizesKerbyWrappedBindFailure() {
+    assertTrue(
+      isBindException(new Exception("Failed to start DefaultKrbServer",
+        new BindException("Address already in use"))),
+      "a bind failure preserved in the cause chain should be recognised");
+    assertTrue(
+      isBindException(new Exception("Failed to start DefaultKrbServer. Address already in use")),
+      "a wrapper whose message reports the bind conflict should be recognised");
+    assertFalse(isBindException(new RuntimeException("boom")),
+      "an unrelated failure must not be treated as a retryable bind conflict");
   }
 
   static private void setupSSL(File base) throws Exception {
