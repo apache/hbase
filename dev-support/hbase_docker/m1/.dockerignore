@@ -1,0 +1,11 @@
+# Exclude everything by default
+*
+
+# But include the files we might need for different INPUT_MODE options
+!hbase-src.tar.gz
+!hbase
+!hbase/**
+
+# The Dockerfile is not needed in the image
+Dockerfile
+.dockerignore
