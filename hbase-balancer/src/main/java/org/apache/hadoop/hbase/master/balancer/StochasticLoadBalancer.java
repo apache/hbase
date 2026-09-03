@@ -585,7 +585,6 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
     BalancerClusterState cluster = createState(loadOfOneTable, loads, finder, rackManager);
 
     long startTime = EnvironmentEdgeManager.currentTime();
-    cluster.setStopRequestedAt(startTime + maxRunningTime);
 
     initCosts(cluster);
     balancerConditionals.loadClusterState(cluster);
@@ -636,6 +635,7 @@ public class StochasticLoadBalancer extends BaseLoadBalancer {
       currentCost / sumMultiplier, functionCost(), computedMaxSteps);
 
     final String initFunctionTotalCosts = totalCostsPerFunc();
+    cluster.setStopRequestedAt(EnvironmentEdgeManager.currentTime() + maxRunningTime);
     // Perform a stochastic walk to see if we can get a good fit.
     long step;
     boolean planImprovedConditionals = false;
