@@ -25,6 +25,8 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -38,6 +40,7 @@ import org.apache.hadoop.hbase.client.SnapshotType;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
@@ -51,7 +54,10 @@ import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.Threads;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -325,6 +331,65 @@ public class TestMergeTableRegionsProcedure {
     UTIL.waitUntilAllRegionsAssigned(tableName);
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
     assertEquals(initialRegionCount, regions.size());
+  }
+
+  /**
+   * HBASE-30334 repro. Plant a stale recovered.edits file on a parent region so that
+   * MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS throws (the exact failure from the 49-min stuck-RIT
+   * incident). After rollback the parents MUST be OPEN. If they stay stuck (e.g. CLOSED / MERGING),
+   * we've reproduced the incident locally and the rollback path as-is is broken.
+   */
+  @Test
+  public void testRollbackReopensParentsAfterCheckClosedRegionsFailure() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+    UTIL.createTable(tableName, new byte[][] { HConstants.CATALOG_FAMILY },
+      new byte[][] { new byte[] { 'b' } });
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    List<RegionInfo> ris = MetaTableAccessor.getTableRegions(UTIL.getConnection(), tableName);
+    assertEquals(2, ris.size());
+    RegionInfo[] regionsToMerge = new RegionInfo[] { ris.get(0), ris.get(1) };
+
+    Configuration conf = UTIL.getConfiguration();
+    Path regionDir =
+      FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), regionsToMerge[0]);
+    Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir);
+    FileSystem fs = CommonFSUtils.getRootDirFileSystem(conf);
+    fs.mkdirs(recoveredEditsDir);
+    Path staleFile = new Path(recoveredEditsDir, "0000000000000000001");
+    fs.createNewFile(staleFile);
+    assertTrue(WALSplitUtil.hasRecoveredEdits(conf, regionsToMerge[0]),
+      "stale recovered.edits file must be visible");
+
+    AssignmentManager am = UTIL.getHBaseCluster().getMaster().getAssignmentManager();
+    LOG.info("HBASE-30334-DEBUG pre-merge: {} state={} / {} state={}",
+      regionsToMerge[0].getEncodedName(),
+      am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState(),
+      regionsToMerge[1].getEncodedName(),
+      am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState());
+
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    MergeTableRegionsProcedure proc =
+      new MergeTableRegionsProcedure(procExec.getEnvironment(), regionsToMerge, true);
+    long procId = procExec.submitProcedure(proc);
+    ProcedureTestingUtility.waitProcedure(procExec, procId);
+
+    RegionState.State s0Post =
+      am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState();
+    RegionState.State s1Post =
+      am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
+    LOG.info("HBASE-30334-DEBUG post-rollback: {} state={} / {} state={}",
+      regionsToMerge[0].getEncodedName(), s0Post, regionsToMerge[1].getEncodedName(), s1Post);
+
+    ProcedureTestingUtility.assertProcFailed(procExec, procId);
+
+    fs.delete(staleFile, false);
+
+    UTIL.waitFor(30_000, 500, () -> {
+      RegionState.State a = am.getRegionStates().getRegionStateNode(regionsToMerge[0]).getState();
+      RegionState.State b = am.getRegionStates().getRegionStateNode(regionsToMerge[1]).getState();
+      return a == RegionState.State.OPEN && b == RegionState.State.OPEN;
+    });
   }
 
   @Test
