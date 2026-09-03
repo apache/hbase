@@ -11,7 +11,7 @@ import os
 import time
 
 from python.src.environment_loader import get_env
-from python.src.hbase_docker_client import HBaseDockerClient
+from python.src.hbase_docker_client import HBaseDockerClient, DockerExecCommandError
 from python.src.logger_config import get_logger
 from python.src.utils import load_env_and_set_up_clients, log_script_start, log_script_end
 
@@ -19,6 +19,7 @@ logger = get_logger(__name__)
 
 STARTUP_WAIT_SECONDS = 60
 EXPECTED_ERROR_MSG = "Another cluster is running in active (read-write) mode on this storage location"
+HMASTER_STARTUP_MARKER = "STARTING service HMaster"
 CLUSTER1_SERVICE_NAME = "hbase"
 CLUSTER2_SERVICE_NAME = "hbase2"
 
@@ -36,14 +37,23 @@ def check_cluster_processes(cluster: HBaseDockerClient) -> bool:
 
 def assert_error_in_master_log(cluster: HBaseDockerClient):
     logger.info(f"Checking {cluster.name} master log for expected error message")
-    log_output = cluster.run_docker_exec_command(
-        "cat /opt/hbase/logs/hbase-*-master-*.log || true"
+    awk_cmd = (
+        f"awk '/{HMASTER_STARTUP_MARKER}/{{found=0}} "
+        f"index($0, \"{EXPECTED_ERROR_MSG}\"){{found=1}} "
+        f"END{{exit !found}}' /opt/hbase/logs/hbase-*-master-*.log"
     )
-    assert EXPECTED_ERROR_MSG in log_output, (
-        f"Expected {cluster.name}'s master log to contain:\n"
-        f"  '{EXPECTED_ERROR_MSG}'\n"
-        f"but it was not found.\nLog tail:\n{log_output[-2000:]}"
-    )
+    try:
+        cluster.run_docker_exec_command(awk_cmd)
+    except DockerExecCommandError:
+        log_tail = cluster.run_docker_exec_command(
+            "tail -100 /opt/hbase/logs/hbase-*-master-*.log || true"
+        )
+        raise AssertionError(
+            f"Expected {cluster.name}'s master log to contain "
+            f"(after the most recent '{HMASTER_STARTUP_MARKER}'):\n"
+            f"  '{EXPECTED_ERROR_MSG}'\n"
+            f"but it was not found.\nLog tail:\n{log_tail}"
+        )
     logger.info(f"  [PASS] Found expected error message in {cluster.name}'s master log")
 
 

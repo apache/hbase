@@ -1,10 +1,7 @@
 # Stage 0: Cache Maven dependencies
-ARG BASE_IMAGE=registry.access.redhat.com/ubi8/openjdk-17:1.23
-# hadolint ignore=DL3006
-FROM ${BASE_IMAGE} AS cache-stage
+FROM registry.access.redhat.com/ubi8/openjdk-17:1.23 AS cache-stage
 
 # Switch to user root (UID 0)
-# hadolint ignore=DL3002
 USER 0
 
 # Install necessary packages for building Maven dependencies
@@ -24,12 +21,13 @@ WORKDIR /opt/hbase-src
 # Download and cache all dependencies
 RUN mvn clean install -DskipTests -Dskip.license.check=true
 
+# Switch to default user (UID 1001) at end of stage
+USER 1001
+
 # Stage 1: Build the HBase source code
-# hadolint ignore=DL3006
-FROM ${BASE_IMAGE} AS build-stage
+FROM registry.access.redhat.com/ubi8/openjdk-17:1.23 AS build-stage
 
 # Switch to user root (UID 0)
-# hadolint ignore=DL3002
 USER 0
 
 # Install necessary build packages
@@ -52,9 +50,11 @@ WORKDIR /opt/hbase-src
 # Build HBase source code using cached dependencies and enable parallel build
 RUN mvn clean package -DskipTests -Dskip.license.check=true assembly:single -T 1C
 
+# Switch to default user (UID 1001) at end of stage
+USER 1001
+
 # Stage 2: Create the final Docker image
-# hadolint ignore=DL3006
-FROM ${BASE_IMAGE}
+FROM registry.access.redhat.com/ubi8/openjdk-17:1.23
 
 # Switch to user root (UID 0)
 USER 0
@@ -85,12 +85,13 @@ RUN microdnf update -y && microdnf install -y \
     && microdnf clean all
 
 # Copy the built HBase binaries from the build-stage
-COPY --from=build-stage /opt/hbase-src/hbase-assembly/target/hbase-4.0.0-alpha-1-SNAPSHOT-bin.tar.gz /opt/
+COPY --from=build-stage /opt/hbase-src/hbase-assembly/target/hbase-*-bin.tar.gz /opt/hbase-dist/
 
-# Extract HBase binaries
-RUN tar -xzf /opt/hbase-4.0.0-alpha-1-SNAPSHOT-bin.tar.gz -C /opt \
-    && ln -s /opt/hbase-4.0.0-alpha-1-SNAPSHOT /opt/hbase \
-    && rm /opt/hbase-4.0.0-alpha-1-SNAPSHOT-bin.tar.gz
+# Extract the full HBase binary distribution (not the client-only assembly)
+RUN archive="$(find /opt/hbase-dist -maxdepth 1 -type f -name 'hbase-*-bin.tar.gz' ! -name 'hbase-*-client-bin.tar.gz' -print -quit)" \
+    && mkdir -p /opt/hbase \
+    && tar -xzf "${archive}" -C /opt/hbase --strip-components=1 \
+    && rm -rf /opt/hbase-dist
 
 COPY --from=build-stage /root/.m2/repository/org/apache/hadoop/hadoop-mapreduce-client-common/*/hadoop-mapreduce-client-common-*.jar \
                         ${HBASE_HOME}/lib/

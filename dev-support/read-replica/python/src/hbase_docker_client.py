@@ -57,16 +57,18 @@ class HBaseDockerClient:
             container = self._docker_client.containers.get(self._container_name)
 
             if timeout is not None:
-                with ThreadPoolExecutor(max_workers=1) as pool:
-                    future = pool.submit(container.exec_run, cmd, demux=True)
-                    try:
-                        result = future.result(timeout=timeout)
-                    except FuturesTimeoutError:
-                        raise DockerExecCommandTimeoutError(
-                            f"Command timed out after {timeout}s on {self._cluster_name} "
-                            f"({self._container_name}): {bash_cmd}\n"
-                            f"The command used to run this was: {cmd_str}\n"
-                        )
+                pool = ThreadPoolExecutor(max_workers=1)
+                future = pool.submit(container.exec_run, cmd, demux=True)
+                try:
+                    result = future.result(timeout=timeout)
+                except FuturesTimeoutError:
+                    raise DockerExecCommandTimeoutError(
+                        f"Command timed out after {timeout}s on {self._cluster_name} "
+                        f"({self._container_name}): {bash_cmd}\n"
+                        f"The command used to run this was: {cmd_str}\n"
+                    )
+                finally:
+                    pool.shutdown(wait=False, cancel_futures=True)
             else:
                 result = container.exec_run(cmd, demux=True)
         except DockerExecCommandError:
@@ -124,11 +126,11 @@ class HBaseDockerClient:
         last_exception = None
         for attempt in range(1, self._max_retries + 1):
             try:
-                response = requests.get(url)
+                response = requests.get(url, timeout=self._sleep_time)
                 if response.status_code == 200:
                     logger.info(f"SUCCESS: {self._cluster_name} UI is up.")
                     return True
-            except requests.exceptions.ConnectionError as e:
+            except requests.exceptions.RequestException as e:
                 last_exception = e
             logging.info(f"Waiting {self._sleep_time} seconds before requesting HBase UI again")
             time.sleep(self._sleep_time)
@@ -296,7 +298,7 @@ class HBaseDockerClient:
         logger.info(f"Deleting data from table '{table_name}' on {self.name}")
         delete_cmd = f"delete '{table_name}', '{row}', '{column}'"
         if timestamp:
-            delete_cmd += f", {table_name}"
+            delete_cmd += f", {timestamp}"
         if spec_map:
             delete_cmd += f", {spec_map}"
         self.run_hbase_shell_command(delete_cmd)
