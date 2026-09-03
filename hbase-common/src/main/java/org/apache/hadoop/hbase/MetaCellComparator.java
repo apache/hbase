@@ -148,11 +148,11 @@ public class MetaCellComparator extends CellComparatorImpl {
     if (result != 0) {
       return result;
     } else {
-      if (leftDelimiter < 0 && rightDelimiter >= 0) {
+      if (leftFarDelimiter < 0 && rightFarDelimiter >= 0) {
         return -1;
-      } else if (rightDelimiter < 0 && leftDelimiter >= 0) {
+      } else if (rightFarDelimiter < 0 && leftFarDelimiter >= 0) {
         return 1;
-      } else if (leftDelimiter < 0) {
+      } else if (leftFarDelimiter < 0) {
         return 0;
       }
     }
