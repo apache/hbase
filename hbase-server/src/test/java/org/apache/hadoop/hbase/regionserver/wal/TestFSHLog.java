@@ -19,7 +19,10 @@ package org.apache.hadoop.hbase.regionserver.wal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -32,6 +35,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HConstants;
@@ -56,6 +60,9 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALProvider;
+import org.apache.hadoop.hdfs.DFSOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -378,6 +385,39 @@ public class TestFSHLog extends AbstractTestFSWAL {
       TEST_UTIL.waitFor(10000, log.walFile2Props::isEmpty);
       assertEquals(0, log.walFile2Props.size(), "WAL Files not cleaned ");
       region.close();
+    }
+  }
+
+  /**
+   * Regression test for HBASE-30346: FSHLog#getPipeline() must never return null, even when the
+   * underlying DFSOutputStream#getPipeline() legitimately returns null (e.g. the DFS streamer is
+   * closed, or no block pipeline is currently established -- see HDFS-826 and the
+   * DFSOutputStream#getPipeline() javadoc: "returns the list of targets, if any"). Prior to this
+   * fix, AbstractFSWAL#rollWriterInternal's debug-log statement called
+   * Arrays.stream(getPipeline()), which threw a NullPointerException whenever this happened during
+   * a WAL roll, aborting the RegionServer on what was otherwise a successful roll.
+   */
+  @Test
+  public void testGetPipelineDoesNotReturnNullWhenUnderlyingStreamerHasNone() throws Exception {
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
+      log.init();
+
+      // Simulate the legitimate HDFS contract: the wrapped DFSOutputStream currently has no
+      // established pipeline (e.g. streamer closed, or between blocks) and returns null.
+      DFSOutputStream mockDfsOut = mock(DFSOutputStream.class);
+      when(mockDfsOut.getPipeline()).thenReturn(null);
+      FSDataOutputStream wrappedOut = new HdfsDataOutputStream(mockDfsOut, null);
+
+      Field hdfsOutField = FSHLog.class.getDeclaredField("hdfs_out");
+      hdfsOutField.setAccessible(true);
+      hdfsOutField.set(log, wrappedOut);
+
+      DatanodeInfo[] pipeline = log.getPipeline();
+      assertNotNull(pipeline, "getPipeline() must never return null");
+      assertEquals(0, pipeline.length,
+        "Should normalize a null underlying pipeline to an empty array");
     }
   }
 }

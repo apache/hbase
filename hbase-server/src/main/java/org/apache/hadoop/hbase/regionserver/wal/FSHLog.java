@@ -1200,13 +1200,21 @@ public class FSHLog extends AbstractFSWAL<Writer> {
   }
 
   /**
-   * This method gets the pipeline for the current WAL.
+   * This method gets the pipeline for the current WAL. Note that DFSOutputStream#getPipeline() can
+   * legitimately return null (e.g. the underlying streamer is closed, or no block pipeline is
+   * currently established, such as between blocks) -- see HDFS-826. We normalize that to an empty
+   * array here so that callers (in particular debug-log formatting in AbstractFSWAL) never have to
+   * null-check, matching the contract already honored by AsyncFSWAL#getPipeline().
    */
   @Override
   DatanodeInfo[] getPipeline() {
     if (this.hdfs_out != null) {
       if (this.hdfs_out.getWrappedStream() instanceof DFSOutputStream) {
-        return ((DFSOutputStream) this.hdfs_out.getWrappedStream()).getPipeline();
+        DatanodeInfo[] pipeline =
+          ((DFSOutputStream) this.hdfs_out.getWrappedStream()).getPipeline();
+        if (pipeline != null) {
+          return pipeline;
+        }
       }
     }
     return new DatanodeInfo[0];
