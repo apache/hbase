@@ -244,6 +244,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       @Override
       public Object run() throws Exception {
         ACCESS_CONTROLLER.preModifyNamespace(ObserverContextImpl.createAndPrepare(CP_ENV),
+          NamespaceDescriptor.create(TEST_NAMESPACE).build(),
           NamespaceDescriptor.create(TEST_NAMESPACE).addConfiguration("abc", "156").build());
         return null;
       }

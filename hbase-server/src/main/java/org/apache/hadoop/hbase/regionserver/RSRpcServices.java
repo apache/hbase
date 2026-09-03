@@ -4048,16 +4048,18 @@ public class RSRpcServices
   }
 
   @Override
+  @QosPriority(priority = HConstants.ADMIN_QOS)
   public HBaseProtos.LogEntry getLogEntries(RpcController controller,
     HBaseProtos.LogRequest request) throws ServiceException {
     try {
+      requirePermission("getLogEntries", Permission.Action.ADMIN);
       final String logClassName = request.getLogClassName();
       Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
       Method method = logClass.getMethod("parseFrom", ByteString.class);
       if (logClassName.contains("SlowLogResponseRequest")) {
         SlowLogResponseRequest slowLogResponseRequest =
           (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
-        final NamedQueueRecorder namedQueueRecorder = this.regionServer.getNamedQueueRecorder();
+        final NamedQueueRecorder namedQueueRecorder = regionServer.getNamedQueueRecorder();
         final List<SlowLogPayload> slowLogPayloads =
           getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
         SlowLogResponses slowLogResponses =
@@ -4067,7 +4069,7 @@ public class RSRpcServices
           .setLogMessage(slowLogResponses.toByteString()).build();
       }
     } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
-      | InvocationTargetException e) {
+      | InvocationTargetException | IOException e) {
       LOG.error("Error while retrieving log entries.", e);
       throw new ServiceException(e);
     }
