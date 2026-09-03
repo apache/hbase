@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -78,7 +79,7 @@ public final class MobFileCleanupUtil {
       return;
     } else {
       LOG.info("Only MOB files whose creation time older than {} will be archived, table={}",
-        maxCreationTimeToArchive, table);
+        new Date(maxCreationTimeToArchive), table);
     }
 
     FileSystem fs = FileSystem.get(conf);
