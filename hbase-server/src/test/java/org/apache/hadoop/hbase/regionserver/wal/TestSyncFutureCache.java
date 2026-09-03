@@ -23,15 +23,17 @@ import static org.junit.jupiter.api.Assertions.assertNotSame;
 
 import java.lang.reflect.Field;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
+import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
+import org.apache.hbase.thirdparty.com.google.common.cache.ForwardingCache;
 
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
@@ -71,8 +73,18 @@ public class TestSyncFutureCache {
   public void testFallsBackToNewSyncFutureWhenCacheThrows() throws Exception {
     SyncFutureCache cache = new SyncFutureCache(HBaseConfiguration.create());
 
-    Cache<?, ?> throwing = Mockito.mock(Cache.class);
-    Mockito.when(throwing.asMap()).thenThrow(new NullPointerException("boom"));
+    final Cache<Thread, SyncFuture> delegate = CacheBuilder.newBuilder().build();
+    Cache<Thread, SyncFuture> throwing = new ForwardingCache<Thread, SyncFuture>() {
+      @Override
+      protected Cache<Thread, SyncFuture> delegate() {
+        return delegate;
+      }
+
+      @Override
+      public ConcurrentMap<Thread, SyncFuture> asMap() {
+        throw new NullPointerException("boom");
+      }
+    };
 
     Field field = SyncFutureCache.class.getDeclaredField("syncFutureCache");
     field.setAccessible(true);
