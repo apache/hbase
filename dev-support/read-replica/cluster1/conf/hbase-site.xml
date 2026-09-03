@@ -1,0 +1,54 @@
+<?xml version='1.0' encoding='utf-8'?>
+<configuration>
+
+  <property>
+     <name>hbase.zookeeper.quorum</name>
+     <value>hbase-docker</value>
+  </property>
+  <property>
+     <name>hbase.zookeeper.property.dataDir</name>
+     <value>/data-store/zk</value>
+  </property>
+  <property>
+    <name>hbase.rootdir</name>
+    <value>file:///data-store/hbase</value>
+  </property>
+  <property>
+    <name>hbase.wal.dir</name>
+    <value>file:///data-store/wal</value>
+  </property>
+  <property>
+    <name>hbase.store.file-tracker.impl</name>
+    <value>FILE</value>
+  </property>
+
+  <property>
+    <name>hbase.master.info.bindAddress</name>
+    <value>hbase-docker</value>
+  </property>
+  <property>
+    <name>hbase.regionserver.info.bindAddress</name>
+    <value>hbase-docker</value>
+  </property>
+  <property>
+    <name>hbase.unsafe.stream.capability.enforce</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hbase.cluster.distributed</name>
+    <value>true</value>
+  </property>
+  <property>
+    <name>hbase.rest.port</name>
+    <value>8000</value>
+  </property>
+
+  <property>
+    <name>hbase.global.readonly.enabled</name>
+    <value>false</value>
+  </property>
+  <property>
+    <name>hbase.master.hbck.chore.interval</name>
+    <value>0</value>
+  </property>
+</configuration>
