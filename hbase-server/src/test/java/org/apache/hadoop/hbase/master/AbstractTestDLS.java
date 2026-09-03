@@ -55,6 +55,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.coordination.ZKSplitLogManagerCoordination;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.MultiVersionConcurrencyControl;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -415,6 +416,18 @@ public abstract class AbstractTestDLS {
     // sync every ~30k to line up with desired wal rolls
     final int syncEvery = 30 * 1024 / editSize;
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+    // HBASE-30335: match the per-region seqid invariant a real WAL preserves so the splitter's
+    // openSeqNum-seeded filter doesn't drop our injected edits as already-flushed.
+    long maxOpen = 0L;
+    for (RegionInfo info : hris) {
+      HRegion r = hrs.getRegion(info.getEncodedName());
+      if (r != null) {
+        maxOpen = Math.max(maxOpen, r.getOpenSeqNum());
+      }
+    }
+    if (maxOpen > 0L) {
+      mvcc.advanceTo(maxOpen);
+    }
     if (n > 0) {
       for (int i = 0; i < numEdits; i += 1) {
         WALEdit e = new WALEdit();
