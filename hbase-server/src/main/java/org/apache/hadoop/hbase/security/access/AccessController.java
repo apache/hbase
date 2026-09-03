@@ -875,6 +875,13 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   }
 
   @Override
+  public void preTruncateRegion(final ObserverContext<MasterCoprocessorEnvironment> ctx,
+    final RegionInfo regionInfo) throws IOException {
+    requirePermission(ctx, "truncateRegion", regionInfo.getTable(), null, null, Action.ADMIN,
+      Action.CREATE);
+  }
+
+  @Override
   public TableDescriptor preModifyTable(ObserverContext<MasterCoprocessorEnvironment> c,
     TableName tableName, TableDescriptor currentDesc, TableDescriptor newDesc) throws IOException {
     // TODO: potentially check if this is a add/modify/delete column operation
@@ -1145,10 +1152,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preModifyNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    NamespaceDescriptor ns) throws IOException {
+    NamespaceDescriptor currentNsDescriptor, NamespaceDescriptor newNsDescriptor)
+    throws IOException {
     // We require only global permission so that
     // a user with NS admin cannot altering namespace configurations. i.e. namespace quota
-    requireGlobalPermission(ctx, "modifyNamespace", Action.ADMIN, ns.getName());
+    requireGlobalPermission(ctx, "modifyNamespace", Action.ADMIN, newNsDescriptor.getName());
   }
 
   @Override
@@ -1986,7 +1994,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           request.hasColumnFamily() ? request.getColumnFamily().toByteArray() : null;
         final byte[] cq =
           request.hasColumnQualifier() ? request.getColumnQualifier().toByteArray() : null;
-        preGetUserPermissions(caller, userName, namespace, table, cf, cq);
+        AccessControlProtos.Permission.Type protoType =
+          request.hasType() ? request.getType() : null;
+        Permission.Scope permissionScope = AccessControlUtil.toPermissionScope(protoType);
+        preGetUserPermissions(caller, userName, namespace, table, cf, cq, permissionScope);
         GetUserPermissionsRequest getUserPermissionsRequest = null;
         if (request.getType() == AccessControlProtos.Permission.Type.Table) {
           getUserPermissionsRequest = GetUserPermissionsRequest.newBuilder(table).withFamily(cf)
@@ -2408,9 +2419,26 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
 
   @Override
   public void preGetUserPermissions(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier)
+    String userName, String namespace, TableName tableName, byte[] family, byte[] qualifier,
+    Permission.Scope permissionScope) throws IOException {
+    preGetUserPermissions(getActiveUser(ctx), userName, namespace, tableName, family, qualifier,
+      permissionScope);
+  }
+
+  private void preGetUserPermissions(User caller, String userName, String namespace,
+    TableName tableName, byte[] family, byte[] qualifier, Permission.Scope permissionScope)
     throws IOException {
-    preGetUserPermissions(getActiveUser(ctx), userName, namespace, tableName, family, qualifier);
+    if (permissionScope == Permission.Scope.TABLE) {
+      accessChecker.requirePermission(caller, "getUserPermissions", tableName, family, qualifier,
+        userName, Action.ADMIN);
+    } else if (permissionScope == Permission.Scope.NAMESPACE) {
+      accessChecker.requireNamespacePermission(caller, "getUserPermissions", namespace, userName,
+        Action.ADMIN);
+    } else if (permissionScope == Permission.Scope.GLOBAL) {
+      accessChecker.requirePermission(caller, "getUserPermissions", userName, Action.ADMIN);
+    } else {
+      preGetUserPermissions(caller, userName, namespace, tableName, family, qualifier);
+    }
   }
 
   private void preGetUserPermissions(User caller, String userName, String namespace,
