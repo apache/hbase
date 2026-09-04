@@ -24,9 +24,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
-import java.lang.reflect.Field;
-import java.lang.reflect.Modifier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -54,8 +51,6 @@ public class TestMetaTableForReplica {
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaTableForReplica.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Connection connection;
-  private static Field metaTableName;
-  private static Object originalMetaTableName;
 
   @BeforeAll
   public static void beforeClass() throws Exception {
@@ -66,9 +61,6 @@ public class TestMetaTableForReplica {
     // Start cluster having non-default hbase meta table name
     UTIL.startMiniCluster(3);
     connection = ConnectionFactory.createConnection(c);
-    // Save the original value of META_TABLE_NAME before any test runs.x
-    metaTableName = TableName.class.getDeclaredField("META_TABLE_NAME");
-    originalMetaTableName = metaTableName.get(null);
   }
 
   @AfterAll
@@ -116,52 +108,17 @@ public class TestMetaTableForReplica {
   }
 
   @Test
-  public void testMetaTableNameForReplicaWithSuffix() throws Exception {
-    // This test actively changes the META_TABLE_NAME to a non-default value and verifies it.
+  public void testMetaTableNameForReplicaWithSuffix() {
+    // TableName.META_TABLE_NAME is assigned in the class initializer, before a test can set a
+    // configuration, so assert on the method the initializer itself calls.
     Configuration conf = HBaseConfiguration.create();
-    String suffix = "replica1";
-    conf.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
+    conf.set(HConstants.HBASE_META_TABLE_SUFFIX, "replica1");
+    TableName withSuffix = TableName.initializeHbaseMetaTableName(conf);
 
-    // Re-initialize the static final META_TABLE_NAME for the testing to a non-default value.
-    TableName expectedMetaTableName = TableName.initializeHbaseMetaTableName(conf);
-    setStaticFinalField(metaTableName, expectedMetaTableName);
-
-    TableName currentMetaName = TableName.META_TABLE_NAME;
-    TableName defaultMetaName = TableName.getDefaultNameOfMetaForReplica();
-
-    // The current meta table name is not the default one.
-    assertNotEquals(defaultMetaName, currentMetaName,
-      "META_TABLE_NAME should not be the default. ");
-
-    // The current meta table name has the configured suffix.
-    assertEquals(expectedMetaTableName, currentMetaName,
-      "META_TABLE_NAME should have the configured suffix");
-
-    // restore default value of META_TABLE_NAME
-    setDefaultMetaTableName();
+    assertNotEquals(TableName.getDefaultNameOfMetaForReplica(), withSuffix,
+      "a configured suffix should not produce the default meta table name");
+    assertEquals(TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_replica1"),
+      withSuffix, "meta table name should carry the configured suffix");
   }
 
-  private static void setDefaultMetaTableName() throws Exception {
-    if (originalMetaTableName != null) {
-      setStaticFinalField(metaTableName, originalMetaTableName);
-    }
-  }
-
-  /**
-   * A helper method to modify a static final field using reflection. This is necessary for testing
-   * code that reads a configuration only once during class loading.
-   * @param field    The field to modify.
-   * @param newValue The new value to set.
-   * @throws Exception if reflection fails.
-   */
-  private static void setStaticFinalField(Field field, Object newValue) throws Exception {
-    field.setAccessible(true);
-    // Using MethodHandles to get a trusted lookup with the necessary permissions to modify it.
-    // NOTE: For this to work, the JVM running the test must be started with arguments like:
-    // --add-opens=java.base/java.lang.reflect=ALL-UNNAMED
-    var lookup = MethodHandles.privateLookupIn(Field.class, MethodHandles.lookup());
-    var handle = lookup.findVarHandle(Field.class, "modifiers", int.class);
-    handle.set(field, field.getModifiers() & ~Modifier.FINAL);
-    field.set(null, newValue);
-  }
 }
