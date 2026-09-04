@@ -59,6 +59,7 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.MapreduceHFileArchiver;
 import org.apache.hadoop.hbase.util.RegionSplitter;
 import org.apache.hadoop.io.NullWritable;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -709,7 +710,7 @@ public class TestTableSnapshotInputFormat extends TableSnapshotInputFormatTestBa
         null, snapshotName, rootDir, fs, true);
       Path tempRestoreDir = UTIL.getDataTestDirOnTestFS("restore_" + snapshotName);
       RestoreSnapshotHelper.copySnapshotForScanner(UTIL.getConfiguration(), fs, rootDir,
-        tempRestoreDir, snapshotName);
+        tempRestoreDir, snapshotName, new MapreduceHFileArchiver());
       assertTrue(fs.exists(tempRestoreDir), "Restore directory should exist");
 
       Job job = Job.getInstance(UTIL.getConfiguration());
