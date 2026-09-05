@@ -2232,8 +2232,13 @@ public class AssignmentManager {
   }
 
   // should be called under the RegionStateNode lock
-  // The parameter 'giveUp' means whether we will try to open the region again, if it is true, then
-  // we will persist the FAILED_OPEN state into hbase:meta.
+  // Called when a region open attempt has failed. The 'giveUp' parameter says whether we will try
+  // to open the region again. If true, this is a terminal failure with no more retries: we set
+  // RegionState.State to FAILED_OPEN and persist it to hbase:meta, and only remove the region from
+  // its old target server's bookkeeping once that persist succeeds. If false, we are about to
+  // retry the open with a new plan, so RegionState.State is intentionally left untouched (e.g.
+  // still OPENING), meta is not touched, and we remove the region from its old target server's
+  // bookkeeping immediately. In both cases the removal only happens if there was an old location.
   CompletableFuture<Void> regionFailedOpen(RegionStateNode regionNode, boolean giveUp) {
     RegionState.State state = regionNode.getState();
     ServerName regionLocation = regionNode.getRegionLocation();
