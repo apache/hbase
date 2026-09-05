@@ -3737,10 +3737,10 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         // KrbException whose shape varies by version (see isBindException), so we recognise the
         // port conflict via that predicate rather than a type. We also avoid importing kerby types
         // here (see HBASE-29117).
+        FileUtils.deleteDirectory(dir); // clean directory regardless of failure type
         if (!isBindException(e)) {
           throw e; // not a port conflict, do not mask the real failure behind a retry
         }
-        FileUtils.deleteDirectory(dir); // clean directory
         numTries++;
         if (numTries == 3) {
           LOG.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
