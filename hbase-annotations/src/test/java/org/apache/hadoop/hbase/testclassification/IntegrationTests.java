@@ -27,7 +27,7 @@ package org.apache.hadoop.hbase.testclassification;
  * <li>Should not be run in parallel of other integration tests</li>
  * </ul>
  * Integration / System tests should have a class name starting with "IntegrationTest", and should
- * be annotated with @Category(IntegrationTests.class). Integration tests can be run using the
+ * be annotated with @Tag(IntegrationTests.TAG). Integration tests can be run using the
  * IntegrationTestsDriver class or from mvn verify.
  * @see SmallTests
  * @see MediumTests

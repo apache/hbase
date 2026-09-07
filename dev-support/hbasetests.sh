@@ -210,13 +210,13 @@ do
     isLarge=0
 
     # determine the category of the test by greping into the source code
-    isMedium=`grep "@Category" $testFile | grep "MediumTests.class" | wc -l`
+    isMedium=`grep -F "Tag(MediumTests.TAG)" $testFile | wc -l`
     if (test $isMedium -eq 0)
     then
-      isLarge=`grep "@Category" $testFile | grep "LargeTests.class" | wc -l`
+      isLarge=`grep -F "Tag(LargeTests.TAG)" $testFile | wc -l`
       if (test $isLarge -eq 0)
       then
-        isSmall=`grep "@Category" $testFile | grep "SmallTests.class" | wc -l`
+        isSmall=`grep -F "Tag(SmallTests.TAG)" $testFile | wc -l`
         if (test $isSmall -eq 0)
         then
           echo "$testName is not categorized, so it won't be tested"
