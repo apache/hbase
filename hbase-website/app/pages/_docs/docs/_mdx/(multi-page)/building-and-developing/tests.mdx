@@ -87,7 +87,7 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 
 ## Unit Tests [#building-and-developing-unit-tests]
 
-Apache HBase runs its unit tests with [JUnit 5](https://junit.org/junit5/). Every unit
+Apache HBase runs its unit tests with [JUnit 5](https://docs.junit.org/5.13.4/user-guide/). Every unit
 test must carry a sizing tag, applied with the JUnit 5 `@Tag` annotation. Here is an
 example of what a Test Class looks like:
 
@@ -127,7 +127,7 @@ or the `IntegrationTestsDriver`) do not currently enable this auto-registration.
 Tags can be arbitrary and provided as a list, but each test MUST carry one from the
 following list of sizings: `small`, `medium`, `large`, and `integration`. The test sizing
 is designated with a JUnit 5
-[tag](https://junit.org/junit5/docs/current/user-guide/#writing-tests-tagging-and-filtering)
+[tag](https://docs.junit.org/5.13.4/user-guide/#writing-tests-tagging-and-filtering)
 referencing one of `SmallTests`, `MediumTests`, `LargeTests`, or `IntegrationTests` — use
 the `TAG` constant on each of those interfaces in the
 `org.apache.hadoop.hbase.testclassification` package (a special extension checks for the
@@ -401,8 +401,8 @@ public class TestExample {
   // and, based on the sizing tag above, enforces the whole-class timeout, dumps a thread
   // stack if the class times out, and runs the resource checker.
   //
-  // To get the name of the current test method, inject a JUnit 5 TestInfo into your setUp or
-  // test methods. See down in 'testExampleFoo()' where we use it to log the current test's name.
+  // To get the current test's display name, inject a JUnit 5 TestInfo into your setUp or test
+  // methods. See down in 'testExampleFoo()' where we log it.
 
   @BeforeEach
   public void setUp() throws Exception {
@@ -414,7 +414,7 @@ public class TestExample {
 
   @Test
   public void testExampleFoo(TestInfo testInfo) {
-    LOG.info("Running test " + testInfo.getTestMethod().get().getName());
+    LOG.info("Running test " + testInfo.getDisplayName());
   }
 }
 ```

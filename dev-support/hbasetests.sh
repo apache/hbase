@@ -210,13 +210,13 @@ do
     isLarge=0
 
     # determine the category of the test by greping into the source code
-    isMedium=`grep -F "Tag(MediumTests.TAG)" $testFile | wc -l`
+    isMedium=$(grep -Ec '@(org\.junit\.jupiter\.api\.)?Tag\(MediumTests\.TAG\)' "$testFile")
     if (test $isMedium -eq 0)
     then
-      isLarge=`grep -F "Tag(LargeTests.TAG)" $testFile | wc -l`
+      isLarge=$(grep -Ec '@(org\.junit\.jupiter\.api\.)?Tag\(LargeTests\.TAG\)' "$testFile")
       if (test $isLarge -eq 0)
       then
-        isSmall=`grep -F "Tag(SmallTests.TAG)" $testFile | wc -l`
+        isSmall=$(grep -Ec '@(org\.junit\.jupiter\.api\.)?Tag\(SmallTests\.TAG\)' "$testFile")
         if (test $isSmall -eq 0)
         then
           echo "$testName is not categorized, so it won't be tested"
