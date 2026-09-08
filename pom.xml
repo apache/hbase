@@ -2527,7 +2527,6 @@
         <version>${maven-site.version}</version>
         <configuration>
           <siteDirectory>${basedir}/src/site</siteDirectory>
-          <customBundle>${basedir}/src/site/custom/project-info-report.properties</customBundle>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
