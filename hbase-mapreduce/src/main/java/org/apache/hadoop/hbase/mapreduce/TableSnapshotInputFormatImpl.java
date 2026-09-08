@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -359,6 +360,11 @@ public class TableSnapshotInputFormatImpl {
     for (SnapshotRegionManifest regionManifest : regionManifests) {
       HRegionInfo hri = HRegionInfo.convert(regionManifest.getRegionInfo());
       if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+        continue;
+      }
+      // The mob region is a dummy region used only to organise mob files under mobdir. It has no
+      // region directory under the table dir to open, and holds no rows. See HBASE-30365.
+      if (MobUtils.isMobRegionInfo(hri)) {
         continue;
       }
       regionInfos.add(hri);
