@@ -363,7 +363,7 @@ public class TableSnapshotInputFormatImpl {
         continue;
       }
       // The mob region is a dummy region used only to organise mob files under mobdir. It has no
-      // region directory under the table dir to open. See HBASE-30365 and HBASE-30368.
+      // region directory under the table dir to open. See HBASE-30365.
       if (MobUtils.isMobRegionInfo(hri)) {
         continue;
       }
