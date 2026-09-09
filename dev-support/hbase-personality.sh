@@ -75,7 +75,7 @@ function personality_globals
   #shellcheck disable=SC2034
   JIRA_ISSUE_RE='^HBASE-[0-9]+$'
   #shellcheck disable=SC2034
-  GITHUB_REPO="apache/hbase"
+  GITHUB_REPO="${GITHUB_REPO:-${GITHUB_REPOSITORY:-apache/hbase}}"
 
   # TODO use PATCH_BRANCH to select jdk versions to use.
 
