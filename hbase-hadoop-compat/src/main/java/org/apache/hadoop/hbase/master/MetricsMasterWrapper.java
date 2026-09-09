@@ -124,6 +124,12 @@ public interface MetricsMasterWrapper {
   long getNumWALFiles();
 
   /**
+   * Get the age in milliseconds of the oldest active master procedure for each procedure type,
+   * keyed by the procedure's simple class name.
+   */
+  Map<String, Long> getOldestProcedureAgeByType();
+
+  /**
    * Get the number of region split plans executed.
    */
   long getSplitPlanCount();
