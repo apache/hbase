@@ -1263,18 +1263,13 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         latch.countDown();
       }
     }
-    InterruptedIOException interruptedException = null;
-    while(true) {
-      try {
-        latch.await();
-        break;
-      } catch (InterruptedException ie) {
-        interruptedException = (InterruptedIOException) new InterruptedIOException().initCause(ie);
-      }
+
+    try {
+      latch.await();
+    } catch (InterruptedException ie) {
+      throw (InterruptedIOException) new InterruptedIOException().initCause(ie);
     }
-    if (interruptedException != null) {
-      throw interruptedException;
-    }
+
     for (ParallelSeekHandler handler : handlers) {
       if (handler.getErr() != null) {
         throw new IOException(handler.getErr());
@@ -1307,7 +1302,6 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
    * If an IOException occurs during an inline seek, we must wait for any already-submitted handlers
    * to complete before propagating the error. This prevents the caller from closing scanners that
    * are still being used by worker threads.
-   *
    * @param scanners list of KeyValueScanners to seek
    * @param kv       the key to seek to
    * @throws IOException if any seek operation fails
@@ -1340,15 +1334,14 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
         } catch (IOException e) {
           // Must wait for already-submitted handlers before propagating error
           inlineSeekError = e;
-          if (scanner instanceof StoreFileScanner) {
-            latch.countDown();
-          }
-          break;
         }
         if (scanner instanceof StoreFileScanner) {
           latch.countDown();
         }
         index++;
+        if (inlineSeekError != null) {
+          break;
+        }
       } else {
         // Opportunistic parallel: submit up to 'capacity' StoreFileScanners.
         // MemStore scanners are seeked inline without consuming a capacity slot,
@@ -1388,7 +1381,7 @@ public class StoreScanner extends NonReversedNonLazyKeyValueScanner
     }
 
     InterruptedIOException interruptedException = null;
-    while(true) {
+    while (true) {
       try {
         latch.await();
         break;
