@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
+import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
@@ -365,6 +366,31 @@ public class TestTableSnapshotScanner {
       verifyScanner(scanner, bbb, yyy);
       scanner.close();
     } finally {
+      UTIL.getAdmin().deleteSnapshot(snapshotName);
+      UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
+  public void testScannerWithRestoredMobSnapshot() throws Exception {
+    TableName tableName = TableName.valueOf(methodName);
+    String snapshotName = methodName + "Snapshot";
+    Path restoreDir = UTIL.getDataTestDirOnTestFS(snapshotName);
+    try {
+      MobSnapshotTestingUtils.createMobTable(UTIL, tableName, new byte[0][], 1, FAMILIES);
+      try (Table table = UTIL.getConnection().getTable(tableName)) {
+        UTIL.loadTable(table, FAMILIES);
+      }
+      UTIL.getAdmin().snapshot(snapshotName, tableName);
+
+      Configuration conf = UTIL.getConfiguration();
+      RestoreSnapshotHelper.copySnapshotForScanner(conf, fs, rootDir, restoreDir, snapshotName);
+      try (TableSnapshotScanner scanner = new TableSnapshotScanner(conf, rootDir, restoreDir,
+        snapshotName, new Scan().withStartRow(Bytes.toBytes("zzzz")), true)) {
+        assertNull(scanner.next());
+      }
+    } finally {
+      fs.delete(restoreDir, true);
       UTIL.getAdmin().deleteSnapshot(snapshotName);
       UTIL.deleteTable(tableName);
     }

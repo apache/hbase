@@ -26,6 +26,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -158,6 +159,11 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private boolean isValidRegion(RegionInfo hri) {
     // An offline split parent region should be excluded.
     if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
+      return false;
+    }
+    // The mob region is a dummy region used only to organise mob files under mobdir. It has no
+    // region directory under the table dir to open. See HBASE-30365 and HBASE-30368.
+    if (MobUtils.isMobRegionInfo(hri)) {
       return false;
     }
     return PrivateCellUtil.overlappingKeys(scan.getStartRow(), scan.getStopRow(), hri.getStartKey(),
