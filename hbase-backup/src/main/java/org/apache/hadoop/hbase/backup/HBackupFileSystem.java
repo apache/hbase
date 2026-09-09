@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.HConstants.HBASE_TEMP_DIRECTORY;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.BACKUPID_PREFIX;
 
 import com.google.errorprone.annotations.RestrictedApi;
@@ -144,6 +145,8 @@ public final class HBackupFileSystem {
     return manifest;
   }
 
+  @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
+    allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/HBackupFileSystem.java)")
   public static List<BackupImage> getAllBackupImages(Configuration conf, Path backupRootPath)
     throws IOException {
     FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
@@ -158,11 +161,15 @@ public final class HBackupFileSystem {
       }
 
       String backupId = lfs.getPath().getName();
+      if (HBASE_TEMP_DIRECTORY.equals(backupId)) {
+        continue;
+      }
+
       try {
         BackupManifest manifest = getManifest(conf, backupRootPath, backupId);
         images.add(manifest.getBackupImage());
       } catch (IOException e) {
-        LOG.error("Cannot load backup manifest from: " + lfs.getPath(), e);
+        LOG.error("Cannot load backup manifest from: {}", lfs.getPath(), e);
       }
     }
 
