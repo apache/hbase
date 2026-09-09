@@ -1356,18 +1356,15 @@ public class TestStoreScanner {
    */
   private static void injectAdaptiveFields(StoreScanner scanner, ExecutorService executor)
     throws Exception {
-    Field adaptiveField =
-      StoreScanner.class.getDeclaredField("adaptiveParallelSeekEnabled");
+    Field adaptiveField = StoreScanner.class.getDeclaredField("adaptiveParallelSeekEnabled");
     adaptiveField.setAccessible(true);
     adaptiveField.set(scanner, true);
 
-    Field parallelField =
-      StoreScanner.class.getDeclaredField("parallelSeekEnabled");
+    Field parallelField = StoreScanner.class.getDeclaredField("parallelSeekEnabled");
     parallelField.setAccessible(true);
     parallelField.set(scanner, true);
 
-    Field executorField =
-      StoreScanner.class.getDeclaredField("executor");
+    Field executorField = StoreScanner.class.getDeclaredField("executor");
     executorField.setAccessible(true);
     executorField.set(scanner, executor);
   }
@@ -1482,12 +1479,11 @@ public class TestStoreScanner {
   }
 
   /**
-   * Saturates the RS_PARALLEL_SEEK thread pool in the given ExecutorService by submitting
-   * poolSize blocking tasks. Returns a CountDownLatch that can be counted down to release all
-   * blocked tasks.
+   * Saturates the RS_PARALLEL_SEEK thread pool in the given ExecutorService by submitting poolSize
+   * blocking tasks. Returns a CountDownLatch that can be counted down to release all blocked tasks.
    */
-  private static CountDownLatch saturatePool(ExecutorService exec, int poolSize,
-    Server server) throws Exception {
+  private static CountDownLatch saturatePool(ExecutorService exec, int poolSize, Server server)
+    throws Exception {
     CountDownLatch blockLatch = new CountDownLatch(1);
     CountDownLatch startedLatch = new CountDownLatch(poolSize);
     for (int i = 0; i < poolSize; i++) {
@@ -1504,8 +1500,7 @@ public class TestStoreScanner {
       });
     }
     // Wait until all blocking tasks are actually running
-    assertTrue(startedLatch.await(10, TimeUnit.SECONDS),
-      "Pool should be saturated within 10s");
+    assertTrue(startedLatch.await(10, TimeUnit.SECONDS), "Pool should be saturated within 10s");
     return blockLatch;
   }
 
@@ -1513,8 +1508,8 @@ public class TestStoreScanner {
   private static ExtendedCell makeSeekKey() {
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
       .setRow(Bytes.toBytes("row1")).setFamily(CF).setQualifier(Bytes.toBytes("col"))
-      .setTimestamp(1L).setType(org.apache.hadoop.hbase.Cell.Type.Put)
-      .setValue(new byte[0]).build();
+      .setTimestamp(1L).setType(org.apache.hadoop.hbase.Cell.Type.Put).setValue(new byte[0])
+      .build();
   }
 
   // =========================================================================
@@ -1534,8 +1529,7 @@ public class TestStoreScanner {
       KeepDeletedCells.FALSE, HConstants.DEFAULT_BLOCKSIZE, 0, CellComparator.getInstance(), false);
 
     // parallel disabled in ScanInfo → adaptiveParallelSeekEnabled stays false in StoreScanner
-    assertFalse(si.isParallelSeekEnabled(),
-      "parallelSeekEnabled should be false");
+    assertFalse(si.isParallelSeekEnabled(), "parallelSeekEnabled should be false");
     // adaptive flag from ScanInfo is there but StoreScanner ctor requires store != null
     // with store file count > 1 to set parallelSeekEnabled. So just verify via ScanInfo:
     assertTrue(si.isAdaptiveParallelSeekEnabled(),
@@ -1560,8 +1554,8 @@ public class TestStoreScanner {
   }
 
   /**
-   * Test 2: empty scanner list returns without error.
-   * Requirements: implied by empty list handling in adaptiveParallelSeek
+   * Test 2: empty scanner list returns without error. Requirements: implied by empty list handling
+   * in adaptiveParallelSeek
    */
   @Test
   public void testAdaptiveParallelSeekEmptyList() throws Exception {
@@ -1600,7 +1594,7 @@ public class TestStoreScanner {
       Mockito.when(sfs1.seek(Mockito.any())).thenReturn(true);
       Mockito.when(sfs2.seek(Mockito.any())).thenReturn(true);
 
-      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(sfs1, sfs2);
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner> asList(sfs1, sfs2);
       Scan scan = new Scan();
       StoreScanner storeScanner =
         new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
@@ -1634,7 +1628,7 @@ public class TestStoreScanner {
       Mockito.when(sfs1.seek(Mockito.any())).thenReturn(true);
       Mockito.when(sfs2.seek(Mockito.any())).thenReturn(true);
 
-      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(sfs1, sfs2);
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner> asList(sfs1, sfs2);
       Scan scan = new Scan();
       StoreScanner storeScanner =
         new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
@@ -1664,7 +1658,7 @@ public class TestStoreScanner {
       MockMemStoreScanner ms2 = new MockMemStoreScanner();
       MockMemStoreScanner ms3 = new MockMemStoreScanner();
 
-      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(ms1, ms2, ms3);
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner> asList(ms1, ms2, ms3);
       Scan scan = new Scan();
       StoreScanner storeScanner =
         new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
@@ -1700,7 +1694,7 @@ public class TestStoreScanner {
       MockMemStoreScanner normalScanner = new MockMemStoreScanner();
 
       List<KeyValueScanner> scanners =
-        Arrays.<KeyValueScanner>asList(failingScanner, normalScanner);
+        Arrays.<KeyValueScanner> asList(failingScanner, normalScanner);
       Scan scan = new Scan();
       StoreScanner storeScanner =
         new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
@@ -1716,7 +1710,8 @@ public class TestStoreScanner {
 
       assertNotNull(thrown, "Should have thrown IOException");
       // The second scanner must NOT be sought since the first threw
-      assertEquals(0, normalScanner.getSeekCount(), "normalScanner should not be sought after error");
+      assertEquals(0, normalScanner.getSeekCount(),
+        "normalScanner should not be sought after error");
 
       storeScanner.close();
     } finally {
@@ -1735,8 +1730,7 @@ public class TestStoreScanner {
     try {
       // Mock StoreFileScanner that throws on seek
       StoreFileScanner failingSfs = Mockito.mock(StoreFileScanner.class);
-      Mockito.doThrow(new IOException("parallel seek error")).when(failingSfs)
-        .seek(Mockito.any());
+      Mockito.doThrow(new IOException("parallel seek error")).when(failingSfs).seek(Mockito.any());
 
       List<KeyValueScanner> scanners = Collections.singletonList(failingSfs);
       Scan scan = new Scan();
@@ -1776,7 +1770,7 @@ public class TestStoreScanner {
       return true;
     }).when(blockingSfs).seek(Mockito.any());
 
-    List<KeyValueScanner> scanners = Arrays.<KeyValueScanner>asList(blockingSfs);
+    List<KeyValueScanner> scanners = Arrays.<KeyValueScanner> asList(blockingSfs);
     Scan scan = new Scan();
     StoreScanner storeScanner =
       new StoreScanner(scan, adaptiveScanInfo(), (NavigableSet<byte[]>) null, new ArrayList<>());
@@ -1794,15 +1788,15 @@ public class TestStoreScanner {
     seekThread.start();
 
     // Give the thread time to submit the handler and start awaiting the latch
-    Waiter.waitFor(HBaseConfiguration.create(), 5000, () -> seekThread.getState() == Thread.State.WAITING
-      || seekThread.getState() == Thread.State.TIMED_WAITING);
+    Waiter.waitFor(HBaseConfiguration.create(), 5000,
+      () -> seekThread.getState() == Thread.State.WAITING
+        || seekThread.getState() == Thread.State.TIMED_WAITING);
 
     // Interrupt the seeking thread
     seekThread.interrupt();
-    seekThread.join(5000);
-
     // Release the blocking scanner so background thread can finish
     scannerBlockLatch.countDown();
+    seekThread.join(5000);
 
     assertNotNull(caughtError[0], "Should have caught an IOException");
     assertInstanceOf(InterruptedIOException.class, caughtError[0],
@@ -1831,8 +1825,7 @@ public class TestStoreScanner {
       Mockito.when(sfs1.seek(Mockito.any())).thenReturn(true);
       Mockito.when(sfs2.seek(Mockito.any())).thenReturn(true);
 
-      List<KeyValueScanner> scanners =
-        Arrays.<KeyValueScanner>asList(ms1, sfs1, ms2, sfs2);
+      List<KeyValueScanner> scanners = Arrays.<KeyValueScanner> asList(ms1, sfs1, ms2, sfs2);
 
       Scan scan = new Scan();
       StoreScanner storeScanner =
