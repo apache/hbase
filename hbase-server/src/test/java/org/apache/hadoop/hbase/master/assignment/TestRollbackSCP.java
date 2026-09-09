@@ -133,6 +133,11 @@ public class TestRollbackSCP {
   @BeforeEach
   public void setUp() throws IOException {
     UTIL.ensureSomeNonStoppedRegionServersAvailable(2);
+    // Surefire reruns failed tests in the same JVM without rerunning @BeforeAll, so reset the
+    // fault injection state before each attempt.
+    INJECTED.set(false);
+    ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdateInRollback(
+      UTIL.getMiniHBaseCluster().getMaster().getMasterProcedureExecutor(), false);
   }
 
   private ServerCrashProcedure getSCPForServer(ServerName serverName) throws IOException {
