@@ -18,13 +18,17 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashSet;
 import java.util.List;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
@@ -40,9 +44,11 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -130,6 +136,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String backupIdIncMultiple = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple));
+      assertIncrementalBackupMetadata(backupIdIncMultiple, tables);
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple);
       assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
@@ -161,6 +168,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String backupIdIncMultiple2 = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple2));
+      assertIncrementalBackupMetadata(backupIdIncMultiple2, tables);
       validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple2);
 
       // #5 - restore full backup for all tables
@@ -207,6 +215,22 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
 
       try (Table hTable = conn.getTable(table2_restore)) {
         assertEquals(NB_ROWS_IN_BATCH + 5, HBaseTestingUtil.countRows(hTable));
+      }
+    }
+  }
+
+  private void assertIncrementalBackupMetadata(String backupId, List<TableName> tables)
+    throws IOException {
+    Path backupRoot = new Path(BACKUP_ROOT_DIR);
+    FileSystem fs = backupRoot.getFileSystem(conf1);
+    for (TableName table : tables) {
+      Path tablePath = HBackupFileSystem.getTableBackupPath(table, backupRoot, backupId);
+      assertEquals(TEST_UTIL.getAdmin().getDescriptor(table),
+        FSTableDescriptors.getTableDescriptorFromFs(fs, tablePath));
+      RemoteIterator<LocatedFileStatus> files = fs.listFiles(tablePath, true);
+      while (files.hasNext()) {
+        Path path = files.next().getPath();
+        assertNotEquals(HRegionFileSystem.REGION_INFO_FILE, path.getName(), path.toString());
       }
     }
   }
