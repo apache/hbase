@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.metrics.BaseSource;
@@ -60,7 +61,7 @@ public class MetricsSource implements BaseSource {
       .getInstance(MetricsReplicationSourceFactory.class).getSource(id);
     globalSourceSource = CompatibilitySingletonFactory
       .getInstance(MetricsReplicationSourceFactory.class).getGlobalSource();
-    singleSourceSourceByTable = new HashMap<>();
+    singleSourceSourceByTable = new ConcurrentHashMap<>();
   }
 
   /**
