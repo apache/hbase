@@ -1082,10 +1082,14 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           } finally {
             entry.release();
           }
+        } else if (truck.type() == RingBufferTruck.Type.EMPTY) {
+          // publishSyncOnRingBuffer claimed the sequence but threw before loading the truck.
+          LOG.warn("Empty RingBufferTruck at sequence {}", sequence);
+          return;
         } else {
-          // Empty truck: publishSyncOnRingBuffer claimed the sequence but threw before loading it.
-          // Fall through rather than failing syncs, so the empty slot is harmless.
-          LOG.warn("RingBufferTruck with unexpected type: {}", truck.type());
+          cleanupOutstandingSyncsOnException(sequence,
+            new IllegalStateException("Unexpected truck type: " + truck.type()));
+          return;
         }
 
         // TODO: Check size and if big go ahead and call a sync if we have enough data.
