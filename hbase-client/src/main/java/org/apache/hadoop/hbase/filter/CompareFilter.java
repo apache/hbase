@@ -22,6 +22,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -124,6 +125,21 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   /**
+   * RuntimeException when applying a comparator indicates a code bug or misconfigured
+   * filter/comparator, we wrap it in `HBaseIOException` to provide a clear exception message/stack
+   * trace and prevent propagating a runtime exception up the call stack (which would lead to
+   * unexpected throwable at RpcServer layer and a complicated unclear remote exception on the
+   * client)
+   */
+  public static HBaseIOException wrapInHBaseIOException(RuntimeException e,
+    ByteArrayComparable comparator) {
+    String msg =
+      String.format("Runtime exception occurred when applying comparator %s during filtering",
+        comparator.getClass().getSimpleName());
+    return new HBaseIOException(msg, e);
+  }
+
+  /**
    * @deprecated Since 2.0.0. Will be removed in 3.0.0. Use
    *             {@link #compareRow(CompareOperator, ByteArrayComparable, Cell)}
    */
@@ -138,12 +154,16 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareRow(final CompareOperator op, final ByteArrayComparable comparator,
-    final Cell cell) {
+    final Cell cell) throws IOException {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = PrivateCellUtil.compareRow(cell, comparator);
-    return compare(op, compareResult);
+    try {
+      int compareResult = PrivateCellUtil.compareRow(cell, comparator);
+      return compare(op, compareResult);
+    } catch (RuntimeException e) {
+      throw wrapInHBaseIOException(e, comparator);
+    }
   }
 
   /**
@@ -161,12 +181,16 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareFamily(final CompareOperator op, final ByteArrayComparable comparator,
-    final Cell cell) {
+    final Cell cell) throws IOException {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = PrivateCellUtil.compareFamily(cell, comparator);
-    return compare(op, compareResult);
+    try {
+      int compareResult = PrivateCellUtil.compareFamily(cell, comparator);
+      return compare(op, compareResult);
+    } catch (RuntimeException e) {
+      throw wrapInHBaseIOException(e, comparator);
+    }
   }
 
   /**
@@ -185,13 +209,17 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareQualifier(final CompareOperator op, final ByteArrayComparable comparator,
-    final Cell cell) {
+    final Cell cell) throws IOException {
     // We do not call through to the non-deprecated method for perf reasons.
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = PrivateCellUtil.compareQualifier(cell, comparator);
-    return compare(op, compareResult);
+    try {
+      int compareResult = PrivateCellUtil.compareQualifier(cell, comparator);
+      return compare(op, compareResult);
+    } catch (RuntimeException e) {
+      throw wrapInHBaseIOException(e, comparator);
+    }
   }
 
   /**
@@ -210,12 +238,16 @@ public abstract class CompareFilter extends FilterBase {
   }
 
   protected boolean compareValue(final CompareOperator op, final ByteArrayComparable comparator,
-    final Cell cell) {
+    final Cell cell) throws IOException {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = PrivateCellUtil.compareValue(cell, comparator);
-    return compare(op, compareResult);
+    try {
+      int compareResult = PrivateCellUtil.compareValue(cell, comparator);
+      return compare(op, compareResult);
+    } catch (RuntimeException e) {
+      throw wrapInHBaseIOException(e, comparator);
+    }
   }
 
   static boolean compare(final CompareOp op, int compareResult) {
