@@ -108,6 +108,10 @@ public class TestSyncReplicationStandbyKillMaster extends SyncReplicationTestBas
     await().atMost(Duration.ofMinutes(3))
       .untilAsserted(() -> assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
         UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID)));
+    await().atMost(Duration.ofMinutes(3))
+      .untilAsserted(() -> assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
+        UTIL2.getRSForFirstRegionInTable(TABLE_NAME).getReplicationSourceService()
+          .getReplicationPeers().getPeer(PEER_ID).getSyncReplicationState()));
 
     verify(UTIL2, 0, COUNT);
   }
