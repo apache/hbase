@@ -38,6 +38,7 @@ pipeline {
     OUTPUT_DIR_RELATIVE_JDK8_HADOOP3 = 'output-jdk8-hadoop3'
     OUTPUT_DIR_RELATIVE_JDK11_HADOOP3 = 'output-jdk11-hadoop3'
     OUTPUT_DIR_RELATIVE_JDK17_HADOOP3 = 'output-jdk17-hadoop3'
+    OUTPUT_DIR_RELATIVE_READ_REPLICA = 'output-read-replica'
 
     PROJECT = 'hbase'
     PROJECT_PERSONALITY = 'https://raw.githubusercontent.com/apache/hbase/master/dev-support/hbase-personality.sh'
@@ -135,6 +136,7 @@ pipeline {
         stash name: 'jdk8-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/doesn't-match"
         stash name: 'jdk11-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/doesn't-match"
         stash name: 'jdk17-hadoop3-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/doesn't-match"
+        stash name: 'read-replica-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_READ_REPLICA}/doesn't-match"
       }
     }
     stage ('health checks') {
@@ -319,7 +321,7 @@ pipeline {
                 else
                   echo "No archiver directory, skipping compressing."
                 fi
-'''
+              '''
               sshPublisher(publishers: [
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
@@ -338,7 +340,7 @@ pipeline {
                 else
                   echo "No test_logs.zip, skipping"
                 fi
-'''
+              '''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -432,7 +434,7 @@ pipeline {
                 else
                   echo "No archiver directory, skipping compressing."
                 fi
-'''
+              '''
               sshPublisher(publishers: [
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
@@ -451,7 +453,7 @@ pipeline {
                 else
                   echo "No test_logs.zip, skipping"
                 fi
-'''
+              '''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -580,7 +582,6 @@ pipeline {
             }
           }
         }
-
         stage ('yetus jdk17 hadoop3 checks') {
           agent {
             node {
@@ -691,6 +692,70 @@ pipeline {
             }
           }
         }
+        stage ('hbase read-replica feature checks') {
+          agent {
+            node {
+              label 'hbase'
+            }
+          }
+          when {
+            anyOf {
+              branch 'master'
+              branch 'branch-3'
+            }
+          }
+          environment {
+            BASEDIR = "${env.WORKSPACE}/component"
+            OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}"
+            OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}"
+          }
+          steps {
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              echo '(x) {color:red}-1 read-replica checks{color}' >"${OUTPUT_DIR}/commentfile"
+              echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+            '''
+            dir('component') {
+              checkout scm
+            }
+            sh '''#!/usr/bin/env bash
+              set -e
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+              echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+              ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+            '''
+            script {
+              def ret = sh(
+                returnStatus: true,
+                script: '''#!/usr/bin/env bash
+                  set -e
+                  declare -i status=0
+                  if "${BASEDIR}/dev-support/hbase_nightly_read_replica_test.sh" ; then
+                    echo '(/) {color:green}+1 read-replica checks{color}' > "${OUTPUT_DIR}/commentfile"
+                  else
+                    echo '(x) {color:red}-1 read-replica checks{color}' > "${OUTPUT_DIR}/commentfile"
+                    status=1
+                  fi
+                  echo "-- For more information [see console output|${BUILD_URL}/console]" >> "${OUTPUT_DIR}/commentfile"
+                  exit "${status}"
+                '''
+              )
+              if (ret != 0) {
+                // mark the build as UNSTABLE instead of FAILURE, to avoid skipping the later publish of
+                // test output. See HBASE-26339 for more details.
+                currentBuild.result = 'UNSTABLE'
+              }
+            }
+          }
+          post {
+            always {
+              stash name: 'read-replica-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+              archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*", allowEmptyArchive: true
+            }
+          }
+        }
       } // parallel
     } //stage:_health checks
   } //stages
@@ -707,18 +772,21 @@ pipeline {
              rm -rf ${OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}
              rm -rf ${OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}
              rm -rf ${OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}
+             rm -rf ${OUTPUT_DIR_RELATIVE_READ_REPLICA}
            '''
            unstash 'general-result'
            unstash 'jdk8-hadoop2-result'
            unstash 'jdk8-hadoop3-result'
            unstash 'jdk11-hadoop3-result'
            unstash 'jdk17-hadoop3-result'
+           unstash 'read-replica-result'
 
            def results = ["${env.OUTPUT_DIR_RELATIVE_GENERAL}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP2}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK8_HADOOP3}/commentfile",
                           "${env.OUTPUT_DIR_RELATIVE_JDK11_HADOOP3}/commentfile",
-                          "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile"]
+                          "${env.OUTPUT_DIR_RELATIVE_JDK17_HADOOP3}/commentfile",
+                          "${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}/commentfile"]
            echo env.BRANCH_NAME
            echo env.BUILD_URL
            echo currentBuild.result
