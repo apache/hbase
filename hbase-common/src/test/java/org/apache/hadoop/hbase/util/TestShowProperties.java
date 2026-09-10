@@ -18,12 +18,10 @@
 package org.apache.hadoop.hbase.util;
 
 import java.util.Properties;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -31,12 +29,9 @@ import org.slf4j.LoggerFactory;
  * This test is there to dump the properties. It allows to detect possible env issues when executing
  * the tests on various environment.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestShowProperties {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestShowProperties.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestShowProperties.class);
 

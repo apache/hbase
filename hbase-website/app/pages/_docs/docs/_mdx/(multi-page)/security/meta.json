@@ -1,0 +1,12 @@
+{
+  "title": "Security",
+  "pages": [
+    "web-ui",
+    "client-access",
+    "user-access",
+    "tls",
+    "hdfs-and-zookeeper-access",
+    "data-access",
+    "example"
+  ]
+}

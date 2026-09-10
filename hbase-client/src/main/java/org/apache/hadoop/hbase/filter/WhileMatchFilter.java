@@ -140,6 +140,16 @@ public class WhileMatchFilter extends FilterBase {
   }
 
   @Override
+  public Cell getHintForRejectedRow(Cell firstRowCell) throws IOException {
+    return filter.getHintForRejectedRow(firstRowCell);
+  }
+
+  @Override
+  public Cell getSkipHint(Cell skippedCell) throws IOException {
+    return filter.getSkipHint(skippedCell);
+  }
+
+  @Override
   public boolean isFamilyEssential(byte[] name) throws IOException {
     return filter.isFamilyEssential(name);
   }

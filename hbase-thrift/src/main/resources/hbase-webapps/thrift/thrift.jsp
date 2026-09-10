@@ -112,7 +112,7 @@
     </div>
     <div class="row">
         <section>
-            <a href="http://hbase.apache.org/book.html#_thrift">
+            <a href="https://hbase.apache.org/docs/external-apis#thrift>
               Apache HBase Reference Guide chapter on Thrift</a>
         </section>
     </div>

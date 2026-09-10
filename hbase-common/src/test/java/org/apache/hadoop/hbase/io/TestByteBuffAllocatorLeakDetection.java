@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hbase.io;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.io.netty.util.ResourceLeakDetector;
 import org.apache.hbase.thirdparty.io.netty.util.internal.logging.InternalLogLevel;
@@ -35,12 +33,9 @@ import org.apache.hbase.thirdparty.io.netty.util.internal.logging.InternalLogger
 import org.apache.hbase.thirdparty.io.netty.util.internal.logging.InternalLoggerFactory;
 import org.apache.hbase.thirdparty.io.netty.util.internal.logging.Slf4JLoggerFactory;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestByteBuffAllocatorLeakDetection {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestByteBuffAllocatorLeakDetection.class);
 
   @SuppressWarnings("unused")
   @Test

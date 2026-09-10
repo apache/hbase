@@ -17,44 +17,42 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestKeyLocker {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyLocker.class);
 
   @Test
   public void testLocker() {
     KeyLocker<String> locker = new KeyLocker<>();
     ReentrantLock lock1 = locker.acquireLock("l1");
-    Assert.assertTrue(lock1.isHeldByCurrentThread());
+    assertTrue(lock1.isHeldByCurrentThread());
 
     ReentrantLock lock2 = locker.acquireLock("l2");
-    Assert.assertTrue(lock2.isHeldByCurrentThread());
-    Assert.assertTrue(lock1 != lock2);
+    assertTrue(lock2.isHeldByCurrentThread());
+    assertTrue(lock1 != lock2);
 
     // same key = same lock
     ReentrantLock lock20 = locker.acquireLock("l2");
-    Assert.assertTrue(lock20 == lock2);
-    Assert.assertTrue(lock2.isHeldByCurrentThread());
-    Assert.assertTrue(lock20.isHeldByCurrentThread());
+    assertTrue(lock20 == lock2);
+    assertTrue(lock2.isHeldByCurrentThread());
+    assertTrue(lock20.isHeldByCurrentThread());
 
     // Locks are still reentrant; so with 2 acquires we want two unlocks
     lock20.unlock();
-    Assert.assertTrue(lock20.isHeldByCurrentThread());
+    assertTrue(lock20.isHeldByCurrentThread());
 
     lock2.unlock();
-    Assert.assertFalse(lock20.isHeldByCurrentThread());
+    assertFalse(lock20.isHeldByCurrentThread());
 
     // The lock object will be garbage-collected
     // if you free its reference for a long time,
@@ -68,13 +66,13 @@ public class TestKeyLocker {
     System.gc();
 
     ReentrantLock lock200 = locker.acquireLock("l2");
-    Assert.assertNotEquals(lock2Hash, System.identityHashCode(lock200));
+    assertNotEquals(lock2Hash, System.identityHashCode(lock200));
     lock200.unlock();
-    Assert.assertFalse(lock200.isHeldByCurrentThread());
+    assertFalse(lock200.isHeldByCurrentThread());
 
     // first lock is still there
-    Assert.assertTrue(lock1.isHeldByCurrentThread());
+    assertTrue(lock1.isHeldByCurrentThread());
     lock1.unlock();
-    Assert.assertFalse(lock1.isHeldByCurrentThread());
+    assertFalse(lock1.isHeldByCurrentThread());
   }
 }

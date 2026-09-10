@@ -18,7 +18,7 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.util.Threads.sleep;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,7 +26,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,36 +36,26 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestCheckAndMutateWithByteBuff {
-  private static final Logger LOG = LoggerFactory.getLogger(TestCheckAndMutateWithByteBuff.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCheckAndMutateWithByteBuff.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final byte[] CF = Bytes.toBytes("CF");
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   private static Admin admin = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     conf.set(HConstants.REGION_IMPL, TestCheckAndMutateRegion.class.getName());
     conf.set(ByteBuffAllocator.BYTEBUFF_ALLOCATOR_CLASS,
@@ -82,22 +71,23 @@ public class TestCheckAndMutateWithByteBuff {
     admin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testCheckAndMutateWithByteBuffNoEncode() throws Exception {
-    testCheckAndMutateWithByteBuff(TableName.valueOf(name.getMethodName()), DataBlockEncoding.NONE);
+  public void testCheckAndMutateWithByteBuffNoEncode(TestInfo testInfo) throws Exception {
+    testCheckAndMutateWithByteBuff(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+      DataBlockEncoding.NONE);
   }
 
   @Test
-  public void testCheckAndMutateWithByteBuffEncode() throws Exception {
+  public void testCheckAndMutateWithByteBuffEncode(TestInfo testInfo) throws Exception {
     // Tests for HBASE-26777.
     // As most HBase.getRegion() calls have been factored out from HBase, you'd need to revert
     // both HBASE-26777, and the HBase.get() replacements from HBASE-26036 for this test to fail
-    testCheckAndMutateWithByteBuff(TableName.valueOf(name.getMethodName()),
+    testCheckAndMutateWithByteBuff(TableName.valueOf(testInfo.getTestMethod().get().getName()),
       DataBlockEncoding.FAST_DIFF);
   }
 

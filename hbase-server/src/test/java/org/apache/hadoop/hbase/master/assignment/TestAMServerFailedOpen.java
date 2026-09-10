@@ -17,29 +17,24 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RetriesExhaustedException;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAMServerFailedOpen extends TestAssignmentManagerBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAMServerFailedOpen.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAMServerFailedOpen.class);
 
@@ -51,7 +46,7 @@ public class TestAMServerFailedOpen extends TestAssignmentManagerBase {
 
   @Test
   public void testServerNotYetRunning() throws Exception {
-    testRetriesExhaustedFailure(TableName.valueOf(this.name.getMethodName()),
+    testRetriesExhaustedFailure(TableName.valueOf(testMethodName),
       new ServerNotYetRunningRsExecutor());
   }
 

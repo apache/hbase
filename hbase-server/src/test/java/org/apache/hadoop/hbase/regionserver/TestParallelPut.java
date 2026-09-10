@@ -18,13 +18,13 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HConstants.OperationStatusCode;
@@ -41,34 +41,28 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing of multiPut in parallel.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestParallelPut {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestParallelPut.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestParallelPut.class);
-  @Rule
-  public TestName name = new TestName();
 
   private HRegion region = null;
   private static HBaseTestingUtil HBTU = new HBaseTestingUtil();
   private static final int THREADS100 = 100;
+  private String methodName;
 
   // Test names
   static byte[] tableName;
@@ -80,21 +74,19 @@ public class TestParallelPut {
   static final byte[] row = Bytes.toBytes("rowA");
   static final byte[] row2 = Bytes.toBytes("rowB");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() {
     // Make sure enough handlers.
     HBTU.getConfiguration().setInt(HConstants.REGION_SERVER_HANDLER_COUNT, THREADS100);
   }
 
-  /**
-   * @see org.apache.hadoop.hbase.HBaseTestCase#setUp()
-   */
-  @Before
-  public void setUp() throws Exception {
-    tableName = Bytes.toBytes(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
+    tableName = Bytes.toBytes(methodName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManagerTestHelper.reset();
     if (region != null) {
@@ -102,8 +94,8 @@ public class TestParallelPut {
     }
   }
 
-  public String getName() {
-    return name.getMethodName();
+  public String getMethodName() {
+    return methodName;
   }
 
   //////////////////////////////////////////////////////////////////////////////
@@ -117,7 +109,7 @@ public class TestParallelPut {
   @Test
   public void testPut() throws IOException {
     LOG.info("Starting testPut");
-    this.region = initHRegion(tableName, getName(), fam1);
+    this.region = initHRegion(tableName, getMethodName(), fam1);
 
     long value = 1L;
 
@@ -136,7 +128,7 @@ public class TestParallelPut {
 
     LOG.info("Starting testParallelPuts");
 
-    this.region = initHRegion(tableName, getName(), fam1);
+    this.region = initHRegion(tableName, getMethodName(), fam1);
     int numOps = 1000; // these many operations per thread
 
     // create 100 threads, each will do its own puts
@@ -228,7 +220,7 @@ public class TestParallelPut {
           assertEquals(OperationStatusCode.SUCCESS, ret[0].getOperationStatusCode());
           assertGet(this.region, rowkey, fam1, qual1, value);
         } catch (IOException e) {
-          assertTrue("Thread id " + threadNumber + " operation " + i + " failed.", false);
+          fail("Thread id " + threadNumber + " operation " + i + " failed.", e);
         }
       }
     }

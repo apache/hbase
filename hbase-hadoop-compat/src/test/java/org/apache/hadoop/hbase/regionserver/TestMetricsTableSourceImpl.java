@@ -17,26 +17,23 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MetricsTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test for MetricsTableSourceImpl
  */
-@Category({ MetricsTests.class, SmallTests.class })
+@Tag(MetricsTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsTableSourceImpl {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsTableSourceImpl.class);
 
   @SuppressWarnings("SelfComparison")
   @Test
@@ -61,11 +58,13 @@ public class TestMetricsTableSourceImpl {
     assertTrue(two.compareTo(two) == 0);
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testNoGetTableMetricsSourceImpl() {
     // This should throw an exception because MetricsTableSourceImpl should only
     // be created by a factory.
-    CompatibilitySingletonFactory.getInstance(MetricsTableSourceImpl.class);
+    assertThrows(RuntimeException.class, () -> {
+      CompatibilitySingletonFactory.getInstance(MetricsTableSourceImpl.class);
+    });
   }
 
   @Test
@@ -75,5 +74,4 @@ public class TestMetricsTableSourceImpl {
         .createTable("ONETABLE", new MetricsTableWrapperStub("ONETABLE"));
     assertEquals("ONETABLE", oneTbl.getTableName());
   }
-
 }

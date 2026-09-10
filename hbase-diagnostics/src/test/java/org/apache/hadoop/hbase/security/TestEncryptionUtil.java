@@ -17,15 +17,15 @@
  */
 package org.apache.hadoop.hbase.security;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.security.Key;
 import java.security.KeyException;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
@@ -33,19 +33,15 @@ import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestEncryptionUtil {
 
   private static final String INVALID_HASH_ALG = "this-hash-algorithm-not-exists hopefully... :)";
   private static final String DEFAULT_HASH_ALGORITHM = "use-default";
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEncryptionUtil.class);
 
   // There does not seem to be a ready way to test either getKeyFromBytesOrMasterKey
   // or createEncryptionContext, and the existing code under MobUtils appeared to be
@@ -71,9 +67,9 @@ public class TestEncryptionUtil {
     testKeyWrapping("SHA-384");
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testKeyWrappingWithInvalidHashAlg() throws Exception {
-    testKeyWrapping(INVALID_HASH_ALG);
+    assertThrows(RuntimeException.class, () -> testKeyWrapping(INVALID_HASH_ALG));
   }
 
   @Test
@@ -96,12 +92,12 @@ public class TestEncryptionUtil {
     testWALKeyWrapping("SHA-384");
   }
 
-  @Test(expected = RuntimeException.class)
+  @Test
   public void testWALKeyWrappingWithInvalidHashAlg() throws Exception {
-    testWALKeyWrapping(INVALID_HASH_ALG);
+    assertThrows(RuntimeException.class, () -> testWALKeyWrapping(INVALID_HASH_ALG));
   }
 
-  @Test(expected = KeyException.class)
+  @Test
   public void testWALKeyWrappingWithIncorrectKey() throws Exception {
     // set up the key provider for testing to resolve a key for our test subject
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
@@ -118,14 +114,15 @@ public class TestEncryptionUtil {
     assertNotNull(wrappedKeyBytes);
 
     // unwrap with an incorrect key
-    EncryptionUtil.unwrapWALKey(conf, "other", wrappedKeyBytes);
+    assertThrows(KeyException.class,
+      () -> EncryptionUtil.unwrapWALKey(conf, "other", wrappedKeyBytes));
   }
 
-  @Test(expected = KeyException.class)
+  @Test
   public void testHashAlgorithmMismatchWhenFailExpected() throws Exception {
     Configuration conf = new Configuration(); // we don't need HBaseConfiguration for this
     conf.setBoolean(Encryption.CRYPTO_KEY_FAIL_ON_ALGORITHM_MISMATCH_CONF_KEY, true);
-    testKeyWrappingWithMismatchingAlgorithms(conf);
+    assertThrows(KeyException.class, () -> testKeyWrappingWithMismatchingAlgorithms(conf));
   }
 
   @Test
@@ -165,8 +162,8 @@ public class TestEncryptionUtil {
     // only secretkeyspec supported for now
     assertTrue(unwrappedKey instanceof SecretKeySpec);
     // did we get back what we wrapped?
-    assertTrue("Unwrapped key bytes do not match original",
-      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    assertTrue(Bytes.equals(keyBytes, unwrappedKey.getEncoded()),
+      "Unwrapped key bytes do not match original");
 
     // unwrap with an incorrect key
     try {
@@ -201,8 +198,8 @@ public class TestEncryptionUtil {
     // only secretkeyspec supported for now
     assertTrue(unwrappedKey instanceof SecretKeySpec);
     // did we get back what we wrapped?
-    assertTrue("Unwrapped key bytes do not match original",
-      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    assertTrue(Bytes.equals(keyBytes, unwrappedKey.getEncoded()),
+      "Unwrapped key bytes do not match original");
   }
 
   private void testKeyWrappingWithMismatchingAlgorithms(Configuration conf) throws Exception {
@@ -230,8 +227,8 @@ public class TestEncryptionUtil {
     assertNotNull(unwrappedKey);
 
     // did we get back what we wrapped?
-    assertTrue("Unwrapped key bytes do not match original",
-      Bytes.equals(keyBytes, unwrappedKey.getEncoded()));
+    assertTrue(Bytes.equals(keyBytes, unwrappedKey.getEncoded()),
+      "Unwrapped key bytes do not match original");
   }
 
 }

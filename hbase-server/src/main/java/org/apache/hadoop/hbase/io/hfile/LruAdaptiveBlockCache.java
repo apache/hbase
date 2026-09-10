@@ -147,7 +147,7 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   private static final String LRU_MIN_FACTOR_CONFIG_NAME = "hbase.lru.blockcache.min.factor";
 
   /**
-   * Acceptable size of cache (no evictions if size < acceptable)
+   * Acceptable size of cache (no evictions if {@code size < acceptable})
    */
   private static final String LRU_ACCEPTABLE_FACTOR_CONFIG_NAME =
     "hbase.lru.blockcache.acceptable.factor";
@@ -264,10 +264,10 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
   /** Approximate block size */
   private final long blockSize;
 
-  /** Acceptable size of cache (no evictions if size < acceptable) */
+  /** Acceptable size of cache (no evictions if {@code size < acceptable}) */
   private final float acceptableFactor;
 
-  /** Minimum threshold of cache (when evicting, evict until size < min) */
+  /** Minimum threshold of cache (when evicting, evict until {@code size < min}) */
   private final float minFactor;
 
   /** Single access bucket size */

@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -27,22 +28,18 @@ import org.apache.hadoop.hbase.io.ByteArrayOutputStream;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestIndividualBytesFieldCell {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIndividualBytesFieldCell.class);
 
   private static IndividualBytesFieldCell ic0 = null;
   private static KeyValue kv0 = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void testConstructorAndVerify() {
     // Immutable inputs
     byte[] row = Bytes.toBytes("immutable-row");
@@ -185,46 +182,58 @@ public class TestIndividualBytesFieldCell {
     ec.deepClone(); // Do something with ec
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testIllegalRow() {
-    new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 100, HConstants.EMPTY_BYTE_ARRAY, 0, 0,
-      HConstants.EMPTY_BYTE_ARRAY, 0, 0, 0L, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY, 0,
-      0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 100, HConstants.EMPTY_BYTE_ARRAY, 0, 0,
+        HConstants.EMPTY_BYTE_ARRAY, 0, 0, 0L, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY, 0,
+        0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testIllegalFamily() {
-    new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 100,
-      HConstants.EMPTY_BYTE_ARRAY, 0, 0, 0L, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY, 0,
-      0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 100,
+        HConstants.EMPTY_BYTE_ARRAY, 0, 0, 0L, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY, 0,
+        0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testIllegalQualifier() {
-    new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
-      Bytes.toBytes("qualifier"), 0, 100, 0L, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY, 0,
-      0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
+        Bytes.toBytes("qualifier"), 0, 100, 0L, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY,
+        0, 0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testIllegalTimestamp() {
-    new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
-      Bytes.toBytes("qualifier"), 0, 9, -100, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY, 0,
-      0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
+        Bytes.toBytes("qualifier"), 0, 9, -100, KeyValue.Type.Put, 0, HConstants.EMPTY_BYTE_ARRAY,
+        0, 0, HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testIllegalValue() {
-    new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
-      Bytes.toBytes("qualifier"), 0, 9, 0L, KeyValue.Type.Put, 0, Bytes.toBytes("value"), 0, 100,
-      HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
+        Bytes.toBytes("qualifier"), 0, 9, 0L, KeyValue.Type.Put, 0, Bytes.toBytes("value"), 0, 100,
+        HConstants.EMPTY_BYTE_ARRAY, 0, 0);
+    });
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testIllegalTags() {
-    new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
-      Bytes.toBytes("qualifier"), 0, 9, 0L, KeyValue.Type.Put, 0, Bytes.toBytes("value"), 0, 5,
-      Bytes.toBytes("tags"), 0, 100);
+    assertThrows(IllegalArgumentException.class, () -> {
+      new IndividualBytesFieldCell(Bytes.toBytes("row"), 0, 3, Bytes.toBytes("family"), 0, 6,
+        Bytes.toBytes("qualifier"), 0, 9, 0L, KeyValue.Type.Put, 0, Bytes.toBytes("value"), 0, 5,
+        Bytes.toBytes("tags"), 0, 100);
+    });
   }
 
   @Test

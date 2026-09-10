@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -37,11 +36,10 @@ import org.apache.hadoop.hbase.client.coprocessor.Batch;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,12 +58,9 @@ import org.apache.hadoop.hbase.shaded.coprocessor.protobuf.generated.ColumnAggre
 /**
  * TestEndpoint: test cases to verify the batch execution of coprocessor Endpoint
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBatchCoprocessorEndpoint {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBatchCoprocessorEndpoint.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestBatchCoprocessorEndpoint.class);
 
@@ -81,7 +76,7 @@ public class TestBatchCoprocessorEndpoint {
 
   private static HBaseTestingUtil util = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     // set configure to indicate which cp should be loaded
     Configuration conf = util.getConfiguration();
@@ -110,7 +105,7 @@ public class TestBatchCoprocessorEndpoint {
     table.close();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -140,7 +135,7 @@ public class TestBatchCoprocessorEndpoint {
     for (long i = 0; i < rowSeperator2; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
     table.close();
   }
 
@@ -181,7 +176,7 @@ public class TestBatchCoprocessorEndpoint {
     for (long i = 0; i < ROWSIZE; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
 
     results.clear();
 
@@ -197,7 +192,7 @@ public class TestBatchCoprocessorEndpoint {
     for (long i = rowSeperator1; i < ROWSIZE; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
     table.close();
   }
 
@@ -216,7 +211,7 @@ public class TestBatchCoprocessorEndpoint {
     for (long i = 0; i < ROWSIZE; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
 
     // scan: for region 2 and region 3
     results = sum(table, TEST_FAMILY, TEST_QUALIFIER, ROWS[rowSeperator1], ROWS[ROWS.length - 1]);
@@ -230,7 +225,7 @@ public class TestBatchCoprocessorEndpoint {
     for (long i = rowSeperator1; i < ROWSIZE; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
     table.close();
   }
 
@@ -276,7 +271,7 @@ public class TestBatchCoprocessorEndpoint {
     for (long i = 0; i < rowSeperator2; i++) {
       expectedResult += i;
     }
-    assertEquals("Invalid result", expectedResult, sumResult);
+    assertEquals(expectedResult, sumResult, "Invalid result");
     assertTrue(hasError);
     table.close();
   }

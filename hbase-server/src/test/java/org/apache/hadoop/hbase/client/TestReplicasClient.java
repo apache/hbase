@@ -19,6 +19,10 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.codahale.metrics.Counter;
 import java.io.IOException;
@@ -33,7 +37,6 @@ import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -55,14 +58,12 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -74,13 +75,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
  * Tests for region replicas. Sad that we cannot isolate these without bringing up a whole cluster.
  * See {@link org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster}.
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 @SuppressWarnings("deprecation")
 public class TestReplicasClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicasClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicasClient.class);
 
@@ -189,7 +187,7 @@ public class TestReplicasClient {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // enable store file refreshing
     HTU.getConfiguration().setInt(StorefileRefresherChore.REGIONSERVER_STOREFILE_REFRESH_PERIOD,
@@ -224,16 +222,16 @@ public class TestReplicasClient {
     LOG.info("Master has stopped");
 
     rsServerName = HTU.getHBaseCluster().getRegionServer(0).getServerName();
-    Assert.assertNotNull(rsServerName);
+    assertNotNull(rsServerName);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     HTU.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     HTU.getConnection().clearRegionLocationCache();
     try {
@@ -247,7 +245,7 @@ public class TestReplicasClient {
     table = HTU.getConnection().getTable(TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void after() throws IOException, KeeperException {
     try {
       closeRegion(hriSecondary);
@@ -273,8 +271,8 @@ public class TestReplicasClient {
     AdminProtos.OpenRegionRequest orr =
       RequestConverter.buildOpenRegionRequest(getRS().getServerName(), hri, null);
     AdminProtos.OpenRegionResponse responseOpen = getRS().getRSRpcServices().openRegion(null, orr);
-    Assert.assertEquals(1, responseOpen.getOpeningStateCount());
-    Assert.assertEquals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED,
+    assertEquals(1, responseOpen.getOpeningStateCount());
+    assertEquals(AdminProtos.OpenRegionResponse.RegionOpeningState.OPENED,
       responseOpen.getOpeningState(0));
     checkRegionIsOpened(hri);
   }
@@ -284,7 +282,7 @@ public class TestReplicasClient {
       ProtobufUtil.buildCloseRegionRequest(getRS().getServerName(), hri.getRegionName());
     AdminProtos.CloseRegionResponse responseClose =
       getRS().getRSRpcServices().closeRegion(null, crr);
-    Assert.assertTrue(responseClose.getClosed());
+    assertTrue(responseClose.getClosed());
 
     checkRegionIsClosed(hri.getEncodedName());
   }
@@ -306,7 +304,7 @@ public class TestReplicasClient {
     }
 
     try {
-      Assert.assertFalse(getRS().getRegionByEncodedName(encodedRegionName).isAvailable());
+      assertFalse(getRS().getRegionByEncodedName(encodedRegionName).isAvailable());
     } catch (NotServingRegionException expected) {
       // That's how it work: if the region is closed we have an exception.
     }
@@ -326,7 +324,7 @@ public class TestReplicasClient {
     try {
       Get g = new Get(b1);
       Result r = table.get(g);
-      Assert.assertFalse(r.isStale());
+      assertFalse(r.isStale());
     } finally {
       closeRegion(hriSecondary);
     }
@@ -341,17 +339,17 @@ public class TestReplicasClient {
       RegionLocator locator = conn.getRegionLocator(TABLE_NAME)) {
       conn.clearRegionLocationCache();
       List<HRegionLocation> rl = locator.getRegionLocations(b1, true);
-      Assert.assertEquals(2, rl.size());
+      assertEquals(2, rl.size());
 
       rl = locator.getRegionLocations(b1, false);
-      Assert.assertEquals(2, rl.size());
+      assertEquals(2, rl.size());
 
       conn.clearRegionLocationCache();
       rl = locator.getRegionLocations(b1, false);
-      Assert.assertEquals(2, rl.size());
+      assertEquals(2, rl.size());
 
       rl = locator.getRegionLocations(b1, true);
-      Assert.assertEquals(2, rl.size());
+      assertEquals(2, rl.size());
     } finally {
       closeRegion(hriSecondary);
     }
@@ -366,7 +364,7 @@ public class TestReplicasClient {
       // A get works and is not stale
       Get g = new Get(b1);
       Result r = table.get(g);
-      Assert.assertFalse(r.isStale());
+      assertFalse(r.isStale());
     } finally {
       closeRegion(hriSecondary);
     }
@@ -382,7 +380,7 @@ public class TestReplicasClient {
       Get g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       Result r = table.get(g);
-      Assert.assertTrue(r.isStale());
+      assertTrue(r.isStale());
     } finally {
       SlowMeCopro.getPrimaryCdl().get().countDown();
       closeRegion(hriSecondary);
@@ -399,7 +397,7 @@ public class TestReplicasClient {
       SlowMeCopro.sleepTime.set(2000);
       Get g = new Get(b1);
       Result r = table.get(g);
-      Assert.assertFalse(r.isStale());
+      assertFalse(r.isStale());
 
     } finally {
       SlowMeCopro.sleepTime.set(0);
@@ -480,16 +478,16 @@ public class TestReplicasClient {
       // A get works and is not stale
       Get g = new Get(b1);
       Result r = table.get(g);
-      Assert.assertFalse(r.isStale());
-      Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
+      assertFalse(r.isStale());
+      assertFalse(r.getColumnCells(f, b1).isEmpty());
       LOG.info("get works and is not stale done");
 
       // Even if it we have to wait a little on the main region
       SlowMeCopro.sleepTime.set(2000);
       g = new Get(b1);
       r = table.get(g);
-      Assert.assertFalse(r.isStale());
-      Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
+      assertFalse(r.isStale());
+      assertFalse(r.getColumnCells(f, b1).isEmpty());
       SlowMeCopro.sleepTime.set(0);
       LOG.info("sleep and is not stale done");
 
@@ -498,8 +496,8 @@ public class TestReplicasClient {
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
-      Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
+      assertTrue(r.isStale());
+      assertTrue(r.getColumnCells(f, b1).isEmpty());
       SlowMeCopro.getPrimaryCdl().get().countDown();
 
       LOG.info("stale done");
@@ -508,8 +506,8 @@ public class TestReplicasClient {
       g = new Get(b1);
       g.setCheckExistenceOnly(true);
       r = table.get(g);
-      Assert.assertFalse(r.isStale());
-      Assert.assertTrue(r.getExists());
+      assertFalse(r.isStale());
+      assertTrue(r.getExists());
       LOG.info("exists not stale done");
 
       // exists works on stale but don't see the put
@@ -518,8 +516,8 @@ public class TestReplicasClient {
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
-      Assert.assertFalse("The secondary has stale data", r.getExists());
+      assertTrue(r.isStale());
+      assertFalse(r.getExists(), "The secondary has stale data");
       SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("exists stale before flush done");
 
@@ -533,8 +531,8 @@ public class TestReplicasClient {
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
-      Assert.assertFalse(r.isEmpty());
+      assertTrue(r.isStale());
+      assertFalse(r.isEmpty());
       SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("stale done");
 
@@ -544,8 +542,8 @@ public class TestReplicasClient {
       g.setCheckExistenceOnly(true);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
-      Assert.assertTrue(r.getExists());
+      assertTrue(r.isStale());
+      assertTrue(r.getExists());
       SlowMeCopro.getPrimaryCdl().get().countDown();
       LOG.info("exists stale after flush done");
 
@@ -573,8 +571,8 @@ public class TestReplicasClient {
       // A get works and is not stale
       Get g = new Get(b1);
       Result r = table.get(g);
-      Assert.assertFalse(r.isStale());
-      Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
+      assertFalse(r.isStale());
+      assertFalse(r.getColumnCells(f, b1).isEmpty());
       LOG.info("get works and is not stale done");
 
       // reset
@@ -594,10 +592,10 @@ public class TestReplicasClient {
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertFalse(r.isStale());
-      Assert.assertFalse(r.getColumnCells(f, b1).isEmpty());
-      Assert.assertEquals(1, hedgedReadOps.getCount());
-      Assert.assertEquals(0, hedgedReadWin.getCount());
+      assertFalse(r.isStale());
+      assertFalse(r.getColumnCells(f, b1).isEmpty());
+      assertEquals(1, hedgedReadOps.getCount());
+      assertEquals(0, hedgedReadWin.getCount());
       SlowMeCopro.sleepTime.set(0);
       SlowMeCopro.getSecondaryCdl().get().countDown();
       LOG.info("hedged read occurred but not faster");
@@ -607,9 +605,9 @@ public class TestReplicasClient {
       g = new Get(b1);
       g.setConsistency(Consistency.TIMELINE);
       r = table.get(g);
-      Assert.assertTrue(r.isStale());
-      Assert.assertTrue(r.getColumnCells(f, b1).isEmpty());
-      Assert.assertEquals(2, hedgedReadOps.getCount());
+      assertTrue(r.isStale());
+      assertTrue(r.getColumnCells(f, b1).isEmpty());
+      assertEquals(2, hedgedReadOps.getCount());
       // we update the metrics after we finish the request so we use a waitFor here, use assert
       // directly may cause failure if we run too fast.
       HTU.waitFor(10000, () -> hedgedReadWin.getCount() == 1);
@@ -672,21 +670,20 @@ public class TestReplicasClient {
     throws IOException {
     try (ResultScanner rs = table.getScanner(scan);) {
       for (Result r : rs) {
-        Assert.assertEquals(isStale, r.isStale());
-        Assert.assertFalse(r.isEmpty());
+        assertEquals(isStale, r.isStale());
+        assertFalse(r.isEmpty());
       }
       Map<ScanMetricsRegionInfo, Map<String, Long>> scanMetricsByRegion =
         rs.getScanMetrics().collectMetricsByRegion(false);
-      Assert.assertEquals(1, scanMetricsByRegion.size());
+      assertEquals(1, scanMetricsByRegion.size());
       for (Map.Entry<ScanMetricsRegionInfo, Map<String, Long>> entry : scanMetricsByRegion
         .entrySet()) {
         ScanMetricsRegionInfo scanMetricsRegionInfo = entry.getKey();
         Map<String, Long> metrics = entry.getValue();
-        Assert.assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
-        Assert.assertEquals(regionInfo.getEncodedName(),
-          scanMetricsRegionInfo.getEncodedRegionName());
-        Assert.assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
-        Assert.assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
+        assertEquals(rsServerName, scanMetricsRegionInfo.getServerName());
+        assertEquals(regionInfo.getEncodedName(), scanMetricsRegionInfo.getEncodedRegionName());
+        assertEquals(1, (long) metrics.get(REGIONS_SCANNED_METRIC_NAME));
+        assertEquals(1, (long) metrics.get(COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME));
       }
     }
   }

@@ -20,7 +20,7 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.Optional;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -38,18 +38,19 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: regionReplication={0}")
 public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
   extends CloneSnapshotFromClientCloneLinksAfterDeleteTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCloneSnapshotFromClientCloneLinksAfterDelete.class);
+  public TestMobCloneSnapshotFromClientCloneLinksAfterDelete(int numReplicas) {
+    super(numReplicas);
+  }
 
   private static boolean delayFlush = false;
 
@@ -87,7 +88,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     TEST_UTIL.getConfiguration().setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     setupConfiguration();
     TEST_UTIL.startMiniCluster(3);
@@ -96,7 +97,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
   @Override
   protected void createTable() throws IOException, InterruptedException {
     MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName,
-      SnapshotTestingUtils.getSplitKeys(), getNumReplicas(),
+      SnapshotTestingUtils.getSplitKeys(), numReplicas,
       StoreFileTrackerFactory.Trackers.DEFAULT.name(), DelayFlushCoprocessor.class.getName(),
       FAMILY);
   }
@@ -111,8 +112,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     return MobSnapshotTestingUtils.countMobRows(table);
   }
 
-  @Test
-  @Override
+  @TestTemplate
   public void testCloneLinksAfterDelete() throws IOException, InterruptedException {
     // delay the flush to make sure
     delayFlush = true;
@@ -120,7 +120,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     long tid = EnvironmentEdgeManager.currentTime();
     String snapshotName3 = "snaptb3-" + tid;
     TableName clonedTableName3 =
-      TableName.valueOf(name.getMethodName() + EnvironmentEdgeManager.currentTime());
+      TableName.valueOf(getValidMethodName() + EnvironmentEdgeManager.currentTime());
     admin.snapshot(snapshotName3, tableName);
     delayFlush = false;
     int snapshot3Rows = -1;
@@ -129,7 +129,7 @@ public class TestMobCloneSnapshotFromClientCloneLinksAfterDelete
     }
     admin.cloneSnapshot(snapshotName3, clonedTableName3);
     admin.deleteSnapshot(snapshotName3);
-    super.testCloneLinksAfterDelete();
+    testCloneLinksAfterDelete0();
     verifyRowCount(TEST_UTIL, clonedTableName3, snapshot3Rows);
     admin.disableTable(clonedTableName3);
     admin.deleteTable(clonedTableName3);

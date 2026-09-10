@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -31,18 +30,14 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRoundRobinAssignmentOnRestart.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRoundRobinAssignmentOnRestart.class);
@@ -110,7 +105,7 @@ public class TestRoundRobinAssignmentOnRestart extends AbstractTestRestartCluste
     List<RegionInfo> newRegionInfos =
       cluster.getMaster().getAssignmentManager().getRegionsOnServer(newTestServer);
     LOG.debug("RegionServer {} has {} regions", newTestServer, newRegionInfos.size());
-    assertTrue("Should not retain all regions when restart",
-      newRegionInfos.size() < regionInfos.size());
+    assertTrue(newRegionInfos.size() < regionInfos.size(),
+      "Should not retain all regions when restart");
   }
 }

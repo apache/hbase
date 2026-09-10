@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.crypto.aes;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -32,7 +32,6 @@ import java.security.Security;
 import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.DefaultCipherProvider;
@@ -41,15 +40,12 @@ import org.apache.hadoop.hbase.io.crypto.Encryptor;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestAES {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestAES.class);
 
   // Validation for AES in CTR mode with a 128 bit key
   // From NIST Special Publication 800-38A
@@ -74,13 +70,13 @@ public class TestAES {
     ByteArrayInputStream in = new ByteArrayInputStream(out.toByteArray());
     byte[] b = new byte[16];
     IOUtils.readFully(in, b);
-    assertTrue("Failed #1", Bytes.equals(b, Bytes.fromHex("874d6191b620e3261bef6864990db6ce")));
+    assertTrue(Bytes.equals(b, Bytes.fromHex("874d6191b620e3261bef6864990db6ce")), "Failed #1");
     IOUtils.readFully(in, b);
-    assertTrue("Failed #2", Bytes.equals(b, Bytes.fromHex("9806f66b7970fdff8617187bb9fffdff")));
+    assertTrue(Bytes.equals(b, Bytes.fromHex("9806f66b7970fdff8617187bb9fffdff")), "Failed #2");
     IOUtils.readFully(in, b);
-    assertTrue("Failed #3", Bytes.equals(b, Bytes.fromHex("5ae4df3edbd5d35e5b4f09020db03eab")));
+    assertTrue(Bytes.equals(b, Bytes.fromHex("5ae4df3edbd5d35e5b4f09020db03eab")), "Failed #3");
     IOUtils.readFully(in, b);
-    assertTrue("Failed #4", Bytes.equals(b, Bytes.fromHex("1e031dda2fbe03d1792170a0f3009cee")));
+    assertTrue(Bytes.equals(b, Bytes.fromHex("1e031dda2fbe03d1792170a0f3009cee")), "Failed #4");
   }
 
   @Test
@@ -93,7 +89,7 @@ public class TestAES {
     DefaultCipherProvider.getInstance().setConf(conf);
 
     AES aes = new AES(DefaultCipherProvider.getInstance());
-    assertEquals("AES did not find alternate RNG", "TestRNG", aes.getRNG().getAlgorithm());
+    assertEquals("TestRNG", aes.getRNG().getAlgorithm(), "AES did not find alternate RNG");
   }
 
   static class TestProvider extends Provider {

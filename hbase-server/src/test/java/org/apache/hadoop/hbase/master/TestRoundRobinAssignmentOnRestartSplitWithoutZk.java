@@ -17,19 +17,14 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRoundRobinAssignmentOnRestartSplitWithoutZk
   extends TestRoundRobinAssignmentOnRestart {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRoundRobinAssignmentOnRestartSplitWithoutZk.class);
 
   @Override
   protected boolean splitWALCoordinatedByZk() {

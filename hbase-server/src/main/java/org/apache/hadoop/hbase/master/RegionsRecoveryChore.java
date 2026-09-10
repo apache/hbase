@@ -50,8 +50,8 @@ public class RegionsRecoveryChore extends ScheduledChore {
 
   private static final String REGIONS_RECOVERY_CHORE_NAME = "RegionsRecoveryChore";
 
-  private static final String ERROR_REOPEN_REIONS_MSG =
-    "Error reopening regions with high storeRefCount. ";
+  private static final String ERROR_REOPEN_REGIONS_MSG =
+    "Error reopening regions with high storeRefCount.";
 
   private final HMaster hMaster;
   private final int storeFileRefCountThreshold;
@@ -73,7 +73,6 @@ public class RegionsRecoveryChore extends ScheduledChore {
     this.hMaster = hMaster;
     this.storeFileRefCountThreshold = configuration.getInt(
       HConstants.STORE_FILE_REF_COUNT_THRESHOLD, HConstants.DEFAULT_STORE_FILE_REF_COUNT_THRESHOLD);
-
   }
 
   @Override
@@ -83,6 +82,12 @@ public class RegionsRecoveryChore extends ScheduledChore {
         "Starting up Regions Recovery chore for reopening regions based on storeFileRefCount...");
     }
     try {
+      if (!hMaster.isInitialized()) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("Skipping regions recovery chore because master is not initialized yet");
+        }
+        return;
+      }
       // only if storeFileRefCountThreshold > 0, consider the feature turned on
       if (storeFileRefCountThreshold > 0) {
         final ClusterMetrics clusterMetrics = hMaster.getClusterMetrics();
@@ -94,11 +99,11 @@ public class RegionsRecoveryChore extends ScheduledChore {
           tableToReopenRegionsMap.forEach((tableName, regionNames) -> {
             try {
               LOG.warn("Reopening regions due to high storeFileRefCount. "
-                + "TableName: {} , noOfRegions: {}", tableName, regionNames.size());
-              hMaster.reopenRegions(tableName, regionNames, NONCE_GENERATOR.getNonceGroup(),
-                NONCE_GENERATOR.newNonce());
+                + "TableName: {}, numOfRegions: {}", tableName, regionNames.size());
+              hMaster.reopenRegionsThrottled(tableName, regionNames,
+                NONCE_GENERATOR.getNonceGroup(), NONCE_GENERATOR.newNonce());
             } catch (IOException e) {
-              LOG.error("{} tableName: {}, regionNames: {}", ERROR_REOPEN_REIONS_MSG, tableName,
+              LOG.error("{} tableName: {}, regionNames: {}", ERROR_REOPEN_REGIONS_MSG, tableName,
                 regionNames, e);
             }
           });

@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -38,7 +38,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -69,20 +68,20 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * This class is used to test the functionality of the DataTieringManager.
- *
+ * <p>
  * The mock online regions are stored in {@link TestCustomCellDataTieringManager#testOnlineRegions}.
  * For all tests, the setup of
  *  {@link TestCustomCellDataTieringManager#testOnlineRegions} occurs only once.
- * Please refer to {@link TestCustomCellDataTieringManager#setupOnlineRegions()} for the structure.
+ * Please refer to {@link TestCustomCellDataTieringManager#setupOnlineRegions(BlockCache)} for the
+ * structure.
  * Additionally, a list of all store files is
  *  maintained in {@link TestCustomCellDataTieringManager#hStoreFiles}.
  * The characteristics of these store files are listed below:
@@ -97,12 +96,9 @@ import org.slf4j.LoggerFactory;
  * @formatter:on
  */
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCustomCellDataTieringManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCustomCellDataTieringManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCustomCellDataTieringManager.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -124,7 +120,7 @@ public class TestCustomCellDataTieringManager {
    */
   private static String rowKeyString;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestCustomCellDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
@@ -163,10 +159,6 @@ public class TestCustomCellDataTieringManager {
     key = new BlockCacheKey(hStoreFiles.get(1).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, false);
 
-    // Test with valid key with no HFile Path
-    key = new BlockCacheKey(hStoreFiles.get(0).getPath().getName(), 0);
-    testDataTieringMethodWithKeyExpectingException(methodCallerWithKey, key,
-      new DataTieringException("BlockCacheKey Doesn't Contain HFile Path"));
   }
 
   @Test
@@ -191,13 +183,14 @@ public class TestCustomCellDataTieringManager {
     Path basePath = hStoreFiles.get(0).getPath().getParent().getParent().getParent();
     hFilePath = new Path(basePath, "incorrectRegion/cf1/filename");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException("HRegion corresponding to incorrectRegion doesn't exist"));
 
     // Test with a non-existing HStore path
     basePath = hStoreFiles.get(0).getPath().getParent().getParent();
     hFilePath = new Path(basePath, "incorrectCf/filename");
     testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist"));
+      new DataTieringException(
+        "HStore corresponding to " + basePath.getName() + "/incorrectCf doesn't exist"));
   }
 
   @Test
@@ -215,25 +208,6 @@ public class TestCustomCellDataTieringManager {
   }
 
   @Test
-  public void testHotDataWithPath() throws IOException {
-    initializeTestEnvironment();
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
-
-    // Test with valid path
-    Path hFilePath = hStoreFiles.get(2).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
-
-    // Test with another valid path
-    hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
-
-    // Test with a filename where corresponding HStoreFile in not present
-    hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
-  }
-
-  @Test
   public void testPrefetchWhenDataTieringEnabled() throws IOException {
     setPrefetchBlocksOnOpen();
     this.blockCache = initializeTestEnvironment();
@@ -247,9 +221,9 @@ public class TestCustomCellDataTieringManager {
 
     // Since we have one cold file among four files, only three should get prefetched.
     Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
-    assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
+    assertTrue(fullyCachedFiles.isPresent(), "We should get the fully cached files from the cache");
     Waiter.waitFor(defaultConf, 10000, () -> fullyCachedFiles.get().size() == 3);
-    assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
+    assertEquals(3, fullyCachedFiles.get().size(), "Number of fully cached files are incorrect");
   }
 
   private void setPrefetchBlocksOnOpen() {
@@ -265,14 +239,16 @@ public class TestCustomCellDataTieringManager {
     }
 
     // Verify hStoreFile3 is identified as cold data
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
+    DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isHotData;
     Path hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    testDataTieringMethodWithKeyNoException(methodCallerWithKey,
+      new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), false);
 
     // Verify all the other files in hStoreFiles are hot data
     for (int i = 0; i < hStoreFiles.size() - 1; i++) {
       hFilePath = hStoreFiles.get(i).getPath();
-      testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+      testDataTieringMethodWithKeyNoException(methodCallerWithKey,
+        new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), true);
     }
 
     try {

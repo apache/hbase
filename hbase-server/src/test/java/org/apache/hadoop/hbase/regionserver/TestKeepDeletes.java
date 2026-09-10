@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HBaseTestingUtil.COLUMNS;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -30,7 +30,6 @@ import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -48,20 +47,15 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.IncrementingEnvironmentEdge;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestKeepDeletes {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeepDeletes.class);
 
   HBaseTestingUtil hbu = new HBaseTestingUtil();
   private final byte[] T0 = Bytes.toBytes("0");
@@ -74,12 +68,11 @@ public class TestKeepDeletes {
 
   private final byte[] c0 = COLUMNS[0];
   private final byte[] c1 = COLUMNS[1];
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     /*
      * HBASE-6832: [WINDOWS] Tests should use explicit timestamp for Puts, and not rely on implicit
      * RS timing. Use an explicit timer (IncrementingEnvironmentEdge) so that the put, delete
@@ -91,7 +84,7 @@ public class TestKeepDeletes {
     EnvironmentEdgeManagerTestHelper.injectEdge(new IncrementingEnvironmentEdge());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     EnvironmentEdgeManager.reset();
   }
@@ -100,10 +93,11 @@ public class TestKeepDeletes {
    * Make sure that deleted rows are retained. Family delete markers are deleted. Column Delete
    * markers are versioned Time range scan of deleted rows are possible
    */
+
   @Test
   public void testBasicScenario() throws Exception {
     // keep 3 versions, rows do not expire
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 3,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 3,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -198,7 +192,7 @@ public class TestKeepDeletes {
   @Test
   public void testRawScanWithoutKeepingDeletes() throws Exception {
     // KEEP_DELETED_CELLS is NOT enabled
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 3,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 3,
       HConstants.FOREVER, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -243,7 +237,7 @@ public class TestKeepDeletes {
   @Test
   public void testWithoutKeepingDeletes() throws Exception {
     // KEEP_DELETED_CELLS is NOT enabled
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 3,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 3,
       HConstants.FOREVER, KeepDeletedCells.FALSE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -296,7 +290,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testRawScanWithColumns() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 3,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 3,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     Region region = hbu.createLocalHRegion(htd, null, null);
 
@@ -320,7 +314,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testRawScan() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 3,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 3,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     Region region = hbu.createLocalHRegion(htd, null, null);
 
@@ -409,7 +403,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testDeleteMarkerExpirationEmptyStore() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 1,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 1,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -452,7 +446,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testDeleteMarkerExpiration() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 1,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 1,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -515,7 +509,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testWithOldRow() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 1,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 1,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -593,7 +587,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testRanges() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 3,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 3,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     Region region = hbu.createLocalHRegion(htd, null, null);
 
@@ -674,7 +668,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testDeleteMarkerVersioning() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 1,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 1,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
@@ -767,7 +761,7 @@ public class TestKeepDeletes {
    */
   @Test
   public void testWithMixedCFs() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 0, 1,
+    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name), 0, 1,
       HConstants.FOREVER, KeepDeletedCells.TRUE);
     Region region = hbu.createLocalHRegion(htd, null, null);
 
@@ -818,8 +812,8 @@ public class TestKeepDeletes {
    */
   @Test
   public void testWithMinVersions() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 3,
-      1000, 1, KeepDeletedCells.TRUE);
+    TableDescriptor htd =
+      hbu.createTableDescriptor(TableName.valueOf(name), 3, 1000, 1, KeepDeletedCells.TRUE);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past
@@ -896,8 +890,8 @@ public class TestKeepDeletes {
    */
   @Test
   public void testWithTTL() throws Exception {
-    TableDescriptor htd = hbu.createTableDescriptor(TableName.valueOf(name.getMethodName()), 1,
-      1000, 1, KeepDeletedCells.TTL);
+    TableDescriptor htd =
+      hbu.createTableDescriptor(TableName.valueOf(name), 1, 1000, 1, KeepDeletedCells.TTL);
     HRegion region = hbu.createLocalHRegion(htd, null, null);
 
     long ts = EnvironmentEdgeManager.currentTime() - 2000; // 2s in the past

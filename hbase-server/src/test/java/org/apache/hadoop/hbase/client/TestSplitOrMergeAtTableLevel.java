@@ -17,58 +17,57 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestSplitOrMergeAtTableLevel {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitOrMergeAtTableLevel.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static byte[] FAMILY = Bytes.toBytes("testFamily");
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
   private static Admin admin;
 
-  @BeforeClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(2);
     admin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testTableSplitSwitch() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setSplitEnabled(false).build();
 
@@ -90,7 +89,7 @@ public class TestSplitOrMergeAtTableLevel {
 
   @Test
   public void testTableSplitSwitchForPreSplittedTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
 
     // create a table with split disabled
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
@@ -112,7 +111,7 @@ public class TestSplitOrMergeAtTableLevel {
 
   @Test
   public void testTableMergeSwitch() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
 
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setMergeEnabled(false).build();
@@ -135,7 +134,7 @@ public class TestSplitOrMergeAtTableLevel {
 
   @Test
   public void testTableMergeSwitchForPreSplittedTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
 
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(FAMILY)).setMergeEnabled(false).build();
@@ -166,7 +165,7 @@ public class TestSplitOrMergeAtTableLevel {
       // expected to reach here
       // check and ensure that table does not get splitted
       assertTrue(admin.getRegions(tableName).size() == originalCount);
-      assertTrue("Expected DoNotRetryIOException!", ee.getCause() instanceof DoNotRetryIOException);
+      assertTrue(ee.getCause() instanceof DoNotRetryIOException, "Expected DoNotRetryIOException!");
     }
   }
 
@@ -226,7 +225,7 @@ public class TestSplitOrMergeAtTableLevel {
       // expected to reach here
       // check and ensure that region do not get merged
       assertTrue(admin.getRegions(tableName).size() == originalCount);
-      assertTrue("Expected DoNotRetryIOException!", ee.getCause() instanceof DoNotRetryIOException);
+      assertTrue(ee.getCause() instanceof DoNotRetryIOException, "Expected DoNotRetryIOException!");
     }
   }
 

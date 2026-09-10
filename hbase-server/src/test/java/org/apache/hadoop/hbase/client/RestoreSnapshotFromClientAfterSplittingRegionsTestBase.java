@@ -20,12 +20,16 @@ package org.apache.hadoop.hbase.client;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class RestoreSnapshotFromClientAfterSplittingRegionsTestBase
   extends RestoreSnapshotFromClientTestBase {
 
-  @Test
+  protected RestoreSnapshotFromClientAfterSplittingRegionsTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testRestoreSnapshotAfterSplittingRegions() throws IOException, InterruptedException {
     List<RegionInfo> regionInfos = admin.getRegions(tableName);
     RegionReplicaUtil.removeNonDefaultRegions(regionInfos);

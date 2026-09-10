@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -30,16 +29,12 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRecoverySnapshotUtils {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRecoverySnapshotUtils.class);
 
   @Test
   public void testRecoverySnapshotTtlNoDescriptor() {
@@ -53,8 +48,8 @@ public class TestRecoverySnapshotUtils {
 
     // Test with null table descriptor - should return site configuration
     long actualTtl = RecoverySnapshotUtils.getRecoverySnapshotTtl(env, null);
-    assertEquals("Should return site-level TTL when no table descriptor provided", siteLevelTtl,
-      actualTtl);
+    assertEquals(siteLevelTtl, actualTtl,
+      "Should return site-level TTL when no table descriptor provided");
   }
 
   @Test
@@ -75,8 +70,8 @@ public class TestRecoverySnapshotUtils {
 
     // Test with table descriptor override - should return table-level TTL
     long actualTtl = RecoverySnapshotUtils.getRecoverySnapshotTtl(env, tableDescriptor);
-    assertEquals("Should return table-level TTL when table descriptor provides override",
-      tableLevelTtl, actualTtl);
+    assertEquals(tableLevelTtl, actualTtl,
+      "Should return table-level TTL when table descriptor provides override");
   }
 
   @Test
@@ -90,7 +85,7 @@ public class TestRecoverySnapshotUtils {
 
     // Test with null table descriptor - should return default TTL
     long actualTtl = RecoverySnapshotUtils.getRecoverySnapshotTtl(env, null);
-    assertEquals("Should return default TTL when no site configuration provided",
-      HConstants.DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL, actualTtl);
+    assertEquals(HConstants.DEFAULT_SNAPSHOT_BEFORE_DESTRUCTIVE_ACTION_TTL, actualTtl,
+      "Should return default TTL when no site configuration provided");
   }
 }

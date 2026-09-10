@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
@@ -37,25 +36,21 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test restore/clone snapshots with TTL from the client
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestSnapshotWithTTLFromClient {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotWithTTLFromClient.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotWithTTLFromClient.class);
 
@@ -72,7 +67,7 @@ public class TestSnapshotWithTTLFromClient {
    * Setup the config for the cluster
    * @throws Exception on failure
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
@@ -86,7 +81,7 @@ public class TestSnapshotWithTTLFromClient {
     conf.setInt("hbase.master.cleaner.snapshot.interval", CHORE_INTERVAL_SECS * 60 * 1000);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     createTable();
   }
@@ -95,7 +90,7 @@ public class TestSnapshotWithTTLFromClient {
     UTIL.createTable(TABLE_NAME, new byte[][] { TEST_FAM });
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.deleteTableIfAny(TABLE_NAME);
     UTIL.deleteTableIfAny(CLONED_TABLE_NAME);
@@ -103,7 +98,7 @@ public class TestSnapshotWithTTLFromClient {
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();

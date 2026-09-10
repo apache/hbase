@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.http.jmx;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -27,31 +27,26 @@ import java.net.URLEncoder;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.servlet.http.HttpServletResponse;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.HttpServer;
 import org.apache.hadoop.hbase.http.HttpServerFunctionalTest;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestJMXJsonServlet extends HttpServerFunctionalTest {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestJMXJsonServlet.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestJMXJsonServlet.class);
   private static HttpServer server;
   private static URL baseUrl;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     // Eclipse doesn't pick this up correctly from the plugin
     // configuration in the pom.
@@ -61,7 +56,7 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
     baseUrl = getServerURL(server);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     server.stop();
   }
@@ -69,13 +64,13 @@ public class TestJMXJsonServlet extends HttpServerFunctionalTest {
   public static void assertReFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertTrue("'" + p + "' does not match " + value, m.find());
+    assertTrue(m.find(), "'" + p + "' does not match " + value);
   }
 
   public static void assertNotFind(String re, String value) {
     Pattern p = Pattern.compile(re);
     Matcher m = p.matcher(value);
-    assertFalse("'" + p + "' should not match " + value, m.find());
+    assertFalse(m.find(), "'" + p + "' should not match " + value);
   }
 
   @Test

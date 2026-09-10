@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -33,18 +32,14 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, RegionServerTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestCompactionTool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionTool.class);
 
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
 
@@ -53,7 +48,7 @@ public class TestCompactionTool {
   private Path rootDir;
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.testUtil.startMiniCluster();
     testUtil.createTable(tableName, HBaseTestingUtil.fam1);
@@ -61,7 +56,7 @@ public class TestCompactionTool {
     this.region = testUtil.getMiniHBaseCluster().getRegions(tableName).get(0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     this.testUtil.shutdownMiniCluster();
     testUtil.cleanupTestDir();

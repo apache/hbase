@@ -205,6 +205,12 @@ public class OfflineTableReplicationQueueStorage implements ReplicationQueueStor
   }
 
   @Override
+  public List<String> listAllPeerIds() throws ReplicationException {
+    return offsets.keySet().stream().map(ReplicationQueueId::getPeerId).distinct()
+      .collect(Collectors.toList());
+  }
+
+  @Override
   public synchronized List<ReplicationQueueId> listAllQueueIds(String peerId)
     throws ReplicationException {
     return offsets.keySet().stream().filter(rqi -> rqi.getPeerId().equals(peerId))

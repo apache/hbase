@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client.replication;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -35,20 +34,16 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerConfigBuilder;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestReplicationAdminForSyncReplication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationAdminForSyncReplication.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestReplicationAdminForSyncReplication.class);
@@ -57,14 +52,14 @@ public class TestReplicationAdminForSyncReplication {
 
   private static Admin hbaseAdmin;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 1);
     TEST_UTIL.startMiniCluster();
     hbaseAdmin = TEST_UTIL.getAdmin();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     hbaseAdmin.close();
     TEST_UTIL.shutdownMiniCluster();
@@ -104,7 +99,7 @@ public class TestReplicationAdminForSyncReplication {
         successCount++;
       }
     }
-    assertEquals("Only one peer can be added successfully", 1, successCount);
+    assertEquals(1, successCount, "Only one peer can be added successfully");
   }
 
   private ReplicationPeerConfig buildSyncReplicationPeerConfig(String clusterKey,

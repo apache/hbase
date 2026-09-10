@@ -27,12 +27,11 @@ import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 
 import io.opentelemetry.api.trace.StatusCode;
-import io.opentelemetry.sdk.testing.junit4.OpenTelemetryRule;
+import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import java.net.InetSocketAddress;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CallDroppedException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MatcherPredicate;
 import org.apache.hadoop.hbase.Waiter;
@@ -41,31 +40,26 @@ import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandlerImpl;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.mockito.Mockito;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCallRunner {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCallRunner.class);
-
-  @Rule
-  public TestName testName = new TestName();
-
-  @Rule
-  public OpenTelemetryRule otelRule = OpenTelemetryRule.create();
+  @RegisterExtension
+  public static final OpenTelemetryExtension otelRule = OpenTelemetryExtension.create();
 
   private Configuration conf = null;
+  private String testMethodName;
 
-  @Before
-  public void before() {
+  @BeforeEach
+  public void before(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
     final HBaseTestingUtil util = new HBaseTestingUtil();
     conf = util.getConfiguration();
   }
@@ -83,13 +77,13 @@ public class TestCallRunner {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.run();
-    }, testName.getMethodName());
+    }, testMethodName);
 
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
-      hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+      hasItem(allOf(hasName(testMethodName), hasEnded()))));
 
-    assertThat(otelRule.getSpans(), hasItem(
-      allOf(hasName(testName.getMethodName()), hasStatusWithCode(StatusCode.OK), hasEnded())));
+    assertThat(otelRule.getSpans(),
+      hasItem(allOf(hasName(testMethodName), hasStatusWithCode(StatusCode.OK), hasEnded())));
   }
 
   @Test
@@ -103,7 +97,7 @@ public class TestCallRunner {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.run();
-    }, testName.getMethodName());
+    }, testMethodName);
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
   }
 
@@ -118,14 +112,14 @@ public class TestCallRunner {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.drop();
-    }, testName.getMethodName());
+    }, testMethodName);
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
 
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
-      hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+      hasItem(allOf(hasName(testMethodName), hasEnded()))));
 
     assertThat(otelRule.getSpans(),
-      hasItem(allOf(hasName(testName.getMethodName()), hasStatusWithCode(StatusCode.OK),
+      hasItem(allOf(hasName(testMethodName), hasStatusWithCode(StatusCode.OK),
         hasEvents(hasItem(EventMatchers.hasName("Client disconnect detected"))), hasEnded())));
   }
 
@@ -144,15 +138,15 @@ public class TestCallRunner {
       CallRunner cr = new CallRunner(mockRpcServer, mockCall);
       cr.setStatus(new MonitoredRPCHandlerImpl("test"));
       cr.drop();
-    }, testName.getMethodName());
+    }, testMethodName);
     Mockito.verify(mockCall, Mockito.times(1)).cleanup();
     Mockito.verify(mockMetrics).exception(Mockito.any(CallDroppedException.class));
 
     Waiter.waitFor(conf, TimeUnit.SECONDS.toMillis(5), new MatcherPredicate<>(otelRule::getSpans,
-      hasItem(allOf(hasName(testName.getMethodName()), hasEnded()))));
+      hasItem(allOf(hasName(testMethodName), hasEnded()))));
 
     assertThat(otelRule.getSpans(),
-      hasItem(allOf(hasName(testName.getMethodName()), hasStatusWithCode(StatusCode.ERROR),
+      hasItem(allOf(hasName(testMethodName), hasStatusWithCode(StatusCode.ERROR),
         hasEvents(hasItem(allOf(EventMatchers.hasName("exception"),
           EventMatchers.hasAttributes(
             containsEntry("exception.type", CallDroppedException.class.getName()))))),

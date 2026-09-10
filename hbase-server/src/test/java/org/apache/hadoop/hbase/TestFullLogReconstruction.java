@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Waiter.ExplainingPredicate;
@@ -26,28 +26,24 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFullLogReconstruction {
   private static final Logger LOG = LoggerFactory.getLogger(TestFullLogReconstruction.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFullLogReconstruction.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private final static TableName TABLE_NAME = TableName.valueOf("tabletest");
   private final static byte[] FAMILY = Bytes.toBytes("family");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration c = TEST_UTIL.getConfiguration();
     // quicker heartbeat interval for faster DN death notification
@@ -61,7 +57,7 @@ public class TestFullLogReconstruction {
     TEST_UTIL.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -77,7 +73,7 @@ public class TestFullLogReconstruction {
 
     // Load up the table with simple rows and count them
     int initialCount = TEST_UTIL.loadTable(table, FAMILY);
-    int count = TEST_UTIL.countRows(table);
+    int count = HBaseTestingUtil.countRows(table);
 
     assertEquals(initialCount, count);
 
@@ -104,7 +100,7 @@ public class TestFullLogReconstruction {
     });
     LOG.info("Starting count");
 
-    int newCount = TEST_UTIL.countRows(table);
+    int newCount = HBaseTestingUtil.countRows(table);
     assertEquals(count, newCount);
     table.close();
   }

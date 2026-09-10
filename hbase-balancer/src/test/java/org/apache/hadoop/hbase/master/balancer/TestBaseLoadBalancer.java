@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -36,7 +37,6 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
@@ -51,30 +51,26 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBaseLoadBalancer extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBaseLoadBalancer.class);
 
   private static LoadBalancer loadBalancer;
   private static final Logger LOG = LoggerFactory.getLogger(TestBaseLoadBalancer.class);
   private static final ServerName master = ServerName.valueOf("fake-master", 0, 1L);
   private static RackManager rackManager;
   private static final int NUM_SERVERS = 15;
-  private static ServerName[] servers = new ServerName[NUM_SERVERS];
+  private static final ServerName[] servers = new ServerName[NUM_SERVERS];
 
   int[][] regionsAndServersMocks = new int[][] {
     // { num regions, num servers }
@@ -83,10 +79,9 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     new int[] { 1, 3 }, new int[] { 2, 3 }, new int[] { 3, 3 }, new int[] { 25, 3 },
     new int[] { 2, 10 }, new int[] { 2, 100 }, new int[] { 12, 10 }, new int[] { 12, 100 }, };
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
@@ -107,6 +102,11 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
         when(rackManager.getRack(servers[i])).thenReturn("rack3");
       }
     }
+  }
+
+  @BeforeEach
+  public void setUpBeforeEach(TestInfo testInfo) throws Exception {
+    methodName = testInfo.getTestMethod().get().getName();
   }
 
   public static class MockBalancer extends BaseLoadBalancer {
@@ -136,7 +136,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     }
     assertEquals(hris.size(), totalRegion);
     for (int[] mock : regionsAndServersMocks) {
-      LOG.debug("testBulkAssignment with " + mock[0] + " regions and " + mock[1] + " servers");
+      LOG.debug("testBulkAssignment with {} regions and {} servers", mock[0], mock[1]);
       List<RegionInfo> regions = randomRegions(mock[0]);
       List<ServerAndLoad> servers = randomServers(mock[1], 0);
       List<ServerName> list = getListOfServerNames(servers);
@@ -197,7 +197,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
   @Test
   public void testRandomAssignment() throws Exception {
     for (int i = 1; i != 5; ++i) {
-      LOG.info("run testRandomAssignment() with idle servers:" + i);
+      LOG.info("run testRandomAssignment() with idle servers:{}", i);
       testRandomAssignment(i);
     }
   }
@@ -222,14 +222,14 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
         return idleServers;
       }
     });
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(Bytes.toBytes("key1")).setEndKey(Bytes.toBytes("key2")).setSplit(false)
-      .setRegionId(100).build();
+    RegionInfo hri1 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey(Bytes.toBytes("key1"))
+        .setEndKey(Bytes.toBytes("key2")).setSplit(false).setRegionId(100).build();
     assertNull(balancer.randomAssignment(hri1, Collections.emptyList()));
     assertNull(balancer.randomAssignment(hri1, null));
     for (int i = 0; i != 3; ++i) {
       ServerName sn = balancer.randomAssignment(hri1, allServers);
-      assertTrue("actual:" + sn + ", except:" + idleServers, idleServers.contains(sn));
+      assertTrue(idleServers.contains(sn), "actual:" + sn + ", except:" + idleServers);
     }
   }
 
@@ -244,15 +244,15 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<RegionInfo> list1 = new ArrayList<>();
     List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(Bytes.toBytes("key1")).setEndKey(Bytes.toBytes("key2")).setSplit(false)
-      .setRegionId(100).build();
+    RegionInfo hri1 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey(Bytes.toBytes("key1"))
+        .setEndKey(Bytes.toBytes("key2")).setSplit(false).setRegionId(100).build();
     // create a replica of the region (replica_of_region1)
     RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
-    RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(Bytes.toBytes("key2")).setEndKey(Bytes.toBytes("key3")).setSplit(false)
-      .setRegionId(101).build();
+    RegionInfo hri3 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey(Bytes.toBytes("key2"))
+        .setEndKey(Bytes.toBytes("key3")).setSplit(false).setRegionId(101).build();
     list0.add(hri1); // only region1
     list1.add(hri2); // only replica_of_region1
     list2.add(hri3); // only region2
@@ -270,13 +270,13 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     assertTrue(cluster.wouldLowerAvailability(hri1, servers[1]));
     // check whether a move of region1 from servers[0] to servers[2] would lower
     // the availability of region1
-    assertTrue(!cluster.wouldLowerAvailability(hri1, servers[2]));
+    assertFalse(cluster.wouldLowerAvailability(hri1, servers[2]));
     // check whether a move of replica_of_region1 from servers[0] to servers[2] would lower
     // the availability of replica_of_region1
-    assertTrue(!cluster.wouldLowerAvailability(hri2, servers[2]));
+    assertFalse(cluster.wouldLowerAvailability(hri2, servers[2]));
     // check whether a move of region2 from servers[0] to servers[1] would lower
     // the availability of region2
-    assertTrue(!cluster.wouldLowerAvailability(hri3, servers[1]));
+    assertFalse(cluster.wouldLowerAvailability(hri3, servers[1]));
 
     // now lets have servers[1] host replica_of_region2
     list1.add(RegionReplicaUtil.getRegionInfoForReplica(hri3, 1));
@@ -304,7 +304,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     cluster = new BalancerClusterState(clusterState, null, null, null);
     // now repeat check whether a move of region1 from servers[0] to servers[6] would
     // lower the availability
-    assertTrue(!cluster.wouldLowerAvailability(hri1, servers[6]));
+    assertFalse(cluster.wouldLowerAvailability(hri1, servers[6]));
   }
 
   @Test
@@ -313,15 +313,15 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     List<RegionInfo> list1 = new ArrayList<>();
     List<RegionInfo> list2 = new ArrayList<>();
     // create a region (region1)
-    RegionInfo hri1 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(Bytes.toBytes("key1")).setEndKey(Bytes.toBytes("key2")).setSplit(false)
-      .setRegionId(100).build();
+    RegionInfo hri1 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey(Bytes.toBytes("key1"))
+        .setEndKey(Bytes.toBytes("key2")).setSplit(false).setRegionId(100).build();
     // create a replica of the region (replica_of_region1)
     RegionInfo hri2 = RegionReplicaUtil.getRegionInfoForReplica(hri1, 1);
     // create a second region (region2)
-    RegionInfo hri3 = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setStartKey(Bytes.toBytes("key2")).setEndKey(Bytes.toBytes("key3")).setSplit(false)
-      .setRegionId(101).build();
+    RegionInfo hri3 =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(methodName)).setStartKey(Bytes.toBytes("key2"))
+        .setEndKey(Bytes.toBytes("key3")).setSplit(false).setRegionId(101).build();
     list0.add(hri1); // only region1
     list1.add(hri2); // only replica_of_region1
     list2.add(hri3); // only region2
@@ -335,7 +335,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     // map (linkedhashmap is important).
     BalancerClusterState cluster = new BalancerClusterState(clusterState, null, null, rackManager);
     // check whether moving region1 from servers[1] to servers[2] would lower availability
-    assertTrue(!cluster.wouldLowerAvailability(hri1, servers[2]));
+    assertFalse(cluster.wouldLowerAvailability(hri1, servers[2]));
 
     // now move region1 from servers[0] to servers[2]
     cluster.doAction(new MoveRegionAction(0, 0, 2));
@@ -356,7 +356,7 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     cluster = new BalancerClusterState(clusterState, null, null, rackManager);
     // check whether a move of replica_of_region2 from servers[12],rack3 to servers[0],rack1 would
     // lower the availability
-    assertTrue(!cluster.wouldLowerAvailability(hri4, servers[0]));
+    assertFalse(cluster.wouldLowerAvailability(hri4, servers[0]));
     // now move region2 from servers[6],rack2 to servers[0],rack1
     cluster.doAction(new MoveRegionAction(2, 2, 0));
     // now repeat check if replica_of_region2 from servers[12],rack3 to servers[0],rack1 would
@@ -384,8 +384,8 @@ public class TestBaseLoadBalancer extends BalancerTestBase {
     Set<ServerName> onlineServerSet = new TreeSet<>(servers);
     Set<RegionInfo> assignedRegions = new TreeSet<>(RegionInfo.COMPARATOR);
     for (Map.Entry<ServerName, List<RegionInfo>> a : assignment.entrySet()) {
-      assertTrue("Region assigned to server that was not listed as online",
-        onlineServerSet.contains(a.getKey()));
+      assertTrue(onlineServerSet.contains(a.getKey()),
+        "Region assigned to server that was not listed as online");
       for (RegionInfo r : a.getValue())
         assignedRegions.add(r);
     }

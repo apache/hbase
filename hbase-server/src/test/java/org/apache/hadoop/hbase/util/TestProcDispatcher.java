@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.apache.hadoop.hbase.master.HMaster.HBASE_MASTER_RSPROC_DISPATCHER_CLASS;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -41,15 +41,13 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,39 +56,34 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 /**
  * Testing custom RSProcedureDispatcher to ensure retry limit can be imposed on certain errors.
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestProcDispatcher {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestProcDispatcher.class);
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestProcDispatcher.class);
-
-  @Rule
-  public TestName name = new TestName();
-
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static ServerName rs0;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().set(HBASE_MASTER_RSPROC_DISPATCHER_CLASS,
       RSProcDispatcher.class.getName());
+    TEST_UTIL.getConfiguration().setInt(RSProcDispatcher.FAIL_FAST_LIMIT_KEY, 5);
     TEST_UTIL.startMiniCluster(3);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor tableDesc = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of("fam1")).build();
     int startKey = 0;
@@ -98,17 +91,23 @@ public class TestProcDispatcher {
     TEST_UTIL.getAdmin().createTable(tableDesc, Bytes.toBytes(startKey), Bytes.toBytes(endKey), 9);
   }
 
+  @AfterEach
+  public void tearDown() {
+    RSProcDispatcher.stopInjecting();
+  }
+
   @Test
-  public void testRetryLimitOnConnClosedErrors() throws Exception {
+  public void testRetryLimitOnConnClosedErrors(TestInfo testInfo) throws Exception {
     HbckChore hbckChore = new HbckChore(TEST_UTIL.getHBaseCluster().getMaster());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
-    Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = IntStream.range(10, 50000).mapToObj(i -> new Put(Bytes.toBytes(i))
       .addColumn(Bytes.toBytes("fam1"), Bytes.toBytes("q1"), Bytes.toBytes("val_" + i)))
       .collect(Collectors.toList());
-    table.put(puts);
+    try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+      table.put(puts);
+    }
     admin.flush(tableName);
     admin.compact(tableName);
     Thread.sleep(3000);
@@ -121,11 +120,13 @@ public class TestProcDispatcher {
 
     hbckChore.choreForTesting();
     HbckReport hbckReport = hbckChore.getLastReport();
-    Assert.assertEquals(0, hbckReport.getInconsistentRegions().size());
-    Assert.assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
-    Assert.assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
+    assertEquals(0, hbckReport.getInconsistentRegions().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnFS().size());
+    assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
     HRegion region0 = hRegionServer0.getRegions().get(0);
+    // Fail the next two open/close-region requests for this table so the moves trigger SCP(s).
+    RSProcDispatcher.injectErrorsForNextRequests(tableName, 2);
     // move all regions from server1 to server0
     for (HRegion region : hRegionServer1.getRegions()) {
       TEST_UTIL.getAdmin().move(region.getRegionInfo().getEncodedNameAsBytes(), rs0);
@@ -133,11 +134,11 @@ public class TestProcDispatcher {
     TEST_UTIL.getAdmin().move(region0.getRegionInfo().getEncodedNameAsBytes());
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
 
-    // Ensure:
-    // 1. num of regions before and after scheduling SCP remain same
-    // 2. all procedures including SCPs are successfully completed
-    // 3. two servers have SCPs scheduled
-    TEST_UTIL.waitFor(5000, 1000, () -> {
+    // Ensure, after the injected connection errors:
+    // 1. the total number of regions is unchanged before and after the SCP(s)
+    // 2. all procedures (including the SCP(s)) complete successfully
+    // 3. at least one ServerCrashProcedure was scheduled
+    TEST_UTIL.waitFor(60000, 1000, () -> {
       LOG.info("numRegions0: {} , numRegions1: {} , numRegions2: {}", numRegions0, numRegions1,
         numRegions2);
       LOG.info("Online regions - server0 : {} , server1: {} , server2: {}",
@@ -150,7 +151,7 @@ public class TestProcDispatcher {
               == ProcedureProtos.ProcedureState.SUCCESS)
           .count(),
         master.getMasterProcedureExecutor().getProcedures().size());
-      LOG.info("Num of SCPs: " + master.getMasterProcedureExecutor().getProcedures().stream()
+      LOG.info("Num of SCPs: {}", master.getMasterProcedureExecutor().getProcedures().stream()
         .filter(proc -> proc instanceof ServerCrashProcedure).count());
       return (numRegions0 + numRegions1 + numRegions2)
           == (cluster.getRegionServer(0).getNumberOfOnlineRegions()
@@ -165,13 +166,11 @@ public class TestProcDispatcher {
     });
 
     // Ensure we have no inconsistent regions
-    TEST_UTIL.waitFor(5000, 1000, () -> {
+    TEST_UTIL.waitFor(60000, 1000, () -> {
       hbckChore.choreForTesting();
       HbckReport report = hbckChore.getLastReport();
       return report.getInconsistentRegions().isEmpty() && report.getOrphanRegionsOnFS().isEmpty()
         && report.getOrphanRegionsOnRS().isEmpty();
     });
-
   }
-
 }

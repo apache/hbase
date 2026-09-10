@@ -17,37 +17,32 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestPrefixFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPrefixFilter.class);
 
   Filter mainFilter;
   static final char FIRST_CHAR = 'a';
   static final char LAST_CHAR = 'e';
   static final String HOST_PREFIX = "org.apache.site-";
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.mainFilter = new PrefixFilter(Bytes.toBytes(HOST_PREFIX));
   }
@@ -81,14 +76,14 @@ public class TestPrefixFilter {
   private void prefixRowTests(Filter filter, boolean lastFilterAllRemaining) throws Exception {
     for (char c = FIRST_CHAR; c <= LAST_CHAR; c++) {
       byte[] t = createRow(c);
-      assertFalse("Failed with character " + c,
-        filter.filterRowKey(KeyValueUtil.createFirstOnRow(t)));
+      assertFalse(filter.filterRowKey(KeyValueUtil.createFirstOnRow(t)),
+        "Failed with character " + c);
       assertFalse(filter.filterAllRemaining());
     }
     String yahooSite = "com.yahoo.www";
     byte[] yahooSiteBytes = Bytes.toBytes(yahooSite);
     KeyValue yahooSiteCell = KeyValueUtil.createFirstOnRow(yahooSiteBytes);
-    assertFalse("Failed with character " + yahooSite, filter.filterRowKey(yahooSiteCell));
+    assertFalse(filter.filterRowKey(yahooSiteCell), "Failed with character " + yahooSite);
     assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(yahooSiteCell));
     assertEquals(lastFilterAllRemaining, filter.filterAllRemaining());
   }

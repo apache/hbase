@@ -17,19 +17,18 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -62,16 +61,12 @@ import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.wal.WALSplitter;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -80,15 +75,12 @@ import org.apache.hbase.thirdparty.com.google.common.base.Throwables;
 /**
  * Tests for conditions that should trigger RegionServer aborts when rolling the current WAL fails.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: walProvider={0}")
 public class TestLogRollAbort {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLogRollAbort.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(AbstractTestLogRolling.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestLogRollAbort.class);
   private static MiniDFSCluster dfsCluster;
   private static Admin admin;
   private static SingleProcessHBaseCluster cluster;
@@ -101,7 +93,7 @@ public class TestLogRollAbort {
 
   // Need to override this setup so we can edit the config before it gets sent
   // to the HDFS & HBase cluster startup.
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Tweak default timeout values down for faster recovery
     TEST_UTIL.getConfiguration().setInt("hbase.regionserver.logroll.errors.tolerated", 2);
@@ -120,18 +112,20 @@ public class TestLogRollAbort {
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, "asyncfs");
   }
 
-  @Parameters(name = "{index}: walProvider={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { "filesystem" }, new Object[] { "asyncfs" });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("filesystem"), Arguments.of("asyncfs"));
   }
 
   private Configuration conf;
   private FileSystem fs;
 
-  @Parameter
-  public String walProvider;
+  private final String walProvider;
 
-  @Before
+  public TestLogRollAbort(String walProvider) {
+    this.walProvider = walProvider;
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().set(WALFactory.WAL_PROVIDER, walProvider);
     TEST_UTIL.startMiniCluster(2);
@@ -148,7 +142,7 @@ public class TestLogRollAbort {
     CommonFSUtils.setWALRootDir(conf, HBASELOGDIR);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -157,7 +151,7 @@ public class TestLogRollAbort {
    * Tests that RegionServer aborts if we hit an error closing the WAL when there are unsynced WAL
    * edits. See HBASE-4282.
    */
-  @Test
+  @TestTemplate
   public void testRSAbortWithUnflushedEdits() throws Exception {
     LOG.info("Starting testRSAbortWithUnflushedEdits()");
 
@@ -207,7 +201,7 @@ public class TestLogRollAbort {
    * declared it dead and started to split. Want log rolling after a master split to fail. See
    * HBASE-2312.
    */
-  @Test
+  @TestTemplate
   public void testLogRollAfterSplitStart() throws IOException {
     LOG.info("Verify wal roll after split starts will fail.");
     String logName =
@@ -254,9 +248,9 @@ public class TestLogRollAbort {
       if (error instanceof RemoteException) {
         error = ((RemoteException) error).unwrapRemoteException();
       }
-      assertTrue("unexpected error: " + Throwables.getStackTraceAsString(error),
-        error instanceof FileNotFoundException
-          || error.getCause() instanceof FileNotFoundException);
+      assertTrue(
+        error instanceof FileNotFoundException || error.getCause() instanceof FileNotFoundException,
+        "unexpected error: " + Throwables.getStackTraceAsString(error));
     } finally {
       wals.close();
       if (fs.exists(thisTestsDir)) {

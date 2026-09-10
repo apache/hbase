@@ -23,6 +23,7 @@ import java.io.BufferedInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -32,6 +33,7 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.HFileArchiver;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -50,6 +52,7 @@ import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
+import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
@@ -83,14 +86,24 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     this.ctx = ctx;
   }
 
+  private boolean isReadOnlyEnabled() {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
+  private boolean isNonWritableTableWhenReadOnlyMode() {
+    return isReadOnlyEnabled()
+      && !AbstractReadOnlyController.isWritableInReadOnlyMode(ctx.getTableName());
+  }
+
   @Override
   public final List<StoreFileInfo> load() throws IOException {
-    return doLoadStoreFiles(!isPrimaryReplica);
+    return doLoadStoreFiles(!isPrimaryReplica || isNonWritableTableWhenReadOnlyMode());
   }
 
   @Override
   public final void add(Collection<StoreFileInfo> newFiles) throws IOException {
-    if (isPrimaryReplica) {
+    if (isPrimaryReplica && !isNonWritableTableWhenReadOnlyMode()) {
       doAddNewStoreFiles(newFiles);
     }
   }
@@ -98,14 +111,14 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   @Override
   public final void replace(Collection<StoreFileInfo> compactedFiles,
     Collection<StoreFileInfo> newFiles) throws IOException {
-    if (isPrimaryReplica) {
+    if (isPrimaryReplica && !isNonWritableTableWhenReadOnlyMode()) {
       doAddCompactionResults(compactedFiles, newFiles);
     }
   }
 
   @Override
   public final void set(List<StoreFileInfo> files) throws IOException {
-    if (isPrimaryReplica) {
+    if (isPrimaryReplica && !isNonWritableTableWhenReadOnlyMode()) {
       doSetStoreFiles(files);
     }
   }
@@ -140,8 +153,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   @Override
   public final StoreFileWriter createWriter(CreateStoreFileWriterParams params) throws IOException {
-    if (!isPrimaryReplica) {
-      throw new IllegalStateException("Should not call create writer on secondary replicas");
+    if (!isPrimaryReplica || isNonWritableTableWhenReadOnlyMode()) {
+      throw new IllegalStateException(
+        "Should not call create writer on secondary replicas or in read-only mode");
     }
     // creating new cache config for each new writer
     final CacheConfig cacheConf = ctx.getCacheConf();
@@ -217,6 +231,11 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       out.close();
     }
     return reference;
+  }
+
+  @Override
+  public Reference createAndCommitReference(Reference reference, Path path) throws IOException {
+    return createReference(reference, path);
   }
 
   /**
@@ -324,7 +343,18 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
       isPrimaryReplica);
   }
 
-  public String createHFileLink(final TableName linkedTable, final String linkedRegion,
+  public HFileLink createAndCommitHFileLink(final TableName linkedTable, final String linkedRegion,
+    final String hfileName, final boolean createBackRef) throws IOException {
+    HFileLink hFileLink = createHFileLink(linkedTable, linkedRegion, hfileName, createBackRef);
+    Path path = new Path(ctx.getFamilyStoreDirectoryPath(),
+      HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName));
+    StoreFileInfo storeFileInfo =
+      new StoreFileInfo(conf, this.ctx.getRegionFileSystem().getFileSystem(), path, hFileLink);
+    add(Arrays.asList(storeFileInfo));
+    return hFileLink;
+  }
+
+  public HFileLink createHFileLink(final TableName linkedTable, final String linkedRegion,
     final String hfileName, final boolean createBackRef) throws IOException {
     String name = HFileLink.createHFileLinkName(linkedTable, linkedRegion, hfileName);
     String refName = HFileLink.createBackReferenceName(ctx.getTableName().toString(),
@@ -349,7 +379,8 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     try {
       // Create the link
       if (fs.createNewFile(new Path(ctx.getFamilyStoreDirectoryPath(), name))) {
-        return name;
+        return new HFileLink(new Path(ctx.getFamilyStoreDirectoryPath(), name), backRefPath, null,
+          archiveStoreDir);
       }
     } catch (IOException e) {
       LOG.error("couldn't create the link=" + name + " for " + ctx.getFamilyStoreDirectoryPath(),
@@ -365,14 +396,27 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   }
 
-  public String createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
+  public HFileLink createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
     throws IOException {
-    Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
-    if (!m.matches()) {
-      throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
+    Matcher hfileLinkMatcher = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
+    if (hfileLinkMatcher.matches()) {
+      return createHFileLink(
+        TableName.valueOf(hfileLinkMatcher.group(1), hfileLinkMatcher.group(2)),
+        hfileLinkMatcher.group(3), hfileLinkMatcher.group(4), createBackRef);
     }
-    return createHFileLink(TableName.valueOf(m.group(1), m.group(2)), m.group(3), m.group(4),
-      createBackRef);
+    if (StoreFileInfo.isMobFileLink(hfileLinkName)) {
+      Matcher mobLinkMatcher = HFileLink.REF_OR_HFILE_LINK_PATTERN.matcher(hfileLinkName);
+      if (mobLinkMatcher.matches()) {
+        return createHFileLink(TableName.valueOf(mobLinkMatcher.group(1), mobLinkMatcher.group(2)),
+          mobLinkMatcher.group(3), mobLinkMatcher.group(4), createBackRef);
+      }
+    }
+    throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
+  }
+
+  @Override
+  public StoreContext getStoreContext() {
+    return ctx;
   }
 
   public void removeStoreFiles(List<HStoreFile> storeFiles) throws IOException {

@@ -17,40 +17,35 @@
  */
 package org.apache.hadoop.hbase.security.token;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Abortable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Waiter;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
+import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test the synchronization of token authentication master keys through ZKSecretWatcher
  */
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestZKSecretWatcher {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKSecretWatcher.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestZKSecretWatcher.class);
   private static HBaseTestingUtil TEST_UTIL;
@@ -99,7 +94,7 @@ public class TestZKSecretWatcher {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.startMiniZKCluster();
@@ -129,7 +124,7 @@ public class TestZKSecretWatcher {
     LOG.info("Master is " + KEY_MASTER.getName() + ", slave is " + KEY_SLAVE.getName());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniZKCluster();
   }
@@ -139,7 +134,6 @@ public class TestZKSecretWatcher {
     // sanity check
     assertTrue(KEY_MASTER.isMaster());
     assertFalse(KEY_SLAVE.isMaster());
-    int maxKeyId = 0;
 
     KEY_MASTER.rollCurrentKey();
     AuthenticationKey key1 = KEY_MASTER.getCurrentKey();
@@ -187,7 +181,7 @@ public class TestZKSecretWatcher {
       LOG.info("AuthKey1={}", k);
       return k == null;
     });
-    assertNull("key1=" + KEY_SLAVE.getKey(key1.getKeyId()), KEY_SLAVE.getKey(key1.getKeyId()));
+    assertNull(KEY_SLAVE.getKey(key1.getKeyId()), "key1=" + KEY_SLAVE.getKey(key1.getKeyId()));
 
     // bring up a new slave
     Configuration conf = TEST_UTIL.getConfiguration();

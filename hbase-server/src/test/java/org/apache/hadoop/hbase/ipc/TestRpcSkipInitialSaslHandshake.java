@@ -23,15 +23,14 @@ import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getKeytabFileF
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.getPrincipalForTesting;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.loginKerberosPrincipal;
 import static org.apache.hadoop.hbase.security.HBaseKerberosUtils.setSecuredConfiguration;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
@@ -41,12 +40,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
@@ -55,12 +53,9 @@ import org.apache.hbase.thirdparty.io.netty.channel.Channel;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestProtos;
 import org.apache.hadoop.hbase.shaded.ipc.protobuf.generated.TestRpcServiceProtos.TestProtobufRpcProto.BlockingInterface;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRpcSkipInitialSaslHandshake {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcSkipInitialSaslHandshake.class);
 
   protected static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -103,18 +98,18 @@ public class TestRpcSkipInitialSaslHandshake {
     serverConf = new Configuration(TEST_UTIL.getConfiguration());
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     initKDCAndConf();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     stopKDC();
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUpTest() throws Exception {
     setUpPrincipalAndConf();
   }

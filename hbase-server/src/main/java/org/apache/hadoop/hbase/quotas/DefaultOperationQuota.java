@@ -310,6 +310,8 @@ public class DefaultOperationQuota implements OperationQuota {
     return calculateReadCapacityUnit(actualSize) - calculateReadCapacityUnit(estimateSize);
   }
 
+  // TODO: the implementation of this method seems incorrect, although finally we will correct the
+  // usage when closing
   private long calculateHandlerUsageTimeEstimate(final double requestsPerSecond,
     final int numHandlerThreads) {
     if (requestsPerSecond <= numHandlerThreads) {
@@ -328,6 +330,7 @@ public class DefaultOperationQuota implements OperationQuota {
     long currentTime = EnvironmentEdgeManager.currentTime();
     long startTime = RpcServer.getCurrentCall().map(RpcCall::getStartTime).orElse(currentTime);
     long timeElapsed = currentTime - startTime;
-    return handlerUsageTimeConsumed - timeElapsed;
+    // actualTime - estimateTime
+    return timeElapsed - handlerUsageTimeConsumed;
   }
 }

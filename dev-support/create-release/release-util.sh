@@ -609,6 +609,8 @@ function generate_api_report {
     org.apache.yetus.audience.InterfaceAudience.Public  \
     -e "original-hbase.*.jar" \
     -e "hbase-shaded-testing-util.*.jar" \
+    --java8_home "${JAVA8_HOME}" \
+    --java17_home "${JAVA17_HOME}" \
     "$previous_tag" "$release_tag"
   previous_version="$(echo "${previous_tag}" | sed -e 's/rel\///')"
   cp "${project}/target/compat-check/report.html" "./api_compare_${previous_version}_to_${release_tag}.html"
@@ -969,7 +971,7 @@ function get_hadoop3_version() {
 # case spotless:check failure, so we should run spotless:apply before committing
 function maven_spotless_apply() {
   # our spotless plugin version requires at least java 11 to run, so we use java 17 here
-  JAVA_HOME="/usr/lib/jvm/java-17-openjdk-amd64" "${MVN[@]}" spotless:apply
+  JAVA_HOME="${JAVA17_HOME}" "${MVN[@]}" spotless:apply
 }
 
 function git_add_poms() {

@@ -152,20 +152,9 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   void incrSlowAppend();
 
   /**
-   * Update the split transaction time histogram
-   * @param t time it took, in milliseconds
-   */
-  void updateSplitTime(long t);
-
-  /**
    * Increment number of a requested splits
    */
   void incrSplitRequest();
-
-  /**
-   * Increment number of successful splits
-   */
-  void incrSplitSuccess();
 
   /**
    * Update the flush time histogram
@@ -408,12 +397,22 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
 
   String L1_CACHE_HIT_COUNT = "l1CacheHitCount";
   String L1_CACHE_HIT_COUNT_DESC = "L1 cache hit count.";
+  String L1_CACHE_HIT_CAGHING_COUNT = "l1CacheHitCachingCount";
+  String L1_CACHE_HIT_CAGHING_COUNT_DESC =
+    "Count of the hit on the L1 cache, for cacheable requests";
   String L1_CACHE_MISS_COUNT = "l1CacheMissCount";
   String L1_CACHE_MISS_COUNT_DESC = "L1 cache miss count.";
+  String L1_CACHE_MISS_CACHING_COUNT = "l1CacheMissCachingCount";
+  String L1_CACHE_MISS_CACHING_COUNT_DESC =
+    "Count of the misses on the L1 cache, for cacheable requests";
   String L1_CACHE_HIT_RATIO = "l1CacheHitRatio";
   String L1_CACHE_HIT_RATIO_DESC = "L1 cache hit ratio.";
+  String L1_CACHE_HIT_CACHING_RATIO = "l1CacheHitCachingRatio";
+  String L1_CACHE_HIT_CACHING_RATIO_DESC = "Hit Caching ratio of L1 cache";
   String L1_CACHE_MISS_RATIO = "l1CacheMissRatio";
   String L1_CACHE_MISS_RATIO_DESC = "L1 cache miss ratio.";
+  String L1_CACHE_MISS_CACHING_RATIO = "l1CacheMissCachingRatio";
+  String L1_CACHE_MISS_CACHING_RATIO_DESC = "Miss Caching ratio of L1 cache";
   String L2_CACHE_FREE_SIZE = "l2CacheFreeSize";
   String L2_CACHE_FREE_SIZE_DESC = "Amount of free bytes in the L2 cache";
   String L2_CACHE_SIZE = "l2CacheSize";
@@ -424,12 +423,22 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String L2_CACHE_EVICTION_COUNT_DESC = "Count of blocks evicted from the L2 cache";
   String L2_CACHE_HIT_COUNT = "l2CacheHitCount";
   String L2_CACHE_HIT_COUNT_DESC = "L2 cache hit count.";
+  String L2_CACHE_HIT_CACHING_COUNT = "l2CacheHitCachingCount";
+  String L2_CACHE_HIT_CACHING_COUNT_DESC =
+    "Count of the hit on the L2 cache, for cacheable requests";
   String L2_CACHE_MISS_COUNT = "l2CacheMissCount";
   String L2_CACHE_MISS_COUNT_DESC = "L2 cache miss count.";
+  String L2_CACHE_MISS_CACHING_COUNT = "l2CacheMissCachingCount";
+  String L2_CACHE_MISS_CACHING_COUNT_DESC =
+    "Count of the misses on the L2 cache, for cacheable requests";
   String L2_CACHE_HIT_RATIO = "l2CacheHitRatio";
   String L2_CACHE_HIT_RATIO_DESC = "L2 cache hit ratio.";
+  String L2_CACHE_HIT_CACHING_RATIO = "l2CacheHitCachingRatio";
+  String L2_CACHE_HIT_CACHING_RATIO_DESC = "Hit Caching ratio of L2 cache";
   String L2_CACHE_MISS_RATIO = "l2CacheMissRatio";
   String L2_CACHE_MISS_RATIO_DESC = "L2 cache miss ratio.";
+  String L2_CACHE_MISS_CACHING_RATIO = "l2CacheMissCachingRatio";
+  String L2_CACHE_MISS_CACHING_RATIO_DESC = "Miss Caching ratio of L2 cache";
   String RS_START_TIME_NAME = "regionServerStartTime";
   String ZOOKEEPER_QUORUM_NAME = "zookeeperQuorum";
   String SERVER_NAME_NAME = "serverName";
@@ -544,11 +553,8 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
   String BLOCKED_REQUESTS_COUNT_DESC = "The number of blocked requests because of memstore size is "
     + "larger than blockingMemStoreSize";
 
-  String SPLIT_KEY = "splitTime";
   String SPLIT_REQUEST_KEY = "splitRequestCount";
   String SPLIT_REQUEST_DESC = "Number of splits requested";
-  String SPLIT_SUCCESS_KEY = "splitSuccessCount";
-  String SPLIT_SUCCESS_DESC = "Number of successfully executed splits";
 
   String FLUSH_TIME = "flushTime";
   String FLUSH_TIME_DESC = "Histogram for the time in millis for memstore flush";
@@ -647,4 +653,15 @@ public interface MetricsRegionServerSource extends BaseSource, JvmPauseMonitorSo
     "Count of scanners which were expired due to scanner lease timeout";
   String CURRENT_REGION_CACHE_RATIO = "currentRegionCacheRatio";
   String CURRENT_REGION_CACHE_RATIO_DESC = "The percentage of caching completed for this region.";
+
+  String CURRENT_REGION_COLD_DATA_RATIO = "currentRegionColdDataRatio";
+
+  String CURRENT_REGION_COLD_DATA_RATIO_DESC = "The percentage of data in this region that "
+    + "is marked as cold by the configured time based priority logic.";
+
+  String EXCLUDE_DATA_NODES_COUNT = "excludedDataNodesCount";
+  String EXCLUDE_DATA_NODES_COUNT_DESC =
+    "Count of slow/connect error DataNodes excluded during WAL write operation";
+  String EXCLUDE_DATA_NODES_DETAILS = "excludedDataNodesDetails";
+  String EXCLUDE_DATA_NODES_DETAILS_DESC = "Excluded DataNodes info";
 }

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -32,14 +32,13 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Arrays;
-import java.util.Collection;
+import java.util.stream.Stream;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
@@ -51,25 +50,19 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestKVGenerator;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslHandler;
 
-@Category({ RPCTests.class, MediumTests.class })
-@RunWith(Parameterized.class)
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: allocatorType={0}")
 public class TestNettyRpcServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNettyRpcServer.class);
 
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] QUALIFIER = Bytes.toBytes("q");
@@ -78,21 +71,29 @@ public class TestNettyRpcServer {
   private static final int MAX_LEN = 1000000;
   protected static final LoadTestKVGenerator GENERATOR = new LoadTestKVGenerator(MIN_LEN, MAX_LEN);
   protected static HBaseTestingUtil TEST_UTIL;
+  protected TableName tableName;
+  protected final String allocatorType;
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
-
-  @Parameterized.Parameter
-  public String allocatorType;
-
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[][] { { NettyRpcServer.POOLED_ALLOCATOR_TYPE },
-      { NettyRpcServer.UNPOOLED_ALLOCATOR_TYPE }, { NettyRpcServer.HEAP_ALLOCATOR_TYPE },
-      { SimpleByteBufAllocator.class.getName() } });
+  public TestNettyRpcServer(String allocatorType) {
+    this.allocatorType = allocatorType;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return Arrays
+      .stream(
+        new Object[] { NettyRpcServer.POOLED_ALLOCATOR_TYPE, NettyRpcServer.UNPOOLED_ALLOCATOR_TYPE,
+          NettyRpcServer.HEAP_ALLOCATOR_TYPE, SimpleByteBufAllocator.class.getName() })
+      .map(Arguments::of);
+  }
+
+  @BeforeEach
+  public void setUpTable(TestInfo testInfo) {
+    String sanitizedAllocatorType = allocatorType.replaceAll("[^a-zA-Z0-9_.-]", "_");
+    tableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + "_" + sanitizedAllocatorType);
+  }
+
+  @BeforeEach
   public void setup() throws Exception {
     // A subclass may have already created TEST_UTIL and is now upcalling to us
     if (TEST_UTIL == null) {
@@ -104,14 +105,14 @@ public class TestNettyRpcServer {
     TEST_UTIL.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testNettyRpcServer() throws Exception {
-    doTest(name.getTableName());
+    doTest(tableName);
   }
 
   protected void doTest(TableName tableName) throws Exception {
@@ -130,10 +131,10 @@ public class TestNettyRpcServer {
       for (int i = 0; i < NUM_ROWS; i++) {
         final byte[] rowKey = Bytes.toBytes(LoadTestKVGenerator.md5PrefixedKey(i));
         final Result r = table.get(new Get(rowKey).addColumn(FAMILY, QUALIFIER));
-        assertNotNull("Result was empty", r);
+        assertNotNull(r, "Result was empty");
         final byte[] v = r.getValue(FAMILY, QUALIFIER);
-        assertNotNull("Result did not contain expected value", v);
-        assertTrue("Value was not verified", LoadTestKVGenerator.verify(v, rowKey, QUALIFIER));
+        assertNotNull(v, "Result did not contain expected value");
+        assertTrue(LoadTestKVGenerator.verify(v, rowKey, QUALIFIER), "Value was not verified");
       }
     }
   }
@@ -163,7 +164,7 @@ public class TestNettyRpcServer {
     + "khS2d/JDZq2XL5RGexf3CA6YYzWiTr9YZHNjuobvLH7mVnA2c8n6Zty/UhfnuK1x\n" + "JbkleFk=\n"
     + "-----END CERTIFICATE-----";
 
-  @Test
+  @TestTemplate
   public void testHandshakeCompleteHandler()
     throws SSLPeerUnverifiedException, CertificateException {
     NettyServerRpcConnection conn = mock(NettyServerRpcConnection.class);

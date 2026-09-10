@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,22 +42,17 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueExcludeFilter;
 import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestServerSideScanMetricsFromClientSide {
   private static final Logger LOG =
     LoggerFactory.getLogger(TestServerSideScanMetricsFromClientSide.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerSideScanMetricsFromClientSide.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -92,7 +87,7 @@ public class TestServerSideScanMetricsFromClientSide {
   // getCellHeapSize().
   private static long CELL_HEAP_SIZE = -1;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TABLE = createTestTable(TABLE_NAME, ROWS, FAMILIES, QUALIFIERS, VALUE);
@@ -107,7 +102,7 @@ public class TestServerSideScanMetricsFromClientSide {
     return ht;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -251,6 +246,57 @@ public class TestServerSideScanMetricsFromClientSide {
   }
 
   @Test
+  public void testRowsSeenMetricWithJoinedHeap() throws Exception {
+    // When Scan#setLoadColumnFamiliesOnDemand is enabled and the filter declares some families
+    // as non essential, a row passing the filter is populated in two steps: the essential
+    // families through the store heap and the remaining ones through the joined heap
+    // (HBASE-5416). Such a row must still be counted only once in the ROWS_SCANNED metric.
+    TableName tableName = TableName.valueOf("testRowsSeenMetricWithJoinedHeap");
+    byte[] essentialFamily = Bytes.toBytes("essential");
+    byte[] joinedFamily = Bytes.toBytes("joined");
+    byte[] otherValue = Bytes.toBytes("otherValue");
+    int numMatchingRows = 5;
+    try (Table table =
+      TEST_UTIL.createTable(tableName, new byte[][] { essentialFamily, joinedFamily })) {
+      List<Put> puts = new ArrayList<>();
+      for (int row = 0; row < NUM_ROWS; row++) {
+        Put put = new Put(ROWS[row]);
+        put.addColumn(essentialFamily, QUALIFIERS[0], row < numMatchingRows ? VALUE : otherValue);
+        put.addColumn(joinedFamily, QUALIFIERS[0], VALUE);
+        puts.add(put);
+      }
+      table.put(puts);
+
+      SingleColumnValueFilter filter =
+        new SingleColumnValueFilter(essentialFamily, QUALIFIERS[0], CompareOperator.EQUAL, VALUE);
+      // Makes the joined family non essential (see SingleColumnValueFilter#isFamilyEssential),
+      // so that it is lazily populated through the joined heap for rows passing the filter.
+      filter.setFilterIfMissing(true);
+      Scan scan = new Scan();
+      scan.setScanMetricsEnabled(true);
+      scan.setLoadColumnFamiliesOnDemand(true);
+      scan.setFilter(filter);
+
+      ResultScanner scanner = table.getScanner(scan);
+      int rowsReturned = 0;
+      for (Result result = scanner.next(); result != null; result = scanner.next()) {
+        // Both the essential and the lazily loaded family must be present in the result.
+        assertEquals(2, result.rawCells().length);
+        rowsReturned++;
+      }
+      scanner.close();
+      assertEquals(numMatchingRows, rowsReturned);
+      ScanMetrics metrics = scanner.getScanMetrics();
+      assertEquals(NUM_ROWS,
+        metrics.getCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME).get());
+      assertEquals(NUM_ROWS - numMatchingRows,
+        metrics.getCounter(ServerSideScanMetrics.COUNT_OF_ROWS_FILTERED_KEY_METRIC_NAME).get());
+    } finally {
+      TEST_UTIL.deleteTable(tableName);
+    }
+  }
+
+  @Test
   public void testRowsFilteredMetric() throws Exception {
     // Base scan configuration
     Scan baseScan;
@@ -351,7 +397,7 @@ public class TestServerSideScanMetricsFromClientSide {
 
   private void testMetric(Scan scan, String metricKey, long expectedValue,
     CompareOperator compareOperator) throws Exception {
-    assertTrue("Scan should be configured to record metrics", scan.isScanMetricsEnabled());
+    assertTrue(scan.isScanMetricsEnabled(), "Scan should be configured to record metrics");
     ResultScanner scanner = TABLE.getScanner(scan);
     // Iterate through all the results
     while (scanner.next() != null) {
@@ -359,17 +405,15 @@ public class TestServerSideScanMetricsFromClientSide {
     }
     scanner.close();
     ScanMetrics metrics = scanner.getScanMetrics();
-    assertNotNull("Metrics are null", metrics);
-    assertTrue("Metric : " + metricKey + " does not exist", metrics.hasCounter(metricKey));
+    assertNotNull(metrics, "Metrics are null");
+    assertTrue(metrics.hasCounter(metricKey), "Metric : " + metricKey + " does not exist");
     final long actualMetricValue = metrics.getCounter(metricKey).get();
     if (compareOperator == CompareOperator.EQUAL) {
-      assertEquals(
-        "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue,
-        expectedValue, actualMetricValue);
+      assertEquals(expectedValue, actualMetricValue,
+        "Metric: " + metricKey + " Expected: " + expectedValue + " Actual: " + actualMetricValue);
     } else {
-      assertTrue(
-        "Metric: " + metricKey + " Expected: > " + expectedValue + " Actual: " + actualMetricValue,
-        actualMetricValue > expectedValue);
+      assertTrue(actualMetricValue > expectedValue,
+        "Metric: " + metricKey + " Expected: > " + expectedValue + " Actual: " + actualMetricValue);
     }
   }
 }

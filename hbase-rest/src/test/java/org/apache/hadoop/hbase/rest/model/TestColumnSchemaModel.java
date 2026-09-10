@@ -17,22 +17,17 @@
  */
 package org.apache.hadoop.hbase.rest.model;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RestTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RestTests.class, SmallTests.class })
+@Tag(RestTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnSchemaModel.class);
 
   protected static final String COLUMN_NAME = "testcolumn";
   protected static final boolean BLOCKCACHE = true;
@@ -70,14 +65,14 @@ public class TestColumnSchemaModel extends TestModelBase<ColumnSchemaModel> {
 
   @Override
   protected void checkModel(ColumnSchemaModel model) {
-    assertEquals("name", COLUMN_NAME, model.getName());
-    assertEquals("block cache", BLOCKCACHE, model.__getBlockcache());
-    assertEquals("block size", BLOCKSIZE, model.__getBlocksize());
-    assertEquals("bloomfilter", BLOOMFILTER, model.__getBloomfilter());
-    assertTrue("compression", model.__getCompression().equalsIgnoreCase(COMPRESSION));
-    assertEquals("in memory", IN_MEMORY, model.__getInMemory());
-    assertEquals("ttl", TTL, model.__getTTL());
-    assertEquals("versions", VERSIONS, model.__getVersions());
+    assertEquals(COLUMN_NAME, model.getName(), "name");
+    assertEquals(BLOCKCACHE, model.__getBlockcache(), "block cache");
+    assertEquals(BLOCKSIZE, model.__getBlocksize(), "block size");
+    assertEquals(BLOOMFILTER, model.__getBloomfilter(), "bloomfilter");
+    assertTrue(model.__getCompression().equalsIgnoreCase(COMPRESSION), "compression");
+    assertEquals(IN_MEMORY, model.__getInMemory(), "in memory");
+    assertEquals(TTL, model.__getTTL(), "ttl");
+    assertEquals(VERSIONS, model.__getVersions(), "versions");
   }
 
   @Override

@@ -44,7 +44,6 @@ import java.util.stream.Collectors;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.io.WritableUtils;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -59,8 +58,7 @@ public class ByteBufferUtilsTestBase {
 
   private byte[] array;
 
-  @BeforeAll
-  public static void setUpBeforeAll() {
+  protected static void initialize() {
     SortedSet<Long> a = new TreeSet<>();
     for (int i = 0; i <= 63; ++i) {
       long v = -1L << i;

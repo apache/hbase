@@ -42,18 +42,6 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
  */
 public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
 
-  private long restartRandomRsExceptMetaSleepTime;
-  private long restartActiveMasterSleepTime;
-  private long rollingBatchRestartRSSleepTime;
-  private long restartActiveNameNodeSleepTime;
-  private long restartRandomDataNodeSleepTime;
-  private long restartRandomJournalNodeSleepTime;
-  private long restartRandomZKNodeSleepTime;
-  private long gracefulRollingRestartTSSLeepTime;
-  private long rollingBatchSuspendRSSleepTime;
-  private float rollingBatchSuspendtRSRatio;
-  private long action1Period;
-
   @Override
   public ChaosMonkey build() {
     loadProperties();
@@ -72,7 +60,7 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new RestartRandomZKNodeAction(restartRandomZKNodeSleepTime),
       new GracefulRollingRestartRsAction(gracefulRollingRestartTSSLeepTime),
       new RollingBatchSuspendResumeRsAction(rollingBatchSuspendRSSleepTime,
-          rollingBatchSuspendtRSRatio)
+          rollingBatchSuspendRSRatio)
     };
     // @formatter:on
 
@@ -84,41 +72,5 @@ public class ServerAndDependenciesKillingMonkeyFactory extends MonkeyFactory {
       new CompositeSequentialPolicy(new DoActionsOncePolicy(action1Period, actions1),
         new PeriodicRandomActionPolicy(action1Period, actions1)),
       new PeriodicRandomActionPolicy(action1Period, actions2));
-  }
-
-  private void loadProperties() {
-    restartRandomRsExceptMetaSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME + ""));
-    restartActiveMasterSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
-    rollingBatchRestartRSSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_RESTART_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_RESTART_RS_SLEEP_TIME + ""));
-    restartActiveNameNodeSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_NAMENODE_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_ACTIVE_NAMENODE_SLEEP_TIME + ""));
-    restartRandomDataNodeSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_DATANODE_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_RANDOM_DATANODE_SLEEP_TIME + ""));
-    restartRandomJournalNodeSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_JOURNALNODE_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_RANDOM_JOURNALNODE_SLEEP_TIME + ""));
-    restartRandomZKNodeSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_RANDOM_ZKNODE_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_RANDOM_ZKNODE_SLEEP_TIME + ""));
-    gracefulRollingRestartTSSLeepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.GRACEFUL_RESTART_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_GRACEFUL_RESTART_RS_SLEEP_TIME + ""));
-    rollingBatchSuspendRSSleepTime = Long
-      .parseLong(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_SLEEP_TIME + ""));
-    rollingBatchSuspendtRSRatio =
-      Float.parseFloat(this.properties.getProperty(MonkeyConstants.ROLLING_BATCH_SUSPEND_RS_RATIO,
-        MonkeyConstants.DEFAULT_ROLLING_BATCH_SUSPEND_RS_RATIO + ""));
-    action1Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
   }
 }

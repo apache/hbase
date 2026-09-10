@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.apache.hbase.thirdparty.com.google.common.collect.Iterables.size;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -28,7 +28,6 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -39,10 +38,9 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
@@ -54,12 +52,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.SpaceQuota;
 /**
  * Test class for {@link NamespaceQuotaSnapshotStore}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestNamespaceQuotaViolationStore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamespaceQuotaViolationStore.class);
 
   private static final long ONE_MEGABYTE = 1024L * 1024L;
 
@@ -68,7 +62,7 @@ public class TestNamespaceQuotaViolationStore {
   private Map<RegionInfo, Long> regionReports;
   private NamespaceQuotaSnapshotStore store;
 
-  @Before
+  @BeforeEach
   public void setup() {
     conn = mock(Connection.class);
     chore = mock(QuotaObserverChore.class);

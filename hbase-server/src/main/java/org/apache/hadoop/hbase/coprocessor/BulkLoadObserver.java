@@ -27,12 +27,12 @@ import org.apache.yetus.audience.InterfaceStability;
  * <br>
  * <h3>Exception Handling</h3> For all functions, exception handling is done as follows:
  * <ul>
- * <li>Exceptions of type {@link IOException} are reported back to client.</li>
+ * <li>Exceptions of type {@link IOException} are reported back to the client.</li>
  * <li>For any other kind of exception:
  * <ul>
  * <li>If the configuration {@link CoprocessorHost#ABORT_ON_ERROR_KEY} is set to true, then the
  * server aborts.</li>
- * <li>Otherwise, coprocessor is removed from the server and
+ * <li>Otherwise, the coprocessor is removed from the server and
  * {@link org.apache.hadoop.hbase.DoNotRetryIOException} is returned to the client.</li>
  * </ul>
  * </li>
@@ -42,11 +42,11 @@ import org.apache.yetus.audience.InterfaceStability;
 @InterfaceStability.Evolving
 public interface BulkLoadObserver {
   /**
-   * Called as part of SecureBulkLoadEndpoint.prepareBulkLoad() RPC call. It can't bypass the
-   * default action, e.g., ctx.bypass() won't have effect. If you need to get the region or table
-   * name, get it from the <code>ctx</code> as follows:
-   * <code>code>ctx.getEnvironment().getRegion()</code>. Use getRegionInfo to fetch the encodedName
-   * and use getDescriptor() to get the tableName.
+   * Called as part of the SecureBulkLoadEndpoint.prepareBulkLoad() RPC call. It can't bypass the
+   * default action, e.g., ctx.bypass() won't have any effect. If you need to get the region or
+   * table name, get it from the <code>ctx</code> as follows:
+   * <code>ctx.getEnvironment().getRegion()</code>. Use getRegionInfo to fetch the encodedName and
+   * use getDescriptor() to get the tableName.
    * @param ctx the environment to interact with the framework and master
    */
   default void prePrepareBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)
@@ -54,11 +54,11 @@ public interface BulkLoadObserver {
   }
 
   /**
-   * Called as part of SecureBulkLoadEndpoint.cleanupBulkLoad() RPC call. It can't bypass the
-   * default action, e.g., ctx.bypass() won't have effect. If you need to get the region or table
-   * name, get it from the <code>ctx</code> as follows:
-   * <code>code>ctx.getEnvironment().getRegion()</code>. Use getRegionInfo to fetch the encodedName
-   * and use getDescriptor() to get the tableName.
+   * Called as part of the SecureBulkLoadEndpoint.cleanupBulkLoad() RPC call. It can't bypass the
+   * default action, e.g., ctx.bypass() won't have any effect. If you need to get the region or
+   * table name, get it from the <code>ctx</code> as follows:
+   * <code>ctx.getEnvironment().getRegion()</code>. Use getRegionInfo to fetch the encodedName and
+   * use getDescriptor() to get the tableName.
    * @param ctx the environment to interact with the framework and master
    */
   default void preCleanupBulkLoad(ObserverContext<RegionCoprocessorEnvironment> ctx)

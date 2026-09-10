@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
@@ -34,9 +36,8 @@ import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.test.LoadTestDataGenerator;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
@@ -67,7 +68,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
  * -DIntegrationTestRegionReplicaReplication.num_write_threads=100
  * </pre>
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestRegionReplicaReplication extends IntegrationTestIngest {
 
   private static final String TEST_NAME =
@@ -194,7 +195,7 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
-        Assert.fail(errorMsg);
+        fail(errorMsg);
       }
 
       args = Lists.newArrayList(getArgsForLoadTestTool("", "", startKey, numKeys));
@@ -211,7 +212,7 @@ public class IntegrationTestRegionReplicaReplication extends IntegrationTestInge
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
-        Assert.fail(errorMsg);
+        fail(errorMsg);
       }
       startKey += numKeys;
     }

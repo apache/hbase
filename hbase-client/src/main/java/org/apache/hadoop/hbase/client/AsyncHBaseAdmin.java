@@ -162,6 +162,16 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   }
 
   @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName) {
+    return wrap(rawAdmin.reopenTableRegions(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Void> reopenTableRegions(TableName tableName, List<RegionInfo> regions) {
+    return wrap(rawAdmin.reopenTableRegions(tableName, regions));
+  }
+
+  @Override
   public CompletableFuture<Void> modifyTableStoreFileTracker(TableName tableName, String dstSFT) {
     return wrap(rawAdmin.modifyTableStoreFileTracker(tableName, dstSFT));
   }
@@ -1009,6 +1019,26 @@ class AsyncHBaseAdmin implements AsyncAdmin {
   @Override
   public CompletableFuture<List<String>> getCachedFilesList(ServerName serverName) {
     return wrap(rawAdmin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshMeta() {
+    return wrap(rawAdmin.refreshMeta());
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final TableName tableName) {
+    return wrap(rawAdmin.refreshHFiles(tableName));
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles(final String namespace) {
+    return wrap(rawAdmin.refreshHFiles(namespace));
+  }
+
+  @Override
+  public CompletableFuture<Long> refreshHFiles() {
+    return wrap(rawAdmin.refreshHFiles());
   }
 
   @Override

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.crypto;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -28,22 +28,17 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.util.Properties;
 import javax.crypto.spec.SecretKeySpec;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestKeyStoreKeyProvider {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyStoreKeyProvider.class);
 
   static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
   static final String ALIAS = "test";
@@ -53,7 +48,7 @@ public class TestKeyStoreKeyProvider {
   static File storeFile;
   static File passwordFile;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     KEY = MessageDigest.getInstance("SHA-256").digest(Bytes.toBytes(ALIAS));
     // Create a JKECS store containing a test secret key
@@ -66,21 +61,15 @@ public class TestKeyStoreKeyProvider {
     new File(dataDir).mkdirs();
     // Write the keystore file
     storeFile = new File(dataDir, "keystore.jks");
-    FileOutputStream os = new FileOutputStream(storeFile);
-    try {
+    try (FileOutputStream os = new FileOutputStream(storeFile)) {
       store.store(os, PASSWORD.toCharArray());
-    } finally {
-      os.close();
     }
     // Write the password file
     Properties p = new Properties();
     p.setProperty(ALIAS, PASSWORD);
     passwordFile = new File(dataDir, "keystore.pw");
-    os = new FileOutputStream(passwordFile);
-    try {
+    try (FileOutputStream os = new FileOutputStream(passwordFile)) {
       p.store(os, "");
-    } finally {
-      os.close();
     }
   }
 

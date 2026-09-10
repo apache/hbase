@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.master.procedure.PeerProcedureInterface.PeerOperationType;
 import org.apache.hadoop.hbase.master.procedure.TestMasterProcedureScheduler.TestPeerProcedure;
@@ -32,35 +31,31 @@ import org.apache.hadoop.hbase.master.procedure.TestMasterProcedureScheduler.Tes
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterProcedureSchedulerConcurrency {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterProcedureSchedulerConcurrency.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestMasterProcedureSchedulerConcurrency.class);
 
   private MasterProcedureScheduler queue;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     queue = new MasterProcedureScheduler(pid -> null);
     queue.start();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
-    assertEquals("proc-queue expected to be empty", 0, queue.size());
+    assertEquals(0, queue.size(), "proc-queue expected to be empty");
     queue.stop();
     queue.clear();
   }
@@ -102,22 +97,22 @@ public class TestMasterProcedureSchedulerConcurrency {
 
               String peerId = proc.getPeerId();
               synchronized (concurrentPeers) {
-                assertTrue("unexpected concurrency on " + peerId, concurrentPeers.add(peerId));
+                assertTrue(concurrentPeers.add(peerId), "unexpected concurrency on " + peerId);
               }
               assertTrue(opsCount.decrementAndGet() >= 0);
 
               try {
                 long procId = proc.getProcId();
                 int concurrent = concurrentCount.incrementAndGet();
-                assertTrue("inc-concurrent=" + concurrent + " 1 <= concurrent <= " + NUM_PEERS,
-                  concurrent >= 1 && concurrent <= NUM_PEERS);
+                assertTrue(concurrent >= 1 && concurrent <= NUM_PEERS,
+                  "inc-concurrent=" + concurrent + " 1 <= concurrent <= " + NUM_PEERS);
                 LOG.debug(
                   "[S] peerId=" + peerId + " procId=" + procId + " concurrent=" + concurrent);
                 Thread.sleep(2000);
                 concurrent = concurrentCount.decrementAndGet();
                 LOG.debug(
                   "[E] peerId=" + peerId + " procId=" + procId + " concurrent=" + concurrent);
-                assertTrue("dec-concurrent=" + concurrent, concurrent < NUM_PEERS);
+                assertTrue(concurrent < NUM_PEERS, "dec-concurrent=" + concurrent);
               } finally {
                 synchronized (concurrentPeers) {
                   assertTrue(concurrentPeers.remove(peerId));
@@ -141,7 +136,7 @@ public class TestMasterProcedureSchedulerConcurrency {
     for (int i = 0; i < threads.length; ++i) {
       threads[i].join();
     }
-    assertTrue(failures.toString(), failures.isEmpty());
+    assertTrue(failures.isEmpty(), failures.toString());
     assertEquals(0, opsCount.get());
     assertEquals(0, queue.size());
   }
@@ -188,21 +183,21 @@ public class TestMasterProcedureSchedulerConcurrency {
 
               TableName tableId = procSet.getTableName(proc);
               synchronized (concurrentTables) {
-                assertTrue("unexpected concurrency on " + tableId, concurrentTables.add(tableId));
+                assertTrue(concurrentTables.add(tableId), "unexpected concurrency on " + tableId);
               }
               assertTrue(opsCount.decrementAndGet() >= 0);
               try {
                 long procId = proc.getProcId();
                 int concurrent = concurrentCount.incrementAndGet();
-                assertTrue("inc-concurrent=" + concurrent + " 1 <= concurrent <= " + NUM_TABLES,
-                  concurrent >= 1 && concurrent <= NUM_TABLES);
+                assertTrue(concurrent >= 1 && concurrent <= NUM_TABLES,
+                  "inc-concurrent=" + concurrent + " 1 <= concurrent <= " + NUM_TABLES);
                 LOG.debug(
                   "[S] tableId=" + tableId + " procId=" + procId + " concurrent=" + concurrent);
                 Thread.sleep(2000);
                 concurrent = concurrentCount.decrementAndGet();
                 LOG.debug(
                   "[E] tableId=" + tableId + " procId=" + procId + " concurrent=" + concurrent);
-                assertTrue("dec-concurrent=" + concurrent, concurrent < NUM_TABLES);
+                assertTrue(concurrent < NUM_TABLES, "dec-concurrent=" + concurrent);
               } finally {
                 synchronized (concurrentTables) {
                   assertTrue(concurrentTables.remove(tableId));
@@ -225,7 +220,7 @@ public class TestMasterProcedureSchedulerConcurrency {
     for (int i = 0; i < threads.length; ++i) {
       threads[i].join();
     }
-    assertTrue(failures.toString(), failures.isEmpty());
+    assertTrue(failures.isEmpty(), failures.toString());
     assertEquals(0, opsCount.get());
     assertEquals(0, queue.size());
 
@@ -233,8 +228,8 @@ public class TestMasterProcedureSchedulerConcurrency {
       final TableName table = TableName.valueOf(String.format("testtb-%04d", i));
       final TestTableProcedure dummyProc =
         new TestTableProcedure(100, table, TableProcedureInterface.TableOperationType.DELETE);
-      assertTrue("queue should be deleted, table=" + table,
-        queue.markTableAsDeleted(table, dummyProc));
+      assertTrue(queue.markTableAsDeleted(table, dummyProc),
+        "queue should be deleted, table=" + table);
     }
   }
 

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -27,7 +27,8 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -43,28 +44,20 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: serialPeer={0}")
 public class TestNamespaceReplication extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestNamespaceReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestNamespaceReplication.class);
 
@@ -84,23 +77,23 @@ public class TestNamespaceReplication extends TestReplicationBase {
   private static Admin admin1;
   private static Admin admin2;
 
-  @Parameter
-  public boolean serialPeer;
+  private boolean serialPeer;
+
+  public TestNamespaceReplication(boolean serialPeer) {
+    this.serialPeer = serialPeer;
+  }
 
   @Override
   protected boolean isSerialPeer() {
     return serialPeer;
   }
 
-  @Parameters(name = "{index}: serialPeer={0}")
-  public static List<Boolean> parameters() {
-    return ImmutableList.of(true, false);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TestReplicationBase.setUpBeforeClass();
-
     connection1 = ConnectionFactory.createConnection(CONF1);
     connection2 = ConnectionFactory.createConnection(CONF2);
     admin1 = connection1.getAdmin();
@@ -130,7 +123,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
     admin2.createTable(tabB);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     admin1.disableTable(tabAName);
     admin1.deleteTable(tabAName);
@@ -148,10 +141,9 @@ public class TestNamespaceReplication extends TestReplicationBase {
 
     connection1.close();
     connection2.close();
-    TestReplicationBase.tearDownAfterClass();
   }
 
-  @Test
+  @TestTemplate
   public void testNamespaceReplication() throws Exception {
     String peerId = "2";
 

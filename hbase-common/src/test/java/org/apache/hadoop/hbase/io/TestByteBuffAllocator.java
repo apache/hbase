@@ -19,32 +19,26 @@ package org.apache.hadoop.hbase.io;
 
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.getHeapAllocationRatio;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertSame;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestByteBuffAllocator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestByteBuffAllocator.class);
 
   @Test
   public void testRecycleOnlyPooledBuffers() {
@@ -364,25 +358,25 @@ public class TestByteBuffAllocator {
     conf.setInt(ByteBuffAllocator.DEPRECATED_MAX_BUFFER_COUNT_KEY, 10);
     conf.setInt(ByteBuffAllocator.DEPRECATED_BUFFER_SIZE_KEY, 1024);
     ByteBuffAllocator allocator = ByteBuffAllocator.create(conf, true);
-    Assert.assertEquals(1024, allocator.getBufferSize());
-    Assert.assertEquals(10, allocator.getTotalBufferCount());
+    assertEquals(1024, allocator.getBufferSize());
+    assertEquals(10, allocator.getTotalBufferCount());
 
     conf = new Configuration();
     conf.setInt(ByteBuffAllocator.MAX_BUFFER_COUNT_KEY, 11);
     conf.setInt(ByteBuffAllocator.BUFFER_SIZE_KEY, 2048);
     allocator = ByteBuffAllocator.create(conf, true);
-    Assert.assertEquals(2048, allocator.getBufferSize());
-    Assert.assertEquals(11, allocator.getTotalBufferCount());
+    assertEquals(2048, allocator.getBufferSize());
+    assertEquals(11, allocator.getTotalBufferCount());
 
     conf = new Configuration();
     conf.setBoolean(ByteBuffAllocator.DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, false);
-    Assert.assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
+    assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
     conf.setBoolean(ByteBuffAllocator.DEPRECATED_ALLOCATOR_POOL_ENABLED_KEY, true);
-    Assert.assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
+    assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
     conf.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true);
-    Assert.assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
+    assertTrue(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false));
     conf.setBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, false);
-    Assert.assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
+    assertFalse(conf.getBoolean(ByteBuffAllocator.ALLOCATOR_POOL_ENABLED_KEY, true));
   }
 
   @Test
@@ -391,31 +385,30 @@ public class TestByteBuffAllocator {
     conf.setInt(ByteBuffAllocator.MAX_BUFFER_COUNT_KEY, 11);
     conf.setInt(ByteBuffAllocator.BUFFER_SIZE_KEY, 2048);
     ByteBuffAllocator alloc1 = ByteBuffAllocator.create(conf, true);
-    Assert.assertEquals(getHeapAllocationRatio(alloc1), 0.0f, 1e-6);
+    assertEquals(getHeapAllocationRatio(alloc1), 0.0f, 1e-6);
     alloc1.allocate(1);
-    Assert.assertEquals(getHeapAllocationRatio(alloc1), 1.0f, 1e-6);
+    assertEquals(getHeapAllocationRatio(alloc1), 1.0f, 1e-6);
 
     alloc1.allocate(2048 / 6 - 1);
-    Assert.assertEquals(getHeapAllocationRatio(alloc1), 1.0f, 1e-6);
+    assertEquals(getHeapAllocationRatio(alloc1), 1.0f, 1e-6);
 
     alloc1.allocate(24);
     alloc1.allocate(1024);
-    Assert.assertEquals(getHeapAllocationRatio(alloc1), 24 / (24f + 2048), 1e-6);
-    Assert.assertEquals(getHeapAllocationRatio(alloc1), 0.0f, 1e-6);
+    assertEquals(getHeapAllocationRatio(alloc1), 24 / (24f + 2048), 1e-6);
+    assertEquals(getHeapAllocationRatio(alloc1), 0.0f, 1e-6);
 
     // Allocate something from HEAP
     HEAP.allocate(1024);
     alloc1.allocate(24);
     alloc1.allocate(1024);
-    Assert.assertEquals(getHeapAllocationRatio(HEAP, alloc1), (1024f + 24) / (1024f + 24 + 2048),
-      1e-6);
-    Assert.assertEquals(getHeapAllocationRatio(HEAP, alloc1), 0.0f, 1e-6);
+    assertEquals(getHeapAllocationRatio(HEAP, alloc1), (1024f + 24) / (1024f + 24 + 2048), 1e-6);
+    assertEquals(getHeapAllocationRatio(HEAP, alloc1), 0.0f, 1e-6);
 
     // Check duplicated heap allocator, say even if we passed (HEAP, HEAP, alloc1), it will only
     // caculate the allocation from (HEAP, alloc1).
     HEAP.allocate(1024);
     alloc1.allocate(1024);
-    Assert.assertEquals(getHeapAllocationRatio(HEAP, HEAP, alloc1), 1024f / (1024f + 2048f), 1e-6);
+    assertEquals(getHeapAllocationRatio(HEAP, HEAP, alloc1), 1024f / (1024f + 2048f), 1e-6);
   }
 
   /**

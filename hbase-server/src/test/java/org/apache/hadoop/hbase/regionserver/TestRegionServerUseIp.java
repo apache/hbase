@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.net.InetAddress;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -29,19 +28,16 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerUseIp {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerUseIp.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerUseIp.class);
 
@@ -51,7 +47,7 @@ public class TestRegionServerUseIp {
   private static final int NUM_MASTERS = 1;
   private static final int NUM_RS = 1;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(HConstants.HBASE_SERVER_USEIP_ENABLED_KEY, true);
@@ -61,7 +57,7 @@ public class TestRegionServerUseIp {
     CLUSTER = TEST_UTIL.startMiniCluster(option);
   }
 
-  @After
+  @AfterEach
   public void teardown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

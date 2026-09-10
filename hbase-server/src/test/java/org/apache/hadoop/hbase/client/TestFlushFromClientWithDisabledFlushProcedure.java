@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.procedure.flush.MasterFlushTableProcedureManager;
@@ -34,26 +33,21 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestFlushFromClientWithDisabledFlushProcedure {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFlushFromClientWithDisabledFlushProcedure.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestFlushFromClientWithDisabledFlushProcedure.class);
@@ -62,12 +56,9 @@ public class TestFlushFromClientWithDisabledFlushProcedure {
   private static final byte[] FAMILY = Bytes.toBytes("info");
   private static final byte[] QUALIFIER = Bytes.toBytes("name");
 
-  @Rule
-  public TestName name = new TestName();
-
   private TableName tableName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration configuration = TEST_UTIL.getConfiguration();
     configuration.setBoolean(MasterFlushTableProcedureManager.FLUSH_PROCEDURE_ENABLED, false);
@@ -75,15 +66,15 @@ public class TestFlushFromClientWithDisabledFlushProcedure {
     asyncConn = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(asyncConn, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    tableName = TableName.valueOf(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     try (Table t = TEST_UTIL.createTable(tableName, FAMILY)) {
       List<Put> puts = new ArrayList<>();
       for (int i = 0; i <= 10; ++i) {
@@ -97,7 +88,7 @@ public class TestFlushFromClientWithDisabledFlushProcedure {
     assertFalse(regions.isEmpty());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     for (TableDescriptor htd : TEST_UTIL.getAdmin().listTableDescriptors()) {
       LOG.info("Tear down, remove table=" + htd.getTableName());

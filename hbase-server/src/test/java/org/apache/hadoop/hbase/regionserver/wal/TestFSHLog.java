@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
@@ -29,9 +32,9 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -51,25 +54,27 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.apache.hadoop.hdfs.DFSOutputStream;
+import org.apache.hadoop.hdfs.client.HdfsDataOutputStream;
+import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Provides FSHLog test cases.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSHLog extends AbstractTestFSWAL {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE = HBaseClassTestRule.forClass(TestFSHLog.class);
+  private String name;
 
-  private static final long TEST_TIMEOUT_MS = 10000;
-
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void initTestName(TestInfo testInfo) {
+    name = testInfo.getTestMethod().get().getName();
+  }
 
   @Override
   protected AbstractFSWAL<?> newWAL(FileSystem fs, Path rootDir, String walDir, String archiveDir,
@@ -102,17 +107,16 @@ public class TestFSHLog extends AbstractTestFSWAL {
   @Test
   public void testSyncRunnerIndexOverflow() throws IOException, NoSuchFieldException,
     SecurityException, IllegalArgumentException, IllegalAccessException {
-    final String name = this.name.getMethodName();
-    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null);
     log.init();
     try {
       Field syncRunnerIndexField = FSHLog.class.getDeclaredField("syncRunnerIndex");
       syncRunnerIndexField.setAccessible(true);
       syncRunnerIndexField.set(log, Integer.MAX_VALUE - 1);
-      TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
       NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
       for (byte[] fam : htd.getColumnFamilyNames()) {
         scopes.put(fam, 0);
@@ -132,7 +136,6 @@ public class TestFSHLog extends AbstractTestFSWAL {
    */
   @Test
   public void testUnflushedSeqIdTracking() throws IOException, InterruptedException {
-    final String name = this.name.getMethodName();
     final byte[] b = Bytes.toBytes("b");
 
     final AtomicBoolean startHoldingForAppend = new AtomicBoolean(false);
@@ -140,7 +143,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
     final CountDownLatch flushFinished = new CountDownLatch(1);
     final CountDownLatch putFinished = new CountDownLatch(1);
 
-    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), name,
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
       HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
       log.init();
       log.registerWALActionsListener(new WALActionsListener() {
@@ -157,9 +161,8 @@ public class TestFSHLog extends AbstractTestFSWAL {
       });
 
       // open a new region which uses this WAL
-      TableDescriptor htd =
-        TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name.getMethodName()))
-          .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
+      TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(this.name))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(b)).build();
       RegionInfo hri = RegionInfoBuilder.newBuilder(htd.getTableName()).build();
       ChunkCreator.initialize(MemStoreLAB.CHUNK_SIZE_DEFAULT, false, 0, 0, 0, null,
         MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
@@ -209,14 +212,47 @@ public class TestFSHLog extends AbstractTestFSWAL {
       flushFinished.await();
 
       // check whether flush went through
-      assertEquals("Region did not flush?", 1, region.getStoreFileList(new byte[][] { b }).size());
+      assertEquals(1, region.getStoreFileList(new byte[][] { b }).size(), "Region did not flush?");
 
       // now check the region's unflushed seqIds.
       long seqId = AbstractTestFSWAL.getEarliestMemStoreSeqNum(log, hri.getEncodedNameAsBytes());
-      assertEquals("Found seqId for the region which is already flushed", HConstants.NO_SEQNUM,
-        seqId);
+      assertEquals(HConstants.NO_SEQNUM, seqId,
+        "Found seqId for the region which is already flushed");
 
       region.close();
+    }
+  }
+
+  /**
+   * Regression test for HBASE-30346: FSHLog#getPipeline() must never return null, even when the
+   * underlying DFSOutputStream#getPipeline() legitimately returns null (e.g. the DFS streamer is
+   * closed, or no block pipeline is currently established -- see HDFS-826 and the
+   * DFSOutputStream#getPipeline() javadoc: "returns the list of targets, if any"). Prior to this
+   * fix, AbstractFSWAL#rollWriterInternal's debug-log statement called
+   * Arrays.stream(getPipeline()), which threw a NullPointerException whenever this happened during
+   * a WAL roll, aborting the RegionServer on what was otherwise a successful roll.
+   */
+  @Test
+  public void testGetPipelineDoesNotReturnNullWhenUnderlyingStreamerHasNone() throws Exception {
+    FS.mkdirs(new Path(CommonFSUtils.getRootDir(CONF), this.name));
+    try (FSHLog log = new FSHLog(FS, CommonFSUtils.getRootDir(CONF), this.name,
+      HConstants.HREGION_OLDLOGDIR_NAME, CONF, null, true, null, null)) {
+      log.init();
+
+      // Simulate the legitimate HDFS contract: the wrapped DFSOutputStream currently has no
+      // established pipeline (e.g. streamer closed, or between blocks) and returns null.
+      DFSOutputStream mockDfsOut = mock(DFSOutputStream.class);
+      when(mockDfsOut.getPipeline()).thenReturn(null);
+      FSDataOutputStream wrappedOut = new HdfsDataOutputStream(mockDfsOut, null);
+
+      Field hdfsOutField = FSHLog.class.getDeclaredField("hdfs_out");
+      hdfsOutField.setAccessible(true);
+      hdfsOutField.set(log, wrappedOut);
+
+      DatanodeInfo[] pipeline = log.getPipeline();
+      assertNotNull(pipeline, "getPipeline() must never return null");
+      assertEquals(0, pipeline.length,
+        "Should normalize a null underlying pipeline to an empty array");
     }
   }
 }

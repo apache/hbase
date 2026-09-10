@@ -99,7 +99,10 @@ public interface ColumnFamilyDescriptor {
   /** Returns an unmodifiable map. */
   Map<String, String> getConfiguration();
 
-  /** Returns accessing the configuration value by key. */
+  /**
+   * Returns the value for the given key, looking in the values map (where the shell writes settings
+   * since HBASE-20819) and the legacy configuration map.
+   */
   String getConfigurationValue(String key);
 
   /** Returns replication factor set for this CF */
@@ -113,6 +116,9 @@ public interface ColumnFamilyDescriptor {
 
   /** Returns Return the raw crypto key attribute for the family, or null if not set */
   byte[] getEncryptionKey();
+
+  /** Returns the encryption key namespace for this family */
+  String getEncryptionKeyNamespace();
 
   /** Returns Return the encryption algorithm in use by this family */
   String getEncryptionType();

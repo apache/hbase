@@ -17,23 +17,26 @@
  */
 package org.apache.hadoop.hbase.regionserver.wal;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category(LargeTests.class)
-public class TestWALReplayBoundedLogWriterCreation extends TestWALReplay {
+@Tag(LargeTests.TAG)
+public class TestWALReplayBoundedLogWriterCreation extends AbstractTestWALReplay {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALReplayBoundedLogWriterCreation.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TestWALReplay.setUpBeforeClass();
     TEST_UTIL.getConfiguration().setBoolean(WALSplitter.SPLIT_WRITER_CREATION_BOUNDED, true);
+  }
+
+  @Override
+  protected WAL createWAL(Configuration c, Path hbaseRootDir, String logName) throws IOException {
+    return TestWALReplay.createFSHLog(c, hbaseRootDir, logName);
   }
 }

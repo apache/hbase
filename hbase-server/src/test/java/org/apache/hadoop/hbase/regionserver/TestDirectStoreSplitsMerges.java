@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -41,41 +40,40 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestDirectStoreSplitsMerges {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDirectStoreSplitsMerges.class);
 
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   public static final byte[] FAMILY_NAME = Bytes.toBytes("info");
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testSplitStoreDir() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // first put some data in order to have a store file created
     putThreeRowsAndFlush(table);
@@ -91,7 +89,7 @@ public class TestDirectStoreSplitsMerges {
       StoreFileTrackerFactory.create(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(),
         true, region.getStores().get(0).getStoreContext());
     Path result = regionFS.splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
-      Bytes.toBytes("002"), false, region.getSplitPolicy(), sft);
+      Bytes.toBytes("002"), false, region.getSplitPolicy(), sft).getPath();
     // asserts the reference file naming is correct
     validateResultingFile(region.getRegionInfo().getEncodedName(), result);
     // Additionally check if split region dir was created directly under table dir, not on .tmp
@@ -101,7 +99,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testMergeStoreFile() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
@@ -135,7 +133,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testCommitDaughterRegionNoFiles() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     HRegion region = TEST_UTIL.getHBaseCluster().getRegions(table).get(0);
     HRegionFileSystem regionFS = region.getStores().get(0).getRegionFileSystem();
@@ -153,7 +151,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testCommitDaughterRegionWithFiles() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // first put some data in order to have a store file created
     putThreeRowsAndFlush(table);
@@ -170,13 +168,13 @@ public class TestDirectStoreSplitsMerges {
     Path splitDirA = regionFS.getSplitsDir(daughterA);
     Path splitDirB = regionFS.getSplitsDir(daughterB);
     HStoreFile file = (HStoreFile) region.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    List<Path> filesA = new ArrayList<>();
+    List<StoreFileInfo> filesA = new ArrayList<>();
     StoreFileTracker sft =
       StoreFileTrackerFactory.create(TEST_UTIL.getHBaseCluster().getMaster().getConfiguration(),
         true, region.getStores().get(0).getStoreContext());
     filesA.add(regionFS.splitStoreFile(daughterA, Bytes.toString(FAMILY_NAME), file,
       Bytes.toBytes("002"), false, region.getSplitPolicy(), sft));
-    List<Path> filesB = new ArrayList<>();
+    List<StoreFileInfo> filesB = new ArrayList<>();
     filesB.add(regionFS.splitStoreFile(daughterB, Bytes.toString(FAMILY_NAME), file,
       Bytes.toBytes("002"), true, region.getSplitPolicy(), sft));
     MasterProcedureEnv env =
@@ -189,7 +187,7 @@ public class TestDirectStoreSplitsMerges {
 
   @Test
   public void testCommitMergedRegion() throws Exception {
-    TableName table = TableName.valueOf(name.getMethodName());
+    TableName table = TableName.valueOf(name);
     TEST_UTIL.createTable(table, FAMILY_NAME);
     // splitting the table first
     TEST_UTIL.getAdmin().split(table, Bytes.toBytes("002"));
@@ -217,7 +215,7 @@ public class TestDirectStoreSplitsMerges {
       true, first.getStore(FAMILY_NAME).getStoreContext()));
     // merge file from second region
     file = (HStoreFile) second.getStore(FAMILY_NAME).getStorefiles().toArray()[0];
-    List<Path> mergedFiles = new ArrayList<>();
+    List<StoreFileInfo> mergedFiles = new ArrayList<>();
     mergedFiles.add(mergeFileFromRegion(mergeRegionFs, second, file, StoreFileTrackerFactory
       .create(configuration, true, second.getStore(FAMILY_NAME).getStoreContext())));
     MasterProcedureEnv env =
@@ -241,11 +239,11 @@ public class TestDirectStoreSplitsMerges {
     }
   }
 
-  private Path mergeFileFromRegion(HRegionFileSystem regionFS, HRegion regionToMerge,
+  private StoreFileInfo mergeFileFromRegion(HRegionFileSystem regionFS, HRegion regionToMerge,
     HStoreFile file, StoreFileTracker sft) throws IOException {
-    Path mergedFile = regionFS.mergeStoreFile(regionToMerge.getRegionInfo(),
+    StoreFileInfo mergedFile = regionFS.mergeStoreFile(regionToMerge.getRegionInfo(),
       Bytes.toString(FAMILY_NAME), file, sft);
-    validateResultingFile(regionToMerge.getRegionInfo().getEncodedName(), mergedFile);
+    validateResultingFile(regionToMerge.getRegionInfo().getEncodedName(), mergedFile.getPath());
     return mergedFile;
   }
 

@@ -17,26 +17,34 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.NamespaceNotFoundException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.snapshot.SnapshotDoesNotExistException;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class CloneSnapshotFromClientErrorTestBase extends CloneSnapshotFromClientTestBase {
 
-  @Test(expected = SnapshotDoesNotExistException.class)
+  protected CloneSnapshotFromClientErrorTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
+  @TestTemplate
   public void testCloneNonExistentSnapshot() throws IOException, InterruptedException {
     String snapshotName = "random-snapshot-" + EnvironmentEdgeManager.currentTime();
     final TableName tableName =
       TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
-    admin.cloneSnapshot(snapshotName, tableName);
+    assertThrows(SnapshotDoesNotExistException.class,
+      () -> admin.cloneSnapshot(snapshotName, tableName));
   }
 
-  @Test(expected = NamespaceNotFoundException.class)
+  @TestTemplate
   public void testCloneOnMissingNamespace() throws IOException, InterruptedException {
     final TableName clonedTableName = TableName.valueOf("unknownNS:" + getValidMethodName());
-    admin.cloneSnapshot(snapshotName1, clonedTableName);
+    assertThrows(NamespaceNotFoundException.class,
+      () -> admin.cloneSnapshot(snapshotName1, clonedTableName));
   }
 }

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_SNAPSHOT_TTL;
+
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
@@ -70,6 +72,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 @InterfaceAudience.Public
 public final class SnapshotInfo extends AbstractHBaseTool {
   private static final Logger LOG = LoggerFactory.getLogger(SnapshotInfo.class);
+
+  private static final String EXPIRED_LABEL = "Yes";
+  private static final String NOT_EXPIRED_LABEL = "No";
+  private static final String TTL_FOREVER = "FOREVER";
 
   static final class Options {
     static final Option SNAPSHOT =
@@ -391,11 +397,18 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     // List Available Snapshots
     if (listSnapshots) {
       SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
-      System.out.printf("%-20s | %-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME", "TTL IN SEC",
-        "TABLE NAME");
-      for (SnapshotDescription desc : getSnapshotList(conf)) {
-        System.out.printf("%-20s | %20s | %20s | %s%n", desc.getName(),
-          df.format(new Date(desc.getCreationTime())), desc.getTtl(), desc.getTableNameAsString());
+      List<SnapshotDescription> snapshotDescriptions = getSnapshotList(conf);
+      System.out.printf("%-20s | %-20s | %-20s | %-20s | %s%n", "SNAPSHOT", "CREATION TIME",
+        "TTL(Sec)", "EXPIRED", "TABLE NAME");
+      long currentTime = System.currentTimeMillis();
+      for (SnapshotDescription desc : snapshotDescriptions) {
+        String ttlInfo =
+          desc.getTtl() == DEFAULT_SNAPSHOT_TTL ? TTL_FOREVER : String.valueOf(desc.getTtl());
+        String expired = SnapshotDescriptionUtils.isExpiredSnapshot(desc.getTtl(),
+          desc.getCreationTime(), currentTime) ? EXPIRED_LABEL : NOT_EXPIRED_LABEL;
+        System.out.printf("%-20s | %20s | %20s | %20s | %s%n", desc.getName(),
+          df.format(new Date(desc.getCreationTime())), ttlInfo, expired,
+          desc.getTableNameAsString());
       }
       return 0;
     }
@@ -443,15 +456,23 @@ public final class SnapshotInfo extends AbstractHBaseTool {
   private void printInfo() {
     SnapshotProtos.SnapshotDescription snapshotDesc = snapshotManifest.getSnapshotDescription();
     SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss");
+    String ttlInfo = snapshotDesc.getTtl() == DEFAULT_SNAPSHOT_TTL
+      ? TTL_FOREVER
+      : String.valueOf(snapshotDesc.getTtl());
+    String expired = SnapshotDescriptionUtils.isExpiredSnapshot(snapshotDesc.getTtl(),
+      snapshotDesc.getCreationTime(), System.currentTimeMillis())
+        ? EXPIRED_LABEL
+        : NOT_EXPIRED_LABEL;
     System.out.println("Snapshot Info");
-    System.out.println("----------------------------------------");
-    System.out.println("   Name: " + snapshotDesc.getName());
-    System.out.println("   Type: " + snapshotDesc.getType());
-    System.out.println("  Table: " + snapshotDesc.getTable());
-    System.out.println(" Format: " + snapshotDesc.getVersion());
-    System.out.println("Created: " + df.format(new Date(snapshotDesc.getCreationTime())));
-    System.out.println("    Ttl: " + snapshotDesc.getTtl());
-    System.out.println("  Owner: " + snapshotDesc.getOwner());
+    System.out.println("-----------------------------------------");
+    System.out.println("    Name: " + snapshotDesc.getName());
+    System.out.println("    Type: " + snapshotDesc.getType());
+    System.out.println("   Table: " + snapshotDesc.getTable());
+    System.out.println("  Format: " + snapshotDesc.getVersion());
+    System.out.println(" Created: " + df.format(new Date(snapshotDesc.getCreationTime())));
+    System.out.println("Ttl(Sec): " + ttlInfo);
+    System.out.println(" Expired: " + expired);
+    System.out.println("   Owner: " + snapshotDesc.getOwner());
     System.out.println();
   }
 
@@ -628,8 +649,11 @@ public final class SnapshotInfo extends AbstractHBaseTool {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = FileSystem.get(rootDir.toUri(), conf);
     Path snapshotDir = SnapshotDescriptionUtils.getSnapshotsDir(rootDir);
-    FileStatus[] snapshots = fs.listStatus(snapshotDir,
+    FileStatus[] snapshots = CommonFSUtils.listStatus(fs, snapshotDir,
       new SnapshotDescriptionUtils.CompletedSnaphotDirectoriesFilter(fs));
+    if (snapshots == null) {
+      return Collections.emptyList();
+    }
     List<SnapshotDescription> snapshotLists = new ArrayList<>(snapshots.length);
     for (FileStatus snapshotDirStat : snapshots) {
       SnapshotProtos.SnapshotDescription snapshotDesc =

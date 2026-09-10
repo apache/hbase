@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -32,7 +32,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -49,23 +48,18 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestFSHLogProvider {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSHLogProvider.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSHLogProvider.class);
 
@@ -74,11 +68,11 @@ public class TestFSHLogProvider {
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private MultiVersionConcurrencyControl mvcc;
 
-  @Rule
-  public final TestName currentTest = new TestName();
+  private String currentTestName;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    currentTestName = testInfo.getTestMethod().get().getName();
     mvcc = new MultiVersionConcurrencyControl();
     FileStatus[] entries = fs.listStatus(new Path("/"));
     for (FileStatus dir : entries) {
@@ -86,7 +80,7 @@ public class TestFSHLogProvider {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // Make block sizes small.
     TEST_UTIL.getConfiguration().setInt("dfs.blocksize", 1024 * 1024);
@@ -107,7 +101,7 @@ public class TestFSHLogProvider {
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -132,15 +126,15 @@ public class TestFSHLogProvider {
     ServerName parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
       CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn
         + "/localhost%2C32984%2C1343316388997.1343316390417");
-    assertEquals("standard", sn, parsed);
+    assertEquals(sn, parsed, "standard");
 
     parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf, hl + "/qdf");
-    assertEquals("subdir", sn, parsed);
+    assertEquals(sn, parsed, "subdir");
 
     parsed = AbstractFSWALProvider.getServerNameFromWALDirectoryName(conf,
       CommonFSUtils.getRootDir(conf).toUri().toString() + wals + sn
         + "-splitting/localhost%3A57020.1340474893931");
-    assertEquals("split", sn, parsed);
+    assertEquals(sn, parsed, "split");
   }
 
   private void addEdits(WAL log, RegionInfo hri, TableDescriptor htd, int times,
@@ -180,11 +174,10 @@ public class TestFSHLogProvider {
   }
 
   private void testLogCleaning(WALFactory wals) throws IOException {
-    TableDescriptor htd =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName()))
-        .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+    TableDescriptor htd = TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     TableDescriptor htd2 =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "2"))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName + "2"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : htd.getColumnFamilyNames()) {
@@ -238,10 +231,10 @@ public class TestFSHLogProvider {
 
   @Test
   public void testLogCleaning() throws Exception {
-    LOG.info(currentTest.getMethodName());
+    LOG.info(currentTestName);
     Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
-    WALFactory wals = new WALFactory(localConf, currentTest.getMethodName());
+    WALFactory wals = new WALFactory(localConf, currentTestName);
     try {
       testLogCleaning(wals);
     } finally {
@@ -251,10 +244,10 @@ public class TestFSHLogProvider {
 
   private void testWALArchiving(WALFactory wals) throws IOException {
     TableDescriptor table1 =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "1"))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName + "1"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     TableDescriptor table2 =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTest.getMethodName() + "2"))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(currentTestName + "2"))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
     NavigableMap<byte[], Integer> scopes1 = new TreeMap<>(Bytes.BYTES_COMPARATOR);
     for (byte[] fam : table1.getColumnFamilyNames()) {
@@ -322,11 +315,11 @@ public class TestFSHLogProvider {
    */
   @Test
   public void testWALArchiving() throws IOException {
-    LOG.debug(currentTest.getMethodName());
+    LOG.debug(currentTestName);
 
     Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
-    WALFactory wals = new WALFactory(localConf, currentTest.getMethodName());
+    WALFactory wals = new WALFactory(localConf, currentTestName);
     try {
       testWALArchiving(wals);
     } finally {
@@ -341,18 +334,18 @@ public class TestFSHLogProvider {
   public void setMembershipDedups() throws IOException {
     Configuration localConf = new Configuration(conf);
     localConf.set(WALFactory.WAL_PROVIDER, FSHLogProvider.class.getName());
-    WALFactory wals = new WALFactory(localConf, currentTest.getMethodName());
+    WALFactory wals = new WALFactory(localConf, currentTestName);
     try {
       final Set<WAL> seen = new HashSet<>(1);
-      assertTrue("first attempt to add WAL from default provider should work.",
-        seen.add(wals.getWAL(null)));
+      assertTrue(seen.add(wals.getWAL(null)),
+        "first attempt to add WAL from default provider should work.");
       for (int i = 0; i < 1000; i++) {
         assertFalse(
-          "default wal provider is only supposed to return a single wal, which should "
-            + "compare as .equals itself.",
           seen.add(wals.getWAL(RegionInfoBuilder
             .newBuilder(TableName.valueOf("Table-" + ThreadLocalRandom.current().nextInt()))
-            .build())));
+            .build())),
+          "default wal provider is only supposed to return a single wal, which should "
+            + "compare as .equals itself.");
       }
     } finally {
       wals.close();

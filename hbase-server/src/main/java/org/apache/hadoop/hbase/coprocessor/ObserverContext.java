@@ -70,10 +70,20 @@ public interface ObserverContext<E extends CoprocessorEnvironment> {
   void bypass();
 
   /**
-   * Returns the active user for the coprocessor call. If an explicit {@code User} instance was
-   * provided to the constructor, that will be returned, otherwise if we are in the context of an
-   * RPC call, the remote user is used. May not be present if the execution is outside of an RPC
-   * context.
+   * Returns the {@link ObserverRpcCallContext} of an RPC call. May not be present if the execution
+   * is outside an RPC context.
+   * @return the context.
    */
-  Optional<User> getCaller();
+  Optional<ObserverRpcCallContext> getRpcCallContext();
+
+  /**
+   * Returns the active user for the coprocessor call. May not be present if the execution is
+   * outside an RPC context.
+   * @return the {@link User}.
+   * @deprecated will be removed in 4.0.0. Use {@link #getRpcCallContext()} instead.
+   */
+  @Deprecated
+  default Optional<User> getCaller() {
+    return getRpcCallContext().map(ObserverRpcCallContext::getUser);
+  }
 }

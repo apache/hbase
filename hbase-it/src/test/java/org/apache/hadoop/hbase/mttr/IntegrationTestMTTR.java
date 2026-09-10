@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.mttr;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
@@ -63,10 +63,10 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.LoadTestTool;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -102,7 +102,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
  * At the end of the test a log line is output on the INFO level containing the timing data that was
  * collected.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestMTTR {
   /**
    * Constants.
@@ -143,7 +143,7 @@ public class IntegrationTestMTTR {
    */
   private static LoadTestTool loadTool;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Set up the integration test util
     if (util == null) {
@@ -232,10 +232,10 @@ public class IntegrationTestMTTR {
 
     // Setup the table for LoadTestTool
     int ret = loadTool.run(new String[] { "-tn", loadTableName.getNameAsString(), "-init_only" });
-    assertEquals("Failed to initialize LoadTestTool", 0, ret);
+    assertEquals(0, ret, "Failed to initialize LoadTestTool");
   }
 
-  @AfterClass
+  @AfterAll
   public static void after() throws IOException {
     // Clean everything up.
     util.restoreCluster();
@@ -598,7 +598,7 @@ public class IntegrationTestMTTR {
         int ret = loadTool.run(new String[] { "-tn", loadTableName.getNameAsString(), "-write",
           String.format("%d:%d:%d", colsPerKey, 500, writeThreads), "-num_keys",
           String.valueOf(numKeys), "-skip_init" });
-        assertEquals("Load failed", 0, ret);
+        assertEquals(0, ret, "Load failed");
       } while (!future.isDone());
 
       return true;

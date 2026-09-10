@@ -47,6 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.io.netty.handler.ssl.IdentityCipherSuiteFilter;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.OpenSsl;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContext;
 import org.apache.hbase.thirdparty.io.netty.handler.ssl.SslContextBuilder;
@@ -210,7 +211,14 @@ public final class X509Util {
       sslContextBuilder.protocols(enabledProtocols);
     }
     String[] cipherSuites = getCipherSuites(config);
-    if (cipherSuites != null) {
+    if (cipherSuites == null) {
+      /*
+       * if cipher list is not explicitly defined, we use the most inclusive cipher list at the
+       * client side
+       */
+      sslContextBuilder.ciphers(null,
+        IdentityCipherSuiteFilter.INSTANCE_DEFAULTING_TO_SUPPORTED_CIPHERS);
+    } else {
       sslContextBuilder.ciphers(Arrays.asList(cipherSuites));
     }
 
@@ -226,15 +234,14 @@ public final class X509Util {
    */
   private static boolean configureOpenSslIfAvailable(SslContextBuilder sslContextBuilder,
     Configuration conf) {
-    if (OpenSsl.isAvailable() && conf.getBoolean(TLS_USE_OPENSSL, true)) {
+    boolean openSslEnabled = conf.getBoolean(TLS_USE_OPENSSL, true);
+    if (openSslEnabled && OpenSsl.isAvailable()) {
       LOG.debug("Using netty-tcnative to accelerate SSL handling");
       sslContextBuilder.sslProvider(SslProvider.OPENSSL);
       return true;
     } else {
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
-          OpenSsl.isAvailable() ? "enabled" : "available");
-      }
+      LOG.debug("Using default JDK SSL provider because netty-tcnative is not {}",
+        openSslEnabled ? "available" : "enabled");
       sslContextBuilder.sslProvider(SslProvider.JDK);
       return false;
     }

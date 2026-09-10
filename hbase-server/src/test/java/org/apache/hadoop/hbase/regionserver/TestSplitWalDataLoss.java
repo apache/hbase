@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.spy;
@@ -27,7 +27,6 @@ import java.io.IOException;
 import java.util.Map;
 import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -44,11 +43,10 @@ import org.apache.hadoop.hbase.regionserver.HRegion.FlushResult;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 import org.slf4j.Logger;
@@ -57,12 +55,8 @@ import org.slf4j.LoggerFactory;
 /**
  * Testcase for https://issues.apache.org/jira/browse/HBASE-13811
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestSplitWalDataLoss {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitWalDataLoss.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWalDataLoss.class);
 
@@ -77,7 +71,7 @@ public class TestSplitWalDataLoss {
 
   private byte[] qualifier = Bytes.toBytes("q");
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testUtil.getConfiguration().setInt("hbase.regionserver.msginterval", 30000);
     testUtil.startMiniCluster(2);
@@ -88,7 +82,7 @@ public class TestSplitWalDataLoss {
     testUtil.waitTableAvailable(tableName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testUtil.shutdownMiniCluster();
   }

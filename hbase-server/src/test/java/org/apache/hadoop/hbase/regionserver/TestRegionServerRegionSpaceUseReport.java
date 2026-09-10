@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.doCallRealMethod;
 import static org.mockito.Mockito.mock;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -34,9 +33,8 @@ import org.apache.hadoop.hbase.quotas.RegionSizeStore;
 import org.apache.hadoop.hbase.quotas.RegionSizeStoreFactory;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionSpaceUse;
@@ -46,12 +44,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
  * Test class for isolated (non-cluster) tests surrounding the report of Region space use to the
  * Master by RegionServers.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestRegionServerRegionSpaceUseReport {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerRegionSpaceUseReport.class);
 
   @Test
   public void testConversion() {
@@ -78,9 +72,9 @@ public class TestRegionServerRegionSpaceUseReport {
     for (RegionSpaceUse spaceUse : requests.getSpaceUseList()) {
       RegionInfo hri = ProtobufUtil.toRegionInfo(spaceUse.getRegionInfo());
       RegionSize expectedSize = store.remove(hri);
-      assertNotNull("Could not find size for HRI: " + hri, expectedSize);
+      assertNotNull(expectedSize, "Could not find size for HRI: " + hri);
       assertEquals(expectedSize.getSize(), spaceUse.getRegionSize());
     }
-    assertTrue("Should not have any space use entries left: " + store, store.isEmpty());
+    assertTrue(store.isEmpty(), "Should not have any space use entries left: " + store);
   }
 }

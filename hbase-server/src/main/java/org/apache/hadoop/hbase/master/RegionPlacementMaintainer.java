@@ -605,7 +605,7 @@ public class RegionPlacementMaintainer implements Closeable {
    */
   public void updateAssignmentPlanToMeta(FavoredNodesPlan plan) throws IOException {
     try {
-      LOG.info("Start to update the hbase:meta with the new assignment plan");
+      LOG.info("Started updating {} with the new assignment plan", TableName.META_TABLE_NAME);
       Map<String, List<ServerName>> assignmentMap = plan.getAssignmentMap();
       Map<RegionInfo, List<ServerName>> planToUpdate = new HashMap<>(assignmentMap.size());
       Map<String, RegionInfo> regionToRegionInfoMap =
@@ -615,10 +615,10 @@ public class RegionPlacementMaintainer implements Closeable {
       }
 
       FavoredNodeAssignmentHelper.updateMetaWithFavoredNodesInfo(planToUpdate, conf);
-      LOG.info("Updated the hbase:meta with the new assignment plan");
+      LOG.info("Updated {} with the new assignment plan", TableName.META_TABLE_NAME);
     } catch (Exception e) {
-      LOG.error(
-        "Failed to update hbase:meta with the new assignment" + "plan because " + e.getMessage());
+      LOG.error("Failed to update {} with the new assignment plan because {}",
+        TableName.META_TABLE_NAME, e.getMessage());
     }
   }
 
@@ -690,14 +690,14 @@ public class RegionPlacementMaintainer implements Closeable {
   }
 
   public void updateAssignmentPlan(FavoredNodesPlan plan) throws IOException {
-    LOG.info("Start to update the new assignment plan for the hbase:meta table and"
-      + " the region servers");
+    LOG.info("Started updating the new assignment plan for {} and the region servers",
+      TableName.META_TABLE_NAME);
     // Update the new assignment plan to META
     updateAssignmentPlanToMeta(plan);
     // Update the new assignment plan to Region Servers
     updateAssignmentPlanToRegionServers(plan);
-    LOG.info("Finish to update the new assignment plan for the hbase:meta table and"
-      + " the region servers");
+    LOG.info("Finished updating the new assignment plan for {} and the region servers",
+      TableName.META_TABLE_NAME);
   }
 
   /**

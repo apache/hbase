@@ -17,18 +17,17 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.instanceOf;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -40,21 +39,17 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableScanException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableScanException.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -99,7 +94,7 @@ public class TestAsyncTableScanException {
 
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.getAdmin()
@@ -114,13 +109,13 @@ public class TestAsyncTableScanException {
     CONN = ConnectionFactory.createAsyncConnection(UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() {
     REQ_COUNT.set(0);
     ERROR_AT = 0;
@@ -128,12 +123,12 @@ public class TestAsyncTableScanException {
     DO_NOT_RETRY = false;
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testDoNotRetryIOException() throws IOException {
     ERROR_AT = 1;
     DO_NOT_RETRY = true;
     try (ResultScanner scanner = CONN.getTable(TABLE_NAME).getScanner(FAMILY)) {
-      scanner.next();
+      assertThrows(DoNotRetryIOException.class, () -> scanner.next());
     }
   }
 
@@ -142,13 +137,11 @@ public class TestAsyncTableScanException {
     ERROR = true;
     try (ResultScanner scanner =
       CONN.getTableBuilder(TABLE_NAME).setMaxAttempts(3).build().getScanner(FAMILY)) {
-      scanner.next();
-      fail();
-    } catch (RetriesExhaustedException e) {
-      // expected
+      RetriesExhaustedException e =
+        assertThrows(RetriesExhaustedException.class, () -> scanner.next());
       assertThat(e.getCause(), instanceOf(ScannerResetException.class));
     }
-    assertTrue(REQ_COUNT.get() >= 3);
+    assertThat(REQ_COUNT.get(), greaterThanOrEqualTo(3));
   }
 
   private void count() throws IOException {
@@ -167,7 +160,7 @@ public class TestAsyncTableScanException {
     count();
     // we should at least request 1 time otherwise the error will not be triggered, and then we
     // need at least one more request to get the remaining results.
-    assertTrue(REQ_COUNT.get() >= 2);
+    assertThat(REQ_COUNT.get(), greaterThanOrEqualTo(2));
   }
 
   @Test
@@ -176,6 +169,6 @@ public class TestAsyncTableScanException {
     count();
     // we should at least request 2 times otherwise the error will not be triggered, and then we
     // need at least one more request to get the remaining results.
-    assertTrue(REQ_COUNT.get() >= 3);
+    assertThat(REQ_COUNT.get(), greaterThanOrEqualTo(3));
   }
 }

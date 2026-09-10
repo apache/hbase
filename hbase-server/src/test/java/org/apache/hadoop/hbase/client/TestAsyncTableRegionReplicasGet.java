@@ -17,26 +17,25 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestAsyncTableRegionReplicasGet extends AbstractTestAsyncTableRegionReplicasRead {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableRegionReplicasGet.class);
+  public TestAsyncTableRegionReplicasGet(Supplier<AsyncTable<?>> getTable) {
+    super(getTable);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     startClusterAndCreateTable();
     AsyncTable<?> table = ASYNC_CONN.getTable(TABLE_NAME);

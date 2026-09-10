@@ -18,33 +18,30 @@
 package org.apache.hadoop.hbase.client;
 
 import java.util.concurrent.ForkJoinPool;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncResultScannerCursor extends AbstractTestResultScannerCursor {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncResultScannerCursor.class);
 
   private static AsyncConnection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    AbstractTestScanCursor.setUpBeforeClass();
+    startCluster();
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (CONN != null) {
       CONN.close();
     }
-    AbstractTestScanCursor.tearDownAfterClass();
+    stopCluster();
   }
 
   @Override

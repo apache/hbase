@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collection;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -38,22 +37,17 @@ import org.apache.hadoop.hbase.master.cleaner.TimeToLiveHFileCleaner;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class })
+@Tag(MediumTests.TAG)
 public class TestCleanupCompactedFileOnRegionClose {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCleanupCompactedFileOnRegionClose.class);
 
   private static HBaseTestingUtil util;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     util = new HBaseTestingUtil();
     util.getConfiguration().setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MIN_KEY, 100);
@@ -63,7 +57,7 @@ public class TestCleanupCompactedFileOnRegionClose {
     util.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterclass() throws Exception {
     util.shutdownMiniCluster();
   }
@@ -132,8 +126,8 @@ public class TestCleanupCompactedFileOnRegionClose {
     hBaseAdmin.assign(region.getRegionInfo().getRegionName());
     util.waitUntilNoRegionsInTransition(10000);
 
-    assertFalse("Deleted row should not exist",
-      table.exists(new Get(Bytes.toBytes(refSFCount - 1))));
+    assertFalse(table.exists(new Get(Bytes.toBytes(refSFCount - 1))),
+      "Deleted row should not exist");
 
     rs = util.getRSForFirstRegionInTable(tableName);
     region = rs.getRegions(tableName).get(0);

@@ -17,21 +17,18 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.testclassification.ZKTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ZKTests.class, SmallTests.class })
+@Tag(ZKTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestInstancePending {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInstancePending.class);
 
   @Test
   public void test() throws Exception {
@@ -46,10 +43,10 @@ public class TestInstancePending {
     }.start();
 
     Thread.sleep(100);
-    Assert.assertNull(getResultRef.get());
+    assertNull(getResultRef.get());
 
     pending.prepare("abc");
     Thread.sleep(100);
-    Assert.assertEquals("abc", getResultRef.get());
+    assertEquals("abc", getResultRef.get());
   }
 }

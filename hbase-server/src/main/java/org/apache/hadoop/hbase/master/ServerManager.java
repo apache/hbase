@@ -437,12 +437,13 @@ public class ServerManager implements ConfigurationObserver {
    * <p/>
    * Must be called inside the initialization method of {@code RegionServerTracker} to avoid
    * concurrency issue.
-   * @param deadServersFromPE     the region servers which already have a SCP associated.
-   * @param liveServersFromWALDir the live region servers from wal directory.
+   * @param deadServersWithDeathTimeFromPE the region servers which already have an SCP associated,
+   *                                       have time of death as value.
+   * @param liveServersFromWALDir          the live region servers from wal directory.
    */
-  void findDeadServersAndProcess(Set<ServerName> deadServersFromPE,
+  void findDeadServersAndProcess(Map<ServerName, Long> deadServersWithDeathTimeFromPE,
     Set<ServerName> liveServersFromWALDir) {
-    deadServersFromPE.forEach(deadservers::putIfAbsent);
+    deadServersWithDeathTimeFromPE.forEach(deadservers::putIfAbsent);
     liveServersFromWALDir.stream().filter(sn -> !onlineServers.containsKey(sn))
       .forEach(this::expireServer);
   }
@@ -979,11 +980,14 @@ public class ServerManager implements ConfigurationObserver {
   /**
    * Check if a server is unknown. A server can be online, or known to be dead, or unknown to this
    * manager (i.e, not online, not known to be dead either; it is simply not tracked by the master
-   * any more, for example, a very old previous instance).
+   * anymore, for example, a very old previous instance). A serverName with value null should not be
+   * considered unknown. We set value of regionLocation to null just before finding the assign
+   * candidate (in-between region transition) or while marking it OFFLINE/FAILED_OPEN. Refer
+   * HBASE-30142.
    */
   public boolean isServerUnknown(ServerName serverName) {
-    return serverName == null
-      || (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
+    return serverName != null
+      && (!onlineServers.containsKey(serverName) && !deadservers.isDeadServer(serverName));
   }
 
   public void shutdownCluster() {

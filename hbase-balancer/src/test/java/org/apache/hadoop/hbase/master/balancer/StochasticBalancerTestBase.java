@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
 import java.util.List;
@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.BeforeAll;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -44,7 +44,7 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
   protected static DummyMetricsStochasticBalancer dummyMetricsStochasticBalancer =
     new DummyMetricsStochasticBalancer();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     conf = HBaseConfiguration.create();
     conf.setClass("hbase.util.ip.to.rack.determiner", MockMapping.class, DNSToSwitchMapping.class);
@@ -84,7 +84,7 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
   protected void testWithClusterWithIteration(Map<ServerName, List<RegionInfo>> serverMap,
     RackManager rackManager, boolean assertFullyBalanced, boolean assertFullyBalancedForReplicas) {
     List<ServerAndLoad> list = convertToList(serverMap);
-    LOG.info("Mock Cluster : " + printMock(list) + " " + printStats(list));
+    LOG.info("Mock Cluster : {} {}", printMock(list), printStats(list));
 
     loadBalancer.setRackManager(rackManager);
     // Run the balancer.
@@ -106,7 +106,7 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
       balancedCluster = reconcile(list, plans, serverMap);
 
       // Print out the cluster loads to make debugging easier.
-      LOG.info("Mock after balance: " + printMock(balancedCluster));
+      LOG.info("Mock after balance: {}", printMock(balancedCluster));
 
       LoadOfAllTable = (Map) mockClusterServersWithTables(serverMap);
       plans = loadBalancer.balanceCluster(LoadOfAllTable);
@@ -116,8 +116,8 @@ public class StochasticBalancerTestBase extends BalancerTestBase {
     LOG.info("Mock Final balance: " + printMock(balancedCluster));
 
     if (assertFullyBalanced) {
-      assertNull("Given a requirement to be fully balanced, second attempt at plans should "
-        + "produce none.", plans);
+      assertNull(plans, "Given a requirement to be fully balanced, second attempt at plans should "
+        + "produce none.");
     }
     if (assertFullyBalancedForReplicas) {
       assertRegionReplicaPlacement(serverMap, rackManager);

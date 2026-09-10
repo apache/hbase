@@ -28,7 +28,6 @@ import java.util.Map.Entry;
 import java.util.NavigableMap;
 import java.util.Objects;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.Mutation;
@@ -37,10 +36,9 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentMatcher;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -48,17 +46,13 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 /**
  * Test case for {@link TableSpaceQuotaSnapshotNotifier}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestTableSpaceQuotaViolationNotifier {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableSpaceQuotaViolationNotifier.class);
 
   private TableSpaceQuotaSnapshotNotifier notifier;
   private Connection conn;
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     notifier = new TableSpaceQuotaSnapshotNotifier();
     conn = mock(Connection.class);

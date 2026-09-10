@@ -25,6 +25,8 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -116,5 +118,13 @@ public class RegionServicesForStores {
 
   long getMemStoreSize() {
     return region.getMemStoreDataSize();
+  }
+
+  public ManagedKeyDataCache getManagedKeyDataCache() {
+    return rsServices.getManagedKeyDataCache();
+  }
+
+  public SystemKeyCache getSystemKeyCache() {
+    return rsServices.getSystemKeyCache();
   }
 }

@@ -17,25 +17,23 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * With filter we may stop at a middle of row and think that we still have more cells for the
@@ -43,12 +41,9 @@ import org.junit.experimental.categories.Category;
  * lead to a Result that mayHaveMoreCellsInRow is true but actually there are no cells for the same
  * row. Here we want to test if our limited scan still works.
  */
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestRawAsyncTableLimitedScanWithFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRawAsyncTableLimitedScanWithFilter.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -65,7 +60,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
 
   private static AsyncTable<?> TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(1);
     UTIL.createTable(TABLE_NAME, FAMILY);
@@ -79,7 +74,7 @@ public class TestRawAsyncTableLimitedScanWithFilter {
     }).collect(Collectors.toList())).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (CONN != null) {
       CONN.close();

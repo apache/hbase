@@ -17,50 +17,46 @@
  */
 package org.apache.hadoop.hbase.quotas.policies;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link DisableTableViolationPolicyEnforcement}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestDisableTableViolationPolicyEnforcement extends BaseViolationPolicyEnforcement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDisableTableViolationPolicyEnforcement.class);
 
   private DisableTableViolationPolicyEnforcement enforcement;
 
-  @Before
+  @BeforeEach
   public void setup() {
     enforcement = new DisableTableViolationPolicyEnforcement();
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckPut() throws SpaceLimitingException {
     // If the policy is enacted, it will always throw an exception
     // to avoid constantly re-checking the table state.
-    enforcement.check(PUT);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(PUT));
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckAppend() throws SpaceLimitingException {
-    enforcement.check(APPEND);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(APPEND));
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckDelete() throws SpaceLimitingException {
-    enforcement.check(DELETE);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(DELETE));
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testCheckIncrement() throws SpaceLimitingException {
-    enforcement.check(INCREMENT);
+    assertThrows(SpaceLimitingException.class, () -> enforcement.check(INCREMENT));
   }
 }

@@ -17,36 +17,32 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentNavigableMap;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCopyOnWriteMaps {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCopyOnWriteMaps.class);
 
   private static final int MAX_INITIAL_ENTRIES = 10_000;
   private static final int MAX_RAND = 10 * 1000 * 1000;
   private ConcurrentNavigableMap<Long, Long> m;
   private ConcurrentSkipListMap<Long, Long> csm;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     m = new CopyOnWriteArrayMap<>();
     csm = new ConcurrentSkipListMap<>();
@@ -75,7 +71,7 @@ public class TestCopyOnWriteMaps {
 
   @Test
   public void testSize() {
-    assertEquals("Size should always be equal", m.size(), csm.size());
+    assertEquals(m.size(), csm.size(), "Size should always be equal");
   }
 
   @Test

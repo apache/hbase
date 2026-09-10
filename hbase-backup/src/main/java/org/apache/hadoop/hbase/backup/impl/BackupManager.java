@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
+
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -199,8 +202,8 @@ public class BackupManager implements Closeable {
    * @throws BackupException exception
    */
   public BackupInfo createBackupInfo(String backupId, BackupType type, List<TableName> tableList,
-    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify)
-    throws BackupException {
+    String targetRootDir, int workers, long bandwidth, boolean noChecksumVerify,
+    boolean continuousBackupEnabled) throws BackupException {
     if (targetRootDir == null) {
       throw new BackupException("Wrong backup request parameter: target backup root directory");
     }
@@ -238,6 +241,7 @@ public class BackupManager implements Closeable {
     backupInfo.setBandwidth(bandwidth);
     backupInfo.setWorkers(workers);
     backupInfo.setNoChecksumVerify(noChecksumVerify);
+    backupInfo.setContinuousBackupEnabled(continuousBackupEnabled);
     return backupInfo;
   }
 
@@ -249,7 +253,8 @@ public class BackupManager implements Closeable {
    * @throws IOException exception
    */
   private String getOngoingBackupId() throws IOException {
-    ArrayList<BackupInfo> sessions = systemTable.getBackupInfos(BackupState.RUNNING);
+    List<BackupInfo> sessions =
+      systemTable.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
     if (sessions.size() == 0) {
       return null;
     }
@@ -334,32 +339,17 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Read the last backup start code (timestamp) of last successful backup. Will return null if
-   * there is no startcode stored in backup system table or the value is of length 0. These two
-   * cases indicate there is no successful backup completed so far.
-   * @return the timestamp of a last successful backup
-   * @throws IOException exception
-   */
-  public String readBackupStartCode() throws IOException {
-    return systemTable.readBackupStartCode(backupInfo.getBackupRootDir());
-  }
-
-  /**
-   * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode start code
-   * @throws IOException exception
-   */
-  public void writeBackupStartCode(Long startCode) throws IOException {
-    systemTable.writeBackupStartCode(startCode, backupInfo.getBackupRootDir());
-  }
-
-  /**
    * Get the RS log information after the last log roll from backup system table.
    * @return RS log info
    * @throws IOException exception
    */
   public HashMap<String, Long> readRegionServerLastLogRollResult() throws IOException {
     return systemTable.readRegionServerLastLogRollResult(backupInfo.getBackupRootDir());
+  }
+
+  public List<BulkLoad> readBulkloadRows(List<TableName> tableList, long endTimestamp)
+    throws IOException {
+    return systemTable.readBulkloadRows(tableList, endTimestamp);
   }
 
   public List<BulkLoad> readBulkloadRows(List<TableName> tableList) throws IOException {
@@ -371,16 +361,10 @@ public class BackupManager implements Closeable {
   }
 
   /**
-   * Get all completed backup information (in desc order by time)
-   * @return history info of BackupCompleteData
-   * @throws IOException exception
+   * Get all backup information, ordered by descending start time. I.e. from newest to oldest.
    */
-  public List<BackupInfo> getBackupHistory() throws IOException {
-    return systemTable.getBackupHistory();
-  }
-
-  public ArrayList<BackupInfo> getBackupHistory(boolean completed) throws IOException {
-    return systemTable.getBackupHistory(completed);
+  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... filters) throws IOException {
+    return systemTable.getBackupHistory(filters);
   }
 
   /**
@@ -426,5 +410,18 @@ public class BackupManager implements Closeable {
 
   public Connection getConnection() {
     return conn;
+  }
+
+  /**
+   * Adds a set of tables to the global continuous backup set. Only tables that do not already have
+   * continuous backup enabled will be updated.
+   * @param tables         set of tables to add to continuous backup
+   * @param startTimestamp timestamp indicating when continuous backup started for newly added
+   *                       tables
+   * @throws IOException if an error occurs while updating the backup system table
+   */
+  public void addContinuousBackupTableSet(Set<TableName> tables, long startTimestamp)
+    throws IOException {
+    systemTable.addContinuousBackupTableSet(tables, startTimestamp);
   }
 }

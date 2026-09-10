@@ -17,25 +17,21 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@org.junit.jupiter.api.Tag(MiscTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
 public class TestByteRangeWithKVSerialization {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestByteRangeWithKVSerialization.class);
 
   static void writeCell(PositionedByteRange pbr, KeyValue kv) throws Exception {
     pbr.putInt(kv.getKeyLength());
@@ -88,12 +84,12 @@ public class TestByteRangeWithKVSerialization {
     for (int i = 0; i < kvCount; i++) {
       KeyValue kv = readCell(pbr1);
       KeyValue kv1 = kvs.get(i);
-      Assert.assertTrue(kv.equals(kv1));
-      Assert.assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
+      assertTrue(kv.equals(kv1));
+      assertTrue(Bytes.equals(kv.getValueArray(), kv.getValueOffset(), kv.getValueLength(),
         kv1.getValueArray(), kv1.getValueOffset(), kv1.getValueLength()));
-      Assert.assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength(),
+      assertTrue(Bytes.equals(kv.getTagsArray(), kv.getTagsOffset(), kv.getTagsLength(),
         kv1.getTagsArray(), kv1.getTagsOffset(), kv1.getTagsLength()));
-      Assert.assertEquals(kv1.getSequenceId(), kv.getSequenceId());
+      assertEquals(kv1.getSequenceId(), kv.getSequenceId());
     }
   }
 }

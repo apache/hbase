@@ -87,7 +87,7 @@ public class ConfigurableSlowDeterministicMonkeyFactory extends SlowDeterministi
       .toArray(String[]::new);
     LOG.info("About to instantiate action class: {}; With constructor params: {}", className,
       params);
-    Class<? extends Action> actionClass = (Class<? extends Action>) Class.forName(className);
+    Class<? extends Action> actionClass = Class.forName(className).asSubclass(Action.class);
     Constructor<? extends Action>[] constructors =
       (Constructor<? extends Action>[]) actionClass.getDeclaredConstructors();
     for (Constructor<? extends Action> c : constructors) {

@@ -114,9 +114,14 @@ public interface Table extends Closeable {
    * Put had put.
    * @param actions list of Get, Put, Delete, Increment, Append, RowMutations.
    * @param results Empty Object[], same size as actions. Provides access to partial results, in
-   *                case an exception is thrown. A null in the result array means that the call for
-   *                that action failed, even after retries. The order of the objects in the results
-   *                array corresponds to the order of actions in the request list.
+   *                case an exception is thrown. On per-action failure after retries, the
+   *                corresponding slot contains the Throwable (typically an IOException). On
+   *                success, the slot contains a {@link Result} (possibly empty for a Get with no
+   *                match, or empty for successful mutations). A null slot may appear if the entire
+   *                batch was rejected before dispatch (for example, IllegalArgumentException from
+   *                input validation), in which case all slots will be null. The order of the
+   *                objects in the results array corresponds to the order of actions in the request
+   *                list.
    * @since 0.90.0
    */
   default void batch(final List<? extends Row> actions, final Object[] results)

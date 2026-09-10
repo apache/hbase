@@ -17,11 +17,11 @@
  */
 package org.apache.hadoop.hbase.monitoring;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Query;
@@ -37,25 +36,21 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.skyscreamer.jsonassert.JSONAssert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTaskMonitor {
   private static final Logger LOG = LoggerFactory.getLogger(TestTaskMonitor.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTaskMonitor.class);
 
   @Test
   public void testTaskMonitorBasics() {
     TaskMonitor tm = new TaskMonitor(new Configuration());
-    assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
+    assertTrue(tm.getTasks().isEmpty(), "Task monitor should start empty");
 
     // Make a task and fetch it back out
     MonitoredTask task = tm.createStatus("Test task");
@@ -85,7 +80,7 @@ public class TestTaskMonitor {
   @Test
   public void testTasksGetAbortedOnLeak() throws InterruptedException {
     final TaskMonitor tm = new TaskMonitor(new Configuration());
-    assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
+    assertTrue(tm.getTasks().isEmpty(), "Task monitor should start empty");
 
     final AtomicBoolean threadSuccess = new AtomicBoolean(false);
     // Make a task in some other thread and leak it
@@ -144,7 +139,7 @@ public class TestTaskMonitor {
         remainRPCTask++;
       }
     }
-    assertEquals("RPC Tasks have been purged!", RPCTaskNums, remainRPCTask);
+    assertEquals(RPCTaskNums, remainRPCTask, "RPC Tasks have been purged!");
     tm.shutdown();
   }
 
@@ -158,21 +153,21 @@ public class TestTaskMonitor {
     final TaskMonitor tm = new TaskMonitor(conf);
     MonitoredRPCHandler t = tm.createRPCStatus("test task");
     long beforeSetRPC = EnvironmentEdgeManager.currentTime();
-    assertTrue("Validating initialization assumption", t.getWarnTime() <= beforeSetRPC);
+    assertTrue(t.getWarnTime() <= beforeSetRPC, "Validating initialization assumption");
     Thread.sleep(MONITOR_INTERVAL * 2);
     t.setRPC("testMethod", new Object[0], beforeSetRPC);
     long afterSetRPC = EnvironmentEdgeManager.currentTime();
     Thread.sleep(MONITOR_INTERVAL * 2);
-    assertTrue("Validating no warn after starting RPC", t.getWarnTime() <= afterSetRPC);
+    assertTrue(t.getWarnTime() <= afterSetRPC, "Validating no warn after starting RPC");
     Thread.sleep(MONITOR_INTERVAL * 2);
-    assertTrue("Validating warn after RPC_WARN_TIME", t.getWarnTime() > afterSetRPC);
+    assertTrue(t.getWarnTime() > afterSetRPC, "Validating warn after RPC_WARN_TIME");
     tm.shutdown();
   }
 
   @Test
   public void testGetTasksWithFilter() throws Exception {
     TaskMonitor tm = new TaskMonitor(new Configuration());
-    assertTrue("Task monitor should start empty", tm.getTasks().isEmpty());
+    assertTrue(tm.getTasks().isEmpty(), "Task monitor should start empty");
     // Create 5 general tasks
     tm.createStatus("General task1");
     tm.createStatus("General task2");

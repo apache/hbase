@@ -36,7 +36,7 @@ import org.slf4j.LoggerFactory;
  */
 @InterfaceAudience.Private
 public class ExecutorStatusChore extends ScheduledChore {
-  private static final Logger LOG = LoggerFactory.getLogger(HealthCheckChore.class);
+  private static final Logger LOG = LoggerFactory.getLogger(ExecutorStatusChore.class);
   public static final String WAKE_FREQ = "hbase.executors.status.collect.period";
   public static final int DEFAULT_WAKE_FREQ = 60000;
   private ExecutorService service;

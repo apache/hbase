@@ -17,24 +17,21 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RPCTests.class, SmallTests.class })
+@Tag(RPCTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHBaseClient {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseClient.class);
-
   @Test
   public void testFailedServer() {
     ManualEnvironmentEdge ee = new ManualEnvironmentEdge();
@@ -48,36 +45,36 @@ public class TestHBaseClient {
     Address ia3 = Address.fromParts("badtoo", 12);
     Address ia4 = Address.fromParts("badtoo", 13);
 
-    Assert.assertFalse(fs.isFailedServer(ia));
+    assertFalse(fs.isFailedServer(ia));
 
     fs.addToFailedServers(ia, testThrowable);
-    Assert.assertTrue(fs.isFailedServer(ia));
-    Assert.assertTrue(fs.isFailedServer(ia2));
+    assertTrue(fs.isFailedServer(ia));
+    assertTrue(fs.isFailedServer(ia2));
 
     ee.incValue(1);
-    Assert.assertTrue(fs.isFailedServer(ia));
-    Assert.assertTrue(fs.isFailedServer(ia2));
+    assertTrue(fs.isFailedServer(ia));
+    assertTrue(fs.isFailedServer(ia2));
 
     ee.incValue(RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1);
-    Assert.assertFalse(fs.isFailedServer(ia));
-    Assert.assertFalse(fs.isFailedServer(ia2));
+    assertFalse(fs.isFailedServer(ia));
+    assertFalse(fs.isFailedServer(ia2));
 
     fs.addToFailedServers(ia, testThrowable);
     fs.addToFailedServers(ia3, testThrowable);
     fs.addToFailedServers(ia4, testThrowable);
 
-    Assert.assertTrue(fs.isFailedServer(ia));
-    Assert.assertTrue(fs.isFailedServer(ia2));
-    Assert.assertTrue(fs.isFailedServer(ia3));
-    Assert.assertTrue(fs.isFailedServer(ia4));
+    assertTrue(fs.isFailedServer(ia));
+    assertTrue(fs.isFailedServer(ia2));
+    assertTrue(fs.isFailedServer(ia3));
+    assertTrue(fs.isFailedServer(ia4));
 
     ee.incValue(RpcClient.FAILED_SERVER_EXPIRY_DEFAULT + 1);
-    Assert.assertFalse(fs.isFailedServer(ia));
-    Assert.assertFalse(fs.isFailedServer(ia2));
-    Assert.assertFalse(fs.isFailedServer(ia3));
-    Assert.assertFalse(fs.isFailedServer(ia4));
+    assertFalse(fs.isFailedServer(ia));
+    assertFalse(fs.isFailedServer(ia2));
+    assertFalse(fs.isFailedServer(ia3));
+    assertFalse(fs.isFailedServer(ia4));
 
     fs.addToFailedServers(ia3, testThrowable);
-    Assert.assertFalse(fs.isFailedServer(ia4));
+    assertFalse(fs.isFailedServer(ia4));
   }
 }

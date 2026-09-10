@@ -17,134 +17,133 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+
+import java.io.IOException;
+import java.util.Arrays;
+import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.util.Pair;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFuzzyRowFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFuzzyRowFilter.class);
 
   @Test
   public void testSatisfiesNoUnsafeForward() {
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES,
       FuzzyRowFilter.satisfiesNoUnsafe(false, new byte[] { 1, (byte) -128, 1, 0, 1 }, 0, 5,
         new byte[] { 1, 0, 1 }, new byte[] { 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfiesNoUnsafe(false, new byte[] { 1, (byte) -128, 2, 0, 1 }, 0, 5,
         new byte[] { 1, 0, 1 }, new byte[] { 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfiesNoUnsafe(false,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfiesNoUnsafe(false,
       new byte[] { 1, 2, 1, 3, 3 }, 0, 5, new byte[] { 1, 2, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfiesNoUnsafe(false, new byte[] { 1, 1, 1, 3, 0 }, // row to check
         0, 5, new byte[] { 1, 2, 0, 3 }, // fuzzy row
         new byte[] { 0, 0, 1, 0 })); // mask
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfiesNoUnsafe(false, new byte[] { 1, 1, 1, 3, 0 }, 0, 5,
         new byte[] { 1, (byte) 245, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(
-      false, new byte[] { 1, 2, 1, 0, 1 }, 0, 5, new byte[] { 0, 1, 2 }, new byte[] { 1, 0, 0 }));
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(false,
+      new byte[] { 1, 2, 1, 0, 1 }, 0, 5, new byte[] { 0, 1, 2 }, new byte[] { 1, 0, 0 }));
   }
 
   @Test
   public void testSatisfiesForward() {
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(false,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(false,
       new byte[] { 1, (byte) -128, 1, 0, 1 }, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(false,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(false,
       new byte[] { 1, (byte) -128, 2, 0, 1 }, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(false,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(false,
       new byte[] { 1, 2, 1, 3, 3 }, new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfies(false, new byte[] { 1, 1, 1, 3, 0 }, // row to check
         new byte[] { 1, 2, 0, 3 }, // fuzzy row
         new byte[] { -1, -1, 0, -1 })); // mask
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfies(false, new byte[] { 1, 1, 1, 3, 0 },
         new byte[] { 1, (byte) 245, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(false,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(false,
       new byte[] { 1, 2, 1, 0, 1 }, new byte[] { 0, 1, 2 }, new byte[] { 0, -1, -1 }));
   }
 
   @Test
   public void testSatisfiesReverse() {
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(true,
       new byte[] { 1, (byte) -128, 1, 0, 1 }, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
       new byte[] { 1, (byte) -128, 2, 0, 1 }, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
       new byte[] { 2, 3, 1, 1, 1 }, new byte[] { 1, 0, 1 }, new byte[] { -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfies(true,
       new byte[] { 1, 2, 1, 3, 3 }, new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfies(true, new byte[] { 1, (byte) 245, 1, 3, 0 },
         new byte[] { 1, 1, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
       new byte[] { 1, 3, 1, 3, 0 }, new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
       new byte[] { 2, 1, 1, 1, 0 }, new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfies(true,
       new byte[] { 1, 2, 1, 0, 1 }, new byte[] { 0, 1, 2 }, new byte[] { 0, -1, -1 }));
   }
 
   @Test
   public void testSatisfiesNoUnsafeReverse() {
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES,
       FuzzyRowFilter.satisfiesNoUnsafe(true, new byte[] { 1, (byte) -128, 1, 0, 1 }, 0, 5,
         new byte[] { 1, 0, 1 }, new byte[] { 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfiesNoUnsafe(true, new byte[] { 1, (byte) -128, 2, 0, 1 }, 0, 5,
         new byte[] { 1, 0, 1 }, new byte[] { 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(
-      true, new byte[] { 2, 3, 1, 1, 1 }, 0, 5, new byte[] { 1, 0, 1 }, new byte[] { 0, 1, 0 }));
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(true,
+      new byte[] { 2, 3, 1, 1, 1 }, 0, 5, new byte[] { 1, 0, 1 }, new byte[] { 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfiesNoUnsafe(true,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.YES, FuzzyRowFilter.satisfiesNoUnsafe(true,
       new byte[] { 1, 2, 1, 3, 3 }, 0, 5, new byte[] { 1, 2, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
       FuzzyRowFilter.satisfiesNoUnsafe(true, new byte[] { 1, (byte) 245, 1, 3, 0 }, 0, 5,
         new byte[] { 1, 1, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
-      FuzzyRowFilter.satisfiesNoUnsafe(true, new byte[] { 1, 3, 1, 3, 0 }, 0, 5,
-        new byte[] { 1, 2, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(true,
+      new byte[] { 1, 3, 1, 3, 0 }, 0, 5, new byte[] { 1, 2, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS,
-      FuzzyRowFilter.satisfiesNoUnsafe(true, new byte[] { 2, 1, 1, 1, 0 }, 0, 5,
-        new byte[] { 1, 2, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(true,
+      new byte[] { 2, 1, 1, 1, 0 }, 0, 5, new byte[] { 1, 2, 0, 3 }, new byte[] { 0, 0, 1, 0 }));
 
-    Assert.assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(
-      true, new byte[] { 1, 2, 1, 0, 1 }, 0, 5, new byte[] { 0, 1, 2 }, new byte[] { 1, 0, 0 }));
+    assertEquals(FuzzyRowFilter.SatisfiesCode.NEXT_EXISTS, FuzzyRowFilter.satisfiesNoUnsafe(true,
+      new byte[] { 1, 2, 1, 0, 1 }, 0, 5, new byte[] { 0, 1, 2 }, new byte[] { 1, 0, 0 }));
   }
 
   @Test
@@ -225,15 +224,15 @@ public class TestFuzzyRowFilter {
       new byte[] { 1, 1 }); // expected next
 
     // No next for this one
-    Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 2, 3, 1, 1, 1 }, // row to
-                                                                                       // check
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 2, 3, 1, 1, 1 }, // row to
+                                                                                // check
       new byte[] { 1, 0, 1 }, // fuzzy row
       new byte[] { -1, 0, -1 })); // mask
-    Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 1, (byte) 245, 1, 3, 0 },
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 1, (byte) 245, 1, 3, 0 },
       new byte[] { 1, 1, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
-    Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 1, 3, 1, 3, 0 },
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 1, 3, 1, 3, 0 },
       new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
-    Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 2, 1, 1, 1, 0 },
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(new byte[] { 2, 1, 1, 1, 0 },
       new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
   }
 
@@ -252,6 +251,12 @@ public class TestFuzzyRowFilter {
       new byte[] { 1, 2, 1, 0, 1 }, // current
       new byte[] { 1, 1, 3 }); // expected next
 
+    // Preserve HBASE-28634 boundary hints. Lowering 1115 to 1114 would skip rows such as 111444.
+    assertNext(true, Bytes.toBytes("111433"), // fuzzy row
+      new byte[] { -1, -1, -1, -1, 0, 0 }, // mask
+      Bytes.toBytes("1115"), // current
+      Bytes.toBytes("1115")); // expected next
+
     assertNext(true, new byte[] { 0, 1, 0, 2, 0 }, // fuzzy row
       new byte[] { 0, -1, 0, -1, 0 }, // mask
       new byte[] { 1, 2, 1, 3, 1 }, // current
@@ -266,11 +271,6 @@ public class TestFuzzyRowFilter {
       new byte[] { 0, -1, 0, -1 }, // mask
       new byte[] { 5, 1, 0, 2, 1 }, // current
       new byte[] { 5, 1, 0, 2 }); // expected next
-
-    assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
-      new byte[] { 0, -1, 0, 0 }, // mask
-      new byte[] { 5, 1, (byte) 255, 1 }, // current
-      new byte[] { 5, 1, (byte) 255, 1 }); // expected next
 
     assertNext(true, new byte[] { 0, 1, 0, 1 }, // fuzzy row
       new byte[] { 0, -1, 0, -1 }, // mask
@@ -307,6 +307,24 @@ public class TestFuzzyRowFilter {
       new byte[] { 2, 1, 1, 1, 0 }, // row to check
       new byte[] { 1, 2, (byte) 255, 4 }); // expected next
 
+    // No cell before the current one satisfies the fuzzy row -> null.
+    assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
+      new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
+  }
+
+  @Test
+  public void testGetNextForFuzzyRuleReverseCanReturnCurrentRow() {
+    // HBASE-28634 reverse adjustment can intentionally return the current row as a boundary hint.
+    assertNext(true, new byte[] { 'a', 'a', 'a' }, // fuzzy row
+      new byte[] { -1, 0, -1 }, // mask
+      new byte[] { 'a', 'b', 'b' }, // current
+      new byte[] { 'a', 'b', 'b' }); // expected next
+
+    assertNext(true, new byte[] { 0, 1, 0, 0 }, // fuzzy row
+      new byte[] { 0, -1, 0, 0 }, // mask
+      new byte[] { 5, 1, (byte) 255, 1 }, // current
+      new byte[] { 5, 1, (byte) 255, 1 }); // expected next
+
     assertNext(true, new byte[] { 1, 0, 1 }, // fuzzy row
       new byte[] { -1, 0, -1 }, // mask
       new byte[] { 1, (byte) 128, 2 }, // row to check
@@ -331,10 +349,6 @@ public class TestFuzzyRowFilter {
       new byte[] { 0, 0, 0, 0 }, // mask
       new byte[] { 1, 1, 2, 3 }, // row to check
       new byte[] { 1, 1, 2, 3 }); // expected next
-
-    // no before cell than current which satisfies the fuzzy row -> null
-    Assert.assertNull(FuzzyRowFilter.getNextForFuzzyRule(true, new byte[] { 1, 1, 1, 3, 0 },
-      new byte[] { 1, 2, 0, 3 }, new byte[] { -1, -1, 0, -1 }));
   }
 
   private static void assertNext(boolean reverse, byte[] fuzzyRow, byte[] mask, byte[] current,
@@ -342,6 +356,87 @@ public class TestFuzzyRowFilter {
     KeyValue kv = KeyValueUtil.createFirstOnRow(current);
     byte[] nextForFuzzyRule = FuzzyRowFilter.getNextForFuzzyRule(reverse, kv.getRowArray(),
       kv.getRowOffset(), kv.getRowLength(), fuzzyRow, mask);
-    Assert.assertEquals(Bytes.toStringBinary(expected), Bytes.toStringBinary(nextForFuzzyRule));
+    assertEquals(Bytes.toStringBinary(expected), Bytes.toStringBinary(nextForFuzzyRule));
+  }
+
+  @Test
+  public void testReverseFilterCellSkipsSameRowHint() {
+    // The first non-matching row can seek to abb, but abb would recreate abb as its reverse hint.
+    // The scanner should skip that non-matching row instead of seeking to the same row again.
+    FuzzyRowFilter filter = newReverseFuzzyRowFilter();
+
+    KeyValue abc = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abc"));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(abc));
+    Cell hint = filter.getNextCellHint(abc);
+    assertRow("abb", hint);
+
+    KeyValue abb = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abb"));
+    // filterCell handles the same-row hint by skipping the current non-matching row.
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(abb));
+  }
+
+  @Test
+  public void testReverseFilterListSkipsSameRowFuzzyHint() throws IOException {
+    for (FilterList.Operator operator : Arrays.asList(FilterList.Operator.MUST_PASS_ALL,
+      FilterList.Operator.MUST_PASS_ONE)) {
+      FilterList filterList =
+        new FilterList(operator, newReverseFuzzyRowFilter(), newReverseFuzzyRowFilter());
+
+      KeyValue abc = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abc"));
+      assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filterList.filterCell(abc));
+      assertRow("abb", filterList.getNextCellHint(abc));
+
+      KeyValue abb = KeyValueUtil.createFirstOnRow(Bytes.toBytes("abb"));
+      assertEquals(Filter.ReturnCode.NEXT_ROW, filterList.filterCell(abb));
+    }
+  }
+
+  /**
+   * Serializing a filter must not leak the internal mask encoding. On the unsafe path the stored
+   * mask is {-1 (fixed), 0 (non-fixed)}; {@code toByteArray} must emit the public constructor {0,
+   * 1} form so the round-tripped filter behaves identically (otherwise the leaked {-1, 0} is
+   * reparsed as an all-fixed mask). Processing a cell first must not change this.
+   */
+  @Test
+  public void testSerializationAfterFilterCellPreservesBehavior() throws Exception {
+    FuzzyRowFilter original =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    // Process a cell first to prove serialization is unaffected by scanning.
+    original.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
+
+    FuzzyRowFilter parsed = FuzzyRowFilter.parseFrom(original.toByteArray());
+    // A row matching only via the wildcard position must still be INCLUDED after the round-trip.
+    assertEquals(Filter.ReturnCode.INCLUDE,
+      parsed.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 99, 3 })));
+  }
+
+  /**
+   * Two filters built from the same rule (distinct array instances) must be equal and hash equally,
+   * i.e. {@code equals}/{@code hashCode} must be content-based, not identity-based, and consistent
+   * with each other and with the serialized ({0, 1}) form. This must also hold after one of them
+   * has processed a cell.
+   */
+  @Test
+  public void testEqualsConsistentAfterFilterCell() {
+    FuzzyRowFilter fresh =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    FuzzyRowFilter scanned =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(new byte[] { 1, 2, 3 }, new byte[] { 0, 1, 0 })));
+    scanned.filterCell(KeyValueUtil.createFirstOnRow(new byte[] { 1, 50, 3 }));
+
+    assertEquals(fresh, scanned);
+    assertEquals(fresh.hashCode(), scanned.hashCode());
+  }
+
+  private static FuzzyRowFilter newReverseFuzzyRowFilter() {
+    FuzzyRowFilter filter =
+      new FuzzyRowFilter(Arrays.asList(new Pair<>(Bytes.toBytes("aaa"), new byte[] { 0, 1, 0 })));
+    filter.setReversed(true);
+    return filter;
+  }
+
+  private static void assertRow(String expected, Cell cell) {
+    assertEquals(expected,
+      Bytes.toString(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength()));
   }
 }

@@ -17,9 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -31,18 +33,14 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCreateDeleteTableProcedureWithRetry {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCreateDeleteTableProcedureWithRetry.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -51,7 +49,7 @@ public class TestCreateDeleteTableProcedureWithRetry {
 
   private static final String CF = "cf";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
@@ -59,7 +57,7 @@ public class TestCreateDeleteTableProcedureWithRetry {
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -73,7 +71,7 @@ public class TestCreateDeleteTableProcedureWithRetry {
     CreateTableProcedure createProc =
       new CreateTableProcedure(procExec.getEnvironment(), htd, regions);
     ProcedureTestingUtility.submitAndWait(procExec, createProc);
-    Assert.assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertTrue(UTIL.getAdmin().tableExists(TABLE_NAME));
     MasterProcedureTestingUtility.validateTableCreation(UTIL.getMiniHBaseCluster().getMaster(),
       TABLE_NAME, regions, CF);
 
@@ -81,7 +79,7 @@ public class TestCreateDeleteTableProcedureWithRetry {
     DeleteTableProcedure deleteProc =
       new DeleteTableProcedure(procExec.getEnvironment(), TABLE_NAME);
     ProcedureTestingUtility.submitAndWait(procExec, deleteProc);
-    Assert.assertFalse(UTIL.getAdmin().tableExists(TABLE_NAME));
+    assertFalse(UTIL.getAdmin().tableExists(TABLE_NAME));
     MasterProcedureTestingUtility.validateTableDeletion(UTIL.getMiniHBaseCluster().getMaster(),
       TABLE_NAME);
   }

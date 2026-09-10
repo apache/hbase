@@ -19,11 +19,11 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.createBucketEntry;
 import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.getByteBuff;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
@@ -31,18 +31,15 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -50,12 +47,9 @@ import org.mockito.stubbing.Answer;
 /**
  * Basic test for {@link FileIOEngine}
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFileIOEngine {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFileIOEngine.class);
 
   private static final long TOTAL_CAPACITY = 6 * 1024 * 1024; // 6 MB
   private static final String[] FILE_PATHS =
@@ -81,12 +75,12 @@ public class TestFileIOEngine {
     boundaryStopPositions.add(SIZE_PER_FILE * FILE_PATHS.length - 1);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fileIOEngine = new FileIOEngine(TOTAL_CAPACITY, false, FILE_PATHS);
   }
 
-  @After
+  @AfterEach
   public void cleanUp() {
     fileIOEngine.shutdown();
     for (String filePath : FILE_PATHS) {
@@ -177,10 +171,9 @@ public class TestFileIOEngine {
       fileIOEngine.read(be);
       ByteBuff dst = getByteBuff(be);
 
-      Assert.assertEquals(src.remaining(), len);
-      Assert.assertEquals(dst.remaining(), len);
-      Assert.assertEquals(0,
-        ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
+      assertEquals(src.remaining(), len);
+      assertEquals(dst.remaining(), len);
+      assertEquals(0, ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
     }
   }
 

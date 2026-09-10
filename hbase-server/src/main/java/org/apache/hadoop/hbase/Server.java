@@ -23,6 +23,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.AsyncConnection;
 import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -104,4 +105,7 @@ public interface Server extends Abortable, Stoppable {
   default boolean isStopping() {
     return false;
   }
+
+  /** Returns the KeyManagementService instance for this server. */
+  KeyManagementService getKeyManagementService();
 }

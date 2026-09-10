@@ -17,27 +17,22 @@
  */
 package org.apache.hadoop.hbase.metrics.impl;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Optional;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
 import org.apache.hadoop.hbase.metrics.MetricRegistry;
 import org.apache.hadoop.hbase.metrics.MetricRegistryInfo;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test class for {@link MetricRegistries}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMetricRegistriesImpl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricRegistriesImpl.class);
 
   @Test
   public void testMetricsRegistriesRemoveRef() {
@@ -57,6 +52,6 @@ public class TestMetricRegistriesImpl {
 
     MetricRegistries.global().remove(registryInfo);
     Optional<MetricRegistry> registry4 = MetricRegistries.global().get(registryInfo);
-    assertTrue(!registry4.isPresent());
+    assertFalse(registry4.isPresent());
   }
 }

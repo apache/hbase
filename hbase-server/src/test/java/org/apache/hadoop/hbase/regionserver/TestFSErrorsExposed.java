@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -51,12 +50,11 @@ import org.apache.hadoop.hbase.io.hfile.HFileScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assume;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Assumptions;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,19 +62,19 @@ import org.slf4j.LoggerFactory;
  * Test cases that ensure that file system level errors are bubbled up appropriately to clients,
  * rather than swallowed.
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestFSErrorsExposed {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFSErrorsExposed.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFSErrorsExposed.class);
 
   HBaseTestingUtil util = new HBaseTestingUtil();
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
   /**
    * Injects errors into the pread calls of an on-disk file, and makes sure those bubble up to the
@@ -185,7 +183,7 @@ public class TestFSErrorsExposed {
   public void testFullSystemBubblesFSErrors() throws Exception {
     // We won't have an error if the datanode is not there if we use short circuit
     // it's a known 'feature'.
-    Assume.assumeTrue(!util.isReadShortCircuitOn());
+    Assumptions.assumeTrue(!util.isReadShortCircuitOn());
 
     try {
       // Make it fail faster.
@@ -194,7 +192,7 @@ public class TestFSErrorsExposed {
       util.getConfiguration().setInt("hbase.lease.recovery.timeout", 10000);
       util.getConfiguration().setInt("hbase.lease.recovery.dfs.timeout", 1000);
       util.startMiniCluster(1);
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(name);
       byte[] fam = Bytes.toBytes("fam");
 
       Admin admin = util.getAdmin();

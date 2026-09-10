@@ -17,46 +17,45 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.math.BigDecimal;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBigDecimalComparator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBigDecimalComparator.class);
 
   @Test
   public void testObjectEquals() {
     BigDecimal bd = new BigDecimal(Double.MIN_VALUE);
     // Check that equals returns true for identical objects
     final BigDecimalComparator bdc = new BigDecimalComparator(bd);
-    Assert.assertTrue(bdc.equals(bdc));
-    Assert.assertEquals(bdc.hashCode(), bdc.hashCode());
+    assertTrue(bdc.equals(bdc));
+    assertEquals(bdc.hashCode(), bdc.hashCode());
 
     // Check that equals returns true for the same object
     final BigDecimalComparator bdc1 = new BigDecimalComparator(bd);
     final BigDecimalComparator bdc2 = new BigDecimalComparator(bd);
-    Assert.assertTrue(bdc1.equals(bdc2));
-    Assert.assertEquals(bdc1.hashCode(), bdc2.hashCode());
+    assertTrue(bdc1.equals(bdc2));
+    assertEquals(bdc1.hashCode(), bdc2.hashCode());
 
     // Check that equals returns false for different objects
     final BigDecimalComparator bdc3 = new BigDecimalComparator(bd);
     final BigDecimalComparator bdc4 = new BigDecimalComparator(new BigDecimal(Long.MIN_VALUE));
-    Assert.assertFalse(bdc3.equals(bdc4));
-    Assert.assertNotEquals(bdc3.hashCode(), bdc4.hashCode());
+    assertFalse(bdc3.equals(bdc4));
+    assertNotEquals(bdc3.hashCode(), bdc4.hashCode());
 
     // Check that equals returns false for a different type
     final BigDecimalComparator bdc5 = new BigDecimalComparator(bd);
-    Assert.assertFalse(bdc5.equals(0));
+    assertFalse(bdc5.equals(0));
   }
 
   @Test
@@ -74,8 +73,8 @@ public class TestBigDecimalComparator {
     int comp2 = comparator2.compareTo(value2);
 
     // then
-    Assert.assertEquals(0, comp1);
-    Assert.assertEquals(0, comp2);
+    assertEquals(0, comp1);
+    assertEquals(0, comp2);
   }
 
   @Test
@@ -93,9 +92,9 @@ public class TestBigDecimalComparator {
     int comp3 = comparator.compareTo(val3);
 
     // then
-    Assert.assertEquals(1, comp1);
-    Assert.assertEquals(1, comp2);
-    Assert.assertEquals(1, comp3);
+    assertEquals(1, comp1);
+    assertEquals(1, comp2);
+    assertEquals(1, comp3);
   }
 
   @Test
@@ -113,9 +112,9 @@ public class TestBigDecimalComparator {
     int comp3 = comparator.compareTo(val3);
 
     // then
-    Assert.assertEquals(-1, comp1);
-    Assert.assertEquals(-1, comp2);
-    Assert.assertEquals(-1, comp3);
+    assertEquals(-1, comp1);
+    assertEquals(-1, comp2);
+    assertEquals(-1, comp3);
   }
 
 }

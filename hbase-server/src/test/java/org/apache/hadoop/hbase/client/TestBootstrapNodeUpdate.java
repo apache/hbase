@@ -19,12 +19,11 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.hasItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
@@ -32,11 +31,10 @@ import org.apache.hadoop.hbase.regionserver.BootstrapNodeManager;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -44,18 +42,15 @@ import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
  * Make sure that we can update the bootstrap server from master to region server, and region server
  * could also contact each other to update the bootstrap nodes.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBootstrapNodeUpdate {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBootstrapNodeUpdate.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
   private static RpcConnectionRegistry REGISTRY;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setLong(BootstrapNodeManager.REQUEST_MASTER_INTERVAL_SECS, 5);
@@ -69,7 +64,7 @@ public class TestBootstrapNodeUpdate {
     REGISTRY = new RpcConnectionRegistry(conf, UserProvider.instantiate(conf).getCurrent());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     Closeables.close(REGISTRY, true);
     UTIL.shutdownMiniCluster();

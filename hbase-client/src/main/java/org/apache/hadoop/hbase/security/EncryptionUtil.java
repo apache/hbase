@@ -27,7 +27,6 @@ import javax.crypto.spec.SecretKeySpec;
 import org.apache.commons.crypto.cipher.CryptoCipherFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
 import org.apache.hadoop.hbase.io.crypto.Encryption;
 import org.apache.hadoop.hbase.io.crypto.aes.CryptoAES;
@@ -80,6 +79,21 @@ public final class EncryptionUtil {
    * @return the encrypted key bytes
    */
   public static byte[] wrapKey(Configuration conf, String subject, Key key) throws IOException {
+    return wrapKey(conf, subject, key, null);
+  }
+
+  /**
+   * Protect a key by encrypting it with the secret key of the given subject or kek. The
+   * configuration must be set up correctly for key alias resolution. Only one of the
+   * {@code subject} or {@code kek} needs to be specified and the other one can be {@code null}.
+   * @param conf    configuration
+   * @param subject subject key alias
+   * @param key     the key
+   * @param kek     the key encryption key
+   * @return the encrypted key bytes
+   */
+  public static byte[] wrapKey(Configuration conf, String subject, Key key, Key kek)
+    throws IOException {
     // Wrap the key with the configured encryption algorithm.
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     Cipher cipher = Encryption.getCipher(conf, algorithm);
@@ -100,8 +114,12 @@ public final class EncryptionUtil {
     builder
       .setHash(UnsafeByteOperations.unsafeWrap(Encryption.computeCryptoKeyHash(conf, keyBytes)));
     ByteArrayOutputStream out = new ByteArrayOutputStream();
-    Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject, conf, cipher,
-      iv);
+    if (kek != null) {
+      Encryption.encryptWithGivenKey(kek, out, new ByteArrayInputStream(keyBytes), cipher, iv);
+    } else {
+      Encryption.encryptWithSubjectKey(out, new ByteArrayInputStream(keyBytes), subject, conf,
+        cipher, iv);
+    }
     builder.setData(UnsafeByteOperations.unsafeWrap(out.toByteArray()));
     // Build and return the protobuf message
     out.reset();
@@ -119,6 +137,21 @@ public final class EncryptionUtil {
    */
   public static Key unwrapKey(Configuration conf, String subject, byte[] value)
     throws IOException, KeyException {
+    return unwrapKey(conf, subject, value, null);
+  }
+
+  /**
+   * Unwrap a key by decrypting it with the secret key of the given subject. The configuration must
+   * be set up correctly for key alias resolution. Only one of the {@code subject} or {@code kek}
+   * needs to be specified and the other one can be {@code null}.
+   * @param conf    configuration
+   * @param subject subject key alias
+   * @param value   the encrypted key bytes
+   * @param kek     the key encryption key
+   * @return the raw key bytes
+   */
+  public static Key unwrapKey(Configuration conf, String subject, byte[] value, Key kek)
+    throws IOException, KeyException {
     EncryptionProtos.WrappedKey wrappedKey =
       EncryptionProtos.WrappedKey.parser().parseDelimitedFrom(new ByteArrayInputStream(value));
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
@@ -126,11 +159,12 @@ public final class EncryptionUtil {
     if (cipher == null) {
       throw new RuntimeException("Cipher '" + algorithm + "' not available");
     }
-    return getUnwrapKey(conf, subject, wrappedKey, cipher);
+    return getUnwrapKey(conf, subject, wrappedKey, cipher, kek);
   }
 
   private static Key getUnwrapKey(Configuration conf, String subject,
-    EncryptionProtos.WrappedKey wrappedKey, Cipher cipher) throws IOException, KeyException {
+    EncryptionProtos.WrappedKey wrappedKey, Cipher cipher, Key kek)
+    throws IOException, KeyException {
     String configuredHashAlgorithm = Encryption.getConfiguredHashAlgorithm(conf);
     String wrappedHashAlgorithm = wrappedKey.getHashAlgorithm().trim();
     if (!configuredHashAlgorithm.equalsIgnoreCase(wrappedHashAlgorithm)) {
@@ -143,8 +177,13 @@ public final class EncryptionUtil {
     }
     ByteArrayOutputStream out = new ByteArrayOutputStream();
     byte[] iv = wrappedKey.hasIv() ? wrappedKey.getIv().toByteArray() : null;
-    Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(), wrappedKey.getLength(),
-      subject, conf, cipher, iv);
+    if (kek != null) {
+      Encryption.decryptWithGivenKey(kek, out, wrappedKey.getData().newInput(),
+        wrappedKey.getLength(), cipher, iv);
+    } else {
+      Encryption.decryptWithSubjectKey(out, wrappedKey.getData().newInput(), wrappedKey.getLength(),
+        subject, conf, cipher, iv);
+    }
     byte[] keyBytes = out.toByteArray();
     if (wrappedKey.hasHash()) {
       if (
@@ -176,58 +215,7 @@ public final class EncryptionUtil {
     if (cipher == null) {
       throw new RuntimeException("Cipher '" + algorithm + "' not available");
     }
-    return getUnwrapKey(conf, subject, wrappedKey, cipher);
-  }
-
-  /**
-   * Helper to create an encyption context.
-   * @param conf   The current configuration.
-   * @param family The current column descriptor.
-   * @return The created encryption context.
-   * @throws IOException           if an encryption key for the column cannot be unwrapped
-   * @throws IllegalStateException in case of encryption related configuration errors
-   */
-  public static Encryption.Context createEncryptionContext(Configuration conf,
-    ColumnFamilyDescriptor family) throws IOException {
-    Encryption.Context cryptoContext = Encryption.Context.NONE;
-    String cipherName = family.getEncryptionType();
-    if (cipherName != null) {
-      if (!Encryption.isEncryptionEnabled(conf)) {
-        throw new IllegalStateException("Encryption for family '" + family.getNameAsString()
-          + "' configured with type '" + cipherName + "' but the encryption feature is disabled");
-      }
-      Cipher cipher;
-      Key key;
-      byte[] keyBytes = family.getEncryptionKey();
-      if (keyBytes != null) {
-        // Family provides specific key material
-        key = unwrapKey(conf, keyBytes);
-        // Use the algorithm the key wants
-        cipher = Encryption.getCipher(conf, key.getAlgorithm());
-        if (cipher == null) {
-          throw new IllegalStateException("Cipher '" + key.getAlgorithm() + "' is not available");
-        }
-        // Fail if misconfigured
-        // We use the encryption type specified in the column schema as a sanity check on
-        // what the wrapped key is telling us
-        if (!cipher.getName().equalsIgnoreCase(cipherName)) {
-          throw new IllegalStateException(
-            "Encryption for family '" + family.getNameAsString() + "' configured with type '"
-              + cipherName + "' but key specifies algorithm '" + cipher.getName() + "'");
-        }
-      } else {
-        // Family does not provide key material, create a random key
-        cipher = Encryption.getCipher(conf, cipherName);
-        if (cipher == null) {
-          throw new IllegalStateException("Cipher '" + cipherName + "' is not available");
-        }
-        key = cipher.getRandomKey();
-      }
-      cryptoContext = Encryption.newContext(conf);
-      cryptoContext.setCipher(cipher);
-      cryptoContext.setKey(key);
-    }
-    return cryptoContext;
+    return getUnwrapKey(conf, subject, wrappedKey, cipher, null);
   }
 
   /**

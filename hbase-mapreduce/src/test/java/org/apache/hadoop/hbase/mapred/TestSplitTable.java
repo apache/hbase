@@ -17,31 +17,21 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MapReduceTests.class, SmallTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSplitTable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitTable.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   @Test
   @SuppressWarnings({ "deprecation", "SelfComparison" })
@@ -104,16 +94,16 @@ public class TestSplitTable {
 
   @Test
   @SuppressWarnings("deprecation")
-  public void testToString() {
-    TableSplit split = new TableSplit(TableName.valueOf(name.getMethodName()),
+  public void testToString(TestInfo testInfo) {
+    TableSplit split = new TableSplit(TableName.valueOf(testInfo.getTestMethod().get().getName()),
       Bytes.toBytes("row-start"), Bytes.toBytes("row-end"), "location");
-    String str = "HBase table split(table name: " + name.getMethodName()
+    String str = "HBase table split(table name: " + testInfo.getTestMethod().get().getName()
       + ", start row: row-start, " + "end row: row-end, region location: location)";
-    Assert.assertEquals(str, split.toString());
+    assertEquals(str, split.toString());
 
     split = new TableSplit((TableName) null, null, null, null);
     str = "HBase table split(table name: null, start row: null, "
       + "end row: null, region location: null)";
-    Assert.assertEquals(str, split.toString());
+    assertEquals(str, split.toString());
   }
 }

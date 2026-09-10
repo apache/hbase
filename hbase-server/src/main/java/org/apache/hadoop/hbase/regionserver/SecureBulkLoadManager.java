@@ -151,12 +151,26 @@ public class SecureBulkLoadManager {
     region.getCoprocessorHost().preCleanupBulkLoad(getActiveUser());
 
     Path path = new Path(request.getBulkToken());
+    validateStagingPath(path);
     if (!fs.delete(path, true)) {
       if (fs.exists(path)) {
         throw new IOException("Failed to clean up " + path);
       }
     }
     LOG.trace("Cleaned up {} successfully.", path);
+  }
+
+  /**
+   * Verify that the given path is a direct child of the staging directory. Rejects path traversal
+   * attempts and paths outside the expected staging area.
+   */
+  void validateStagingPath(Path path) throws IOException {
+    Path qualified = path.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    Path qualifiedBase = baseStagingDir.makeQualified(fs.getUri(), fs.getWorkingDirectory());
+    if (qualified.getParent() == null || !qualified.getParent().equals(qualifiedBase)) {
+      throw new DoNotRetryIOException(
+        "Bulk load token path must be a direct child of the staging directory: " + baseStagingDir);
+    }
   }
 
   private Consumer<HRegion> fsCreatedListener;

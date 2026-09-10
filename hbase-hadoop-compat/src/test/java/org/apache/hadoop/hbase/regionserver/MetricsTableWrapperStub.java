@@ -54,6 +54,16 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   }
 
   @Override
+  public long getMemStoreHeapSize(String table) {
+    return 1001;
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize(String table) {
+    return 1002;
+  }
+
+  @Override
   public long getStoreFileSize(String table) {
     return 2000;
   }
@@ -153,6 +163,13 @@ public class MetricsTableWrapperStub implements MetricsTableWrapperAggregate {
   public Map<String, Long> getMixedRowReadsCount(String table) {
     Map<String, Long> map = new HashMap<String, Long>();
     map.put("table#info", 3L);
+    return map;
+  }
+
+  @Override
+  public Map<String, Long> getStoreFileSizePerStore(String table) {
+    Map<String, Long> map = new HashMap<String, Long>();
+    map.put("table#info", 2000L);
     return map;
   }
 }

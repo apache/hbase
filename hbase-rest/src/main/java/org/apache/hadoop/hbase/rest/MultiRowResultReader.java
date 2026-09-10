@@ -58,7 +58,11 @@ public class MultiRowResultReader {
             }
           }
         }
-        get.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
+        if (rowspec.isPartialTimeRange()) {
+          get.setTimestamp(rowspec.getTimestamp());
+        } else {
+          get.setTimeRange(rowspec.getStartTime(), rowspec.getEndTime());
+        }
         get.readVersions(rowspec.getMaxVersions());
         if (filter != null) {
           get.setFilter(filter);

@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.master.migrate;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -34,18 +34,15 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestInitializeStoreFileTracker {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInitializeStoreFileTracker.class);
+
   private final static String[] tables = new String[] { "t1", "t2", "t3", "t4", "t5", "t6" };
   private final static String famStr = "f1";
   private final static byte[] fam = Bytes.toBytes(famStr);
@@ -54,7 +51,7 @@ public class TestInitializeStoreFileTracker {
   private Configuration conf;
   private TableDescriptor tableDescriptor;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf = HBaseConfiguration.create();
     // Speed up the launch of RollingUpgradeChore
@@ -67,7 +64,7 @@ public class TestInitializeStoreFileTracker {
     HTU.startMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     HTU.shutdownMiniCluster();
   }
@@ -84,7 +81,7 @@ public class TestInitializeStoreFileTracker {
     for (int i = 0; i < tables.length; i++) {
       TableDescriptor tdAfterCreated = tableDescriptors.get(TableName.valueOf(tables[i]));
       // make sure that TRACKER_IMPL was set by default after tables have been created.
-      Assert.assertNotNull(tdAfterCreated.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
+      assertNotNull(tdAfterCreated.getValue(StoreFileTrackerFactory.TRACKER_IMPL));
       // Remove StoreFileTracker impl from tableDescriptor
       TableDescriptor tdRemovedSFT = TableDescriptorBuilder.newBuilder(tdAfterCreated)
         .removeValue(StoreFileTrackerFactory.TRACKER_IMPL).build();

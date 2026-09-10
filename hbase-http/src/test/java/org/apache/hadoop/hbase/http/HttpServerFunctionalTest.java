@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -215,7 +215,7 @@ public class HttpServerFunctionalTest {
    * @throws MalformedURLException if the URL cannot be created.
    */
   public static URL getServerURL(HttpServer server) throws MalformedURLException {
-    assertNotNull("No server", server);
+    assertNotNull(server, "No server");
     return new URL("http://" + NetUtils.getHostPortString(server.getConnectorAddress(0)));
   }
 

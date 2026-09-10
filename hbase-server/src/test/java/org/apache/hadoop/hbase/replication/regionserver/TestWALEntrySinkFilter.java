@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.net.SocketAddress;
@@ -33,7 +33,6 @@ import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.ExtendedCellBuilder;
 import org.apache.hadoop.hbase.ExtendedCellBuilderFactory;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -51,11 +50,9 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 
@@ -64,15 +61,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos;
 /**
  * Simple test of sink-side wal entry filter facility.
  */
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWALEntrySinkFilter {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALEntrySinkFilter.class);
-
-  @Rule
-  public TestName name = new TestName();
   static final int BOUNDARY = 5;
   static final AtomicInteger UNFILTERED = new AtomicInteger();
   static final AtomicInteger FILTERED = new AtomicInteger();
@@ -84,7 +76,8 @@ public class TestWALEntrySinkFilter {
    * our counting Table.
    */
   @Test
-  public void testWALEntryFilter() throws IOException {
+  public void testWALEntryFilter(TestInfo testInfo) throws IOException {
+    String testName = testInfo.getTestMethod().get().getName();
     Configuration conf = HBaseConfiguration.create();
     // Make it so our filter is instantiated on construction of ReplicationSink.
     conf.setClass(HConstants.CLIENT_CONNECTION_REGISTRY_IMPL_CONF_KEY,
@@ -98,8 +91,7 @@ public class TestWALEntrySinkFilter {
     List<AdminProtos.WALEntry> entries = new ArrayList<>();
     AdminProtos.WALEntry.Builder entryBuilder = AdminProtos.WALEntry.newBuilder();
     // Need a tablename.
-    ByteString tableName =
-      ByteString.copyFromUtf8(TableName.valueOf(this.name.getMethodName()).toString());
+    ByteString tableName = ByteString.copyFromUtf8(TableName.valueOf(testName).toString());
     // Add WALEdit Cells to Cells List. The way edits arrive at the sink is with protos
     // describing the edit with all Cells from all edits aggregated in a single CellScanner.
     final List<ExtendedCell> cells = new ArrayList<>();
@@ -201,7 +193,7 @@ public class TestWALEntrySinkFilter {
           for (Row action : actions) {
             // Row is the index of the loop above where we make WALEntry and Cells.
             int row = Bytes.toInt(action.getRow());
-            assertTrue("" + row, row > BOUNDARY);
+            assertTrue(row > BOUNDARY, "" + row);
             UNFILTERED.incrementAndGet();
             list.add(null);
           }

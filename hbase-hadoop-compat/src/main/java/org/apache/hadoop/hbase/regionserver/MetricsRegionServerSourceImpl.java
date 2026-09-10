@@ -63,8 +63,6 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
 
   // split related metrics
   private final MutableFastCounter splitRequest;
-  private final MutableFastCounter splitSuccess;
-  private final MetricHistogram splitTimeHisto;
 
   // flush related metrics
   private final MetricHistogram flushTimeHisto;
@@ -182,9 +180,7 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
     majorCompactedOutputBytes = getMetricsRegistry().newCounter(MAJOR_COMPACTED_OUTPUT_BYTES,
       MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
 
-    splitTimeHisto = getMetricsRegistry().newTimeHistogram(SPLIT_KEY);
     splitRequest = getMetricsRegistry().newCounter(SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = getMetricsRegistry().newCounter(SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
 
     // pause monitor metrics
     infoPauseThresholdExceeded =
@@ -281,16 +277,6 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
   }
 
   @Override
-  public void incrSplitSuccess() {
-    splitSuccess.incr();
-  }
-
-  @Override
-  public void updateSplitTime(long t) {
-    splitTimeHisto.add(t);
-  }
-
-  @Override
   public void updateFlushTime(long t) {
     flushTimeHisto.add(t);
   }
@@ -369,7 +355,8 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
 
     // rsWrap can be null because this function is called inside of init.
     if (rsWrap != null) {
-      addGaugesToMetricsRecordBuilder(mrb)
+      MetricsRecordBuilder metricsRecordBuilder = addGaugesToMetricsRecordBuilder(mrb);
+      metricsRecordBuilder
         .addCounter(Interns.info(TOTAL_REQUEST_COUNT, TOTAL_REQUEST_COUNT_DESC),
           rsWrap.getTotalRequestCount())
         .addCounter(
@@ -496,10 +483,17 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
           rsWrap.getHedgedReadOpsInCurThread())
         .addCounter(Interns.info(BLOCKED_REQUESTS_COUNT, BLOCKED_REQUESTS_COUNT_DESC),
           rsWrap.getBlockedRequestsCount())
+        .addCounter(Interns.info(EXCLUDE_DATA_NODES_COUNT, EXCLUDE_DATA_NODES_COUNT_DESC),
+          rsWrap.getWALExcludeDNs().size())
         .tag(Interns.info(ZOOKEEPER_QUORUM_NAME, ZOOKEEPER_QUORUM_DESC),
           rsWrap.getZookeeperQuorum())
         .tag(Interns.info(SERVER_NAME_NAME, SERVER_NAME_DESC), rsWrap.getServerName())
         .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), rsWrap.getClusterId());
+      if (!rsWrap.getWALExcludeDNs().isEmpty()) {
+        metricsRecordBuilder.tag(
+          Interns.info(EXCLUDE_DATA_NODES_DETAILS, EXCLUDE_DATA_NODES_DETAILS_DESC),
+          rsWrap.getWALExcludeDNs().toString());
+      }
     }
 
     metricsRegistry.snapshot(mrb, all);
@@ -597,12 +591,20 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getL1CacheEvictedCount())
       .addGauge(Interns.info(L1_CACHE_HIT_COUNT, L1_CACHE_HIT_COUNT_DESC),
         rsWrap.getL1CacheHitCount())
+      .addGauge(Interns.info(L1_CACHE_HIT_CAGHING_COUNT, L1_CACHE_HIT_CAGHING_COUNT_DESC),
+        rsWrap.getL1CacheHitCachingCount())
       .addGauge(Interns.info(L1_CACHE_MISS_COUNT, L1_CACHE_MISS_COUNT_DESC),
         rsWrap.getL1CacheMissCount())
+      .addGauge(Interns.info(L1_CACHE_MISS_CACHING_COUNT, L1_CACHE_MISS_CACHING_COUNT_DESC),
+        rsWrap.getL1CacheMissCachingCount())
       .addGauge(Interns.info(L1_CACHE_HIT_RATIO, L1_CACHE_HIT_RATIO_DESC),
         rsWrap.getL1CacheHitRatio())
+      .addGauge(Interns.info(L1_CACHE_HIT_CACHING_RATIO, L1_CACHE_HIT_CACHING_RATIO_DESC),
+        rsWrap.getL1CacheHitCachingRatio())
       .addGauge(Interns.info(L1_CACHE_MISS_RATIO, L1_CACHE_MISS_RATIO_DESC),
         rsWrap.getL1CacheMissRatio())
+      .addGauge(Interns.info(L1_CACHE_MISS_CACHING_RATIO, L1_CACHE_MISS_CACHING_RATIO_DESC),
+        rsWrap.getL1CacheMissCachingRatio())
       .addGauge(Interns.info(L2_CACHE_SIZE, L2_CACHE_SIZE_DESC), rsWrap.getL2CacheSize())
       .addGauge(Interns.info(L2_CACHE_FREE_SIZE, L2_CACHE_FREE_SIZE_DESC),
         rsWrap.getL2CacheFreeSize())
@@ -611,12 +613,20 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
         rsWrap.getL2CacheEvictedCount())
       .addGauge(Interns.info(L2_CACHE_HIT_COUNT, L2_CACHE_HIT_COUNT_DESC),
         rsWrap.getL2CacheHitCount())
+      .addGauge(Interns.info(L2_CACHE_HIT_CACHING_COUNT, L2_CACHE_HIT_CACHING_COUNT_DESC),
+        rsWrap.getL2CacheHitCachingCount())
       .addGauge(Interns.info(L2_CACHE_MISS_COUNT, L2_CACHE_MISS_COUNT_DESC),
         rsWrap.getL2CacheMissCount())
+      .addGauge(Interns.info(L2_CACHE_MISS_CACHING_COUNT, L2_CACHE_MISS_CACHING_COUNT_DESC),
+        rsWrap.getL2CacheMissCachingCount())
       .addGauge(Interns.info(L2_CACHE_HIT_RATIO, L2_CACHE_HIT_RATIO_DESC),
         rsWrap.getL2CacheHitRatio())
+      .addGauge(Interns.info(L2_CACHE_HIT_CACHING_RATIO, L2_CACHE_HIT_CACHING_RATIO_DESC),
+        rsWrap.getL2CacheHitCachingRatio())
       .addGauge(Interns.info(L2_CACHE_MISS_RATIO, L2_CACHE_MISS_RATIO_DESC),
         rsWrap.getL2CacheMissRatio())
+      .addGauge(Interns.info(L2_CACHE_MISS_CACHING_RATIO, L2_CACHE_MISS_CACHING_RATIO_DESC),
+        rsWrap.getL2CacheMissCachingRatio())
       .addGauge(Interns.info(MOB_FILE_CACHE_COUNT, MOB_FILE_CACHE_COUNT_DESC),
         rsWrap.getMobFileCacheCount())
       .addGauge(Interns.info(MOB_FILE_CACHE_HIT_PERCENT, MOB_FILE_CACHE_HIT_PERCENT_DESC),

@@ -199,7 +199,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               String fName = MobUtils.getMobFileName(c);
               // Added to support migration
               try {
-                mobCell = mobStore.resolve(c, true, false).getCell();
+                mobCell = resolveMobCell(c);
               } catch (DoNotRetryIOException e) {
                 if (
                   discardMobMiss && e.getCause() != null
@@ -269,7 +269,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
               } else {
                 // If the value is not larger than the threshold, it's not regarded a mob. Retrieve
                 // the mob cell from the mob file, and write it back to the store file.
-                mobCell = mobStore.resolve(c, true, false).getCell();
+                mobCell = resolveMobCell(c);
                 if (mobCell.getValueLength() != 0) {
                   // put the mob data back to the store file
                   PrivateCellUtil.setSequenceId(mobCell, c.getSequenceId());
@@ -331,6 +331,7 @@ public class FaultyMobStoreCompactor extends DefaultMobStoreCompactor {
           if (kvs != null && bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
             ((ShipperListener) writer).beforeShipped();
             kvs.shipped();
+            scannerContext.clearBlockSizeProgress();
             bytesWrittenProgressForShippedCall = 0;
           }
         }

@@ -20,7 +20,7 @@ require 'hbase_shell'
 class NonInteractiveTest < Test::Unit::TestCase
   def setup
     @hbase = ::Hbase::Hbase.new($TEST_CLUSTER.getConfiguration)
-    @shell = Shell::Shell.new(@hbase, false)
+    @shell = Shell::Shell.new(@hbase, interactive: false)
   end
 
   define_test "Shell::Shell noninteractive mode should throw" do

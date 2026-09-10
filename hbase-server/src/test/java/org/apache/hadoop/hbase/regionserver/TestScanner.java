@@ -20,18 +20,20 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.NavigableSet;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
@@ -49,34 +51,29 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.filter.BinaryComparator;
+import org.apache.hadoop.hbase.filter.ByteArrayComparable;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.InclusiveStopFilter;
 import org.apache.hadoop.hbase.filter.PrefixFilter;
+import org.apache.hadoop.hbase.filter.RowFilter;
 import org.apache.hadoop.hbase.filter.WhileMatchFilter;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test of a long-lived scanner validating as we go.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestScanner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanner.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanner.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -104,6 +101,10 @@ public class TestScanner {
 
   private static final long START_CODE = Long.MAX_VALUE;
 
+  private static final byte[] LAZY_SEEK_FAMILY = Bytes.toBytes("family");
+  private static final byte[] LAZY_SEEK_QUALIFIER = Bytes.toBytes("qualifier");
+  private static final byte[] LAZY_SEEK_ROW = Bytes.toBytes("row");
+
   private HRegion region;
 
   private byte[] firstRowBytes, secondRowBytes, thirdRowBytes;
@@ -120,6 +121,185 @@ public class TestScanner {
     thirdRowBytes[START_KEY_BYTES.length - 1] =
       (byte) (thirdRowBytes[START_KEY_BYTES.length - 1] + 2);
     col1 = Bytes.toBytes("column1");
+  }
+
+  private static final class RecordingStoreScanner extends StoreScanner {
+    private boolean initialSeekWasLazy;
+
+    RecordingStoreScanner(HStore store, Scan scan, NavigableSet<byte[]> columns)
+      throws IOException {
+      super(store, store.getScanInfo(), scan, columns, Long.MAX_VALUE);
+    }
+
+    @Override
+    protected void seekScanners(List<? extends KeyValueScanner> scanners, ExtendedCell seekKey,
+      boolean isLazy, boolean isParallelSeek) throws IOException {
+      initialSeekWasLazy = isLazy;
+      super.seekScanners(scanners, seekKey, isLazy, isParallelSeek);
+    }
+  }
+
+  private static final class TrackingRowComparator extends ByteArrayComparable {
+    private final List<byte[]> comparedRows = new ArrayList<>();
+
+    TrackingRowComparator(byte[] value) {
+      super(value);
+    }
+
+    @Override
+    public int compareTo(byte[] value, int offset, int length) {
+      comparedRows.add(Bytes.copy(value, offset, length));
+      return Bytes.compareTo(getValue(), 0, getValue().length, value, offset, length);
+    }
+
+    @Override
+    public byte[] toByteArray() {
+      return getValue();
+    }
+  }
+
+  @Test
+  public void testFilterComparatorOnlySeesActualRows() throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    byte[] regionStartKey = new byte[] { 1 };
+    byte[] row = new byte[] { 1, 0, 1 };
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("testFilterComparatorOnlySeesActualRows"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family)
+          .setBloomFilterType(BloomType.ROWCOL).build())
+        .build();
+    TrackingRowComparator comparator = new TrackingRowComparator(row);
+
+    StoreScanner.enableLazySeekGlobally(true);
+    try {
+      this.region = TEST_UTIL.createLocalHRegion(tableDescriptor, regionStartKey, null);
+      Put put = new Put(row);
+      put.addColumn(family, qualifier, Bytes.toBytes("value"));
+      region.put(put);
+      region.flush(true);
+
+      Scan scan = new Scan().withStartRow(regionStartKey);
+      scan.addColumn(family, qualifier);
+      scan.setFilter(new RowFilter(CompareOperator.EQUAL, comparator));
+      List<Cell> results = new ArrayList<>();
+      try (InternalScanner scanner = region.getScanner(scan)) {
+        assertFalse(scanner.next(results));
+      }
+
+      assertEquals(1, results.size());
+      assertTrue(CellUtil.matchingRows(results.get(0), row));
+      assertEquals(1, comparator.comparedRows.size());
+      assertTrue(Bytes.equals(row, comparator.comparedRows.get(0)));
+    } finally {
+      StoreScanner.enableLazySeekGlobally(StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
+    }
+  }
+
+  @Test
+  public void testWhileMatchFilterOnlySeesActualRows() throws Exception {
+    byte[] family = Bytes.toBytes("family");
+    byte[] qualifier = Bytes.toBytes("qualifier");
+    TableDescriptor tableDescriptor =
+      TableDescriptorBuilder.newBuilder(TableName.valueOf("testWhileMatchFilterOnlySeesActualRows"))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(family).build()).build();
+
+    StoreScanner.enableLazySeekGlobally(true);
+    try {
+      this.region = TEST_UTIL.createLocalHRegion(tableDescriptor, null, null);
+      List<String> rows = List.of("row1", "row2", "row3");
+      for (String row : rows) {
+        Put put = new Put(Bytes.toBytes(row)).addColumn(family, qualifier, Bytes.toBytes("value"));
+        region.put(put);
+      }
+      region.flush(true);
+
+      Scan scan = new Scan().addColumn(family, qualifier)
+        .setFilter(new WhileMatchFilter(new RowFilter(CompareOperator.NOT_EQUAL,
+          new BinaryComparator(HConstants.EMPTY_START_ROW))));
+      int scannedRows = 0;
+      try (InternalScanner scanner = region.getScanner(scan)) {
+        boolean hasMoreRows;
+        do {
+          List<Cell> results = new ArrayList<>();
+          hasMoreRows = scanner.next(results);
+          if (!results.isEmpty()) {
+            ++scannedRows;
+          }
+        } while (hasMoreRows);
+      }
+
+      assertEquals(rows.size(), scannedRows);
+    } finally {
+      StoreScanner.enableLazySeekGlobally(StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
+      HBaseTestingUtil.closeRegionAndWAL(this.region);
+    }
+  }
+
+  @Test
+  public void testInitialLazySeekForUnfilteredExplicitColumnScan() throws Exception {
+    Scan scan = new Scan().withStartRow(LAZY_SEEK_ROW);
+    scan.addColumn(LAZY_SEEK_FAMILY, LAZY_SEEK_QUALIFIER);
+    assertInitialLazySeek(scan, true, true);
+  }
+
+  @Test
+  public void testInitialLazySeekForFilteredGet() throws Exception {
+    Get get = new Get(LAZY_SEEK_ROW);
+    get.addColumn(LAZY_SEEK_FAMILY, LAZY_SEEK_QUALIFIER);
+    get.setFilter(new PrefixFilter(LAZY_SEEK_ROW));
+    assertInitialLazySeek(new Scan(get), true, true);
+  }
+
+  @Test
+  public void testInitialLazySeekForFilteredNonGetScan() throws Exception {
+    Scan scan = new Scan().withStartRow(LAZY_SEEK_ROW);
+    scan.addColumn(LAZY_SEEK_FAMILY, LAZY_SEEK_QUALIFIER);
+    scan.setFilter(new PrefixFilter(LAZY_SEEK_ROW));
+    assertInitialLazySeek(scan, true, false);
+  }
+
+  @Test
+  public void testInitialLazySeekForAllColumnScan() throws Exception {
+    assertInitialLazySeek(new Scan().withStartRow(LAZY_SEEK_ROW), true, false);
+  }
+
+  @Test
+  public void testInitialLazySeekWhenDisabledGlobally() throws Exception {
+    Scan scan = new Scan().withStartRow(LAZY_SEEK_ROW);
+    scan.addColumn(LAZY_SEEK_FAMILY, LAZY_SEEK_QUALIFIER);
+    assertInitialLazySeek(scan, false, false);
+  }
+
+  private void assertInitialLazySeek(Scan scan, boolean lazySeekEnabled, boolean expected)
+    throws IOException {
+    StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
+    try {
+      HStore store = createLazySeekTestStore();
+      try (RecordingStoreScanner scanner =
+        new RecordingStoreScanner(store, scan, scan.getFamilyMap().get(LAZY_SEEK_FAMILY))) {
+        assertEquals(expected, scanner.initialSeekWasLazy);
+      }
+    } finally {
+      StoreScanner.enableLazySeekGlobally(StoreScanner.LAZY_SEEK_ENABLED_BY_DEFAULT);
+      if (this.region != null) {
+        HBaseTestingUtil.closeRegionAndWAL(this.region);
+        this.region = null;
+      }
+    }
+  }
+
+  private HStore createLazySeekTestStore() throws IOException {
+    TableDescriptor tableDescriptor = TableDescriptorBuilder
+      .newBuilder(TableName.valueOf("testInitialLazySeek"))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(LAZY_SEEK_FAMILY).build()).build();
+    this.region = TEST_UTIL.createLocalHRegion(tableDescriptor, null, null);
+    Put put = new Put(LAZY_SEEK_ROW);
+    put.addColumn(LAZY_SEEK_FAMILY, LAZY_SEEK_QUALIFIER, Bytes.toBytes("value"));
+    region.put(put);
+    region.flush(true);
+    return region.getStore(LAZY_SEEK_FAMILY);
   }
 
   /**
@@ -492,10 +672,11 @@ public class TestScanner {
    * Make sure scanner returns correct result when we run a major compaction with deletes.
    */
   @Test
-  public void testScanAndConcurrentMajorCompact() throws Exception {
-    TableDescriptor htd = TEST_UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()),
-      ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
-      ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
+  public void testScanAndConcurrentMajorCompact(TestInfo testInfo) throws Exception {
+    TableDescriptor htd =
+      TEST_UTIL.createTableDescriptor(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+        ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
+        ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.region = TEST_UTIL.createLocalHRegion(htd, null, null);
     Table hri = new RegionAsTable(region);
 
@@ -525,7 +706,7 @@ public class TestScanner {
       s.next(results);
 
       // make sure returns column2 of firstRow
-      assertTrue("result is not correct, keyValues : " + results, results.size() == 1);
+      assertEquals(1, results.size(), "result is not correct, keyValues : " + results);
       assertTrue(CellUtil.matchingRows(results.get(0), firstRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam2));
 
@@ -533,7 +714,7 @@ public class TestScanner {
       s.next(results);
 
       // get secondRow
-      assertTrue(results.size() == 2);
+      assertEquals(2, results.size());
       assertTrue(CellUtil.matchingRows(results.get(0), secondRowBytes));
       assertTrue(CellUtil.matchingFamily(results.get(0), fam1));
       assertTrue(CellUtil.matchingFamily(results.get(1), fam2));
@@ -544,7 +725,7 @@ public class TestScanner {
 
   /**
    * Count table.
-   * @param hri        Region
+   * @param countTable Table
    * @param flushIndex At what row we start the flush.
    * @param concurrent if the flush should be concurrent or sync.
    * @return Count of rows found.

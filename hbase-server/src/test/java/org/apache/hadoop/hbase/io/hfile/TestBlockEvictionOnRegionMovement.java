@@ -19,15 +19,15 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_IOENGINE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.CACHE_BLOCKS_ON_WRITE_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -45,20 +45,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestBlockEvictionOnRegionMovement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBlockEvictionOnRegionMovement.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestBlockEvictionOnRegionMovement.class);
@@ -72,7 +68,7 @@ public class TestBlockEvictionOnRegionMovement {
   StartTestingClusterOption option =
     StartTestingClusterOption.builder().numRegionServers(2).build();
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     testDir = TEST_UTIL.getDataTestDir();
@@ -131,20 +127,24 @@ public class TestBlockEvictionOnRegionMovement {
         : cluster.getRegionServer(0);
 
     assertTrue(regionServingRS.getBlockCache().isPresent());
-    long oldUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
-    assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    BlockCache oldBucketCache = regionServingRS.getBlockCache().get().getBlockCaches()[1];
+    long oldUsedCacheSize = oldBucketCache.getCurrentSize();
+    assertNotEquals(0, oldUsedCacheSize);
+    assertNotEquals(0, oldBucketCache.getBlockCount());
 
-    cluster.stopRegionServer(regionServingRS.getServerName());
-    Thread.sleep(500);
-    cluster.startRegionServer();
-    Thread.sleep(500);
+    ServerName serverName = regionServingRS.getServerName();
+    cluster.stopRegionServer(serverName);
+    cluster.waitForRegionServerToStop(serverName, 10000);
 
-    regionServingRS.getBlockCache().get().waitForCacheInitialization(10000);
-    long newUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
-    assertEquals(oldUsedCacheSize, newUsedCacheSize);
-    assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    assertEquals(0, oldBucketCache.getCurrentSize());
+
+    HRegionServer restartedRegionServer = cluster.startRegionServer().getRegionServer();
+    assertTrue(restartedRegionServer.getBlockCache().isPresent());
+    BlockCache restoredBucketCache =
+      restartedRegionServer.getBlockCache().get().getBlockCaches()[1];
+    assertTrue(restoredBucketCache.waitForCacheInitialization(10000));
+    assertEquals(oldUsedCacheSize, restoredBucketCache.getCurrentSize());
+    assertNotEquals(0, restoredBucketCache.getBlockCount());
   }
 
   public TableName writeDataToTable(String testName) throws IOException, InterruptedException {
@@ -176,7 +176,7 @@ public class TestBlockEvictionOnRegionMovement {
     return tableName;
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     TEST_UTIL.cleanupDataTestDirOnTestFS(String.valueOf(testDir));

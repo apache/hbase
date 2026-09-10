@@ -31,13 +31,13 @@ import org.apache.hadoop.hbase.regionserver.StripeStoreEngine;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
 /**
  * A test class that does the same things as IntegrationTestIngest but with stripe compactions. Can
  * be used with ChaosMonkey in the same manner.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestIngestStripeCompactions extends IntegrationTestIngest {
   @Override
   protected void initTable() throws IOException {

@@ -195,6 +195,12 @@
       <optional>true</optional>
     </dependency>
     <dependency>
+      <groupId>com.github.stephenc.jcip</groupId>
+      <artifactId>jcip-annotations</artifactId>
+      <scope>compile</scope>
+      <optional>true</optional>
+    </dependency>
+    <dependency>
       <groupId>com.github.ben-manes.caffeine</groupId>
       <artifactId>caffeine</artifactId>
     </dependency>
@@ -223,10 +229,6 @@
       <artifactId>zookeeper</artifactId>
     </dependency>
     <dependency>
-      <groupId>org.jamon</groupId>
-      <artifactId>jamon-runtime</artifactId>
-    </dependency>
-    <dependency>
       <groupId>javax.servlet</groupId>
       <artifactId>javax.servlet-api</artifactId>
     </dependency>
@@ -242,7 +244,7 @@
     <!-- Test dependencies -->
     <dependency>
       <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-core</artifactId>
+      <artifactId>hamcrest</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -253,11 +255,6 @@
     <dependency>
       <groupId>io.opentelemetry</groupId>
       <artifactId>opentelemetry-sdk-testing</artifactId>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest-library</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -296,13 +293,13 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-      <groupId>org.junit.vintage</groupId>
-      <artifactId>junit-vintage-engine</artifactId>
+      <groupId>org.awaitility</groupId>
+      <artifactId>awaitility</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
       <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
+      <artifactId>mockito-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
     <dependency>
@@ -417,13 +414,13 @@
             <configuration>
               <attachToTest>false</attachToTest>
               <properties>
-                <copyright-end-year>${build.year}</copyright-end-year>
-                <debug-print-included-work-info>${license.debug.print.included}</debug-print-included-work-info>
-                <bundled-dependencies>${license.bundles.dependencies}</bundled-dependencies>
-                <bundled-jquery>${license.bundles.jquery}</bundled-jquery>
-                <bundled-vega>${license.bundles.vega}</bundled-vega>
-                <bundled-logo>${license.bundles.logo}</bundled-logo>
-                <bundled-bootstrap>${license.bundles.bootstrap}</bundled-bootstrap>
+                <copyright_end_year>${build.year}</copyright_end_year>
+                <debug_print_included_work_info>${license.debug.print.included}</debug_print_included_work_info>
+                <bundled_dependencies>${license.bundles.dependencies}</bundled_dependencies>
+                <bundled_jquery>${license.bundles.jquery}</bundled_jquery>
+                <bundled_vega>${license.bundles.vega}</bundled_vega>
+                <bundled_logo>${license.bundles.logo}</bundled_logo>
+                <bundled_bootstrap>${license.bundles.bootstrap}</bundled_bootstrap>
               </properties>
               <resourceBundles>
                 <resourceBundle>${project.groupId}:hbase-resource-bundle:${project.version}</resourceBundle>
@@ -479,7 +476,6 @@
             <phase>generate-sources</phase>
             <configuration>
               <sources>
-                <source>${project.build.directory}/generated-jamon</source>
                 <source>${project.build.directory}/generated-sources/java</source>
               </sources>
             </configuration>
@@ -564,29 +560,29 @@
                     <exclude name="**/*~"/>
                   </fileset>
                 </copy>
+                <!-- Create a "staging" JSP directory where we copy the common JSP files into master and rs directories.
+                     Compilation is done using this "staging" JSP directory. -->
+                <mkdir dir="${project.build.directory}/jsp"/>
+                <copy todir="${project.build.directory}/jsp">
+                  <fileset dir="${src.webapps}">
+                    <include name="**/*.jsp"/>
+                  </fileset>
+                </copy>
+                <copy todir="${project.build.directory}/jsp/master">
+                  <fileset dir="${project.build.directory}/jsp/common"/>
+                </copy>
+                <copy todir="${project.build.directory}/jsp/regionserver">
+                  <fileset dir="${project.build.directory}/jsp/common"/>
+                </copy>
                 <!--The compile.classpath is passed in by maven -->
                 <taskdef classname="org.apache.jasper.JspC" classpathref="maven.compile.classpath" name="jspcompiler"/>
                 <mkdir dir="${build.webapps}/master/WEB-INF"/>
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${src.webapps}/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.master" uriroot="${project.build.directory}/jsp/master" webxml="${build.webapps}/master/WEB-INF/web.xml"/>
                 <mkdir dir="${build.webapps}/regionserver/WEB-INF"/>
-                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${src.webapps}/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.regionserver" uriroot="${project.build.directory}/jsp/regionserver" webxml="${build.webapps}/regionserver/WEB-INF/web.xml"/>
+                <mkdir dir="${build.webapps}/canary/WEB-INF"/>
+                <jspcompiler outputdir="${generated.sources}/java" package="org.apache.hadoop.hbase.generated.canary" uriroot="${project.build.directory}/jsp/canary" webxml="${build.webapps}/canary/WEB-INF/web.xml"/>
               </target>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-maven-plugin</artifactId>
-        <executions>
-          <execution>
-            <goals>
-              <goal>translate</goal>
-            </goals>
-            <phase>generate-sources</phase>
-            <configuration>
-              <templateSourceDir>src/main/jamon</templateSourceDir>
-              <templateOutputDir>target/generated-jamon</templateOutputDir>
             </configuration>
           </execution>
         </executions>
@@ -925,22 +921,6 @@
                   <pluginExecutions>
                     <pluginExecution>
                       <pluginExecutionFilter>
-                        <groupId>org.jamon</groupId>
-                        <artifactId>jamon-maven-plugin</artifactId>
-                        <versionRange>[2.3.4,)</versionRange>
-                        <goals>
-                          <goal>translate</goal>
-                        </goals>
-                      </pluginExecutionFilter>
-                      <action>
-                        <execute>
-                          <runOnIncremental>false</runOnIncremental>
-                          <runOnConfiguration>true</runOnConfiguration>
-                        </execute>
-                      </action>
-                    </pluginExecution>
-                    <pluginExecution>
-                      <pluginExecutionFilter>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-antrun-plugin</artifactId>
                         <versionRange>[1.6,)</versionRange>
@@ -974,31 +954,6 @@
             </plugin>
           </plugins>
         </pluginManagement>
-        <plugins>
-          <plugin>
-            <groupId>org.apache.maven.plugins</groupId>
-            <artifactId>maven-eclipse-plugin</artifactId>
-            <configuration>
-              <additionalProjectnatures>
-                <projectnature>org.jamon.project.jamonnature</projectnature>
-              </additionalProjectnatures>
-              <buildcommands>
-                <buildcommand>org.jamon.project.templateBuilder</buildcommand>
-                <buildcommand>org.eclipse.jdt.core.javabuilder</buildcommand>
-                <buildcommand>org.jamon.project.markerUpdater</buildcommand>
-              </buildcommands>
-              <additionalConfig>
-                <file>
-                  <name>.settings/org.jamon.prefs</name>
-                  <content># now
-                    eclipse.preferences.version=1
-                    templateSourceDir=src/main/jamon
-                    templateOutputDir=target/generated-jamon</content>
-                </file>
-              </additionalConfig>
-            </configuration>
-          </plugin>
-        </plugins>
       </build>
     </profile>
   </profiles>

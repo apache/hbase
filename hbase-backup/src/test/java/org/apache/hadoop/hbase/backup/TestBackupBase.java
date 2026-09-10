@@ -17,9 +17,15 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_BULKLOAD_ENABLE_KEY;
+import static org.apache.hadoop.hbase.HConstants.REPLICATION_CLUSTER_ID;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
+import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -40,6 +46,7 @@ import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.IncrementalBackupManager;
@@ -66,9 +73,9 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -116,7 +123,7 @@ public class TestBackupBase {
       super(conn, backupId, request);
     }
 
-    @Before
+    @BeforeEach
     public void ensurePreviousBackupTestsAreCleanedUp() throws Exception {
       // Every operation here may not be necessary for any given test,
       // some often being no-ops. the goal is to help ensure atomicity
@@ -164,7 +171,7 @@ public class TestBackupBase {
         // copy out the table and region info files for each table
         BackupUtils.copyTableRegionInfo(conn, backupInfo, conf);
         // convert WAL to HFiles and copy them to .tmp under BACKUP_ROOT
-        convertWALsToHFiles();
+        convertWALsToHFiles(new HashMap<>(), new HashMap<>());
         incrementalCopyHFiles(new String[] { getBulkOutputDir().toString() },
           backupInfo.getBackupRootDir());
         failStageIf(Stage.stage_2);
@@ -185,14 +192,11 @@ public class TestBackupBase {
         Map<TableName, Map<String, Long>> newTableSetTimestampMap =
           backupManager.readLogTimestampMap();
 
-        Long newStartCode =
-          BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-        backupManager.writeBackupStartCode(newStartCode);
-
-        handleBulkLoad(backupInfo.getTableNames());
+        handleBulkLoad(backupInfo.getTableNames(), new HashMap<>(), new HashMap<>());
         failStageIf(Stage.stage_4);
 
         // backup complete
+        backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
         completeBackup(conn, backupInfo, BackupType.INCREMENTAL, conf);
 
       } catch (Exception e) {
@@ -219,16 +223,7 @@ public class TestBackupBase {
         // Begin BACKUP
         beginBackup(backupManager, backupInfo);
         failStageIf(Stage.stage_0);
-        String savedStartCode;
-        boolean firstBackup;
         // do snapshot for full table backup
-        savedStartCode = backupManager.readBackupStartCode();
-        firstBackup = savedStartCode == null || Long.parseLong(savedStartCode) == 0L;
-        if (firstBackup) {
-          // This is our first backup. Let's put some marker to system table so that we can hold the
-          // logs while we do the backup.
-          backupManager.writeBackupStartCode(0L);
-        }
         failStageIf(Stage.stage_1);
         // We roll log here before we do the snapshot. It is possible there is duplicate data
         // in the log that is already in the snapshot. But if we do it after the snapshot, we
@@ -269,11 +264,9 @@ public class TestBackupBase {
         Map<TableName, Map<String, Long>> newTableSetTimestampMap =
           backupManager.readLogTimestampMap();
 
-        Long newStartCode =
-          BackupUtils.getMinValue(BackupUtils.getRSLogTimestampMins(newTableSetTimestampMap));
-        backupManager.writeBackupStartCode(newStartCode);
         failStageIf(Stage.stage_4);
         // backup complete
+        backupInfo.setTableSetTimestampMap(newTableSetTimestampMap);
         completeBackup(conn, backupInfo, BackupType.FULL, conf);
 
       } catch (Exception e) {
@@ -290,6 +283,9 @@ public class TestBackupBase {
   public static void setUpHelper() throws Exception {
     BACKUP_ROOT_DIR = Path.SEPARATOR + "backupUT";
     BACKUP_REMOTE_ROOT_DIR = Path.SEPARATOR + "backupUT";
+    conf1.setBoolean(REPLICATION_BULKLOAD_ENABLE_KEY, true);
+    conf1.set(REPLICATION_CLUSTER_ID, "clusterId1");
+    conf1.setBoolean(IGNORE_EMPTY_FILES, true);
 
     if (secure) {
       // set the always on security provider
@@ -343,7 +339,7 @@ public class TestBackupBase {
    * Setup Cluster with appropriate configurations before running tests.
    * @throws Exception if starting the mini cluster or setting up the tables fails
    */
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     conf1 = TEST_UTIL.getConfiguration();
@@ -360,7 +356,7 @@ public class TestBackupBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     try {
       SnapshotTestingUtils.deleteAllSnapshots(TEST_UTIL.getAdmin());
@@ -401,15 +397,30 @@ public class TestBackupBase {
     return request;
   }
 
+  protected BackupRequest createBackupRequest(BackupType type, List<TableName> tables,
+    String rootDir, boolean noChecksumVerify, boolean isContinuousBackupEnabled) {
+    BackupRequest.Builder builder = new BackupRequest.Builder();
+    return builder.withBackupType(type).withTableList(tables).withTargetRootDir(rootDir)
+      .withNoChecksumVerify(noChecksumVerify).withContinuousBackupEnabled(isContinuousBackupEnabled)
+      .build();
+  }
+
   protected String backupTables(BackupType type, List<TableName> tables, String path)
     throws IOException {
+    return backupTables(type, tables, path, false);
+  }
+
+  protected String backupTables(BackupType type, List<TableName> tables, String path,
+    boolean isContinuousBackup) throws IOException {
     Connection conn = null;
     BackupAdmin badmin = null;
     String backupId;
     try {
       conn = ConnectionFactory.createConnection(conf1);
       badmin = new BackupAdminImpl(conn);
-      BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
+
+      BackupRequest request =
+        createBackupRequest(type, new ArrayList<>(tables), path, false, isContinuousBackup);
       backupId = badmin.backupTables(request);
     } finally {
       if (badmin != null) {
@@ -539,6 +550,22 @@ public class TestBackupBase {
     RemoteIterator<LocatedFileStatus> it = fs.listFiles(new Path(BACKUP_ROOT_DIR), true);
     while (it.hasNext()) {
       LOG.debug(Objects.toString(it.next().getPath()));
+    }
+  }
+
+  BackupManifest getLatestBackupManifest(List<BackupInfo> backups) throws IOException {
+    BackupInfo newestBackup = backups.get(0);
+    return HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR),
+      newestBackup.getBackupId());
+  }
+
+  void deleteContinuousBackupReplicationPeerIfExists(Admin admin) throws IOException {
+    if (
+      admin.listReplicationPeers().stream()
+        .anyMatch(peer -> peer.getPeerId().equals(CONTINUOUS_BACKUP_REPLICATION_PEER))
+    ) {
+      admin.disableReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
+      admin.removeReplicationPeer(CONTINUOUS_BACKUP_REPLICATION_PEER);
     }
   }
 }

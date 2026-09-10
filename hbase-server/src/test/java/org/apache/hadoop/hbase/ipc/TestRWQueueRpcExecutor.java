@@ -20,38 +20,32 @@ package org.apache.hadoop.hbase.ipc;
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_READ_SHARE_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RWQueueRpcExecutor.CALL_QUEUE_SCAN_SHARE_CONF_KEY;
 import static org.apache.hadoop.hbase.ipc.RpcExecutor.CALL_QUEUE_HANDLER_FACTOR_CONF_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.mockito.Mockito.*;
+import static org.apache.hadoop.hbase.ipc.RpcExecutor.DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.util.List;
 import java.util.concurrent.BlockingQueue;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RPCTests.class, MediumTests.class })
+@Tag(RPCTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRWQueueRpcExecutor {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRWQueueRpcExecutor.class);
-
-  @Rule
-  public TestName testName = new TestName();
-
   private Configuration conf;
+  private String testMethodName;
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
     conf = HBaseConfiguration.create();
     conf.setFloat(CALL_QUEUE_HANDLER_FACTOR_CONF_KEY, 1.0f);
     conf.setFloat(CALL_QUEUE_SCAN_SHARE_CONF_KEY, 0.5f);
@@ -61,8 +55,9 @@ public class TestRWQueueRpcExecutor {
   @Test
   public void itProvidesCorrectQueuesToBalancers() throws InterruptedException {
     PriorityFunction qosFunction = mock(PriorityFunction.class);
+    int softQueueLimit = 100;
     RWQueueRpcExecutor executor =
-      new RWQueueRpcExecutor(testName.getMethodName(), 100, 100, qosFunction, conf, null);
+      new RWQueueRpcExecutor(testMethodName, 100, softQueueLimit, qosFunction, conf, null);
 
     QueueBalancer readBalancer = executor.getReadBalancer();
     QueueBalancer writeBalancer = executor.getWriteBalancer();
@@ -79,6 +74,11 @@ public class TestRWQueueRpcExecutor {
     assertEquals(25, readQueues.size());
     assertEquals(50, writeQueues.size());
     assertEquals(25, scanQueues.size());
+    assertEquals(softQueueLimit, executor.currentQueueLimit, "Soft limit is not applied properly");
+    // Hard Limit is applied as the max capacity of the queue
+    int hardQueueLimit = readQueues.get(0).remainingCapacity() + readQueues.get(0).size();
+    assertEquals(DEFAULT_CALL_QUEUE_SIZE_HARD_LIMIT, hardQueueLimit,
+      "Default hard limit should be applied ");
 
     verifyDistinct(readQueues, writeQueues, scanQueues);
     verifyDistinct(writeQueues, readQueues, scanQueues);

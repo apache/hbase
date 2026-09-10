@@ -17,28 +17,27 @@
  */
 package org.apache.hadoop.hbase.replication.multiwal;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.replication.TestReplicationKillMasterRSCompressed;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.replication.ReplicationKillMasterRSTestBase;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestReplicationKillMasterRSCompressedWithMultipleWAL
-  extends TestReplicationKillMasterRSCompressed {
+  extends ReplicationKillMasterRSTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationKillMasterRSCompressedWithMultipleWAL.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
+    NUM_SLAVES1 = 2;
     CONF1.set(WALFactory.WAL_PROVIDER, "multiwal");
     CONF1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "filesystem");
-    TestReplicationKillMasterRSCompressed.setUpBeforeClass();
+    CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
   }
 }

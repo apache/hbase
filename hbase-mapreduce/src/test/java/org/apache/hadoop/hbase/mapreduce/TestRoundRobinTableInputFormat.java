@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
@@ -36,19 +35,15 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.JobContext;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
 /**
  * Basic test of {@link RoundRobinTableInputFormat}; i.e. RRTIF.
  */
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestRoundRobinTableInputFormat {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRoundRobinTableInputFormat.class);
 
   private static final int SERVERS_COUNT = 5;
   private static final String[] KEYS = { "aa", "ab", "ac", "ad", "ae", "ba", "bb", "bc", "bd", "be",
@@ -127,7 +122,7 @@ public class TestRoundRobinTableInputFormat {
     long previousLength = Long.MAX_VALUE;
     for (InputSplit is : list) {
       long length = is.getLength();
-      assertTrue(previousLength + " " + length, previousLength > length);
+      assertTrue(previousLength > length, previousLength + " " + length);
       previousLength = length;
     }
   }

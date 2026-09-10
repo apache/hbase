@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -30,10 +30,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Random;
 import java.util.Set;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -43,19 +44,18 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,13 +63,10 @@ import org.slf4j.LoggerFactory;
  * Test various seek optimizations for correctness and check if they are actually saving I/O
  * operations.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: comprAlgo={0}, bloomType={1}")
 public class TestSeekOptimizations {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSeekOptimizations.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSeekOptimizations.class);
 
@@ -116,9 +113,8 @@ public class TestSeekOptimizations {
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Random RNG = new Random(); // This test depends on Random#setSeed
 
-  @Parameters
-  public static final Collection<Object[]> parameters() {
-    return HBaseTestingUtil.BLOOM_AND_COMPRESSION_COMBINATIONS;
+  public static Stream<Arguments> parameters() {
+    return HBaseTestingUtil.BLOOM_AND_COMPRESSION_COMBINATIONS.stream().map(Arguments::of);
   }
 
   public TestSeekOptimizations(Compression.Algorithm comprAlgo, BloomType bloomType) {
@@ -126,22 +122,20 @@ public class TestSeekOptimizations {
     this.bloomType = bloomType;
   }
 
-  @Before
-  public void setUp() {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
     RNG.setSeed(91238123L);
     expectedKVs.clear();
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
-  }
 
-  @Test
-  public void testMultipleTimestampRanges() throws IOException {
     // enable seek counting
     StoreFileScanner.instrument();
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(FAMILY)).setCompressionType(comprAlgo)
         .setBloomFilterType(bloomType).setMaxVersions(3).build();
 
-    region = TEST_UTIL.createTestRegion("testMultipleTimestampRanges", columnFamilyDescriptor);
+    region =
+      TEST_UTIL.createTestRegion(testInfo.getTestMethod().get().getName(), columnFamilyDescriptor);
 
     // Delete the given timestamp and everything before.
     final long latestDelTS = USE_MANY_STORE_FILES ? 1397 : -1;
@@ -157,12 +151,15 @@ public class TestSeekOptimizations {
     }
 
     prepareExpectedKVs(latestDelTS);
+  }
 
+  @TestTemplate
+  public void testMultipleTimestampRanges() throws IOException {
     for (int[] columnArr : COLUMN_SETS) {
       for (int[] rowRange : ROW_RANGES) {
         for (int maxVersions : MAX_VERSIONS_VALUES) {
           for (boolean lazySeekEnabled : new boolean[] { false, true }) {
-            testScan(columnArr, lazySeekEnabled, rowRange[0], rowRange[1], maxVersions);
+            testScan(columnArr, lazySeekEnabled, rowRange[0], rowRange[1], maxVersions, false);
           }
         }
       }
@@ -177,13 +174,15 @@ public class TestSeekOptimizations {
     // Test that lazy seeks are buying us something. Without the actual
     // implementation of the lazy seek optimization this will be 0.
     final double expectedSeekSavings = 0.0;
-    assertTrue("Lazy seek is only saving " + String.format("%.2f%%", seekSavings * 100)
-      + " seeks but should " + "save at least "
-      + String.format("%.2f%%", expectedSeekSavings * 100), seekSavings >= expectedSeekSavings);
+    assertTrue(seekSavings >= expectedSeekSavings,
+      "Lazy seek is only saving " + String.format("%.2f%%", seekSavings * 100)
+        + " seeks but should " + "save at least "
+        + String.format("%.2f%%", expectedSeekSavings * 100));
   }
 
-  private void testScan(final int[] columnArr, final boolean lazySeekEnabled, final int startRow,
-    final int endRow, int maxVersions) throws IOException {
+  private ScanResult testScan(final int[] columnArr, final boolean lazySeekEnabled,
+    final int startRow, final int endRow, final int maxVersions, final boolean filtered)
+    throws IOException {
     StoreScanner.enableLazySeekGlobally(lazySeekEnabled);
     final Scan scan = new Scan();
     final Set<String> qualSet = new HashSet<>();
@@ -191,6 +190,9 @@ public class TestSeekOptimizations {
       String qualStr = getQualStr(iColumn);
       scan.addColumn(FAMILY_BYTES, Bytes.toBytes(qualStr));
       qualSet.add(qualStr);
+    }
+    if (filtered) {
+      scan.setFilter(new PrefixFilter(Bytes.toBytes("row")));
     }
     scan.readVersions(maxVersions);
     scan.withStartRow(rowBytes(startRow));
@@ -204,18 +206,23 @@ public class TestSeekOptimizations {
 
     final long initialSeekCount = StoreFileScanner.getSeekCount();
     final InternalScanner scanner = region.getScanner(scan);
+    final long scannerOpenSeekCount = StoreFileScanner.getSeekCount() - initialSeekCount;
     final List<Cell> results = new ArrayList<>();
     final List<Cell> actualKVs = new ArrayList<>();
 
     // Such a clumsy do-while loop appears to be the official way to use an
     // internalScanner. scanner.next() return value refers to the _next_
     // result, not to the one already returned in results.
-    boolean hasNext;
-    do {
-      hasNext = scanner.next(results);
-      actualKVs.addAll(results);
-      results.clear();
-    } while (hasNext);
+    try {
+      boolean hasNext;
+      do {
+        hasNext = scanner.next(results);
+        actualKVs.addAll(results);
+        results.clear();
+      } while (hasNext);
+    } finally {
+      scanner.close();
+    }
 
     List<Cell> filteredKVs =
       filterExpectedResults(qualSet, rowBytes(startRow), rowBytes(endRow), maxVersions);
@@ -240,6 +247,7 @@ public class TestSeekOptimizations {
       totalSeekDiligent += seekCount;
     }
     assertKVListsEqual(testDesc, filteredKVs, actualKVs);
+    return new ScanResult(actualKVs, scannerOpenSeekCount);
   }
 
   private List<Cell> filterExpectedResults(Set<String> qualSet, byte[] startRow, byte[] endRow,
@@ -419,7 +427,7 @@ public class TestSeekOptimizations {
     region.flush(true);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     if (region != null) {
       HBaseTestingUtil.closeRegionAndWAL(region);
@@ -452,6 +460,27 @@ public class TestSeekOptimizations {
       throw new AssertionError("Expected and actual KV arrays differ at position " + i + ": "
         + HBaseTestingUtil.safeGetAsStr(expected, i) + " (length " + eLen + ") vs. "
         + HBaseTestingUtil.safeGetAsStr(actual, i) + " (length " + aLen + ")" + additionalMsg);
+    }
+  }
+
+  @TestTemplate
+  public void testSeeksEagerlyWhenFiltered() throws IOException {
+    ScanResult filteredLazyResults = testScan(new int[] { 0 }, true, 0, 2, 1, true);
+    ScanResult filteredEagerResults = testScan(new int[] { 0 }, false, 0, 2, 1, true);
+    assertKVListsEqual("Filtered explicit column scan results differ with lazy seeking enabled",
+      filteredEagerResults.cells, filteredLazyResults.cells);
+    assertEquals(filteredEagerResults.scannerOpenSeekCount,
+      filteredLazyResults.scannerOpenSeekCount,
+      "Filtered explicit column scans must always eagerly seek");
+  }
+
+  private static final class ScanResult {
+    private final List<Cell> cells;
+    private final long scannerOpenSeekCount;
+
+    private ScanResult(List<Cell> cells, long scannerOpenSeekCount) {
+      this.cells = cells;
+      this.scannerOpenSeekCount = scannerOpenSeekCount;
     }
   }
 }

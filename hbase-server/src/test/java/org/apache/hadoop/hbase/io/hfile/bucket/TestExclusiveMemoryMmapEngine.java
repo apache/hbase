@@ -19,27 +19,22 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 
 import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.createBucketEntry;
 import static org.apache.hadoop.hbase.io.hfile.bucket.TestByteBufferIOEngine.getByteBuff;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.File;
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Basic test for {@link ExclusiveMemoryMmapIOEngine}
  */
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExclusiveMemoryMmapEngine {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExclusiveMemoryMmapEngine.class);
 
   @Test
   public void testFileMmapEngine() throws IOException {
@@ -63,10 +58,9 @@ public class TestExclusiveMemoryMmapEngine {
         fileMmapEngine.read(be);
         ByteBuff dst = getByteBuff(be);
 
-        Assert.assertEquals(src.remaining(), len);
-        Assert.assertEquals(dst.remaining(), len);
-        Assert.assertEquals(0,
-          ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
+        assertEquals(src.remaining(), len);
+        assertEquals(dst.remaining(), len);
+        assertEquals(0, ByteBuff.compareTo(src, pos, len, dst, dst.position(), dst.remaining()));
       }
     } finally {
       File file = new File(filePath);

@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.List;
@@ -39,31 +39,24 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test our testing utility class
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestHBaseTestingUtil {
-  private static final int NUMTABLES = 1;
-  private static final int NUMROWS = 100;
-  private static final int NUMREGIONS = 10;
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHBaseTestingUtil.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHBaseTestingUtil.class);
 
-  @Rule
-  public TestName name = new TestName();
+  private static final int NUMTABLES = 1;
+  private static final int NUMROWS = 100;
+  private static final int NUMREGIONS = 10;
 
   /**
    * Basic sanity test that spins up multiple HDFS and HBase clusters that share the same ZK
@@ -72,7 +65,7 @@ public class TestHBaseTestingUtil {
    * @throws Exception on error
    */
   @Test
-  public void testMultiClusters() throws Exception {
+  public void testMultiClusters(TestInfo testInfo) throws Exception {
     // Create three clusters
 
     // Cluster 1.
@@ -102,7 +95,7 @@ public class TestHBaseTestingUtil {
       htu2.startMiniCluster();
       htu3.startMiniCluster();
 
-      final TableName tableName = TableName.valueOf(name.getMethodName());
+      final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
       final byte[] FAM_NAME = Bytes.toBytes("fam");
       final byte[] ROW = Bytes.toBytes("row");
       final byte[] QUAL_NAME = Bytes.toBytes("qual");
@@ -452,8 +445,7 @@ public class TestHBaseTestingUtil {
   // This test demonstrates how long killHBTU takes vs. shutdownHBTU takes
   // for realistic results, adjust NUMROWS, NUMTABLES to much larger number.
   @Test
-  public void testKillMiniHBaseCluster() throws Exception {
-
+  public void testKillMiniHBaseCluster(TestInfo testInfo) throws Exception {
     HBaseTestingUtil htu = new HBaseTestingUtil();
     htu.startMiniZKCluster();
 
@@ -464,7 +456,7 @@ public class TestHBaseTestingUtil {
       byte[] FAM_NAME;
 
       for (int i = 0; i < NUMTABLES; i++) {
-        tableName = TableName.valueOf(name.getMethodName() + i);
+        tableName = TableName.valueOf(testInfo.getTestMethod().get().getName() + i);
         FAM_NAME = Bytes.toBytes("fam" + i);
 
         try (Table table = htu.createMultiRegionTable(tableName, FAM_NAME, NUMREGIONS)) {

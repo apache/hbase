@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -28,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -38,18 +37,14 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, RegionServerTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestBrokenStoreFileCleaner {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBrokenStoreFileCleaner.class);
 
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private final static byte[] fam = Bytes.toBytes("cf_1");
@@ -58,7 +53,7 @@ public class TestBrokenStoreFileCleaner {
   private final static String junkFileName = "409fad9a751c4e8c86d7f32581bdc156";
   TableName tableName;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testUtil.getConfiguration().set(StoreFileTrackerFactory.TRACKER_IMPL,
       "org.apache.hadoop.hbase.regionserver.storefiletracker.FileBasedStoreFileTracker");
@@ -71,7 +66,7 @@ public class TestBrokenStoreFileCleaner {
     testUtil.startMiniCluster(1);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testUtil.shutdownMiniCluster();
   }

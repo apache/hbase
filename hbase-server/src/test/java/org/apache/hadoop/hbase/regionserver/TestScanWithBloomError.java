@@ -17,24 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.NavigableSet;
 import java.util.TreeSet;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
@@ -48,13 +48,10 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -62,13 +59,10 @@ import org.slf4j.LoggerFactory;
  * Test a multi-column scanner when there is a Bloom filter false-positive. This is needed for the
  * multi-column Bloom filter optimization.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: bloomType={0}")
 public class TestScanWithBloomError {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestScanWithBloomError.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestScanWithBloomError.class);
 
@@ -86,27 +80,26 @@ public class TestScanWithBloomError {
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Parameters
-  public static final Collection<Object[]> parameters() {
-    List<Object[]> configurations = new ArrayList<>();
+  public static final Stream<Arguments> parameters() {
+    List<Arguments> configurations = new ArrayList<>();
     for (BloomType bloomType : BloomType.values()) {
-      configurations.add(new Object[] { bloomType });
+      configurations.add(Arguments.of(bloomType));
     }
-    return configurations;
+    return configurations.stream();
   }
 
   public TestScanWithBloomError(BloomType bloomType) {
     this.bloomType = bloomType;
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
     conf.setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
   }
 
-  @Test
+  @TestTemplate
   public void testThreeStoreFiles() throws IOException {
     ColumnFamilyDescriptor columnFamilyDescriptor = ColumnFamilyDescriptorBuilder
       .newBuilder(Bytes.toBytes(FAMILY)).setCompressionType(Compression.Algorithm.GZ)

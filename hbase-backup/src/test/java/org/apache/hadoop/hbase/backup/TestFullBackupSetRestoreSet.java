@@ -17,29 +17,23 @@
  */
 package org.apache.hadoop.hbase.backup;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestFullBackupSetRestoreSet extends TestBackupBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFullBackupSetRestoreSet.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFullBackupSetRestoreSet.class);
 
@@ -55,15 +49,15 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
       List<TableName> names = table.describeBackupSet(name);
 
       assertNotNull(names);
-      assertTrue(names.size() == 1);
+      assertEquals(1, names.size());
       assertTrue(names.get(0).equals(table1));
 
       String[] args = new String[] { "create", "full", BACKUP_ROOT_DIR, "-s", name };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertTrue(ret == 0);
+      assertEquals(0, ret);
       List<BackupInfo> backups = table.getBackupHistory();
-      assertTrue(backups.size() == 1);
+      assertEquals(1, backups.size());
       String backupId = backups.get(0).getBackupId();
       assertTrue(checkSucceeded(backupId));
 
@@ -74,7 +68,7 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
         table1_restore.getNameAsString(), "-o" };
       // Run backup
       ret = ToolRunner.run(conf1, new RestoreDriver(), args);
-      assertTrue(ret == 0);
+      assertEquals(0, ret);
       Admin hba = TEST_UTIL.getAdmin();
       assertTrue(hba.tableExists(table1_restore));
       // Verify number of rows in both tables
@@ -97,13 +91,13 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
       List<TableName> names = table.describeBackupSet(name);
 
       assertNotNull(names);
-      assertTrue(names.size() == 1);
+      assertEquals(1, names.size());
       assertTrue(names.get(0).equals(table1));
 
       String[] args = new String[] { "create", "full", BACKUP_ROOT_DIR, "-s", name };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertTrue(ret == 0);
+      assertEquals(0, ret);
       List<BackupInfo> backups = table.getBackupHistory();
       String backupId = backups.get(0).getBackupId();
       assertTrue(checkSucceeded(backupId));
@@ -116,7 +110,7 @@ public class TestFullBackupSetRestoreSet extends TestBackupBase {
       args = new String[] { BACKUP_ROOT_DIR, backupId, "-s", name, "-o" };
       // Run backup
       ret = ToolRunner.run(conf1, new RestoreDriver(), args);
-      assertTrue(ret == 0);
+      assertEquals(0, ret);
       Admin hba = TEST_UTIL.getAdmin();
       assertTrue(hba.tableExists(table1));
       // Verify number of rows in both tables

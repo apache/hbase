@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.http;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -29,7 +30,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableDescriptors;
@@ -50,18 +50,14 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMasterStatusUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterStatusUtil.class);
 
   private HMaster master;
   private Configuration conf;
@@ -73,7 +69,7 @@ public class TestMasterStatusUtil {
   static final RegionInfo FAKE_HRI = RegionInfoBuilder.newBuilder(FAKE_TABLE.getTableName())
     .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
 
-  @Before
+  @BeforeEach
   public void setupBasicMocks() {
     conf = HBaseConfiguration.create();
 
@@ -97,7 +93,7 @@ public class TestMasterStatusUtil {
     regionsInTransition
       .add(new RegionState(FAKE_HRI, RegionState.State.CLOSING, 12345L, FAKE_HOST));
     Mockito.doReturn(rs).when(am).getRegionStates();
-    Mockito.doReturn(regionsInTransition).when(rs).getRegionsInTransition();
+    Mockito.doReturn(regionsInTransition).when(am).getRegionsInTransition();
     Mockito.doReturn(am).when(master).getAssignmentManager();
     Mockito.doReturn(serverManager).when(master).getServerManager();
 
@@ -203,7 +199,7 @@ public class TestMasterStatusUtil {
     conf.setBoolean("hbase.master.ui.fragmentation.enabled", true);
     Map<String, Integer> fragmentationInfo = MasterStatusUtil.getFragmentationInfo(master, conf);
     assertNotNull(fragmentationInfo);
-    assertEquals(1, fragmentationInfo.size());
+    assertFalse(fragmentationInfo.isEmpty());
   }
 
   @Test
@@ -240,7 +236,8 @@ public class TestMasterStatusUtil {
     String link = MasterStatusUtil.serverNameLink(master, FAKE_HOST);
 
     assertNotNull(link);
-    assertEquals("<a href=\"//fakehost:16030/rs-status\">fakehost,12345,1234567890</a>", link);
+    assertEquals("<a href=\"//fakehost:16030/regionserver.jsp\">fakehost,12345,1234567890</a>",
+      link);
   }
 
   @Test

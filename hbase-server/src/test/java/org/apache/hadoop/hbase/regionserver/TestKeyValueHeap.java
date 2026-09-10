@@ -17,33 +17,31 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
+import java.util.Set;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CollectionBackedScanner;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestKeyValueHeap {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestKeyValueHeap.class);
 
   private byte[] row1 = Bytes.toBytes("row1");
   private byte[] fam1 = Bytes.toBytes("fam1");
@@ -127,8 +125,8 @@ public class TestKeyValueHeap {
 
       List<Cell> actual = Arrays.asList(kvh.peek());
 
-      assertEquals("Expected = " + Arrays.toString(expected.toArray()) + "\n Actual = "
-        + Arrays.toString(actual.toArray()), expected, actual);
+      assertEquals(expected, actual, "Expected = " + Arrays.toString(expected.toArray())
+        + "\n Actual = " + Arrays.toString(actual.toArray()));
     }
   }
 
@@ -209,6 +207,57 @@ public class TestKeyValueHeap {
     assertCells(expected, Arrays.asList(scan1, scan2));
   }
 
+  @Test
+  public void testGetFilesRead() throws IOException {
+    // Create test scanners with file paths
+    Path file1 = new Path("/test/file1");
+    Path file2 = new Path("/test/file2");
+    Path file3 = new Path("/test/file3");
+
+    FileTrackingScanner scanner1 =
+      new FileTrackingScanner(Arrays.asList(kv115, kv211, kv212), file1);
+    FileTrackingScanner scanner2 = new FileTrackingScanner(Arrays.asList(kv111, kv112), file2);
+    FileTrackingScanner scanner3 =
+      new FileTrackingScanner(Arrays.asList(kv113, kv114, kv121, kv122, kv213), file3);
+
+    // Add a non-file-based scanner (e.g., memstore scanner) that doesn't return files
+    TestScanner memStoreScanner = new TestScanner(Arrays.asList(kv114));
+
+    List<KeyValueScanner> scanners =
+      new ArrayList<>(Arrays.asList(scanner1, scanner2, scanner3, memStoreScanner));
+
+    // Create KeyValueHeap and scan through all cells
+    KeyValueHeap keyValueHeap = new KeyValueHeap(scanners, CellComparatorImpl.COMPARATOR);
+
+    // Before closing, should return empty set even after scanning
+    // Scan through all cells first
+    while (keyValueHeap.peek() != null) {
+      keyValueHeap.next();
+    }
+
+    // Verify that before closing, files are not returned
+    Set<Path> filesReadBeforeClose = keyValueHeap.getFilesRead();
+    assertTrue(filesReadBeforeClose.isEmpty(), "Should return empty set before closing heap");
+    assertEquals(0, filesReadBeforeClose.size(), "Should have 0 files before closing");
+
+    // Now close the heap
+    keyValueHeap.close();
+
+    // After closing, should return all files from file-based scanners only
+    // Non-file-based scanners (like memstore) should not contribute files
+    Set<Path> filesReadAfterClose = keyValueHeap.getFilesRead();
+    assertEquals(3, filesReadAfterClose.size(),
+      "Should return set with 3 file paths after closing (excluding non-file scanner)");
+    assertTrue(filesReadAfterClose.contains(file1), "Should contain file1");
+    assertTrue(filesReadAfterClose.contains(file2), "Should contain file2");
+    assertTrue(filesReadAfterClose.contains(file3), "Should contain file3");
+
+    // Verify that non-file-based scanner doesn't contribute any files
+    // (memStoreScanner.getFilesRead() should return empty set)
+    Set<Path> memStoreFiles = memStoreScanner.getFilesRead();
+    assertTrue(memStoreFiles.isEmpty(), "Non-file-based scanner should return empty set");
+  }
+
   private static class TestScanner extends CollectionBackedScanner {
     private boolean closed = false;
     private long scannerOrder = 0;
@@ -267,6 +316,28 @@ public class TestKeyValueHeap {
     @Override
     public void enforceSeek() throws IOException {
       throw new IOException("enforceSeek must not be called on a " + "non-lazy scanner");
+    }
+  }
+
+  private static class FileTrackingScanner extends TestScanner {
+    private final Path filePath;
+    private boolean closed = false;
+
+    public FileTrackingScanner(List<ExtendedCell> list, Path filePath) {
+      super(list);
+      this.filePath = filePath;
+    }
+
+    @Override
+    public void close() {
+      super.close();
+      closed = true;
+    }
+
+    @Override
+    public Set<Path> getFilesRead() {
+      // Only return the file path after the scanner is closed
+      return closed ? Collections.singleton(filePath) : Collections.emptySet();
     }
   }
 }

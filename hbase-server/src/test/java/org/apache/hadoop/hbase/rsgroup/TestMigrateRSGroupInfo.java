@@ -20,13 +20,12 @@ package org.apache.hadoop.hbase.rsgroup;
 import static org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.META_FAMILY_BYTES;
 import static org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.META_QUALIFIER_BYTES;
 import static org.apache.hadoop.hbase.rsgroup.RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.TableName;
@@ -41,11 +40,11 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.zookeeper.KeeperException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
@@ -53,12 +52,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
 /**
  * Testcase for HBASE-22819
  */
-@Category({ RSGroupTests.class, MediumTests.class })
+@Tag(RSGroupTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMigrateRSGroupInfo.class);
 
   private static String TABLE_NAME_PREFIX = "Table_";
 
@@ -68,7 +64,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
 
   private static RSGroupAdminClient RS_GROUP_ADMIN_CLIENT;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class,
       HMaster.class);
@@ -83,7 +79,7 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
@@ -115,8 +111,8 @@ public class TestMigrateRSGroupInfo extends TestRSGroupsBase {
   }
 
   @Test
-  public void testMigrate() throws IOException, InterruptedException {
-    String groupName = getNameWithoutIndex(name.getMethodName());
+  public void testMigrate(TestInfo testInfo) throws IOException, InterruptedException {
+    String groupName = getNameWithoutIndex(testInfo.getTestMethod().get().getName());
     addGroup(groupName, TEST_UTIL.getMiniHBaseCluster().getRegionServerThreads().size() - 1);
     RSGroupInfo rsGroupInfo = ADMIN.getRSGroup(groupName);
     assertTrue(rsGroupInfo.getTables().isEmpty());

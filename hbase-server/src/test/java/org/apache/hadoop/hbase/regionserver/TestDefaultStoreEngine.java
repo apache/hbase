@@ -17,27 +17,23 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.DefaultCompactor;
 import org.apache.hadoop.hbase.regionserver.compactions.RatioBasedCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDefaultStoreEngine {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultStoreEngine.class);
 
   public static class DummyStoreFlusher extends DefaultStoreFlusher {
     public DummyStoreFlusher(Configuration conf, HStore store) {
@@ -70,9 +66,9 @@ public class TestDefaultStoreEngine {
     Mockito.when(mockStore.getRegionInfo()).thenReturn(RegionInfoBuilder.FIRST_META_REGIONINFO);
     Mockito.when(mockStore.getHRegion()).thenReturn(mockRegion);
     StoreEngine<?, ?, ?, ?> se = StoreEngine.create(mockStore, conf, CellComparatorImpl.COMPARATOR);
-    Assert.assertTrue(se instanceof DefaultStoreEngine);
-    Assert.assertTrue(se.getCompactionPolicy() instanceof DummyCompactionPolicy);
-    Assert.assertTrue(se.getStoreFlusher() instanceof DummyStoreFlusher);
-    Assert.assertTrue(se.getCompactor() instanceof DummyCompactor);
+    assertTrue(se instanceof DefaultStoreEngine);
+    assertTrue(se.getCompactionPolicy() instanceof DummyCompactionPolicy);
+    assertTrue(se.getStoreFlusher() instanceof DummyStoreFlusher);
+    assertTrue(se.getCompactor() instanceof DummyCompactor);
   }
 }

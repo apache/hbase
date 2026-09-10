@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.http;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -29,7 +29,6 @@ import java.security.GeneralSecurityException;
 import javax.net.ssl.HttpsURLConnection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
@@ -38,11 +37,10 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.ssl.SSLFactory;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -50,12 +48,9 @@ import org.slf4j.LoggerFactory;
  * This testcase issues SSL certificates configures the HttpServer to serve HTTPS using the created
  * certficates and calls an echo servlet using the corresponding HTTPS URL.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSSLHttpServer extends HttpServerFunctionalTest {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSSLHttpServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSSLHttpServer.class);
   private static Configuration serverConf;
@@ -66,7 +61,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
   private static SSLFactory clientSslFactory;
   private static HBaseCommonTestingUtil HTU;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
 
     HTU = new HBaseCommonTestingUtil();
@@ -106,7 +101,7 @@ public class TestSSLHttpServer extends HttpServerFunctionalTest {
     LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     server.stop();
     FileUtil.fullyDelete(new File(HTU.getDataTestDir().toString()));

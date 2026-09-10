@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.security.User;
@@ -37,7 +37,7 @@ public class QosTestBase {
     final AnnotationReadingPriorityFunction<?> qosf, final Message param) {
     RPCProtos.RequestHeader.Builder builder = RPCProtos.RequestHeader.newBuilder();
     builder.setMethodName(methodName);
-    assertEquals(methodName, expected, qosf.getPriority(builder.build(), param,
-      User.createUserForTesting(conf, "someuser", new String[] { "somegroup" })));
+    assertEquals(expected, qosf.getPriority(builder.build(), param,
+      User.createUserForTesting(conf, "someuser", new String[] { "somegroup" })), methodName);
   }
 }

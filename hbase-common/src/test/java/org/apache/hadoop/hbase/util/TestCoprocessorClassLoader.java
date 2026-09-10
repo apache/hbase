@@ -17,35 +17,30 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.io.IOUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test TestCoprocessorClassLoader. More tests are in TestClassLoading
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCoprocessorClassLoader {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorClassLoader.class);
-
   private static final HBaseCommonTestingUtil TEST_UTIL = new HBaseCommonTestingUtil();
   private static final Configuration conf = TEST_UTIL.getConfiguration();
   static {
@@ -64,16 +59,16 @@ public class TestCoprocessorClassLoader {
       tmpJarFile.delete();
     }
 
-    assertFalse("tmp jar file should not exist", tmpJarFile.exists());
+    assertFalse(tmpJarFile.exists(), "tmp jar file should not exist");
     ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
     CoprocessorClassLoader.getClassLoader(new Path(jarFile.getParent()), parent, "112", conf);
     IOUtils.copyBytes(new FileInputStream(jarFile), new FileOutputStream(tmpJarFile), conf, true);
-    assertTrue("tmp jar file should be created", tmpJarFile.exists());
+    assertTrue(tmpJarFile.exists(), "tmp jar file should be created");
     Path path = new Path(jarFile.getAbsolutePath());
     CoprocessorClassLoader.parentDirLockSet.clear(); // So that clean up can be triggered
     ClassLoader classLoader = CoprocessorClassLoader.getClassLoader(path, parent, "111", conf);
-    assertNotNull("Classloader should be created", classLoader);
-    assertFalse("tmp jar file should be removed", tmpJarFile.exists());
+    assertNotNull(classLoader, "Classloader should be created");
+    assertFalse(tmpJarFile.exists(), "tmp jar file should be removed");
   }
 
   @Test
@@ -109,7 +104,7 @@ public class TestCoprocessorClassLoader {
     Path path = new Path(targetJarFile.getAbsolutePath());
     ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
     ClassLoader classLoader = CoprocessorClassLoader.getClassLoader(path, parent, "112", conf);
-    assertNotNull("Classloader should be created", classLoader);
+    assertNotNull(classLoader, "Classloader should be created");
     String fileToLookFor = "." + className + ".jar";
     String[] files = tmpFolder.list();
     if (files != null) {
@@ -128,7 +123,6 @@ public class TestCoprocessorClassLoader {
   public void testDirectoryAndWildcard() throws Exception {
     String testClassName = "TestClass";
     String dataTestDir = TEST_UTIL.getDataTestDir().toString();
-    System.out.println(dataTestDir);
     String localDirContainingJar = ClassLoaderTestHelper.localDirPath(conf);
     ClassLoaderTestHelper.buildJar(dataTestDir, testClassName, null, localDirContainingJar);
     ClassLoader parent = TestCoprocessorClassLoader.class.getClassLoader();
@@ -160,7 +154,7 @@ public class TestCoprocessorClassLoader {
    */
   private void verifyCoprocessorClassLoader(CoprocessorClassLoader coprocessorClassLoader,
     String className) throws ClassNotFoundException {
-    assertNotNull("Classloader should be created and not null", coprocessorClassLoader);
+    assertNotNull(coprocessorClassLoader, "Classloader should be created and not null");
     assertEquals(className, coprocessorClassLoader.loadClass(className).getName());
   }
 }

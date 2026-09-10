@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -36,29 +35,21 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRemoveRegionMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRemoveRegionMetrics.class);
 
   private static SingleProcessHBaseCluster cluster;
   private static Configuration conf;
   private static HBaseTestingUtil TEST_UTIL;
   private static MetricsAssertHelper metricsHelper;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void startCluster() throws Exception {
     metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
     TEST_UTIL = new HBaseTestingUtil();
@@ -79,8 +70,8 @@ public class TestRemoveRegionMetrics {
   }
 
   @Test
-  public void testMoveRegion() throws IOException, InterruptedException {
-    String tableNameString = name.getMethodName();
+  public void testMoveRegion(TestInfo testInfo) throws IOException, InterruptedException {
+    String tableNameString = testInfo.getTestMethod().get().getName();
     TableName tableName = TableName.valueOf(tableNameString);
     Table t = TEST_UTIL.createTable(tableName, Bytes.toBytes("D"));
     TEST_UTIL.waitUntilAllRegionsAssigned(t.getName());

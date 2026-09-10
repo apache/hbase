@@ -34,6 +34,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -302,10 +303,36 @@ public final class SnapshotDescriptionUtils {
    */
   public static SnapshotDescription validate(SnapshotDescription snapshot, Configuration conf)
     throws IllegalArgumentException, IOException {
+    requireHasTable(snapshot);
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      return validate(conn, snapshot, conf);
+    }
+  }
+
+  private static void requireHasTable(SnapshotDescription snapshot) {
     if (!snapshot.hasTable()) {
       throw new IllegalArgumentException(
         "Descriptor doesn't apply to a table, so we can't build it.");
     }
+  }
+
+  /**
+   * Convert the passed snapshot description into a 'full' snapshot description based on default
+   * parameters, if none have been supplied. This resolves any 'optional' parameters that aren't
+   * supplied to their default values. Prefer this overload over
+   * {@link #validate(SnapshotDescription, Configuration)} when the caller already holds a
+   * {@link Connection}, to avoid the cost of creating a fresh connection (which involves a ZK
+   * session and, in Kerberos environments, a TGS request to the KDC) for each call.
+   * @param conn     connection to use for reading ACL information when security is enabled
+   * @param snapshot general snapshot descriptor
+   * @param conf     Configuration to read configured snapshot defaults if snapshot is not complete
+   * @return a valid snapshot description
+   * @throws IllegalArgumentException if the {@link SnapshotDescription} is not a complete
+   *                                  {@link SnapshotDescription}.
+   */
+  public static SnapshotDescription validate(Connection conn, SnapshotDescription snapshot,
+    Configuration conf) throws IllegalArgumentException, IOException {
+    requireHasTable(snapshot);
 
     SnapshotDescription.Builder builder = snapshot.toBuilder();
 
@@ -350,8 +377,8 @@ public final class SnapshotDescriptionUtils {
     snapshot = builder.build();
 
     // set the acl to snapshot if security feature is enabled.
-    if (isSecurityAvailable(conf)) {
-      snapshot = writeAclToSnapshotDescription(snapshot, conf);
+    if (isSecurityAvailable(conn)) {
+      snapshot = writeAclToSnapshotDescription(conn, snapshot, conf);
     }
     return snapshot;
   }
@@ -475,20 +502,32 @@ public final class SnapshotDescriptionUtils {
   }
 
   public static boolean isSecurityAvailable(Configuration conf) throws IOException {
-    try (Connection conn = ConnectionFactory.createConnection(conf);
-      Admin admin = conn.getAdmin()) {
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      return isSecurityAvailable(conn);
+    }
+  }
+
+  /**
+   * Prefer this overload over {@link #isSecurityAvailable(Configuration)} when the caller already
+   * holds a {@link Connection}, to avoid the cost of creating a fresh connection (which involves a
+   * ZK session and, in Kerberos environments, a TGS request to the KDC) for each call.
+   */
+  public static boolean isSecurityAvailable(Connection conn) throws IOException {
+    try (Admin admin = conn.getAdmin()) {
       return admin.tableExists(PermissionStorage.ACL_TABLE_NAME);
     }
   }
 
-  private static SnapshotDescription writeAclToSnapshotDescription(SnapshotDescription snapshot,
-    Configuration conf) throws IOException {
+  private static SnapshotDescription writeAclToSnapshotDescription(Connection conn,
+    SnapshotDescription snapshot, Configuration conf) throws IOException {
     ListMultimap<String, UserPermission> perms =
       User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, UserPermission>>() {
         @Override
         public ListMultimap<String, UserPermission> run() throws Exception {
-          return PermissionStorage.getTablePermissions(conf,
-            TableName.valueOf(snapshot.getTable()));
+          try (Table aclTable = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+            return PermissionStorage.getTablePermissions(conf,
+              TableName.valueOf(snapshot.getTable()), aclTable);
+          }
         }
       });
     return snapshot.toBuilder()

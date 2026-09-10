@@ -73,6 +73,9 @@ message Procedure {
   // whether the procedure has been executed
   // since we do not always maintain the stack_id now, we need a separated flag
   optional bool executed = 18 [default = false];
+
+  // Indicates that the procedure belongs to a crytical system table.
+  optional bool is_crytical_system_table = 19 [default = false];
 }
 
 /**

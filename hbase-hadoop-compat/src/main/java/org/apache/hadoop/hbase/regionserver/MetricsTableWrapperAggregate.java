@@ -59,6 +59,16 @@ public interface MetricsTableWrapperAggregate {
   long getMemStoreSize(String table);
 
   /**
+   * Get the size of the on heap memstore of this table
+   */
+  long getMemStoreHeapSize(String table);
+
+  /**
+   * Get the size of the off heap memstore of this table
+   */
+  long getMemStoreOffHeapSize(String table);
+
+  /**
    * Get the store file size against this table
    */
   long getStoreFileSize(String table);
@@ -128,4 +138,7 @@ public interface MetricsTableWrapperAggregate {
 
   /** Returns number of row reads from file and memstore per store for this table */
   Map<String, Long> getMixedRowReadsCount(String table);
+
+  /** Returns store file size per store (column family) for this table */
+  Map<String, Long> getStoreFileSizePerStore(String table);
 }

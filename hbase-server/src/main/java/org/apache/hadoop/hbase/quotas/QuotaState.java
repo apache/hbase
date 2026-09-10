@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
 
@@ -57,9 +58,9 @@ public class QuotaState {
   /**
    * Setup the global quota information. (This operation is part of the QuotaState setup)
    */
-  public synchronized void setQuotas(final Quotas quotas) {
+  public synchronized void setQuotas(Configuration conf, final Quotas quotas) {
     if (quotas.hasThrottle()) {
-      globalLimiter = QuotaLimiterFactory.fromThrottle(quotas.getThrottle());
+      globalLimiter = QuotaLimiterFactory.fromThrottle(conf, quotas.getThrottle());
     } else {
       globalLimiter = NoopQuotaLimiter.get();
     }

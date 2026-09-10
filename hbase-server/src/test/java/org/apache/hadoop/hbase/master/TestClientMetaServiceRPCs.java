@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_RPC_TIMEOUT;
 import static org.apache.hadoop.hbase.HConstants.HBASE_RPC_TIMEOUT_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -27,7 +27,6 @@ import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -40,11 +39,10 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
@@ -55,12 +53,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClust
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
 
-@Category({ MediumTests.class, MasterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(MasterTests.TAG)
 public class TestClientMetaServiceRPCs {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientMetaServiceRPCs.class);
 
   // Total number of masters (active + stand by) for the purpose of this test.
   private static final int MASTER_COUNT = 3;
@@ -69,7 +64,7 @@ public class TestClientMetaServiceRPCs {
   private static int rpcTimeout;
   private static RpcClient rpcClient;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Start the mini cluster with stand-by masters.
     StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
@@ -82,7 +77,7 @@ public class TestClientMetaServiceRPCs {
       TEST_UTIL.getMiniHBaseCluster().getMaster().getClusterId());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     if (rpcClient != null) {
       rpcClient.close();

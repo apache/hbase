@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
@@ -26,7 +26,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Connection;
@@ -38,18 +37,18 @@ import org.apache.hadoop.hbase.quotas.RpcThrottlingException;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-@Category({ MediumTests.class, CoprocessorTests.class })
+@Tag(MediumTests.TAG)
+@Tag(CoprocessorTests.TAG)
 public class TestRegionCoprocessorQuotaUsage {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionCoprocessorQuotaUsage.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestRegionCoprocessorQuotaUsage.class);
 
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static TableName TABLE_NAME = TableName.valueOf("TestRegionCoprocessorQuotaUsage");
@@ -66,11 +65,14 @@ public class TestRegionCoprocessorQuotaUsage {
 
       // For the purposes of this test, we only need to catch a throttle happening once, then
       // let future requests pass through so we don't make this test take any longer than necessary
+      LOG.info("Intercepting GetOp");
       if (!THROTTLING_OCCURRED.get()) {
         try {
           c.getEnvironment().checkBatchQuota(c.getEnvironment().getRegion(),
             OperationQuota.OperationType.GET);
+          LOG.info("Request was not throttled");
         } catch (RpcThrottlingException e) {
+          LOG.info("Intercepting was throttled");
           THROTTLING_OCCURRED.set(true);
           throw e;
         }
@@ -87,13 +89,12 @@ public class TestRegionCoprocessorQuotaUsage {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setBoolean("hbase.quota.enabled", true);
-    conf.setInt("hbase.quota.default.user.machine.read.num", 2);
+    conf.setInt("hbase.quota.default.user.machine.read.num", 1);
     conf.set("hbase.quota.rate.limiter", "org.apache.hadoop.hbase.quotas.FixedIntervalRateLimiter");
-    conf.set("hbase.quota.rate.limiter.refill.interval.ms", "300000");
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY, MyCoprocessor.class.getName());
     UTIL.startMiniCluster(3);
     byte[][] splitKeys = new byte[8][];
@@ -106,7 +107,7 @@ public class TestRegionCoprocessorQuotaUsage {
     TABLE.put(new Put(Bytes.toBytes(String.format("%d", 0))).addColumn(CF, CQ, Bytes.toBytes(0L)));
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -116,7 +117,10 @@ public class TestRegionCoprocessorQuotaUsage {
     // Hit the table 5 times which ought to be enough to make a throttle happen
     for (int i = 0; i < 5; i++) {
       TABLE.get(new Get(Bytes.toBytes("000")));
+      if (THROTTLING_OCCURRED.get()) {
+        break;
+      }
     }
-    assertTrue("Throttling did not happen as expected", THROTTLING_OCCURRED.get());
+    assertTrue(THROTTLING_OCCURRED.get(), "Throttling did not happen as expected");
   }
 }

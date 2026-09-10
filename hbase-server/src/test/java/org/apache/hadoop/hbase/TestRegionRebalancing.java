@@ -17,16 +17,16 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -42,14 +42,11 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,20 +57,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
  * balancing, not per table wide. Increase the margin a little to make StochasticLoadBalancer result
  * acceptable.
  */
-@Category({ FlakeyTests.class, LargeTests.class })
-@RunWith(value = Parameterized.class)
+@Tag(FlakeyTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: balancer = {0}")
 public class TestRegionRebalancing {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionRebalancing.class);
-
-  @Parameters
-  public static Collection<Object[]> data() {
-    Object[][] balancers =
-      new String[][] { { "org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer" },
-        { "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer" } };
-    return Arrays.asList(balancers);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("org.apache.hadoop.hbase.master.balancer.SimpleLoadBalancer"),
+      Arguments.of("org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer"));
   }
 
   private static final byte[] FAMILY_NAME = Bytes.toBytes("col");
@@ -88,12 +79,12 @@ public class TestRegionRebalancing {
 
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     UTIL.getConfiguration().set("hbase.master.loadbalancer.class", this.balancerName);
     // set minCostNeedBalance to 0, make sure balancer run
@@ -107,7 +98,7 @@ public class TestRegionRebalancing {
    * For HBASE-71. Try a few different configurations of starting and stopping region servers to see
    * if the assignment or regions is pretty balanced.
    */
-  @Test
+  @TestTemplate
   public void testRebalanceOnRegionServerNumberChange() throws IOException, InterruptedException {
     try (Connection connection = ConnectionFactory.createConnection(UTIL.getConfiguration());
       Admin admin = connection.getAdmin()) {
@@ -117,8 +108,8 @@ public class TestRegionRebalancing {
 
       MetaTableAccessor.fullScanMetaAndPrint(admin.getConnection());
 
-      assertEquals("Test table should have right number of regions", HBaseTestingUtil.KEYS.length,
-        this.regionLocator.getStartKeys().length);
+      assertEquals(HBaseTestingUtil.KEYS.length, this.regionLocator.getStartKeys().length,
+        "Test table should have right number of regions");
 
       // verify that the region assignments are balanced to start out
       assertRegionsAreBalanced();

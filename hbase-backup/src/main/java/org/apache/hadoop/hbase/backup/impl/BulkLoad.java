@@ -34,14 +34,16 @@ public class BulkLoad {
   private final String columnFamily;
   private final String hfilePath;
   private final byte[] rowKey;
+  private final long timestamp;
 
   public BulkLoad(TableName tableName, String region, String columnFamily, String hfilePath,
-    byte[] rowKey) {
+    byte[] rowKey, long timestamp) {
     this.tableName = tableName;
     this.region = region;
     this.columnFamily = columnFamily;
     this.hfilePath = hfilePath;
     this.rowKey = rowKey;
+    this.timestamp = timestamp;
   }
 
   public TableName getTableName() {
@@ -64,6 +66,10 @@ public class BulkLoad {
     return rowKey;
   }
 
+  public long getTimestamp() {
+    return timestamp;
+  }
+
   @Override
   public boolean equals(Object o) {
     if (this == o) {
@@ -75,19 +81,20 @@ public class BulkLoad {
     BulkLoad that = (BulkLoad) o;
     return new EqualsBuilder().append(tableName, that.tableName).append(region, that.region)
       .append(columnFamily, that.columnFamily).append(hfilePath, that.hfilePath)
-      .append(rowKey, that.rowKey).isEquals();
+      .append(rowKey, that.rowKey).append(timestamp, that.timestamp).isEquals();
   }
 
   @Override
   public int hashCode() {
     return new HashCodeBuilder().append(tableName).append(region).append(columnFamily)
-      .append(hfilePath).append(rowKey).toHashCode();
+      .append(hfilePath).append(rowKey).append(timestamp).toHashCode();
   }
 
   @Override
   public String toString() {
     return new ToStringBuilder(this, ToStringStyle.NO_CLASS_NAME_STYLE)
       .append("tableName", tableName).append("region", region).append("columnFamily", columnFamily)
-      .append("hfilePath", hfilePath).append("rowKey", rowKey).toString();
+      .append("hfilePath", hfilePath).append("rowKey", rowKey).append("timestamp", timestamp)
+      .toString();
   }
 }

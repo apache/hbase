@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -92,7 +94,7 @@ public abstract class TableBackupClient {
     this.fs = CommonFSUtils.getCurrentFileSystem(conf);
     backupInfo = backupManager.createBackupInfo(backupId, request.getBackupType(), tableList,
       request.getTargetRootDir(), request.getTotalTasks(), request.getBandwidth(),
-      request.getNoChecksumVerify());
+      request.getNoChecksumVerify(), request.isContinuousBackupEnabled());
     if (tableList == null || tableList.isEmpty()) {
       this.tableList = new ArrayList<>(backupInfo.getTables());
     }
@@ -310,7 +312,8 @@ public abstract class TableBackupClient {
     Set<TableName> tablesToCover = new HashSet<>(backupInfo.getTables());
 
     // Go over the backup history list from newest to oldest
-    List<BackupInfo> allHistoryList = backupManager.getBackupHistory(true);
+    List<BackupInfo> allHistoryList =
+      backupManager.getBackupHistory(withState(BackupState.COMPLETE));
     for (BackupInfo backup : allHistoryList) {
       // If the image has a different rootDir, it cannot be an ancestor.
       if (!Objects.equals(backup.getBackupRootDir(), backupInfo.getBackupRootDir())) {

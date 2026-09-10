@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -32,7 +32,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -55,22 +54,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MapReduceTests.class, LargeTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestImportTSVWithOperationAttributes implements Configurable {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestImportTSVWithOperationAttributes.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestImportTSVWithOperationAttributes.class);
@@ -93,9 +87,6 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
 
   private final String FAMILY = "FAM";
 
-  @Rule
-  public TestName name = new TestName();
-
   @Override
   public Configuration getConf() {
     return util.getConfiguration();
@@ -106,7 +97,7 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     throw new IllegalArgumentException("setConf not supported");
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void provisionCluster() throws Exception {
     conf = util.getConfiguration();
     conf.set("hbase.coprocessor.master.classes", OperationAttributesTestController.class.getName());
@@ -114,14 +105,15 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
     util.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void releaseCluster() throws Exception {
     util.shutdownMiniCluster();
   }
 
   @Test
-  public void testMROnTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMROnTable(TestInfo testInfo) throws Exception {
+    final TableName tableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {
@@ -136,8 +128,9 @@ public class TestImportTSVWithOperationAttributes implements Configurable {
   }
 
   @Test
-  public void testMROnTableWithInvalidOperationAttr() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName() + util.getRandomUUID());
+  public void testMROnTableWithInvalidOperationAttr(TestInfo testInfo) throws Exception {
+    final TableName tableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName() + util.getRandomUUID());
 
     // Prepare the arguments required for the test.
     String[] args = new String[] {

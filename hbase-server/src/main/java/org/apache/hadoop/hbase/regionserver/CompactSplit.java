@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControl
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.StealJobQueue;
 import org.apache.hadoop.ipc.RemoteException;
@@ -344,6 +345,12 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       return;
     }
 
+    // Should not allow compaction if cluster is in read-only mode
+    if (ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
+      LOG.info("Ignoring compaction request for " + region + ",because read-only mode is on.");
+      return;
+    }
+
     if (
       this.server.isStopped() || (region.getTableDescriptor() != null
         && !region.getTableDescriptor().isCompactionEnabled())
@@ -442,6 +449,13 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
       LOG.info(String.format("User has disabled compactions"));
       return Optional.empty();
     }
+
+    // Should not allow compaction if cluster is in read-only mode
+    if (ConfigurationUtil.isReadOnlyModeEnabledInConf(conf)) {
+      LOG.info(String.format("Compaction request skipped as read-only mode is on"));
+      return Optional.empty();
+    }
+
     Optional<CompactionContext> compaction = store.requestCompaction(priority, tracker, user);
     if (!compaction.isPresent() && region.getRegionInfo() != null) {
       String reason = "Not compacting " + region.getRegionInfo().getRegionNameAsString()
@@ -507,7 +521,8 @@ public class CompactSplit implements CompactionRequester, PropagatingConfigurati
   private boolean shouldSplitRegion(RegionInfo ri) {
     if (server.getNumberOfOnlineRegions() > 0.9 * regionSplitLimit) {
       LOG.warn("Total number of regions is approaching the upper limit " + regionSplitLimit + ". "
-        + "Please consider taking a look at http://hbase.apache.org/book.html#ops.regionmgt");
+        + "Please consider taking a look at "
+        + "https://hbase.apache.org/docs/operational-management/region-and-capacity#region-management");
     }
     return (regionSplitLimit > server.getNumberOfOnlineRegions()
       // Do not attempt to split secondary region replicas, as this is not allowed and our request

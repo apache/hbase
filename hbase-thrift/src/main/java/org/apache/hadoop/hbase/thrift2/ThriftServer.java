@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.thrift.ThriftMetrics;
 import org.apache.hadoop.hbase.thrift2.generated.THBaseService;
 import org.apache.hadoop.util.Shell;
 import org.apache.hadoop.util.ToolRunner;
-import org.apache.thrift.TProcessor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -40,6 +39,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
+import org.apache.hbase.thirdparty.org.apache.thrift.TProcessor;
 
 /**
  * ThriftServer - this class starts up a Thrift server which implements the HBase API specified in
@@ -64,7 +64,7 @@ public class ThriftServer extends org.apache.hadoop.hbase.thrift.ThriftServer {
         + "To shutdown the thrift server run 'hbase-daemon.sh stop thrift2' or"
         + " send a kill signal to the thrift server pid",
       true);
-    throw new Shell.ExitCodeException(exitCode, "");
+    System.exit(exitCode);
   }
 
   @Override

@@ -18,11 +18,12 @@
 package org.apache.hadoop.hbase.tool;
 
 import static org.apache.hadoop.hbase.regionserver.TestRegionServerNoMaster.closeRegion;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hbase.tool.CanaryTool.HBASE_CANARY_INFO_PORT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.ArgumentMatchers.eq;
@@ -35,13 +36,21 @@ import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
+import org.apache.commons.io.IOUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -54,33 +63,27 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.JvmVersion;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.ArgumentMatcher;
 
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestCanaryTool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCanaryTool.class);
 
   private HBaseTestingUtil testingUtility;
   private static final byte[] FAMILY = Bytes.toBytes("f");
   private static final byte[] COLUMN = Bytes.toBytes("col");
 
-  @Rule
-  public TestName name = new TestName();
-
   private org.apache.logging.log4j.core.Appender mockAppender;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testingUtility = new HBaseTestingUtil();
     testingUtility.startMiniCluster();
@@ -91,7 +94,7 @@ public class TestCanaryTool {
       .getLogger("org.apache.hadoop.hbase")).addAppender(mockAppender);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     testingUtility.shutdownMiniCluster();
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
@@ -112,8 +115,8 @@ public class TestCanaryTool {
   }
 
   @Test
-  public void testBasicCanaryWorks() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testBasicCanaryWorks(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
     // insert some test rows
     for (int i = 0; i < 1000; i++) {
@@ -127,8 +130,8 @@ public class TestCanaryTool {
     CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-writeSniffing", "-t", "10000", tableName.getNameAsString() };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
-    assertEquals("verify no read error count", 0, canary.getReadFailures().size());
-    assertEquals("verify no write error count", 0, canary.getWriteFailures().size());
+    assertEquals(0, canary.getReadFailures().size(), "verify no read error count");
+    assertEquals(0, canary.getWriteFailures().size(), "verify no write error count");
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
       isA(ColumnFamilyDescriptor.class), anyLong());
   }
@@ -140,14 +143,14 @@ public class TestCanaryTool {
    * @throws Exception if it can't create a table, communicate with minicluster, or run the canary.
    */
   @Test
-  public void testCanaryStopsScanningAfterTimeout() throws Exception {
+  public void testCanaryStopsScanningAfterTimeout(TestInfo testInfo) throws Exception {
     // Prepare a table with multiple regions, and close those regions on the regionserver.
     // Do not notify HMaster or META. CanaryTool will scan and receive NotServingRegionExceptions.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     // Close the unused Table reference returned by createMultiRegionTable.
     testingUtility.createMultiRegionTable(tableName, new byte[][] { FAMILY }).close();
     List<RegionInfo> regions = testingUtility.getAdmin().getRegions(tableName);
-    assertTrue("verify table has multiple regions", regions.size() > 1);
+    assertTrue(regions.size() > 1, "verify table has multiple regions");
     HRegionServer regionserver = testingUtility.getMiniHBaseCluster().getRegionServer(0);
     for (RegionInfo region : regions) {
       closeRegion(testingUtility, regionserver, region);
@@ -171,16 +174,16 @@ public class TestCanaryTool {
     }
 
     CanaryTool.Sink sink = canary.getActiveSink();
-    assertEquals("verify canary timed out with TIMEOUT_ERROR_EXIT_CODE", 3, retCode);
-    assertEquals("verify only the first region failed", 1, sink.getReadFailureCount());
-    assertEquals("verify no successful reads", 0, sink.getReadSuccessCount());
-    assertEquals("verify we were attempting to scan all regions", regions.size(),
-      ((CanaryTool.RegionStdOutSink) sink).getTotalExpectedRegions());
+    assertEquals(3, retCode, "verify canary timed out with TIMEOUT_ERROR_EXIT_CODE");
+    assertEquals(1, sink.getReadFailureCount(), "verify only the first region failed");
+    assertEquals(0, sink.getReadSuccessCount(), "verify no successful reads");
+    assertEquals(regions.size(), ((CanaryTool.RegionStdOutSink) sink).getTotalExpectedRegions(),
+      "verify we were attempting to scan all regions");
   }
 
   @Test
-  public void testCanaryRegionTaskReadAllCF() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testCanaryRegionTaskReadAllCF(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = testingUtility.createTable(tableName,
       new byte[][] { Bytes.toBytes("f1"), Bytes.toBytes("f2") });
     // insert some test rows
@@ -203,23 +206,23 @@ public class TestCanaryTool {
       // we expect read count is double of region count
       int expectedReadCount =
         readAllCF ? 2 * sink.getTotalExpectedRegions() : sink.getTotalExpectedRegions();
-      assertEquals("canary region success count should equal total expected read count",
-        expectedReadCount, sink.getReadSuccessCount());
+      assertEquals(expectedReadCount, sink.getReadSuccessCount(),
+        "canary region success count should equal total expected read count");
       Map<String, List<CanaryTool.RegionTaskResult>> regionMap = sink.getRegionMap();
-      assertFalse("verify region map has size > 0", regionMap.isEmpty());
+      assertFalse(regionMap.isEmpty(), "verify region map has size > 0");
 
       for (String regionName : regionMap.keySet()) {
         for (CanaryTool.RegionTaskResult res : regionMap.get(regionName)) {
-          assertNotNull("verify getRegionNameAsString()", regionName);
-          assertNotNull("verify getRegionInfo()", res.getRegionInfo());
-          assertNotNull("verify getTableName()", res.getTableName());
-          assertNotNull("verify getTableNameAsString()", res.getTableNameAsString());
-          assertNotNull("verify getServerName()", res.getServerName());
-          assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
-          assertNotNull("verify getColumnFamily()", res.getColumnFamily());
-          assertNotNull("verify getColumnFamilyNameAsString()", res.getColumnFamilyNameAsString());
-          assertTrue("read from region " + regionName + " succeeded", res.isReadSuccess());
-          assertTrue("read took some time", res.getReadLatency() > -1);
+          assertNotNull(regionName, "verify getRegionNameAsString()");
+          assertNotNull(res.getRegionInfo(), "verify getRegionInfo()");
+          assertNotNull(res.getTableName(), "verify getTableName()");
+          assertNotNull(res.getTableNameAsString(), "verify getTableNameAsString()");
+          assertNotNull(res.getServerName(), "verify getServerName()");
+          assertNotNull(res.getServerNameAsString(), "verify getServerNameAsString()");
+          assertNotNull(res.getColumnFamily(), "verify getColumnFamily()");
+          assertNotNull(res.getColumnFamilyNameAsString(), "verify getColumnFamilyNameAsString()");
+          assertTrue(res.isReadSuccess(), "read from region " + regionName + " succeeded");
+          assertTrue(res.getReadLatency() > -1, "read took some time");
         }
       }
     }
@@ -242,39 +245,40 @@ public class TestCanaryTool {
     String[] args = { "-writeSniffing", "-t", "10000", "testCanaryRegionTaskResult" };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
 
-    assertTrue("canary should expect to scan at least 1 region",
-      sink.getTotalExpectedRegions() > 0);
-    assertTrue("there should be no read failures", sink.getReadFailureCount() == 0);
-    assertTrue("there should be no write failures", sink.getWriteFailureCount() == 0);
-    assertTrue("verify read success count > 0", sink.getReadSuccessCount() > 0);
-    assertTrue("verify write success count > 0", sink.getWriteSuccessCount() > 0);
+    assertTrue(sink.getTotalExpectedRegions() > 0,
+      "canary should expect to scan at least 1 region");
+    assertTrue(sink.getReadFailureCount() == 0, "there should be no read failures");
+    assertTrue(sink.getWriteFailureCount() == 0, "there should be no write failures");
+    assertTrue(sink.getReadSuccessCount() > 0, "verify read success count > 0");
+    assertTrue(sink.getWriteSuccessCount() > 0, "verify write success count > 0");
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
       isA(ColumnFamilyDescriptor.class), anyLong());
     verify(sink, atLeastOnce()).publishWriteTiming(isA(ServerName.class), isA(RegionInfo.class),
       isA(ColumnFamilyDescriptor.class), anyLong());
 
-    assertEquals("canary region success count should equal total expected regions",
-      sink.getReadSuccessCount() + sink.getWriteSuccessCount(), sink.getTotalExpectedRegions());
+    assertEquals(sink.getReadSuccessCount() + sink.getWriteSuccessCount(),
+      sink.getTotalExpectedRegions(),
+      "canary region success count should equal total expected regions");
     Map<String, List<CanaryTool.RegionTaskResult>> regionMap = sink.getRegionMap();
-    assertFalse("verify region map has size > 0", regionMap.isEmpty());
+    assertFalse(regionMap.isEmpty(), "verify region map has size > 0");
 
     for (String regionName : regionMap.keySet()) {
       for (CanaryTool.RegionTaskResult res : regionMap.get(regionName)) {
-        assertNotNull("verify getRegionNameAsString()", regionName);
-        assertNotNull("verify getRegionInfo()", res.getRegionInfo());
-        assertNotNull("verify getTableName()", res.getTableName());
-        assertNotNull("verify getTableNameAsString()", res.getTableNameAsString());
-        assertNotNull("verify getServerName()", res.getServerName());
-        assertNotNull("verify getServerNameAsString()", res.getServerNameAsString());
-        assertNotNull("verify getColumnFamily()", res.getColumnFamily());
-        assertNotNull("verify getColumnFamilyNameAsString()", res.getColumnFamilyNameAsString());
+        assertNotNull(regionName, "verify getRegionNameAsString()");
+        assertNotNull(res.getRegionInfo(), "verify getRegionInfo()");
+        assertNotNull(res.getTableName(), "verify getTableName()");
+        assertNotNull(res.getTableNameAsString(), "verify getTableNameAsString()");
+        assertNotNull(res.getServerName(), "verify getServerName()");
+        assertNotNull(res.getServerNameAsString(), "verify getServerNameAsString()");
+        assertNotNull(res.getColumnFamily(), "verify getColumnFamily()");
+        assertNotNull(res.getColumnFamilyNameAsString(), "verify getColumnFamilyNameAsString()");
 
         if (regionName.contains(CanaryTool.DEFAULT_WRITE_TABLE_NAME.getNameAsString())) {
-          assertTrue("write to region " + regionName + " succeeded", res.isWriteSuccess());
-          assertTrue("write took some time", res.getWriteLatency() > -1);
+          assertTrue(res.isWriteSuccess(), "write to region " + regionName + " succeeded");
+          assertTrue(res.getWriteLatency() > -1, "write took some time");
         } else {
-          assertTrue("read from region " + regionName + " succeeded", res.isReadSuccess());
-          assertTrue("read took some time", res.getReadLatency() > -1);
+          assertTrue(res.isReadSuccess(), "read from region " + regionName + " succeeded");
+          assertTrue(res.getReadLatency() > -1, "read took some time");
         }
       }
     }
@@ -296,11 +300,12 @@ public class TestCanaryTool {
   // )
   // )
   //
-  @org.junit.Ignore
+  @Disabled
   @Test
-  public void testReadTableTimeouts() throws Exception {
-    final TableName[] tableNames = new TableName[] { TableName.valueOf(name.getMethodName() + "1"),
-      TableName.valueOf(name.getMethodName() + "2") };
+  public void testReadTableTimeouts(TestInfo testInfo) throws Exception {
+    final TableName[] tableNames =
+      new TableName[] { TableName.valueOf(testInfo.getTestMethod().get().getName() + "1"),
+        TableName.valueOf(testInfo.getTestMethod().get().getName() + "2") };
     // Create 2 test tables.
     for (int j = 0; j < 2; j++) {
       Table table = testingUtility.createTable(tableNames[j], new byte[][] { FAMILY });
@@ -317,15 +322,16 @@ public class TestCanaryTool {
     CanaryTool canary = new CanaryTool(executor, sink);
     String configuredTimeoutStr = tableNames[0].getNameAsString() + "=" + Long.MAX_VALUE + ","
       + tableNames[1].getNameAsString() + "=0";
-    String[] args = { "-readTableTimeouts", configuredTimeoutStr, name.getMethodName() + "1",
-      name.getMethodName() + "2" };
+    String[] args =
+      { "-readTableTimeouts", configuredTimeoutStr, testInfo.getTestMethod().get().getName() + "1",
+        testInfo.getTestMethod().get().getName() + "2" };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
     verify(sink, times(tableNames.length)).initializeAndGetReadLatencyForTable(isA(String.class));
     for (int i = 0; i < 2; i++) {
-      assertNotEquals("verify non-null read latency", null,
-        sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
-      assertNotEquals("verify non-zero read latency", 0L,
-        sink.getReadLatencyMap().get(tableNames[i].getNameAsString()));
+      assertNotEquals(null, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()),
+        "verify non-null read latency");
+      assertNotEquals(0L, sink.getReadLatencyMap().get(tableNames[i].getNameAsString()),
+        "verify non-zero read latency");
     }
     // One table's timeout is set for 0 ms and thus, should lead to an error.
     verify(mockAppender, times(1))
@@ -352,8 +358,8 @@ public class TestCanaryTool {
     CanaryTool canary = new CanaryTool(executor, sink);
     String[] args = { "-writeSniffing", "-writeTableTimeout", String.valueOf(Long.MAX_VALUE) };
     assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
-    assertNotEquals("verify non-null write latency", null, sink.getWriteLatency());
-    assertNotEquals("verify non-zero write latency", 0L, sink.getWriteLatency());
+    assertNotEquals(null, sink.getWriteLatency(), "verify non-null write latency");
+    assertNotEquals(0L, sink.getWriteLatency(), "verify non-zero write latency");
     verify(mockAppender, times(1))
       .append(argThat(new ArgumentMatcher<org.apache.logging.log4j.core.LogEvent>() {
         @Override
@@ -379,8 +385,8 @@ public class TestCanaryTool {
 
   // by creating a table, there shouldn't be any region servers not serving any regions
   @Test
-  public void testRegionserverWithRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testRegionserverWithRegions(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     testingUtility.createTable(tableName, new byte[][] { FAMILY });
     runRegionserverCanary();
     verify(mockAppender, never())
@@ -394,8 +400,8 @@ public class TestCanaryTool {
   }
 
   @Test
-  public void testRawScanConfig() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testRawScanConfig(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = testingUtility.createTable(tableName, new byte[][] { FAMILY });
     // insert some test rows
     for (int i = 0; i < 1000; i++) {
@@ -407,22 +413,23 @@ public class TestCanaryTool {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     CanaryTool.RegionStdOutSink sink = spy(new CanaryTool.RegionStdOutSink());
     CanaryTool canary = new CanaryTool(executor, sink);
-    String[] args = { "-t", "10000", name.getMethodName() };
+    String[] args = { "-t", "10000", testInfo.getTestMethod().get().getName() };
     org.apache.hadoop.conf.Configuration conf =
       new org.apache.hadoop.conf.Configuration(testingUtility.getConfiguration());
     conf.setBoolean(HConstants.HBASE_CANARY_READ_RAW_SCAN_KEY, true);
     assertEquals(0, ToolRunner.run(conf, canary, args));
     verify(sink, atLeastOnce()).publishReadTiming(isA(ServerName.class), isA(RegionInfo.class),
       isA(ColumnFamilyDescriptor.class), anyLong());
-    assertEquals("verify no read error count", 0, canary.getReadFailures().size());
+    assertEquals(0, canary.getReadFailures().size(), "verify no read error count");
   }
 
   private void runRegionserverCanary() throws Exception {
     ExecutorService executor = new ScheduledThreadPoolExecutor(1);
     CanaryTool canary = new CanaryTool(executor, new CanaryTool.RegionServerStdOutSink());
     String[] args = { "-t", "10000", "-regionserver" };
-    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args));
-    assertEquals("verify no read error count", 0, canary.getReadFailures().size());
+    assertEquals(0, ToolRunner.run(testingUtility.getConfiguration(), canary, args),
+      "verify no read error count");
+    assertEquals(0, canary.getReadFailures().size(), "verify no read error count");
   }
 
   private void testZookeeperCanaryWithArgs(String[] args) throws Exception {
@@ -436,5 +443,141 @@ public class TestCanaryTool {
     String baseZnode = testingUtility.getConfiguration().get(HConstants.ZOOKEEPER_ZNODE_PARENT,
       HConstants.DEFAULT_ZOOKEEPER_ZNODE_PARENT);
     verify(sink, atLeastOnce()).publishReadTiming(eq(baseZnode), eq(hostPort), anyLong());
+  }
+
+  @Test
+  public void testWebUI() throws Exception {
+    CanaryTool.RegionStdOutSink sink = mock(CanaryTool.RegionStdOutSink.class);
+
+    Configuration configuration = HBaseConfiguration.create(testingUtility.getConfiguration());
+    int infoPort = 16666;
+    configuration.setInt(HBASE_CANARY_INFO_PORT, infoPort);
+
+    ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
+
+    // Test that old canary status page URL redirects to JSP
+    URL oldPageUrl = new URL("http://localhost:" + infoPort + "/canary-status");
+    String oldPageContent = getPageContent(oldPageUrl);
+    assertTrue(oldPageContent.contains("canary.jsp"),
+      "expected=canary.jsp, content=" + oldPageContent);
+
+    // Test web UI page content
+    URL url = new URL("http://localhost:" + infoPort + "/canary.jsp");
+    String page = getPageContent(url);
+
+    assertTrue(page.contains("<title>Canary</title>"), "Page should contain page title.");
+
+    assertTrue(page.contains("<h2>Failed Servers</h2>"),
+      "Page should contain Failed Servers header.");
+    assertTrue(page.contains("<td>Total Failed Servers: 0</td>"),
+      "Page should have zero Failed Servers.");
+
+    assertTrue(page.contains("<h2>Failed Tables</h2>"),
+      "Page should contain Failed Tables header.");
+    assertTrue(page.contains("<td>Total Failed Tables: 0</td>"),
+      "Page should have zero Failed Tables.");
+
+    assertTrue(page.contains("<h2>Software Attributes</h2>"),
+      "Page should contain Software Attributes header.");
+    assertTrue(page.contains("<td>" + JvmVersion.getVersion() + "</td>"),
+      "Page should contain JVM version.");
+    assertTrue(
+      page
+        .contains("<td>" + VersionInfo.getVersion() + ", r" + VersionInfo.getRevision() + "</td>"),
+      "Page should contain HBase version.");
+
+    // Stop Canary tool daemon
+    executorService.shutdown();
+  }
+
+  @Test
+  public void testWebUIWithFailures() throws Exception {
+    CanaryTool.RegionStdOutSink sink = mock(CanaryTool.RegionStdOutSink.class);
+
+    // Simulate a failed server
+    ServerName sn1 = ServerName.parseServerName("asf903.gq1.ygridcore.net,52690,1517835491385");
+    ConcurrentMap<ServerName, LongAdder> servers = new ConcurrentHashMap<>();
+    servers.put(sn1, new LongAdder());
+    when(sink.getPerServerFailuresCount()).thenReturn(servers);
+
+    // Simulate failed tables
+    ConcurrentMap<String, LongAdder> tables = new ConcurrentHashMap<>();
+    tables.put("awesome-table", new LongAdder());
+    tables.put("awesome-table-two", new LongAdder());
+    when(sink.getPerTableFailuresCount()).thenReturn(tables);
+
+    Configuration configuration = HBaseConfiguration.create(testingUtility.getConfiguration());
+    int infoPort = 16667;
+    configuration.setInt(HBASE_CANARY_INFO_PORT, infoPort);
+
+    ExecutorService executorService = startCanaryToolInBackground(sink, configuration);
+
+    URL url = new URL("http://localhost:" + infoPort + "/canary.jsp");
+    String page = getPageContent(url);
+
+    assertTrue(page.contains("<title>Canary</title>"), "Page should contain page title.");
+
+    assertTrue(page.contains("<h2>Failed Servers</h2>"),
+      "Page should contain Failed Servers header.");
+    assertTrue(page.contains(
+      "<a href=\"//asf903.gq1.ygridcore.net:52691/\">asf903.gq1.ygridcore.net,52690,1517835491385</a>"),
+      "Page should contain the failed server link.");
+    assertTrue(page.contains("<td>Total Failed Servers: 1</td>"),
+      "Page should summarize 1 failed server.");
+
+    assertTrue(page.contains("<h2>Failed Tables</h2>"),
+      "Page should contain Failed Tables header.");
+    assertTrue(page.contains("<td>awesome-table</td>"),
+      "Page should contain awesome-table as failed table link.");
+    assertTrue(page.contains("<td>awesome-table-two</td>"),
+      "Page should contain awesome-table-two as failed table link.");
+    assertTrue(page.contains("<td>Total Failed Tables: 2</td>"),
+      "Page should summarize 2 failed tables.");
+
+    // Stop Canary tool daemon
+    executorService.shutdown();
+  }
+
+  private static ExecutorService startCanaryToolInBackground(CanaryTool.RegionStdOutSink sink,
+    Configuration configuration) {
+    ExecutorService canaryExecutor = new ScheduledThreadPoolExecutor(1);
+    CanaryTool canary = new CanaryTool(canaryExecutor, sink);
+    String[] args = { "-daemon", "-interval", "5", "-f", "false" };
+
+    // Run the Canary CLI tool in another thread otherwise it would block the unit test thread
+    // and we could not examine the web UI page.
+    ExecutorService executorService = new ScheduledThreadPoolExecutor(1);
+    executorService.submit(() -> ToolRunner.run(configuration, canary, args));
+    return executorService;
+  }
+
+  private String getPageContent(URL url) throws IOException, InterruptedException {
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+    boolean success = false;
+    for (int i = 1; i <= 5; i++) {
+      try {
+        conn.connect();
+        if (
+          conn.getResponseCode() == 200 && "text/html;charset=utf-8".equals(conn.getContentType())
+        ) {
+          success = true;
+          break;
+        }
+      } catch (IOException e) {
+        // ignore connection error as we retry.
+      }
+
+      // Wait a bit for the Canary web UI to come up
+      TimeUnit.MILLISECONDS.sleep(100);
+    }
+
+    if (success) {
+      try (InputStream in = conn.getInputStream()) {
+        return IOUtils.toString(in, StandardCharsets.UTF_8);
+      }
+    } else {
+      throw new IllegalStateException("Could not get Canary status page.");
+    }
   }
 }

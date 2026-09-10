@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedExceptionAction;
@@ -35,7 +35,6 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -65,15 +64,13 @@ import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.hbase.wal.WALSplitter;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -81,12 +78,9 @@ import org.slf4j.LoggerFactory;
  * Tests invocation of the {@link org.apache.hadoop.hbase.coprocessor.MasterObserver} interface
  * hooks at all appropriate times during normal HMaster operations.
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALObserver {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALObserver.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestWALObserver.class);
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -100,8 +94,7 @@ public class TestWALObserver {
     { Bytes.toBytes("v1"), Bytes.toBytes("v2"), Bytes.toBytes("v3"), };
   private static byte[] TEST_ROW = Bytes.toBytes("testRow");
 
-  @Rule
-  public TestName currentTest = new TestName();
+  private String currentTestName;
 
   private Configuration conf;
   private FileSystem fs;
@@ -111,7 +104,7 @@ public class TestWALObserver {
   private Path logDir;
   private WALFactory wals;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.WAL_COPROCESSOR_CONF_KEY,
@@ -129,21 +122,22 @@ public class TestWALObserver {
     CommonFSUtils.setWALRootDir(conf, hbaseWALRootDir);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    currentTestName = testInfo.getTestMethod().get().getName();
     this.conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
     // this.cluster = TEST_UTIL.getDFSCluster();
     this.fs = TEST_UTIL.getDFSCluster().getFileSystem();
     this.hbaseRootDir = CommonFSUtils.getRootDir(conf);
     this.hbaseWALRootDir = CommonFSUtils.getWALRootDir(conf);
     this.oldLogDir = new Path(this.hbaseWALRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
-    String serverName = ServerName
-      .valueOf(currentTest.getMethodName(), 16010, EnvironmentEdgeManager.currentTime()).toString();
+    String serverName =
+      ServerName.valueOf(currentTestName, 16010, EnvironmentEdgeManager.currentTime()).toString();
     this.logDir =
       new Path(this.hbaseWALRootDir, AbstractFSWALProvider.getWALDirectoryName(serverName));
 
@@ -156,7 +150,7 @@ public class TestWALObserver {
     this.wals = new WALFactory(conf, serverName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       wals.shutdown();
@@ -291,8 +285,8 @@ public class TestWALObserver {
         new WALEdit());
       log.sync(txid);
 
-      assertFalse("Empty WALEdit should skip coprocessor evaluation.", cp.isPreWALWriteCalled());
-      assertFalse("Empty WALEdit should skip coprocessor evaluation.", cp.isPostWALWriteCalled());
+      assertFalse(cp.isPreWALWriteCalled(), "Empty WALEdit should skip coprocessor evaluation.");
+      assertFalse(cp.isPostWALWriteCalled(), "Empty WALEdit should skip coprocessor evaluation.");
     } finally {
       log.close();
     }
@@ -305,7 +299,7 @@ public class TestWALObserver {
   public void testWALCoprocessorReplay() throws Exception {
     // WAL replay is handled at HRegion::replayRecoveredEdits(), which is
     // ultimately called by HRegion::initialize()
-    TableName tableName = TableName.valueOf(currentTest.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     TableDescriptor htd = getBasic3FamilyHTableDescriptor(tableName);
     MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
     // final HRegionInfo hri =
@@ -346,10 +340,8 @@ public class TestWALObserver {
         Path p = runWALSplit(newConf);
         LOG.info("WALSplit path == " + p);
         // Make a new wal for new region open.
-        final WALFactory wals2 = new WALFactory(conf,
-          ServerName
-            .valueOf(currentTest.getMethodName() + "2", 16010, EnvironmentEdgeManager.currentTime())
-            .toString());
+        final WALFactory wals2 = new WALFactory(conf, ServerName
+          .valueOf(currentTestName + "2", 16010, EnvironmentEdgeManager.currentTime()).toString());
         WAL wal2 = wals2.getWAL(null);
         HRegion region = HRegion.openHRegion(newConf, FileSystem.get(newConf), hbaseRootDir, hri,
           htd, wal2, TEST_UTIL.getHBaseCluster().getRegionServer(0), null);

@@ -238,7 +238,7 @@ public abstract class BaseLoadBalancer implements LoadBalancer {
       }
     }
     return new BalancerClusterState(regions, clusterState, null, this.regionFinder, rackManager,
-      null);
+      null, null);
   }
 
   private List<ServerName> findIdleServers(List<ServerName> servers) {

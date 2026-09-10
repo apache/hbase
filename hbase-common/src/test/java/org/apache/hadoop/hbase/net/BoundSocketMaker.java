@@ -37,10 +37,6 @@ public final class BoundSocketMaker implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(BoundSocketMaker.class);
   private final ServerSocket socket;
 
-  private BoundSocketMaker() {
-    this.socket = null;
-  }
-
   public BoundSocketMaker(Supplier<Integer> randomPortMaker) {
     this(InetAddress.getLoopbackAddress().getHostName(), randomPortMaker);
   }

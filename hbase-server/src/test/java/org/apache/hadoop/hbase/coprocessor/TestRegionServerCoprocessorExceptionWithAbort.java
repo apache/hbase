@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
@@ -36,10 +36,8 @@ import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,12 +46,9 @@ import org.slf4j.LoggerFactory;
  * that the regionserver will abort with an informative error message describing the set of its
  * loaded coprocessors for crash diagnosis. (HBASE-4014).
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerCoprocessorExceptionWithAbort {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerCoprocessorExceptionWithAbort.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionServerCoprocessorExceptionWithAbort.class);
@@ -132,7 +127,7 @@ public class TestRegionServerCoprocessorExceptionWithAbort {
           fail("InterruptedException while waiting for regionserver " + "zk node to be deleted.");
         }
       }
-      Assert.assertTrue("The region server should have aborted", aborted);
+      assertTrue(aborted, "The region server should have aborted");
       table.close();
     } finally {
       TEST_UTIL.shutdownMiniCluster();

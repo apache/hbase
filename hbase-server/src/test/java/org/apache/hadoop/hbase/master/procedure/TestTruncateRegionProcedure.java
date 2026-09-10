@@ -18,15 +18,14 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import static org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil.insertData;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -41,53 +40,48 @@ import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 
 @SuppressWarnings("OptionalGetWithoutIsPresent")
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTruncateRegionProcedure.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestTruncateRegionProcedure.class);
+  private String testMethodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
-  private static void setupConf(Configuration conf) {
+  protected static void setupConf(Configuration conf) {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
     conf.setLong(HConstants.MAJOR_COMPACTION_PERIOD, 0);
     conf.setInt("hbase.client.sync.wait.timeout.msec", 60000);
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
-    try {
-      UTIL.shutdownMiniCluster();
-    } catch (Exception e) {
-      LOG.warn("failure shutting down cluster", e);
-    }
+    TestTableDDLProcedureBase.cleanupTest();
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
 
@@ -97,7 +91,7 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ProcedureTestingUtility.setKillAndToggleBeforeStoreUpdate(getMasterProcedureExecutor(), false);
     for (TableDescriptor htd : UTIL.getAdmin().listTableDescriptors()) {
@@ -109,7 +103,7 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
   public void testTruncateRegionProcedure() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     // Arrange - Load table and prepare arguments values.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String[] families = new String[] { "f1", "f2" };
     final byte[][] splitKeys =
       new byte[][] { Bytes.toBytes("30"), Bytes.toBytes("60"), Bytes.toBytes("90") };
@@ -137,8 +131,8 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
     assertEquals(8 - 2, UTIL.countRows(tableName));
 
     int rowsAfterDropRegion = UTIL.countRows(tableName);
-    assertTrue("Row counts after truncate region should be less than row count before it",
-      rowsAfterDropRegion < rowsBeforeDropRegion);
+    assertTrue(rowsAfterDropRegion < rowsBeforeDropRegion,
+      "Row counts after truncate region should be less than row count before it");
     assertEquals(rowsBeforeDropRegion, rowsAfterDropRegion + 2);
 
     insertData(UTIL, tableName, 2, 20, families);
@@ -149,7 +143,7 @@ public class TestTruncateRegionProcedure extends TestTableDDLProcedureBase {
   public void testTruncateRegionProcedureErrorWhenSpecifiedReplicaRegionID() throws Exception {
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
     // Arrange - Load table and prepare arguments values.
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String[] families = new String[] { "f1", "f2" };
     createTable(tableName, families, 2);
     insertData(UTIL, tableName, 2, 20, families);

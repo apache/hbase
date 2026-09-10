@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;
@@ -43,12 +43,11 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -71,14 +70,11 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * specified for scan related operations such as openScanner(), next(). If that times out
  * {@link RetriesExhaustedException} will be thrown.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestClientOperationTimeout {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestClientOperationTimeout.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientOperationTimeout.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -97,7 +93,7 @@ public class TestClientOperationTimeout {
   private static Connection CONN;
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // Set RegionServer class and use default values for other options.
     StartTestingClusterOption option =
@@ -115,14 +111,14 @@ public class TestClientOperationTimeout {
     TABLE = CONN.getTable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(TABLE, true);
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() throws Exception {
     DELAY_GET = 0;
     DELAY_SCAN = 0;

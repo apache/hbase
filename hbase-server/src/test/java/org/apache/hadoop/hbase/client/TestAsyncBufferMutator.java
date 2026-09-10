@@ -19,12 +19,12 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,27 +35,22 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.io.netty.util.HashedWheelTimer;
 import org.apache.hbase.thirdparty.io.netty.util.Timeout;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncBufferMutator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncBufferMutator.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -73,7 +68,7 @@ public class TestAsyncBufferMutator {
 
   private static AsyncConnection CONN;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     TEST_UTIL.createTable(TABLE_NAME, CF);
@@ -82,7 +77,7 @@ public class TestAsyncBufferMutator {
     Bytes.random(VALUE);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     CONN.close();
     TEST_UTIL.shutdownMiniCluster();
@@ -258,7 +253,7 @@ public class TestAsyncBufferMutator {
 
   private static final class AsyncBufferMutatorForTest extends AsyncBufferedMutatorImpl {
 
-    private int flushCount;
+    private int drainCount;
 
     AsyncBufferMutatorForTest(HashedWheelTimer periodicalFlushTimer, AsyncTable<?> table,
       long writeBufferSize, long periodicFlushTimeoutNs, int maxKeyValueSize, int maxMutation) {
@@ -267,9 +262,9 @@ public class TestAsyncBufferMutator {
     }
 
     @Override
-    protected void internalFlush() {
-      flushCount++;
-      super.internalFlush();
+    protected Batch drainBatch() {
+      drainCount++;
+      return super.drainBatch();
     }
   }
 
@@ -284,16 +279,19 @@ public class TestAsyncBufferMutator {
       Timeout task = mutator.periodicFlushTask;
       // we should have scheduled a periodic flush task
       assertNotNull(task);
-      synchronized (mutator) {
-        // synchronized on mutator to prevent periodic flush to be executed
+      // get the lock toprevent periodic flush to be executed
+      mutator.lock.lock();
+      try {
         Thread.sleep(500);
         // the timeout should be issued
         assertTrue(task.isExpired());
-        // but no flush is issued as we hold the lock
-        assertEquals(0, mutator.flushCount);
+        // but no drain is issued as we hold the lock
+        assertEquals(0, mutator.drainCount);
         assertFalse(future.isDone());
-        // manually flush, then release the lock
+        // manually flush and drain, then release the lock
         mutator.flush();
+      } finally {
+        mutator.lock.unlock();
       }
       // this is a bit deep into the implementation in netty but anyway let's add a check here to
       // confirm that an issued timeout can not be canceled by netty framework.
@@ -303,7 +301,7 @@ public class TestAsyncBufferMutator {
       AsyncTable<?> table = CONN.getTable(TABLE_NAME);
       assertArrayEquals(VALUE, table.get(new Get(Bytes.toBytes(0))).get().getValue(CF, CQ));
       // only the manual flush, the periodic flush should have been canceled by us
-      assertEquals(1, mutator.flushCount);
+      assertEquals(1, mutator.drainCount);
     }
   }
 }

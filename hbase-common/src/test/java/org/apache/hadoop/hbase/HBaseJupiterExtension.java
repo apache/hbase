@@ -178,7 +178,7 @@ public class HBaseJupiterExtension implements InvocationInterceptor, BeforeAllCa
 
   private void printThreadDump() {
     LOG.info("====> TEST TIMED OUT. PRINTING THREAD DUMP. <====");
-    LOG.info(TimedOutTestsListener.buildThreadDiagnosticString());
+    LOG.info(TimedOutTestsThreadDumpHelper.buildThreadDiagnosticString());
   }
 
   @Override

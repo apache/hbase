@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.Map;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -28,16 +31,13 @@ import org.apache.hadoop.hbase.replication.regionserver.ReplicationStatus;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationMetricsforUI extends TestReplicationBase {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationMetricsforUI.class);
+
   private static final byte[] qualName = Bytes.toBytes("q");
 
   @Test
@@ -54,13 +54,13 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
       Thread.sleep(5000);
       HRegionServer rs = UTIL1.getRSForFirstRegionInTable(tableName);
       Map<String, ReplicationStatus> metrics = rs.getWalGroupsReplicationStatus();
-      Assert.assertEquals("metric size ", 1, metrics.size());
+      assertEquals(1, metrics.size(), "metric size");
       long lastPosition = 0;
       for (Map.Entry<String, ReplicationStatus> metric : metrics.entrySet()) {
-        Assert.assertEquals("peerId", PEER_ID2, metric.getValue().getPeerId());
-        Assert.assertEquals("queue length", 1, metric.getValue().getQueueSize());
-        Assert.assertEquals("replication delay", 0, metric.getValue().getReplicationDelay());
-        Assert.assertTrue("current position >= 0", metric.getValue().getCurrentPosition() >= 0);
+        assertEquals(PEER_ID2, metric.getValue().getPeerId(), "peerId");
+        assertEquals(1, metric.getValue().getQueueSize(), "queue length");
+        assertEquals(0, metric.getValue().getReplicationDelay(), "replication delay");
+        assertTrue(metric.getValue().getCurrentPosition() >= 0, "current position >= 0");
         lastPosition = metric.getValue().getCurrentPosition();
       }
       for (int i = 0; i < NB_ROWS_IN_BATCH; i++) {
@@ -78,11 +78,11 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
       Path lastPath = null;
       for (Map.Entry<String, ReplicationStatus> metric : metrics.entrySet()) {
         lastPath = metric.getValue().getCurrentPath();
-        Assert.assertEquals("peerId", PEER_ID2, metric.getValue().getPeerId());
-        Assert.assertTrue("age of Last Shipped Op should be > 0 ",
-          metric.getValue().getAgeOfLastShippedOp() > 0);
-        Assert.assertTrue("current position should > last position",
-          metric.getValue().getCurrentPosition() - lastPosition > 0);
+        assertEquals(PEER_ID2, metric.getValue().getPeerId(), "peerId");
+        assertTrue(metric.getValue().getAgeOfLastShippedOp() > 0,
+          "age of Last Shipped Op should be > 0");
+        assertTrue(metric.getValue().getCurrentPosition() - lastPosition > 0,
+          "current position should > last position");
         lastPosition = metric.getValue().getCurrentPosition();
       }
 
@@ -98,10 +98,10 @@ public class TestReplicationMetricsforUI extends TestReplicationBase {
       Thread.sleep(5000);
       metrics = rs.getWalGroupsReplicationStatus();
       for (Map.Entry<String, ReplicationStatus> metric : metrics.entrySet()) {
-        Assert.assertEquals("replication delay", 0, metric.getValue().getReplicationDelay());
-        Assert.assertTrue("current position should < last position",
-          metric.getValue().getCurrentPosition() < lastPosition);
-        Assert.assertNotEquals("current path", lastPath, metric.getValue().getCurrentPath());
+        assertEquals(0, metric.getValue().getReplicationDelay(), "replication delay");
+        assertTrue(metric.getValue().getCurrentPosition() < lastPosition,
+          "current position should < last position");
+        assertNotEquals(lastPath, metric.getValue().getCurrentPath(), "current path");
       }
     }
   }

@@ -19,10 +19,15 @@ package org.apache.hadoop.hbase.util;
 
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestByteBufferUtils extends ByteBufferUtilsTestBase {
 
+  @BeforeAll
+  public static void setUpBeforeAll() {
+    initialize();
+  }
 }

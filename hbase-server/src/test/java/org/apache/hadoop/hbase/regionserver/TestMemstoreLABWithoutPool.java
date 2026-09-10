@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.lang.management.ManagementFactory;
 import java.nio.ByteBuffer;
@@ -29,25 +29,20 @@ import java.util.concurrent.ThreadLocalRandom;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Ignore // See HBASE-19742 for issue on reenabling.
-@Category({ RegionServerTests.class, SmallTests.class })
+@Disabled // See HBASE-19742 for issue on reenabling.
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMemstoreLABWithoutPool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemstoreLABWithoutPool.class);
 
   private final static Configuration conf = new Configuration();
 
@@ -55,7 +50,7 @@ public class TestMemstoreLABWithoutPool {
   private static final byte[] cf = Bytes.toBytes("f");
   private static final byte[] q = Bytes.toBytes("q");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     long globalMemStoreLimit =
       (long) (ManagementFactory.getMemoryMXBean().getHeapMemoryUsage().getMax() * 0.8);
@@ -89,12 +84,12 @@ public class TestMemstoreLABWithoutPool {
         expectedOff = Bytes.SIZEOF_INT;
         lastBuffer = newKv.getBuffer();
         int chunkId = newKv.getBuffer().getInt(0);
-        assertTrue("chunkid should be different", chunkId != lastChunkId);
+        assertTrue(chunkId != lastChunkId, "chunkid should be different");
         lastChunkId = chunkId;
       }
       assertEquals(expectedOff, newKv.getOffset());
-      assertTrue("Allocation overruns buffer",
-        newKv.getOffset() + size <= newKv.getBuffer().capacity());
+      assertTrue(newKv.getOffset() + size <= newKv.getBuffer().capacity(),
+        "Allocation overruns buffer");
       expectedOff += size;
     }
   }
@@ -148,8 +143,8 @@ public class TestMemstoreLABWithoutPool {
       mslab[i].close();
     }
     // all of the chunkIds would have been returned back
-    assertTrue("All the chunks must have been cleared",
-      ChunkCreator.instance.numberOfMappedChunks() == 0);
+    assertTrue(ChunkCreator.instance.numberOfMappedChunks() == 0,
+      "All the chunks must have been cleared");
   }
 
   private Thread getChunkQueueTestThread(final MemStoreLABImpl mslab, String threadName,

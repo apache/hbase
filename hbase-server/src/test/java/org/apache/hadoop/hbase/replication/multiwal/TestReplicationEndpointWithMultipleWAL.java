@@ -17,27 +17,22 @@
  */
 package org.apache.hadoop.hbase.replication.multiwal;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.replication.TestReplicationEndpoint;
+import org.apache.hadoop.hbase.replication.ReplicationEndpointTestBase;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.RegionGroupingProvider;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ReplicationTests.class, MediumTests.class })
-public class TestReplicationEndpointWithMultipleWAL extends TestReplicationEndpoint {
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
+public class TestReplicationEndpointWithMultipleWAL extends ReplicationEndpointTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationEndpointWithMultipleWAL.class);
-
-  @BeforeClass
-  public static void setUpBeforeClass() throws Exception {
+  @BeforeAll
+  public static void setUpBeforeAll() throws Exception {
     CONF1.set(WALFactory.WAL_PROVIDER, "multiwal");
     CONF1.set(RegionGroupingProvider.DELEGATE_PROVIDER, "filesystem");
-    TestReplicationEndpoint.setUpBeforeClass();
+    ReplicationEndpointTestBase.setUpBeforeClass();
   }
 }

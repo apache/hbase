@@ -75,6 +75,11 @@ public final class BackupRequest {
       return this;
     }
 
+    public Builder withContinuousBackupEnabled(boolean continuousBackupEnabled) {
+      request.setContinuousBackupEnabled(continuousBackupEnabled);
+      return this;
+    }
+
     public BackupRequest build() {
       return request;
     }
@@ -89,6 +94,7 @@ public final class BackupRequest {
   private boolean noChecksumVerify = false;
   private String backupSetName;
   private String yarnPoolName;
+  private boolean continuousBackupEnabled;
 
   private BackupRequest() {
   }
@@ -162,5 +168,13 @@ public final class BackupRequest {
 
   public void setYarnPoolName(String yarnPoolName) {
     this.yarnPoolName = yarnPoolName;
+  }
+
+  private void setContinuousBackupEnabled(boolean continuousBackupEnabled) {
+    this.continuousBackupEnabled = continuousBackupEnabled;
+  }
+
+  public boolean isContinuousBackupEnabled() {
+    return this.continuousBackupEnabled;
   }
 }

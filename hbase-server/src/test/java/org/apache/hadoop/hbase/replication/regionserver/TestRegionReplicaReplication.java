@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -42,13 +41,11 @@ import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.testclassification.FlakeyTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,12 +55,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.Uninterrupt
  * Tests region replication by setting up region replicas and verifying async wal replication
  * replays the edits to the secondary region in various scenarios.
  */
-@Category({ FlakeyTests.class, LargeTests.class })
+@Tag(FlakeyTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionReplicaReplication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicaReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicaReplication.class);
 
@@ -71,10 +65,9 @@ public class TestRegionReplicaReplication {
 
   private static final HBaseTestingUtil HTU = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
+  private String testName;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HTU.getConfiguration();
     conf.setFloat("hbase.regionserver.logroll.multiplier", 0.0003f);
@@ -93,7 +86,7 @@ public class TestRegionReplicaReplication {
     HTU.startMiniCluster(NB_SERVERS);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HTU.shutdownMiniCluster();
   }
@@ -196,9 +189,10 @@ public class TestRegionReplicaReplication {
   }
 
   @Test
-  public void testRegionReplicaWithoutMemstoreReplication() throws Exception {
+  public void testRegionReplicaWithoutMemstoreReplication(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     int regionReplication = 3;
-    TableDescriptor htd = HTU.createModifyableTableDescriptor(name.getMethodName())
+    TableDescriptor htd = HTU.createModifyableTableDescriptor(testName)
       .setRegionReplication(regionReplication).setRegionMemStoreReplication(false).build();
     createOrEnableTableWithRetries(htd, true);
     final TableName tableName = htd.getTableName();
@@ -226,14 +220,16 @@ public class TestRegionReplicaReplication {
   }
 
   @Test
-  public void testRegionReplicaReplicationForFlushAndCompaction() throws Exception {
+  public void testRegionReplicaReplicationForFlushAndCompaction(TestInfo testInfo)
+    throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     // Tests a table with region replication 3. Writes some data, and causes flushes and
     // compactions. Verifies that the data is readable from the replicas. Note that this
     // does not test whether the replicas actually pick up flushed files and apply compaction
     // to their stores
     int regionReplication = 3;
-    TableDescriptor htd = HTU.createModifyableTableDescriptor(name.getMethodName())
-      .setRegionReplication(regionReplication).build();
+    TableDescriptor htd =
+      HTU.createModifyableTableDescriptor(testName).setRegionReplication(regionReplication).build();
     createOrEnableTableWithRetries(htd, true);
     final TableName tableName = htd.getTableName();
 

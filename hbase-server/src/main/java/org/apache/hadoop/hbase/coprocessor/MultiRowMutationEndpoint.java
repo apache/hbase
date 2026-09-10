@@ -102,7 +102,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MultiRowMutationProtos.
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 @InterfaceStability.Evolving
 public class MultiRowMutationEndpoint extends MultiRowMutationService implements RegionCoprocessor {
-  private static final Logger LOGGER = LoggerFactory.getLogger(HRegion.class);
+  private static final Logger LOGGER = LoggerFactory.getLogger(MultiRowMutationEndpoint.class);
 
   private RegionCoprocessorEnvironment env;
 

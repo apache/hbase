@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
@@ -44,34 +43,24 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * A test case to verify that region reports are expired when they are not sent.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestQuotaObserverChoreRegionReports {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaObserverChoreRegionReports.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestQuotaObserverChoreRegionReports.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName testName = new TestName();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Increase the frequency of some of the chores for responsiveness of the test
@@ -79,7 +68,7 @@ public class TestQuotaObserverChoreRegionReports {
     conf.setInt(QuotaObserverChore.REGION_REPORT_RETENTION_DURATION_KEY, 1000);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -221,7 +210,7 @@ public class TestQuotaObserverChoreRegionReports {
     QuotaSnapshotStore<TableName> tableStore =
       master.getQuotaObserverChore().getTableSnapshotStore();
     SpaceQuotaSnapshot snapshot = tableStore.getCurrentState(tn);
-    assertFalse("Quota should not be in violation", snapshot.getQuotaStatus().isInViolation());
+    assertFalse(snapshot.getQuotaStatus().isInViolation(), "Quota should not be in violation");
   }
 
   private SpaceQuotaSnapshot getSnapshotForTable(Connection conn, TableName tn) throws IOException {

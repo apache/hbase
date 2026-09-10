@@ -20,8 +20,8 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.START_KEY_BYTES;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam1;
 import static org.apache.hadoop.hbase.HBaseTestingUtil.fam2;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -29,7 +29,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HTestConst;
@@ -48,27 +47,21 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test minor compactions
  */
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMinorCompaction {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMinorCompaction.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String name;
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static Configuration CONF = UTIL.getConfiguration();
 
@@ -94,7 +87,7 @@ public class TestMinorCompaction {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     // Set cache flush size to 1MB
     CONF.setInt(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 1024 * 1024);
@@ -114,15 +107,16 @@ public class TestMinorCompaction {
     COL2 = Bytes.toBytes("column2");
   }
 
-  @Before
-  public void setUp() throws Exception {
-    this.htd = UTIL.createTableDescriptor(TableName.valueOf(name.getMethodName()),
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
+    this.htd = UTIL.createTableDescriptor(TableName.valueOf(name),
       ColumnFamilyDescriptorBuilder.DEFAULT_MIN_VERSIONS, 3, HConstants.FOREVER,
       ColumnFamilyDescriptorBuilder.DEFAULT_KEEP_DELETED);
     this.r = UTIL.createLocalHRegion(htd, null, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     WAL wal = ((HRegion) r).getWAL();
     ((HRegion) r).close();
@@ -240,15 +234,15 @@ public class TestMinorCompaction {
     // do a compaction
     HStore store2 = r.getStore(fam2);
     int numFiles1 = store2.getStorefiles().size();
-    assertTrue("Was expecting to see 4 store files", numFiles1 > COMPACTION_THRESHOLD); // > 3
+    assertTrue(numFiles1 > COMPACTION_THRESHOLD, "Was expecting to see 4 store files"); // > 3
     Optional<CompactionContext> compaction = store2.requestCompaction();
     assertTrue(compaction.isPresent());
     store2.compact(compaction.get(), NoLimitThroughputController.INSTANCE, null); // = 3
     int numFiles2 = store2.getStorefiles().size();
     // Check that we did compact
-    assertTrue("Number of store files should go down", numFiles1 > numFiles2);
+    assertTrue(numFiles1 > numFiles2, "Number of store files should go down");
     // Check that it was a minor compaction.
-    assertTrue("Was not supposed to be a major compaction", numFiles2 > 1);
+    assertTrue(numFiles2 > 1, "Was not supposed to be a major compaction");
 
     // Make sure that we have only deleted family2 from secondRowBytes
     result = r.get(new Get(SECOND_ROW_BYTES).addColumn(fam2, COL2).readVersions(100));

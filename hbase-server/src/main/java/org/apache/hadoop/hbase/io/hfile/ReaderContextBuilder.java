@@ -26,6 +26,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
+import org.apache.hadoop.hbase.keymeta.ManagedKeyDataCache;
+import org.apache.hadoop.hbase.keymeta.SystemKeyCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -39,6 +41,8 @@ public class ReaderContextBuilder {
   private HFileSystem hfs;
   private boolean primaryReplicaReader = true;
   private ReaderType type = ReaderType.PREAD;
+  private SystemKeyCache systemKeyCache;
+  private ManagedKeyDataCache managedKeyDataCache;
 
   public ReaderContextBuilder() {
   }
@@ -53,6 +57,8 @@ public class ReaderContextBuilder {
     this.fileSize = readerContext.getFileSize();
     this.hfs = readerContext.getFileSystem();
     this.type = readerContext.getReaderType();
+    this.systemKeyCache = readerContext.getSystemKeyCache();
+    this.managedKeyDataCache = readerContext.getManagedKeyDataCache();
   }
 
   public ReaderContextBuilder withFilePath(Path filePath) {
@@ -101,9 +107,20 @@ public class ReaderContextBuilder {
     return this;
   }
 
+  public ReaderContextBuilder withManagedKeyDataCache(ManagedKeyDataCache managedKeyDataCache) {
+    this.managedKeyDataCache = managedKeyDataCache;
+    return this;
+  }
+
+  public ReaderContextBuilder withSystemKeyCache(SystemKeyCache systemKeyCache) {
+    this.systemKeyCache = systemKeyCache;
+    return this;
+  }
+
   public ReaderContext build() {
     validateFields();
-    return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type);
+    return new ReaderContext(filePath, fsdis, fileSize, hfs, primaryReplicaReader, type,
+      systemKeyCache, managedKeyDataCache);
   }
 
   private void validateFields() throws IllegalArgumentException {

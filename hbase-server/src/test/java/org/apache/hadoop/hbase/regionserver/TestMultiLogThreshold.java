@@ -17,34 +17,31 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
 import java.util.concurrent.BlockingDeque;
 import java.util.concurrent.LinkedBlockingDeque;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -62,13 +59,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
  * Tests logging of large batch commands via Multi. Tests are fast, but uses a mini-cluster (to test
  * via "Multi" commands) so classified as MediumTests
  */
-@RunWith(Parameterized.class)
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: rejectLargeBatchOp={0}")
 public class TestMultiLogThreshold {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiLogThreshold.class);
 
   private static final TableName NAME = TableName.valueOf("tableName");
   private static final byte[] TEST_FAM = Bytes.toBytes("fam");
@@ -81,12 +74,14 @@ public class TestMultiLogThreshold {
 
   private org.apache.logging.log4j.core.Appender appender;
 
-  @Parameterized.Parameter
-  public static boolean rejectLargeBatchOp;
+  private final boolean rejectLargeBatchOp;
 
-  @Parameterized.Parameters
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { false }, new Object[] { true });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(false), Arguments.of(true));
+  }
+
+  public TestMultiLogThreshold(boolean rejectLargeBatchOp) {
+    this.rejectLargeBatchOp = rejectLargeBatchOp;
   }
 
   private final class LevelAndMessage {
@@ -104,7 +99,7 @@ public class TestMultiLogThreshold {
   // log4j2 will reuse the LogEvent so we need to copy the level and message out.
   private BlockingDeque<LevelAndMessage> logs = new LinkedBlockingDeque<>();
 
-  @Before
+  @BeforeEach
   public void setupTest() throws Exception {
     util = new HBaseTestingUtil();
     conf = util.getConfiguration();
@@ -132,7 +127,7 @@ public class TestMultiLogThreshold {
       .getLogger(RSRpcServices.class)).addAppender(appender);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     ((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
       .getLogger(RSRpcServices.class)).removeAppender(appender);
@@ -193,7 +188,7 @@ public class TestMultiLogThreshold {
     assertEquals(expected, actual);
   }
 
-  @Test
+  @TestTemplate
   public void testMultiLogThresholdRegionActions() throws ServiceException, IOException {
     try {
       sendMultiRequest(threshold + 1, ActionType.REGION_ACTIONS);

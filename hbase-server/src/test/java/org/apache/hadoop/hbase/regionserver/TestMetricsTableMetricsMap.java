@@ -17,24 +17,19 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMetricsTableMetricsMap {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsTableMetricsMap.class);
 
   private String tableName = "testTableMetricsMap";
 
@@ -44,7 +39,7 @@ public class TestMetricsTableMetricsMap {
   private MetricsRegionServer rsm;
   private MetricsTableAggregateSourceImpl agg;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     Configuration conf = new Configuration();
 
@@ -68,7 +63,7 @@ public class TestMetricsTableMetricsMap {
     rsm.updateCompaction(tableName, true, 100, 200, 300, 400, 500);
 
     int metricsMapSize = agg.getMetricsRegistry().getMetricsMap().size();
-    assertTrue("table metrics added then metricsMapSize should larger than 0", metricsMapSize > 0);
+    assertTrue(metricsMapSize > 0, "table metrics added then metricsMapSize should larger than 0");
 
     // just for metrics update
     Thread.sleep(1000);
@@ -76,6 +71,6 @@ public class TestMetricsTableMetricsMap {
     agg.deleteTableSource(tableName);
 
     metricsMapSize = agg.getMetricsRegistry().getMetricsMap().size();
-    assertEquals("table metrics all deleted then metricsSize should be 0", 0, metricsMapSize);
+    assertEquals(0, metricsMapSize, "table metrics all deleted then metricsSize should be 0");
   }
 }

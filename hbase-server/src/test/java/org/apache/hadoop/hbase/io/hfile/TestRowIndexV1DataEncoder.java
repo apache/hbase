@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
@@ -26,23 +28,18 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CellComparatorImpl;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ IOTests.class, MediumTests.class })
+@Tag(IOTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRowIndexV1DataEncoder {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRowIndexV1DataEncoder.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -50,7 +47,7 @@ public class TestRowIndexV1DataEncoder {
   private FileSystem fs;
   private DataBlockEncoding dataBlockEncoding;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
@@ -89,7 +86,7 @@ public class TestRowIndexV1DataEncoder {
     // Without the patch it would have produced 244 blocks (each block of 1236 bytes)
     // Earlier this would create blocks ~20% greater than the block size of 1024 bytes
     // After this patch actual block size is ~2% greater than the block size of 1024 bytes
-    Assert.assertEquals(278, trailer.getDataIndexCount());
+    assertEquals(278, trailer.getDataIndexCount());
   }
 
   private void writeKeyValues(int entryCount, HFile.Writer writer, List<KeyValue> keyValues)

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -25,7 +25,6 @@ import java.util.Collection;
 import java.util.HashMap;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -38,20 +37,16 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RegionSplitter;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionReplicasAreDistributed {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionReplicasAreDistributed.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionReplicasAreDistributed.class);
 
@@ -65,7 +60,7 @@ public class TestRegionReplicasAreDistributed {
   Map<ServerName, Collection<RegionInfo>> serverVsOnlineRegions3;
   Map<ServerName, Collection<RegionInfo>> serverVsOnlineRegions4;
 
-  @BeforeClass
+  @BeforeAll
   public static void before() throws Exception {
     HTU.getConfiguration().setInt("hbase.master.wait.on.regionservers.mintostart", 3);
 
@@ -94,7 +89,7 @@ public class TestRegionReplicasAreDistributed {
     return split.split(numRegions);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     HRegionServer.TEST_SKIP_REPORTING_TRANSITION = false;
     table.close();
@@ -124,7 +119,7 @@ public class TestRegionReplicasAreDistributed {
       HTU.getAdmin().enableTable(table.getName());
       LOG.info("Enabled the table " + table.getName());
       boolean res = checkAndAssertRegionDistribution(true);
-      assertTrue("Region retainment not done ", res);
+      assertTrue(res, "Region retainment not done ");
     } finally {
       HTU.getAdmin().disableTable(table.getName());
       HTU.getAdmin().deleteTable(table.getName());

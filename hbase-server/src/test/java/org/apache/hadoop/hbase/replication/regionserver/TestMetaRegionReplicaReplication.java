@@ -18,21 +18,22 @@
 package org.apache.hadoop.hbase.replication.regionserver;
 
 import static org.apache.hadoop.hbase.client.RegionLocator.LOCATOR_META_REPLICAS_MODE;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.concurrent.Callable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -52,15 +53,14 @@ import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,23 +69,21 @@ import org.slf4j.LoggerFactory;
  * replication replays the edits to the secondary region in various scenarios.
  * @see TestRegionReplicaReplication
  */
-@Category({ LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMetaRegionReplicaReplication {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetaRegionReplicaReplication.class);
   private static final Logger LOG = LoggerFactory.getLogger(TestMetaRegionReplicaReplication.class);
   private static final int NB_SERVERS = 4;
   private final HBaseTestingUtil HTU = new HBaseTestingUtil();
   private int numOfMetaReplica = NB_SERVERS - 1;
   private static byte[] VALUE = Bytes.toBytes("value");
 
-  @Rule
-  public TestName name = new TestName();
+  private String testName;
 
-  @Before
-  public void before() throws Exception {
+  @BeforeEach
+  public void before(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     Configuration conf = HTU.getConfiguration();
     conf.setInt("zookeeper.recovery.retry", 1);
     conf.setInt("zookeeper.recovery.retry.intervalmill", 10);
@@ -104,7 +102,7 @@ public class TestMetaRegionReplicaReplication {
         >= numOfMetaReplica);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     HTU.shutdownMiniCluster();
   }
@@ -115,14 +113,14 @@ public class TestMetaRegionReplicaReplication {
    */
   @Test
   public void testHBaseMetaReplicates() throws Exception {
-    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_0"),
-      HConstants.CATALOG_FAMILY,
-      Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
+    try (
+      Table table = HTU.createTable(TableName.valueOf(testName + "_0"), HConstants.CATALOG_FAMILY,
+        Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
     }
-    try (Table table = HTU.createTable(TableName.valueOf(this.name.getMethodName() + "_1"),
-      HConstants.CATALOG_FAMILY,
-      Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
+    try (
+      Table table = HTU.createTable(TableName.valueOf(testName + "_1"), HConstants.CATALOG_FAMILY,
+        Arrays.copyOfRange(HBaseTestingUtil.KEYS, 1, HBaseTestingUtil.KEYS.length))) {
       verifyReplication(TableName.META_TABLE_NAME, numOfMetaReplica, getMetaCells(table.getName()));
       // Try delete.
       HTU.deleteTableIfAny(table.getName());
@@ -376,17 +374,10 @@ public class TestMetaRegionReplicaReplication {
     }
   }
 
-  private void primaryNoChangeReplicaIncrease(final long[] before, final long[] after) {
-    assertEquals(before[RegionInfo.DEFAULT_REPLICA_ID], after[RegionInfo.DEFAULT_REPLICA_ID]);
-
-    for (int i = 1; i < after.length; i++) {
-      assertTrue(after[i] > before[i]);
-    }
-  }
-
   private void primaryIncreaseReplicaNoChange(final long[] before, final long[] after) {
     // There are read requests increase for primary meta replica.
-    assertTrue(after[RegionInfo.DEFAULT_REPLICA_ID] > before[RegionInfo.DEFAULT_REPLICA_ID]);
+    assertThat(after[RegionInfo.DEFAULT_REPLICA_ID],
+      greaterThan(before[RegionInfo.DEFAULT_REPLICA_ID]));
 
     // No change for replica regions
     for (int i = 1; i < after.length; i++) {
@@ -397,7 +388,7 @@ public class TestMetaRegionReplicaReplication {
   private void primaryIncreaseReplicaIncrease(final long[] before, final long[] after) {
     // There are read requests increase for all meta replica regions,
     for (int i = 0; i < after.length; i++) {
-      assertTrue(after[i] > before[i]);
+      assertThat(after[i], greaterThan(before[i]));
     }
   }
 
@@ -410,9 +401,25 @@ public class TestMetaRegionReplicaReplication {
     }
   }
 
+  private void runAtMostNTimes(int times, Callable<?> action, Runnable assertion) throws Exception {
+    for (int i = 0; i < times - 1; i++) {
+      action.call();
+      try {
+        assertion.run();
+        // return if the assertion passes, otherwise try again
+        return;
+      } catch (AssertionError e) {
+        LOG.warn("Assertion failed, times = {}, try again", i, e);
+      }
+    }
+    // try last time
+    action.call();
+    assertion.run();
+  }
+
   @Test
   public void testHBaseMetaReplicaGets() throws Exception {
-    TableName tn = TableName.valueOf(this.name.getMethodName());
+    TableName tn = TableName.valueOf(testName);
     final Region[] metaRegions = getAllRegions(TableName.META_TABLE_NAME, numOfMetaReplica);
     long[] readReqsForMetaReplicas = new long[numOfMetaReplica];
     long[] readReqsForMetaReplicasAfterGet = new long[numOfMetaReplica];
@@ -442,38 +449,43 @@ public class TestMetaRegionReplicaReplication {
           }
         }
       }
+    }
 
-      getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicas);
+    getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicas);
 
-      Configuration c = new Configuration(HTU.getConfiguration());
-      c.setBoolean(HConstants.USE_META_REPLICAS, true);
-      c.set(LOCATOR_META_REPLICAS_MODE, "LoadBalance");
-      Connection connection = ConnectionFactory.createConnection(c);
+    Configuration c = new Configuration(HTU.getConfiguration());
+    c.setBoolean(HConstants.USE_META_REPLICAS, true);
+    c.set(LOCATOR_META_REPLICAS_MODE, "LoadBalance");
+    try (Connection connection = ConnectionFactory.createConnection(c);
       Table tableForGet = connection.getTable(tn);
+      RegionLocator locator = tableForGet.getRegionLocator()) {
       byte[][] getRows = new byte[HBaseTestingUtil.KEYS.length][];
-
-      int i = 0;
-      for (byte[] key : HBaseTestingUtil.KEYS) {
-        getRows[i] = key;
-        i++;
+      for (int i = 1; i < HBaseTestingUtil.KEYS.length; i++) {
+        getRows[i] = HBaseTestingUtil.KEYS[i];
       }
       getRows[0] = Bytes.toBytes("aaa");
-      doNGets(tableForGet, getRows);
-
-      getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterGet);
 
       // There are more reads against all meta replica regions, including the primary region.
-      primaryIncreaseReplicaIncrease(readReqsForMetaReplicas, readReqsForMetaReplicasAfterGet);
+      // Since in load balance mode, we will randomly select region replicas, it is possible that we
+      // missed read some replicas, so here we run it at most 3 times to make it more stable
+      runAtMostNTimes(3, () -> {
+        locator.clearRegionLocationCache();
+        doNGets(tableForGet, getRows);
+        getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterGet);
+        return null;
+      }, () -> primaryIncreaseReplicaIncrease(readReqsForMetaReplicas,
+        readReqsForMetaReplicasAfterGet));
 
-      RegionLocator locator = tableForGet.getRegionLocator();
-
-      for (int j = 0; j < numOfMetaReplica * 3; j++) {
-        locator.getAllRegionLocations();
-      }
-
-      getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterGetAllLocations);
-      primaryIncreaseReplicaIncrease(readReqsForMetaReplicasAfterGet,
-        readReqsForMetaReplicasAfterGetAllLocations);
+      // Same as above, we need to run it multiple times to make it stable. And numOfMetaReplicas is
+      // much less than HBaseTestingUtil.KEYS.length, so here we need to run more times.
+      runAtMostNTimes(30, () -> {
+        for (int i = 0; i < numOfMetaReplica; i++) {
+          locator.getAllRegionLocations();
+        }
+        getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterGetAllLocations);
+        return null;
+      }, () -> primaryIncreaseReplicaIncrease(readReqsForMetaReplicasAfterGet,
+        readReqsForMetaReplicasAfterGetAllLocations));
 
       // move one of regions so it meta cache may be invalid.
       HTU.moveRegionAndWait(userRegion.getRegionInfo(), destRs.getServerName());
@@ -489,10 +501,8 @@ public class TestMetaRegionReplicaReplication {
       // Move region again.
       HTU.moveRegionAndWait(userRegion.getRegionInfo(), srcRs.getServerName());
 
-      // Wait until moveRegion cache timeout.
-      while (destRs.getMovedRegion(userRegion.getRegionInfo().getEncodedName()) != null) {
-        Thread.sleep(1000);
-      }
+      // Remove it from the move region cache
+      destRs.removeFromMovedRegions(userRegion.getRegionInfo().getEncodedName());
 
       getMetaReplicaReadRequests(metaRegions, readReqsForMetaReplicasAfterSecondMove);
 

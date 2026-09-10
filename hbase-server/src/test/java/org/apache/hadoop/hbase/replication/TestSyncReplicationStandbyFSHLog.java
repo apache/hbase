@@ -17,25 +17,20 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSyncReplicationStandbyFSHLog extends SyncReplicationStandbyTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSyncReplicationStandbyFSHLog.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL1.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
     UTIL2.getConfiguration().set(WALFactory.WAL_PROVIDER, "filesystem");
-    SyncReplicationTestBase.setUp();
+    startClusters();
   }
 }

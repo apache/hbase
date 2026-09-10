@@ -17,14 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Optional;
 import java.util.TimerTask;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
@@ -42,20 +41,16 @@ import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionServerAbortTimeout {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerAbortTimeout.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerAbortTimeout.class);
 
@@ -73,7 +68,7 @@ public class TestRegionServerAbortTimeout {
 
   private static volatile boolean abortTimeoutTaskScheduled = false;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     // Will schedule a abort timeout task after SLEEP_TIME_WHEN_CLOSE_REGION ms
@@ -88,7 +83,7 @@ public class TestRegionServerAbortTimeout {
     UTIL.getAdmin().createTable(td, Bytes.toBytes("0"), Bytes.toBytes("9"), REGIONS_NUM);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -116,7 +111,7 @@ public class TestRegionServerAbortTimeout {
     long timeout = REGIONS_NUM * SLEEP_TIME_WHEN_CLOSE_REGION * 10;
     while (EnvironmentEdgeManager.currentTime() - startTime < timeout) {
       if (UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 1) {
-        assertTrue("Abort timer task should be scheduled", abortTimeoutTaskScheduled);
+        assertTrue(abortTimeoutTaskScheduled, "Abort timer task should be scheduled");
         return;
       }
       Threads.sleep(SLEEP_TIME_WHEN_CLOSE_REGION);

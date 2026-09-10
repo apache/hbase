@@ -17,18 +17,19 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.NavigableMap;
 import java.util.TreeMap;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -53,44 +54,37 @@ import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALEditInternalHelper;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
-
-@RunWith(Parameterized.class)
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: serialPeer={0}")
 public class TestReplicationSmallTests extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationSmallTests.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestReplicationSmallTests.class);
   private static final String PEER_ID = "2";
 
-  @Parameter
-  public boolean serialPeer;
+  private boolean serialPeer;
+
+  public TestReplicationSmallTests(boolean serialPeer) {
+    this.serialPeer = serialPeer;
+  }
 
   @Override
   protected boolean isSerialPeer() {
     return serialPeer;
   }
 
-  @Parameters(name = "{index}: serialPeer={0}")
-  public static List<Boolean> parameters() {
-    return ImmutableList.of(true, false);
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(true), Arguments.of(false));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cleanUp();
   }
@@ -98,7 +92,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   /**
    * Verify that version and column delete marker types are replicated correctly.
    */
-  @Test
+  @TestTemplate
   public void testDeleteTypes() throws Exception {
     LOG.info("testDeleteTypes");
     final byte[] v1 = Bytes.toBytes("v1");
@@ -184,7 +178,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   /**
    * Add a row, check it's replicated, delete it, check's gone
    */
-  @Test
+  @TestTemplate
   public void testSimplePutDelete() throws Exception {
     LOG.info("testSimplePutDelete");
     runSimplePutDeleteTest();
@@ -193,7 +187,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   /**
    * Try a small batch upload using the write buffer, check it's replicated
    */
-  @Test
+  @TestTemplate
   public void testSmallBatch() throws Exception {
     LOG.info("testSmallBatch");
     runSmallBatchTest();
@@ -203,7 +197,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    * Test disable/enable replication, trying to insert, make sure nothing's replicated, enable it,
    * the insert should be replicated
    */
-  @Test
+  @TestTemplate
   public void testDisableEnable() throws Exception {
     // Test disabling replication
     hbaseAdmin.disableReplicationPeer(PEER_ID);
@@ -243,7 +237,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   /**
    * Removes and re-add a peer cluster
    */
-  @Test
+  @TestTemplate
   public void testAddAndRemoveClusters() throws Exception {
     LOG.info("testAddAndRemoveClusters");
     hbaseAdmin.removeReplicationPeer(PEER_ID);
@@ -296,7 +290,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    * Do a more intense version testSmallBatch, one that will trigger wal rolling and other
    * non-trivial code paths
    */
-  @Test
+  @TestTemplate
   public void testLoading() throws Exception {
     LOG.info("Writing out rows to table1 in testLoading");
     List<Put> puts = new ArrayList<>(NB_ROWS_IN_BIG_BATCH);
@@ -357,7 +351,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
    * Create two new Tables with colfamilies enabled for replication then run
    * {@link Admin#listReplicatedTableCFs()}. Finally verify the table:colfamilies.
    */
-  @Test
+  @TestTemplate
   public void testVerifyListReplicatedTable() throws Exception {
     LOG.info("testVerifyListReplicatedTable");
 
@@ -390,7 +384,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
 
     // check the matching result
     for (int i = 0; i < match.length; i++) {
-      assertTrue("listReplicated() does not match table " + i, (match[i] == 1));
+      assertEquals(1, match[i], "listReplicated() does not match table " + i);
     }
 
     // drop tables
@@ -406,7 +400,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   /**
    * Test for HBase-15259 WALEdits under replay will also be replicated
    */
-  @Test
+  @TestTemplate
   public void testReplicationInReplay() throws Exception {
     final TableName tableName = htable1.getName();
 
@@ -448,7 +442,7 @@ public class TestReplicationSmallTests extends TestReplicationBase {
   /**
    * Test for HBASE-27448 Add an admin method to get replication enabled state
    */
-  @Test
+  @TestTemplate
   public void testGetReplicationPeerState() throws Exception {
 
     // Test disable replication peer

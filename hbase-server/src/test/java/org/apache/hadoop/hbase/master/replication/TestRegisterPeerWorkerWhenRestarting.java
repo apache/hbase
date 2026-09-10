@@ -23,30 +23,25 @@ import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureP
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
+import org.apache.hadoop.hbase.replication.SyncReplicationTestBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Testcase for HBASE-21494.
  */
-@Category({ MasterTests.class, LargeTests.class })
-public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegisterPeerWorkerWhenRestarting.class);
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBaseNoBeforeAll {
 
   private static volatile boolean FAIL = false;
 
@@ -68,10 +63,10 @@ public class TestRegisterPeerWorkerWhenRestarting extends SyncReplicationTestBas
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL2.getConfiguration().setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
-    SyncReplicationTestBase.setUp();
+    startClusters();
   }
 
   @Test

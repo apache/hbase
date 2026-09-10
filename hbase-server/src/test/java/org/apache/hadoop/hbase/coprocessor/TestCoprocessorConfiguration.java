@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -27,7 +28,6 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CoprocessorEnvironment;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -42,24 +42,15 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.CoprocessorTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests for global coprocessor loading configuration
  */
-@Category({ CoprocessorTests.class, SmallTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCoprocessorConfiguration {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCoprocessorConfiguration.class);
-
-  @Rule
-  public ExpectedException thrown = ExpectedException.none();
 
   private static final Configuration CONF = HBaseConfiguration.create();
   static {
@@ -118,12 +109,12 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
-    assertEquals("System coprocessors loading default was not honored",
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
-    assertEquals("Table coprocessors loading default was not honored",
+    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(),
+      "System coprocessors loading default was not honored");
+    assertEquals(
       CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED
         && CoprocessorHost.DEFAULT_USER_COPROCESSORS_ENABLED,
-      tableCoprocessorLoaded.get());
+      tableCoprocessorLoaded.get(), "Table coprocessors loading default was not honored");
   }
 
   @Test
@@ -132,8 +123,8 @@ public class TestCoprocessorConfiguration {
     RegionServerServices rsServices = mock(RegionServerServices.class);
     systemCoprocessorLoaded.set(false);
     new RegionServerCoprocessorHost(rsServices, conf);
-    assertEquals("System coprocessors loading default was not honored",
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
+    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(),
+      "System coprocessors loading default was not honored");
   }
 
   @Test
@@ -142,8 +133,8 @@ public class TestCoprocessorConfiguration {
     MasterServices masterServices = mock(MasterServices.class);
     systemCoprocessorLoaded.set(false);
     new MasterCoprocessorHost(masterServices, conf);
-    assertEquals("System coprocessors loading default was not honored",
-      CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get());
+    assertEquals(CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED, systemCoprocessorLoaded.get(),
+      "System coprocessors loading default was not honored");
   }
 
   @Test
@@ -157,8 +148,8 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
-    assertFalse("System coprocessors should not have been loaded", systemCoprocessorLoaded.get());
-    assertFalse("Table coprocessors should not have been loaded", tableCoprocessorLoaded.get());
+    assertFalse(systemCoprocessorLoaded.get(), "System coprocessors should not have been loaded");
+    assertFalse(tableCoprocessorLoaded.get(), "Table coprocessors should not have been loaded");
   }
 
   @Test
@@ -173,8 +164,8 @@ public class TestCoprocessorConfiguration {
     systemCoprocessorLoaded.set(false);
     tableCoprocessorLoaded.set(false);
     new RegionCoprocessorHost(region, rsServices, conf);
-    assertTrue("System coprocessors should have been loaded", systemCoprocessorLoaded.get());
-    assertFalse("Table coprocessors should not have been loaded", tableCoprocessorLoaded.get());
+    assertTrue(systemCoprocessorLoaded.get(), "System coprocessors should have been loaded");
+    assertFalse(tableCoprocessorLoaded.get(), "Table coprocessors should not have been loaded");
   }
 
   /**
@@ -196,9 +187,9 @@ public class TestCoprocessorConfiguration {
         found = true;
       }
       Configuration c = cpenv.getConfiguration();
-      thrown.expect(UnsupportedOperationException.class);
-      c.set("one.two.three", "four.five.six");
+      assertThrows(UnsupportedOperationException.class,
+        () -> c.set("one.two.three", "four.five.six"));
     }
-    assertTrue("Should be at least one CP found", found);
+    assertTrue(found, "Should be at least one CP found");
   }
 }

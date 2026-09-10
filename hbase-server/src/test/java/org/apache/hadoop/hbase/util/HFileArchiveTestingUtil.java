@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -115,8 +115,8 @@ public class HFileArchiveTestingUtil {
 
     // check the backed up files versus the current (should match up, less the
     // backup time in the name)
-    assertEquals("Didn't expect any backup files, but got: " + backedup, hasTimedBackup,
-      backedup.size() > 0);
+    assertEquals(hasTimedBackup, backedup.size() > 0,
+      "Didn't expect any backup files, but got: " + backedup);
     String msg = null;
     if (hasTimedBackup) {
       assertArchiveEquality(original, backedup);

@@ -20,10 +20,10 @@ package org.apache.hadoop.hbase.io.hfile.bucket;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedWriter;
 import java.io.File;
@@ -33,50 +33,47 @@ import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
 import java.time.Instant;
-import java.util.Arrays;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
+import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hbase.util.Pair;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
  */
-@RunWith(Parameterized.class)
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
+@Tag(RegionServerTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: blockSize={0}, bucketSizes={1}")
 public class TestVerifyBucketCacheFile {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVerifyBucketCacheFile.class);
 
-  @Parameterized.Parameters(name = "{index}: blockSize={0}, bucketSizes={1}")
-  public static Iterable<Object[]> data() {
-    return Arrays.asList(new Object[][] { { 8192, null },
-      { 16 * 1024,
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(8192, null),
+      Arguments.of(16 * 1024,
         new int[] { 2 * 1024 + 1024, 4 * 1024 + 1024, 8 * 1024 + 1024, 16 * 1024 + 1024,
           28 * 1024 + 1024, 32 * 1024 + 1024, 64 * 1024 + 1024, 96 * 1024 + 1024,
-          128 * 1024 + 1024 } } });
+          128 * 1024 + 1024 }));
   }
 
-  @Parameterized.Parameter(0)
-  public int constructedBlockSize;
+  private final int constructedBlockSize;
+  private final int[] constructedBlockSizes;
 
-  @Parameterized.Parameter(1)
-  public int[] constructedBlockSizes;
+  public TestVerifyBucketCacheFile(int constructedBlockSize, int[] constructedBlockSizes) {
+    this.constructedBlockSize = constructedBlockSize;
+    this.constructedBlockSizes = constructedBlockSizes;
+  }
 
   final long capacitySize = 32 * 1024 * 1024;
   final int writeThreads = BucketCache.DEFAULT_WRITER_THREADS;
@@ -92,7 +89,7 @@ public class TestVerifyBucketCacheFile {
    * cache file and persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testRetrieveFromFile() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -101,18 +98,18 @@ public class TestVerifyBucketCacheFile {
     Configuration conf = HBaseConfiguration.create();
     // Disables the persister thread by setting its interval to MAX_VALUE
     conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
-
     BucketCache bucketCache = null;
     BucketCache recoveredBucketCache = null;
     try {
-      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      bucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
+      String[] names = CacheTestUtils.getHFileNames(blocks);
       // Add blocks
       for (CacheTestUtils.HFileBlockPair block : blocks) {
         cacheAndWaitUntilFlushedToBucket(bucketCache, block.getBlockName(), block.getBlock());
@@ -122,11 +119,10 @@ public class TestVerifyBucketCacheFile {
       // 1.persist cache to file
       bucketCache.shutdown();
       // restore cache from file
-      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      bucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
       assertTrue(bucketCache.waitForCacheInitialization(10000));
-      waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       // persist cache to file
       bucketCache.shutdown();
@@ -136,17 +132,17 @@ public class TestVerifyBucketCacheFile {
         FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
       assertTrue(Files.deleteIfExists(cacheFile));
       // can't restore cache from file
-      recoveredBucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
-        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
-        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      recoveredBucketCache =
+        new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, constructedBlockSize,
+          constructedBlockSizes, writeThreads, writerQLen, testDir + "/bucket.persistence");
       assertTrue(recoveredBucketCache.waitForCacheInitialization(10000));
       waitPersistentCacheValidation(conf, recoveredBucketCache);
       assertEquals(0, recoveredBucketCache.getAllocator().getUsedSize());
       assertEquals(0, recoveredBucketCache.backingMap.size());
+      BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
       // Add blocks
-      for (CacheTestUtils.HFileBlockPair block : blocks) {
-        cacheAndWaitUntilFlushedToBucket(recoveredBucketCache, block.getBlockName(),
-          block.getBlock());
+      for (int i = 0; i < blocks.length; i++) {
+        cacheAndWaitUntilFlushedToBucket(recoveredBucketCache, newKeys[i], blocks[i].getBlock());
       }
       usedSize = recoveredBucketCache.getAllocator().getUsedSize();
       assertNotEquals(0, usedSize);
@@ -166,7 +162,7 @@ public class TestVerifyBucketCacheFile {
       assertEquals(0, bucketCache.getAllocator().getUsedSize());
       assertEquals(0, bucketCache.backingMap.size());
     } finally {
-      if (bucketCache != null) {
+      if (recoveredBucketCache == null && bucketCache != null) {
         bucketCache.shutdown();
       }
       if (recoveredBucketCache != null) {
@@ -176,7 +172,7 @@ public class TestVerifyBucketCacheFile {
     TEST_UTIL.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testRetrieveFromFileAfterDelete() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -228,7 +224,7 @@ public class TestVerifyBucketCacheFile {
    * persistence file would be deleted before BucketCache start normally.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileData() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -293,7 +289,7 @@ public class TestVerifyBucketCacheFile {
    * recoverable from the cache.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testModifiedBucketCacheFileTime() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -309,8 +305,6 @@ public class TestVerifyBucketCacheFile {
       assertTrue(bucketCache.waitForCacheInitialization(10000));
       long usedSize = bucketCache.getAllocator().getUsedSize();
       assertEquals(0, usedSize);
-
-      Pair<String, Long> myPair = new Pair<>();
 
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 1);
@@ -353,7 +347,7 @@ public class TestVerifyBucketCacheFile {
    * corruption.
    * @throws Exception the exception
    */
-  @Test
+  @TestTemplate
   public void testBucketCacheRecovery() throws Exception {
     HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
     Path testDir = TEST_UTIL.getDataTestDir();
@@ -372,6 +366,7 @@ public class TestVerifyBucketCacheFile {
 
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, 4);
+      String[] names = CacheTestUtils.getHFileNames(blocks);
       // Add three blocks
       cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[0].getBlockName(), blocks[0].getBlock());
       cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[1].getBlockName(), blocks[1].getBlock());
@@ -394,37 +389,35 @@ public class TestVerifyBucketCacheFile {
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(newBucketCache.waitForCacheInitialization(10000));
-      waitPersistentCacheValidation(conf, newBucketCache);
-      assertNull(newBucketCache.getBlock(blocks[0].getBlockName(), false, false, false));
-      assertEquals(blocks[1].getBlock(),
-        newBucketCache.getBlock(blocks[1].getBlockName(), false, false, false));
-      assertEquals(blocks[2].getBlock(),
-        newBucketCache.getBlock(blocks[2].getBlockName(), false, false, false));
-      assertNull(newBucketCache.getBlock(blocks[3].getBlockName(), false, false, false));
+      BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
+      assertNull(newBucketCache.getBlock(newKeys[0], false, false, false));
+      assertEquals(blocks[1].getBlock(), newBucketCache.getBlock(newKeys[1], false, false, false));
+      assertEquals(blocks[2].getBlock(), newBucketCache.getBlock(newKeys[2], false, false, false));
+      assertNull(newBucketCache.getBlock(newKeys[3], false, false, false));
       assertEquals(2, newBucketCache.backingMap.size());
     } finally {
-      if (bucketCache != null) {
+      if (newBucketCache == null && bucketCache != null) {
         bucketCache.shutdown();
       }
       if (newBucketCache != null) {
         newBucketCache.shutdown();
       }
+      TEST_UTIL.cleanupTestDir();
     }
-    TEST_UTIL.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testSingleChunk() throws Exception {
     testChunkedBackingMapRecovery(5, 5);
   }
 
-  @Test
+  @TestTemplate
   public void testCompletelyFilledChunks() throws Exception {
     // Test where the all the chunks are complete with chunkSize entries
     testChunkedBackingMapRecovery(5, 10);
   }
 
-  @Test
+  @TestTemplate
   public void testPartiallyFilledChunks() throws Exception {
     // Test where the last chunk is not completely filled.
     testChunkedBackingMapRecovery(5, 13);
@@ -448,6 +441,7 @@ public class TestVerifyBucketCacheFile {
 
       CacheTestUtils.HFileBlockPair[] blocks =
         CacheTestUtils.generateHFileBlocks(constructedBlockSize, numBlocks);
+      String[] names = CacheTestUtils.getHFileNames(blocks);
 
       for (int i = 0; i < numBlocks; i++) {
         cacheAndWaitUntilFlushedToBucket(bucketCache, blocks[i].getBlockName(),
@@ -462,21 +456,22 @@ public class TestVerifyBucketCacheFile {
         constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen, mapFileName,
         DEFAULT_ERROR_TOLERATION_DURATION, conf);
       assertTrue(newBucketCache.waitForCacheInitialization(10000));
-      waitPersistentCacheValidation(conf, newBucketCache);
+
       assertEquals(numBlocks, newBucketCache.backingMap.size());
+      BlockCacheKey[] newKeys = CacheTestUtils.regenerateKeys(blocks, names);
       for (int i = 0; i < numBlocks; i++) {
         assertEquals(blocks[i].getBlock(),
-          newBucketCache.getBlock(blocks[i].getBlockName(), false, false, false));
+          newBucketCache.getBlock(newKeys[i], false, false, false));
       }
     } finally {
-      if (bucketCache != null) {
+      if (newBucketCache == null && bucketCache != null) {
         bucketCache.shutdown();
       }
       if (newBucketCache != null) {
         newBucketCache.shutdown();
       }
+      TEST_UTIL.cleanupTestDir();
     }
-    TEST_UTIL.cleanupTestDir();
   }
 
   private void waitUntilFlushedToBucket(BucketCache cache, BlockCacheKey cacheKey)
@@ -495,6 +490,7 @@ public class TestVerifyBucketCacheFile {
   }
 
   private void waitPersistentCacheValidation(Configuration config, final BucketCache bucketCache) {
-    Waiter.waitFor(config, 5000, () -> bucketCache.getBackingMapValidated().get());
+    Waiter.waitFor(config, 5000,
+      () -> bucketCache.getBackingMapValidated().get() && bucketCache.isCacheEnabled());
   }
 }

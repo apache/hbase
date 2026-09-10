@@ -17,35 +17,31 @@
  */
 package org.apache.hadoop.hbase.io.util;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.math.BigInteger;
 import java.util.Arrays;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests LRUDictionary
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestLRUDictionary {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestLRUDictionary.class);
 
   LRUDictionary testee;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testee = new LRUDictionary();
     testee.init(Short.MAX_VALUE);
@@ -72,8 +68,8 @@ public class TestLRUDictionary {
     // works.
     int len = HConstants.CATALOG_FAMILY.length;
     int index = testee.addEntry(HConstants.CATALOG_FAMILY, 0, len);
-    assertFalse(index == testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
-    assertFalse(index == testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
+    assertNotEquals(index, testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
+    assertNotEquals(index, testee.addEntry(HConstants.CATALOG_FAMILY, 0, len));
   }
 
   @Test
@@ -93,7 +89,7 @@ public class TestLRUDictionary {
     short t = testee.findEntry(testBytes, 0, testBytes.length);
 
     // Making sure we do find what we're looking for
-    assertTrue(t != -1);
+    assertNotEquals(t, -1);
 
     byte[] testBytesCopy = new byte[20];
 
@@ -121,33 +117,31 @@ public class TestLRUDictionary {
     }
 
     // check we have the first element added
-    assertTrue(
-      testee.findEntry(BigInteger.ZERO.toByteArray(), 0, BigInteger.ZERO.toByteArray().length)
-          != -1);
+    assertNotEquals(
+      testee.findEntry(BigInteger.ZERO.toByteArray(), 0, BigInteger.ZERO.toByteArray().length), -1);
 
     // check for an element we know isn't there
-    assertTrue(testee.findEntry(BigInteger.valueOf(Integer.MAX_VALUE).toByteArray(), 0,
-      BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length) == -1);
+    assertEquals(testee.findEntry(BigInteger.valueOf(Integer.MAX_VALUE).toByteArray(), 0,
+      BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length), -1);
 
     // since we just checked for this element, it should be there now.
-    assertTrue(testee.findEntry(BigInteger.valueOf(Integer.MAX_VALUE).toByteArray(), 0,
-      BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length) != -1);
+    assertNotEquals(testee.findEntry(BigInteger.valueOf(Integer.MAX_VALUE).toByteArray(), 0,
+      BigInteger.valueOf(Integer.MAX_VALUE).toByteArray().length), -1);
 
     // test eviction, that the least recently added or looked at element is
     // evicted. We looked at ZERO so it should be in the dictionary still.
-    assertTrue(
-      testee.findEntry(BigInteger.ZERO.toByteArray(), 0, BigInteger.ZERO.toByteArray().length)
-          != -1);
+    assertNotEquals(
+      testee.findEntry(BigInteger.ZERO.toByteArray(), 0, BigInteger.ZERO.toByteArray().length), -1);
     // Now go from beyond 1 to the end.
     for (int i = 1; i < Short.MAX_VALUE; i++) {
-      assertTrue(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
-        BigInteger.valueOf(i).toByteArray().length) == -1);
+      assertEquals(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
+        BigInteger.valueOf(i).toByteArray().length), -1);
     }
 
     // check we can find all of these.
     for (int i = 0; i < Short.MAX_VALUE; i++) {
-      assertTrue(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
-        BigInteger.valueOf(i).toByteArray().length) != -1);
+      assertNotEquals(testee.findEntry(BigInteger.valueOf(i).toByteArray(), 0,
+        BigInteger.valueOf(i).toByteArray().length), -1);
     }
   }
 

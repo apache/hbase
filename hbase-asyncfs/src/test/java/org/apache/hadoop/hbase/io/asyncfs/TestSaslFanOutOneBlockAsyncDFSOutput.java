@@ -31,6 +31,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.Properties;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -38,7 +39,7 @@ import org.apache.hadoop.crypto.CipherSuite;
 import org.apache.hadoop.crypto.key.KeyProvider;
 import org.apache.hadoop.crypto.key.KeyProviderFactory;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.StreamSlowMonitor;
 import org.apache.hadoop.hbase.security.HBaseKerberosUtils;
 import org.apache.hadoop.hbase.security.SecurityConstants;
@@ -47,19 +48,14 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.minikdc.MiniKdc;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -69,16 +65,13 @@ import org.apache.hbase.thirdparty.io.netty.channel.EventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.nio.NioEventLoopGroup;
 import org.apache.hbase.thirdparty.io.netty.channel.socket.nio.NioSocketChannel;
 
-@RunWith(Parameterized.class)
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "[{index}] protection = {0}, encryption = {1}, cipher = {2}")
 public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestSaslFanOutOneBlockAsyncDFSOutput.class);
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSaslFanOutOneBlockAsyncDFSOutput.class);
 
   private static DistributedFileSystem FS;
 
@@ -104,29 +97,27 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
   private static StreamSlowMonitor MONITOR;
 
-  @Rule
-  public TestName name = new TestName();
+  private String protection;
+  private String encryptionAlgorithm;
+  private String cipherSuite;
 
-  @Parameter(0)
-  public String protection;
+  public TestSaslFanOutOneBlockAsyncDFSOutput(String protection, String encryptionAlgorithm,
+    String cipherSuite) {
+    this.protection = protection;
+    this.encryptionAlgorithm = encryptionAlgorithm;
+    this.cipherSuite = cipherSuite;
+  }
 
-  @Parameter(1)
-  public String encryptionAlgorithm;
-
-  @Parameter(2)
-  public String cipherSuite;
-
-  @Parameters(name = "{index}: protection={0}, encryption={1}, cipherSuite={2}")
-  public static Iterable<Object[]> data() {
-    List<Object[]> params = new ArrayList<>();
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (String protection : Arrays.asList("authentication", "integrity", "privacy")) {
       for (String encryptionAlgorithm : Arrays.asList("", "3des", "rc4")) {
         for (String cipherSuite : Arrays.asList("", CipherSuite.AES_CTR_NOPADDING.getName())) {
-          params.add(new Object[] { protection, encryptionAlgorithm, cipherSuite });
+          params.add(Arguments.of(protection, encryptionAlgorithm, cipherSuite));
         }
       }
     }
-    return params;
+    return params.stream();
   }
 
   private static void setUpKeyProvider(Configuration conf) throws Exception {
@@ -174,7 +165,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     return kdc;
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     EVENT_LOOP_GROUP = new NioEventLoopGroup();
     CHANNEL_CLASS = NioSocketChannel.class;
@@ -192,7 +183,7 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     MONITOR = StreamSlowMonitor.create(UTIL.getConfiguration(), "testMonitor");
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
       EVENT_LOOP_GROUP.shutdownGracefully().get();
@@ -211,8 +202,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     FS.createEncryptionZone(entryptionTestDirOnTestFs, TEST_KEY_NAME);
   }
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
     UTIL.getConfiguration().set("dfs.data.transfer.protection", protection);
     if (StringUtils.isBlank(encryptionAlgorithm) && StringUtils.isBlank(cipherSuite)) {
       UTIL.getConfiguration().setBoolean(DFS_ENCRYPT_DATA_TRANSFER_KEY, false);
@@ -232,14 +223,14 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
 
     startMiniDFSCluster(3);
     FS = CLUSTER.getFileSystem();
-    testDirOnTestFs = new Path("/" + name.getMethodName().replaceAll("[^0-9a-zA-Z]", "_"));
+    testDirOnTestFs = new Path("/" + testInfo.getDisplayName().replaceAll("[^0-9a-zA-Z]", "_"));
     FS.mkdirs(testDirOnTestFs);
     entryptionTestDirOnTestFs = new Path("/" + testDirOnTestFs.getName() + "_enc");
     FS.mkdirs(entryptionTestDirOnTestFs);
     createEncryptionZone();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     shutdownMiniDFSCluster();
   }
@@ -259,8 +250,8 @@ public class TestSaslFanOutOneBlockAsyncDFSOutput extends AsyncFSTestBase {
     TestFanOutOneBlockAsyncDFSOutput.writeAndVerify(FS, file, out);
   }
 
-  @Test
-  public void test() throws IOException, InterruptedException, ExecutionException {
+  @TestTemplate
+  public void test() throws Exception {
     test(getTestFile());
     test(getEncryptionTestFile());
   }

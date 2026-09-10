@@ -20,7 +20,11 @@ package org.apache.hadoop.hbase.io.hfile;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.HEAP;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
 import java.io.DataOutputStream;
@@ -28,7 +32,6 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -41,6 +44,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -49,8 +53,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -72,25 +76,19 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.io.WritableUtils;
 import org.apache.hadoop.io.compress.Compressor;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, LargeTests.class })
-@RunWith(Parameterized.class)
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(
+    name = "{index}: includesMemstoreTS={0}, includesTag={1}, useHeapAllocator={2}")
 public class TestHFileBlock {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileBlock.class);
 
   // change this value to activate more logs
   private static final boolean detailedLogging = false;
@@ -126,18 +124,15 @@ public class TestHFileBlock {
     assertAllocator();
   }
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    List<Object[]> params = new ArrayList<>();
-    // Generate boolean triples from 000 to 111
+  public static Stream<Arguments> parameters() {
+    List<Arguments> params = new ArrayList<>();
     for (int i = 0; i < (1 << 3); i++) {
-      Object[] flags = new Boolean[3];
-      for (int k = 0; k < 3; k++) {
-        flags[k] = (i & (1 << k)) != 0;
-      }
-      params.add(flags);
+      boolean v0 = (i & (1 << 0)) != 0;
+      boolean v1 = (i & (1 << 1)) != 0;
+      boolean v2 = (i & (1 << 2)) != 0;
+      params.add(Arguments.of(v0, v1, v2));
     }
-    return params;
+    return params.stream();
   }
 
   private ByteBuffAllocator createOffHeapAlloc() {
@@ -162,12 +157,12 @@ public class TestHFileBlock {
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     fs = HFileSystem.get(TEST_UTIL.getConfiguration());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     assertAllocator();
     alloc.clean();
@@ -290,7 +285,7 @@ public class TestHFileBlock {
     return Bytes.toStringBinary(testV2Block);
   }
 
-  @Test
+  @TestTemplate
   public void testNoCompression() throws IOException {
     CacheConfig cacheConf = Mockito.mock(CacheConfig.class);
     Mockito.when(cacheConf.getBlockCache()).thenReturn(Optional.empty());
@@ -302,7 +297,7 @@ public class TestHFileBlock {
     assertTrue(block.isUnpacked());
   }
 
-  @Test
+  @TestTemplate
   public void testGzipCompression() throws IOException {
     // @formatter:off
     String correctTestBlockStr = "DATABLK*\\x00\\x00\\x00>\\x00\\x00\\x0F\\xA0\\xFF\\xFF\\xFF\\xFF"
@@ -333,7 +328,7 @@ public class TestHFileBlock {
       testBlockStr.substring(0, correctGzipBlockLength - 4));
   }
 
-  @Test
+  @TestTemplate
   public void testReaderV2() throws IOException {
     testReaderV2Internals();
   }
@@ -406,10 +401,9 @@ public class TestHFileBlock {
             fail("Exception expected");
           } catch (IOException ex) {
             String expectedPrefix = "Passed in onDiskSizeWithHeader=";
-            assertTrue(
+            assertTrue(ex.getMessage().startsWith(expectedPrefix),
               "Invalid exception message: '" + ex.getMessage()
-                + "'.\nMessage is expected to start with: '" + expectedPrefix + "'",
-              ex.getMessage().startsWith(expectedPrefix));
+                + "'.\nMessage is expected to start with: '" + expectedPrefix + "'");
           }
           assertRelease(b);
           is.close();
@@ -423,7 +417,7 @@ public class TestHFileBlock {
    * Test encoding/decoding data blocks.
    * @throws IOException a bug or a problem with temporary files.
    */
-  @Test
+  @TestTemplate
   public void testDataBlockEncoding() throws IOException {
     testInternals();
   }
@@ -497,18 +491,17 @@ public class TestHFileBlock {
               LOG.info("packedHeapsize=" + packedHeapsize + ", unpackedHeadsize="
                 + blockUnpacked.heapSize());
               assertFalse(packedHeapsize == blockUnpacked.heapSize());
-              assertTrue("Packed heapSize should be < unpacked heapSize",
-                packedHeapsize < blockUnpacked.heapSize());
+              assertTrue(packedHeapsize < blockUnpacked.heapSize(),
+                "Packed heapSize should be < unpacked heapSize");
             }
             ByteBuff actualBuffer = blockUnpacked.getBufferWithoutHeader();
             if (encoding != DataBlockEncoding.NONE) {
               // We expect a two-byte big-endian encoding id.
-              assertEquals(
-                "Unexpected first byte with " + buildMessageDetails(algo, encoding, pread),
-                Long.toHexString(0), Long.toHexString(actualBuffer.get(0)));
-              assertEquals(
-                "Unexpected second byte with " + buildMessageDetails(algo, encoding, pread),
-                Long.toHexString(encoding.getId()), Long.toHexString(actualBuffer.get(1)));
+              assertEquals(Long.toHexString(0), Long.toHexString(actualBuffer.get(0)),
+                "Unexpected first byte with " + buildMessageDetails(algo, encoding, pread));
+              assertEquals(Long.toHexString(encoding.getId()),
+                Long.toHexString(actualBuffer.get(1)),
+                "Unexpected second byte with " + buildMessageDetails(algo, encoding, pread));
               actualBuffer.position(2);
               actualBuffer = actualBuffer.slice();
             }
@@ -525,12 +518,12 @@ public class TestHFileBlock {
               blockFromHFile.serialize(serialized, true);
               HFileBlock deserialized = (HFileBlock) blockFromHFile.getDeserializer()
                 .deserialize(new SingleByteBuff(serialized), HEAP);
-              assertEquals("Serialization did not preserve block state. reuseBuffer=" + reuseBuffer,
-                blockFromHFile, deserialized);
+              assertEquals(blockFromHFile, deserialized,
+                "Serialization did not preserve block state. reuseBuffer=" + reuseBuffer);
               // intentional reference comparison
               if (blockFromHFile != blockUnpacked) {
-                assertEquals("Deserialized block cannot be unpacked correctly.", blockUnpacked,
-                  deserialized.unpack(meta, hbr));
+                assertEquals(blockUnpacked, deserialized.unpack(meta, hbr),
+                  "Deserialized block cannot be unpacked correctly.");
               }
             }
             assertRelease(blockUnpacked);
@@ -575,7 +568,7 @@ public class TestHFileBlock {
       + (numBytes < maxBytes ? "..." : "");
   }
 
-  @Test
+  @TestTemplate
   public void testPreviousOffset() throws IOException {
     testPreviousOffsetInternals();
   }
@@ -620,10 +613,11 @@ public class TestHFileBlock {
             if (detailedLogging) {
               LOG.info("Block #" + i + ": " + b);
             }
-            assertEquals("Invalid block #" + i + "'s type:", expectedTypes.get(i),
-              b.getBlockType());
-            assertEquals("Invalid previous block offset for block " + i + " of " + "type "
-              + b.getBlockType() + ":", (long) expectedPrevOffsets.get(i), b.getPrevBlockOffset());
+            assertEquals(expectedTypes.get(i), b.getBlockType(),
+              "Invalid block #" + i + "'s type:");
+            assertEquals((long) expectedPrevOffsets.get(i), b.getPrevBlockOffset(),
+              "Invalid previous block offset for block " + i + " of " + "type " + b.getBlockType()
+                + ":");
             b.sanityCheck();
             assertEquals(curOffset, b.getOffset());
 
@@ -679,7 +673,7 @@ public class TestHFileBlock {
                   LOG.warn(wrongBytesMsg);
                 }
               }
-              assertTrue(wrongBytesMsg, bytesAreCorrect);
+              assertTrue(bytesAreCorrect, wrongBytesMsg);
               assertRelease(newBlock);
               if (newBlock != b) {
                 assertRelease(b);
@@ -768,7 +762,7 @@ public class TestHFileBlock {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testConcurrentReading() throws Exception {
     testConcurrentReadingInternals();
   }
@@ -869,7 +863,7 @@ public class TestHFileBlock {
     return totalSize;
   }
 
-  @Test
+  @TestTemplate
   public void testBlockHeapSize() {
     testBlockHeapSizeInternals();
   }
@@ -896,15 +890,14 @@ public class TestHFileBlock {
       long hfileMetaSize = ClassSize.align(ClassSize.estimateBase(HFileContext.class, true));
       long hfileBlockExpectedSize = ClassSize.align(ClassSize.estimateBase(HFileBlock.class, true));
       long expected = hfileBlockExpectedSize + byteBufferExpectedSize + hfileMetaSize;
-      assertEquals(
+      assertEquals(expected, block.heapSize(),
         "Block data size: " + size + ", byte buffer expected " + "size: " + byteBufferExpectedSize
           + ", HFileBlock class expected " + "size: " + hfileBlockExpectedSize
-          + " HFileContext class expected size: " + hfileMetaSize + "; ",
-        expected, block.heapSize());
+          + " HFileContext class expected size: " + hfileMetaSize + "; ");
     }
   }
 
-  @Test
+  @TestTemplate
   public void testSerializeWithoutNextBlockMetadata() {
     int size = 100;
     int length = HConstants.HFILEBLOCK_HEADER_SIZE + size;

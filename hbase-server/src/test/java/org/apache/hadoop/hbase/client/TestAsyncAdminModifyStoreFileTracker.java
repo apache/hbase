@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
+import java.util.function.Supplier;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotEnabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
@@ -34,23 +35,33 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.FutureUtils;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncAdminModifyStoreFileTracker.class);
 
   private static final String SRC_IMPL = "hbase.store.file-tracker.migration.src.impl";
 
   private static final String DST_IMPL = "hbase.store.file-tracker.migration.dst.impl";
+
+  public TestAsyncAdminModifyStoreFileTracker(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
+
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
+    TestAsyncAdminBase.setUpBeforeClass();
+  }
+
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
 
   private void verifyModifyTableResult(TableName tableName, byte[] family, byte[] qual, byte[] row,
     byte[] value, String sft) throws IOException {
@@ -64,7 +75,7 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testModifyTableStoreFileTracker() throws IOException {
     byte[] family = Bytes.toBytes("info");
     byte[] qual = Bytes.toBytes("q");
@@ -123,7 +134,7 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testModifyColumnFamilyStoreFileTracker() throws IOException {
     byte[] family = Bytes.toBytes("info");
     byte[] qual = Bytes.toBytes("q");
@@ -173,7 +184,7 @@ public class TestAsyncAdminModifyStoreFileTracker extends TestAsyncAdminBase {
       StoreFileTrackerFactory.Trackers.DEFAULT.name());
   }
 
-  @Test
+  @TestTemplate
   public void testModifyStoreFileTrackerError() throws IOException {
     byte[] family = Bytes.toBytes("info");
     TEST_UTIL.createTable(tableName, family).close();

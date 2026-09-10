@@ -17,28 +17,26 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestBidirectionSerialReplicationStuck extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBidirectionSerialReplicationStuck.class);
 
   @Override
   protected boolean isSerialPeer() {
     return true;
   }
 
+  @BeforeEach
   @Override
   public void setUpBase() throws Exception {
     UTIL1.ensureSomeRegionServersAvailable(2);
@@ -47,6 +45,7 @@ public class TestBidirectionSerialReplicationStuck extends TestReplicationBase {
     addPeer(PEER_ID2, tableName, UTIL2, UTIL1);
   }
 
+  @AfterEach
   @Override
   public void tearDownBase() throws Exception {
     removePeer(PEER_ID2, UTIL1);

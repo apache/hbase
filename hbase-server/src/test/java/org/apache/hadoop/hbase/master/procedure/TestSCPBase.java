@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -33,8 +33,8 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.assignment.AssignmentTestingUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -48,7 +48,7 @@ public class TestSCPBase {
     conf.setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     this.util = new HBaseTestingUtil();
     setupConf(this.util.getConfiguration());
@@ -61,7 +61,7 @@ public class TestSCPBase {
     this.util.startMiniCluster(RS_COUNT);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     SingleProcessHBaseCluster cluster = this.util.getHBaseCluster();
     HMaster master = cluster == null ? null : cluster.getMaster();
@@ -84,7 +84,7 @@ public class TestSCPBase {
       // Load the table with a bit of data so some logs to split and some edits in each region.
       this.util.loadTable(t, HBaseTestingUtil.COLUMNS[0]);
       final int count = HBaseTestingUtil.countRows(t);
-      assertTrue("expected some rows", count > 0);
+      assertTrue(count > 0, "expected some rows");
       final String checksum = util.checksumRows(t);
       // Run the procedure executor outside the master so we can mess with it. Need to disable
       // Master's running of the server crash processing.

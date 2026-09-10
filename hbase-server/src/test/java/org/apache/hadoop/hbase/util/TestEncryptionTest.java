@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.security.Key;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.crypto.Cipher;
@@ -33,16 +33,12 @@ import org.apache.hadoop.hbase.io.crypto.KeyProvider;
 import org.apache.hadoop.hbase.io.crypto.MockAesKeyProvider;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestEncryptionTest {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestEncryptionTest.class);
 
   @Test
   public void testTestKeyProvider() throws Exception {
@@ -51,12 +47,13 @@ public class TestEncryptionTest {
     EncryptionTest.testKeyProvider(conf);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testBadKeyProvider() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, FailingKeyProvider.class.getName());
-    EncryptionTest.testKeyProvider(conf);
-    fail("Instantiation of bad test key provider should have failed check");
+    assertThrows(IOException.class, () -> {
+      EncryptionTest.testKeyProvider(conf);
+    });
   }
 
   @Test
@@ -66,12 +63,13 @@ public class TestEncryptionTest {
     EncryptionTest.testCipherProvider(conf);
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testBadCipherProvider() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CRYPTO_CIPHERPROVIDER_CONF_KEY, FailingCipherProvider.class.getName());
-    EncryptionTest.testCipherProvider(conf);
-    fail("Instantiation of bad test cipher provider should have failed check");
+    assertThrows(IOException.class, () -> {
+      EncryptionTest.testCipherProvider(conf);
+    });
   }
 
   @Test
@@ -86,12 +84,13 @@ public class TestEncryptionTest {
     }
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testUnknownCipher() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
-    EncryptionTest.testEncryption(conf, "foobar", null);
-    fail("Test for bogus cipher should have failed");
+    assertThrows(IOException.class, () -> {
+      EncryptionTest.testEncryption(conf, "foobar", null);
+    });
   }
 
   @Test
@@ -121,13 +120,15 @@ public class TestEncryptionTest {
     }
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testTestEnabledWhenCryptoIsExplicitlyDisabled() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(HConstants.CRYPTO_KEYPROVIDER_CONF_KEY, MockAesKeyProvider.class.getName());
     String algorithm = conf.get(HConstants.CRYPTO_KEY_ALGORITHM_CONF_KEY, HConstants.CIPHER_AES);
     conf.setBoolean(Encryption.CRYPTO_ENABLED_CONF_KEY, false);
-    EncryptionTest.testEncryption(conf, algorithm, null);
+    assertThrows(IOException.class, () -> {
+      EncryptionTest.testEncryption(conf, algorithm, null);
+    });
   }
 
   public static class FailingKeyProvider implements KeyProvider {

@@ -17,34 +17,287 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import org.apache.commons.lang3.StringUtils;
+import static org.apache.hadoop.hbase.HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Objects;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.coprocessor.CoprocessorReloadTask;
+import org.apache.hadoop.hbase.security.access.BulkLoadReadOnlyController;
+import org.apache.hadoop.hbase.security.access.EndpointReadOnlyController;
+import org.apache.hadoop.hbase.security.access.MasterReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionReadOnlyController;
+import org.apache.hadoop.hbase.security.access.RegionServerReadOnlyController;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
+import org.apache.hbase.thirdparty.com.google.common.base.Strings;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
 
 /**
  * Helper class for coprocessor host when configuration changes.
  */
 @InterfaceAudience.Private
 public final class CoprocessorConfigurationUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(CoprocessorConfigurationUtil.class);
+
+  private static final ImmutableMap<String, List<String>> READONLY_COPROCESSORS =
+    ImmutableMap.of(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(MasterReadOnlyController.class.getName()),
+      CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(RegionServerReadOnlyController.class.getName()),
+      CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
+      ImmutableList.of(RegionReadOnlyController.class.getName(),
+        BulkLoadReadOnlyController.class.getName(), EndpointReadOnlyController.class.getName()));
 
   private CoprocessorConfigurationUtil() {
   }
 
-  public static boolean checkConfigurationChange(Configuration oldConfig, Configuration newConfig,
-    String... configurationKey) {
+  /**
+   * Check configuration change by comparing current loaded coprocessors with configuration values.
+   * This method is useful when the configuration object has been updated, but we need to determine
+   * if the coprocessor configuration has actually changed compared to what's currently loaded.
+   * <p>
+   * <b>Note:</b> This method only detects changes in the set of coprocessor class names. It does
+   * <b>not</b> detect changes to priority or path for coprocessors that are already loaded with the
+   * same class name. If you need to update the priority or path of an existing coprocessor, you
+   * must restart the region/regionserver/master.
+   * @param coprocessorHost  the coprocessor host to check current loaded coprocessors (can be null)
+   * @param conf             the configuration to check
+   * @param configurationKey the configuration keys to check
+   * @return true if configuration has changed, false otherwise
+   */
+  public static boolean checkConfigurationChange(CoprocessorHost<?, ?> coprocessorHost,
+    Configuration conf, String... configurationKey) {
     Preconditions.checkArgument(configurationKey != null, "Configuration Key(s) must be provided");
-    boolean isConfigurationChange = false;
+    Preconditions.checkArgument(conf != null, "Configuration must be provided");
+
+    if (
+      !conf.getBoolean(CoprocessorHost.COPROCESSORS_ENABLED_CONF_KEY,
+        CoprocessorHost.DEFAULT_COPROCESSORS_ENABLED)
+    ) {
+      return false;
+    }
+
+    if (coprocessorHost == null) {
+      // If no coprocessor host exists, check if any coprocessors are now configured
+      return hasCoprocessorsConfigured(conf, configurationKey);
+    }
+
+    // Get currently loaded coprocessor class names
+    Set<String> currentlyLoaded = coprocessorHost.getCoprocessorClassNames();
+
+    // Get coprocessor class names from configuration
+    // Only class names are compared; priority and path changes are not detected
+    Set<String> configuredClasses = new HashSet<>();
     for (String key : configurationKey) {
-      String oldValue = oldConfig.get(key);
-      String newValue = newConfig.get(key);
-      // check if the coprocessor key has any difference
-      if (!StringUtils.equalsIgnoreCase(oldValue, newValue)) {
-        isConfigurationChange = true;
-        break;
+      String[] classes = conf.getStrings(key);
+      if (classes != null) {
+        for (String className : classes) {
+          // Handle the className|priority|path format
+          String[] classNameToken = className.split("\\|");
+          String actualClassName = classNameToken[0].trim();
+          if (!Strings.isNullOrEmpty(actualClassName)) {
+            configuredClasses.add(actualClassName);
+          }
+        }
       }
     }
-    return isConfigurationChange;
+
+    // Compare the two sets
+    return !currentlyLoaded.equals(configuredClasses);
+  }
+
+  /**
+   * Helper method to check if there are any coprocessors configured.
+   */
+  private static boolean hasCoprocessorsConfigured(Configuration conf, String... configurationKey) {
+    for (String key : configurationKey) {
+      String[] coprocessors = conf.getStrings(key);
+      if (coprocessors != null && coprocessors.length > 0) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  private static List<String> getCoprocessorsFromConfig(Configuration conf,
+    String configurationKey) {
+    String[] existing = conf.getStrings(configurationKey);
+    return existing != null ? new ArrayList<>(Arrays.asList(existing)) : new ArrayList<>();
+  }
+
+  public static void addCoprocessors(Configuration conf, String configurationKey,
+    List<String> coprocessorsToAdd) {
+    List<String> existing = getCoprocessorsFromConfig(conf, configurationKey);
+
+    boolean isModified = false;
+
+    for (String coprocessor : coprocessorsToAdd) {
+      if (!existing.contains(coprocessor)) {
+        existing.add(coprocessor);
+        isModified = true;
+      }
+    }
+
+    if (isModified) {
+      conf.setStrings(configurationKey, existing.toArray(new String[0]));
+    }
+  }
+
+  public static void removeCoprocessors(Configuration conf, String configurationKey,
+    List<String> coprocessorsToRemove) {
+    List<String> existing = getCoprocessorsFromConfig(conf, configurationKey);
+
+    if (existing.isEmpty()) {
+      return;
+    }
+
+    boolean isModified = false;
+
+    for (String coprocessor : coprocessorsToRemove) {
+      if (existing.contains(coprocessor)) {
+        existing.remove(coprocessor);
+        isModified = true;
+      }
+    }
+
+    if (isModified) {
+      conf.setStrings(configurationKey, existing.toArray(new String[0]));
+    }
+  }
+
+  private static List<String> getReadOnlyCoprocessors(String configurationKey) {
+    return READONLY_COPROCESSORS.get(configurationKey);
+  }
+
+  /**
+   * Updates the coprocessors in one Configuration object to match the coprocessors in the other
+   * @param srcConf            the Configuration object we are getting coprocessors from
+   * @param dstConf            the Configuration object we are updating
+   * @param coprocessorConfKey the type of coprocessors we are updating
+   */
+  private static void syncCoprocessorsWithConf(Configuration srcConf, Configuration dstConf,
+    String coprocessorConfKey) {
+    String configuredCps = srcConf.get(coprocessorConfKey);
+    dstConf.set(coprocessorConfKey, Objects.requireNonNullElse(configuredCps, ""));
+
+    // A configuration with region coprocessors may also have user region coprocessors
+    if (CoprocessorHost.REGION_COPROCESSOR_CONF_KEY.equals(coprocessorConfKey)) {
+      String configuredUserCps = srcConf.get(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY);
+      dstConf.set(CoprocessorHost.USER_REGION_COPROCESSOR_CONF_KEY,
+        Objects.requireNonNullElse(configuredUserCps, ""));
+    }
+  }
+
+  /**
+   * This method adds or removes relevant ReadOnlyController coprocessors to the provided
+   * configuration based on whether read-only mode is enabled in the provided Configuration.
+   * @param conf               The up-to-date configuration used to determine how to handle
+   *                           coprocessors
+   * @param coprocessorConfKey The configuration key name
+   */
+  public static void syncReadOnlyConfigurations(Configuration conf, String coprocessorConfKey) {
+    boolean isReadOnlyModeEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(conf);
+
+    List<String> cpList = getReadOnlyCoprocessors(coprocessorConfKey);
+    if (isReadOnlyModeEnabled) {
+      CoprocessorConfigurationUtil.addCoprocessors(conf, coprocessorConfKey, cpList);
+    } else {
+      CoprocessorConfigurationUtil.removeCoprocessors(conf, coprocessorConfKey, cpList);
+    }
+  }
+
+  /**
+   * Check whether ReadOnlyController coprocessors have been loaded in the provided configuration.
+   * @param conf               the configuration we are checking
+   * @param coprocessorConfKey configuration key used for setting master, region server, or region
+   *                           coprocessors
+   * @return true if the ReadOnlyCoprocessors are loaded in the configuration; false otherwise
+   */
+  public static boolean areReadOnlyCoprocessorsLoaded(Configuration conf,
+    String coprocessorConfKey) {
+    // Using a HashSet will improve performance when searching for read-only coprocessors
+    HashSet<String> allCoprocessors =
+      new HashSet<>(getCoprocessorsFromConfig(conf, coprocessorConfKey));
+    List<String> readOnlyCoprocessors = getReadOnlyCoprocessors(coprocessorConfKey);
+    return allCoprocessors.containsAll(readOnlyCoprocessors);
+  }
+
+  /**
+   * Gets the name of a component based on the provided coprocessor configuration key.
+   * @param coprocessorConfKey configuration key used for setting master, region server, or region
+   *                           coprocessors
+   * @return the component type - Master, Region Server, or Region
+   */
+  public static String getComponentName(String coprocessorConfKey) {
+    return switch (coprocessorConfKey) {
+      case CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY -> "Master";
+      case CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY -> "Region Server";
+      case CoprocessorHost.REGION_COPROCESSOR_CONF_KEY -> "Region";
+      default -> throw new IllegalArgumentException(
+        "Unsupported coprocessor configuration key: " + coprocessorConfKey);
+    };
+  }
+
+  /**
+   * This method updates the coprocessors on the master, region server, or region if a change has
+   * been detected. Detected changes include changes in coprocessors or changes in read-only mode
+   * configuration. If a change is detected, then new coprocessors are loaded using the provided
+   * reload method. The new value for the read-only config variable is updated as well.
+   * @param updatedConf               an updated configuration
+   * @param originalConf              the actual configuration we want to update, which may or may
+   *                                  not be the same Configuration object as {@code updatedConf}
+   * @param originalIsReadOnlyEnabled the original value for
+   *                                  {@value HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY}
+   * @param coprocessorHost           the coprocessor host for HMaster, HRegionServer, or HRegion
+   * @param coprocessorConfKey        configuration key used for setting master, region server, or
+   *                                  region coprocessors
+   * @param isMaintenanceMode         whether maintenance mode is active (mainly for HMaster)
+   * @param instance                  string value of the instance calling this method (mainly helps
+   *                                  with tracking region logging)
+   * @param reloadTask                lambda function that reloads coprocessors on the master,
+   *                                  region server, or region
+   */
+  public static void maybeUpdateCoprocessors(Configuration updatedConf, Configuration originalConf,
+    boolean originalIsReadOnlyEnabled, CoprocessorHost<?, ?> coprocessorHost,
+    String coprocessorConfKey, boolean isMaintenanceMode, String instance,
+    CoprocessorReloadTask reloadTask) {
+
+    String componentName = getComponentName(coprocessorConfKey);
+    boolean updatedReadOnlyMode = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
+    boolean hasReadOnlyModeChanged = originalIsReadOnlyEnabled != updatedReadOnlyMode;
+    boolean hasCoprocessorConfigChanged = CoprocessorConfigurationUtil
+      .checkConfigurationChange(coprocessorHost, updatedConf, coprocessorConfKey);
+
+    if ((hasCoprocessorConfigChanged || hasReadOnlyModeChanged) && !isMaintenanceMode) {
+      LOG.info("Updating coprocessors for {} {} because the configuration has changed",
+        componentName, instance);
+      // In real HBase deployments, updatedConf and originalConf reference the same Configuration
+      // object for HMaster and HRegionServer respectively. However, for HRegion and for unit test
+      // cases, these are different objects, and the original conf needs to be updated accordingly.
+      if (updatedConf != originalConf) {
+        syncCoprocessorsWithConf(updatedConf, originalConf, coprocessorConfKey);
+        originalConf.setBoolean(HBASE_GLOBAL_READONLY_ENABLED_KEY, updatedReadOnlyMode);
+      }
+      // This needs to run even if read-only mode has not changed in case ReadOnly coprocessors
+      // were unintentionally added/removed in the previous code block
+      syncReadOnlyConfigurations(originalConf, coprocessorConfKey);
+      reloadTask.reload(originalConf);
+    }
+
+    if (hasReadOnlyModeChanged) {
+      LOG.info("Config {} has been dynamically changed to {} for {} {}",
+        HBASE_GLOBAL_READONLY_ENABLED_KEY, updatedReadOnlyMode, componentName, instance);
+    }
   }
 }

@@ -17,24 +17,20 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.regex.Pattern;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.filter.RegexStringComparator.EngineType;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRegexComparator {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegexComparator.class);
 
   @Test
   public void testSerialization() throws Exception {
@@ -56,7 +52,7 @@ public class TestRegexComparator {
     for (TestCase t : TEST_CASES) {
       boolean result = new RegexStringComparator(t.regex, t.flags, EngineType.JAVA)
         .compareTo(Bytes.toBytes(t.haystack)) == 0;
-      assertEquals("Regex '" + t.regex + "' failed test '" + t.haystack + "'", result, t.expected);
+      assertEquals(t.expected, result, "Regex '" + t.regex + "' failed test '" + t.haystack + "'");
     }
   }
 
@@ -65,7 +61,7 @@ public class TestRegexComparator {
     for (TestCase t : TEST_CASES) {
       boolean result = new RegexStringComparator(t.regex, t.flags, EngineType.JONI)
         .compareTo(Bytes.toBytes(t.haystack)) == 0;
-      assertEquals("Regex '" + t.regex + "' failed test '" + t.haystack + "'", result, t.expected);
+      assertEquals(t.expected, result, "Regex '" + t.regex + "' failed test '" + t.haystack + "'");
     }
   }
 
@@ -146,5 +142,5 @@ public class TestRegexComparator {
     new TestCase("[\\n-#]", "-", false), new TestCase("[\\043]+", "blahblah#blech", true),
     new TestCase("[\\042-\\044]+", "blahblah#blech", true),
     new TestCase("[\\u1234-\\u1236]", "blahblah\u1235blech", true),
-    new TestCase("[^\043]*", "blahblah#blech", true), new TestCase("(|f)?+", "foo", true), };
+    new TestCase("[^\\043]*", "blahblah#blech", true), new TestCase("(|f)?+", "foo", true), };
 }

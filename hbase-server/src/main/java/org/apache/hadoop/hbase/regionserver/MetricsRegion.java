@@ -23,7 +23,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * This is the glue between the HRegion and whatever hadoop shim layer is loaded
- * (hbase-hadoop1-compat or hbase-hadoop2-compat).
+ * (hbase-hadoop-compat).
  */
 @InterfaceAudience.Private
 public class MetricsRegion {

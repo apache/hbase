@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -26,7 +26,6 @@ import static org.mockito.Mockito.when;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -34,29 +33,24 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RPCTests;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos;
 
-@Category({ RPCTests.class, LargeTests.class })
+@Tag(RPCTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterFifoRpcScheduler {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterFifoRpcScheduler.class);
 
   private static final String REGION_SERVER_REPORT = "RegionServerReport";
   private static final String OTHER = "Other";
   private static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.set(MasterRpcServices.MASTER_RPC_SCHEDULER_FACTORY_CLASS,
@@ -66,7 +60,7 @@ public class TestMasterFifoRpcScheduler {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -76,7 +70,7 @@ public class TestMasterFifoRpcScheduler {
     HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
     MasterRpcServices masterRpcServices = master.getMasterRpcServices();
     RpcScheduler masterRpcScheduler = masterRpcServices.getRpcScheduler();
-    Assert.assertTrue(masterRpcScheduler instanceof MasterFifoRpcScheduler);
+    assertTrue(masterRpcScheduler instanceof MasterFifoRpcScheduler);
   }
 
   @Test

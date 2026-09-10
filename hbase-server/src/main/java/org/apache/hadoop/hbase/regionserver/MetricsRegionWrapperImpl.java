@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -51,6 +52,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private long storeRefCount;
   private long maxCompactedStoreFileRefCount;
   private long memstoreSize;
+  private long memstoreHeapSize;
+  private long memstoreOffHeapSize;
   private long storeFileSize;
   private long maxStoreFileAge;
   private long minStoreFileAge;
@@ -64,9 +67,13 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   private ScheduledFuture<?> regionMetricsUpdateTask;
 
   private float currentRegionCacheRatio;
+  private final String tableDescriptorHash;
+
+  private float currentRegionColdDataRatio;
 
   public MetricsRegionWrapperImpl(HRegion region) {
     this.region = region;
+    this.tableDescriptorHash = determineTableDescriptorHash();
     this.executor = CompatibilitySingletonFactory.getInstance(MetricsExecutor.class).getExecutor();
     this.runnable = new HRegionMetricsWrapperRunnable();
     this.regionMetricsUpdateTask =
@@ -120,12 +127,26 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
   }
 
   @Override
+  public long getMemStoreHeapSize() {
+    return memstoreHeapSize;
+  }
+
+  @Override
+  public long getMemStoreOffHeapSize() {
+    return memstoreOffHeapSize;
+  }
+
+  @Override
   public long getStoreFileSize() {
     return storeFileSize;
   }
 
   public float getCurrentRegionCacheRatio() {
     return currentRegionCacheRatio;
+  }
+
+  public float getCurrentRegionColdDataRatio() {
+    return currentRegionColdDataRatio;
   }
 
   @Override
@@ -258,6 +279,8 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
       int tempStoreRefCount = 0;
       int tempMaxCompactedStoreFileRefCount = 0;
       long tempMemstoreSize = 0;
+      long tempMemstoreHeapSize = 0;
+      long tempMemstoreOffHeapSize = 0;
       long tempStoreFileSize = 0;
       long tempMaxStoreFileAge = 0;
       long tempMinStoreFileAge = Long.MAX_VALUE;
@@ -274,7 +297,10 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
           tempMaxCompactedStoreFileRefCount =
             Math.max(tempMaxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
-          tempMemstoreSize += store.getMemStoreSize().getDataSize();
+          final MemStoreSize memStore = store.getMemStoreSize();
+          tempMemstoreSize += memStore.getDataSize();
+          tempMemstoreHeapSize += memStore.getHeapSize();
+          tempMemstoreOffHeapSize += memStore.getOffHeapSize();
           tempStoreFileSize += store.getStorefilesSize();
           OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
           if (
@@ -330,11 +356,18 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
           region.getRegionInfo().getEncodedName(), regionCachedAmount.getValue(),
           tempStoreFileSize);
         currentRegionCacheRatio = regionCachedAmount.floatValue() / tempStoreFileSize;
+        if (DataTieringManager.getInstance() != null) {
+          currentRegionColdDataRatio = DataTieringManager.getInstance().getRegionColdDataSize()
+            .getOrDefault(region.getRegionInfo().getEncodedName(), new Pair<>(null, 0L)).getSecond()
+            / (float) tempStoreFileSize;
+        }
       }
       numStoreFiles = tempNumStoreFiles;
       storeRefCount = tempStoreRefCount;
       maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;
       memstoreSize = tempMemstoreSize;
+      memstoreHeapSize = tempMemstoreHeapSize;
+      memstoreOffHeapSize = tempMemstoreOffHeapSize;
       storeFileSize = tempStoreFileSize;
       maxStoreFileAge = tempMaxStoreFileAge;
       if (tempMinStoreFileAge != Long.MAX_VALUE) {
@@ -355,6 +388,19 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
         maxFlushQueueSize = tempMaxFlushQueueSize;
       }
     }
+  }
+
+  @Override
+  public String getTableDescriptorHash() {
+    return tableDescriptorHash;
+  }
+
+  private String determineTableDescriptorHash() {
+    TableDescriptor tableDesc = this.region.getTableDescriptor();
+    if (tableDesc == null) {
+      return UNKNOWN;
+    }
+    return tableDesc.getDescriptorHash();
   }
 
   @Override

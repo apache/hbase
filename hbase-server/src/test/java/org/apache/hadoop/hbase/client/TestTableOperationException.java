@@ -17,12 +17,13 @@
  */
 package org.apache.hadoop.hbase.client;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -34,18 +35,14 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestTableOperationException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableOperationException.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -61,7 +58,7 @@ public class TestTableOperationException {
 
   private static byte[] CQ = Bytes.toBytes("cq");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_RETRIES_NUMBER, 2);
     UTIL.startMiniCluster();
@@ -77,7 +74,7 @@ public class TestTableOperationException {
     tableRetry = UTIL.getConnection().getTable(TABLE_RETRY);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.getAdmin().disableTable(TABLE_DONOT_RETRY);
     UTIL.getAdmin().disableTable(TABLE_RETRY);
@@ -86,55 +83,64 @@ public class TestTableOperationException {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testGetWithDoNotRetryIOException() throws Exception {
-    tableDoNotRetry.get(new Get(Bytes.toBytes("row")).addColumn(CF, CQ));
+    assertThrows(DoNotRetryIOException.class,
+      () -> tableDoNotRetry.get(new Get(Bytes.toBytes("row")).addColumn(CF, CQ)));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testPutWithDoNotRetryIOException() throws Exception {
-    tableDoNotRetry.put(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value")));
+    assertThrows(DoNotRetryIOException.class, () -> tableDoNotRetry
+      .put(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value"))));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testDeleteWithDoNotRetryIOException() throws Exception {
-    tableDoNotRetry.delete(new Delete(Bytes.toBytes("row")).addColumn(CF, CQ));
+    assertThrows(DoNotRetryIOException.class,
+      () -> tableDoNotRetry.delete(new Delete(Bytes.toBytes("row")).addColumn(CF, CQ)));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testAppendWithDoNotRetryIOException() throws Exception {
-    tableDoNotRetry
-      .append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value")));
+    assertThrows(DoNotRetryIOException.class, () -> tableDoNotRetry
+      .append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value"))));
   }
 
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testIncrementWithDoNotRetryIOException() throws Exception {
-    tableDoNotRetry.increment(new Increment(Bytes.toBytes("row")).addColumn(CF, CQ, 1));
+    assertThrows(DoNotRetryIOException.class,
+      () -> tableDoNotRetry.increment(new Increment(Bytes.toBytes("row")).addColumn(CF, CQ, 1)));
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testGetWithIOException() throws Exception {
-    tableRetry.get(new Get(Bytes.toBytes("row")).addColumn(CF, CQ));
+    assertThrows(RetriesExhaustedException.class,
+      () -> tableRetry.get(new Get(Bytes.toBytes("row")).addColumn(CF, CQ)));
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testPutWithIOException() throws Exception {
-    tableRetry.put(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value")));
+    assertThrows(RetriesExhaustedException.class, () -> tableRetry
+      .put(new Put(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value"))));
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testDeleteWithIOException() throws Exception {
-    tableRetry.delete(new Delete(Bytes.toBytes("row")).addColumn(CF, CQ));
+    assertThrows(RetriesExhaustedException.class,
+      () -> tableRetry.delete(new Delete(Bytes.toBytes("row")).addColumn(CF, CQ)));
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testAppendWithIOException() throws Exception {
-    tableRetry.append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value")));
+    assertThrows(RetriesExhaustedException.class, () -> tableRetry
+      .append(new Append(Bytes.toBytes("row")).addColumn(CF, CQ, Bytes.toBytes("value"))));
   }
 
-  @Test(expected = RetriesExhaustedException.class)
+  @Test
   public void testIncrementWithIOException() throws Exception {
-    tableRetry.increment(new Increment(Bytes.toBytes("row")).addColumn(CF, CQ, 1));
+    assertThrows(RetriesExhaustedException.class,
+      () -> tableRetry.increment(new Increment(Bytes.toBytes("row")).addColumn(CF, CQ, 1)));
   }
 
   public static class ThrowDoNotRetryIOExceptionCoprocessor

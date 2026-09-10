@@ -17,33 +17,19 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-/**
- * Runs the TestReplicationKillRS test and selects the RS to kill in the slave cluster Do not add
- * other tests in this class.
- */
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillSlaveRS extends TestReplicationKillRS {
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestReplicationKillSlaveRS extends ReplicationKillSlaveRSTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationKillSlaveRS.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     NUM_SLAVES2 = 2;
-    TestReplicationBase.setUpBeforeClass();
-  }
-
-  @Test
-  public void killOneSlaveRS() throws Exception {
-    loadTableAndKillRS(UTIL2);
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
   }
 }

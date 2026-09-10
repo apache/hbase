@@ -17,24 +17,18 @@
  */
 package org.apache.hadoop.hbase.io.compress.xerial;
 
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.io.compress.CompressionTestBase;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestSnappyCodec extends CompressionTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnappyCodec.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     assumeTrue(SnappyCodec.isLoaded());
   }
@@ -55,5 +49,4 @@ public class TestSnappyCodec extends CompressionTestBase {
   public void testSnappyCodecVeryLarge() throws Exception {
     codecVeryLargeTest(new SnappyCodec(), 3); // like text
   }
-
 }

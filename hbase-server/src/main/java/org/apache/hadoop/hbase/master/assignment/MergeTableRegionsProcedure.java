@@ -605,7 +605,7 @@ public class MergeTableRegionsProcedure
     final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
     final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), regionsToMerge[0].getTable());
     final FileSystem fs = mfs.getFileSystem();
-    List<Path> mergedFiles = new ArrayList<>();
+    List<StoreFileInfo> mergedFiles = new ArrayList<StoreFileInfo>();
     HRegionFileSystem mergeRegionFs = HRegionFileSystem
       .createRegionOnFileSystem(env.getMasterConfiguration(), fs, tableDir, mergedRegion);
 
@@ -622,11 +622,11 @@ public class MergeTableRegionsProcedure
       .setState(State.MERGING_NEW);
   }
 
-  private List<Path> mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
+  private List<StoreFileInfo> mergeStoreFiles(MasterProcedureEnv env, HRegionFileSystem regionFs,
     HRegionFileSystem mergeRegionFs, RegionInfo mergedRegion) throws IOException {
     final TableDescriptor htd =
       env.getMasterServices().getTableDescriptors().get(mergedRegion.getTable());
-    List<Path> mergedFiles = new ArrayList<>();
+    List<StoreFileInfo> mergedFiles = new ArrayList<StoreFileInfo>();
     for (ColumnFamilyDescriptor hcd : htd.getColumnFamilies()) {
       String family = hcd.getNameAsString();
       StoreFileTracker tracker =
@@ -643,7 +643,7 @@ public class MergeTableRegionsProcedure
           // is running in a regionserver's Store context, or we might not be able
           // to read the hfiles.
           storeFileInfo.setConf(storeConfiguration);
-          Path refFile = mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
+          StoreFileInfo refFile = mergeRegionFs.mergeStoreFile(regionFs.getRegionInfo(), family,
             new HStoreFile(storeFileInfo, hcd.getBloomFilterType(), CacheConfig.DISABLED), tracker);
           mergedFiles.add(refFile);
         }
@@ -718,8 +718,10 @@ public class MergeTableRegionsProcedure
           RegionInfo.parseRegionName(p.getRow());
         }
       } catch (IOException e) {
-        LOG.error("Row key of mutation from coprocessor is not parsable as region name. "
-          + "Mutations from coprocessor should only be for hbase:meta table.", e);
+        LOG.error(
+          "Row key of mutation from coprocessor is not parsable as region name. "
+            + "Mutations from coprocessor should only be for {} table.",
+          TableName.META_TABLE_NAME, e);
         throw e;
       }
     }

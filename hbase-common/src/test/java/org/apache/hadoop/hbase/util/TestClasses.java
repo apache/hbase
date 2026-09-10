@@ -17,25 +17,15 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.ExpectedException;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestClasses {
-
-  @Rule
-  public final ExpectedException thrown = ExpectedException.none();
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClasses.class);
 
   @Test
   public void testExtendedForName() throws ClassNotFoundException {
@@ -48,8 +38,7 @@ public class TestClasses {
     assertEquals(double.class, Classes.extendedForName("double"));
     assertEquals(boolean.class, Classes.extendedForName("boolean"));
 
-    thrown.expect(ClassNotFoundException.class);
-    Classes.extendedForName("foo");
+    assertThrows(ClassNotFoundException.class, () -> Classes.extendedForName("foo"));
   }
 
   @Test

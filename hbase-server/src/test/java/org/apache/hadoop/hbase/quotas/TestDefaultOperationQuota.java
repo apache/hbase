@@ -17,30 +17,28 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManagerTestHelper;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDefaultOperationQuota {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDefaultOperationQuota.class);
 
+  private static final Configuration conf = HBaseConfiguration.create();
   private static final int DEFAULT_REQUESTS_PER_SECOND = 1000;
   private static ManualEnvironmentEdge envEdge = new ManualEnvironmentEdge();
   static {
@@ -150,7 +148,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setReadNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota =
       new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
@@ -172,7 +170,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setWriteNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota =
       new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
@@ -194,7 +192,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setReadNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota =
       new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
@@ -216,7 +214,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setWriteNum(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota =
       new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
@@ -238,7 +236,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setWriteSize(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota =
       new DefaultOperationQuota(new Configuration(), 65536, DEFAULT_REQUESTS_PER_SECOND, limiter);
 
@@ -261,7 +259,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setReadSize(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), (int) blockSize,
       DEFAULT_REQUESTS_PER_SECOND, limiter);
 
@@ -284,7 +282,7 @@ public class TestDefaultOperationQuota {
     QuotaProtos.Throttle throttle =
       QuotaProtos.Throttle.newBuilder().setReqSize(QuotaProtos.TimedQuota.newBuilder()
         .setSoftLimit(limit).setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build()).build();
-    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(throttle);
+    QuotaLimiter limiter = TimeBasedLimiter.fromThrottle(conf, throttle);
     DefaultOperationQuota quota = new DefaultOperationQuota(new Configuration(), (int) blockSize,
       DEFAULT_REQUESTS_PER_SECOND, limiter);
 

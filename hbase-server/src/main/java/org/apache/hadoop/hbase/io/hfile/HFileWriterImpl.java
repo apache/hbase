@@ -27,6 +27,7 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.security.Key;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -188,11 +189,21 @@ public class HFileWriterImpl implements HFile.Writer {
   private final TimeRangeTracker timeRangeTracker;
   private long earliestPutTs = HConstants.LATEST_TIMESTAMP;
 
+  private String regionName;
+
+  private String familyName;
+
   public HFileWriterImpl(final Configuration conf, CacheConfig cacheConf, Path path,
     FSDataOutputStream outputStream, HFileContext fileContext) {
     this.outputStream = outputStream;
     this.path = path;
-    this.name = path != null ? path.getName() : outputStream.toString();
+    if (path != null) {
+      this.name = path.getName();
+      this.regionName = path.getParent().getParent().getName();
+      this.familyName = path.getParent().getName();
+    } else {
+      this.name = outputStream.toString();
+    }
     this.hFileContext = fileContext;
     // TODO: Move this back to upper layer
     this.timeRangeTracker = TimeRangeTracker.create(TimeRangeTracker.Type.NON_SYNC);
@@ -577,11 +588,11 @@ public class HFileWriterImpl implements HFile.Writer {
   private void doCacheOnWrite(long offset) {
     cacheConf.getBlockCache().ifPresent(cache -> {
       HFileBlock cacheFormatBlock = blockWriter.getBlockForCaching(cacheConf);
-      BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
-      if (!shouldCacheBlock(cache, key)) {
-        return;
-      }
       try {
+        BlockCacheKey key = buildCacheBlockKey(offset, cacheFormatBlock.getBlockType());
+        if (!shouldCacheBlock(cache, key)) {
+          return;
+        }
         cache.cacheBlock(key, cacheFormatBlock, cacheConf.isInMemory(), true);
       } finally {
         // refCnt will auto increase when block add to Cache, see RAMCache#putIfAbsent
@@ -592,7 +603,7 @@ public class HFileWriterImpl implements HFile.Writer {
 
   private BlockCacheKey buildCacheBlockKey(long offset, BlockType blockType) {
     if (path != null) {
-      return new BlockCacheKey(path, offset, true, blockType);
+      return new BlockCacheKey(name, familyName, regionName, offset, true, blockType, false);
     }
     return new BlockCacheKey(name, offset, true, blockType);
   }
@@ -877,12 +888,23 @@ public class HFileWriterImpl implements HFile.Writer {
     // Write out encryption metadata before finalizing if we have a valid crypto context
     Encryption.Context cryptoContext = hFileContext.getEncryptionContext();
     if (cryptoContext != Encryption.Context.NONE) {
-      // Wrap the context's key and write it as the encryption metadata, the wrapper includes
-      // all information needed for decryption
-      trailer.setEncryptionKey(EncryptionUtil.wrapKey(
-        cryptoContext.getConf(), cryptoContext.getConf()
-          .get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY, User.getCurrent().getShortName()),
-        cryptoContext.getKey()));
+      // key management is not yet implemented, so kekData is always null
+      // Use traditional encryption with master key
+      String wrapperSubject = cryptoContext.getConf().get(HConstants.CRYPTO_MASTERKEY_NAME_CONF_KEY,
+        User.getCurrent().getShortName());
+      Key encKey = cryptoContext.getKey();
+
+      // Wrap the context's key and write it as the encryption metadata
+      if (encKey != null) {
+        byte[] wrappedKey =
+          EncryptionUtil.wrapKey(cryptoContext.getConf(), wrapperSubject, encKey, null);
+        trailer.setEncryptionKey(wrappedKey);
+      }
+
+      // Key management fields - not yet implemented, set to defaults
+      trailer.setKeyNamespace(null);
+      trailer.setKEKMetadata(null);
+      trailer.setKEKChecksum(0);
     }
     // Now we can finish the close
     trailer.setMetaIndexCount(metaNames.size());

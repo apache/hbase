@@ -17,34 +17,25 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import java.util.List;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.regionserver.wal.CompressionContext;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.params.ParameterizedClass;
+import org.junit.jupiter.params.provider.Arguments;
+import org.junit.jupiter.params.provider.MethodSource;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
+@ParameterizedClass(name = "{index}: compression={0}")
+@MethodSource("parameters")
 public class TestCompressedWALValueCompression extends CompressedWALTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompressedWALValueCompression.class);
-
-  @Parameters(name = "{index}: compression={0}")
-  public static List<Object[]> params() {
-    return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED;
-  }
 
   private final Compression.Algorithm compression;
 
@@ -52,7 +43,11 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
     this.compression = algo;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return HBaseCommonTestingUtil.COMPRESSION_ALGORITHMS_PARAMETERIZED.stream().map(Arguments::of);
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
     TEST_UTIL.getConfiguration().setBoolean(CompressionContext.ENABLE_WAL_VALUE_COMPRESSION, true);
@@ -61,7 +56,7 @@ public class TestCompressedWALValueCompression extends CompressedWALTestBase {
     TEST_UTIL.startMiniDFSCluster(3);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }

@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.replication;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureConstants;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
@@ -30,25 +29,22 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
-import org.apache.hadoop.hbase.replication.SyncReplicationTestBase;
+import org.apache.hadoop.hbase.replication.SyncReplicationTestBaseNoBeforeAll;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, LargeTests.class })
-public class TestTransitPeerSyncReplicationStateProcedureRetry extends SyncReplicationTestBase {
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestTransitPeerSyncReplicationStateProcedureRetry
+  extends SyncReplicationTestBaseNoBeforeAll {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTransitPeerSyncReplicationStateProcedureRetry.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL2.getConfiguration().setInt(MasterProcedureConstants.MASTER_PROCEDURE_THREADS, 1);
-    SyncReplicationTestBase.setUp();
+    startClusters();
   }
 
   @Test

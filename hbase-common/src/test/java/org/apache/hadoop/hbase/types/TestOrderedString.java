@@ -17,24 +17,19 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestOrderedString {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOrderedString.class);
-
   private static final String[] VALUES = new String[] { null, "", "1", "22", "333", "4444", "55555",
     "666666", "7777777", "88888888", "999999999" };
 
@@ -46,8 +41,8 @@ public class TestOrderedString {
       for (final String val : VALUES) {
         buff.setPosition(0);
         type.encode(buff, val);
-        assertEquals("encodedLength does not match actual, " + val, buff.getPosition(),
-          type.encodedLength(val));
+        assertEquals(buff.getPosition(), type.encodedLength(val),
+          "encodedLength does not match actual, " + val);
       }
     }
   }

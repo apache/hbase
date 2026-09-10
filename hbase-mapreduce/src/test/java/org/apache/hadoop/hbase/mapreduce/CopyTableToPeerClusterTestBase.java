@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test CopyTable between clusters
@@ -37,13 +38,13 @@ public abstract class CopyTableToPeerClusterTestBase extends CopyTableTestBase {
 
   protected static final HBaseTestingUtil UTIL2 = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     UTIL1.startMiniCluster(3);
     UTIL2.startMiniCluster(3);
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL1.shutdownMiniCluster();
     UTIL2.shutdownMiniCluster();
@@ -78,35 +79,35 @@ public abstract class CopyTableToPeerClusterTestBase extends CopyTableTestBase {
    * Simple end-to-end test
    */
   @Test
-  public void testCopyTable() throws Exception {
-    doCopyTableTest(UTIL1.getConfiguration(), false);
+  public void testCopyTable(TestInfo testInfo) throws Exception {
+    doCopyTableTest(UTIL1.getConfiguration(), false, testInfo);
   }
 
   /**
    * Simple end-to-end test on table with MOB
    */
   @Test
-  public void testCopyTableWithMob() throws Exception {
-    doCopyTableTestWithMob(UTIL1.getConfiguration(), false);
+  public void testCopyTableWithMob(TestInfo testInfo) throws Exception {
+    doCopyTableTestWithMob(UTIL1.getConfiguration(), false, testInfo);
   }
 
   @Test
-  public void testStartStopRow() throws Exception {
-    testStartStopRow(UTIL1.getConfiguration());
+  public void testStartStopRow(TestInfo testInfo) throws Exception {
+    testStartStopRow(UTIL1.getConfiguration(), testInfo);
   }
 
   /**
    * Test copy of table from sourceTable to targetTable all rows from family a
    */
   @Test
-  public void testRenameFamily() throws Exception {
-    testRenameFamily(UTIL1.getConfiguration());
+  public void testRenameFamily(TestInfo testInfo) throws Exception {
+    testRenameFamily(UTIL1.getConfiguration(), testInfo);
   }
 
   @Test
-  public void testBulkLoadNotSupported() throws Exception {
-    TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  public void testBulkLoadNotSupported(TestInfo testInfo) throws Exception {
+    TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     try (Table t1 = UTIL1.createTable(tableName1, FAMILY_A);
       Table t2 = UTIL2.createTable(tableName2, FAMILY_A)) {
       String[] args = ArrayUtils.addAll(getPeerClusterOptions(),
@@ -119,9 +120,9 @@ public abstract class CopyTableToPeerClusterTestBase extends CopyTableTestBase {
   }
 
   @Test
-  public void testSnapshotNotSupported() throws Exception {
-    TableName tableName1 = TableName.valueOf(name.getMethodName() + "1");
-    TableName tableName2 = TableName.valueOf(name.getMethodName() + "2");
+  public void testSnapshotNotSupported(TestInfo testInfo) throws Exception {
+    TableName tableName1 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "1");
+    TableName tableName2 = TableName.valueOf(testInfo.getTestMethod().get().getName() + "2");
     String snapshot = tableName1.getNameAsString() + "_snapshot";
     try (Table t1 = UTIL1.createTable(tableName1, FAMILY_A);
       Table t2 = UTIL2.createTable(tableName2, FAMILY_A)) {

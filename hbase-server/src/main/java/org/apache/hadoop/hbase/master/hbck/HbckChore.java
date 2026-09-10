@@ -261,7 +261,8 @@ public class HbckChore extends ScheduledChore {
     FileSystem fs = master.getMasterFileSystem().getFileSystem();
 
     int numRegions = 0;
-    List<Path> tableDirs = FSUtils.getTableDirs(fs, rootDir);
+    List<Path> tableDirs =
+      FSUtils.getTableDirs(fs, rootDir).stream().filter(FSUtils::isLocalMetaTable).toList();
     for (Path tableDir : tableDirs) {
       List<Path> regionDirs = FSUtils.getRegionDirs(fs, tableDir);
       for (Path regionDir : regionDirs) {

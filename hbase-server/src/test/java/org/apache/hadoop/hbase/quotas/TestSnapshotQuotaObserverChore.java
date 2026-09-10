@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -35,7 +35,6 @@ import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
@@ -52,14 +51,12 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.NoFilesToDischarg
 import org.apache.hadoop.hbase.quotas.SpaceQuotaHelperForTests.SpaceQuotaSnapshotPredicate;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,27 +67,21 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Multimap;
 /**
  * Test class for the {@link SnapshotQuotaObserverChore}.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestSnapshotQuotaObserverChore {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotQuotaObserverChore.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotQuotaObserverChore.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final AtomicLong COUNTER = new AtomicLong();
-
-  @Rule
-  public TestName testName = new TestName();
 
   private Connection conn;
   private Admin admin;
   private SpaceQuotaHelperForTests helper;
   private HMaster master;
   private SnapshotQuotaObserverChore testChore;
+  private String testName;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     SpaceQuotaHelperForTests.updateConfigForQuotas(conf);
@@ -99,16 +90,17 @@ public class TestSnapshotQuotaObserverChore {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setup() throws Exception {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    testName = testInfo.getTestMethod().get().getName();
     conn = TEST_UTIL.getConnection();
     admin = TEST_UTIL.getAdmin();
-    helper = new SpaceQuotaHelperForTests(TEST_UTIL, testName, COUNTER);
+    helper = new SpaceQuotaHelperForTests(TEST_UTIL, () -> testName, COUNTER);
     master = TEST_UTIL.getHBaseCluster().getMaster();
     helper.removeAllQuotas(conn);
     testChore = new SnapshotQuotaObserverChore(TEST_UTIL.getConnection(),
@@ -228,8 +220,8 @@ public class TestSnapshotQuotaObserverChore {
 
     // Get the snapshots
     Multimap<TableName, String> snapshotsToCompute = testChore.getSnapshotsToComputeSize();
-    assertEquals("Expected to see the single snapshot: " + snapshotsToCompute, 1,
-      snapshotsToCompute.size());
+    assertEquals(1, snapshotsToCompute.size(),
+      "Expected to see the single snapshot: " + snapshotsToCompute);
 
     // Get the size of our snapshot
     Map<String, Long> namespaceSnapshotSizes = testChore.computeSnapshotSizes(snapshotsToCompute);
@@ -263,8 +255,8 @@ public class TestSnapshotQuotaObserverChore {
 
     // Still should see only one snapshot
     snapshotsToCompute = testChore.getSnapshotsToComputeSize();
-    assertEquals("Expected to see the single snapshot: " + snapshotsToCompute, 1,
-      snapshotsToCompute.size());
+    assertEquals(1, snapshotsToCompute.size(),
+      "Expected to see the single snapshot: " + snapshotsToCompute);
     namespaceSnapshotSizes = testChore.computeSnapshotSizes(snapshotsToCompute);
     assertEquals(1, namespaceSnapshotSizes.size());
     size = namespaceSnapshotSizes.get(tn1.getNamespaceAsString());

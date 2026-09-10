@@ -24,15 +24,6 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
 import org.apache.hadoop.hbase.chaos.policies.Policy;
 
 public class UnbalanceMonkeyFactory extends MonkeyFactory {
-  /**
-   * How often to introduce the chaos. If too frequent, sequence of kills on minicluster can cause
-   * test to fail when Put runs out of retries.
-   */
-  private long chaosEveryMilliSec;
-  private long waitForUnbalanceMilliSec;
-  private long waitForKillMilliSec;
-  private long waitAfterBalanceMilliSec;
-  private boolean killMetaRs;
 
   @Override
   public ChaosMonkey build() {
@@ -42,23 +33,5 @@ public class UnbalanceMonkeyFactory extends MonkeyFactory {
         waitForUnbalanceMilliSec, waitForKillMilliSec, waitAfterBalanceMilliSec, killMetaRs));
 
     return new PolicyBasedChaosMonkey(properties, util, chaosPolicy);
-  }
-
-  private void loadProperties() {
-    chaosEveryMilliSec =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_CHAOS_EVERY_MS,
-        MonkeyConstants.DEFAULT_UNBALANCE_CHAOS_EVERY_MS + ""));
-    waitForUnbalanceMilliSec =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_WAIT_FOR_UNBALANCE_MS,
-        MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_UNBALANCE_MS + ""));
-    waitForKillMilliSec =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_WAIT_FOR_KILLS_MS,
-        MonkeyConstants.DEFAULT_UNBALANCE_WAIT_FOR_KILLS_MS + ""));
-    waitAfterBalanceMilliSec =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.UNBALANCE_WAIT_AFTER_BALANCE_MS,
-        MonkeyConstants.DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS + ""));
-    killMetaRs =
-      Boolean.parseBoolean(this.properties.getProperty(MonkeyConstants.UNBALANCE_KILL_META_RS,
-        MonkeyConstants.DEFAULT_UNBALANCE_KILL_META_RS + ""));
   }
 }

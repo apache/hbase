@@ -46,6 +46,8 @@ public interface MonkeyConstants {
   String UNBALANCE_WAIT_AFTER_BALANCE_MS = "unbalance.action.wait.after.period";
   String UNBALANCE_KILL_META_RS = "unbalance.action.kill.meta.rs";
   String DECREASE_HFILE_SIZE_SLEEP_TIME = "decrease.hfile.size.sleep.time";
+  String DECREASE_HFILE_SIZE_MIN_HFILE_SIZE = "decrease.hfile.size.min.hfile.size";
+  String DECREASE_HFILE_SIZE_HFILE_SIZE_JITTER = "decrease.hfile.size.hfile.size.jitter";
   String RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME = "restart.random.rs.exception.sleep.time";
   String RESTART_ACTIVE_NAMENODE_SLEEP_TIME = "restart.active.namenode.sleep.time";
   String RESTART_RANDOM_DATANODE_SLEEP_TIME = "restart.random.datanode.sleep.time";
@@ -99,6 +101,8 @@ public interface MonkeyConstants {
   long DEFAULT_UNBALANCE_WAIT_AFTER_BALANCE_MS = 5 * 1000;
   boolean DEFAULT_UNBALANCE_KILL_META_RS = true;
   long DEFAULT_DECREASE_HFILE_SIZE_SLEEP_TIME = 30 * 1000;
+  long DEFAULT_DECREASE_HFILE_SIZE_MIN_HFILE_SIZE = 1024L * 1024 * 1024;
+  float DEFAULT_DECREASE_HFILE_SIZE_HFILE_SIZE_JITTER = 0.001f;
 
   long DEFAULT_RESTART_RANDOM_RS_EXCEPTION_SLEEP_TIME = TimeUnit.MILLISECONDS.toMillis(60000);
   long DEFAULT_RESTART_ACTIVE_NAMENODE_SLEEP_TIME = TimeUnit.MILLISECONDS.toMillis(60000);

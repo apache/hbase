@@ -57,7 +57,6 @@ import java.util.concurrent.locks.ReentrantReadWriteLock;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.commons.io.IOUtils;
-import org.apache.commons.lang3.mutable.MutableInt;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -93,6 +92,7 @@ import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
 import org.apache.hadoop.hbase.util.Pair;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -207,6 +207,12 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   private volatile CacheState cacheState;
 
+  /** The single cleanup thread shared by disable and explicit shutdown calls. */
+  private volatile Thread cacheCleanupThread;
+
+  /** The thread restoring the persistent cache index during initialization. */
+  private volatile Thread persistenceRetrieverThread;
+
   /**
    * A list of writer queues. We have a queue per {@link WriterThread} we have running. In other
    * words, the work adding blocks to the BucketCache is divided up amongst the running
@@ -228,8 +234,6 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /** Cache access count (sequential ID) */
   private final AtomicLong accessCount = new AtomicLong();
-
-  private static final int DEFAULT_CACHE_WAIT_TIME = 50;
 
   private final BucketCacheStats cacheStats;
   private final String persistencePath;
@@ -419,12 +423,17 @@ public class BucketCache implements BlockCache, HeapSize {
           LOG.error("Exception during Bucket Allocation", allocatorException);
         }
       } finally {
-        this.cacheState = CacheState.ENABLED;
-        startWriterThreads();
+        synchronized (BucketCache.this) {
+          if (cacheState == CacheState.INITIALIZING) {
+            cacheState = CacheState.ENABLED;
+            startWriterThreads();
+          }
+        }
       }
     };
-    Thread t = new Thread(persistentCacheRetriever);
-    t.start();
+    persistenceRetrieverThread = new Thread(persistentCacheRetriever,
+      "BucketCachePersistenceRetriever-" + System.identityHashCode(this));
+    persistenceRetrieverThread.start();
   }
 
   private void sanityCheckConfigs() {
@@ -598,7 +607,8 @@ public class BucketCache implements BlockCache, HeapSize {
     if (cacheKey.getBlockType() == null && cachedItem.getBlockType() != null) {
       cacheKey.setBlockType(cachedItem.getBlockType());
     }
-    LOG.trace("Caching key={}, item={}", cacheKey, cachedItem);
+    LOG.debug("Caching key={}, item={}, key heap size={}", cacheKey, cachedItem,
+      cacheKey.heapSize());
     // Stuff the entry into the RAM cache so it can get drained to the persistent store
     RAMQueueEntry re = new RAMQueueEntry(cacheKey, cachedItem, accessCount.incrementAndGet(),
       inMemory, isCachePersistent() && ioEngine instanceof FileIOEngine, wait);
@@ -645,18 +655,22 @@ public class BucketCache implements BlockCache, HeapSize {
    *         the passed key doesn't relate to a reference.
    */
   public BucketEntry getBlockForReference(BlockCacheKey key) {
-    BucketEntry foundEntry = null;
-    String referredFileName = null;
-    if (StoreFileInfo.isReference(key.getHfileName())) {
-      referredFileName = StoreFileInfo.getReferredToRegionAndFile(key.getHfileName()).getSecond();
-    }
-    if (referredFileName != null) {
-      BlockCacheKey convertedCacheKey = new BlockCacheKey(referredFileName, key.getOffset());
-      foundEntry = backingMap.get(convertedCacheKey);
+    BlockCacheKey referredKey = getBlockKeyForReference(key);
+    BucketEntry foundEntry = referredKey != null ? backingMap.get(referredKey) : null;
+    if (referredKey != null) {
       LOG.debug("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
-        convertedCacheKey, foundEntry);
+        referredKey, foundEntry);
     }
     return foundEntry;
+  }
+
+  private BlockCacheKey getBlockKeyForReference(BlockCacheKey key) {
+    if (!StoreFileInfo.isReference(key.getHfileName())) {
+      return null;
+    }
+    String referredFileName =
+      StoreFileInfo.getReferredToRegionAndFile(key.getHfileName()).getSecond();
+    return referredFileName != null ? new BlockCacheKey(referredFileName, key.getOffset()) : null;
   }
 
   /**
@@ -682,21 +696,28 @@ public class BucketCache implements BlockCache, HeapSize {
       re.access(accessCount.incrementAndGet());
       return re.getData();
     }
-    BucketEntry bucketEntry = backingMap.get(key);
+    BlockCacheKey backingMapLookupKey = key;
+    BucketEntry bucketEntry = backingMap.get(backingMapLookupKey);
+    LOG.debug("bucket entry for key {}: {}", key,
+      bucketEntry == null ? null : bucketEntry.offset());
     if (bucketEntry == null) {
-      bucketEntry = getBlockForReference(key);
+      backingMapLookupKey = getBlockKeyForReference(key);
+      if (backingMapLookupKey != null) {
+        bucketEntry = backingMap.get(backingMapLookupKey);
+        LOG.debug("Got a link/ref: {}. Related cacheKey: {}. Found entry: {}", key.getHfileName(),
+          backingMapLookupKey, bucketEntry);
+      }
     }
     if (bucketEntry != null) {
       long start = System.nanoTime();
       ReentrantReadWriteLock lock = offsetLock.getLock(bucketEntry.offset());
+      boolean inconsistentEntry = false;
       try {
         lock.readLock().lock();
         // We can not read here even if backingMap does contain the given key because its offset
         // maybe changed. If we lock BlockCacheKey instead of offset, then we can only check
         // existence here.
-        if (
-          bucketEntry.equals(backingMap.get(key)) || bucketEntry.equals(getBlockForReference(key))
-        ) {
+        if (bucketEntry.equals(backingMap.get(backingMapLookupKey))) {
           // Read the block from IOEngine based on the bucketEntry's offset and length, NOTICE: the
           // block will use the refCnt of bucketEntry, which means if two HFileBlock mapping to
           // the same BucketEntry, then all of the three will share the same refCnt.
@@ -718,11 +739,9 @@ public class BucketCache implements BlockCache, HeapSize {
           return cachedBlock;
         }
       } catch (HBaseIOException hioex) {
-        // When using file io engine persistent cache,
-        // the cache map state might differ from the actual cache. If we reach this block,
-        // we should remove the cache key entry from the backing map
-        backingMap.remove(key);
-        fullyCachedFiles.remove(key.getHfileName());
+        // FileIOEngine throws this when its cached time differs from the persisted index. A plain
+        // IOException still follows the configured tolerance policy below.
+        inconsistentEntry = true;
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -730,11 +749,27 @@ public class BucketCache implements BlockCache, HeapSize {
       } finally {
         lock.readLock().unlock();
       }
+      if (inconsistentEntry) {
+        evictInconsistentEntry(backingMapLookupKey, bucketEntry);
+      }
     }
     if (!repeat && updateCacheMetrics) {
       cacheStats.miss(caching, key.isPrimary(), key.getBlockType());
     }
     return null;
+  }
+
+  private void evictInconsistentEntry(BlockCacheKey lookupKey, BucketEntry bucketEntry) {
+    BlockCacheKey storedKey = blocksByHFile.ceiling(lookupKey);
+    if (storedKey == null || !storedKey.equals(lookupKey)) {
+      return;
+    }
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.remove(storedKey, bucketEntry)) {
+        blockEvicted(storedKey, bucketEntry, true, false);
+      }
+      return null;
+    });
   }
 
   /**
@@ -747,7 +782,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fileNotFullyCached(cacheKey.getHfileName());
+        fileNotFullyCached(cacheKey, bucketEntry);
       }
     }
     if (evictedByEvictionProcess) {
@@ -758,23 +793,11 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  private void fileNotFullyCached(String hfileName) {
-    // Update the regionPrefetchedSizeMap before removing the file from prefetchCompleted
-    if (fullyCachedFiles.containsKey(hfileName)) {
-      Pair<String, Long> regionEntry = fullyCachedFiles.get(hfileName);
-      String regionEncodedName = regionEntry.getFirst();
-      long filePrefetchSize = regionEntry.getSecond();
-      LOG.debug("Removing file {} for region {}", hfileName, regionEncodedName);
-      regionCachedSize.computeIfPresent(regionEncodedName, (rn, pf) -> pf - filePrefetchSize);
-      // If all the blocks for a region are evicted from the cache, remove the entry for that region
-      if (
-        regionCachedSize.containsKey(regionEncodedName)
-          && regionCachedSize.get(regionEncodedName) == 0
-      ) {
-        regionCachedSize.remove(regionEncodedName);
-      }
-    }
-    fullyCachedFiles.remove(hfileName);
+  private void fileNotFullyCached(BlockCacheKey key, BucketEntry entry) {
+    // Update the updateRegionCachedSize before removing the file from fullyCachedFiles.
+    // This computation should happen even if the file is not in fullyCachedFiles map.
+    updateRegionCachedSize(key, (entry.getLength() * -1));
+    fullyCachedFiles.remove(key.getHfileName());
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
@@ -786,11 +809,21 @@ public class BucketCache implements BlockCache, HeapSize {
     fullyCachedFiles.put(filePath.getName(), pair);
   }
 
-  private void updateRegionCachedSize(Path filePath, long cachedSize) {
-    if (filePath != null) {
-      String regionName = filePath.getParent().getParent().getName();
-      regionCachedSize.merge(regionName, cachedSize,
-        (previousSize, newBlockSize) -> previousSize + newBlockSize);
+  private void updateRegionCachedSize(BlockCacheKey key, long cachedSize) {
+    if (key.getRegionName() != null) {
+      if (key.isArchived()) {
+        LOG.trace("Skipping region cached size update for archived file:{} from region: {}",
+          key.getHfileName(), key.getRegionName());
+      } else {
+        String regionName = key.getRegionName();
+        regionCachedSize.merge(regionName, cachedSize,
+          (previousSize, newBlockSize) -> previousSize + newBlockSize);
+        // If all the blocks for a region are evicted from the cache,
+        // remove the entry for that region from regionCachedSize map.
+        if (regionCachedSize.getOrDefault(regionName, 0L) <= 0) {
+          regionCachedSize.remove(regionName);
+        }
+      }
     }
   }
 
@@ -1351,14 +1384,19 @@ public class BucketCache implements BlockCache, HeapSize {
    */
   protected void putIntoBackingMap(BlockCacheKey key, BucketEntry bucketEntry) {
     BucketEntry previousEntry = backingMap.put(key, bucketEntry);
-    blocksByHFile.add(key);
-    updateRegionCachedSize(key.getFilePath(), bucketEntry.getLength());
+    updateRegionCachedSize(key, bucketEntry.getLength());
     if (previousEntry != null && previousEntry != bucketEntry) {
       previousEntry.withWriteLock(offsetLock, () -> {
         blockEvicted(key, previousEntry, false, false);
         return null;
       });
     }
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.get(key) == bucketEntry) {
+        blocksByHFile.add(key);
+      }
+      return null;
+    });
   }
 
   /**
@@ -1552,6 +1590,12 @@ public class BucketCache implements BlockCache, HeapSize {
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "OBL_UNSATISFIED_OBLIGATION",
       justification = "false positive, try-with-resources ensures close is called.")
   void persistToFile() throws IOException {
+    persistToFile(entry -> {
+    });
+  }
+
+  private void persistToFile(Consumer<Map.Entry<BlockCacheKey, BucketEntry>> entryCopiedAction)
+    throws IOException {
     LOG.debug("Thread {} started persisting bucket cache to file",
       Thread.currentThread().getName());
     if (!isCachePersistent()) {
@@ -1561,7 +1605,7 @@ public class BucketCache implements BlockCache, HeapSize {
     try (FileOutputStream fos = new FileOutputStream(tempPersistencePath, false)) {
       LOG.debug("Persist in new chunked persistence format.");
 
-      persistChunkedBackingMap(fos);
+      persistChunkedBackingMap(fos, entryCopiedAction);
 
       LOG.debug(
         "PersistToFile: after persisting backing map size: {}, fullycachedFiles size: {},"
@@ -1611,10 +1655,17 @@ public class BucketCache implements BlockCache, HeapSize {
       int pblen = ProtobufMagic.lengthOfPBMagic();
       byte[] pbuf = new byte[pblen];
       IOUtils.readFully(in, pbuf, 0, pblen);
+
       if (ProtobufMagic.isPBMagicPrefix(pbuf)) {
         LOG.info("Reading old format of persistence.");
         // The old non-chunked version of backing map persistence.
-        parsePB(BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in));
+        BucketCacheProtos.BucketCacheEntry cacheEntry =
+          BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+        if (cacheEntry == null) {
+          throw new IOException(
+            "Failed to parse cache entry from persistence file: " + persistencePath);
+        }
+        parsePB(cacheEntry);
       } else if (Arrays.equals(pbuf, BucketProtoUtils.PB_MAGIC_V2)) {
         // The new persistence format of chunked persistence.
         LOG.info("Reading new chunked format of persistence.");
@@ -1638,13 +1689,7 @@ public class BucketCache implements BlockCache, HeapSize {
       dumpPrefetchList();
     }
     regionCachedSize.clear();
-    fullyCachedFiles.forEach((hFileName, hFileSize) -> {
-      // Get the region name for each file
-      String regionEncodedName = hFileSize.getFirst();
-      long cachedFileSize = hFileSize.getSecond();
-      regionCachedSize.merge(regionEncodedName, cachedFileSize,
-        (oldpf, fileSize) -> oldpf + fileSize);
-    });
+    backingMap.forEach((k, v) -> updateRegionCachedSize(k, v.getLength()));
   }
 
   private void dumpPrefetchList() {
@@ -1698,7 +1743,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
             evictBlock(keyEntry.getKey());
-            fileNotFullyCached(keyEntry.getKey().getHfileName());
+            fileNotFullyCached(keyEntry.getKey(), keyEntry.getValue());
           }
         }
         backingMapValidated.set(true);
@@ -1716,7 +1761,10 @@ public class BucketCache implements BlockCache, HeapSize {
     java.util.Map<java.lang.Integer, java.lang.String> deserializer) throws IOException {
     Pair<ConcurrentHashMap<BlockCacheKey, BucketEntry>, NavigableSet<BlockCacheKey>> pair2 =
       BucketProtoUtils.fromPB(deserializer, chunk, this::createRecycler);
-    backingMap.putAll(pair2.getFirst());
+    pair2.getFirst().forEach((k, v) -> {
+      backingMap.put(k, v);
+      updateRegionCachedSize(k, v.getLength());
+    });
     blocksByHFile.addAll(pair2.getSecond());
   }
 
@@ -1737,13 +1785,14 @@ public class BucketCache implements BlockCache, HeapSize {
     verifyCapacityAndClasses(proto.getCacheCapacity(), proto.getIoClass(), proto.getMapClass());
   }
 
-  private void persistChunkedBackingMap(FileOutputStream fos) throws IOException {
+  private void persistChunkedBackingMap(FileOutputStream fos,
+    Consumer<Map.Entry<BlockCacheKey, BucketEntry>> entryCopiedAction) throws IOException {
     LOG.debug(
       "persistToFile: before persisting backing map size: {}, "
         + "fullycachedFiles size: {}, chunkSize: {}",
       backingMap.size(), fullyCachedFiles.size(), persistenceChunkSize);
 
-    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize);
+    BucketProtoUtils.serializeAsPB(this, fos, persistenceChunkSize, entryCopiedAction);
 
     LOG.debug(
       "persistToFile: after persisting backing map size: {}, " + "fullycachedFiles size: {}",
@@ -1751,16 +1800,23 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private void retrieveChunkedBackingMap(FileInputStream in) throws IOException {
-
     // Read the first chunk that has all the details.
     BucketCacheProtos.BucketCacheEntry cacheEntry =
       BucketCacheProtos.BucketCacheEntry.parseDelimitedFrom(in);
+
+    // HBASE-29857: Handle case where persistence file is empty.
+    // parseDelimitedFrom() returns null when there's no data to read.
+    // Note: Corrupted files would throw InvalidProtocolBufferException (subclass of IOException).
+    if (cacheEntry == null) {
+      throw new IOException("Failed to read cache entry from persistence file (file is empty)");
+    }
 
     fullyCachedFiles.clear();
     fullyCachedFiles.putAll(BucketProtoUtils.fromPB(cacheEntry.getCachedFilesMap()));
 
     backingMap.clear();
     blocksByHFile.clear();
+    regionCachedSize.clear();
 
     // Read the backing map entries in batches.
     int numChunks = 0;
@@ -1774,7 +1830,6 @@ public class BucketCache implements BlockCache, HeapSize {
     verifyFileIntegrity(cacheEntry);
     verifyCapacityAndClasses(cacheEntry.getCacheCapacity(), cacheEntry.getIoClass(),
       cacheEntry.getMapClass());
-    updateRegionSizeMapWhileRetrievingFromFile();
   }
 
   /**
@@ -1798,57 +1853,106 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /**
    * Used to shut down the cache -or- turn it off in the case of something broken.
+   * @return whether explicit shutdown should wait for cleanup
    */
-  private void disableCache() {
-    if (!isCacheEnabled()) {
-      return;
+  private synchronized boolean disableCache() {
+    if (cacheState == CacheState.DISABLED) {
+      return false;
     }
+    boolean waitForCleanup = cacheState == CacheState.ENABLED && isCachePersistent();
     LOG.info("Disabling cache");
     cacheState = CacheState.DISABLED;
-    ioEngine.shutdown();
     this.scheduleThreadPool.shutdown();
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].interrupt();
-    this.ramCache.clear();
-    if (!ioEngine.isPersistent() || persistencePath == null) {
-      // If persistent ioengine and a path, we will serialize out the backingMap.
-      this.backingMap.clear();
-      this.blocksByHFile.clear();
-      this.fullyCachedFiles.clear();
-      this.regionCachedSize.clear();
+    for (WriterThread writerThread : writerThreads) {
+      writerThread.interrupt();
     }
+    // Closing the IO engine helps unblock an in-flight writer before the cleanup thread joins it.
+    // FileIOEngine can reopen a channel, so cleanup closes the engine again after writers stop.
+    ioEngine.shutdown();
     if (cacheStats.getMetricsRollerScheduler() != null) {
       cacheStats.getMetricsRollerScheduler().shutdownNow();
     }
+    cacheCleanupThread = Threads.setDaemonThreadRunning(new Thread(this::cleanupCache),
+      "BucketCacheCleanup-" + System.identityHashCode(this), Threads.LOGGING_EXCEPTION_HANDLER);
+    return waitForCleanup;
   }
 
-  private void join() throws InterruptedException {
-    for (int i = 0; i < writerThreads.length; ++i)
-      writerThreads[i].join();
+  private void cleanupCache() {
+    try {
+      Threads.shutdown(persistenceRetrieverThread);
+      for (WriterThread writerThread : writerThreads) {
+        Threads.shutdown(writerThread);
+      }
+      for (BlockingQueue<RAMQueueEntry> writerQueue : writerQueues) {
+        writerQueue.clear();
+      }
+      ramCache.clear();
+      if (cachePersister != null) {
+        LOG.info("Shutting down cache persister thread.");
+        cachePersister.shutdown();
+        Threads.shutdown(cachePersister);
+      }
+      if (isCachePersistent()) {
+        try {
+          // The serializer already visits every entry. Release owner references in the same pass.
+          persistToFile(this::cleanupBackingMapEntry);
+        } catch (IOException ex) {
+          LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
+        }
+      }
+    } finally {
+      try {
+        cleanupCacheIndex();
+      } finally {
+        ioEngine.shutdown();
+      }
+    }
+  }
+
+  private void cleanupCacheIndex() {
+    // A successful persistent cleanup emptied the map during serialization. Avoid creating a
+    // second iterator over a large ConcurrentHashMap in that case.
+    if (!backingMap.isEmpty()) {
+      for (Map.Entry<BlockCacheKey, BucketEntry> entry : backingMap.entrySet()) {
+        cleanupBackingMapEntry(entry);
+      }
+    }
+    blocksByHFile.clear();
+    fullyCachedFiles.clear();
+    regionCachedSize.clear();
+  }
+
+  private void cleanupBackingMapEntry(Map.Entry<BlockCacheKey, BucketEntry> entry) {
+    BlockCacheKey cacheKey = entry.getKey();
+    BucketEntry bucketEntry = entry.getValue();
+    bucketEntry.withWriteLock(offsetLock, () -> {
+      if (backingMap.remove(cacheKey, bucketEntry)) {
+        bucketEntry.markAsEvicted();
+      }
+      return null;
+    });
+  }
+
+  private void waitForCacheCleanup() throws InterruptedException {
+    Thread cleanupThread = cacheCleanupThread;
+    if (cleanupThread == null || cleanupThread == Thread.currentThread()) {
+      return;
+    }
+    cleanupThread.join();
   }
 
   @Override
   public void shutdown() {
-    disableCache();
-    LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
-      + persistencePath);
-    if (ioEngine.isPersistent() && persistencePath != null) {
+    if (disableCache()) {
       try {
-        join();
-        if (cachePersister != null) {
-          LOG.info("Shutting down cache persister thread.");
-          cachePersister.shutdown();
-          while (cachePersister.isAlive()) {
-            Thread.sleep(10);
-          }
-        }
-        persistToFile();
-      } catch (IOException ex) {
-        LOG.error("Unable to persist data on exit: " + ex.toString(), ex);
+        waitForCacheCleanup();
       } catch (InterruptedException e) {
-        LOG.warn("Failed to persist data on exit", e);
+        Thread.currentThread().interrupt();
+        LOG.warn("Interrupted while waiting for bucket cache cleanup", e);
       }
     }
+    LOG.info("Shutdown bucket cache: IO persistent=" + ioEngine.isPersistent() + "; path to write="
+      + persistencePath);
   }
 
   /**
@@ -1929,10 +2033,15 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public int evictBlocksRangeByHfileName(String hfileName, long initOffset, long endOffset) {
-    fileNotFullyCached(hfileName);
     Set<BlockCacheKey> keySet = getAllCacheKeysForFile(hfileName, initOffset, endOffset);
+    // We need to make sure whether we are evicting all blocks for this given file. In case of
+    // split references, we might be evicting just half of the blocks
     LOG.debug("found {} blocks for file {}, starting offset: {}, end offset: {}", keySet.size(),
       hfileName, initOffset, endOffset);
+    return evictBlockSet(keySet);
+  }
+
+  private int evictBlockSet(Set<BlockCacheKey> keySet) {
     int numEvicted = 0;
     for (BlockCacheKey key : keySet) {
       if (evictBlock(key)) {
@@ -1943,8 +2052,22 @@ public class BucketCache implements BlockCache, HeapSize {
   }
 
   private Set<BlockCacheKey> getAllCacheKeysForFile(String hfileName, long init, long end) {
-    return blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
-      new BlockCacheKey(hfileName, end), true);
+    Set<BlockCacheKey> cacheKeys = new HashSet<>();
+    // At this moment, Some Bucket Entries may be in the WriterThread queue, and not yet put into
+    // the backingMap. So, when executing this method, we should check both the RAMCache and
+    // backingMap to ensure all CacheKeys are obtained.
+    // For more details, please refer to HBASE-29862.
+    Set<BlockCacheKey> ramCacheKeySet = ramCache.getRamBlockCacheKeysForHFile(hfileName);
+    for (BlockCacheKey key : ramCacheKeySet) {
+      if (key.getOffset() >= init && key.getOffset() <= end) {
+        cacheKeys.add(key);
+      }
+    }
+
+    // These keys are just for comparison and are short lived, so we need only file name and offset
+    cacheKeys.addAll(blocksByHFile.subSet(new BlockCacheKey(hfileName, init), true,
+      new BlockCacheKey(hfileName, end), true));
+    return cacheKeys;
   }
 
   /**
@@ -2339,6 +2462,16 @@ public class BucketCache implements BlockCache, HeapSize {
       return delegate.keySet().stream().filter(key -> key.getHfileName().equals(fileName))
         .findFirst().isPresent();
     }
+
+    public Set<BlockCacheKey> getRamBlockCacheKeysForHFile(String fileName) {
+      Set<BlockCacheKey> ramCacheKeySet = new HashSet<>();
+      for (BlockCacheKey blockCacheKey : delegate.keySet()) {
+        if (blockCacheKey.getHfileName().equals(fileName)) {
+          ramCacheKeySet.add(blockCacheKey);
+        }
+      }
+      return ramCacheKeySet;
+    }
   }
 
   public Map<BlockCacheKey, BucketEntry> getBackingMap() {
@@ -2369,6 +2502,34 @@ public class BucketCache implements BlockCache, HeapSize {
     return Optional.empty();
   }
 
+  private int countBlocksForFile(Path fileName, List<ReentrantReadWriteLock> locks) {
+    LOG.debug("iterating over {} entries in the backing map", backingMap.size());
+    Set<BlockCacheKey> result = getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE);
+    if (result.isEmpty() && StoreFileInfo.isReference(fileName)) {
+      result = getAllCacheKeysForFile(
+        StoreFileInfo.getReferredToRegionAndFile(fileName.getName()).getSecond(), 0,
+        Long.MAX_VALUE);
+    }
+    int count = 0;
+    for (BlockCacheKey entry : result) {
+      LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
+        fileName.getName(), entry.getOffset());
+      ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
+      lock.readLock().lock();
+      locks.add(lock);
+      if (backingMap.containsKey(entry) && entry.getBlockType().isData()) {
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private void releaseAllLocks(List<ReentrantReadWriteLock> locks) {
+    for (ReentrantReadWriteLock lock : locks) {
+      lock.readLock().unlock();
+    }
+  }
+
   @Override
   public void notifyFileCachingCompleted(Path fileName, int totalBlockCount, int dataBlockCount,
     long size) {
@@ -2379,58 +2540,42 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.debug("Notifying caching completed for file {}, with total blocks {}, and data blocks {}",
       fileName, totalBlockCount, dataBlockCount);
     try {
-      final MutableInt count = new MutableInt();
-      LOG.debug("iterating over {} entries in the backing map", backingMap.size());
-      Set<BlockCacheKey> result = getAllCacheKeysForFile(fileName.getName(), 0, Long.MAX_VALUE);
-      if (result.isEmpty() && StoreFileInfo.isReference(fileName)) {
-        result = getAllCacheKeysForFile(
-          StoreFileInfo.getReferredToRegionAndFile(fileName.getName()).getSecond(), 0,
-          Long.MAX_VALUE);
-      }
-      result.stream().forEach(entry -> {
-        LOG.debug("found block for file {} in the backing map. Acquiring read lock for offset {}",
-          fileName.getName(), entry.getOffset());
-        ReentrantReadWriteLock lock = offsetLock.getLock(entry.getOffset());
-        lock.readLock().lock();
-        locks.add(lock);
-        if (backingMap.containsKey(entry) && entry.getBlockType().isData()) {
-          count.increment();
+      boolean lastTry = false;
+      for (;;) {
+        int count = countBlocksForFile(fileName, locks);
+        // BucketCache would only have data blocks
+        if (dataBlockCount == count) {
+          LOG.debug("File {} has now been fully cached.", fileName);
+          fileCacheCompleted(fileName, size);
+          break;
         }
-      });
-      // BucketCache would only have data blocks
-      if (dataBlockCount == count.getValue()) {
-        LOG.debug("File {} has now been fully cached.", fileName);
-        fileCacheCompleted(fileName, size);
-      } else {
-        LOG.debug(
-          "Prefetch executor completed for {}, but only {} data blocks were cached. "
-            + "Total data blocks for file: {}. "
-            + "Checking for blocks pending cache in cache writer queue.",
-          fileName, count.getValue(), dataBlockCount);
-        if (ramCache.hasBlocksForFile(fileName.getName())) {
-          for (ReentrantReadWriteLock lock : locks) {
-            lock.readLock().unlock();
-          }
-          locks.clear();
-          LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
-            + "and try the verification again.", fileName);
-          Thread.sleep(100);
-          notifyFileCachingCompleted(fileName, totalBlockCount, dataBlockCount, size);
-        } else {
+        if (lastTry) {
           LOG.info(
             "The total block count was {}. We found only {} data blocks cached from "
               + "a total of {} data blocks for file {}, "
               + "but no blocks pending caching. Maybe cache is full or evictions "
               + "happened concurrently to cache prefetch.",
             totalBlockCount, count, dataBlockCount, fileName);
+          break;
+        }
+        if (ramCache.hasBlocksForFile(fileName.getName())) {
+          releaseAllLocks(locks);
+          locks.clear();
+          LOG.debug("There are still blocks pending caching for file {}. Will sleep 100ms "
+            + "and try the verification again.", fileName);
+          Thread.sleep(100);
+        } else {
+          // there are no pending blocks, so count for the last time, if we still can not get enough
+          // data blocks, quit
+          LOG.debug("There are no blocks pending cache for file {}. Will try the verification "
+            + "for the last time.");
+          lastTry = true;
         }
       }
     } catch (InterruptedException e) {
       throw new RuntimeException(e);
     } finally {
-      for (ReentrantReadWriteLock lock : locks) {
-        lock.readLock().unlock();
-      }
+      releaseAllLocks(locks);
     }
   }
 
@@ -2450,7 +2595,17 @@ public class BucketCache implements BlockCache, HeapSize {
     String fileName = hFileInfo.getHFileContext().getHFileName();
     DataTieringManager dataTieringManager = DataTieringManager.getInstance();
     if (dataTieringManager != null && !dataTieringManager.isHotData(hFileInfo, conf)) {
-      LOG.debug("Data tiering is enabled for file: '{}' and it is not hot data", fileName);
+      LOG.debug("Custom tiering is enabled for file: '{}' and it is not hot data", fileName);
+      // If custom tiering has been just enabled for a file that was cached, we now need
+      // to evict it.
+      Set<BlockCacheKey> keySet =
+        getAllCacheKeysForFile(hFileInfo.getHFileContext().getHFileName(), 0, Long.MAX_VALUE);
+      int evictedBlocks = evictBlockSet(keySet);
+      if (evictedBlocks > 0) {
+        LOG.debug(
+          "Evicted {} blocks for file {} as it is now considered cold by DataTieringManager",
+          evictedBlocks, fileName);
+      }
       return Optional.of(false);
     }
     // if we don't have the file in fullyCachedFiles, we should cache it
@@ -2501,16 +2656,19 @@ public class BucketCache implements BlockCache, HeapSize {
 
   @Override
   public boolean waitForCacheInitialization(long timeout) {
-    try {
-      while (cacheState == CacheState.INITIALIZING) {
-        if (timeout <= 0) {
-          break;
-        }
-        Thread.sleep(100);
-        timeout -= 100;
+    while (cacheState == CacheState.INITIALIZING) {
+      if (timeout <= 0) {
+        break;
       }
-    } finally {
-      return isCacheEnabled();
+      try {
+        Thread.sleep(100);
+      } catch (InterruptedException e) {
+        LOG.warn("Interrupted while waiting for cache initialization", e);
+        Thread.currentThread().interrupt();
+        break;
+      }
+      timeout -= 100;
     }
+    return isCacheEnabled();
   }
 }

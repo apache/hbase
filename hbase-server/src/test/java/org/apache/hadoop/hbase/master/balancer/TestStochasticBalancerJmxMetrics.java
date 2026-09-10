@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -36,7 +36,6 @@ import javax.management.ObjectName;
 import javax.management.remote.JMXConnector;
 import javax.management.remote.JMXConnectorFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.JMXListener;
@@ -48,25 +47,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.net.DNSToSwitchMapping;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.FixMethodOrder;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runners.MethodSorters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.MethodOrderer;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, MediumTests.class })
-@FixMethodOrder(MethodSorters.NAME_ASCENDING)
-@Ignore
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
+@TestMethodOrder(MethodOrderer.MethodName.class)
+@Disabled
 public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStochasticBalancerJmxMetrics.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestStochasticBalancerJmxMetrics.class);
   private static HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -89,7 +84,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
   /**
    * Setup the environment for the test.
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
 
     conf = UTIL.getConfiguration();
@@ -120,7 +115,7 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -150,8 +145,8 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
     // assert that every expected is in the JMX
     for (String expected : expectedMetrics) {
-      assertTrue("Metric " + expected + " can not be found in JMX in ensemble mode.",
-        jmxMetrics.contains(expected));
+      assertTrue(jmxMetrics.contains(expected),
+        "Metric " + expected + " can not be found in JMX in ensemble mode.");
     }
   }
 
@@ -196,8 +191,8 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
 
     // assert that every expected is in the JMX
     for (String expected : expectedMetrics) {
-      assertTrue("Metric " + expected + " can not be found in JMX in per-table mode.",
-        jmxMetrics.contains(expected));
+      assertTrue(jmxMetrics.contains(expected),
+        "Metric " + expected + " can not be found in JMX in per-table mode.");
     }
   }
 
@@ -205,7 +200,9 @@ public class TestStochasticBalancerJmxMetrics extends BalancerTestBase {
     final int count = 0;
     for (int i = 0; i < 10; i++) {
       Set<String> metrics = readJmxMetrics();
-      if (metrics != null) return metrics;
+      if (metrics != null) {
+        return metrics;
+      }
       LOG.warn("Failed to get jmxmetrics... sleeping, retrying; " + i + " of " + count + " times");
       Threads.sleep(1000);
     }

@@ -17,13 +17,13 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.Collection;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -35,23 +35,14 @@ import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestCompactSplitThread {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactSplitThread.class);
-
-  private static final Logger LOG = LoggerFactory.getLogger(TestCompactSplitThread.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private final TableName tableName = TableName.valueOf(getClass().getSimpleName());
   private final byte[] family = Bytes.toBytes("f");
@@ -63,7 +54,7 @@ public class TestCompactSplitThread {
   /**
    * Setup the config for the cluster
    */
-  @Before
+  @BeforeEach
   public void setupCluster() throws Exception {
     setupConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(NUM_RS);
@@ -90,7 +81,7 @@ public class TestCompactSplitThread {
     conf.setInt(CompactSplit.SPLIT_THREADS, 5);
   }
 
-  @After
+  @AfterEach
   public void cleanupTest() throws Exception {
     try {
       TEST_UTIL.shutdownMiniCluster();
@@ -120,11 +111,8 @@ public class TestCompactSplitThread {
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 4);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 5);
       conf.setInt(CompactSplit.SPLIT_THREADS, 6);
-      try {
-        regionServer.getCompactSplitThread().onConfigurationChange(conf);
-      } catch (IllegalArgumentException iae) {
-        Assert.fail("Update bigger configuration failed!");
-      }
+      assertDoesNotThrow(() -> regionServer.getCompactSplitThread().onConfigurationChange(conf),
+        "Update bigger configuration failed!");
 
       // check again after online update
       assertEquals(4, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());
@@ -135,11 +123,8 @@ public class TestCompactSplitThread {
       conf.setInt(CompactSplit.LARGE_COMPACTION_THREADS, 2);
       conf.setInt(CompactSplit.SMALL_COMPACTION_THREADS, 3);
       conf.setInt(CompactSplit.SPLIT_THREADS, 4);
-      try {
-        regionServer.getCompactSplitThread().onConfigurationChange(conf);
-      } catch (IllegalArgumentException iae) {
-        Assert.fail("Update smaller configuration failed!");
-      }
+      assertDoesNotThrow(() -> regionServer.getCompactSplitThread().onConfigurationChange(conf),
+        "Update smaller configuration failed!");
 
       // check again after online update
       assertEquals(2, regionServer.getCompactSplitThread().getLargeCompactionThreadNum());

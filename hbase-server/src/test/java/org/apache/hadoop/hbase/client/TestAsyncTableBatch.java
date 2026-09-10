@@ -20,12 +20,12 @@ package org.apache.hadoop.hbase.client;
 import static org.hamcrest.CoreMatchers.containsString;
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
@@ -42,8 +42,9 @@ import java.util.concurrent.TimeoutException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -54,25 +55,18 @@ import org.apache.hadoop.hbase.regionserver.NoSuchColumnFamilyException;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ LargeTests.class, ClientTests.class })
+@HBaseParameterizedTestTemplate(name = "{index}: type={0}")
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableBatch {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableBatch.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
@@ -91,11 +85,11 @@ public class TestAsyncTableBatch {
 
   private static int MAX_KEY_VALUE_SIZE = 64 * 1024;
 
-  @Parameter(0)
-  public String tableType;
+  private final Function<TableName, AsyncTable<?>> tableGetter;
 
-  @Parameter(1)
-  public Function<TableName, AsyncTable<?>> tableGetter;
+  public TestAsyncTableBatch(String tableType, Function<TableName, AsyncTable<?>> tableGetter) {
+    this.tableGetter = tableGetter;
+  }
 
   private static AsyncTable<?> getRawTable(TableName tableName) {
     return CONN.getTable(tableName);
@@ -105,15 +99,13 @@ public class TestAsyncTableBatch {
     return CONN.getTable(tableName, ForkJoinPool.commonPool());
   }
 
-  @Parameters(name = "{index}: type={0}")
-  public static List<Object[]> params() {
+  public static Stream<Arguments> parameters() {
     Function<TableName, AsyncTable<?>> rawTableGetter = TestAsyncTableBatch::getRawTable;
     Function<TableName, AsyncTable<?>> tableGetter = TestAsyncTableBatch::getTable;
-    return Arrays.asList(new Object[] { "raw", rawTableGetter },
-      new Object[] { "normal", tableGetter });
+    return Stream.of(Arguments.of("raw", rawTableGetter), Arguments.of("normal", tableGetter));
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.getConfiguration().setInt(ConnectionConfiguration.MAX_KEYVALUE_SIZE_KEY,
       MAX_KEY_VALUE_SIZE);
@@ -125,19 +117,19 @@ public class TestAsyncTableBatch {
     CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     CONN.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUpBeforeTest() throws IOException, InterruptedException {
     TEST_UTIL.createTable(TABLE_NAME, FAMILY, SPLIT_KEYS);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void tearDownAfterTest() throws IOException {
     Admin admin = TEST_UTIL.getAdmin();
     if (admin.isTableEnabled(TABLE_NAME)) {
@@ -150,7 +142,7 @@ public class TestAsyncTableBatch {
     return Bytes.toBytes(String.format("%03d", i));
   }
 
-  @Test
+  @TestTemplate
   public void test()
     throws InterruptedException, ExecutionException, IOException, TimeoutException {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
@@ -193,7 +185,7 @@ public class TestAsyncTableBatch {
     results.forEach(r -> assertTrue(r.isEmpty()));
   }
 
-  @Test
+  @TestTemplate
   public void testWithRegionServerFailover() throws Exception {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(IntStream.range(0, COUNT)
@@ -218,7 +210,7 @@ public class TestAsyncTableBatch {
     results.forEach(r -> assertTrue(r.isEmpty()));
   }
 
-  @Test
+  @TestTemplate
   public void testMixed() throws InterruptedException, ExecutionException, IOException {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     table.putAll(IntStream.range(0, 7)
@@ -273,7 +265,7 @@ public class TestAsyncTableBatch {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testPartialSuccess() throws IOException, InterruptedException, ExecutionException {
     Admin admin = TEST_UTIL.getAdmin();
     TableDescriptor htd = TableDescriptorBuilder.newBuilder(admin.getDescriptor(TABLE_NAME))
@@ -295,7 +287,7 @@ public class TestAsyncTableBatch {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testPartialSuccessOnSameRegion() throws InterruptedException, ExecutionException {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
     List<CompletableFuture<Object>> futures = table.batch(Arrays.asList(
@@ -316,74 +308,112 @@ public class TestAsyncTableBatch {
       Bytes.toString(table.get(new Get(Bytes.toBytes("put"))).get().getValue(FAMILY, CQ)));
   }
 
-  @Test
-  public void testInvalidPut() {
+  @TestTemplate
+  public void testInvalidMutation() {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
-    try {
-      table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)), new Put(Bytes.toBytes(0))));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
-    }
 
-    try {
-      table.batch(
-        Arrays.asList(new Put(Bytes.toBytes(0)).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]),
-          new Delete(Bytes.toBytes(0))));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    Mutation[] emptyMutations =
+      { new Put(Bytes.toBytes(0)), new Increment(Bytes.toBytes(0)), new Append(Bytes.toBytes(0)) };
+
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
+
+    Mutation[] oversizedMutations =
+      { new Put(Bytes.toBytes(0)).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(Bytes.toBytes(0)).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(Bytes.toBytes(0)).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]) };
+
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        table.batch(Arrays.asList(new Delete(Bytes.toBytes(0)), emptyMutations[i]));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
+
+      // Test oversized mutation
+      try {
+        table.batch(Arrays.asList(oversizedMutations[i], new Delete(Bytes.toBytes(0))));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
-  @Test
-  public void testInvalidPutInRowMutations() throws IOException {
+  @TestTemplate
+  public void testInvalidMutationInRowMutations() throws IOException {
     final byte[] row = Bytes.toBytes(0);
-
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
-    try {
-      table.batch(Arrays.asList(new Delete(row), new RowMutations(row).add(new Put(row))));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
-    }
 
-    try {
-      table.batch(Arrays.asList(
-        new RowMutations(row).add(new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE])),
-        new Delete(row)));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    Mutation[] emptyMutations = { new Put(row), new Increment(row), new Append(row) };
+
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
+
+    Mutation[] oversizedMutations =
+      { new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]) };
+
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        table.batch(Arrays.asList(new Delete(row), new RowMutations(row).add(emptyMutations[i])));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
+
+      // Test oversized mutation
+      try {
+        table
+          .batch(Arrays.asList(new RowMutations(row).add(oversizedMutations[i]), new Delete(row)));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
-  @Test
-  public void testInvalidPutInRowMutationsInCheckAndMutate() throws IOException {
+  @TestTemplate
+  public void testInvalidMutationInRowMutationsInCheckAndMutate() throws IOException {
     final byte[] row = Bytes.toBytes(0);
-
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
-    try {
-      table.batch(Arrays.asList(new Delete(row), CheckAndMutate.newBuilder(row)
-        .ifNotExists(FAMILY, CQ).build(new RowMutations(row).add(new Put(row)))));
-      fail("Should fail since the put does not contain any cells");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("No columns to insert"));
-    }
 
-    try {
-      table.batch(Arrays.asList(
-        CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, CQ)
-          .build(new RowMutations(row)
-            .add(new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]))),
-        new Delete(row)));
-      fail("Should fail since the put exceeds the max key value size");
-    } catch (IllegalArgumentException e) {
-      assertThat(e.getMessage(), containsString("KeyValue size too large"));
+    Mutation[] emptyMutations = { new Put(row), new Increment(row), new Append(row) };
+
+    String[] emptyMessages =
+      { "No columns to put", "No columns to increment", "No columns to append" };
+
+    Mutation[] oversizedMutations =
+      { new Put(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]),
+        new Increment(row).addColumn(FAMILY, new byte[MAX_KEY_VALUE_SIZE], 1),
+        new Append(row).addColumn(FAMILY, CQ, new byte[MAX_KEY_VALUE_SIZE]) };
+
+    for (int i = 0; i < emptyMutations.length; i++) {
+      // Test empty mutation
+      try {
+        table.batch(Arrays.asList(new Delete(row), CheckAndMutate.newBuilder(row)
+          .ifNotExists(FAMILY, CQ).build(new RowMutations(row).add(emptyMutations[i]))));
+        fail("Should fail since the mutation does not contain any cells");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString(emptyMessages[i]));
+      }
+
+      // Test oversized mutation
+      try {
+        table.batch(Arrays.asList(CheckAndMutate.newBuilder(row).ifNotExists(FAMILY, CQ)
+          .build(new RowMutations(row).add(oversizedMutations[i])), new Delete(row)));
+        fail("Should fail since the mutation exceeds the max key value size");
+      } catch (IllegalArgumentException e) {
+        assertThat(e.getMessage(), containsString("KeyValue size too large"));
+      }
     }
   }
 
-  @Test
+  @TestTemplate
   public void testWithCheckAndMutate() throws Exception {
     AsyncTable<?> table = tableGetter.apply(TABLE_NAME);
 

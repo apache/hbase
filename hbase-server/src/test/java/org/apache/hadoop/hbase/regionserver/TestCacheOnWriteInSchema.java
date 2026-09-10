@@ -17,17 +17,15 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.TableName;
@@ -53,16 +51,12 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -70,28 +64,22 @@ import org.slf4j.LoggerFactory;
  * Tests {@link HFile} cache-on-write functionality for data blocks, non-root index blocks, and
  * Bloom filter blocks, as specified by the column family.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: cacheOnWrite={0}")
 public class TestCacheOnWriteInSchema {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCacheOnWriteInSchema.class);
-
   private static final Logger LOG = LoggerFactory.getLogger(TestCacheOnWriteInSchema.class);
-  @Rule
-  public TestName name = new TestName();
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final String DIR = TEST_UTIL.getDataTestDir("TestCacheOnWriteInSchema").toString();
-  private static byte[] table;
   private static byte[] family = Bytes.toBytes("family");
   private static final int NUM_KV = 25000;
   private static final Random rand = new Random(12983177L);
   /** The number of valid key types possible in a store file */
   private static final int NUM_VALID_KEY_TYPES = KeyValue.Type.values().length - 2;
 
-  private static enum CacheOnWriteType {
+  private enum CacheOnWriteType {
     DATA_BLOCKS(BlockType.DATA, BlockType.ENCODED_DATA),
     BLOOM_BLOCKS(BlockType.BLOOM_CHUNK),
     INDEX_BLOCKS(BlockType.LEAF_INDEX, BlockType.INTERMEDIATE_INDEX);
@@ -99,11 +87,11 @@ public class TestCacheOnWriteInSchema {
     private final BlockType blockType1;
     private final BlockType blockType2;
 
-    private CacheOnWriteType(BlockType blockType) {
+    CacheOnWriteType(BlockType blockType) {
       this(blockType, blockType);
     }
 
-    private CacheOnWriteType(BlockType blockType1, BlockType blockType2) {
+    CacheOnWriteType(BlockType blockType1, BlockType blockType2) {
       this.blockType1 = blockType1;
       this.blockType2 = blockType2;
     }
@@ -141,19 +129,14 @@ public class TestCacheOnWriteInSchema {
     System.out.println(testDescription);
   }
 
-  @Parameters
-  public static Collection<Object[]> getParameters() {
-    List<Object[]> cowTypes = new ArrayList<>();
-    for (CacheOnWriteType cowType : CacheOnWriteType.values()) {
-      cowTypes.add(new Object[] { cowType });
-    }
-    return cowTypes;
+  public static Stream<Arguments> parameters() {
+    return Stream.of(CacheOnWriteType.values()).map(Arguments::of);
   }
 
-  @Before
-  public void setUp() throws IOException {
-    // parameterized tests add [#] suffix get rid of [ and ].
-    table = Bytes.toBytes(name.getMethodName().replaceAll("[\\[\\]]", "_"));
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
+    String name = testInfo.getTestMethod().get().getName() + "_" + cowType;
+    byte[] table = Bytes.toBytes(name);
 
     conf = TEST_UTIL.getConfiguration();
     conf.setInt(HFile.FORMAT_VERSION_KEY, HFile.MAX_FORMAT_VERSION);
@@ -183,7 +166,7 @@ public class TestCacheOnWriteInSchema {
     store = region.getStore(hcd.getName());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     IOException ex = null;
     try {
@@ -203,7 +186,7 @@ public class TestCacheOnWriteInSchema {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCacheOnWriteInSchema() throws IOException {
     // Write some random data into the store
     StoreFileWriter writer = store.getStoreEngine()
@@ -226,7 +209,7 @@ public class TestCacheOnWriteInSchema {
     try {
       // Open a scanner with (on read) caching disabled
       HFileScanner scanner = reader.getScanner(conf, false, false);
-      assertTrue(testDescription, scanner.seekTo());
+      assertTrue(scanner.seekTo(), testDescription);
       // Cribbed from io.hfile.TestCacheOnWrite
       long offset = 0;
       while (offset < reader.getTrailer().getLoadOnOpenDataOffset()) {
@@ -279,5 +262,4 @@ public class TestCacheOnWriteInSchema {
       writer.append(kv);
     }
   }
-
 }

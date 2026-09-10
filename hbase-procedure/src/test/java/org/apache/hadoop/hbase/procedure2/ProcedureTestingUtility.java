@@ -17,9 +17,12 @@
  */
 package org.apache.hadoop.hbase.procedure2;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -264,8 +267,8 @@ public final class ProcedureTestingUtility {
     if (
       procExecutor.testing.killBeforeStoreUpdate || procExecutor.testing.toggleKillBeforeStoreUpdate
     ) {
-      assertEquals("expected only one executor running during test with kill/restart", 1,
-        procExecutor.getCorePoolSize());
+      assertEquals(1, procExecutor.getCorePoolSize(),
+        "expected only one executor running during test with kill/restart");
     }
   }
 
@@ -342,48 +345,48 @@ public final class ProcedureTestingUtility {
 
   public static <TEnv> void assertProcNotYetCompleted(ProcedureExecutor<TEnv> procExecutor,
     long procId) {
-    assertFalse("expected a running proc", procExecutor.isFinished(procId));
-    assertEquals(null, procExecutor.getResult(procId));
+    assertFalse(procExecutor.isFinished(procId), "expected a running proc");
+    assertNull(procExecutor.getResult(procId));
   }
 
   public static <TEnv> void assertProcNotFailed(ProcedureExecutor<TEnv> procExecutor, long procId) {
     Procedure<?> result = procExecutor.getResult(procId);
-    assertTrue("expected procedure result", result != null);
+    assertNotNull(result, "expected procedure result");
     assertProcNotFailed(result);
   }
 
   public static void assertProcNotFailed(final Procedure<?> result) {
-    assertFalse("found exception: " + result.getException(), result.isFailed());
+    assertFalse(result.isFailed(), "found exception: " + result.getException());
   }
 
   public static <TEnv> Throwable assertProcFailed(final ProcedureExecutor<TEnv> procExecutor,
     final long procId) {
     Procedure<?> result = procExecutor.getResult(procId);
-    assertTrue("expected procedure result", result != null);
+    assertNotNull(result, "expected procedure result");
     return assertProcFailed(result);
   }
 
   public static Throwable assertProcFailed(final Procedure<?> result) {
-    assertEquals(true, result.isFailed());
+    assertTrue(result.isFailed());
     LOG.info("procId=" + result.getProcId() + " exception: " + result.getException().getMessage());
     return getExceptionCause(result);
   }
 
   public static void assertIsAbortException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
-    assertTrue("expected abort exception, got " + cause,
-      cause instanceof ProcedureAbortedException);
+    assertInstanceOf(ProcedureAbortedException.class, cause,
+      "expected abort exception, got " + cause);
   }
 
   public static void assertIsTimeoutException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
-    assertTrue("expected TimeoutIOException, got " + cause, cause instanceof TimeoutIOException);
+    assertInstanceOf(TimeoutIOException.class, cause, "expected TimeoutIOException, got " + cause);
   }
 
   public static void assertIsIllegalArgumentException(final Procedure<?> result) {
     Throwable cause = assertProcFailed(result);
-    assertTrue("expected IllegalArgumentIOException, got " + cause,
-      cause instanceof IllegalArgumentIOException);
+    assertInstanceOf(IllegalArgumentIOException.class, cause,
+      "expected IllegalArgumentIOException, got " + cause);
   }
 
   public static Throwable getExceptionCause(final Procedure<?> procInfo) {
@@ -669,7 +672,7 @@ public final class ProcedureTestingUtility {
           runnable.add(proc);
         }
         if (procIds != null) {
-          assertTrue("procId=" + procId + " unexpected", procIds.contains(procId));
+          assertTrue(procIds.contains(procId), "procId=" + procId + " unexpected");
         }
       }
     }

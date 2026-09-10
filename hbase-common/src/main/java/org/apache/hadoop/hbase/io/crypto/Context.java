@@ -34,6 +34,8 @@ public class Context implements Configurable {
   private Configuration conf;
   private Cipher cipher;
   private Key key;
+  private ManagedKeyData kekData;
+  private String keyNamespace;
   private String keyHash;
 
   Context(Configuration conf) {
@@ -96,5 +98,23 @@ public class Context implements Configurable {
     this.key = key;
     this.keyHash = new String(Hex.encodeHex(Encryption.computeCryptoKeyHash(conf, encoded)));
     return this;
+  }
+
+  public Context setKeyNamespace(String keyNamespace) {
+    this.keyNamespace = keyNamespace;
+    return this;
+  }
+
+  public String getKeyNamespace() {
+    return keyNamespace;
+  }
+
+  public Context setKEKData(ManagedKeyData kekData) {
+    this.kekData = kekData;
+    return this;
+  }
+
+  public ManagedKeyData getKEKData() {
+    return kekData;
   }
 }

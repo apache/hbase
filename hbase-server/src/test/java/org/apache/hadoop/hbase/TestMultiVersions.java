@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,14 +43,12 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,12 +58,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
  * Port of old TestScanMultipleVersions, TestTimestamp and TestGetRowVersions from old testing
  * framework to {@link HBaseTestingUtil}.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMultiVersions {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiVersions.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiVersions.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -73,20 +68,17 @@ public class TestMultiVersions {
 
   private static final int NUM_SLAVES = 3;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     UTIL.startMiniCluster(NUM_SLAVES);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws MasterNotRunningException, ZooKeeperConnectionException, IOException {
     this.admin = UTIL.getAdmin();
   }
@@ -100,9 +92,9 @@ public class TestMultiVersions {
    * than a single test per spin up. Keep old tests' crazyness.
    */
   @Test
-  public void testTimestamps() throws Exception {
+  public void testTimestamps(TestInfo testInfo) throws Exception {
     TableDescriptor tableDescriptor =
-      TableDescriptorBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
+      TableDescriptorBuilder.newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
         .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(TimestampTestBase.FAMILY_NAME)
           .setMaxVersions(3).build())
         .build();
@@ -136,7 +128,7 @@ public class TestMultiVersions {
    * more than a single test per spin up. Keep old tests' crazyness.
    */
   @Test
-  public void testGetRowVersions() throws Exception {
+  public void testGetRowVersions(TestInfo testInfo) throws Exception {
     final byte[] contents = Bytes.toBytes("contents");
     final byte[] row = Bytes.toBytes("row");
     final byte[] value1 = Bytes.toBytes("value1");
@@ -144,7 +136,7 @@ public class TestMultiVersions {
     final long timestamp1 = 100L;
     final long timestamp2 = 200L;
     TableDescriptor tableDescriptor = TableDescriptorBuilder
-      .newBuilder(TableName.valueOf(name.getMethodName()))
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName()))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(contents).setMaxVersions(3).build())
       .build();
     this.admin.createTable(tableDescriptor);
@@ -199,8 +191,8 @@ public class TestMultiVersions {
    * Tests five cases of scans and timestamps.
    */
   @Test
-  public void testScanMultipleVersions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testScanMultipleVersions(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(HConstants.CATALOG_FAMILY)).build();
 
@@ -254,7 +246,7 @@ public class TestMultiVersions {
     try (ResultScanner s = table.getScanner(scan)) {
       count = Iterables.size(s);
     }
-    assertEquals("Number of rows should be 2", 2, count);
+    assertEquals(2, count, "Number of rows should be 2");
 
     // Case 2: Scan with a timestamp greater than most recent timestamp
     // (in this case > 1000 and < LATEST_TIMESTAMP. Should get 2 rows.
@@ -264,7 +256,7 @@ public class TestMultiVersions {
     try (ResultScanner s = table.getScanner(scan)) {
       count = Iterables.size(s);
     }
-    assertEquals("Number of rows should be 2", 2, count);
+    assertEquals(2, count, "Number of rows should be 2");
 
     // Case 3: scan with timestamp equal to most recent timestamp
     // (in this case == 1000. Should get 2 rows.
@@ -274,7 +266,7 @@ public class TestMultiVersions {
     try (ResultScanner s = table.getScanner(scan)) {
       count = Iterables.size(s);
     }
-    assertEquals("Number of rows should be 2", 2, count);
+    assertEquals(2, count, "Number of rows should be 2");
 
     // Case 4: scan with timestamp greater than first timestamp but less than
     // second timestamp (100 < timestamp < 1000). Should get 2 rows.
@@ -284,7 +276,7 @@ public class TestMultiVersions {
     try (ResultScanner s = table.getScanner(scan)) {
       count = Iterables.size(s);
     }
-    assertEquals("Number of rows should be 2", 2, count);
+    assertEquals(2, count, "Number of rows should be 2");
 
     // Case 5: scan with timestamp equal to first timestamp (100)
     // Should get 2 rows.
@@ -294,7 +286,7 @@ public class TestMultiVersions {
     try (ResultScanner s = table.getScanner(scan)) {
       count = Iterables.size(s);
     }
-    assertEquals("Number of rows should be 2", 2, count);
+    assertEquals(2, count, "Number of rows should be 2");
   }
 
 }

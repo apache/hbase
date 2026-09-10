@@ -143,8 +143,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       if (procs != null) {
         LOG.error("Unsupported procedure type {} found, please rollback your master to the old"
           + " version to finish them, and then try to upgrade again."
-          + " See https://hbase.apache.org/book.html#upgrade2.2 for more details."
-          + " The full procedure list: {}", clazz, procs);
+          + " See https://hbase.apache.org/docs/upgrading/paths#upgrade-from-20-or-21-to-22"
+          + " for more details. The full procedure list: {}", clazz, procs);
         throw new HBaseIOException("Unsupported procedure type " + clazz + " found");
       }
     }
@@ -158,7 +158,8 @@ public class RegionProcedureStore extends ProcedureStoreBase {
       LOG.error("At least one ServerCrashProcedure is going to schedule a RecoverMetaProcedure,"
         + " which is not supported any more. Please rollback your master to the old version to"
         + " finish them, and then try to upgrade again."
-        + " See https://hbase.apache.org/book.html#upgrade2.2 for more details.");
+        + " See https://hbase.apache.org/docs/upgrading/paths#upgrade-from-20-or-21-to-22"
+        + " for more details.");
       throw new HBaseIOException("Unsupported procedure state found for ServerCrashProcedure");
     }
   }

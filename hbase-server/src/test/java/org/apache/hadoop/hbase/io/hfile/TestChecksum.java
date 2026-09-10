@@ -19,9 +19,9 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.GZ;
 import static org.apache.hadoop.hbase.io.compress.Compression.Algorithm.NONE;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
@@ -34,7 +34,6 @@ import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.fs.HFileSystem;
@@ -47,19 +46,15 @@ import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.ChecksumType;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ IOTests.class, SmallTests.class })
+@Tag(IOTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestChecksum {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestChecksum.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestChecksum.class);
 
@@ -71,7 +66,7 @@ public class TestChecksum {
   private FileSystem fs;
   private HFileSystem hfs;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     fs = HFileSystem.get(TEST_UTIL.getConfiguration());
     hfs = (HFileSystem) fs;
@@ -374,7 +369,7 @@ public class TestChecksum {
     // validate data
     for (int i = 0; i < 1234; i++) {
       int val = in.readInt();
-      assertEquals("testChecksumCorruption: data mismatch at index " + i, i, val);
+      assertEquals(i, val, "testChecksumCorruption: data mismatch at index " + i);
     }
   }
 

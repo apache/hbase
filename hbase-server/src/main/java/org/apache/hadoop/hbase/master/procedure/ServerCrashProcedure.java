@@ -169,6 +169,8 @@ public class ServerCrashProcedure extends
           LOG.info("Start " + this);
           // If carrying meta, process it first. Else, get list of regions on crashed server.
           if (this.carryingMeta) {
+            env.getAssignmentManager()
+              .markRegionsAsCrashed(List.of(RegionInfoBuilder.FIRST_META_REGIONINFO), this);
             setNextState(ServerCrashState.SERVER_CRASH_SPLIT_META_LOGS);
           } else {
             setNextState(ServerCrashState.SERVER_CRASH_GET_REGIONS);
@@ -208,6 +210,7 @@ public class ServerCrashProcedure extends
             if (LOG.isTraceEnabled()) {
               this.regionsOnCrashedServer.stream().forEach(ri -> LOG.trace(ri.getShortNameToLog()));
             }
+            env.getAssignmentManager().markRegionsAsCrashed(regionsOnCrashedServer, this);
           }
           if (!this.shouldSplitWal) {
             setNextState(ServerCrashState.SERVER_CRASH_ASSIGN);

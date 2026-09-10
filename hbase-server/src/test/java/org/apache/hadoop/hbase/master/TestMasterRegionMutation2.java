@@ -21,10 +21,6 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
-import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
-import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.client.Mutation;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -36,49 +32,26 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.wal.WAL;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * MasterRegion related test that ensures the operations continue even when Procedure state update
  * encounters non-retriable IO errors.
  */
-@Category({ MasterTests.class, LargeTests.class })
-public class TestMasterRegionMutation2 extends TestMasterRegionMutation1 {
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestMasterRegionMutation2 extends AbstractTestMasterRegionMutation {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionMutation2.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    TEST_UTIL.getConfiguration().setClass(HConstants.REGION_IMPL, TestRegion.class, HRegion.class);
-    StartTestingClusterOption.Builder builder = StartTestingClusterOption.builder();
-    // 2 masters are expected to be aborted with this test
-    builder.numMasters(3).numRegionServers(3);
-    TEST_UTIL.startMiniCluster(builder.build());
-    SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
-    rs0 = cluster.getRegionServer(0).getServerName();
-    TEST_UTIL.getAdmin().balancerSwitch(false, true);
+    AbstractTestMasterRegionMutation.setUpBeforeClass(3, TestRegion.class);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL.shutdownMiniCluster();
-  }
-
-  @Before
-  public void setUp() throws Exception {
-    super.setUp();
-  }
-
-  @Test
-  public void testMasterRegionMutations() throws Exception {
-    super.testMasterRegionMutations();
+    AbstractTestMasterRegionMutation.tearDownAfterClass();
   }
 
   public static class TestRegion extends HRegion {

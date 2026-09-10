@@ -17,9 +17,10 @@
  */
 package org.apache.hadoop.hbase.master.cleaner;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -31,7 +32,6 @@ import java.util.regex.Pattern;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -62,14 +62,12 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -90,12 +88,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Test the master-related aspects of a snapshot
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSnapshotFromMaster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotFromMaster.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSnapshotFromMaster.class);
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
@@ -115,7 +110,7 @@ public class TestSnapshotFromMaster {
   /**
    * Setup the config for the cluster
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
@@ -149,20 +144,20 @@ public class TestSnapshotFromMaster {
     conf.setInt("hbase.master.cleaner.snapshot.interval", 500);
   }
 
-  @Before
+  @BeforeEach
   public void setup() throws Exception {
     UTIL.createTable(TABLE_NAME, TEST_FAM);
     master.getSnapshotManager().setSnapshotHandlerForTesting(TABLE_NAME, null);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.deleteTable(TABLE_NAME);
     SnapshotTestingUtils.deleteAllSnapshots(UTIL.getAdmin());
     SnapshotTestingUtils.deleteArchiveDirectory(UTIL);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanupTest() throws Exception {
     try {
       UTIL.shutdownMiniCluster();
@@ -217,7 +212,7 @@ public class TestSnapshotFromMaster {
     builder.setSnapshot(desc);
     IsSnapshotDoneResponse response =
       master.getMasterRpcServices().isSnapshotDone(null, builder.build());
-    assertTrue("Snapshot didn't complete when it should have.", response.getDone());
+    assertTrue(response.getDone(), "Snapshot didn't complete when it should have.");
 
     // now try the case where we are looking for a snapshot we didn't take
     builder.setSnapshot(SnapshotDescription.newBuilder().setName("Not A Snapshot").build());
@@ -230,7 +225,7 @@ public class TestSnapshotFromMaster {
 
     builder.setSnapshot(desc);
     response = master.getMasterRpcServices().isSnapshotDone(null, builder.build());
-    assertTrue("Completed, on-disk snapshot not found", response.getDone());
+    assertTrue(response.getDone(), "Completed, on-disk snapshot not found");
   }
 
   @Test
@@ -239,7 +234,7 @@ public class TestSnapshotFromMaster {
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
     GetCompletedSnapshotsResponse response =
       master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
+    assertEquals(0, response.getSnapshotsCount(), "Found unexpected number of snapshots");
 
     // write one snapshot to the fs
     String snapshotName = "completed";
@@ -247,10 +242,10 @@ public class TestSnapshotFromMaster {
 
     // check that we get one snapshot
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
+    assertEquals(1, response.getSnapshotsCount(), "Found unexpected number of snapshots");
     List<SnapshotDescription> snapshots = response.getSnapshotsList();
     List<SnapshotDescription> expected = Lists.newArrayList(snapshot);
-    assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
+    assertEquals(expected, snapshots, "Returned snapshots don't match created snapshots");
 
     // write a second snapshot
     snapshotName = "completed_two";
@@ -259,9 +254,9 @@ public class TestSnapshotFromMaster {
 
     // check that we get one snapshot
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
+    assertEquals(2, response.getSnapshotsCount(), "Found unexpected number of snapshots");
     snapshots = response.getSnapshotsList();
-    assertEquals("Returned snapshots don't match created snapshots", expected, snapshots);
+    assertEquals(expected, snapshots, "Returned snapshots don't match created snapshots");
   }
 
   @Test
@@ -297,7 +292,7 @@ public class TestSnapshotFromMaster {
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
     GetCompletedSnapshotsResponse response =
       master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
+    assertEquals(0, response.getSnapshotsCount(), "Found unexpected number of snapshots");
 
     // NOTE: This is going to be flakey. Its timing based. For now made it more coarse
     // so more likely to pass though we have to hang around longer.
@@ -308,13 +303,13 @@ public class TestSnapshotFromMaster {
 
     // check that we get one snapshot
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
+    assertEquals(2, response.getSnapshotsCount(), "Found unexpected number of snapshots");
 
     // Check that 1 snapshot is auto cleaned after 5 sec of TTL expiration. Wait 10 seconds
     // just in case.
     Uninterruptibles.sleepUninterruptibly(10, TimeUnit.SECONDS);
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 1, response.getSnapshotsCount());
+    assertEquals(1, response.getSnapshotsCount(), "Found unexpected number of snapshots");
   }
 
   @Test
@@ -328,7 +323,7 @@ public class TestSnapshotFromMaster {
     GetCompletedSnapshotsRequest request = GetCompletedSnapshotsRequest.newBuilder().build();
     GetCompletedSnapshotsResponse response =
       master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 0, response.getSnapshotsCount());
+    assertEquals(0, response.getSnapshotsCount(), "Found unexpected number of snapshots");
 
     // write one snapshot to the fs
     createSnapshotWithTtl("snapshot_02", 1L);
@@ -336,12 +331,12 @@ public class TestSnapshotFromMaster {
 
     // check that we get one snapshot
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
+    assertEquals(2, response.getSnapshotsCount(), "Found unexpected number of snapshots");
 
     // check that no snapshot is auto cleaned even after 1 sec of TTL expiration
     Uninterruptibles.sleepUninterruptibly(2, TimeUnit.SECONDS);
     response = master.getMasterRpcServices().getCompletedSnapshots(null, request);
-    assertEquals("Found unexpected number of snapshots", 2, response.getSnapshotsCount());
+    assertEquals(2, response.getSnapshotsCount(), "Found unexpected number of snapshots");
   }
 
   @Test
@@ -356,7 +351,7 @@ public class TestSnapshotFromMaster {
       IsSnapshotCleanupEnabledRequest.newBuilder().build();
     IsSnapshotCleanupEnabledResponse isSnapshotCleanupEnabledResponse =
       master.getMasterRpcServices().isSnapshotCleanupEnabled(null, isSnapshotCleanupEnabledRequest);
-    Assert.assertTrue(isSnapshotCleanupEnabledResponse.getEnabled());
+    assertTrue(isSnapshotCleanupEnabledResponse.getEnabled());
 
     // Disable auto snapshot cleanup for the cluster
     setSnapshotCleanupRequest = SetSnapshotCleanupRequest.newBuilder().setEnabled(false).build();
@@ -366,7 +361,7 @@ public class TestSnapshotFromMaster {
     isSnapshotCleanupEnabledRequest = IsSnapshotCleanupEnabledRequest.newBuilder().build();
     isSnapshotCleanupEnabledResponse =
       master.getMasterRpcServices().isSnapshotCleanupEnabled(null, isSnapshotCleanupEnabledRequest);
-    Assert.assertFalse(isSnapshotCleanupEnabledResponse.getEnabled());
+    assertFalse(isSnapshotCleanupEnabledResponse.getEnabled());
   }
 
   /**
@@ -459,8 +454,8 @@ public class TestSnapshotFromMaster {
     // and make sure that there is a proper subset
     for (String fileName : snapshotHFiles) {
       boolean exist = archives.contains(fileName) || hfiles.contains(fileName);
-      assertTrue("Archived hfiles " + archives + " and table hfiles " + hfiles
-        + " is missing snapshot file:" + fileName, exist);
+      assertTrue(exist, "Archived hfiles " + archives + " and table hfiles " + hfiles
+        + " is missing snapshot file:" + fileName);
     }
 
     // delete the existing snapshot

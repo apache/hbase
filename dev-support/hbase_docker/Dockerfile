@@ -75,9 +75,43 @@ ENV PATH "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
 # Pull down HBase and build it into /root/hbase-bin.
 WORKDIR /root
 ARG BRANCH_OR_TAG=master
-RUN git clone --depth 1 -b ${BRANCH_OR_TAG} https://github.com/apache/hbase.git \
-    && \
-    mvn -T1C clean install -DskipTests assembly:single -f ./hbase/pom.xml \
+ARG INPUT_MODE=tag
+
+# INPUT_MODE=tag (default): clones from GitHub; build context files are ignored
+# INPUT_MODE=tarball: expects hbase-src.tar.gz in the build context root
+# INPUT_MODE=source-dir: expects the HBase source root as the build context
+#   (use build-hbase.sh --source, which sets this up correctly)
+COPY . /tmp/build-context/
+
+# Stage source using the appropriate method
+RUN set -e && \
+    case "${INPUT_MODE}" in \
+      tag) \
+        echo "INFO: Cloning HBase from GitHub (branch/tag: ${BRANCH_OR_TAG})" && \
+        git clone --depth 1 -b "${BRANCH_OR_TAG}" https://github.com/apache/hbase.git \
+        ;; \
+      tarball) \
+        echo "INFO: Extracting HBase from tarball" && \
+        if [ ! -f /tmp/build-context/hbase-src.tar.gz ]; then \
+          echo "ERROR: hbase-src.tar.gz not found in build context" >&2 && \
+          exit 1; \
+        fi && \
+        mkdir -p hbase && \
+        tar xzf /tmp/build-context/hbase-src.tar.gz -C hbase --strip-components 1 \
+        ;; \
+      source-dir) \
+        echo "INFO: Using HBase source from build context" && \
+        cp -r /tmp/build-context hbase \
+        ;; \
+      *) \
+        echo "ERROR: Invalid INPUT_MODE=${INPUT_MODE}. Must be: tag, tarball, or source-dir" >&2 && \
+        exit 1 \
+        ;; \
+    esac && \
+    rm -rf /tmp/build-context
+
+# Build HBase and extract the assembly
+RUN mvn -T1C clean install -DskipTests assembly:single -f ./hbase/pom.xml \
     && \
     mkdir -p hbase-bin \
     && \

@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.security.provider;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
@@ -30,13 +32,13 @@ import java.io.File;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.security.PrivilegedExceptionAction;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import javax.security.auth.callback.Callback;
 import javax.security.auth.callback.CallbackHandler;
 import javax.security.auth.callback.NameCallback;
@@ -55,7 +57,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
@@ -90,13 +92,12 @@ import org.apache.hadoop.security.token.SecretManager;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.api.extension.RegisterExtension;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -119,14 +120,16 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
   private static final String USER1_PASSWORD = "foobarbaz";
   private static final String USER2_PASSWORD = "bazbarfoo";
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return Arrays.asList(new Object[] { BlockingRpcClient.class.getName() },
-      new Object[] { NettyRpcClient.class.getName() });
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(BlockingRpcClient.class.getName()),
+      Arguments.of(NettyRpcClient.class.getName()));
   }
 
-  @Parameter
-  public String rpcClientImpl;
+  private String rpcClientImpl;
+
+  public CustomSaslAuthenticationProviderTestBase(String rpcClientImpl) {
+    this.rpcClientImpl = rpcClientImpl;
+  }
 
   private static Map<String, String> createUserDatabase() {
     Map<String, String> db = new ConcurrentHashMap<>();
@@ -442,7 +445,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     CLUSTER.startup();
   }
 
-  @AfterClass
+  @AfterAll
   public static void shutdownCluster() throws Exception {
     if (CLUSTER != null) {
       CLUSTER.shutdown();
@@ -453,18 +456,18 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     UTIL.cleanupTestDir();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     createTable();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     UTIL.deleteTable(name.getTableName());
   }
 
-  @Rule
-  public TableNameTestRule name = new TableNameTestRule();
+  @RegisterExtension
+  private final TableNameTestExtension name = new TableNameTestExtension();
 
   private TableName tableName;
 
@@ -505,7 +508,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     return conf;
   }
 
-  @Test
+  @TestTemplate
   public void testPositiveAuthentication() throws Exception {
     // Validate that we can read that record back out as the user with our custom auth'n
     UserGroupInformation user1 = UserGroupInformation.createUserForTesting("user1", new String[0]);
@@ -517,9 +520,9 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
           Table t = conn.getTable(tableName)) {
           Result r = t.get(new Get(Bytes.toBytes("r1")));
           assertNotNull(r);
-          assertFalse("Should have read a non-empty Result", r.isEmpty());
+          assertFalse(r.isEmpty(), "Should have read a non-empty Result");
           final Cell cell = r.getColumnLatestCell(Bytes.toBytes("f1"), Bytes.toBytes("q1"));
-          assertTrue("Unexpected value", CellUtil.matchingValue(cell, Bytes.toBytes("1")));
+          assertTrue(CellUtil.matchingValue(cell, Bytes.toBytes("1")), "Unexpected value");
 
           return null;
         }
@@ -527,7 +530,7 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
     });
   }
 
-  @Test
+  @TestTemplate
   public void testNegativeAuthentication() throws Exception {
     // Validate that we can read that record back out as the user with our custom auth'n
     UserGroupInformation user1 = UserGroupInformation.createUserForTesting("user1", new String[0]);
@@ -548,9 +551,9 @@ public abstract class CustomSaslAuthenticationProviderTestBase {
           fail("Should not successfully authenticate with HBase");
         } catch (MasterRegistryFetchException mfe) {
           Throwable cause = mfe.getCause();
-          assertTrue(cause.getMessage(), cause.getMessage().contains("SaslException"));
+          assertThat(cause.getMessage(), containsString("SaslException"));
         } catch (RetriesExhaustedException re) {
-          assertTrue(re.getMessage(), re.getMessage().contains("SaslException"));
+          assertThat(re.getMessage(), containsString("SaslException"));
         } catch (Exception e) {
           // Any other exception is unexpected.
           fail("Unexpected exception caught, was expecting a authentication error: "

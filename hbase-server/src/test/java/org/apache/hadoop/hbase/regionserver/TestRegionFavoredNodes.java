@@ -17,7 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.lang.reflect.Method;
 import java.net.InetSocketAddress;
@@ -28,7 +29,6 @@ import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Table;
@@ -38,22 +38,17 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
 import org.apache.hadoop.util.Progressable;
-import org.junit.AfterClass;
-import org.junit.Assume;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the ability to specify favored nodes for a region.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRegionFavoredNodes {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionFavoredNodes.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Table table;
@@ -64,7 +59,7 @@ public class TestRegionFavoredNodes {
   private static final int FLUSHES = 3;
   private static Method createWithFavoredNode = null;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     try {
       createWithFavoredNode = DistributedFileSystem.class.getDeclaredMethod("create", Path.class,
@@ -78,7 +73,7 @@ public class TestRegionFavoredNodes {
     TEST_UTIL.waitUntilAllRegionsAssigned(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     // guard against failure in setup
     if (table != null) {
@@ -92,7 +87,7 @@ public class TestRegionFavoredNodes {
 
   @Test
   public void testFavoredNodes() throws Exception {
-    Assume.assumeTrue(createWithFavoredNode != null);
+    assumeTrue(createWithFavoredNode != null);
     // Get the addresses of the datanodes in the cluster.
     InetSocketAddress[] nodes = new InetSocketAddress[REGION_SERVERS];
     List<DataNode> datanodes = TEST_UTIL.getDFSCluster().getDataNodes();

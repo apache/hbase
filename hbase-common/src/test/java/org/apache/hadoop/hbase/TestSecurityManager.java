@@ -27,9 +27,15 @@ import java.security.Permission;
 * TODO: Look at still using this in those tests
 * */
 public class TestSecurityManager extends SecurityManager {
+
+  // Exiting the JVM is not allowed in tests and this exception is thrown instead
+  // when it is done
+  public static class SystemExitInTestException extends SecurityException {
+  }
+
   @Override
   public void checkExit(int status) {
-    throw new SystemExitRule.SystemExitInTestException();
+    throw new SystemExitInTestException();
   }
 
   @Override

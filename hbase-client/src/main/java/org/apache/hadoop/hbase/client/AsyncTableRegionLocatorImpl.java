@@ -20,10 +20,12 @@ package org.apache.hadoop.hbase.client;
 import static org.apache.hadoop.hbase.trace.TraceUtil.tracedFuture;
 import static org.apache.hadoop.hbase.util.FutureUtils.addListener;
 
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.hbase.ClientMetaTableAccessor;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -79,6 +81,39 @@ class AsyncTableRegionLocatorImpl implements AsyncTableRegionLocator {
     return conn.getLocator()
       .getRegionLocations(tableName, row, RegionLocateType.CURRENT, reload, -1L)
       .thenApply(locs -> Arrays.asList(locs.getRegionLocations()));
+  }
+
+  @Override
+  public CompletableFuture<List<HRegionLocation>> getRegionLocationsPage(byte[] startKey,
+    int limit) {
+    return tracedFuture(() -> {
+      if (TableName.isMetaTableName(tableName)) {
+        CompletableFuture<List<HRegionLocation>> failed = new CompletableFuture<>();
+        failed.completeExceptionally(
+          new IOException("getRegionLocationsPage(startKey, limit) is not supported for hbase:meta;"
+            + " use getRegionLocation(EMPTY_START_ROW) instead."));
+        return failed;
+      }
+      int effectiveLimit = limit > 0
+        ? limit
+        : conn.getConfiguration().getInt(HConstants.HBASE_META_SCANNER_CACHING,
+          HConstants.DEFAULT_HBASE_META_SCANNER_CACHING);
+      CompletableFuture<List<HRegionLocation>> future =
+        ClientMetaTableAccessor.getTableHRegionLocations(conn.getTable(TableName.META_TABLE_NAME),
+          tableName, startKey, effectiveLimit);
+      addListener(future, (locs, error) -> {
+        if (error != null || locs == null) {
+          return;
+        }
+        for (HRegionLocation loc : locs) {
+          // the cache assumes that all locations have a serverName. only add if that's true
+          if (loc.getServerName() != null) {
+            conn.getLocator().getNonMetaRegionLocator().addLocationToCache(loc);
+          }
+        }
+      });
+      return future;
+    }, getClass().getSimpleName() + ".getRegionLocationsPage");
   }
 
   @Override

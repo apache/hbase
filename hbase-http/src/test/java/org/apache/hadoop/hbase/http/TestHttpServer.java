@@ -17,11 +17,13 @@
  */
 package org.apache.hadoop.hbase.http;
 
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.greaterThan;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -57,7 +59,6 @@ import javax.servlet.http.HttpServletRequestWrapper;
 import javax.servlet.http.HttpServletResponse;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.http.HttpServer.QuotingInputFilter.RequestQuoter;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -73,14 +74,11 @@ import org.apache.http.client.methods.CloseableHttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
-import org.hamcrest.MatcherAssert;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Ignore;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -88,11 +86,9 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.ServerConnector;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.util.ajax.JSON;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHttpServer extends HttpServerFunctionalTest {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHttpServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHttpServer.class);
   private static HttpServer server;
@@ -148,7 +144,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
   public static class LongHeaderServlet extends HttpServlet {
     @Override
     public void doGet(HttpServletRequest request, HttpServletResponse response) {
-      Assert.assertEquals(63 * 1024, request.getHeader("longheader").length());
+      assertEquals(63 * 1024, request.getHeader("longheader").length());
       response.setStatus(HttpServletResponse.SC_OK);
     }
   }
@@ -164,7 +160,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     Configuration conf = new Configuration();
     conf.setInt(HttpServer.HTTP_MAX_THREADS, MAX_THREADS);
@@ -179,7 +175,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     LOG.info("HTTP server started: " + baseUrl);
   }
 
-  @AfterClass
+  @AfterAll
   public static void cleanup() throws Exception {
     server.stop();
   }
@@ -201,9 +197,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
           start.await();
           assertEquals("a:b\nc:d\n", readOutput(new URL(baseUrl, "/echo?a=b&c=d")));
           int serverThreads = server.webServer.getThreadPool().getThreads();
-          assertTrue(
-            "More threads are started than expected, Server Threads count: " + serverThreads,
-            serverThreads <= MAX_THREADS);
+          assertTrue(serverThreads <= MAX_THREADS,
+            "More threads are started than expected, Server Threads count: " + serverThreads);
           LOG.info("Number of threads = " + serverThreads
             + " which is less or equal than the max = " + MAX_THREADS);
         } catch (Exception e) {
@@ -302,7 +297,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertNotNull(entity);
         assertNull(entity.getContentEncoding());
         unencodedContentLength = entity.getContentLength();
-        MatcherAssert.assertThat(unencodedContentLength, greaterThan(0L));
+        assertThat(unencodedContentLength, greaterThan(0L));
         final String unencodedEntityBody = readFully(entity.getContent());
         assertEquals(sourceContent, unencodedEntityBody);
       }
@@ -315,13 +310,13 @@ public class TestHttpServer extends HttpServerFunctionalTest {
         assertNotNull(entity.getContentEncoding());
         assertEquals("gzip", entity.getContentEncoding().getValue());
         encodedContentLength = entity.getContentLength();
-        MatcherAssert.assertThat(encodedContentLength, greaterThan(0L));
+        assertThat(encodedContentLength, greaterThan(0L));
         final String encodedEntityBody = readFully(entity.getContent());
         // the encoding/decoding process, as implemented in this specific combination of dependency
         // versions, does not perfectly preserve trailing whitespace. thus, `trim()`.
         assertEquals(sourceContent.trim(), encodedEntityBody.trim());
       }
-      MatcherAssert.assertThat(unencodedContentLength, greaterThan(encodedContentLength));
+      assertThat(unencodedContentLength, greaterThan(encodedContentLength));
     }
   }
 
@@ -419,7 +414,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * authentication filters are set, but authorization is not enabled.
    */
   @Test
-  @Ignore
+  @Disabled
   public void testDisabledAuthorizationOfDefaultServlets() throws Exception {
     Configuration conf = new Configuration();
 
@@ -450,7 +445,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
    * Verify the administrator access for /logs, /stacks, /conf, /logLevel and /metrics servlets.
    */
   @Test
-  @Ignore
+  @Disabled
   public void testAuthorizationOfDefaultServlets() throws Exception {
     Configuration conf = new Configuration();
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
@@ -491,8 +486,8 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(null).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertNull("It should return null " + "when there are no values for the parameter",
-      parameterValues);
+    assertNull(parameterValues,
+      "It should return null " + "when there are no values for the parameter");
   }
 
   @Test
@@ -502,7 +497,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     Mockito.doReturn(values).when(request).getParameterValues("dummy");
     RequestQuoter requestQuoter = new RequestQuoter(request);
     String[] parameterValues = requestQuoter.getParameterValues("dummy");
-    Assert.assertTrue("It should return Parameter Values", Arrays.equals(values, parameterValues));
+    assertTrue(Arrays.equals(values, parameterValues), "It should return Parameter Values");
   }
 
   @SuppressWarnings("unchecked")
@@ -533,26 +528,26 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     // authorization OFF
-    Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
+    assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
     // authorization ON & user NULL
     response = Mockito.mock(HttpServletResponse.class);
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
-    Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
+    assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
     Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_UNAUTHORIZED),
       Mockito.anyString());
 
     // authorization ON & user NOT NULL & ACLs NULL
     response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(request.getRemoteUser()).thenReturn("foo");
-    Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
+    assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
     // authorization ON & user NOT NULL & ACLs NOT NULL & user not in ACLs
     response = Mockito.mock(HttpServletResponse.class);
     AccessControlList acls = Mockito.mock(AccessControlList.class);
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation> any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
-    Assert.assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
+    assertFalse(HttpServer.hasAdministratorAccess(context, request, response));
     Mockito.verify(response).sendError(Mockito.eq(HttpServletResponse.SC_FORBIDDEN),
       Mockito.anyString());
 
@@ -560,7 +555,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     response = Mockito.mock(HttpServletResponse.class);
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation> any())).thenReturn(true);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
-    Assert.assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
+    assertTrue(HttpServer.hasAdministratorAccess(context, request, response));
 
   }
 
@@ -573,7 +568,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     HttpServletResponse response = Mockito.mock(HttpServletResponse.class);
 
     // requires admin access to instrumentation, FALSE by default
-    Assert.assertTrue(HttpServer.isInstrumentationAccessAllowed(context, request, response));
+    assertTrue(HttpServer.isInstrumentationAccessAllowed(context, request, response));
 
     // requires admin access to instrumentation, TRUE
     conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
@@ -581,7 +576,7 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     AccessControlList acls = Mockito.mock(AccessControlList.class);
     Mockito.when(acls.isUserAllowed(Mockito.<UserGroupInformation> any())).thenReturn(false);
     Mockito.when(context.getAttribute(HttpServer.ADMINS_ACL)).thenReturn(acls);
-    Assert.assertFalse(HttpServer.isInstrumentationAccessAllowed(context, request, response));
+    assertFalse(HttpServer.isInstrumentationAccessAllowed(context, request, response));
   }
 
   @Test
@@ -679,5 +674,66 @@ public class TestHttpServer extends HttpServerFunctionalTest {
     conn.setRequestMethod("TRACE");
     conn.connect();
     assertEquals(HttpURLConnection.HTTP_FORBIDDEN, conn.getResponseCode());
+  }
+
+  @Test
+  public void testProfilerDisabledByConfig() throws Exception {
+    Configuration conf = new Configuration();
+    conf.setBoolean(HttpServer.PROFILER_ENABLED_KEY, false);
+    HttpServer myServer = new HttpServer.Builder().setName("test")
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf).build();
+    myServer.setAttribute(HttpServer.CONF_CONTEXT_ATTRIBUTE, conf);
+    myServer.start();
+    try {
+      URL profUrl =
+        new URL("http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/prof");
+      HttpURLConnection conn = (HttpURLConnection) profUrl.openConnection();
+      assertEquals(HttpURLConnection.HTTP_INTERNAL_ERROR, conn.getResponseCode());
+    } finally {
+      myServer.stop();
+    }
+  }
+
+  /**
+   * Verify that /prof-output-hbase/* returns 200 (not 500) for a request when authorization is
+   * disabled. A 500 here would indicate an NPE inside AdminAuthorizedFilter.init() or
+   * hasAdministratorAccess(), which happens when setContextAttributes() is not called on the output
+   * servlet's ServletContextHandler and conf/acl are null.
+   * <p>
+   * The authorization enforcement path (401/403 for non-admins) cannot be tested at this level
+   * without a full SPNEGO/Kerberos or PseudoAuthentication filter stack, which requires keytab
+   * configuration and is tested separately via testHasAdministratorAccess().
+   */
+  @Test
+  public void testProfilerOutputServletNoNpeWhenContextAttributesSet() throws Exception {
+    Configuration conf = new Configuration();
+    // authorization=false: hasAdministratorAccess short-circuits to true, so any request to
+    // /prof-output-hbase/* reaches the servlet. A 500 response means NPE from null conf/acl.
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, false);
+
+    HttpServer myServer = new HttpServer.Builder().setName("test")
+      .addEndpoint(new URI("http://localhost:0")).setFindPort(true).setConf(conf)
+      .setACL(new AccessControlList("adminUser adminGroup")).build();
+    myServer.start();
+
+    // Plant a finished profile file in OUTPUT_DIR so the servlet has something to serve.
+    ProfileServlet.ensureOutputDir();
+    java.io.File profileFile =
+      new java.io.File(ProfileServlet.OUTPUT_DIR, "test-profile-access-control.html");
+    java.nio.file.Files.write(profileFile.toPath(),
+      "<html>flame</html>".getBytes(java.nio.charset.StandardCharsets.UTF_8),
+      java.nio.file.StandardOpenOption.CREATE, java.nio.file.StandardOpenOption.TRUNCATE_EXISTING);
+
+    try {
+      String base = "http://" + NetUtils.getHostPortString(myServer.getConnectorAddress(0)) + "/";
+      String outputPath = "prof-output-hbase/" + profileFile.getName();
+
+      // Must return 200, not 500. A 500 would mean NPE: conf or acl was null inside
+      // AdminAuthorizedFilter because setContextAttributes() was not called on genCtx.
+      assertEquals(HttpURLConnection.HTTP_OK, getHttpStatusCode(base + outputPath, "adminUser"));
+    } finally {
+      profileFile.delete();
+      myServer.stop();
+    }
   }
 }

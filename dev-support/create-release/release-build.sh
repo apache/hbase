@@ -101,6 +101,10 @@ fi
 
 init_locale
 init_java
+# always set java 8 for generating api report
+set_java8_home
+# set java 17 for spotless
+set_java17_home
 init_mvn
 init_python
 # Print out subset of perl version (used in git hooks and japi-compliance-checker)

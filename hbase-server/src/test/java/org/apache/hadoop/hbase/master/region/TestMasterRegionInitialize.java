@@ -17,15 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.region;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -37,16 +39,12 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterRegionInitialize extends MasterRegionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionInitialize.class);
 
   @Test
   public void testUpgrade() throws IOException {
@@ -113,5 +111,20 @@ public class TestMasterRegionInitialize extends MasterRegionTestBase {
 
     // but the data should have been cleaned up
     assertTrue(region.get(new Get(row)).isEmpty());
+  }
+
+  @Test
+  public void testMasterRegionDirSuffix() {
+    String currentMasterRegionDirName = MasterRegionFactory.getMasterRegionDirName();
+    assertEquals("MasterData", currentMasterRegionDirName,
+      "Default master region directory should be MasterData");
+
+    Configuration confWithSuffix = HBaseConfiguration.create();
+    String suffix = "replica1";
+    confWithSuffix.set(HConstants.HBASE_META_TABLE_SUFFIX, suffix);
+    String dirNameWithSuffix = MasterRegionFactory.initMasterRegionDirName(confWithSuffix);
+    String expectedDirName = "MasterData_" + suffix;
+    assertEquals(expectedDirName, dirNameWithSuffix,
+      "Directory name should have suffix when configured");
   }
 }

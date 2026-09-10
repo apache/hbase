@@ -17,14 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -43,15 +43,11 @@ import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALProvider;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -59,13 +55,10 @@ import org.slf4j.LoggerFactory;
  * This testcase is used to ensure that the compaction marker will fail a compaction if the RS is
  * already dead. It can not eliminate FNFE when scanning but it does reduce the possibility a lot.
  */
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: wal={0}")
 public class TestCompactionInDeadRegionServer {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionInDeadRegionServer.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestCompactionInDeadRegionServer.class);
 
@@ -94,16 +87,17 @@ public class TestCompactionInDeadRegionServer {
     }
   }
 
-  @Parameter
-  public Class<? extends WALProvider> walProvider;
+  private final Class<? extends WALProvider> walProvider;
 
-  @Parameters(name = "{index}: wal={0}")
-  public static List<Object[]> params() {
-    return Arrays.asList(new Object[] { FSHLogProvider.class },
-      new Object[] { AsyncFSWALProvider.class });
+  public TestCompactionInDeadRegionServer(Class<? extends WALProvider> walProvider) {
+    this.walProvider = walProvider;
   }
 
-  @Before
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(FSHLogProvider.class), Arguments.of(AsyncFSWALProvider.class));
+  }
+
+  @BeforeEach
   public void setUp() throws Exception {
     UTIL.getConfiguration().setClass(WALFactory.WAL_PROVIDER, walProvider, WALProvider.class);
     UTIL.getConfiguration().setInt(HConstants.ZK_SESSION_TIMEOUT, 2000);
@@ -121,12 +115,12 @@ public class TestCompactionInDeadRegionServer {
     UTIL.getAdmin().flush(TABLE_NAME);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void test() throws Exception {
     HRegionServer regionSvr = UTIL.getRSForFirstRegionInTable(TABLE_NAME);
     HRegion region = regionSvr.getRegions(TABLE_NAME).get(0);

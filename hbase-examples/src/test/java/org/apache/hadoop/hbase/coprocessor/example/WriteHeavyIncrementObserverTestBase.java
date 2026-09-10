@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.coprocessor.example;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
@@ -32,8 +32,6 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.regionserver.CompactingMemStore;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
 
 public class WriteHeavyIncrementObserverTestBase {
 
@@ -55,21 +53,12 @@ public class WriteHeavyIncrementObserverTestBase {
 
   protected static int THREADS = 10;
 
-  @BeforeClass
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setLong(HConstants.HREGION_MEMSTORE_FLUSH_SIZE, 64 * 1024L);
     UTIL.getConfiguration().setLong("hbase.hregion.memstore.flush.size.limit", 1024L);
     UTIL.getConfiguration().setDouble(CompactingMemStore.IN_MEMORY_FLUSH_THRESHOLD_FACTOR_KEY,
       0.014);
     UTIL.startMiniCluster(3);
-  }
-
-  @AfterClass
-  public static void tearDown() throws Exception {
-    if (TABLE != null) {
-      TABLE.close();
-    }
-    UTIL.shutdownMiniCluster();
   }
 
   private static void increment(int sleepSteps) throws IOException {

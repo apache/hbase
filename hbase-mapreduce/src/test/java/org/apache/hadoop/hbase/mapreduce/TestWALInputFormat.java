@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -37,22 +41,19 @@ import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.mapreduce.InputSplit;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.mapreduce.JobContext;
+import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ MapReduceTests.class, MediumTests.class })
+@Tag(MapReduceTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestWALInputFormat {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALInputFormat.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setupClass() throws Exception {
     TEST_UTIL.startMiniCluster();
     TEST_UTIL.createWALRootDir();
@@ -123,6 +124,91 @@ public class TestWALInputFormat {
     assertEquals(1, splits.size());
     WALInputFormat.WALSplit split = (WALInputFormat.WALSplit) splits.get(0);
     assertEquals(archiveWal.toString(), split.getLogFileName());
+  }
+
+  @Test
+  public void testEmptyFileIsIgnoredWhenConfigured() throws IOException, InterruptedException {
+    List<InputSplit> splits = getSplitsForEmptyFile(true);
+    assertTrue(splits.isEmpty(), "Empty file should be ignored when IGNORE_EMPTY_FILES is true");
+  }
+
+  @Test
+  public void testEmptyFileIsIncludedWhenNotIgnored() throws IOException, InterruptedException {
+    List<InputSplit> splits = getSplitsForEmptyFile(false);
+    assertEquals(1, splits.size(),
+      "Empty file should be included when IGNORE_EMPTY_FILES is false");
+  }
+
+  private List<InputSplit> getSplitsForEmptyFile(boolean ignoreEmptyFiles)
+    throws IOException, InterruptedException {
+    Configuration conf = new Configuration();
+    conf.setBoolean(WALPlayer.IGNORE_EMPTY_FILES, ignoreEmptyFiles);
+
+    JobContext jobContext = Mockito.mock(JobContext.class);
+    Mockito.when(jobContext.getConfiguration()).thenReturn(conf);
+
+    LocatedFileStatus emptyFile = Mockito.mock(LocatedFileStatus.class);
+    Mockito.when(emptyFile.getLen()).thenReturn(0L);
+    Mockito.when(emptyFile.getPath()).thenReturn(new Path("/empty.wal"));
+
+    WALInputFormat inputFormat = new WALInputFormat() {
+      @Override
+      Path[] getInputPaths(Configuration conf) {
+        return new Path[] { new Path("/input") };
+      }
+
+      @Override
+      List<FileStatus> getFiles(FileSystem fs, Path inputPath, long startTime, long endTime,
+        Configuration conf) {
+        return Collections.singletonList(emptyFile);
+      }
+    };
+
+    return inputFormat.getSplits(jobContext, "", "");
+  }
+
+  /**
+   * Test that an empty WAL file (which causes WALHeaderEOFException) is gracefully handled and
+   * skipped rather than causing the job to fail.
+   */
+  @Test
+  public void testHandlesEmptyWALFile() throws Exception {
+    Configuration conf = TEST_UTIL.getConfiguration();
+
+    // Create an empty WAL file
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    Path emptyWalFile =
+      new Path(walRootDir, "WALs/empty-wal-test/empty." + EnvironmentEdgeManager.currentTime());
+    TEST_UTIL.getTestFileSystem().mkdirs(emptyWalFile.getParent());
+    TEST_UTIL.getTestFileSystem().create(emptyWalFile).close();
+
+    try {
+      JobContext ctx = Mockito.mock(JobContext.class);
+      conf.set(FileInputFormat.INPUT_DIR, emptyWalFile.toString());
+      conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ";");
+      Mockito.when(ctx.getConfiguration()).thenReturn(conf);
+      Job job = Job.getInstance(conf);
+      TableMapReduceUtil.initCredentialsForCluster(job, conf);
+      Mockito.when(ctx.getCredentials()).thenReturn(job.getCredentials());
+
+      // Create record reader and verify it handles the empty file gracefully
+      try (WALInputFormat.WALKeyRecordReader reader = new WALInputFormat.WALKeyRecordReader()) {
+        TaskAttemptContext taskCtx = Mockito.mock(TaskAttemptContext.class);
+        Mockito.when(taskCtx.getConfiguration()).thenReturn(conf);
+
+        WALInputFormat wif = new WALInputFormat();
+        List<InputSplit> splits = wif.getSplits(ctx);
+        assertEquals(1, splits.size());
+        WALInputFormat.WALSplit split = (WALInputFormat.WALSplit) splits.get(0);
+
+        // This should not throw WALHeaderEOFException - it should return false for nextKeyValue()
+        reader.initialize(split, taskCtx);
+        // nextKeyValue() should return false since the file is empty (reader is null)
+        assertFalse(reader.nextKeyValue());
+      }
+    } finally {
+      TEST_UTIL.getTestFileSystem().delete(emptyWalFile.getParent(), true);
+    }
   }
 
 }

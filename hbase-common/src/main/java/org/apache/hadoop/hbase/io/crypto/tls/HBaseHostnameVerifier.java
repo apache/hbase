@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.crypto.tls;
 
-import java.net.InetAddress;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
@@ -28,7 +27,6 @@ import java.util.List;
 import java.util.Locale;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.Optional;
 import javax.naming.InvalidNameException;
 import javax.naming.NamingException;
 import javax.naming.directory.Attribute;
@@ -40,11 +38,10 @@ import javax.net.ssl.SSLException;
 import javax.net.ssl.SSLPeerUnverifiedException;
 import javax.net.ssl.SSLSession;
 import javax.security.auth.x500.X500Principal;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.net.InetAddresses;
 
 /**
  * When enabled in {@link X509Util}, handles verifying that the hostname of a peer matches the
@@ -112,9 +109,8 @@ final class HBaseHostnameVerifier implements HostnameVerifier {
   void verify(final String host, final X509Certificate cert) throws SSLException {
     final List<SubjectName> subjectAlts = getSubjectAltNames(cert);
     if (subjectAlts != null && !subjectAlts.isEmpty()) {
-      Optional<InetAddress> inetAddress = parseIpAddress(host);
-      if (inetAddress.isPresent()) {
-        matchIPAddress(host, inetAddress.get(), subjectAlts);
+      if (Strings.isInetAddress(host)) {
+        matchIPAddress(host, subjectAlts);
       } else {
         matchDNSName(host, subjectAlts);
       }
@@ -131,14 +127,14 @@ final class HBaseHostnameVerifier implements HostnameVerifier {
     }
   }
 
-  private static void matchIPAddress(final String host, final InetAddress inetAddress,
-    final List<SubjectName> subjectAlts) throws SSLException {
+  private static void matchIPAddress(final String host, final List<SubjectName> subjectAlts)
+    throws SSLException {
     for (final SubjectName subjectAlt : subjectAlts) {
-      if (subjectAlt.getType() == SubjectName.IP) {
-        Optional<InetAddress> parsed = parseIpAddress(subjectAlt.getValue());
-        if (parsed.filter(altAddr -> altAddr.equals(inetAddress)).isPresent()) {
-          return;
-        }
+      if (
+        subjectAlt.getType() == SubjectName.IP
+          && Strings.hostnamesEqual(host, subjectAlt.getValue())
+      ) {
+        return;
       }
     }
     throw new SSLPeerUnverifiedException("Certificate for <" + host + "> doesn't match any "
@@ -228,32 +224,6 @@ final class HBaseHostnameVerifier implements HostnameVerifier {
     } catch (final InvalidNameException e) {
       throw new SSLException(subjectPrincipal + " is not a valid X500 distinguished name");
     }
-  }
-
-  private static Optional<InetAddress> parseIpAddress(String host) {
-    host = host.trim();
-    // Uri strings only work for ipv6 and are wrapped with brackets
-    // Unfortunately InetAddresses can't handle a mixed input, so we
-    // check here and choose which parse method to use.
-    if (host.startsWith("[") && host.endsWith("]")) {
-      return parseIpAddressUriString(host);
-    } else {
-      return parseIpAddressString(host);
-    }
-  }
-
-  private static Optional<InetAddress> parseIpAddressUriString(String host) {
-    if (InetAddresses.isUriInetAddress(host)) {
-      return Optional.of(InetAddresses.forUriString(host));
-    }
-    return Optional.empty();
-  }
-
-  private static Optional<InetAddress> parseIpAddressString(String host) {
-    if (InetAddresses.isInetAddress(host)) {
-      return Optional.of(InetAddresses.forString(host));
-    }
-    return Optional.empty();
   }
 
   @SuppressWarnings("MixedMutabilityReturnType")

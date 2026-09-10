@@ -17,27 +17,24 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * This is a hammer test that verifies MultiVersionConcurrencyControl in a multiple writer single
  * reader scenario.
  */
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMultiVersionConcurrencyControl {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiVersionConcurrencyControl.class);
 
   static class Writer implements Runnable {
     final AtomicBoolean finished;
@@ -132,9 +129,9 @@ public class TestMultiVersionConcurrencyControl {
     }
 
     // check failure.
-    Assert.assertFalse(readerFailed.get());
+    assertFalse(readerFailed.get());
     for (int i = 0; i < n; ++i) {
-      Assert.assertTrue(statuses[i].get());
+      assertTrue(statuses[i].get());
     }
   }
 }

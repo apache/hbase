@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -26,25 +27,20 @@ import java.util.ConcurrentModificationException;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that I can Iterate Client Actions that hold Cells (Get does not have Cells).
  */
-@Category({ SmallTests.class, ClientTests.class })
+@Tag(SmallTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestPutDeleteEtcCellIteration {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPutDeleteEtcCellIteration.class);
 
   private static final byte[] ROW = new byte[] { 'r' };
   private static final long TIMESTAMP = EnvironmentEdgeManager.currentTime();
@@ -66,21 +62,23 @@ public class TestPutDeleteEtcCellIteration {
     assertEquals(COUNT, index);
   }
 
-  @Test(expected = ConcurrentModificationException.class)
+  @Test
   public void testPutConcurrentModificationOnIteration() throws IOException {
     Put p = new Put(ROW);
     for (int i = 0; i < COUNT; i++) {
       byte[] bytes = Bytes.toBytes(i);
       p.addColumn(bytes, bytes, TIMESTAMP, bytes);
     }
-    int index = 0;
-    for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
-      Cell cell = cellScanner.current();
-      byte[] bytes = Bytes.toBytes(index++);
-      // When we hit the trigger, try inserting a new KV; should trigger exception
-      p.addColumn(bytes, bytes, TIMESTAMP, bytes);
-      assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
-    }
+    assertThrows(ConcurrentModificationException.class, () -> {
+      int index = 0;
+      for (CellScanner cellScanner = p.cellScanner(); cellScanner.advance();) {
+        Cell cell = cellScanner.current();
+        byte[] bytes = Bytes.toBytes(index++);
+        // When we hit the trigger, try inserting a new KV; should trigger exception
+        p.addColumn(bytes, bytes, TIMESTAMP, bytes);
+        assertEquals(new KeyValue(ROW, bytes, bytes, TIMESTAMP, bytes), cell);
+      }
+    });
   }
 
   @Test

@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.hadoop.hbase.wal.WAL;
@@ -66,7 +67,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   /**
    * {@link InputSplit} for {@link WAL} files. Each split represent exactly one log file.
    */
-  static class WALSplit extends InputSplit implements Writable {
+  public static class WALSplit extends InputSplit implements Writable {
     private String logFileName;
     private long fileSize;
     private long startTime;
@@ -161,6 +162,17 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
           reader =
             WALFactory.createStreamReader(path.getFileSystem(conf), path, conf, startPosition);
           return reader;
+        } catch (WALHeaderEOFException wheofe) {
+          // We hit EOF while reading the WAL header. A file that ever had an entry synced to it
+          // necessarily has a complete, readable header (a sync flushes the header too), so a
+          // header EOF means the file holds nothing recoverable right now. For a file that is not
+          // being actively written (a closed/archived WAL, or one left empty by a crashed
+          // RegionServer) the header never appears, so retrying only delays an inevitable skip.
+          // The one case a retry could help is a WAL still being written by the legacy
+          // (non-async) writer that has not yet flushed its header; but we skip that too.
+          LOG.warn("Got WALHeaderEOFException opening reader for {}, skipping empty WAL file.",
+            path, wheofe);
+          return null;
         } catch (LeaseNotRecoveredException lnre) {
           // HBASE-15019 the WAL was not closed due to some hiccup.
           LOG.warn("Try to recover the WAL lease " + path, lnre);
@@ -328,14 +340,21 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         throw e;
       }
     }
+
+    boolean ignoreEmptyFiles =
+      conf.getBoolean(WALPlayer.IGNORE_EMPTY_FILES, WALPlayer.DEFAULT_IGNORE_EMPTY_FILES);
     List<InputSplit> splits = new ArrayList<InputSplit>(allFiles.size());
     for (FileStatus file : allFiles) {
+      if (ignoreEmptyFiles && file.getLen() == 0) {
+        LOG.warn("Ignoring empty file: " + file.getPath());
+        continue;
+      }
       splits.add(new WALSplit(file.getPath().toString(), file.getLen(), startTime, endTime));
     }
     return splits;
   }
 
-  private Path[] getInputPaths(Configuration conf) {
+  Path[] getInputPaths(Configuration conf) {
     String inpDirs = conf.get(FileInputFormat.INPUT_DIR);
     return StringUtils
       .stringToPath(inpDirs.split(conf.get(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ",")));
@@ -349,7 +368,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
    *                  equal to this value else we will filter out the file. If name does not seem to
    *                  have a timestamp, we will just return it w/o filtering.
    */
-  private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
+  List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
     Configuration conf) throws IOException {
     List<FileStatus> result = new ArrayList<>();
     LOG.debug("Scanning " + dir.toString() + " for WAL files");

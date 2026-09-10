@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -37,28 +36,25 @@ import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RSGroupTests.class, MediumTests.class })
+@Tag(RSGroupTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRSGroupsFallback extends TestRSGroupsBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRSGroupsFallback.class);
 
   protected static final Logger LOG = LoggerFactory.getLogger(TestRSGroupsFallback.class);
 
   private static final String FALLBACK_GROUP = "fallback";
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY, true);
@@ -67,17 +63,17 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     MASTER.balanceSwitch(true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     tearDownAfterClass();
   }
 
-  @Before
-  public void beforeMethod() throws Exception {
-    setUpBeforeMethod();
+  @BeforeEach
+  public void beforeMethod(TestInfo testInfo) throws Exception {
+    setUpBeforeMethod(testInfo);
   }
 
-  @After
+  @AfterEach
   public void afterMethod() throws Exception {
     tearDownAfterMethod();
   }

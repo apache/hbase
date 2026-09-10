@@ -17,21 +17,20 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.List;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
@@ -45,11 +44,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 /**
  * Test class for {@link QuotaSettingsFactory}.
  */
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestQuotaSettingsFactory {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestQuotaSettingsFactory.class);
 
   @Test
   public void testAllQuotasAddedToList() {
@@ -80,59 +76,61 @@ public class TestQuotaSettingsFactory {
         ThrottleSettings throttleSettings = (ThrottleSettings) setting;
         switch (throttleSettings.getThrottleType()) {
           case READ_NUMBER:
-            assertFalse("Should not have multiple read quotas", seenRead);
+            assertFalse(seenRead, "Should not have multiple read quotas");
             assertEquals(readLimit, throttleSettings.getSoftLimit());
             assertEquals(TimeUnit.MINUTES, throttleSettings.getTimeUnit());
             assertEquals(tn, throttleSettings.getTableName());
-            assertNull("Username should be null", throttleSettings.getUserName());
-            assertNull("Namespace should be null", throttleSettings.getNamespace());
-            assertNull("RegionServer should be null", throttleSettings.getRegionServer());
+            assertNull(throttleSettings.getUserName(), "Username should be null");
+            assertNull(throttleSettings.getNamespace(), "Namespace should be null");
+            assertNull(throttleSettings.getRegionServer(), "RegionServer should be null");
             seenRead = true;
             break;
           case WRITE_NUMBER:
-            assertFalse("Should not have multiple write quotas", seenWrite);
+            assertFalse(seenWrite, "Should not have multiple write quotas");
             assertEquals(writeLimit, throttleSettings.getSoftLimit());
             assertEquals(TimeUnit.MINUTES, throttleSettings.getTimeUnit());
             assertEquals(tn, throttleSettings.getTableName());
-            assertNull("Username should be null", throttleSettings.getUserName());
-            assertNull("Namespace should be null", throttleSettings.getNamespace());
-            assertNull("RegionServer should be null", throttleSettings.getRegionServer());
+            assertNull(throttleSettings.getUserName(), "Username should be null");
+            assertNull(throttleSettings.getNamespace(), "Namespace should be null");
+            assertNull(throttleSettings.getRegionServer(), "RegionServer should be null");
             seenWrite = true;
             break;
           default:
             fail("Unexpected throttle type: " + throttleSettings.getThrottleType());
         }
       } else if (setting instanceof SpaceLimitSettings) {
-        assertFalse("Should not have multiple space quotas", seenSpace);
+        assertFalse(seenSpace, "Should not have multiple space quotas");
         SpaceLimitSettings spaceLimit = (SpaceLimitSettings) setting;
         assertEquals(tn, spaceLimit.getTableName());
-        assertNull("Username should be null", spaceLimit.getUserName());
-        assertNull("Namespace should be null", spaceLimit.getNamespace());
-        assertNull("RegionServer should be null", spaceLimit.getRegionServer());
-        assertTrue("SpaceLimitSettings should have a SpaceQuota", spaceLimit.getProto().hasQuota());
+        assertNull(spaceLimit.getUserName(), "Username should be null");
+        assertNull(spaceLimit.getNamespace(), "Namespace should be null");
+        assertNull(spaceLimit.getRegionServer(), "RegionServer should be null");
+        assertTrue(spaceLimit.getProto().hasQuota(), "SpaceLimitSettings should have a SpaceQuota");
         assertEquals(spaceQuota, spaceLimit.getProto().getQuota());
         seenSpace = true;
       } else {
         fail("Unexpected QuotaSettings implementation: " + setting.getClass());
       }
     }
-    assertTrue("Should have seen a read quota", seenRead);
-    assertTrue("Should have seen a write quota", seenWrite);
-    assertTrue("Should have seen a space quota", seenSpace);
+    assertTrue(seenRead, "Should have seen a read quota");
+    assertTrue(seenWrite, "Should have seen a write quota");
+    assertTrue(seenSpace, "Should have seen a space quota");
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testNeitherTableNorNamespace() {
     final SpaceQuota spaceQuota = SpaceQuota.newBuilder().setSoftLimit(1L)
       .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE).build();
-    QuotaSettingsFactory.fromSpace(null, null, spaceQuota);
+    assertThrows(IllegalArgumentException.class,
+      () -> QuotaSettingsFactory.fromSpace(null, null, spaceQuota));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testBothTableAndNamespace() {
     final SpaceQuota spaceQuota = SpaceQuota.newBuilder().setSoftLimit(1L)
       .setViolationPolicy(QuotaProtos.SpaceViolationPolicy.DISABLE).build();
-    QuotaSettingsFactory.fromSpace(TableName.valueOf("foo"), "bar", spaceQuota);
+    assertThrows(IllegalArgumentException.class,
+      () -> QuotaSettingsFactory.fromSpace(TableName.valueOf("foo"), "bar", spaceQuota));
   }
 
   @Test
@@ -142,16 +140,16 @@ public class TestQuotaSettingsFactory {
     final SpaceViolationPolicy violationPolicy = SpaceViolationPolicy.NO_INSERTS;
     QuotaSettings settings =
       QuotaSettingsFactory.limitTableSpace(tableName, sizeLimit, violationPolicy);
-    assertNotNull("QuotaSettings should not be null", settings);
-    assertTrue("Should be an instance of SpaceLimitSettings",
-      settings instanceof SpaceLimitSettings);
+    assertNotNull(settings, "QuotaSettings should not be null");
+    assertTrue(settings instanceof SpaceLimitSettings,
+      "Should be an instance of SpaceLimitSettings");
     SpaceLimitSettings spaceLimitSettings = (SpaceLimitSettings) settings;
     SpaceLimitRequest protoRequest = spaceLimitSettings.getProto();
-    assertTrue("Request should have a SpaceQuota", protoRequest.hasQuota());
+    assertTrue(protoRequest.hasQuota(), "Request should have a SpaceQuota");
     SpaceQuota quota = protoRequest.getQuota();
     assertEquals(sizeLimit, quota.getSoftLimit());
     assertEquals(violationPolicy, ProtobufUtil.toViolationPolicy(quota.getViolationPolicy()));
-    assertFalse("The remove attribute should be false", quota.getRemove());
+    assertFalse(quota.getRemove(), "The remove attribute should be false");
   }
 
   @Test
@@ -159,19 +157,19 @@ public class TestQuotaSettingsFactory {
     final String ns = "ns1";
     final TableName tn = TableName.valueOf("tn1");
     QuotaSettings nsSettings = QuotaSettingsFactory.removeNamespaceSpaceLimit(ns);
-    assertNotNull("QuotaSettings should not be null", nsSettings);
-    assertTrue("Should be an instance of SpaceLimitSettings",
-      nsSettings instanceof SpaceLimitSettings);
+    assertNotNull(nsSettings, "QuotaSettings should not be null");
+    assertTrue(nsSettings instanceof SpaceLimitSettings,
+      "Should be an instance of SpaceLimitSettings");
     SpaceLimitRequest nsProto = ((SpaceLimitSettings) nsSettings).getProto();
-    assertTrue("Request should have a SpaceQuota", nsProto.hasQuota());
-    assertTrue("The remove attribute should be true", nsProto.getQuota().getRemove());
+    assertTrue(nsProto.hasQuota(), "Request should have a SpaceQuota");
+    assertTrue(nsProto.getQuota().getRemove(), "The remove attribute should be true");
 
     QuotaSettings tableSettings = QuotaSettingsFactory.removeTableSpaceLimit(tn);
-    assertNotNull("QuotaSettings should not be null", tableSettings);
-    assertTrue("Should be an instance of SpaceLimitSettings",
-      tableSettings instanceof SpaceLimitSettings);
+    assertNotNull(tableSettings, "QuotaSettings should not be null");
+    assertTrue(tableSettings instanceof SpaceLimitSettings,
+      "Should be an instance of SpaceLimitSettings");
     SpaceLimitRequest tableProto = ((SpaceLimitSettings) tableSettings).getProto();
-    assertTrue("Request should have a SpaceQuota", tableProto.hasQuota());
-    assertTrue("The remove attribute should be true", tableProto.getQuota().getRemove());
+    assertTrue(tableProto.hasQuota(), "Request should have a SpaceQuota");
+    assertTrue(tableProto.getQuota().getRemove(), "The remove attribute should be true");
   }
 }

@@ -19,15 +19,16 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.HConstants.BUCKET_CACHE_SIZE_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -38,7 +39,6 @@ import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
+import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -69,10 +70,9 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -95,12 +95,9 @@ import org.slf4j.LoggerFactory;
  * @formatter:on
  */
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDataTieringManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDataTieringManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDataTieringManager.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -122,7 +119,7 @@ public class TestDataTieringManager {
    */
   private static String rowKeyString;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     testDir = TEST_UTIL.getDataTestDir(TestDataTieringManager.class.getSimpleName());
     defaultConf = TEST_UTIL.getConfiguration();
@@ -136,11 +133,6 @@ public class TestDataTieringManager {
     defaultConf.setBoolean(DataTieringManager.GLOBAL_DATA_TIERING_ENABLED_KEY, true);
     defaultConf.setStrings(HConstants.BUCKET_CACHE_IOENGINE_KEY, "offheap");
     defaultConf.setLong(BUCKET_CACHE_SIZE_KEY, 32);
-  }
-
-  @FunctionalInterface
-  interface DataTieringMethodCallerWithPath {
-    boolean call(DataTieringManager manager, Path path) throws DataTieringException;
   }
 
   @FunctionalInterface
@@ -160,49 +152,12 @@ public class TestDataTieringManager {
     // Test with another valid key
     key = new BlockCacheKey(hStoreFiles.get(1).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, false);
-
-    // Test with valid key with no HFile Path
-    key = new BlockCacheKey(hStoreFiles.get(0).getPath().getName(), 0);
-    testDataTieringMethodWithKeyExpectingException(methodCallerWithKey, key,
-      new DataTieringException("BlockCacheKey Doesn't Contain HFile Path"));
-  }
-
-  @Test
-  public void testDataTieringEnabledWithPath() throws IOException {
-    initializeTestEnvironment();
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isDataTieringEnabled;
-
-    // Test with valid path
-    Path hFilePath = hStoreFiles.get(1).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
-
-    // Test with another valid path
-    hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
-
-    // Test with an incorrect path
-    hFilePath = new Path("incorrectPath");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Incorrect HFile Path: " + hFilePath));
-
-    // Test with a non-existing HRegion path
-    Path basePath = hStoreFiles.get(0).getPath().getParent().getParent().getParent();
-    hFilePath = new Path(basePath, "incorrectRegion/cf1/filename");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HRegion corresponding to " + hFilePath + " doesn't exist"));
-
-    // Test with a non-existing HStore path
-    basePath = hStoreFiles.get(0).getPath().getParent().getParent();
-    hFilePath = new Path(basePath, "incorrectCf/filename");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("HStore corresponding to " + hFilePath + " doesn't exist"));
   }
 
   @Test
   public void testHotDataWithKey() throws IOException {
     initializeTestEnvironment();
     DataTieringMethodCallerWithKey methodCallerWithKey = DataTieringManager::isHotData;
-
     // Test with valid key
     BlockCacheKey key = new BlockCacheKey(hStoreFiles.get(0).getPath(), 0, true, BlockType.DATA);
     testDataTieringMethodWithKeyNoException(methodCallerWithKey, key, true);
@@ -213,22 +168,55 @@ public class TestDataTieringManager {
   }
 
   @Test
-  public void testHotDataWithPath() throws IOException {
+  public void testGracePeriodMakesColdFileHot() throws IOException, DataTieringException {
     initializeTestEnvironment();
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
 
-    // Test with valid path
-    Path hFilePath = hStoreFiles.get(2).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+    long hotAge = 1 * DAY;
+    long gracePeriod = 3 * DAY;
 
-    // Test with another valid path
-    hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
 
-    // Test with a filename where corresponding HStoreFile in not present
-    hFilePath = new Path(hStoreFiles.get(0).getPath().getParent(), "incorrectFileName");
-    testDataTieringMethodWithPathExpectingException(methodCallerWithPath, hFilePath,
-      new DataTieringException("Store file corresponding to " + hFilePath + " doesn't exist"));
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+    Path hFilePath = file.getPath();
+    BlockCacheKey key = new BlockCacheKey(hFilePath, 0, true, BlockType.DATA);
+    assertTrue(dataTieringManager.isHotData(key), "File should be hot due to grace period");
+  }
+
+  @Test
+  public void testFileIsColdWithoutGracePeriod() throws IOException, DataTieringException {
+    initializeTestEnvironment();
+
+    long hotAge = 1 * DAY;
+    long gracePeriod = 0;
+    long currentTime = System.currentTimeMillis();
+    long fileTimestamp = currentTime - (2 * DAY);
+
+    Configuration conf = getConfWithGracePeriod(hotAge, gracePeriod);
+    HRegion region = createHRegion("tableNoGracePeriod", conf);
+    HStore hStore = createHStore(region, "cf1", conf);
+
+    HStoreFile file = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), fileTimestamp, region.getRegionFileSystem());
+    file.initReader();
+
+    hStore.refreshStoreFiles();
+    region.stores.put(Bytes.toBytes("cf1"), hStore);
+    testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
+
+    Path hFilePath = file.getPath();
+    BlockCacheKey key = new BlockCacheKey(hFilePath, 0, true, BlockType.DATA);
+    assertFalse(dataTieringManager.isHotData(key), "File should be cold without grace period");
   }
 
   @Test
@@ -245,9 +233,9 @@ public class TestDataTieringManager {
 
     // Since we have one cold file among four files, only three should get prefetched.
     Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
-    assertTrue("We should get the fully cached files from the cache", fullyCachedFiles.isPresent());
+    assertTrue(fullyCachedFiles.isPresent(), "We should get the fully cached files from the cache");
     Waiter.waitFor(defaultConf, 10000, () -> fullyCachedFiles.get().size() == 3);
-    assertEquals("Number of fully cached files are incorrect", 3, fullyCachedFiles.get().size());
+    assertEquals(3, fullyCachedFiles.get().size(), "Number of fully cached files are incorrect");
   }
 
   private void setPrefetchBlocksOnOpen() {
@@ -263,14 +251,16 @@ public class TestDataTieringManager {
     }
 
     // Verify hStoreFile3 is identified as cold data
-    DataTieringMethodCallerWithPath methodCallerWithPath = DataTieringManager::isHotData;
+    DataTieringMethodCallerWithKey methodCallerWithPath = DataTieringManager::isHotData;
     Path hFilePath = hStoreFiles.get(3).getPath();
-    testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, false);
+    testDataTieringMethodWithKeyNoException(methodCallerWithPath,
+      new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), false);
 
     // Verify all the other files in hStoreFiles are hot data
     for (int i = 0; i < hStoreFiles.size() - 1; i++) {
       hFilePath = hStoreFiles.get(i).getPath();
-      testDataTieringMethodWithPathNoException(methodCallerWithPath, hFilePath, true);
+      testDataTieringMethodWithKeyNoException(methodCallerWithPath,
+        new BlockCacheKey(hFilePath, 0, true, BlockType.DATA), true);
     }
 
     try {
@@ -354,6 +344,152 @@ public class TestDataTieringManager {
     assertEquals(1, coldDataFiles.size());
     // hStoreFiles[3] is the cold file.
     assert (coldDataFiles.containsKey(hStoreFiles.get(3).getFileInfo().getActiveFileName()));
+  }
+
+  /**
+   * {@link DataTieringManager#isHotData(HFileInfo, org.apache.hadoop.conf.Configuration)} should
+   * record cold files in {@link DataTieringManager#getRegionColdDataSize()} (path and aggregate
+   * size).
+   */
+  @Test
+  public void testRegionColdDataSizeRecordColdHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    String region = coldFile.getPath().getParent().getParent().getName();
+    assertFalse(dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf()), "fixture file should be cold for TIME_RANGE tiering");
+
+    Map<String, Pair<List<String>, Long>> coldByRegion = dataTieringManager.getRegionColdDataSize();
+    assertTrue(coldByRegion.containsKey(region));
+    Pair<List<String>, Long> entry = coldByRegion.get(region);
+    long expected = Bytes.toLong(coldFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));
+    assertEquals(expected, (long) entry.getSecond());
+    assertEquals(1, entry.getFirst().size());
+    assertTrue(entry.getFirst().contains(coldFile.getPath().getName()));
+  }
+
+  @Test
+  public void testRegionColdDataSizeSkipsHotHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile hotFile = hStoreFiles.get(0);
+    assertTrue(dataTieringManager.isHotData(hotFile.getFileInfo().getHFileInfo(),
+      hotFile.getFileInfo().getConf()));
+    assertTrue(dataTieringManager.getRegionColdDataSize().isEmpty());
+  }
+
+  @Test
+  public void testRegionColdDataSizeSkipsNoTieringHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile file = hStoreFiles.get(1);
+    assertTrue(dataTieringManager.isHotData(file.getFileInfo().getHFileInfo(),
+      file.getFileInfo().getConf()));
+    String encoded = file.getPath().getParent().getParent().getName();
+    assertFalse(dataTieringManager.getRegionColdDataSize().containsKey(encoded));
+  }
+
+  @Test
+  public void testRegionColdDataSizeForSameHFile() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    long expected = Bytes.toLong(coldFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+
+    String region = coldFile.getPath().getParent().getParent().getName();
+    Pair<List<String>, Long> entry = dataTieringManager.getRegionColdDataSize().get(region);
+    assertNotNull(entry);
+    assertEquals(expected, (long) entry.getSecond());
+    assertEquals(1, entry.getFirst().size());
+  }
+
+  @Test
+  public void testUpdateRegionColdDataSizeNoopWhenRegionNotTracked() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+    HStoreFile coldFile = hStoreFiles.get(3);
+    dataTieringManager.updateRegionColdDataSize("not-a-real-encoded-region",
+      Collections.singletonList(coldFile), Collections.emptyList());
+    assertTrue(dataTieringManager.getRegionColdDataSize().isEmpty());
+  }
+
+  @Test
+  public void testUpdateRegionColdDataSizeRemovesCompactedColdAddsNewHot() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    String regionName = coldFile.getPath().getParent().getParent().getName();
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+
+    HRegion region = testOnlineRegions.get(regionName);
+    assertNotNull(region);
+    HStore hStore = region.getStore(Bytes.toBytes("cf2"));
+    HStoreFile newFile = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), System.currentTimeMillis(), region.getRegionFileSystem());
+    newFile.initReader();
+    hStore.refreshStoreFiles();
+
+    dataTieringManager.updateRegionColdDataSize(regionName, Collections.singletonList(coldFile),
+      Collections.singletonList(newFile));
+
+    Pair<List<String>, Long> after = dataTieringManager.getRegionColdDataSize().get(regionName);
+    assertNotNull(after);
+    assertTrue(
+      after.getFirst().isEmpty() || !after.getFirst().contains(coldFile.getPath().getName()),
+      "Cold compacted file should be removed from tracking");
+    assertEquals(0L, (long) after.getSecond());
+  }
+
+  /**
+   * Like {@link #testUpdateRegionColdDataSizeRemovesCompactedColdAddsNewHot}, but the replacement
+   * store file is still cold under TIME_RANGE rules so {@link DataTieringManager} should keep the
+   * region entry and record the new file's size.
+   */
+  @Test
+  public void testUpdateRegionColdDataSizeRemovesCompactedColdAddsNewCold() throws IOException {
+    initializeTestEnvironment();
+    dataTieringManager.getRegionColdDataSize().clear();
+
+    HStoreFile coldFile = hStoreFiles.get(3);
+    String regionName = coldFile.getPath().getParent().getParent().getName();
+    dataTieringManager.isHotData(coldFile.getFileInfo().getHFileInfo(),
+      coldFile.getFileInfo().getConf());
+
+    HRegion region = testOnlineRegions.get(regionName);
+    assertNotNull(region);
+    HStore hStore = region.getStore(Bytes.toBytes("cf2"));
+    // Region2 hot-age is 2.5 * DAY; use 4 * DAY so the new file stays cold.
+    long coldTimestamp = System.currentTimeMillis() - 4 * DAY;
+    HStoreFile newFile = createHStoreFile(hStore.getStoreContext().getFamilyStoreDirectoryPath(),
+      hStore.getReadOnlyConfiguration(), coldTimestamp, region.getRegionFileSystem());
+    newFile.initReader();
+    hStore.refreshStoreFiles();
+
+    assertFalse(dataTieringManager.isHotData(newFile.getFileInfo().getHFileInfo(),
+      newFile.getFileInfo().getConf()), "new store file must be cold for this scenario");
+
+    dataTieringManager.updateRegionColdDataSize(regionName, Collections.singletonList(coldFile),
+      Collections.singletonList(newFile));
+
+    Pair<List<String>, Long> after = dataTieringManager.getRegionColdDataSize().get(regionName);
+    assertNotNull(after);
+    assertFalse(after.getFirst().contains(coldFile.getPath().getName()),
+      "compacted cold file should no longer be tracked");
+    assertEquals(1, after.getFirst().size());
+    assertTrue(after.getFirst().contains(newFile.getPath().getName()));
+    long expectedNew = Bytes.toLong(newFile.getFileInfo().getHFileInfo().get(HFileInfo.FILE_SIZE));
+    assertEquals(expectedNew, (long) after.getSecond());
   }
 
   /*
@@ -653,22 +789,6 @@ public class TestDataTieringManager {
     assertEquals(expectedColdBlocks, numColdBlocks);
   }
 
-  private void testDataTieringMethodWithPath(DataTieringMethodCallerWithPath caller, Path path,
-    boolean expectedResult, DataTieringException exception) {
-    try {
-      boolean value = caller.call(dataTieringManager, path);
-      if (exception != null) {
-        fail("Expected DataTieringException to be thrown");
-      }
-      assertEquals(expectedResult, value);
-    } catch (DataTieringException e) {
-      if (exception == null) {
-        fail("Unexpected DataTieringException: " + e.getMessage());
-      }
-      assertEquals(exception.getMessage(), e.getMessage());
-    }
-  }
-
   private void testDataTieringMethodWithKey(DataTieringMethodCallerWithKey caller,
     BlockCacheKey key, boolean expectedResult, DataTieringException exception) {
     try {
@@ -683,16 +803,6 @@ public class TestDataTieringManager {
       }
       assertEquals(exception.getMessage(), e.getMessage());
     }
-  }
-
-  private void testDataTieringMethodWithPathExpectingException(
-    DataTieringMethodCallerWithPath caller, Path path, DataTieringException exception) {
-    testDataTieringMethodWithPath(caller, path, false, exception);
-  }
-
-  private void testDataTieringMethodWithPathNoException(DataTieringMethodCallerWithPath caller,
-    Path path, boolean expectedResult) {
-    testDataTieringMethodWithPath(caller, path, expectedResult, null);
   }
 
   private void testDataTieringMethodWithKeyExpectingException(DataTieringMethodCallerWithKey caller,
@@ -770,6 +880,8 @@ public class TestDataTieringManager {
       .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
       .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
         conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
+      .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+        conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
       .build();
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
 
@@ -797,6 +909,8 @@ public class TestDataTieringManager {
         .setValue(DataTieringManager.DATATIERING_KEY, conf.get(DataTieringManager.DATATIERING_KEY))
         .setValue(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY,
           conf.get(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY))
+        .setValue(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+          conf.get(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY))
         .build();
 
     return new HStore(region, columnFamilyDescriptor, conf, false);
@@ -806,6 +920,13 @@ public class TestDataTieringManager {
     Configuration conf = new Configuration(defaultConf);
     conf.set(DataTieringManager.DATATIERING_KEY, DataTieringType.TIME_RANGE.name());
     conf.set(DataTieringManager.DATATIERING_HOT_DATA_AGE_KEY, String.valueOf(hotDataAge));
+    return conf;
+  }
+
+  private static Configuration getConfWithGracePeriod(long hotDataAge, long gracePeriod) {
+    Configuration conf = getConfWithTimeRangeDataTieringEnabled(hotDataAge);
+    conf.set(DataTieringManager.HSTORE_DATATIERING_GRACE_PERIOD_MILLIS_KEY,
+      String.valueOf(gracePeriod));
     return conf;
   }
 

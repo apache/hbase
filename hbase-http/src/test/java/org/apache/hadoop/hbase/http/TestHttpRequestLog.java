@@ -19,31 +19,26 @@ package org.apache.hadoop.hbase.http;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.CustomRequestLog;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.RequestLog;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.server.Slf4jRequestLogWriter;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHttpRequestLog {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHttpRequestLog.class);
 
   @Test
   public void testAppenderDefined() {
     RequestLog requestLog = HttpRequestLog.getRequestLog("test");
-    assertNotNull("RequestLog should not be null", requestLog);
+    assertNotNull(requestLog, "RequestLog should not be null");
     assertThat(requestLog, instanceOf(CustomRequestLog.class));
     CustomRequestLog crl = (CustomRequestLog) requestLog;
     assertThat(crl.getWriter(), instanceOf(Slf4jRequestLogWriter.class));

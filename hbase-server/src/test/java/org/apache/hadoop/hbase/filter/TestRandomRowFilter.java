@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestRandomRowFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRandomRowFilter.class);
 
   protected RandomRowFilter quarterChanceFilter;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     quarterChanceFilter = new RandomRowFilter(0.25f);
   }
@@ -59,7 +54,7 @@ public class TestRandomRowFilter {
     // since we're dealing with randomness, we must have a include an epsilon
     // tolerance.
     int epsilon = max / 100;
-    assertTrue("Roughly 25% should pass the filter", Math.abs(included - max / 4) < epsilon);
+    assertTrue(Math.abs(included - max / 4) < epsilon, "Roughly 25% should pass filter");
   }
 
   /**
@@ -69,8 +64,8 @@ public class TestRandomRowFilter {
   public void testSerialization() throws Exception {
     RandomRowFilter newFilter = serializationTest(quarterChanceFilter);
     // use epsilon float comparison
-    assertTrue("float should be equal",
-      Math.abs(newFilter.getChance() - quarterChanceFilter.getChance()) < 0.000001f);
+    assertTrue(Math.abs(newFilter.getChance() - quarterChanceFilter.getChance()) < 0.000001f,
+      "float should be equal");
   }
 
   private RandomRowFilter serializationTest(RandomRowFilter filter) throws Exception {

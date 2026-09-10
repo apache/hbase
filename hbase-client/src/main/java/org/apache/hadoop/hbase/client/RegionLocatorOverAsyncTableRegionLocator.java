@@ -63,6 +63,12 @@ class RegionLocatorOverAsyncTableRegionLocator implements RegionLocator {
   }
 
   @Override
+  public List<HRegionLocation> getRegionLocationsPage(byte[] startKey, int limit)
+    throws IOException {
+    return get(locator.getRegionLocationsPage(startKey, limit));
+  }
+
+  @Override
   public TableName getName() {
     return locator.getName();
   }

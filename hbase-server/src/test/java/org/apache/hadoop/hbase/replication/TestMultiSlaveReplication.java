@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -51,19 +50,15 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMultiSlaveReplication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiSlaveReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMultiSlaveReplication.class);
 
@@ -87,7 +82,7 @@ public class TestMultiSlaveReplication {
 
   private static TableDescriptor table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf1 = HBaseConfiguration.create();
     conf1.set(HConstants.ZOOKEEPER_ZNODE_PARENT, "/1");
@@ -214,7 +209,7 @@ public class TestMultiSlaveReplication {
         break;
       }
     }
-    assertNotNull("Couldn't find the region for row '" + Arrays.toString(row) + "'", region);
+    assertNotNull(region, "Couldn't find the region for row '" + Arrays.toString(row) + "'");
 
     final CountDownLatch latch = new CountDownLatch(1);
 
@@ -253,8 +248,8 @@ public class TestMultiSlaveReplication {
       if (res.size() >= 1) {
         LOG.info("Row is replicated");
         rowReplicated = true;
-        assertEquals("Table '" + table + "' did not have the expected number of  results.", count,
-          res.size());
+        assertEquals(count, res.size(),
+          "Table '" + table + "' did not have the expected number of  results.");
         break;
       }
       if (rowReplicated) {
@@ -269,8 +264,8 @@ public class TestMultiSlaveReplication {
     Get get = new Get(row);
     for (Table table : tables) {
       Result res = table.get(get);
-      assertEquals("Table '" + table + "' did not have the expected number of results.", count,
-        res.size());
+      assertEquals(count, res.size(),
+        "Table '" + table + "' did not have the expected number of results.");
     }
   }
 

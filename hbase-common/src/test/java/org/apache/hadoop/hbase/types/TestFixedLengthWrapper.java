@@ -17,26 +17,22 @@
  */
 package org.apache.hadoop.hbase.types;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Order;
 import org.apache.hadoop.hbase.util.PositionedByteRange;
 import org.apache.hadoop.hbase.util.SimplePositionedMutableByteRange;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestFixedLengthWrapper {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFixedLengthWrapper.class);
 
   static final byte[][] VALUES =
     new byte[][] { Bytes.toBytes(""), Bytes.toBytes("1"), Bytes.toBytes("22"), Bytes.toBytes("333"),
@@ -59,8 +55,8 @@ public class TestFixedLengthWrapper {
           assertEquals(limit, type.encode(buff, val));
           buff.setPosition(0);
           byte[] actual = type.decode(buff);
-          assertTrue("Decoding output differs from expected",
-            Bytes.equals(val, 0, val.length, actual, 0, val.length));
+          assertTrue(Bytes.equals(val, 0, val.length, actual, 0, val.length),
+            "Decoding output differs from expected");
           buff.setPosition(0);
           assertEquals(limit, type.skip(buff));
         }
@@ -68,24 +64,24 @@ public class TestFixedLengthWrapper {
     }
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInsufficientRemainingRead() {
     final PositionedByteRange buff = new SimplePositionedMutableByteRange(0);
     final DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(Order.ASCENDING), 3);
-    type.decode(buff);
+    assertThrows(IllegalArgumentException.class, () -> type.decode(buff));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testInsufficientRemainingWrite() {
     final PositionedByteRange buff = new SimplePositionedMutableByteRange(0);
     final DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(Order.ASCENDING), 3);
-    type.encode(buff, Bytes.toBytes(""));
+    assertThrows(IllegalArgumentException.class, () -> type.encode(buff, Bytes.toBytes("")));
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testOverflowPassthrough() {
     final PositionedByteRange buff = new SimplePositionedMutableByteRange(3);
     final DataType<byte[]> type = new FixedLengthWrapper<>(new RawBytes(Order.ASCENDING), 0);
-    type.encode(buff, Bytes.toBytes("foo"));
+    assertThrows(IllegalArgumentException.class, () -> type.encode(buff, Bytes.toBytes("foo")));
   }
 }

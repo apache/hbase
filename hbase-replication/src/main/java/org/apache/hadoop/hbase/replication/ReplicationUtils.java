@@ -56,6 +56,12 @@ public final class ReplicationUtils {
   public static final String LEGACY_REGION_REPLICATION_ENDPOINT_NAME =
     "org.apache.hadoop.hbase.replication.regionserver.RegionReplicaReplicationEndpoint";
 
+  public static final String OFFSET_UPDATE_INTERVAL_MS_KEY =
+    "hbase.replication.shipper.offset.update.interval.ms";
+
+  public static final String OFFSET_UPDATE_SIZE_THRESHOLD_KEY =
+    "hbase.replication.shipper.offset.update.size.threshold";
+
   private ReplicationUtils() {
   }
 

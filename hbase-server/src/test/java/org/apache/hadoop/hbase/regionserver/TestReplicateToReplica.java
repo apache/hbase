@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.anyList;
@@ -41,12 +41,10 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ExtendedCellScanner;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
 import org.apache.hadoop.hbase.client.AsyncClusterConnection;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Get;
@@ -69,24 +67,20 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.wal.WALFactory;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ReplicateWALEntryRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.WALEntry;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicateToReplica {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicateToReplica.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -95,9 +89,6 @@ public class TestReplicateToReplica {
   private static byte[] QUAL = Bytes.toBytes("qualifier");
 
   private static ExecutorService EXEC;
-
-  @Rule
-  public final TableNameTestRule name = new TableNameTestRule();
 
   private TableName tableName;
 
@@ -153,7 +144,7 @@ public class TestReplicateToReplica {
 
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() {
     Configuration conf = UTIL.getConfiguration();
     conf.setInt("hbase.region.read-replica.sink.flush.min-interval.secs", 1);
@@ -167,16 +158,16 @@ public class TestReplicateToReplica {
       MemStoreLAB.INDEX_CHUNK_SIZE_PERCENTAGE_DEFAULT);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() {
     EXEC.shutdown();
     UTIL.cleanupTestDir();
   }
 
-  @Before
-  public void setUp() throws IOException {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws IOException {
     TO_ADD_AFTER_PREPARE_FLUSH = new ArrayList<>();
-    tableName = name.getTableName();
+    tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     testDir = UTIL.getDataTestDir(tableName.getNameAsString());
     Configuration conf = UTIL.getConfiguration();
     conf.set(HConstants.HBASE_DIR, testDir.toString());
@@ -232,7 +223,7 @@ public class TestReplicateToReplica {
     replicateAll();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     // close region will issue a flush, which will enqueue an edit into the replication sink so we
     // need to complete it otherwise the test will hang.

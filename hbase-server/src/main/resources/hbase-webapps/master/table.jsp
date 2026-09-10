@@ -124,7 +124,7 @@
     String hostNameEncoded = URLEncoder.encode(hostName, StandardCharsets.UTF_8);
     // This port might be wrong if RS actually ended up using something else.
     int serverInfoPort = master.getRegionServerInfoPort(serverName);
-    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/rs-status";
+    String urlRegionServer = "//" + hostNameEncoded + ":" + serverInfoPort + "/regionserver.jsp";
 
     return "<td><a href=\"" + urlRegionServer + "\">" + StringEscapeUtils.escapeHtml4(hostName)
       + ":" + serverInfoPort + "</a></td>";
@@ -377,7 +377,11 @@
                         writeReq = String.format("%,1d", load.getWriteRequestCount());
                         double rSize = load.getStoreFileSize().get(Size.Unit.BYTE);
                         if (rSize > 0) {
-                        fileSize = StringUtils.byteDesc((long) rSize);
+                          fileSize = StringUtils.byteDesc((long) rSize);
+                           // use the primary replica only for the total store file size calculation
+                           if (j == 0) {
+                             totalStoreFileSizeMB += load.getStoreFileSize().get(Size.Unit.MEGABYTE);
+                           }
                         }
                         double rSizeUncompressed = load.getUncompressedStoreFileSize().get(Size.Unit.BYTE);
                         if (rSizeUncompressed > 0) {
@@ -394,7 +398,7 @@
                 %>
               <tr>
                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                 <td><%= readReq%></td>
                 <td><%= writeReq%></td>
                 <td><%= fileSizeUncompressed%></td>
@@ -451,7 +455,7 @@
                  %>
                <tr>
                  <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                 <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                 <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                  <td><%= locality%></td>
                  <td><%= localityForSsd%></td>
                </tr>
@@ -508,7 +512,7 @@
             %>
               <tr>
                 <td><%= escapeXml(meta.getRegionNameAsString()) %></td>
-                <td><a href="http://<%= hostAndPort %>/rs-status"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
+                <td><a href="http://<%= hostAndPort %>/regionserver.jsp"><%= StringEscapeUtils.escapeHtml4(hostAndPort) %></a></td>
                 <td><%= String.format("%,1d", compactingCells)%></td>
                 <td><%= String.format("%,1d", compactedCells)%></td>
                 <td><%= String.format("%,1d", compactingCells - compactedCells)%></td>
@@ -766,33 +770,37 @@
   <tr>
     <td>Space Quota</td>
     <td>
-      <table>
+      <table class="table table-bordered table-sm table-light small mb-2">
+        <thead class="table-secondary text-body-secondary">
         <tr>
-          <th>Property</th>
-          <th>Value</th>
+          <th class="px-1 py-1 align-middle">Property</th>
+          <th class="px-1 py-1 align-middle">Value</th>
+        </tr>
+        </thead>
+        <tbody>
+        <tr>
+          <td class="px-1 py-1 align-middle">Limit</td>
+          <td class="px-1 py-1 align-middle"><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %></td>
         </tr>
         <tr>
-          <td>Limit</td>
-          <td><%= StringUtils.byteDesc(spaceQuota.getSoftLimit()) %></td>
-        </tr>
-        <tr>
-          <td>Policy</td>
-          <td><%= spaceQuota.getViolationPolicy() %></td>
+          <td class="px-1 py-1 align-middle">Policy</td>
+          <td class="px-1 py-1 align-middle"><%= spaceQuota.getViolationPolicy() %></td>
         </tr>
 <%
       if (masterSnapshot != null) {
 %>
         <tr>
-          <td>Usage</td>
-          <td><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %></td>
+          <td class="px-1 py-1 align-middle">Usage</td>
+          <td class="px-1 py-1 align-middle"><%= StringUtils.byteDesc(masterSnapshot.getUsage()) %></td>
         </tr>
         <tr>
-          <td>State</td>
-          <td><%= masterSnapshot.getQuotaStatus().isInViolation() ? "In Violation" : "In Observance" %></td>
+          <td class="px-1 py-1 align-middle">State</td>
+          <td class="px-1 py-1 align-middle"><%= masterSnapshot.getQuotaStatus().isInViolation() ? "In Violation" : "In Observance" %></td>
         </tr>
 <%
       }
 %>
+        </tbody>
       </table>
     </td>
     <td>Information about a Space Quota on this table, if set.</td>
@@ -806,25 +814,29 @@
   <tr>
     <td>Throttle Quota</td>
     <td>
-      <table>
+      <table class="table table-bordered table-sm table-light small mb-2">
+        <thead class="table-secondary text-body-secondary">
         <tr>
-          <th>Limit</th>
-          <th>Type</th>
-          <th>TimeUnit</th>
-          <th>Scope</th>
+            <th class="px-1 py-1 align-middle">Type</th>
+            <th class="px-1 py-1 align-middle">Limit</th>
+            <th class="px-1 py-1 align-middle">TimeUnit</th>
+            <th class="px-1 py-1 align-middle">Scope</th>
         </tr>
+        </thead>
+        <tbody>
 <%
-    for (ThrottleSettings throttle : throttles) {
+   for (ThrottleSettings throttle : throttles) {
 %>
         <tr>
-          <td><%= throttle.getSoftLimit() %></td>
-          <td><%= throttle.getThrottleType() %></td>
-          <td><%= throttle.getTimeUnit() %></td>
-          <td><%= throttle.getQuotaScope() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getThrottleType() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getSoftLimit() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getTimeUnit() %></td>
+            <td class="px-1 py-1 align-middle"><%= throttle.getQuotaScope() %></td>
         </tr>
 <%
-    }
+   }
 %>
+        </tbody>
       </table>
     </td>
     <td>Information about a Throttle Quota on this table, if set.</td>
@@ -1170,7 +1182,7 @@
     for (Map.Entry<ServerName, Integer> rdEntry : regDistribution.entrySet()) {
       ServerName addr = rdEntry.getKey();
       String url = "//" + URLEncoder.encode(addr.getHostname(), StandardCharsets.UTF_8) + ":"
-        + master.getRegionServerInfoPort(addr) + "/rs-status";
+        + master.getRegionServerInfoPort(addr) + "/regionserver.jsp";
   %>
       <tr>
         <td><a href="<%= url %>"><%= StringEscapeUtils.escapeHtml4(addr.getHostname())

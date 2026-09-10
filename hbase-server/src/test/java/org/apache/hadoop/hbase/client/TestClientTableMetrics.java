@@ -17,33 +17,29 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.codahale.metrics.Timer;
 import java.io.IOException;
 import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ClientService;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestClientTableMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientTableMetrics.class);
 
   private static HBaseTestingUtil UTIL;
   private static Connection CONN;
@@ -52,7 +48,7 @@ public class TestClientTableMetrics {
   private static final TableName TABLE_1 = TableName.valueOf(tableName);
   private static final byte[] FAMILY = Bytes.toBytes("f");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.setBoolean(MetricsConnection.CLIENT_SIDE_METRICS_ENABLED_KEY, true);
@@ -65,7 +61,7 @@ public class TestClientTableMetrics {
     METRICS = ((AsyncConnectionImpl) CONN.toAsyncConnection()).getConnectionMetrics().get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.deleteTableIfAny(TABLE_1);
     UTIL.shutdownMiniCluster();
@@ -141,8 +137,8 @@ public class TestClientTableMetrics {
     long numOps = timer.getCount();
     double p95 = timer.getSnapshot().get95thPercentile();
     double p99 = timer.getSnapshot().get99thPercentile();
-    assertEquals("metric: " + metricKey + numOpsSuffix + " val: " + numOps, expectedVal, numOps);
-    assertTrue("metric: " + metricKey + p95Suffix + " val: " + p95, p95 >= 0);
-    assertTrue("metric: " + metricKey + p99Suffix + " val: " + p99, p99 >= 0);
+    assertEquals(expectedVal, numOps, "metric: " + metricKey + numOpsSuffix + " val: " + numOps);
+    assertTrue(p95 >= 0, "metric: " + metricKey + p95Suffix + " val: " + p95);
+    assertTrue(p99 >= 0, "metric: " + metricKey + p99Suffix + " val: " + p99);
   }
 }

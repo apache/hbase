@@ -17,16 +17,17 @@
  */
 package org.apache.hadoop.hbase.master.region;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.time.Duration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.client.Put;
@@ -35,16 +36,12 @@ import org.apache.hadoop.hbase.master.cleaner.TimeToLiveMasterLocalStoreWALClean
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterRegionWALCleaner.class);
 
   private static long TTL_MS = 5000;
 
@@ -87,14 +84,24 @@ public class TestMasterRegionWALCleaner extends MasterRegionTestBase {
     assertFalse(fs.exists(globalWALArchiveDir));
     region.requestRollAll();
     region.waitUntilWalRollFinished();
-    // should have one
+    // archiving wal is called in a background thread when rolling WALs, so it is possible that when
+    // waitUntilWalRollFinished returns, the archived WAL files have not been moved to the global
+    // archive directory yet, so here we need to wait for the directory to be created and the files
+    // to be moved.
+    await().atMost(Duration.ofSeconds(15)).untilAsserted(() -> {
+      assertTrue(fs.exists(globalWALArchiveDir));
+      assertEquals(1, fs.listStatus(globalWALArchiveDir).length);
+    });
     FileStatus[] files = fs.listStatus(globalWALArchiveDir);
     assertEquals(1, files.length);
+    // Rebase the WAL mtime so the following timing assertions are not affected by the wait above.
+    // Cleaner TTL is based on file mtime.
+    fs.setTimes(files[0].getPath(), System.currentTimeMillis(), -1);
     Thread.sleep(2000);
     // should still be there
     assertTrue(fs.exists(files[0].getPath()));
-    Thread.sleep(6000);
     // should have been cleaned
-    assertEquals(0, fs.listStatus(globalWALArchiveDir).length);
+    await().atMost(Duration.ofSeconds(15))
+      .untilAsserted(() -> assertEquals(0, fs.listStatus(globalWALArchiveDir).length));
   }
 }

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.Set;
@@ -49,10 +49,15 @@ public final class AssignmentTestingUtil {
   }
 
   public static void waitForRegionToBeInTransition(final HBaseTestingUtil util,
-    final RegionInfo hri) throws Exception {
-    while (!getMaster(util).getAssignmentManager().getRegionStates().isRegionInTransition(hri)) {
+    final RegionInfo hri) {
+    while (!isRegionInTransition(hri, getMaster(util).getAssignmentManager())) {
       Threads.sleep(10);
     }
+  }
+
+  public static boolean isRegionInTransition(RegionInfo hri, AssignmentManager am) {
+    return am.getRegionsInTransition().stream()
+      .anyMatch(rsn -> rsn.getRegionInfo().getEncodedName().equals(hri.getEncodedName()));
   }
 
   public static void waitForRsToBeDead(final HBaseTestingUtil util, final ServerName serverName)
@@ -141,7 +146,7 @@ public final class AssignmentTestingUtil {
     RegionStateNode regionNode = am.getRegionStates().getRegionStateNode(regionInfo);
     // Wait until the region has already been open, or we have a TRSP along with it.
     Waiter.waitFor(am.getConfiguration(), 30000,
-      () -> regionNode.isInState(State.OPEN) || regionNode.isInTransition());
+      () -> regionNode.isInState(State.OPEN) || regionNode.isTransitionScheduled());
     TransitRegionStateProcedure proc = regionNode.getProcedure();
     regionNode.lock();
     try {

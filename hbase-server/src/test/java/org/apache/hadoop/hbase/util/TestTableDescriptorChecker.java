@@ -17,27 +17,27 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.conf.ConfigKey;
+import org.apache.hadoop.hbase.regionserver.BloomType;
+import org.apache.hadoop.hbase.regionserver.DefaultStoreEngine;
+import org.apache.hadoop.hbase.regionserver.HStore;
+import org.apache.hadoop.hbase.regionserver.compactions.FIFOCompactionPolicy;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestTableDescriptorChecker {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableDescriptorChecker.class);
 
   @Test
   public void testSanityCheck() throws IOException {
@@ -55,8 +55,9 @@ public class TestTableDescriptorChecker {
 
     // Error in table configuration.
     t.setValue(key, "xx");
-    assertThrows("Should have thrown IllegalArgumentException", DoNotRetryIOException.class,
-      () -> TableDescriptorChecker.sanityCheck(conf, t.build()));
+    assertThrows(DoNotRetryIOException.class,
+      () -> TableDescriptorChecker.sanityCheck(conf, t.build()),
+      "Should have thrown IllegalArgumentException");
 
     // Fix the error.
     t.setValue(key, "1");
@@ -72,8 +73,9 @@ public class TestTableDescriptorChecker {
       }
       t.removeColumnFamily("cf".getBytes());
       t.setColumnFamily(cf.build());
-      assertThrows("Should have thrown IllegalArgumentException", DoNotRetryIOException.class,
-        () -> TableDescriptorChecker.sanityCheck(conf, t.build()));
+      assertThrows(DoNotRetryIOException.class,
+        () -> TableDescriptorChecker.sanityCheck(conf, t.build()),
+        "Should have thrown IllegalArgumentException");
 
       // Fix the error.
       if (viaSetValue) {
@@ -81,6 +83,72 @@ public class TestTableDescriptorChecker {
       } else {
         cf.setConfiguration(key, "");
       }
+      t.removeColumnFamily("cf".getBytes());
+      t.setColumnFamily(cf.build());
+      TableDescriptorChecker.sanityCheck(conf, t.build());
+    }
+  }
+
+  @Test
+  public void testBloomFilterPrefixLengthValidation() throws IOException {
+    Configuration conf = new Configuration();
+    String key = BloomFilterUtil.PREFIX_LENGTH_KEY;
+
+    for (boolean viaSetValue : new boolean[] { true, false }) {
+      ColumnFamilyDescriptorBuilder cf = ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes())
+        .setBloomFilterType(BloomType.ROWPREFIX_FIXED_LENGTH);
+      TableDescriptorBuilder t = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"));
+
+      // Invalid: prefix length must be > 0 for ROWPREFIX_FIXED_LENGTH
+      if (viaSetValue) {
+        cf.setValue(key, "0");
+      } else {
+        cf.setConfiguration(key, "0");
+      }
+      t.setColumnFamily(cf.build());
+      assertThrows(DoNotRetryIOException.class,
+        () -> TableDescriptorChecker.sanityCheck(conf, t.build()),
+        "Should reject ROWPREFIX_FIXED_LENGTH with prefix length 0 set via "
+          + (viaSetValue ? "setValue" : "setConfiguration"));
+
+      // Fix the error.
+      if (viaSetValue) {
+        cf.setValue(key, "5");
+      } else {
+        cf.setConfiguration(key, "5");
+      }
+      t.removeColumnFamily("cf".getBytes());
+      t.setColumnFamily(cf.build());
+      TableDescriptorChecker.sanityCheck(conf, t.build());
+    }
+  }
+
+  @Test
+  public void testFifoCompactionPolicyValidation() throws IOException {
+    Configuration conf = new Configuration();
+    String key = DefaultStoreEngine.DEFAULT_COMPACTION_POLICY_CLASS_KEY;
+
+    // FIFO compaction requires a non-default TTL. The policy must be honored whether it is set on
+    // the column family via setValue (the shell path since HBASE-20819) or setConfiguration.
+    for (boolean viaSetValue : new boolean[] { true, false }) {
+      ColumnFamilyDescriptorBuilder cf = ColumnFamilyDescriptorBuilder.newBuilder("cf".getBytes());
+      TableDescriptorBuilder t = TableDescriptorBuilder.newBuilder(TableName.valueOf("test"));
+
+      if (viaSetValue) {
+        cf.setValue(key, FIFOCompactionPolicy.class.getName());
+        cf.setValue(HStore.BLOCKING_STOREFILES_KEY, "1000");
+      } else {
+        cf.setConfiguration(key, FIFOCompactionPolicy.class.getName());
+        cf.setConfiguration(HStore.BLOCKING_STOREFILES_KEY, "1000");
+      }
+      t.setColumnFamily(cf.build());
+      assertThrows(DoNotRetryIOException.class,
+        () -> TableDescriptorChecker.sanityCheck(conf, t.build()),
+        "Should reject FIFO compaction with default TTL set via "
+          + (viaSetValue ? "setValue" : "setConfiguration"));
+
+      // Fix the error: FIFO needs a finite TTL and no min versions.
+      cf.setTimeToLive(3600).setMinVersions(0);
       t.removeColumnFamily("cf".getBytes());
       t.setColumnFamily(cf.build());
       TableDescriptorChecker.sanityCheck(conf, t.build());

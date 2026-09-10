@@ -32,7 +32,8 @@ to remove dry-run mode.
 
 Before starting the RC build, run a reconciliation of what is in JIRA with
 what is in the commit log. Make sure they align and that anomalies are
-explained up in JIRA. See http://hbase.apache.org/book.html#maven.release
+explained up in JIRA.
+See https://hbase.apache.org/docs/building-and-developing/releasing#making-a-release-candidate
 for how.
 
 Regardless of where your release build will run (locally, locally in docker,

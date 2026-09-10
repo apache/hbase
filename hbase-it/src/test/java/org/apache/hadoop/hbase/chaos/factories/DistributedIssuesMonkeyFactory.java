@@ -36,21 +36,6 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
  */
 public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
 
-  private long action1Period;
-  private long action2Period;
-
-  private long cpuLoadDuration;
-  private long cpuLoadProcesses;
-  private long networkIssueTimeout;
-  private long networkIssueDuration;
-  private float networkIssueRation;
-  private long networkIssueDelay;
-  private String networkIssueInterface;
-  private long fillDiskTimeout;
-  private String fillDiskPath;
-  private long fillDiskFileSize;
-  private long fillDiskIssueduration;
-
   @Override
   public ChaosMonkey build() {
     loadProperties();
@@ -76,44 +61,5 @@ public class DistributedIssuesMonkeyFactory extends MonkeyFactory {
     return new PolicyBasedChaosMonkey(properties, util,
       new PeriodicRandomActionPolicy(action1Period, actions1),
       new PeriodicRandomActionPolicy(action2Period, actions2));
-  }
-
-  private void loadProperties() {
-    action1Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
-    action2Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION2_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
-    cpuLoadDuration = Long.parseLong(this.properties.getProperty(MonkeyConstants.CPU_LOAD_DURATION,
-      MonkeyConstants.DEFAULT_CPU_LOAD_DURATION + ""));
-    cpuLoadProcesses =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.CPU_LOAD_PROCESSES,
-        MonkeyConstants.DEFAULT_CPU_LOAD_PROCESSES + ""));
-    networkIssueTimeout =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.NETWORK_ISSUE_COMMAND_TIMEOUT,
-        MonkeyConstants.DEFAULT_NETWORK_ISSUE_COMMAND_TIMEOUT + ""));
-    networkIssueDuration =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.NETWORK_ISSUE_DURATION,
-        MonkeyConstants.DEFAULT_NETWORK_ISSUE_DURATION + ""));
-    networkIssueRation =
-      Float.parseFloat(this.properties.getProperty(MonkeyConstants.NETWORK_ISSUE_RATIO,
-        MonkeyConstants.DEFAULT_NETWORK_ISSUE_RATIO + ""));
-    networkIssueDelay =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.NETWORK_ISSUE_DELAY,
-        MonkeyConstants.DEFAULT_NETWORK_ISSUE_DELAY + ""));
-    networkIssueInterface = this.properties.getProperty(MonkeyConstants.NETWORK_ISSUE_INTERFACE,
-      MonkeyConstants.DEFAULT_NETWORK_ISSUE_INTERFACE + "");
-    fillDiskTimeout =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.FILL_DISK_COMMAND_TIMEOUT,
-        MonkeyConstants.DEFAULT_FILL_DISK_COMMAND_TIMEOUT + ""));
-    fillDiskPath = this.properties.getProperty(MonkeyConstants.FILL_DISK_PATH,
-      MonkeyConstants.DEFAULT_FILL_DISK_PATH + "");
-    fillDiskFileSize =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.FILL_DISK_FILE_SIZE,
-        MonkeyConstants.DEFAULT_FILL_DISK_FILE_SIZE + ""));
-    fillDiskIssueduration =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.FILL_DISK_ISSUE_DURATION,
-        MonkeyConstants.DEFAULT_FILL_DISK_ISSUE_DURATION + ""));
   }
 }

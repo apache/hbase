@@ -19,7 +19,7 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_META_OPERATION_TIMEOUT;
 import static org.apache.hadoop.hbase.io.ByteBuffAllocator.MAX_BUFFER_COUNT_KEY;
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -35,7 +35,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
 import org.apache.hadoop.hbase.ServerName;
@@ -48,12 +47,10 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +60,9 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
 /**
  * Will split the table, and move region randomly when testing.
  */
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAsyncTableGetMultiThreaded {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableGetMultiThreaded.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAsyncTableGetMultiThreaded.class);
 
@@ -85,7 +79,7 @@ public class TestAsyncTableGetMultiThreaded {
 
   private static byte[][] SPLIT_KEYS;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     setUp(MemoryCompactionPolicy.NONE);
   }
@@ -113,7 +107,7 @@ public class TestAsyncTableGetMultiThreaded {
       .get();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -212,7 +206,7 @@ public class TestAsyncTableGetMultiThreaded {
     }
     List<LogEntry> balancerDecisionRecords =
       admin.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 2, null);
-    Assert.assertEquals(balancerDecisionRecords.size(), 2);
+    assertEquals(balancerDecisionRecords.size(), 2);
     LOG.info("====== Read test finished, shutdown thread pool ======");
     stop.set(true);
     executor.shutdown();

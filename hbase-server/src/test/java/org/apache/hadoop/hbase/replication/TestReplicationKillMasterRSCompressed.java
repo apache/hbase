@@ -17,28 +17,25 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Run the same test as TestReplicationKillMasterRS but with WAL compression enabled Do not add
  * other tests in this class.
  */
-@Category({ ReplicationTests.class, LargeTests.class })
-public class TestReplicationKillMasterRSCompressed extends TestReplicationKillMasterRS {
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
+public class TestReplicationKillMasterRSCompressed extends ReplicationKillMasterRSTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationKillMasterRSCompressed.class);
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
+    NUM_SLAVES1 = 2;
     CONF1.setBoolean(HConstants.ENABLE_WAL_COMPRESSION, true);
-    TestReplicationKillMasterRS.setUpBeforeClass();
+    configureClusters(UTIL1, UTIL2);
+    startClusters();
   }
 }

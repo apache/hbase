@@ -116,7 +116,7 @@
           <% if (slowLogs != null && !slowLogs.isEmpty()) {%>
             <% for (TooSlowLog.SlowLogPayload r : slowLogs) { %>
             <tr>
-             <td><%=new Date(r.getStartTime() + 1800*1000)%></td>
+             <td><%=new Date(r.getStartTime())%></td>
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
              <td><%=r.getFsReadTime()%>ms</td>
@@ -165,7 +165,7 @@
           <% if (largeLogs != null && !largeLogs.isEmpty()) {%>
             <% for (TooSlowLog.SlowLogPayload r : largeLogs) { %>
             <tr>
-             <td><%=new Date(r.getStartTime() + 1800*1000)%></td>
+             <td><%=new Date(r.getStartTime())%></td>
              <td><%=r.getProcessingTime()%>ms</td>
              <td><%=r.getQueueTime()%>ms</td>
              <td><%=r.getFsReadTime()%>ms</td>

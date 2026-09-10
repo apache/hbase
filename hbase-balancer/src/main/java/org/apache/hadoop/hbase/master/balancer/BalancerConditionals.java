@@ -185,7 +185,7 @@ final class BalancerConditionals implements Configurable {
   private RegionPlanConditional createConditional(Class<? extends RegionPlanConditional> clazz,
     BalancerClusterState cluster) {
     if (cluster == null) {
-      cluster = new BalancerClusterState(Collections.emptyMap(), null, null, null, null);
+      cluster = new BalancerClusterState(Collections.emptyMap(), null, null, null, null, null);
     }
     try {
       Constructor<? extends RegionPlanConditional> ctor =

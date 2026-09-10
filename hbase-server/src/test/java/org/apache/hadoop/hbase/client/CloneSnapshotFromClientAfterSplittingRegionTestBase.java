@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -28,26 +30,45 @@ import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.Test;
+import org.junit.jupiter.api.TestTemplate;
 
 public class CloneSnapshotFromClientAfterSplittingRegionTestBase
   extends CloneSnapshotFromClientTestBase {
 
+  protected CloneSnapshotFromClientAfterSplittingRegionTestBase(int numReplicas) {
+    super(numReplicas);
+  }
+
   private void splitRegion() throws IOException {
+    int numRegions = admin.getRegions(tableName).size();
+    // Major-compact every region into a single store file that spans the whole key range of the
+    // region. This guarantees that the split row falls inside an existing store file, so the split
+    // produces a reference file rather than a whole-file link (see HBASE-26421, which builds an
+    // HFileLink instead of a Reference when a store file lies entirely on one side of the split
+    // point). Without this, the randomly generated row keys may all fall on one side of the split
+    // point, leaving the snapshot with no reference files. The cloned table's meta would then be
+    // missing the parent split information, which is what HBASE-29111 guards against below. The
+    // region server has compaction disabled (see CloneSnapshotFromClientTestBase), so we
+    // major-compact the table's regions directly to bypass that; auto-compaction stays disabled
+    // afterward so the post-split reference files are not compacted away.
+    TEST_UTIL.compact(tableName, true);
     try (Table k = TEST_UTIL.getConnection().getTable(tableName);
       ResultScanner scanner = k.getScanner(new Scan())) {
       // Split on the second row to make sure that the snapshot contains reference files.
-      // We also disable the compaction so that the reference files are not compacted away.
       scanner.next();
       admin.split(tableName, scanner.next().getRow());
     }
+    await().atMost(Duration.ofSeconds(30)).untilAsserted(
+      () -> assertEquals(numRegions + numReplicas, admin.getRegions(tableName).size()));
   }
 
-  @Test
+  @TestTemplate
   public void testCloneSnapshotAfterSplittingRegion() throws IOException, InterruptedException {
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
 
+    TableName clonedTableName =
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     try {
       List<RegionInfo> regionInfos = admin.getRegions(tableName);
       RegionReplicaUtil.removeNonDefaultRegions(regionInfos);
@@ -57,10 +78,7 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       // Take a snapshot
       admin.snapshot(snapshotName2, tableName);
-
       // Clone the snapshot to another table
-      TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
@@ -90,26 +108,26 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
           assertNotNull(daughter);
         }
       }
-
-      TEST_UTIL.deleteTable(clonedTableName);
     } finally {
+      if (admin.tableExists(clonedTableName)) {
+        TEST_UTIL.deleteTable(clonedTableName);
+      }
       admin.catalogJanitorSwitch(true);
     }
   }
 
-  @Test
+  @TestTemplate
   public void testCloneSnapshotBeforeSplittingRegionAndDroppingTable()
     throws IOException, InterruptedException {
     // Turn off the CatalogJanitor
     admin.catalogJanitorSwitch(false);
-
+    TableName clonedTableName =
+      TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
     try {
       // Take a snapshot
       admin.snapshot(snapshotName2, tableName);
 
       // Clone the snapshot to another table
-      TableName clonedTableName =
-        TableName.valueOf(getValidMethodName() + "-" + EnvironmentEdgeManager.currentTime());
       admin.cloneSnapshot(snapshotName2, clonedTableName);
       SnapshotTestingUtils.waitForTableToBeOnline(TEST_UTIL, clonedTableName);
 
@@ -129,6 +147,9 @@ public class CloneSnapshotFromClientAfterSplittingRegionTestBase
 
       verifyRowCount(TEST_UTIL, clonedTableName, snapshot1Rows);
     } finally {
+      if (admin.tableExists(clonedTableName)) {
+        TEST_UTIL.deleteTable(clonedTableName);
+      }
       admin.catalogJanitorSwitch(true);
     }
   }

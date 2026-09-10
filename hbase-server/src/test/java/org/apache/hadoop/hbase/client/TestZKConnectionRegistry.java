@@ -19,17 +19,16 @@ package org.apache.hadoop.hbase.client;
 
 import static org.hamcrest.CoreMatchers.instanceOf;
 import static org.hamcrest.MatcherAssert.assertThat;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNotSame;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
@@ -39,36 +38,32 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ReadOnlyZKClient;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestZKConnectionRegistry {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKConnectionRegistry.class);
 
   static final Logger LOG = LoggerFactory.getLogger(TestZKConnectionRegistry.class);
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static ZKConnectionRegistry REGISTRY;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     HBaseTestingUtil.setReplicas(TEST_UTIL.getAdmin(), TableName.META_TABLE_NAME, 3);
     REGISTRY = new ZKConnectionRegistry(TEST_UTIL.getConfiguration(), null);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(REGISTRY, true);
     TEST_UTIL.shutdownMiniCluster();
@@ -79,8 +74,8 @@ public class TestZKConnectionRegistry {
     LOG.info("STARTED TEST");
     String clusterId = REGISTRY.getClusterId().get();
     String expectedClusterId = TEST_UTIL.getHBaseCluster().getMaster().getClusterId();
-    assertEquals("Expected " + expectedClusterId + ", found=" + clusterId, expectedClusterId,
-      clusterId);
+    assertEquals(expectedClusterId, clusterId,
+      "Expected " + expectedClusterId + ", found=" + clusterId);
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getServerName(),
       REGISTRY.getActiveMaster().get());
     RegionReplicaTestHelper.waitUntilAllMetaReplicasAreReady(TEST_UTIL, REGISTRY);
@@ -88,7 +83,7 @@ public class TestZKConnectionRegistry {
     assertEquals(3, locs.getRegionLocations().length);
     IntStream.range(0, 3).forEach(i -> {
       HRegionLocation loc = locs.getRegionLocation(i);
-      assertNotNull("Replica " + i + " doesn't have location", loc);
+      assertNotNull(loc, "Replica " + i + " doesn't have location");
       assertEquals(TableName.META_TABLE_NAME, loc.getRegion().getTable());
       assertEquals(i, loc.getRegion().getReplicaId());
     });
@@ -101,11 +96,11 @@ public class TestZKConnectionRegistry {
       otherConf.set(HConstants.ZOOKEEPER_QUORUM, MiniZooKeeperCluster.HOST);
       try (ZKConnectionRegistry otherRegistry = new ZKConnectionRegistry(otherConf, null)) {
         ReadOnlyZKClient zk2 = otherRegistry.getZKClient();
-        assertNotSame("Using a different configuration / quorum should result in different "
-          + "backing zk connection.", zk1, zk2);
-        assertNotEquals(
-          "Using a different configrution / quorum should be reflected in the zk connection.",
-          zk1.getConnectString(), zk2.getConnectString());
+        assertNotSame(zk1, zk2,
+          "Using a different configuration / quorum should result in different "
+            + "backing zk connection.");
+        assertNotEquals(zk1.getConnectString(), zk2.getConnectString(),
+          "Using a different configrution / quorum should be reflected in the zk connection.");
       }
     } finally {
       LOG.info("DONE!");

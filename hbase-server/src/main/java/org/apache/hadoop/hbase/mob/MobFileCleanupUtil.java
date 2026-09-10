@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mob;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -82,7 +83,7 @@ public final class MobFileCleanupUtil {
       return;
     } else {
       LOG.info("Only MOB files whose creation time older than {} will be archived, table={}",
-        maxCreationTimeToArchive, table);
+        new Date(maxCreationTimeToArchive), table);
     }
 
     FileSystem fs = FileSystem.get(conf);
@@ -94,8 +95,8 @@ public final class MobFileCleanupUtil {
     Set<String> allActiveMobFileName = new HashSet<String>();
     for (Path regionPath : regionDirs) {
       regionNames.add(regionPath.getName());
-      HRegionFileSystem regionFS =
-        HRegionFileSystem.create(conf, fs, tableDir, MobUtils.getMobRegionInfo(table));
+      HRegionFileSystem regionFS = HRegionFileSystem.create(conf, fs, tableDir,
+        HRegionFileSystem.loadRegionInfoFileContent(fs, regionPath));
       for (ColumnFamilyDescriptor hcd : list) {
         StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, hcd, regionFS, false);
         String family = hcd.getNameAsString();

@@ -23,7 +23,6 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
@@ -34,25 +33,21 @@ import org.apache.hadoop.hbase.testclassification.VerySlowMapReduceTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.mapreduce.Job;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Function;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
 import org.apache.hbase.thirdparty.com.google.common.collect.Multimaps;
 
-@Category({ VerySlowMapReduceTests.class, LargeTests.class })
+@Tag(VerySlowMapReduceTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMultiTableSnapshotInputFormat.class);
 
   protected Path restoreDir;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpSnapshots() throws Exception {
     Log4jUtils.enableDebug(MultiTableSnapshotInputFormat.class);
     Log4jUtils.enableDebug(MultiTableSnapshotInputFormatImpl.class);
@@ -66,7 +61,7 @@ public class TestMultiTableSnapshotInputFormat extends MultiTableInputFormatTest
     }
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.restoreDir = TEST_UTIL.getRandomDir();
   }

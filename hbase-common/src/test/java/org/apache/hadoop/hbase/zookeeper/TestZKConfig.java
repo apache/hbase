@@ -17,31 +17,26 @@
  */
 package org.apache.hadoop.hbase.zookeeper;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Properties;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.zookeeper.client.ZKClientConfig;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestZKConfig {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestZKConfig.class);
 
   /** Supported ZooKeeper client TLS properties */
   private static final Set<String> ZOOKEEPER_CLIENT_TLS_PROPERTIES = ImmutableSet.of(
@@ -56,8 +51,8 @@ public class TestZKConfig {
     // (i.e. via hbase-default.xml and hbase-site.xml)
     conf.setInt(HConstants.ZOOKEEPER_CLIENT_PORT, 2181);
     Properties props = ZKConfig.makeZKProps(conf);
-    assertEquals("Property client port should have been default from the HBase config", "2181",
-      props.getProperty("clientPort"));
+    assertEquals("2181", props.getProperty("clientPort"),
+      "Property client port should have been default from the HBase config");
   }
 
   @Test
@@ -115,8 +110,8 @@ public class TestZKConfig {
 
     // Assert
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      assertEquals("Invalid or unset system property: " + p, p,
-        zkClientConfig.getProperty("zookeeper." + p));
+      assertEquals(p, zkClientConfig.getProperty("zookeeper." + p),
+        "Invalid or unset system property: " + p);
     }
   }
 
@@ -135,7 +130,7 @@ public class TestZKConfig {
 
     // Assert
     for (String p : ZOOKEEPER_CLIENT_TLS_PROPERTIES) {
-      assertEquals("Invalid or unset system property: " + p, p, zkProps.getProperty(p));
+      assertEquals(p, zkProps.getProperty(p), "Invalid or unset system property: " + p);
     }
   }
 

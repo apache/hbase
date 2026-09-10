@@ -18,15 +18,15 @@ under the License.
 *#
 ## Start with the NOTICE header for this particular artifact
 ${project.name}
-Copyright ${project.inceptionYear}-${copyright-end-year} The Apache Software Foundation
+Copyright ${project.inceptionYear}-${copyright_end_year} The Apache Software Foundation
 
 This product includes software developed at
 The Apache Software Foundation (http://www.apache.org/).
 ## Specially handled included deps. e.g. ASL2.0 works that have additional bundled works but
-#set($bundled-bootstrap = ${bundled-bootstrap.equalsIgnoreCase("true")})
-#set($bundled-logo = ${bundled-logo.equalsIgnoreCase("true")})
-#set($bundled-dependencies = ${bundled-dependencies.equalsIgnoreCase("true")})
-#if($bundled-bootstrap || $bundled-logo || $bundled-dependencies)
+#set($bundled_bootstrap_enabled = ${bundled_bootstrap.equalsIgnoreCase("true")})
+#set($bundled_logo_enabled = ${bundled_logo.equalsIgnoreCase("true")})
+#set($bundled_dependencies_enabled = ${bundled_dependencies.equalsIgnoreCase("true")})
+#if($bundled_bootstrap_enabled || $bundled_logo_enabled || $bundled_dependencies_enabled)
 ====
 ${project.name} contained works
 
@@ -94,13 +94,13 @@ noted in the LICENSE file.
 
 #end
 
-#macro(jetty_notice $jetty-include-unixcrypt)
+#macro(jetty_notice $jetty_include_unixcrypt)
 --
 This product includes portions of 'The Jetty Web Container'
 
 Copyright 1995-2016 Mort Bay Consulting Pty Ltd.
 
-#if(${jetty-include-unixcrypt})
+#if(${jetty_include_unixcrypt})
 ## UnixCrypt.java paragraph only in server
 The UnixCrypt.java code ~Implements the one way cryptography used by
 Unix systems for simple password protection.  Copyright 1996 Aki Yoshida,
@@ -199,13 +199,13 @@ under the Apache License 2.0 (see: StringUtils.containsWhitespace())
 
 #end
 ## first bundled source
-#if(${bundled-logo})
+#if(${bundled_logo_enabled})
 #orca_logo_notice()
 #end
-#if(${bundled-bootstrap})
+#if(${bundled_bootstrap_enabled})
 #bootstrap_notice()
 #end
-#if(${bundled-dependencies})
+#if(${bundled_dependencies_enabled})
 #**
  Note that this will fail the build if we don't have a license. update supplemental-models via
  setting '-Dlicense.debug.print.included' and looking in the generated LICENSE file
@@ -221,7 +221,7 @@ under the Apache License 2.0 (see: StringUtils.containsWhitespace())
 #set($mpl_1_1=[])
 ## track jettys
 #set($jetty=false)
-#set($jetty-with-crypt=false)
+#set($jetty_with_crypt=false)
 ## track jruby
 #set($jruby=false)
 #foreach( ${dep} in ${projects} )
@@ -236,7 +236,7 @@ under the Apache License 2.0 (see: StringUtils.containsWhitespace())
 #if(${dep.artifactId.startsWith("jetty")})
 #set($jetty=true)
 #if(${dep.artifactId.equals("jetty")})
-#set($jetty-with-crypt=true)
+#set($jetty_with_crypt=true)
 #end
 #end
 #if(${dep.artifactId.equals("log4j")})
@@ -309,7 +309,7 @@ For source see '${dep.url}'.
 #end
 ## Print out jetty
 #if(${jetty})
-#jetty_notice(${jetty-with-crypt})
+#jetty_notice(${jetty_with_crypt})
 #end
 ## Now go through all the lists of Category-B licensed works and make sure we
 ## name them and give a URL for the project's home page.

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -27,21 +27,13 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ ClientTests.class, SmallTests.class })
+@Tag(ClientTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCatalogFamilyFormat {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCatalogFamilyFormat.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   @Test
   public void testParseReplicaIdFromServerColumn() {
@@ -84,21 +76,22 @@ public class TestCatalogFamilyFormat {
    * The info we can get from the regionName is: table name, start key, regionId, replicaId.
    */
   @Test
-  public void testParseRegionInfoFromRegionName() throws IOException {
+  public void testParseRegionInfoFromRegionName(TestInfo testInfo) throws IOException {
+    String name = testInfo.getTestMethod().get().getName();
     RegionInfo originalRegionInfo =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).setRegionId(999999L)
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name)).setRegionId(999999L)
         .setStartKey(Bytes.toBytes("2")).setEndKey(Bytes.toBytes("3")).setReplicaId(1).build();
     RegionInfo newParsedRegionInfo =
       CatalogFamilyFormat.parseRegionInfoFromRegionName(originalRegionInfo.getRegionName());
-    assertEquals("Parse TableName error", originalRegionInfo.getTable(),
-      newParsedRegionInfo.getTable());
-    assertEquals("Parse regionId error", originalRegionInfo.getRegionId(),
-      newParsedRegionInfo.getRegionId());
-    assertTrue("Parse startKey error",
-      Bytes.equals(originalRegionInfo.getStartKey(), newParsedRegionInfo.getStartKey()));
-    assertEquals("Parse replicaId error", originalRegionInfo.getReplicaId(),
-      newParsedRegionInfo.getReplicaId());
-    assertTrue("We can't parse endKey from regionName only",
-      Bytes.equals(HConstants.EMPTY_END_ROW, newParsedRegionInfo.getEndKey()));
+    assertEquals(originalRegionInfo.getTable(), newParsedRegionInfo.getTable(),
+      "Parse TableName error");
+    assertEquals(originalRegionInfo.getRegionId(), newParsedRegionInfo.getRegionId(),
+      "Parse regionId error");
+    assertTrue(Bytes.equals(originalRegionInfo.getStartKey(), newParsedRegionInfo.getStartKey()),
+      "Parse startKey error");
+    assertEquals(originalRegionInfo.getReplicaId(), newParsedRegionInfo.getReplicaId(),
+      "Parse replicaId error");
+    assertTrue(Bytes.equals(HConstants.EMPTY_END_ROW, newParsedRegionInfo.getEndKey()),
+      "We can't parse endKey from regionName only");
   }
 }

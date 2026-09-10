@@ -18,7 +18,8 @@
 package org.apache.hadoop.hbase.replication;
 
 import static org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint.REPLICATION_DROP_ON_DELETED_TABLE_KEY;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.ThreadLocalRandom;
@@ -37,14 +38,13 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Base class for testing replication for dropped tables.
  */
-public class ReplicationDroppedTablesTestBase extends TestReplicationBase {
+public class ReplicationDroppedTablesTestBase extends TestReplicationBaseNoBeforeAll {
 
   private static final Logger LOG = LoggerFactory.getLogger(ReplicationDroppedTablesTestBase.class);
 
@@ -149,7 +149,7 @@ public class ReplicationDroppedTablesTestBase extends TestReplicationBase {
         return false;
       }
       for (int i = 0; i < results.length; i++) {
-        Assert.assertArrayEquals(generateRowKey(i), results[i].getRow());
+        assertArrayEquals(generateRowKey(i), results[i].getRow());
       }
       return true;
     }

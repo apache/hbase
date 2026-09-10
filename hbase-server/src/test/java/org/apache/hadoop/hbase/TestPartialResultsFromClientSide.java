@@ -17,12 +17,12 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -43,13 +43,11 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,12 +61,8 @@ import org.slf4j.LoggerFactory;
  * Unless the flag {@link Scan#setAllowPartialResults(boolean)} has been set to true, the caller of
  * {@link ResultScanner#next()} should never see partial results.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestPartialResultsFromClientSide {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestPartialResultsFromClientSide.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestPartialResultsFromClientSide.class);
 
@@ -107,10 +101,7 @@ public class TestPartialResultsFromClientSide {
 
   private static long timeout = 10000;
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setLong(HConstants.HBASE_CLIENT_SCANNER_TIMEOUT_PERIOD, timeout);
     TEST_UTIL.startMiniCluster(MINICLUSTER_SIZE);
@@ -127,7 +118,7 @@ public class TestPartialResultsFromClientSide {
     return ht;
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -230,7 +221,7 @@ public class TestPartialResultsFromClientSide {
     }
 
     r2 = scanner2.next();
-    assertTrue("r2: " + r2 + " Should be null", r2 == null);
+    assertTrue(r2 == null, "r2: " + r2 + " Should be null");
 
     scanner1.close();
     scanner2.close();
@@ -275,26 +266,26 @@ public class TestPartialResultsFromClientSide {
       List<Cell> aggregatePartialCells = new ArrayList<>();
       do {
         partialResult = partialScanner.next();
-        assertTrue("Partial Result is null. iteration: " + iterationCount, partialResult != null);
-        assertTrue("Partial cells are null. iteration: " + iterationCount,
-          partialResult.rawCells() != null);
+        assertTrue(partialResult != null, "Partial Result is null. iteration: " + iterationCount);
+        assertTrue(partialResult.rawCells() != null,
+          "Partial cells are null. iteration: " + iterationCount);
 
         for (Cell c : partialResult.rawCells()) {
           aggregatePartialCells.add(c);
         }
       } while (partialResult.mayHaveMoreCellsInRow());
 
-      assertTrue("Number of cells differs. iteration: " + iterationCount,
-        oneShotResult.rawCells().length == aggregatePartialCells.size());
+      assertTrue(oneShotResult.rawCells().length == aggregatePartialCells.size(),
+        "Number of cells differs. iteration: " + iterationCount);
       final Cell[] oneShotCells = oneShotResult.rawCells();
       for (int cell = 0; cell < oneShotCells.length; cell++) {
         Cell oneShotCell = oneShotCells[cell];
         Cell partialCell = aggregatePartialCells.get(cell);
 
-        assertTrue("One shot cell was null", oneShotCell != null);
-        assertTrue("Partial cell was null", partialCell != null);
-        assertTrue("Cell differs. oneShotCell:" + oneShotCell + " partialCell:" + partialCell,
-          oneShotCell.equals(partialCell));
+        assertTrue(oneShotCell != null, "One shot cell was null");
+        assertTrue(partialCell != null, "Partial cell was null");
+        assertTrue(oneShotCell.equals(partialCell),
+          "Cell differs. oneShotCell:" + oneShotCell + " partialCell:" + partialCell);
       }
 
       oneShotResult = oneShotScanner.next();
@@ -349,9 +340,10 @@ public class TestPartialResultsFromClientSide {
       // 1. Returned result is the final result needed to form the complete result for that row
       // 2. It is the first result we have seen for that row and thus may have been fetched as
       // the last group of cells that fit inside the maxResultSize
-      assertTrue("Result's cell count differed from expected number. result: " + result,
+      assertTrue(
         result.rawCells().length == expectedNumberOfCells || !result.mayHaveMoreCellsInRow()
-          || !Bytes.equals(prevRow, result.getRow()));
+          || !Bytes.equals(prevRow, result.getRow()),
+        "Result's cell count differed from expected number. result: " + result);
       prevRow = result.getRow();
     }
 
@@ -427,7 +419,7 @@ public class TestPartialResultsFromClientSide {
       if (result.mayHaveMoreCellsInRow()) {
         final String error = "Cells:" + result.rawCells().length + " Batch size:" + batch
           + " cellsPerPartialResult:" + cellsPerPartialResult + " rep:" + repCount;
-        assertTrue(error, result.rawCells().length == batch);
+        assertTrue(result.rawCells().length == batch, error);
       } else {
         assertTrue(result.rawCells().length <= batch);
       }
@@ -647,8 +639,8 @@ public class TestPartialResultsFromClientSide {
       }
 
       Cell kvExp = expKvList.get(i++);
-      assertTrue("Not equal. get kv: " + kv.toString() + " exp kv: " + kvExp.toString(),
-        kvExp.equals(kv));
+      assertTrue(kvExp.equals(kv),
+        "Not equal. get kv: " + kv.toString() + " exp kv: " + kvExp.toString());
     }
 
     assertEquals(expKvList.size(), result.size());
@@ -676,8 +668,8 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testReadPointAndPartialResults() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testReadPointAndPartialResults(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     int numRows = 5;
     int numFamilies = 5;
     int numQualifiers = 5;
@@ -705,15 +697,15 @@ public class TestPartialResultsFromClientSide {
     // Should see all cells because scanner was opened prior to deletes
     scannerCount += countCellsFromScanner(scanner);
     int expectedCount = numRows * numFamilies * numQualifiers;
-    assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
-      scannerCount == expectedCount);
+    assertTrue(scannerCount == expectedCount,
+      "scannerCount: " + scannerCount + " expectedCount: " + expectedCount);
 
     // Minus 2 for the two cells that were deleted
     scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
     scannerCount = countCellsFromScanner(scanner);
     expectedCount = numRows * numFamilies * numQualifiers - 2;
-    assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
-      scannerCount == expectedCount);
+    assertTrue(scannerCount == expectedCount,
+      "scannerCount: " + scannerCount + " expectedCount: " + expectedCount);
 
     scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
     scannerCount = scanner.next().rawCells().length;
@@ -729,15 +721,15 @@ public class TestPartialResultsFromClientSide {
     // Scanner opened prior to puts. Cell count shouldn't have changed
     scannerCount += countCellsFromScanner(scanner);
     expectedCount = numRows * numFamilies * numQualifiers - 2;
-    assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
-      scannerCount == expectedCount);
+    assertTrue(scannerCount == expectedCount,
+      "scannerCount: " + scannerCount + " expectedCount: " + expectedCount);
 
     // Now the scanner should see the cells that were added by puts
     scanner = tmpTable.getScanner(new Scan().setMaxResultSize(1).setAllowPartialResults(true));
     scannerCount = countCellsFromScanner(scanner);
     expectedCount = numRows * numFamilies * numQualifiers;
-    assertTrue("scannerCount: " + scannerCount + " expectedCount: " + expectedCount,
-      scannerCount == expectedCount);
+    assertTrue(scannerCount == expectedCount,
+      "scannerCount: " + scannerCount + " expectedCount: " + expectedCount);
 
     TEST_UTIL.deleteTable(tableName);
   }
@@ -809,9 +801,9 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testPartialResultWhenRegionMove() throws IOException {
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+  public void testPartialResultWhenRegionMove(TestInfo testInfo) throws IOException {
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
 
@@ -847,9 +839,9 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testReversedPartialResultWhenRegionMove() throws IOException {
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+  public void testReversedPartialResultWhenRegionMove(TestInfo testInfo) throws IOException {
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
 
@@ -886,9 +878,9 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testCompleteResultWhenRegionMove() throws IOException {
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+  public void testCompleteResultWhenRegionMove(TestInfo testInfo) throws IOException {
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
 
@@ -922,9 +914,9 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testReversedCompleteResultWhenRegionMove() throws IOException {
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+  public void testReversedCompleteResultWhenRegionMove(TestInfo testInfo) throws IOException {
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
 
     moveRegion(table, 1);
 
@@ -959,12 +951,12 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testBatchingResultWhenRegionMove() throws IOException {
+  public void testBatchingResultWhenRegionMove(TestInfo testInfo) throws IOException {
     // If user setBatch(5) and rpc returns 3+5+5+5+3 cells,
     // we should return 5+5+5+5+1 to user.
     // setBatch doesn't mean setAllowPartialResult(true)
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
 
     Put put = new Put(ROWS[1]);
     put.addColumn(FAMILIES[0], QUALIFIERS[1], new byte[VALUE_SIZE * 10]);
@@ -1035,9 +1027,9 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testDontThrowUnknowScannerExceptionToClient() throws Exception {
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+  public void testDontThrowUnknowScannerExceptionToClient(TestInfo testInfo) throws Exception {
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
     Scan scan = new Scan();
     scan.setCaching(1);
     ResultScanner scanner = table.getScanner(scan);
@@ -1052,9 +1044,10 @@ public class TestPartialResultsFromClientSide {
   }
 
   @Test
-  public void testMayHaveMoreCellsInRowReturnsTrueAndSetBatch() throws IOException {
-    Table table =
-      createTestTable(TableName.valueOf(name.getMethodName()), ROWS, FAMILIES, QUALIFIERS, VALUE);
+  public void testMayHaveMoreCellsInRowReturnsTrueAndSetBatch(TestInfo testInfo)
+    throws IOException {
+    Table table = createTestTable(TableName.valueOf(testInfo.getTestMethod().get().getName()), ROWS,
+      FAMILIES, QUALIFIERS, VALUE);
     Scan scan = new Scan();
     scan.setBatch(1);
     scan.setFilter(new FirstKeyOnlyFilter());

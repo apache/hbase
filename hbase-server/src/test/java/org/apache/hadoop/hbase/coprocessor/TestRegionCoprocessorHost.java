@@ -21,9 +21,9 @@ import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.COPROCESSORS_E
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.REGION_COPROCESSOR_CONF_KEY;
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.SKIP_LOAD_DUPLICATE_TABLE_COPROCESSOR;
 import static org.apache.hadoop.hbase.coprocessor.CoprocessorHost.USER_COPROCESSORS_ENABLED_CONF_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -31,7 +31,6 @@ import java.io.IOException;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeepDeletedCells;
@@ -54,23 +53,16 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestRegionCoprocessorHost {
   private Configuration conf;
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionCoprocessorHost.class);
-
-  @Rule
-  public final TestName name = new TestName();
+  private String currentTestName;
   private RegionInfo regionInfo;
   private HRegion region;
   private RegionServerServices rsServices;
@@ -79,8 +71,9 @@ public class TestRegionCoprocessorHost {
   public static final int TTL = 1000;
   public static final int TIME_TO_PURGE_DELETES = 2000;
 
-  @Before
-  public void setup() throws IOException {
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws IOException {
+    currentTestName = testInfo.getTestMethod().get().getName();
     init(null);
   }
 
@@ -88,7 +81,7 @@ public class TestRegionCoprocessorHost {
     conf = HBaseConfiguration.create();
     conf.setBoolean(COPROCESSORS_ENABLED_CONF_KEY, true);
     conf.setBoolean(USER_COPROCESSORS_ENABLED_CONF_KEY, true);
-    TableName tableName = TableName.valueOf(name.getMethodName());
+    TableName tableName = TableName.valueOf(currentTestName);
     regionInfo = RegionInfoBuilder.newBuilder(tableName).build();
     TableDescriptor tableDesc = null;
     if (flag == null) {
@@ -132,7 +125,7 @@ public class TestRegionCoprocessorHost {
     RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
     Scan scan = new Scan();
     scan.setTimeRange(TimeRange.INITIAL_MIN_TIMESTAMP, TimeRange.INITIAL_MAX_TIMESTAMP);
-    assertTrue("Scan is not for all time", scan.getTimeRange().isAllTime());
+    assertTrue(scan.getTimeRange().isAllTime(), "Scan is not for all time");
     // SimpleRegionObserver is set to update the ScanInfo parameters if the passed-in scan
     // is for all time. this lets us exercise both that the Scan is wired up properly in the coproc
     // and that we can customize the metadata
@@ -182,20 +175,20 @@ public class TestRegionCoprocessorHost {
     // By default SimpleRegionObserver is set as region coprocessor which implements
     // postScannerFilterRow
     RegionCoprocessorHost host = new RegionCoprocessorHost(region, rsServices, conf);
-    assertTrue("Region coprocessor implement postScannerFilterRow",
-      host.hasCustomPostScannerFilterRow());
+    assertTrue(host.hasCustomPostScannerFilterRow(),
+      "Region coprocessor implement postScannerFilterRow");
 
     // Set a region CP which doesn't implement postScannerFilterRow
     init(true);
     host = new RegionCoprocessorHost(region, rsServices, conf);
-    assertFalse("Region coprocessor implement postScannerFilterRow",
-      host.hasCustomPostScannerFilterRow());
+    assertFalse(host.hasCustomPostScannerFilterRow(),
+      "Region coprocessor implement postScannerFilterRow");
 
     // Set multiple region CPs, in which one implements postScannerFilterRow
     init(false);
     host = new RegionCoprocessorHost(region, rsServices, conf);
-    assertTrue("Region coprocessor doesn't implement postScannerFilterRow",
-      host.hasCustomPostScannerFilterRow());
+    assertTrue(host.hasCustomPostScannerFilterRow(),
+      "Region coprocessor doesn't implement postScannerFilterRow");
   }
 
   private void verifyScanInfo(ScanInfo newScanInfo) {

@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.net.BindException;
 import java.net.InetAddress;
@@ -26,10 +30,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.Locale;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -42,12 +44,9 @@ import org.slf4j.LoggerFactory;
  * java.net.preferIPv4Stack=true, so that ZK will not fail to bind to ipv6 address using
  * ClientCnxnSocketNIO.
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestIPv6NIOServerSocketChannel {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIPv6NIOServerSocketChannel.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestIPv6NIOServerSocketChannel.class);
 
@@ -120,8 +119,8 @@ public class TestIPv6NIOServerSocketChannel {
       // On Windows JDK6, we will get expected exception:
       // java.net.SocketException: Address family not supported by protocol family
       // or java.net.SocketException: Protocol family not supported
-      Assert.assertFalse(ex instanceof BindException);
-      Assert.assertTrue(ex.getMessage().toLowerCase(Locale.ROOT).contains("protocol family"));
+      assertFalse(ex instanceof BindException);
+      assertTrue(ex.getMessage().toLowerCase(Locale.ROOT).contains("protocol family"));
       LOG.info("Received expected exception:", ex);
 
       // if this is the case, ensure that we are running on preferIPv4=true
@@ -136,7 +135,7 @@ public class TestIPv6NIOServerSocketChannel {
     InetAddress[] addrs = InetAddress.getAllByName("localhost");
     for (InetAddress addr : addrs) {
       LOG.info("resolved localhost as:" + addr);
-      Assert.assertEquals(4, addr.getAddress().length); // ensure 4 byte ipv4 address
+      assertEquals(4, addr.getAddress().length); // ensure 4 byte ipv4 address
     }
   }
 

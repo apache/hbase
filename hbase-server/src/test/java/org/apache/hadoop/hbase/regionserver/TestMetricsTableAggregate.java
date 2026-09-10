@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.concurrent.CyclicBarrier;
@@ -27,24 +27,19 @@ import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMetricsTableAggregate {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMetricsTableAggregate.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMetricsTableAggregate.class);
 
@@ -60,12 +55,12 @@ public class TestMetricsTableAggregate {
   private MetricsRegionServer rsm;
   private MetricsTableAggregateSource agg;
 
-  @BeforeClass
+  @BeforeAll
   public static void classSetUp() {
     HELPER.init();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() {
     tableWrapper = new MetricsTableWrapperStub(tableName);
     mt = new MetricsTable(tableWrapper);
@@ -85,6 +80,8 @@ public class TestMetricsTableAggregate {
   @Test
   public void testRegionAndStoreMetrics() throws IOException {
     HELPER.assertGauge(pre + "memstoreSize", 1000, agg);
+    HELPER.assertGauge(pre + "memstoreHeapSize", 1001, agg);
+    HELPER.assertGauge(pre + "memstoreOffHeapSize", 1002, agg);
     HELPER.assertGauge(pre + "storeFileSize", 2000, agg);
     HELPER.assertGauge(pre + "tableSize", 3000, agg);
 
@@ -104,6 +101,13 @@ public class TestMetricsTableAggregate {
     HELPER.assertCounter(pre + "bloomFilterRequestsCount", 222, agg);
     HELPER.assertCounter(pre + "bloomFilterNegativeResultsCount", 333, agg);
     HELPER.assertCounter(pre + "bloomFilterEligibleRequestsCount", 444, agg);
+  }
+
+  @Test
+  public void testPerStoreFileSize() {
+    String perCfPre =
+      "Namespace_default_table_" + tableName + "_columnfamily_info_metric_storeFileSize";
+    HELPER.assertGauge(perCfPre, 2000, agg);
   }
 
   @Test
@@ -157,6 +161,13 @@ public class TestMetricsTableAggregate {
     HELPER.assertCounter(pre + "majorCompactionOutputFileCount_num_ops", 1, agg);
     HELPER.assertCounter(pre + "majorCompactedInputBytes", 400, agg);
     HELPER.assertCounter(pre + "majorCompactedoutputBytes", 500, agg);
+  }
+
+  @Test
+  public void testSplitRequest() {
+    rsm.incrSplitRequest(null);
+    rsm.incrSplitRequest(tableName);
+    HELPER.assertCounter(pre + "splitRequestCount", 1, agg);
   }
 
   private void update(AtomicBoolean succ, int round, CyclicBarrier barrier) {

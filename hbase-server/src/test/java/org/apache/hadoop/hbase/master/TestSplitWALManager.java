@@ -18,11 +18,11 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.procedure.ServerProcedureInterface.ServerOperationType.SPLIT_WAL;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertThrows;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,6 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -53,11 +52,10 @@ import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -66,12 +64,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSplitWALManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSplitWALManager.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWALManager.class);
   private static HBaseTestingUtil TEST_UTIL;
@@ -80,7 +75,7 @@ public class TestSplitWALManager {
   private TableName TABLE_NAME;
   private byte[] FAMILY;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TEST_UTIL = new HBaseTestingUtil();
     TEST_UTIL.getConfiguration().setBoolean(HConstants.HBASE_SPLIT_WAL_COORDINATED_BY_ZK, false);
@@ -93,7 +88,7 @@ public class TestSplitWALManager {
     FAMILY = Bytes.toBytes("test");
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -257,8 +252,8 @@ public class TestSplitWALManager {
     assertEquals(0, splitWALManager.getWALsToSplit(metaServer, true).size());
     assertEquals(1, splitWALManager.getWALsToSplit(metaServer, false).size());
     // There should be archiveFileCount + 1 WALs after SplitWALProcedure finish
-    assertEquals("Splitted WAL files should be archived", archiveFileCount + 1,
-      walFS.listStatus(walArchivePath).length);
+    assertEquals(archiveFileCount + 1, walFS.listStatus(walArchivePath).length,
+      "Splitted WAL files should be archived");
   }
 
   @Test

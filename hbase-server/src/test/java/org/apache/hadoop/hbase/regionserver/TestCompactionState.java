@@ -17,15 +17,14 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.ThreadLocalRandom;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -37,33 +36,32 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.VerySlowRegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /** Unit tests to test retrieving table/region compaction state */
-@Category({ VerySlowRegionServerTests.class, LargeTests.class })
+@Tag(VerySlowRegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestCompactionState {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactionState.class);
-
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+  private String name;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setTestName(TestInfo testInfo) {
+    this.name = testInfo.getTestMethod().get().getName();
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -75,49 +73,49 @@ public class TestCompactionState {
 
   @Test
   public void testMajorCompactionStateFromAdmin() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 8, CompactionState.MAJOR, false, StateSource.ADMIN);
+    compaction(name, 8, CompactionState.MAJOR, false, StateSource.ADMIN);
   }
 
   @Test
   public void testMinorCompactionStateFromAdmin() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 15, CompactionState.MINOR, false, StateSource.ADMIN);
+    compaction(name, 15, CompactionState.MINOR, false, StateSource.ADMIN);
   }
 
   @Test
   public void testMajorCompactionOnFamilyStateFromAdmin() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 8, CompactionState.MAJOR, true, StateSource.ADMIN);
+    compaction(name, 8, CompactionState.MAJOR, true, StateSource.ADMIN);
   }
 
   @Test
   public void testMinorCompactionOnFamilyStateFromAdmin() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 15, CompactionState.MINOR, true, StateSource.ADMIN);
+    compaction(name, 15, CompactionState.MINOR, true, StateSource.ADMIN);
   }
 
   @Test
   public void testMajorCompactionStateFromMaster() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 8, CompactionState.MAJOR, false, StateSource.MASTER);
+    compaction(name, 8, CompactionState.MAJOR, false, StateSource.MASTER);
   }
 
   @Test
   public void testMinorCompactionStateFromMaster() throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 15, CompactionState.MINOR, false, StateSource.MASTER);
+    compaction(name, 15, CompactionState.MINOR, false, StateSource.MASTER);
   }
 
   @Test
   public void testMajorCompactionOnFamilyStateFromMaster()
     throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 8, CompactionState.MAJOR, true, StateSource.MASTER);
+    compaction(name, 8, CompactionState.MAJOR, true, StateSource.MASTER);
   }
 
   @Test
   public void testMinorCompactionOnFamilyStateFromMaster()
     throws IOException, InterruptedException {
-    compaction(name.getMethodName(), 15, CompactionState.MINOR, true, StateSource.MASTER);
+    compaction(name, 15, CompactionState.MINOR, true, StateSource.MASTER);
   }
 
   @Test
   public void testInvalidColumnFamily() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(name);
     byte[] family = Bytes.toBytes("family");
     byte[] fakecf = Bytes.toBytes("fakecf");
     boolean caughtMinorCompact = false;

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.mapreduce;
 
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assume.assumeTrue;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
@@ -28,32 +28,32 @@ import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.Tool;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Test that we add tmpjars correctly including the named dependencies. Runs as an integration test
  * so that classpath is realistic.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestTableMapReduceUtil implements Configurable, Tool {
 
   private static IntegrationTestingUtility util;
 
-  @BeforeClass
+  @BeforeAll
   public static void provisionCluster() throws Exception {
     if (null == util) {
       util = new IntegrationTestingUtility();
     }
   }
 
-  @Before
+  @BeforeEach
   public void skipMiniCluster() {
     // test probably also works with a local cluster, but
     // IntegrationTestingUtility doesn't support this concept.
-    assumeTrue("test requires a distributed cluster.", util.isDistributedCluster());
+    assumeTrue(util.isDistributedCluster(), "test requires a distributed cluster.");
   }
 
   /**

@@ -17,10 +17,9 @@
  */
 package org.apache.hadoop.hbase.mob;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Mob file compaction chore in a generational non-batch mode test. 1. Uses default (non-batch) mode
@@ -32,12 +31,9 @@ import org.junit.experimental.categories.Category;
  * than minimum age to archive 10. Runs Mob cleaner chore 11 Verifies that number of MOB files in a
  * mob directory is 20. 12 Runs scanner and checks all 3 * 1000 rows.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useFileBasedSFT={0}")
 public class TestMobCompactionOptMode extends TestMobCompactionWithDefaults {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobCompactionOptMode.class);
 
   public TestMobCompactionOptMode(Boolean useFileBasedSFT) {
     super(useFileBasedSFT);

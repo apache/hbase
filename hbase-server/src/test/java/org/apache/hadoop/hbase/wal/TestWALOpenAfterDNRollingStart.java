@@ -18,10 +18,9 @@
 package org.apache.hadoop.hbase.wal;
 
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.List;
+import java.util.stream.Stream;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
@@ -29,25 +28,18 @@ import org.apache.hadoop.hbase.regionserver.wal.AbstractFSWAL;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
-@RunWith(Parameterized.class)
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate
 public class TestWALOpenAfterDNRollingStart {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALOpenAfterDNRollingStart.class);
 
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   // Sleep time before restart next dn, we need to wait the current dn to finish start up
@@ -58,15 +50,17 @@ public class TestWALOpenAfterDNRollingStart {
   // so a low replication case will be detected and the wal will be rolled
   private static long CHECK_LOW_REPLICATION_INTERVAL = 10000;
 
-  @Parameter
   public String walProvider;
 
-  @Parameters(name = "{index}: wal={0}")
-  public static List<Object[]> data() {
-    return Arrays.asList(new Object[] { "asyncfs" }, new Object[] { "filesystem" });
+  public TestWALOpenAfterDNRollingStart(String walProvider) {
+    this.walProvider = walProvider;
   }
 
-  @BeforeClass
+  public static Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of("asyncfs"), Arguments.of("filesystem"));
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     // don't let hdfs client to choose a new replica when dn down
     TEST_UTIL.getConfiguration()
@@ -77,18 +71,18 @@ public class TestWALOpenAfterDNRollingStart {
     TEST_UTIL.startMiniZKCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException, InterruptedException {
     TEST_UTIL.getConfiguration().set("hbase.wal.provider", walProvider);
     TEST_UTIL.startMiniHBaseCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     TEST_UTIL.shutdownMiniHBaseCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -100,7 +94,7 @@ public class TestWALOpenAfterDNRollingStart {
    * never know all the replica of the wal is broken(because of dn restarting). And this wal can
    * never be open
    */
-  @Test
+  @TestTemplate
   public void test() throws Exception {
     HRegionServer server = TEST_UTIL.getHBaseCluster().getRegionServer(0);
     AbstractFSWAL<?> wal = (AbstractFSWAL<?>) server.getWAL(null);

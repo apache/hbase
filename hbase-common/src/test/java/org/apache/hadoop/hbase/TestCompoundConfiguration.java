@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,22 +27,18 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestCompoundConfiguration {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompoundConfiguration.class);
 
   private Configuration baseConf;
   private int baseConfSize;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     baseConf = new Configuration();
     baseConf.set("A", "1");
@@ -61,12 +57,8 @@ public class TestCompoundConfiguration {
 
     assertEquals(CompoundConfiguration.class,
       compoundConf.getClassByName(CompoundConfiguration.class.getName()));
-    try {
-      compoundConf.getClassByName("bad_class_name");
-      fail("Trying to load bad_class_name should throw an exception");
-    } catch (ClassNotFoundException e) {
-      // win!
-    }
+    assertThrows(ClassNotFoundException.class, () -> compoundConf.getClassByName("bad_class_name"),
+      "Trying to load bad_class_name should throw an exception");
   }
 
   @Test

@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.executor;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.mock;
@@ -34,7 +34,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.Waiter;
@@ -44,19 +43,14 @@ import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorConfig;
 import org.apache.hadoop.hbase.executor.ExecutorService.ExecutorStatus;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExecutorService {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestExecutorService.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestExecutorService.class);
 
@@ -104,7 +98,8 @@ public class TestExecutorService {
     ExecutorStatus status = executor.getStatus();
     assertTrue(status.queuedEvents.isEmpty());
     assertEquals(5, status.running.size());
-    checkStatusDump(status);
+    Waiter.waitFor(mockedServer.getConfiguration(), 10000,
+      () -> checkStatusDump(executor.getStatus()));
 
     // Now interrupt the running Executor
     synchronized (lock) {
@@ -147,13 +142,13 @@ public class TestExecutorService {
       .submit(new TestEventHandler(mockedServer, EventType.M_SERVER_SHUTDOWN, lock, counter));
   }
 
-  private void checkStatusDump(ExecutorStatus status) throws IOException {
+  private boolean checkStatusDump(ExecutorStatus status) throws IOException {
     StringWriter sw = new StringWriter();
     status.dumpTo(sw, "");
     String dump = sw.toString();
     LOG.info("Got status dump:\n" + dump);
 
-    assertTrue(dump.contains("Waiting on java.util.concurrent.atomic.AtomicBoolean"));
+    return dump.contains("Waiting on java.util.concurrent.atomic.AtomicBoolean");
   }
 
   public static class TestEventHandler extends EventHandler {
@@ -244,7 +239,7 @@ public class TestExecutorService {
     waitForEventToStart.await(10, TimeUnit.SECONDS);
     int activeCount = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)
       .getThreadPoolExecutor().getActiveCount();
-    Assert.assertEquals(1, activeCount);
+    assertEquals(1, activeCount);
     latch.countDown();
     Waiter.waitFor(conf, 3000, () -> {
       int count = executorService.getExecutor(ExecutorType.MASTER_SNAPSHOT_OPERATIONS)

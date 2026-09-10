@@ -17,22 +17,20 @@
  */
 package org.apache.hadoop.hbase.mapred;
 
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapred.RecordWriter;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -41,12 +39,8 @@ import org.slf4j.LoggerFactory;
  * we can have many instances and not leak connections. This test creates a few TableOutputFormats
  * and shouldn't fail due to ZK connection exhaustion.
  */
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestTableOutputFormatConnectionExhaust {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestTableOutputFormatConnectionExhaust.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestTableOutputFormatConnectionExhaust.class);
@@ -55,7 +49,7 @@ public class TestTableOutputFormatConnectionExhaust {
   static final String TABLE = "TestTableOutputFormatConnectionExhaust";
   static final String FAMILY = "family";
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // Default in ZookeeperMiniCluster is 1000, setting artificially low to trigger exhaustion.
     // need min of 7 to properly start the default mini HBase cluster
@@ -63,12 +57,12 @@ public class TestTableOutputFormatConnectionExhaust {
     UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws IOException {
     LOG.info("before");
     UTIL.ensureSomeRegionServersAvailable(1);

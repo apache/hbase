@@ -17,28 +17,28 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicReference;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestWeakObjectPool {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWeakObjectPool.class);
 
   ObjectPool<String, Object> pool;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     pool = new WeakObjectPool<>(new ObjectPool.ObjectFactory<String, Object>() {
       @Override
@@ -53,11 +53,11 @@ public class TestWeakObjectPool {
     Object obj1 = pool.get("a");
     Object obj2 = pool.get(new String("a"));
 
-    Assert.assertSame(obj1, obj2);
+    assertSame(obj1, obj2);
 
     Object obj3 = pool.get("b");
 
-    Assert.assertNotSame(obj1, obj3);
+    assertNotSame(obj1, obj3);
   }
 
   @Test
@@ -73,10 +73,10 @@ public class TestWeakObjectPool {
     // Sleep a while because references newly becoming stale
     // may still remain when calling the {@code purge} method.
     pool.purge();
-    Assert.assertEquals(1, pool.size());
+    assertEquals(1, pool.size());
 
     Object obj2 = pool.get("a");
-    Assert.assertSame(obj1, obj2);
+    assertSame(obj1, obj2);
 
     obj1 = null;
     obj2 = null;
@@ -87,10 +87,10 @@ public class TestWeakObjectPool {
 
     Thread.sleep(10);
     pool.purge();
-    Assert.assertEquals(0, pool.size());
+    assertEquals(0, pool.size());
 
     Object obj3 = pool.get("a");
-    Assert.assertNotEquals(hash1, System.identityHashCode(obj3));
+    assertNotEquals(hash1, System.identityHashCode(obj3));
   }
 
   @Test
@@ -132,7 +132,7 @@ public class TestWeakObjectPool {
     endLatch.await();
 
     if (assertionFailed.get()) {
-      Assert.fail();
+      fail();
     }
   }
 }

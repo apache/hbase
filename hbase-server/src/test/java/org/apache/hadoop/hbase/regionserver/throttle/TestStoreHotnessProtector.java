@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.throttle;
 import static org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector.PARALLEL_PREPARE_PUT_STORE_MULTIPLIER;
 import static org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector.PARALLEL_PUT_STORE_THREADS_LIMIT;
 import static org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector.PARALLEL_PUT_STORE_THREADS_LIMIT_MIN_COLUMN_COUNT;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -33,26 +34,19 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.regionserver.Store;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestStoreHotnessProtector {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreHotnessProtector.class);
 
   @Test
   public void testPreparePutCounter() throws Exception {
@@ -103,10 +97,9 @@ public class TestStoreHotnessProtector {
 
     countDownLatch.await(60, TimeUnit.SECONDS);
     // no exception
-    Assert.assertEquals(exception.get(), null);
-    Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);
-    Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
-      threadCount);
+    assertEquals(exception.get(), null);
+    assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);
+    assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(), threadCount);
 
     // access limit
 
@@ -117,16 +110,15 @@ public class TestStoreHotnessProtector {
       exception.set(e);
     }
 
-    Assert.assertEquals(exception.get().getClass(), RegionTooBusyException.class);
+    assertEquals(exception.get().getClass(), RegionTooBusyException.class);
 
-    Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);
+    assertEquals(storeHotnessProtector.getPreparePutToStoreMap().size(), 1);
     // when access limit, counter will not changed.
-    Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
+    assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
       threadCount + 1);
 
     storeHotnessProtector.finish(familyMaps);
-    Assert.assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(),
-      threadCount);
+    assertEquals(storeHotnessProtector.getPreparePutToStoreMap().get(family).get(), threadCount);
   }
 
 }

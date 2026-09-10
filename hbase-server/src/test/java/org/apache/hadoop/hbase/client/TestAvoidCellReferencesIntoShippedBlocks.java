@@ -17,8 +17,8 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -31,7 +31,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.ExtendedCell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -59,22 +58,18 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequest;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestAvoidCellReferencesIntoShippedBlocks {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAvoidCellReferencesIntoShippedBlocks.class);
 
   protected final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   static byte[][] ROWS = new byte[2][];
@@ -93,14 +88,14 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   private CountDownLatch latch = new CountDownLatch(1);
   private static CountDownLatch compactReadLatch = new CountDownLatch(1);
   private static AtomicBoolean doScan = new AtomicBoolean(false);
+  private String methodName;
 
-  @Rule
-  public TestName name = new TestName();
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
 
-  /**
-   * @throws java.lang.Exception
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     ROWS[0] = ROW;
     ROWS[1] = ROW1;
@@ -123,14 +118,14 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   /**
    * @throws java.lang.Exception
    */
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
   public void testHBase16372InCompactionWritePath() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     // Create a table with block size as 1024
     final Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024,
       CompactorRegionObserver.class.getName());
@@ -197,7 +192,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       try (ResultScanner scanner = table.getScanner(s)) {
         count = Iterables.size(scanner);
       }
-      assertEquals("Count all the rows ", 6, count);
+      assertEquals(6, count, "Count all the rows ");
       // all the cache is loaded
       // trigger a major compaction
       ScannerThread scannerThread = new ScannerThread(table, cache);
@@ -208,7 +203,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       try (ResultScanner scanner = table.getScanner(s)) {
         count = Iterables.size(scanner);
       }
-      assertEquals("Count all the rows ", 6, count);
+      assertEquals(6, count, "Count all the rows ");
     } finally {
       table.close();
     }
@@ -297,7 +292,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
   @Test
   public void testHBASE16372InReadPath() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     // Create a table with block size as 1024
     try (Table table = TEST_UTIL.createTable(tableName, FAMILIES_1, 1, 1024, null)) {
       // get the block cache and region
@@ -356,7 +351,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
       try (ResultScanner scanner = table.getScanner(s)) {
         count = Iterables.size(scanner);
       }
-      assertEquals("Count all the rows ", 6, count);
+      assertEquals(6, count, "Count all the rows ");
 
       // Scan from cache
       s = new Scan();
@@ -394,7 +389,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
               iterator.next();
               refBlockCount++;
             }
-            assertEquals("One block should be there ", 1, refBlockCount);
+            assertEquals(1, refBlockCount, "One block should be there ");
             // Rescan to prepopulate the data
             // cache this row.
             Scan s1 = new Scan();
@@ -406,7 +401,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
 
             try (ResultScanner scanner = table.getScanner(s1)) {
               int count = Iterables.size(scanner);
-              assertEquals("Count the rows", 2, count);
+              assertEquals(2, count, "Count the rows");
               int newBlockRefCount = 0;
               List<BlockCacheKey> newCacheList = new ArrayList<>();
               while (true) {
@@ -441,7 +436,7 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
           }
         }
       }
-      assertEquals("Count should give all rows ", 10, count);
+      assertEquals(10, count, "Count should give all rows ");
     }
   }
 

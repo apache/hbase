@@ -21,15 +21,14 @@ import java.io.IOException;
 import java.util.UUID;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotManager;
 import org.apache.hadoop.hbase.regionserver.ConstantSizeRegionSplitPolicy;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * This class tests that the use of a temporary snapshot directory supports snapshot functionality
@@ -37,25 +36,26 @@ import org.junit.experimental.categories.Category;
  * <p>
  * This is an end-to-end test for the snapshot utility
  */
-@Category(LargeTests.class)
-public class TestSnapshotDFSTemporaryDirectory extends TestSnapshotTemporaryDirectory {
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "[{index}]: manifestVersion = {0}")
+public class TestSnapshotDFSTemporaryDirectory extends SnapshotTemporaryDirectoryTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotDFSTemporaryDirectory.class);
+  public TestSnapshotDFSTemporaryDirectory(int manifestVersion) {
+    super(manifestVersion);
+  }
 
   /**
    * Setup the config for the cluster
    * @throws Exception on failure
    */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
     admin = UTIL.getAdmin();
   }
 
-  private static void setupConf(Configuration conf) throws IOException {
+  protected static void setupConf(Configuration conf) throws IOException {
     // disable the ui
     conf.setInt("hbase.regionsever.info.port", -1);
     // change the flush size to a small amount, regulating number of store files

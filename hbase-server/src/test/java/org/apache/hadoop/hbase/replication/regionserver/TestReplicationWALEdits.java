@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.replication.regionserver;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -29,7 +29,6 @@ import java.util.NavigableMap;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -40,9 +39,8 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.UnsafeByteOperations;
 
@@ -50,12 +48,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos.BulkLoadDescriptor;
 
-@Category({ ReplicationTests.class, SmallTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestReplicationWALEdits {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationWALEdits.class);
 
   private static final Configuration CONF = HBaseConfiguration.create();
 
@@ -118,8 +113,8 @@ public class TestReplicationWALEdits {
     ReplicationSourceWALActionListener.scopeWALEdits(logKey, logEdit, CONF);
 
     // 4. Assert that no bulk load entry scopes are added if bulk load hfile replication is disabled
-    assertNull("No bulk load entries scope should be added if bulk load replication is disabled.",
-      logKey.getReplicationScopes());
+    assertNull(logKey.getReplicationScopes(),
+      "No bulk load entries scope should be added if bulk load replication is disabled.");
   }
 
   @Test
@@ -138,10 +133,10 @@ public class TestReplicationWALEdits {
 
     NavigableMap<byte[], Integer> scopes = logKey.getReplicationScopes();
     // Assert family with replication scope global is present in the key scopes
-    assertTrue("This family scope is set to global, should be part of replication key scopes.",
-      scopes.containsKey(F1));
+    assertTrue(scopes.containsKey(F1),
+      "This family scope is set to global, should be part of replication key scopes.");
     // Assert family with replication scope local is not present in the key scopes
-    assertFalse("This family scope is set to local, should not be part of replication key scopes",
-      scopes.containsKey(F2));
+    assertFalse(scopes.containsKey(F2),
+      "This family scope is set to local, should not be part of replication key scopes");
   }
 }

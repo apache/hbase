@@ -17,29 +17,24 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ SmallTests.class, MasterTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestBalancerConditionals extends BalancerTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBalancerConditionals.class);
 
   private BalancerConditionals balancerConditionals;
   private BalancerClusterState mockCluster;
 
-  @Before
+  @BeforeEach
   public void setUp() {
     balancerConditionals = BalancerConditionals.create();
     mockCluster = mockCluster(new int[] { 0, 1, 2 });
@@ -51,8 +46,8 @@ public class TestBalancerConditionals extends BalancerTestBase {
     balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
-    assertEquals("No conditionals should be loaded by default", 0,
-      balancerConditionals.getConditionalClasses().size());
+    assertEquals(0, balancerConditionals.getConditionalClasses().size(),
+      "No conditionals should be loaded by default");
   }
 
   @Test
@@ -64,8 +59,8 @@ public class TestBalancerConditionals extends BalancerTestBase {
     balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
-    assertTrue("Custom conditionals should be loaded",
-      balancerConditionals.isConditionalBalancingEnabled());
+    assertTrue(balancerConditionals.isConditionalBalancingEnabled(),
+      "Custom conditionals should be loaded");
   }
 
   @Test
@@ -76,8 +71,8 @@ public class TestBalancerConditionals extends BalancerTestBase {
     balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
-    assertEquals("Invalid classes should not be loaded as conditionals", 0,
-      balancerConditionals.getConditionalClasses().size());
+    assertEquals(0, balancerConditionals.getConditionalClasses().size(),
+      "Invalid classes should not be loaded as conditionals");
   }
 
   @Test
@@ -88,8 +83,7 @@ public class TestBalancerConditionals extends BalancerTestBase {
     balancerConditionals.setConf(conf);
     balancerConditionals.loadClusterState(mockCluster);
 
-    assertTrue("MetaTableIsolationConditional should be active",
-      balancerConditionals.isTableIsolationEnabled());
+    assertTrue(balancerConditionals.isTableIsolationEnabled(),
+      "MetaTableIsolationConditional should be active");
   }
-
 }

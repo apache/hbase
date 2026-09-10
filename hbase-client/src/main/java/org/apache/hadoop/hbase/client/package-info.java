@@ -200,11 +200,11 @@ public class MyLittleHBaseClient {
 
 <h2><a name="related" >Related Documentation</a></h2>
 <ul>
-  <li><a href="http://hbase.org/">HBase Home Page</a>
-  <li><a href="http://hadoop.apache.org/">Hadoop Home Page</a>
+  <li><a href="https://hbase.apache.org/">HBase Home Page</a>
+  <li><a href="https://hadoop.apache.org/">Hadoop Home Page</a>
 </ul>
   <p>See also the section in the HBase Reference Guide where it discusses
-  <a href="http://hbase.apache.org/book.html#client">HBase Client</a>.  It
+  <a href="https://hbase.apache.org/docs/architecture/client">HBase Client</a>.  It
   has section on how to access HBase from inside your multithreaded environment
   how to control resources consumed client-side, etc.</p>
 */

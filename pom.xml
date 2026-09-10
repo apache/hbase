@@ -173,6 +173,12 @@
       <timezone>-8</timezone>
     </developer>
     <developer>
+      <id>dieter</id>
+      <name>Dieter De Paepe</name>
+      <email>dieter@apache.org</email>
+      <timezone>+1</timezone>
+    </developer>
+    <developer>
       <id>dimaspivak</id>
       <name>Dima Spivak</name>
       <email>dimaspivak@apache.org</email>
@@ -362,6 +368,12 @@
       <id>liushaohui</id>
       <name>Shaohui Liu</name>
       <email>liushaohui@apache.org</email>
+      <timezone>+8</timezone>
+    </developer>
+    <developer>
+      <id>liuxiaocs7</id>
+      <name>Xiao Liu</name>
+      <email>liuxiaocs@apache.org</email>
       <timezone>+8</timezone>
     </developer>
     <developer>
@@ -810,6 +822,7 @@
     <module>hbase-compression</module>
     <module>hbase-extensions</module>
     <module>hbase-dev-generate-classpath</module>
+    <module>hbase-website</module>
   </modules>
   <scm>
     <connection>scm:git:git://gitbox.apache.org/repos/asf/hbase.git</connection>
@@ -855,7 +868,7 @@
     <maven.min.version>3.5.0</maven.min.version>
     <java.min.version>${compileSource}</java.min.version>
     <!-- Dependencies -->
-    <hadoop-three.version>3.4.2</hadoop-three.version>
+    <hadoop-three.version>3.4.3</hadoop-three.version>
     <!-- These must be defined here for downstream build tools that don't look at profiles.
     -->
     <hadoop.version>${hadoop-three.version}</hadoop.version>
@@ -870,11 +883,11 @@
       in the dependencyManagement section as it could still lead to different versions of netty
       modules and cause trouble if we only rely on transitive dependencies.
     -->
-    <netty4.version>4.1.123.Final</netty4.version>
+    <netty4.version>4.1.131.Final</netty4.version>
     <!-- end HBASE-15925 default hadoop compatibility values -->
     <audience-annotations.version>0.15.0</audience-annotations.version>
     <javadoc.audience-annotations.version>0.15.0</javadoc.audience-annotations.version>
-    <avro.version>1.11.4</avro.version>
+    <avro.version>1.11.5</avro.version>
     <caffeine.version>2.8.1</caffeine.version>
     <commons-codec.version>1.15</commons-codec.version>
     <commons-validator.version>1.7</commons-validator.version>
@@ -890,80 +903,80 @@
       Note that the version of jackson-[annotations,core,databind] must be kept in sync with the
       version of jackson-jaxrs-json-provider shipped in hbase-thirdparty.
     -->
-    <jackson.version>2.19.2</jackson.version>
-    <jackson.databind.version>2.19.2</jackson.databind.version>
+    <jackson.version>2.21.1</jackson.version>
     <jaxb-api.version>2.3.1</jaxb-api.version>
     <servlet.api.version>4.0.1</servlet.api.version>
     <wx.rs.api.version>2.1.1</wx.rs.api.version>
     <tomcat.jasper.version>9.0.110</tomcat.jasper.version>
-    <jruby.version>9.4.12.1</jruby.version>
+    <jruby.version>9.4.14.0</jruby.version>
     <junit.jupiter.version>5.13.4</junit.jupiter.version>
-    <junit.vintage.version>5.13.4</junit.vintage.version>
-    <hamcrest.version>1.3</hamcrest.version>
+    <awaitility.version>4.3.0</awaitility.version>
+    <hamcrest.version>3.0</hamcrest.version>
     <opentelemetry.version>1.49.0</opentelemetry.version>
     <opentelemetry-semconv.version>1.29.0-alpha</opentelemetry-semconv.version>
-    <opentelemetry-javaagent.version>2.15.0</opentelemetry-javaagent.version>
-    <log4j2.version>2.17.2</log4j2.version>
+    <opentelemetry-javaagent.version>2.30.0</opentelemetry-javaagent.version>
+    <log4j2.version>2.26.1</log4j2.version>
     <mockito.version>4.11.0</mockito.version>
     <byte-buddy.version>1.15.11</byte-buddy.version>
     <!--
       Version of protobuf that hbase uses internally (we shade our pb) Must match what is out
       in hbase-thirdparty include.
     -->
-    <internal.protobuf.version>4.31.1</internal.protobuf.version>
+    <internal.protobuf.version>4.34.0</internal.protobuf.version>
     <protobuf.plugin.version>0.6.1</protobuf.plugin.version>
     <thrift.path>thrift</thrift.path>
-    <thrift.version>0.14.1</thrift.version>
-    <zookeeper.version>3.8.4</zookeeper.version>
+    <!-- Version of the Thrift IDL compiler used to (re)generate the Java sources under
+         hbase-thrift/src/main/java/.../generated when the -Pcompile-thrift profile is active.
+         The libthrift runtime classes are pulled from the hbase-shaded-thrift artifact in
+         hbase-thirdparty. -->
+    <thrift.version>0.23.0</thrift.version>
+    <zookeeper.version>3.8.6</zookeeper.version>
     <jline.version>2.11</jline.version>
     <slf4j.version>1.7.30</slf4j.version>
     <clover.version>4.0.3</clover.version>
-    <jamon-runtime.version>2.4.1</jamon-runtime.version>
     <jettison.version>1.5.4</jettison.version>
     <!--Make sure these joni/jcodings are compatible with the versions used by jruby-->
-    <joni.version>2.2.3</joni.version>
-    <jcodings.version>1.0.61</jcodings.version>
+    <joni.version>2.2.5</joni.version>
+    <jcodings.version>1.0.63</jcodings.version>
     <spy.version>2.12.3</spy.version>
-    <bouncycastle.version>1.81</bouncycastle.version>
+    <bouncycastle.version>1.84</bouncycastle.version>
     <skyscreamer.version>1.5.1</skyscreamer.version>
     <commons-crypto.version>1.1.0</commons-crypto.version>
     <!-- Plugin Dependencies -->
-    <asciidoctor.plugin.version>2.2.2</asciidoctor.plugin.version>
-    <asciidoctorj.pdf.version>2.0.6</asciidoctorj.pdf.version>
     <build.helper.maven.version>3.0.0</build.helper.maven.version>
     <buildnumber.maven.version>1.4</buildnumber.maven.version>
     <!--
       When updating checkstyle.version, please make the same change in `.idea/checkstyle-idea.xml`
     -->
-    <checkstyle.version>8.29</checkstyle.version>
+    <checkstyle.version>11.0.1</checkstyle.version>
     <exec.maven.version>3.1.0</exec.maven.version>
     <error-prone.version>2.41.0</error-prone.version>
-    <jamon.plugin.version>2.4.2</jamon.plugin.version>
     <lifecycle.mapping.version>1.0.0</lifecycle.mapping.version>
     <maven.antrun.version>1.8</maven.antrun.version>
     <maven.bundle.version>3.3.0</maven.bundle.version>
-    <maven.checkstyle.version>3.1.0</maven.checkstyle.version>
+    <maven.checkstyle.version>3.6.0</maven.checkstyle.version>
     <maven.eclipse.version>2.10</maven.eclipse.version>
     <maven.gpg.version>3.0.1</maven.gpg.version>
     <maven.javadoc.version>3.4.0</maven.javadoc.version>
     <maven.dependency.version>3.8.1</maven.dependency.version>
     <maven.warbucks.version>1.1.0</maven.warbucks.version>
-    <maven.project.info.report.version>3.1.2</maven.project.info.report.version>
+    <maven.project.info.report.version>3.9.0</maven.project.info.report.version>
     <maven-owasp-plugin.version>12.1.0</maven-owasp-plugin.version>
     <os.maven.version>1.7.1</os.maven.version>
     <findbugs-annotations.version>1.3.9-1</findbugs-annotations.version>
+    <jcip-annotations.version>1.0-1</jcip-annotations.version>
     <spotbugs.version>4.7.3</spotbugs.version>
     <spotbugs.maven.version>4.7.2.1</spotbugs.maven.version>
     <surefire.version>3.5.3</surefire.version>
-    <wagon.ssh.version>2.12</wagon.ssh.version>
     <xml.maven.version>1.0.1</xml.maven.version>
     <spotless.version>2.44.4</spotless.version>
-    <maven-site.version>3.12.0</maven-site.version>
-    <reflow-maven-skin.version>2.3.3</reflow-maven-skin.version>
+    <maven-site.version>3.21.0</maven-site.version>
+    <maven-download-plugin.version>1.2.1</maven-download-plugin.version>
+    <nexus-staging.version>1.7.0</nexus-staging.version>
     <!-- compression -->
-    <aircompressor.version>0.27</aircompressor.version>
+    <aircompressor.version>2.0.3</aircompressor.version>
     <brotli4j.version>1.11.0</brotli4j.version>
-    <lz4.version>1.8.0</lz4.version>
+    <lz4.version>1.11.1</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
     <zstd-jni.version>1.5.7-2</zstd-jni.version>
     <!--
@@ -972,7 +985,7 @@
         databind] must be kept in sync with the version of jackson-jaxrs-json-provider shipped in
         hbase-thirdparty.
     -->
-    <hbase-thirdparty.version>4.1.12</hbase-thirdparty.version>
+    <hbase-thirdparty.version>4.1.14</hbase-thirdparty.version>
     <!-- for.exclusion version are NOT for direct dependencies. To use the provided
     scope to transitively exclude some transitive dependencies, we need to specify
     some existing version to for maven. -->
@@ -1079,7 +1092,6 @@
     <!-- Required for testing LDAP integration -->
     <apacheds.version>2.0.0.AM27</apacheds.version>
     <ldap-api.version>2.1.7</ldap-api.version>
-    <webjars-dir>${project.build.directory}/META-INF/resources/webjars</webjars-dir>
     <!-- Web UI dependencies -->
     <bootstrap.version>5.3.3</bootstrap.version>
     <jquery.version>3.7.1</jquery.version>
@@ -1087,6 +1099,7 @@
     <vega.version>5.32.0</vega.version>
     <vega-embed.version>6.29.0</vega-embed.version>
     <vega-lite.version>5.23.0</vega-lite.version>
+    <async-profiler.version>4.4</async-profiler.version>
   </properties>
   <!-- Sorted by groups of dependencies then groupId and artifactId -->
   <dependencyManagement>
@@ -1432,6 +1445,11 @@
         <artifactId>findbugs-annotations</artifactId>
         <version>${findbugs-annotations.version}</version>
       </dependency>
+      <dependency>
+        <groupId>com.github.stephenc.jcip</groupId>
+        <artifactId>jcip-annotations</artifactId>
+        <version>${jcip-annotations.version}</version>
+      </dependency>
       <!--
         Logging dependencies. In general, we use slf4j as the log facade in HBase, so all sub
         modules should depend on slf4j-api at compile scope, and then depend on log4j-slf4j-impl
@@ -1503,6 +1521,12 @@
         <groupId>org.apache.httpcomponents</groupId>
         <artifactId>httpclient</artifactId>
         <version>${httpclient.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>org.apache.httpcomponents</groupId>
@@ -1518,6 +1542,12 @@
         <groupId>commons-validator</groupId>
         <artifactId>commons-validator</artifactId>
         <version>${commons-validator.version}</version>
+        <exclusions>
+          <exclusion>
+            <groupId>commons-logging</groupId>
+            <artifactId>commons-logging</artifactId>
+          </exclusion>
+        </exclusions>
       </dependency>
       <dependency>
         <groupId>commons-io</groupId>
@@ -1540,14 +1570,6 @@
         <version>${commons-cli.version}</version>
       </dependency>
       <dependency>
-        <!-- commons-logging is only used by hbase-http's HttpRequestLog and hbase-server's
-             HBaseTestingUtil.
-          -->
-        <groupId>commons-logging</groupId>
-        <artifactId>commons-logging</artifactId>
-        <version>1.2</version>
-      </dependency>
-      <dependency>
         <groupId>org.apache.zookeeper</groupId>
         <artifactId>zookeeper</artifactId>
         <version>${zookeeper.version}</version>
@@ -1568,17 +1590,6 @@
         <version>${jline.version}</version>
       </dependency>
       <dependency>
-        <groupId>org.apache.thrift</groupId>
-        <artifactId>libthrift</artifactId>
-        <version>${thrift.version}</version>
-        <exclusions>
-          <exclusion>
-            <groupId>org.apache.tomcat.embed</groupId>
-            <artifactId>tomcat-embed-core</artifactId>
-          </exclusion>
-        </exclusions>
-      </dependency>
-      <dependency>
         <groupId>org.jruby</groupId>
         <artifactId>jruby-complete</artifactId>
         <version>${jruby.version}</version>
@@ -1592,26 +1603,6 @@
         <groupId>org.jruby.joni</groupId>
         <artifactId>joni</artifactId>
         <version>${joni.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-annotations</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-core</artifactId>
-        <version>${jackson.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>com.fasterxml.jackson.core</groupId>
-        <artifactId>jackson-databind</artifactId>
-        <version>${jackson.databind.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.jamon</groupId>
-        <artifactId>jamon-runtime</artifactId>
-        <version>${jamon-runtime.version}</version>
       </dependency>
       <!-- REST dependencies -->
       <dependency>
@@ -1672,37 +1663,21 @@
         </exclusions>
       </dependency>
       <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-api</artifactId>
+        <groupId>org.junit</groupId>
+        <artifactId>junit-bom</artifactId>
         <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
+        <type>pom</type>
+        <scope>import</scope>
       </dependency>
       <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-engine</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.jupiter</groupId>
-        <artifactId>junit-jupiter-params</artifactId>
-        <version>${junit.jupiter.version}</version>
-        <scope>test</scope>
-      </dependency>
-      <dependency>
-        <groupId>org.junit.vintage</groupId>
-        <artifactId>junit-vintage-engine</artifactId>
-        <version>${junit.vintage.version}</version>
+        <groupId>org.awaitility</groupId>
+        <artifactId>awaitility</artifactId>
+        <version>${awaitility.version}</version>
         <scope>test</scope>
       </dependency>
       <dependency>
         <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-core</artifactId>
-        <version>${hamcrest.version}</version>
-      </dependency>
-      <dependency>
-        <groupId>org.hamcrest</groupId>
-        <artifactId>hamcrest-library</artifactId>
+        <artifactId>hamcrest</artifactId>
         <version>${hamcrest.version}</version>
       </dependency>
       <dependency>
@@ -1756,6 +1731,12 @@
         <scope>test</scope>
       </dependency>
       <dependency>
+        <groupId>org.bouncycastle</groupId>
+        <artifactId>bcutil-jdk18on</artifactId>
+        <version>${bouncycastle.version}</version>
+        <scope>test</scope>
+      </dependency>
+      <dependency>
         <groupId>org.skyscreamer</groupId>
         <artifactId>jsonassert</artifactId>
         <version>${skyscreamer.version}</version>
@@ -1789,8 +1770,13 @@
         <artifactId>aircompressor</artifactId>
         <version>${aircompressor.version}</version>
       </dependency>
+      <!--
+        The official lz4-java project has been discontinued, we have to move to
+        a community fork for addressing CVE-2025-12183 since 1.8.1+,
+        see: https://sites.google.com/sonatype.com/vulnerabilities/cve-2025-12183
+      -->
       <dependency>
-        <groupId>org.lz4</groupId>
+        <groupId>at.yawk.lz4</groupId>
         <artifactId>lz4-java</artifactId>
         <version>${lz4.version}</version>
       </dependency>
@@ -1828,6 +1814,11 @@
       <dependency>
         <groupId>org.apache.hbase.thirdparty</groupId>
         <artifactId>hbase-shaded-protobuf</artifactId>
+        <version>${hbase-thirdparty.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>org.apache.hbase.thirdparty</groupId>
+        <artifactId>hbase-shaded-thrift</artifactId>
         <version>${hbase-thirdparty.version}</version>
       </dependency>
       <dependency>
@@ -1872,12 +1863,23 @@
             <groupId>com.sun.xml.ws</groupId>
             <artifactId>samples</artifactId>
           </exclusion>
+          <exclusion>
+            <groupId>com.sun.mail</groupId>
+            <artifactId>jakarta.mail</artifactId>
+          </exclusion>
         </exclusions>
       </dependency>
       <dependency>
         <groupId>io.netty</groupId>
         <artifactId>netty-bom</artifactId>
         <version>${netty4.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+      <dependency>
+        <groupId>com.fasterxml.jackson</groupId>
+        <artifactId>jackson-bom</artifactId>
+        <version>${jackson.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -2032,11 +2034,6 @@
           <artifactId>maven-antrun-plugin</artifactId>
           <version>${maven.antrun.version}</version>
         </plugin>
-        <plugin>
-          <groupId>org.jamon</groupId>
-          <artifactId>jamon-maven-plugin</artifactId>
-          <version>${jamon.plugin.version}</version>
-        </plugin>
         <!-- Make a jar and put the sources in the jar.
         In the parent pom, so submodules will do the right thing. -->
         <plugin>
@@ -2118,6 +2115,14 @@
               <exclude>**/src/main/resources/hbase-webapps/static/*/bootstrap*</exclude>
               <!-- BSD 3-clause: Vega, Vega-Lite, Vega-Embed -->
               <exclude>**/hbase-webapps/static/js/vega*.min.js</exclude>
+              <!-- MIT: https://github.com/rubychan/coderay/blob/master/MIT-LICENSE -->
+              <exclude>**/public/old-book-static-files/coderay-asciidoctor.css</exclude>
+              <!-- MIT: Asciidoctor default stylesheet https://github.com/asciidoctor/asciidoctor/blob/HEAD/LICENSE -->
+              <exclude>**/public/old-book-static-files/hbase.css</exclude>
+              <!-- http://fontawesome.io/license (Font: SIL OFL 1.1, CSS: MIT License -->
+              <exclude>**/public/old-book-static-files/font-awesome.css</exclude>
+              <!-- Website SEO metadata file cannot carry an ASF license header. -->
+              <exclude>**/public/robots.txt</exclude>
               <!-- vector graphics -->
               <exclude>**/*.vm</exclude>
               <!-- apache doxia generated -->
@@ -2131,7 +2136,6 @@
               <exclude>.svn/**</exclude>
               <exclude>**/.settings/**</exclude>
               <exclude>**/patchprocess/**</exclude>
-              <exclude>src/site/resources/repo/**</exclude>
               <exclude>**/dependency-reduced-pom.xml</exclude>
               <exclude>**/rat.txt</exclude>
               <!-- exclude the shaded protobuf files -->
@@ -2140,6 +2144,10 @@
               <exclude>**/vote.tmpl</exclude>
               <!-- gzipped list of S3N URIs for hbase-it -->
               <exclude>**/CC-MAIN-2021-10-warc.paths.gz</exclude>
+              <!-- Cannot add ASF licence to JSON files as JSON files cannot have comments in them. -->
+              <exclude>**/*.json</exclude>
+              <!-- MDX documentation pages -->
+              <exclude>**/*.mdx</exclude>
             </excludes>
           </configuration>
         </plugin>
@@ -2400,7 +2408,7 @@
   HBase requires at least version ${maven.min.version} of Maven to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: https://hbase.apache.org/book.html#build</message>
+  See the documentation for more information: https://hbase.apache.org/docs/building-and-developing/building</message>
                 </requireMavenVersion>
                 <!-- The earliest JVM version we verify builds for via ASF Jenkins -->
                 <requireJavaVersion>
@@ -2409,7 +2417,7 @@
   HBase requires at least version ${java.min.version} of the JDK to properly build from source.
   You appear to be using an older version. You can use either "mvn -version" or
   "mvn enforcer:display-info" to verify what version is active.
-  See the reference guide on building for more information: https://hbase.apache.org/book.html#build</message>
+  See the documentation for more information: https://hbase.apache.org/docs/building-and-developing/building</message>
                 </requireJavaVersion>
                 <bannedDependencies>
                   <excludes>
@@ -2463,8 +2471,7 @@
                   <excludes>
                     <exclude>commons-logging:commons-logging</exclude>
                   </excludes>
-                  <message>We don't use commons-logging any more, so do not depend on it directly.</message>
-                  <searchTransitive>false</searchTransitive>
+                  <message>We don't use commons-logging any more, so do not depend on it directly. We are also using jcl-over-slf4j for libraries so exclude any transitive commons-logging dependencies.</message>
                 </bannedDependencies>
               </rules>
             </configuration>
@@ -2559,6 +2566,61 @@
             </configuration>
           </execution>
           <execution>
+            <id>banned-junit4</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>junit:junit</exclude>
+                    <exclude>org.junit.vintage:*</exclude>
+                  </excludes>
+                  <message>Use junit5 instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-hamcrest-core-and-library</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.hamcrest:hamcrest-core</exclude>
+                    <exclude>org.hamcrest:hamcrest-library</exclude>
+                  </excludes>
+                  <message>Use org.hamcrest:hamcrest instead</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
+            <id>banned-libthrift</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <configuration>
+              <rules>
+                <bannedDependencies>
+                  <excludes>
+                    <exclude>org.apache.thrift:*</exclude>
+                  </excludes>
+                  <message>Do not depend on upstream libthrift. Use the shaded
+                    org.apache.hbase.thirdparty:hbase-shaded-thrift artifact instead, see
+                    HBASE-30194 / HBASE-30195.</message>
+                  <searchTransitive>true</searchTransitive>
+                </bannedDependencies>
+              </rules>
+            </configuration>
+          </execution>
+          <execution>
             <id>check-aggregate-license</id>
             <goals>
               <goal>enforce</goal>
@@ -2630,6 +2692,7 @@
                     <bannedImport>org.apache.commons.collections.**</bannedImport>
                     <bannedImport>org.apache.commons.collections4.**</bannedImport>
                     <bannedImport>org.apache.hadoop.thirdparty.**</bannedImport>
+                    <bannedImport>org.apache.thrift.**</bannedImport>
                   </bannedImports>
                 </restrictImports>
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
@@ -2728,10 +2791,17 @@
                 <restrictImports implementation="de.skuzzle.enforcer.restrictimports.rule.RestrictImports">
                   <includeTestCode>true</includeTestCode>
                   <commentLineBufferSize>512</commentLineBufferSize>
-                  <reason>Use junit4 instead</reason>
+                  <reason>Use junit5 instead</reason>
                   <bannedImports>
                     <bannedImport>junit.framework.**</bannedImport>
+                    <bannedImport>org.junit.**</bannedImport>
+                    <bannedImport>static org.junit.Assert.**</bannedImport>
+                    <bannedImport>static org.junit.Assume.**</bannedImport>
                   </bannedImports>
+                  <allowedImports>
+                    <allowedImport>org.junit.jupiter.**</allowedImport>
+                    <allowedImport>org.junit.platform.**</allowedImport>
+                  </allowedImports>
                 </restrictImports>
               </rules>
             </configuration>
@@ -2742,129 +2812,6 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-source-plugin</artifactId>
-      </plugin>
-      <!-- parent-module only plugins -->
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>xml-maven-plugin</artifactId>
-        <version>${xml.maven.version}</version>
-        <inherited>false</inherited>
-        <configuration>
-          <transformationSets>
-            <!-- For asciidoc -->
-            <transformationSet>
-              <!--Reaching up and over into common sub-module for hbase-default.xml-->
-              <dir>${basedir}/hbase-common/src/main/resources/</dir>
-              <includes>
-                <include>hbase-default.xml</include>
-              </includes>
-              <stylesheet>${basedir}/src/main/xslt/configuration_to_asciidoc_chapter.xsl</stylesheet>
-              <fileMappers>
-                <fileMapper implementation="org.codehaus.plexus.components.io.filemappers.RegExpFileMapper">
-                  <pattern>^(.*)\.xml$</pattern>
-                  <replacement>$1.adoc</replacement>
-                </fileMapper>
-              </fileMappers>
-              <outputDir>${basedir}/target/asciidoc</outputDir>
-            </transformationSet>
-          </transformationSets>
-        </configuration>
-        <executions>
-          <execution>
-            <!-- Run the hbase-default.xml through a stylesheet so can show it in doc-->
-            <goals>
-              <goal>transform</goal>
-            </goals>
-            <phase>site</phase>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-dependency-plugin</artifactId>
-        <executions>
-          <execution>
-            <!-- Required for the RefGuide (book.html) to use local resources (e.g. not from CDN). -->
-            <id>unpack-RefGuide-resources</id>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>font-awesome</artifactId>
-                  <version>4.7.0</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/css/font-awesome.css,
-                    **/fonts/fontawesome-webfont.eot,
-                    **/fonts/fontawesome-webfont.svg,
-                    **/fonts/fontawesome-webfont.ttf,
-                    **/fonts/fontawesome-webfont.woff,
-                    **/fonts/fontawesome-webfont.woff2,</includes>
-                </artifactItem>
-                <artifactItem>
-                  <groupId>org.webjars</groupId>
-                  <artifactId>MathJax</artifactId>
-                  <version>2.7.0</version>
-                  <type>jar</type>
-                  <overWrite>true</overWrite>
-                  <includes>**/MathJax.js,
-                    **/config/TeX-MML-AM_HTMLorMML.js,
-                    **/jax/output/HTML-CSS/jax.js,
-                    **/jax/output/HTML-CSS/imageFonts.js,
-                    **/jax/output/HTML-CSS/fonts/TeX/fontdata.js,
-                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js,
-                    **/jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js,
-                    **/extensions/MathMenu.js,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Regular.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Main-Italic.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Math-Italic.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size1-Regular.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_Size3-Regular.woff,
-                    **/fonts/HTML-CSS/TeX/woff/MathJax_SansSerif-Italic.woff,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Regular.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Main-Italic.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Math-Italic.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size1-Regular.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_Size3-Regular.otf,
-                    **/fonts/HTML-CSS/TeX/otf/MathJax_SansSerif-Italic.otf,</includes>
-                </artifactItem>
-              </artifactItems>
-              <outputDirectory>${project.build.directory}</outputDirectory>
-            </configuration>
-          </execution>
-          <execution>
-            <!-- Required for the site to use local resources (e.g. not from CDN). -->
-            <id>unpack-site-resources</id>
-            <goals>
-              <goal>unpack</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <artifactItems>
-                <artifactItem>
-                  <groupId>io.github.devacfr.maven.skins</groupId>
-                  <artifactId>reflow-default-webdeps</artifactId>
-                  <version>${reflow-maven-skin.version}</version>
-                  <type>jar</type>
-                  <overWrite>false</overWrite>
-                  <includes>**/css/bootstrap.min.css,
-                    **/css/themes/litera/bootstrap.min.css,
-                    **/css/fontawesome/*,
-                    **/css/fontawesome/webfonts/*,
-                    **/js/*.js,
-                    **/js/languages/*,
-                    **/js/styles/github.min.css,
-                    **/js/styles/default.min.css</includes>
-                </artifactItem>
-              </artifactItems>
-              <outputDirectory>${project.build.directory}/site</outputDirectory>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <!-- Special configuration for spotbugs just in the parent so
       the filter file location can be more general (see definition in pluginManagement) -->
@@ -2892,188 +2839,9 @@
         <artifactId>maven-site-plugin</artifactId>
         <version>${maven-site.version}</version>
         <configuration>
-          <siteDirectory>${basedir}/src/site</siteDirectory>
           <inputEncoding>UTF-8</inputEncoding>
           <outputEncoding>UTF-8</outputEncoding>
         </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>io.github.devacfr.maven.skins</groupId>
-            <artifactId>reflow-velocity-tools</artifactId>
-            <version>${reflow-maven-skin.version}</version>
-          </dependency>
-          <dependency>
-            <!-- add support for ssh/scp -->
-            <groupId>org.apache.maven.wagon</groupId>
-            <artifactId>wagon-ssh</artifactId>
-            <version>${wagon.ssh.version}</version>
-          </dependency>
-        </dependencies>
-      </plugin>
-      <!-- For AsciiDoc docs building -->
-      <plugin>
-        <groupId>org.asciidoctor</groupId>
-        <artifactId>asciidoctor-maven-plugin</artifactId>
-        <version>${asciidoctor.plugin.version}</version>
-        <inherited>false</inherited>
-        <configuration>
-          <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-          <doctype>book</doctype>
-          <attributes>
-            <docVersion>${project.version}</docVersion>
-            <imagesdir>images</imagesdir>
-            <source-highlighter>coderay</source-highlighter>
-            <iconfont-remote>false</iconfont-remote>
-            <stylesdir>css</stylesdir>
-          </attributes>
-        </configuration>
-        <dependencies>
-          <dependency>
-            <groupId>org.asciidoctor</groupId>
-            <artifactId>asciidoctorj-pdf</artifactId>
-            <version>${asciidoctorj.pdf.version}</version>
-          </dependency>
-        </dependencies>
-        <executions>
-          <execution>
-            <id>output-html</id>
-            <goals>
-              <goal>process-asciidoc</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <attributes>
-                <stylesheet>hbase.css</stylesheet>
-              </attributes>
-              <backend>html5</backend>
-            </configuration>
-          </execution>
-          <execution>
-            <id>output-pdf</id>
-            <goals>
-              <goal>process-asciidoc</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <backend>pdf</backend>
-              <attributes>
-                <pagenums/>
-                <toc/>
-                <idprefix/>
-                <idseparator>-</idseparator>
-              </attributes>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-resources-plugin</artifactId>
-        <!--$NO-MVN-MAN-VER$ -->
-        <inherited>false</inherited>
-        <configuration>
-          <escapeString>\</escapeString>
-        </configuration>
-        <executions>
-          <execution>
-            <id>copy-htaccess</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/src/site/resources/</directory>
-                  <includes>
-                    <include>.htaccess</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-          <!-- needed to make the redirect above work -->
-          <execution>
-            <id>copy-empty-book-dir</id>
-            <goals>
-              <goal>copy-resources</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <outputDirectory>${project.reporting.outputDirectory}/</outputDirectory>
-              <resources>
-                <resource>
-                  <directory>${basedir}/src/site/resources/</directory>
-                  <includes>
-                    <include>book/**</include>
-                  </includes>
-                </resource>
-              </resources>
-            </configuration>
-          </execution>
-        </executions>
-      </plugin>
-      <plugin>
-        <groupId>org.apache.maven.plugins</groupId>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>${maven.antrun.version}</version>
-        <inherited>false</inherited>
-        <executions>
-          <execution>
-            <!-- Rename the book.pdf generated by asciidoctor -->
-            <id>rename-pdf</id>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <phase>site</phase>
-            <configuration>
-              <target name="rename file">
-                <move file="${project.reporting.outputDirectory}/book.pdf" tofile="${project.reporting.outputDirectory}/apache_hbase_reference_guide.pdf"/>
-              </target>
-            </configuration>
-          </execution>
-          <execution>
-            <!-- Copy static CSS and JS files for the RefGuide (book.html). -->
-            <id>copy-css-js-for-RefGuide</id>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <phase>pre-site</phase>
-            <configuration>
-              <target>
-                <copy flatten="true" todir="${project.build.directory}/site/css">
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/css">
-                    <include name="font-awesome.css"/>
-                  </fileset>
-                </copy>
-                <copy flatten="true" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
-                    <include name="MathJax.js"/>
-                  </fileset>
-                </copy>
-                <copy flatten="false" todir="${project.build.directory}/site/js">
-                  <fileset dir="${webjars-dir}/MathJax/2.7.0">
-                    <include name="config/TeX-MML-AM_HTMLorMML.js"/>
-                    <include name="jax/output/HTML-CSS/jax.js"/>
-                    <include name="jax/output/HTML-CSS/imageFonts.js"/>
-                    <include name="jax/output/HTML-CSS/fonts/TeX/fontdata.js"/>
-                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/Main.js"/>
-                    <include name="jax/output/HTML-CSS/fonts/TeX/SansSerif/Italic/BasicLatin.js"/>
-                    <include name="extensions/MathMenu.js"/>
-                    <include name="fonts/HTML-CSS/TeX/woff/MathJax_*.woff"/>
-                    <include name="fonts/HTML-CSS/TeX/otf/MathJax_*.otf"/>
-                  </fileset>
-                </copy>
-                <copy flatten="true" todir="${project.build.directory}/site/fonts">
-                  <fileset dir="${webjars-dir}/font-awesome/4.7.0/fonts">
-                    <include name="fontawesome-webfont.*"/>
-                  </fileset>
-                </copy>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
@@ -3193,6 +2961,10 @@
                 <exclude>**/target/**</exclude>
                 <exclude>**/dependency-reduced-pom.xml</exclude>
                 <exclude>**/.idea/**</exclude>
+                <exclude>**/node_modules/**</exclude>
+                <exclude>**/hbase-default.md</exclude>
+                <exclude>**/playwright-report/**</exclude>
+                <exclude>**/test-results/**</exclude>
               </excludes>
               <!-- define the steps to apply to those files -->
               <trimTrailingWhitespace/>
@@ -3224,6 +2996,7 @@
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCOutputFormat.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCRecord.java</exclude>
                 <exclude>src/test/java/org/apache/hadoop/hbase/test/util/warc/WARCWritable.java</exclude>
+                <exclude>**/node_modules/**</exclude>
               </excludes>
               <licenseHeader>
                 <file>${session.executionRootDirectory}/dev-support/license-header</file>
@@ -3325,7 +3098,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3333,6 +3106,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3376,7 +3154,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3384,6 +3162,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3435,7 +3218,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3443,6 +3226,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3493,7 +3281,7 @@
                 </additionalDependency>
                 <additionalDependency>
                   <groupId>org.hamcrest</groupId>
-                  <artifactId>hamcrest-core</artifactId>
+                  <artifactId>hamcrest</artifactId>
                   <version>${hamcrest.version}</version>
                 </additionalDependency>
                 <!-- javadoc tooling requires jsr305 due to references to it from things we rely on -->
@@ -3501,6 +3289,11 @@
                   <groupId>com.google.code.findbugs</groupId>
                   <artifactId>jsr305</artifactId>
                   <version>3.0.2</version>
+                </additionalDependency>
+                <additionalDependency>
+                  <groupId>org.osgi</groupId>
+                  <artifactId>osgi.annotation</artifactId>
+                  <version>8.1.0</version>
                 </additionalDependency>
               </additionalDependencies>
               <inherited>false</inherited>
@@ -3557,10 +3350,6 @@
         <argLine>${hbase-surefire.jdk17.flags}
           ${hbase-surefire.argLine}
           @{jacocoArgLine}</argLine>
-        <!--
-          Value to use for surefire when running jdk11.
-          TODO: replicate logic for windows
-        -->
         <surefire.Xmx>2200m</surefire.Xmx>
       </properties>
       <build>
@@ -3719,7 +3508,7 @@
       </activation>
       <properties>
         <build.platform>cygwin</build.platform>
-        <argLine>${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
+        <argLine>${hbase-surefire.jdk17.flags} ${hbase-surefire.cygwin-argLine} @{jacocoArgLine}</argLine>
       </properties>
     </profile>
     <!-- this profile should match the name of the release profile in the root asf pom -->
@@ -3734,7 +3523,7 @@
           <plugin>
             <groupId>org.sonatype.plugins</groupId>
             <artifactId>nexus-staging-maven-plugin</artifactId>
-            <version>1.6.8</version>
+            <version>${nexus-staging.version}</version>
             <extensions>true</extensions>
             <configuration>
               <nexusUrl>https://repository.apache.org/</nexusUrl>
@@ -4048,6 +3837,10 @@
                 <groupId>org.openlabtesting.leveldbjni</groupId>
                 <artifactId>leveldbjni-all</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4100,6 +3893,10 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4204,6 +4001,10 @@
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
               <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk15on</artifactId>
               </exclusion>
@@ -4263,6 +4064,10 @@
               <exclusion>
                 <groupId>javax.ws.rs</groupId>
                 <artifactId>jsr311-api</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
               </exclusion>
               <exclusion>
                 <groupId>org.bouncycastle</groupId>
@@ -4345,6 +4150,10 @@
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcpkix-jdk15on</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>commons-logging</groupId>
+                <artifactId>commons-logging</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <!--
@@ -4388,6 +4197,10 @@
               <exclusion>
                 <groupId>org.jline</groupId>
                 <artifactId>jline</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>junit</groupId>
+                <artifactId>junit</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4460,6 +4273,91 @@
         <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
         <surefire.secondPartGroups/>
       </properties>
+    </profile>
+    <profile>
+      <!--
+        Wave profiles for partitioning Large tests across parallel CI jobs.
+        Tests are split alphabetically by class name (after "Test" prefix):
+          Wave 1: Test[A-H]* classes
+          Wave 2: Test[I-R]* classes
+          Wave 3: Test[S-Z]* classes
+
+        Flaky test exclusion is handled separately via -Dtest.exclude.pattern
+        which is set by hbase-personality.sh from EXCLUDE_TESTS_URL.
+      -->
+      <id>runLargeTests-wave1</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[a-h].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave2</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[i-r].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>runLargeTests-wave3</id>
+      <activation>
+        <activeByDefault>false</activeByDefault>
+      </activation>
+      <properties>
+        <surefire.skipFirstPart>false</surefire.skipFirstPart>
+        <surefire.skipSecondPart>true</surefire.skipSecondPart>
+        <surefire.firstPartGroups>org.apache.hadoop.hbase.testclassification.LargeTests</surefire.firstPartGroups>
+        <surefire.secondPartGroups/>
+      </properties>
+      <build>
+        <plugins>
+          <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-surefire-plugin</artifactId>
+            <configuration>
+              <includes>
+                <include>%regex[(?i).*/test[s-z].*]</include>
+              </includes>
+            </configuration>
+          </plugin>
+        </plugins>
+      </build>
     </profile>
     <profile>
       <!-- Use it to launch small & medium tests -->
@@ -4889,6 +4787,11 @@
           <name>m2e.version</name>
         </property>
       </activation>
+      <properties>
+        <!-- Keeps test-scope deps on the main classpath in Eclipse so test
+             sources can resolve sibling *-tests.jar artifacts without errors. -->
+        <m2e.disableTestClasspathFlag>true</m2e.disableTestClasspathFlag>
+      </properties>
       <build>
         <pluginManagement>
           <plugins>

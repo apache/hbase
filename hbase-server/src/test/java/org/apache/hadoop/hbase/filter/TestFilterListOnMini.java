@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import org.apache.hadoop.hbase.CompareOperator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Put;
@@ -30,14 +31,11 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -45,32 +43,26 @@ import org.slf4j.LoggerFactory;
  * Tests filter Lists in ways that rely on a MiniCluster. Where possible, favor tests in
  * TestFilterList and TestFilterFromRegionSide instead.
  */
-@Category({ MediumTests.class, FilterTests.class })
+@Tag(MediumTests.TAG)
+@Tag(FilterTests.TAG)
 public class TestFilterListOnMini {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterListOnMini.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestFilterListOnMini.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
   @Test
-  public void testFiltersWithOR() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+  public void testFiltersWithOR(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Table table = TEST_UTIL.createTable(tn, new String[] { "cf1", "cf2" });
     byte[] CF1 = Bytes.toBytes("cf1");
     byte[] CF2 = Bytes.toBytes("cf2");
@@ -90,7 +82,7 @@ public class TestFilterListOnMini {
     ResultScanner scanner = table.getScanner(scan);
     LOG.info("Filter list: " + filterList);
     for (Result rr = scanner.next(); rr != null; rr = scanner.next()) {
-      Assert.assertEquals(2, rr.size());
+      assertEquals(2, rr.size());
     }
   }
 
@@ -98,8 +90,8 @@ public class TestFilterListOnMini {
    * Test case for HBASE-21620
    */
   @Test
-  public void testColumnPrefixFilterConcatWithOR() throws Exception {
-    TableName tn = TableName.valueOf(name.getMethodName());
+  public void testColumnPrefixFilterConcatWithOR(TestInfo testInfo) throws Exception {
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[] cf1 = Bytes.toBytes("f1");
     byte[] row = Bytes.toBytes("row");
     byte[] value = Bytes.toBytes("value");
@@ -127,7 +119,7 @@ public class TestFilterListOnMini {
       cellCount += result.listCells().size();
       resultCount++;
     }
-    Assert.assertEquals(resultCount, 1);
-    Assert.assertEquals(cellCount, 4);
+    assertEquals(resultCount, 1);
+    assertEquals(cellCount, 4);
   }
 }

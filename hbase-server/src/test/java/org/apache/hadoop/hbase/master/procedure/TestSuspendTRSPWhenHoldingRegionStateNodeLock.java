@@ -19,10 +19,9 @@ package org.apache.hadoop.hbase.master.procedure;
 
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.everyItem;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
@@ -39,23 +38,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.hamcrest.BaseMatcher;
 import org.hamcrest.Description;
 import org.hamcrest.Matcher;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * Testcase for HBASE-28240.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSuspendTRSPWhenHoldingRegionStateNodeLock {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSuspendTRSPWhenHoldingRegionStateNodeLock.class);
 
   private static final HBaseTestingUtil HBTU = new HBaseTestingUtil();
 
@@ -63,7 +58,7 @@ public class TestSuspendTRSPWhenHoldingRegionStateNodeLock {
 
   private static byte[] FAMILY = Bytes.toBytes("family");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     HBTU.startMiniCluster(2);
     HBTU.createTable(TABLE_NAME, FAMILY);
@@ -72,7 +67,7 @@ public class TestSuspendTRSPWhenHoldingRegionStateNodeLock {
     HBTU.waitUntilNoRegionsInTransition();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     HBTU.shutdownMiniCluster();
   }

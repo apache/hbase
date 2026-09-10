@@ -318,8 +318,8 @@ public class ReplicationSource implements ReplicationSourceInterface {
     if (server instanceof HRegionServer) {
       tableDescriptors = ((HRegionServer) server).getTableDescriptors();
     }
-    replicationEndpoint
-      .init(new ReplicationEndpoint.Context(server, conf, replicationPeer.getConfiguration(), fs,
+    replicationEndpoint.init(
+      new ReplicationEndpoint.Context(this, server, conf, replicationPeer.getConfiguration(), fs,
         replicationPeer.getId(), clusterId, replicationPeer, metrics, tableDescriptors, server));
     replicationEndpoint.start();
     replicationEndpoint.awaitRunning(waitOnEndpointSeconds, TimeUnit.SECONDS);
@@ -861,5 +861,20 @@ public class ReplicationSource implements ReplicationSourceInterface {
   // Visible for testing purpose
   public long getTotalReplicatedEdits() {
     return totalReplicatedEdits.get();
+  }
+
+  long getSleepForRetries() {
+    return sleepForRetries;
+  }
+
+  void restartShipper(String walGroupId, ReplicationSourceShipper oldWorker) {
+    boolean removed = workerThreads.remove(walGroupId, oldWorker);
+    if (!removed) {
+      // Worker was already replaced (e.g. concurrent restart)
+      LOG.debug("Skip restart for walGroupId={} as worker already replaced", walGroupId);
+      return;
+    }
+
+    tryStartNewShipper(walGroupId);
   }
 }

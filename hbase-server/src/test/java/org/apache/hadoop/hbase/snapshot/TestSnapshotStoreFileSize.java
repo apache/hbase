@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.snapshot;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import java.util.Collection;
 import java.util.HashMap;
@@ -27,7 +29,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
@@ -43,12 +44,10 @@ import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFac
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
@@ -56,12 +55,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.Snapshot
 /**
  * Validate if storefile length match both snapshop manifest and filesystem.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestSnapshotStoreFileSize {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotStoreFileSize.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
   private static final TableName TABLE_NAME = TableName.valueOf("t1");
@@ -71,14 +67,14 @@ public class TestSnapshotStoreFileSize {
   private Admin admin;
   private FileSystem fs;
 
-  @BeforeClass
+  @BeforeAll
   public static void setup() throws Exception {
     conf = UTIL.getConfiguration();
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void teardown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -128,6 +124,6 @@ public class TestSnapshotStoreFileSize {
         storeFileInfoFromFS.put(storeFileName, storeFilesize);
       }
     }
-    Assert.assertEquals(storeFileInfoFromManifest, storeFileInfoFromFS);
+    assertEquals(storeFileInfoFromManifest, storeFileInfoFromFS);
   }
 }

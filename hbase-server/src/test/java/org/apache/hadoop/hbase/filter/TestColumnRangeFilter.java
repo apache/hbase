@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,7 +28,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueTestUtil;
@@ -43,140 +42,49 @@ import org.apache.hadoop.hbase.filter.FilterList.Operator;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-class StringRange {
-  private String start = null;
-  private String end = null;
-  private boolean startInclusive = true;
-  private boolean endInclusive = false;
-
-  public StringRange(String start, boolean startInclusive, String end, boolean endInclusive) {
-    this.start = start;
-    this.startInclusive = startInclusive;
-    this.end = end;
-    this.endInclusive = endInclusive;
-  }
-
-  public String getStart() {
-    return this.start;
-  }
-
-  public String getEnd() {
-    return this.end;
-  }
-
-  public boolean isStartInclusive() {
-    return this.startInclusive;
-  }
-
-  public boolean isEndInclusive() {
-    return this.endInclusive;
-  }
-
-  @Override
-  public int hashCode() {
-    int hashCode = 0;
-    if (this.start != null) {
-      hashCode ^= this.start.hashCode();
-    }
-
-    if (this.end != null) {
-      hashCode ^= this.end.hashCode();
-    }
-    return hashCode;
-  }
-
-  @Override
-  public boolean equals(Object obj) {
-    if (this == obj) {
-      return true;
-    }
-    if (obj == null) {
-      return false;
-    }
-    if (!(obj instanceof StringRange)) {
-      return false;
-    }
-    StringRange oth = (StringRange) obj;
-    return this.startInclusive == oth.startInclusive && this.endInclusive == oth.endInclusive
-      && Objects.equals(this.start, oth.start) && Objects.equals(this.end, oth.end);
-  }
-
-  @Override
-  public String toString() {
-    String result = (this.startInclusive ? "[" : "(") + (this.start == null ? null : this.start)
-      + ", " + (this.end == null ? null : this.end) + (this.endInclusive ? "]" : ")");
-    return result;
-  }
-
-  public boolean inRange(String value) {
-    boolean afterStart = true;
-    if (this.start != null) {
-      int startCmp = value.compareTo(this.start);
-      afterStart = this.startInclusive ? startCmp >= 0 : startCmp > 0;
-    }
-
-    boolean beforeEnd = true;
-    if (this.end != null) {
-      int endCmp = value.compareTo(this.end);
-      beforeEnd = this.endInclusive ? endCmp <= 0 : endCmp < 0;
-    }
-
-    return afterStart && beforeEnd;
-  }
-
-}
-
-@Category({ FilterTests.class, MediumTests.class })
+@Tag(FilterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestColumnRangeFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestColumnRangeFilter.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestColumnRangeFilter.class);
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     // Nothing to do.
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Nothing to do.
   }
 
   @Test
-  public void TestColumnRangeFilterClient() throws Exception {
+  public void TestColumnRangeFilterClient(TestInfo testInfo) throws Exception {
     String family = "Family";
-    Table ht = TEST_UTIL.createTable(TableName.valueOf(name.getMethodName()), Bytes.toBytes(family),
-      Integer.MAX_VALUE);
+    Table ht = TEST_UTIL.createTable(TableName.valueOf(testInfo.getTestMethod().get().getName()),
+      Bytes.toBytes(family), Integer.MAX_VALUE);
 
     List<String> rows = generateRandomWords(10, 8);
     long maxTimestamp = 2;
@@ -295,4 +203,86 @@ public class TestColumnRangeFilter {
     return wordList;
   }
 
+}
+
+class StringRange {
+  private String start = null;
+  private String end = null;
+  private boolean startInclusive = true;
+  private boolean endInclusive = false;
+
+  public StringRange(String start, boolean startInclusive, String end, boolean endInclusive) {
+    this.start = start;
+    this.startInclusive = startInclusive;
+    this.end = end;
+    this.endInclusive = endInclusive;
+  }
+
+  public String getStart() {
+    return this.start;
+  }
+
+  public String getEnd() {
+    return this.end;
+  }
+
+  public boolean isStartInclusive() {
+    return this.startInclusive;
+  }
+
+  public boolean isEndInclusive() {
+    return this.endInclusive;
+  }
+
+  @Override
+  public int hashCode() {
+    int hashCode = 0;
+    if (this.start != null) {
+      hashCode ^= this.start.hashCode();
+    }
+
+    if (this.end != null) {
+      hashCode ^= this.end.hashCode();
+    }
+    return hashCode;
+  }
+
+  @Override
+  public boolean equals(Object obj) {
+    if (this == obj) {
+      return true;
+    }
+    if (obj == null) {
+      return false;
+    }
+    if (!(obj instanceof StringRange)) {
+      return false;
+    }
+    StringRange oth = (StringRange) obj;
+    return this.startInclusive == oth.startInclusive && this.endInclusive == oth.endInclusive
+      && Objects.equals(this.start, oth.start) && Objects.equals(this.end, oth.end);
+  }
+
+  @Override
+  public String toString() {
+    String result = (this.startInclusive ? "[" : "(") + (this.start == null ? null : this.start)
+      + ", " + (this.end == null ? null : this.end) + (this.endInclusive ? "]" : ")");
+    return result;
+  }
+
+  public boolean inRange(String value) {
+    boolean afterStart = true;
+    if (this.start != null) {
+      int startCmp = value.compareTo(this.start);
+      afterStart = this.startInclusive ? startCmp >= 0 : startCmp > 0;
+    }
+
+    boolean beforeEnd = true;
+    if (this.end != null) {
+      int endCmp = value.compareTo(this.end);
+      beforeEnd = this.endInclusive ? endCmp <= 0 : endCmp < 0;
+    }
+
+    return afterStart && beforeEnd;
+  }
 }

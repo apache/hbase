@@ -512,6 +512,17 @@ class AdminOverAsyncAdmin implements Admin {
   }
 
   @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException {
+    return admin.reopenTableRegions(tableName).toCompletableFuture();
+  }
+
+  @Override
+  public Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    return admin.reopenTableRegions(tableName, regions).toCompletableFuture();
+  }
+
+  @Override
   public Future<Void> modifyTableStoreFileTrackerAsync(TableName tableName, String dstSFT)
     throws IOException {
     return admin.modifyTableStoreFileTracker(tableName, dstSFT);
@@ -1140,6 +1151,26 @@ class AdminOverAsyncAdmin implements Admin {
   @Override
   public List<String> getCachedFilesList(ServerName serverName) throws IOException {
     return get(admin.getCachedFilesList(serverName));
+  }
+
+  @Override
+  public long refreshMeta() throws IOException {
+    return get(admin.refreshMeta());
+  }
+
+  @Override
+  public long refreshHFiles(final TableName tableName) throws IOException {
+    return get(admin.refreshHFiles(tableName));
+  }
+
+  @Override
+  public long refreshHFiles(final String namespace) throws IOException {
+    return get(admin.refreshHFiles(namespace));
+  }
+
+  @Override
+  public long refreshHFiles() throws IOException {
+    return get(admin.refreshHFiles());
   }
 
   @Override

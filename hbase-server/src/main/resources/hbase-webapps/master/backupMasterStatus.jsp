@@ -20,14 +20,12 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
          import="org.apache.hadoop.hbase.ServerName"
-         import="org.apache.hadoop.hbase.master.HMaster"
-         import="org.apache.hbase.thirdparty.com.google.common.base.Preconditions" %>
+         import="org.apache.hadoop.hbase.master.HMaster" %>
 <%
   HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   if (!master.isActiveMaster()) {
 
   ServerName active_master = master.getActiveMaster().orElse(null);
-  Preconditions.checkState(active_master != null, "Failed to retrieve active master's ServerName!");
   int activeInfoPort = master.getActiveMasterInfoPort();
 %>
   <div class="row inner_header">
@@ -35,8 +33,16 @@
       <h1>Backup Master <small><%= master.getServerName().getHostname() %></small></h1>
     </div>
   </div>
+  <% if (active_master != null) { %>
   <h4>Current Active Master: <a href="//<%= active_master.getHostname() %>:<%= activeInfoPort %>/master.jsp"
                               target="_blank"><%= active_master.getHostname() %></a></h4>
+  <% } else { %>
+  <div id="initializing-info">
+    <h4>Cluster is starting, active master not yet elected</h4>
+    <p>No active master has been found. This is normal during cluster startup or master failover. 
+      Please refresh manually in a few seconds.</p>
+  </div>
+  <% } %>
   <% } else { %>
    <h2>Backup Masters</h2>
 

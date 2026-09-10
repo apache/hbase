@@ -179,6 +179,7 @@
       <plugin>
         <groupId>org.codehaus.mojo</groupId>
         <artifactId>xml-maven-plugin</artifactId>
+        <version>${xml.maven.version}</version>
         <executions>
           <!-- xml-maven-plugin modifies each exemplar project's pom.xml file to convert to standalone project. -->
           <execution>

@@ -28,25 +28,19 @@ import static org.mockito.Mockito.when;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Function;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.hbtop.screen.ScreenView;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InOrder;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category(SmallTests.class)
-@RunWith(MockitoJUnitRunner.class)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestInputModeScreenPresenter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInputModeScreenPresenter.class);
 
   private static final String TEST_INPUT_MESSAGE = "test input message";
 
@@ -61,7 +55,7 @@ public class TestInputModeScreenPresenter {
 
   private InputModeScreenPresenter inputModeScreenPresenter;
 
-  @Before
+  @BeforeEach
   public void setup() {
     List<String> histories = new ArrayList<>();
     histories.add("history1");

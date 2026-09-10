@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.quotas.policies;
 
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
@@ -25,7 +26,6 @@ import java.util.List;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.SpaceLimitingException;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
@@ -33,24 +33,19 @@ import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.quotas.SpaceViolationPolicyEnforcement;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestBulkLoadCheckingViolationPolicyEnforcement {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestBulkLoadCheckingViolationPolicyEnforcement.class);
 
   FileSystem fs;
   RegionServerServices rss;
   TableName tableName;
   SpaceViolationPolicyEnforcement policy;
 
-  @Before
+  @BeforeEach
   public void setup() {
     fs = mock(FileSystem.class);
     rss = mock(RegionServerServices.class);
@@ -82,7 +77,7 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     policy.computeBulkLoadSize(fs, paths);
   }
 
-  @Test(expected = IllegalArgumentException.class)
+  @Test
   public void testFileIsNotAFile() throws Exception {
     final List<String> paths = new ArrayList<>();
     String path = "/1";
@@ -99,10 +94,10 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
     policy.initialize(rss, tableName, snapshot);
 
     // If the file to bulk load isn't a file, this should throw an exception
-    policy.computeBulkLoadSize(fs, paths);
+    assertThrows(IllegalArgumentException.class, () -> policy.computeBulkLoadSize(fs, paths));
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testOneFileInBatchOverLimit() throws Exception {
     final List<String> paths = new ArrayList<>();
     final List<FileStatus> statuses = new ArrayList<>();
@@ -123,10 +118,10 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
 
     policy.initialize(rss, tableName, snapshot);
 
-    policy.computeBulkLoadSize(fs, paths);
+    assertThrows(SpaceLimitingException.class, () -> policy.computeBulkLoadSize(fs, paths));
   }
 
-  @Test(expected = SpaceLimitingException.class)
+  @Test
   public void testSumOfFilesOverLimit() throws Exception {
     final List<String> paths = new ArrayList<>();
     final List<FileStatus> statuses = new ArrayList<>();
@@ -147,6 +142,6 @@ public class TestBulkLoadCheckingViolationPolicyEnforcement {
 
     policy.initialize(rss, tableName, snapshot);
 
-    policy.computeBulkLoadSize(fs, paths);
+    assertThrows(SpaceLimitingException.class, () -> policy.computeBulkLoadSize(fs, paths));
   }
 }

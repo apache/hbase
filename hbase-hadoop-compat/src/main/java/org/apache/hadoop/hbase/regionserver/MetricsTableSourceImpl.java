@@ -55,11 +55,8 @@ import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJ
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJOR_COMPACTION_OUTPUT_SIZE_DESC;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJOR_COMPACTION_TIME;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.MAJOR_COMPACTION_TIME_DESC;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_KEY;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_REQUEST_DESC;
 import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_REQUEST_KEY;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_DESC;
-import static org.apache.hadoop.hbase.regionserver.MetricsRegionServerSource.SPLIT_SUCCESS_KEY;
 
 import java.util.Map;
 import java.util.Map.Entry;
@@ -101,8 +98,6 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
 
   // split related metrics
   private MutableFastCounter splitRequest;
-  private MutableFastCounter splitSuccess;
-  private MetricHistogram splitTimeHisto;
 
   // flush related metrics
   private MetricHistogram flushTimeHisto;
@@ -186,9 +181,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     majorCompactedOutputBytes = registry.newCounter(tableNamePrefix + MAJOR_COMPACTED_OUTPUT_BYTES,
       MAJOR_COMPACTED_OUTPUT_BYTES_DESC, 0L);
 
-    splitTimeHisto = registry.newTimeHistogram(tableNamePrefix + SPLIT_KEY);
     splitRequest = registry.newCounter(tableNamePrefix + SPLIT_REQUEST_KEY, SPLIT_REQUEST_DESC, 0L);
-    splitSuccess = registry.newCounter(tableNamePrefix + SPLIT_SUCCESS_KEY, SPLIT_SUCCESS_DESC, 0L);
   }
 
   private void deregisterMetrics() {
@@ -211,9 +204,7 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
     registry.removeHistogramMetrics(tableNamePrefix + MAJOR_COMPACTION_OUTPUT_SIZE);
     registry.removeMetric(tableNamePrefix + MAJOR_COMPACTED_INPUT_BYTES);
     registry.removeMetric(tableNamePrefix + MAJOR_COMPACTED_OUTPUT_BYTES);
-    registry.removeHistogramMetrics(tableNamePrefix + SPLIT_KEY);
     registry.removeMetric(tableNamePrefix + SPLIT_REQUEST_KEY);
-    registry.removeMetric(tableNamePrefix + SPLIT_SUCCESS_KEY);
   }
 
   @Override
@@ -299,6 +290,14 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
             MetricsRegionServerSource.MEMSTORE_SIZE_DESC),
           tableWrapperAgg.getMemStoreSize(tableName.getNameAsString()));
         mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_HEAP_SIZE,
+            MetricsRegionServerSource.MEMSTORE_HEAP_SIZE_DESC),
+          tableWrapperAgg.getMemStoreHeapSize(tableName.getNameAsString()));
+        mrb.addGauge(
+          Interns.info(tableNamePrefix + MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE,
+            MetricsRegionServerSource.MEMSTORE_OFFHEAP_SIZE_DESC),
+          tableWrapperAgg.getMemStoreOffHeapSize(tableName.getNameAsString()));
+        mrb.addGauge(
           Interns.info(tableNamePrefix + MetricsRegionServerSource.STOREFILE_COUNT,
             MetricsRegionServerSource.STOREFILE_COUNT_DESC),
           tableWrapperAgg.getNumStoreFiles(tableName.getNameAsString()));
@@ -369,6 +368,8 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
           MetricsRegionSource.ROW_READS_ONLY_ON_MEMSTORE_DESC);
         addGauge(mrb, tableWrapperAgg.getMixedRowReadsCount(tableName.getNameAsString()),
           MetricsRegionSource.MIXED_ROW_READS, MetricsRegionSource.MIXED_ROW_READS_ON_STORE_DESC);
+        addGauge(mrb, tableWrapperAgg.getStoreFileSizePerStore(tableName.getNameAsString()),
+          MetricsRegionServerSource.STOREFILE_SIZE, MetricsRegionServerSource.STOREFILE_SIZE_DESC);
       }
     }
   }
@@ -418,16 +419,6 @@ public class MetricsTableSourceImpl implements MetricsTableSource {
   @Override
   public void incrSplitRequest() {
     splitRequest.incr();
-  }
-
-  @Override
-  public void incrSplitSuccess() {
-    splitSuccess.incr();
-  }
-
-  @Override
-  public void updateSplitTime(long t) {
-    splitTimeHisto.add(t);
   }
 
   @Override

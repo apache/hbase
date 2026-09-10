@@ -18,10 +18,12 @@
 package org.apache.hadoop.hbase.regionserver;
 
 import static org.hamcrest.CoreMatchers.containsString;
+import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.allOf;
 import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.is;
-import static org.junit.Assert.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.StringWriter;
@@ -31,7 +33,6 @@ import java.util.concurrent.ScheduledThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
@@ -49,22 +50,17 @@ import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.zookeeper.KeeperException;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
 public class TestRegionServerReportForDuty {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionServerReportForDuty.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionServerReportForDuty.class);
 
@@ -77,7 +73,7 @@ public class TestRegionServerReportForDuty {
   private MasterThread master;
   private MasterThread backupMaster;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     testUtil = new HBaseTestingUtil();
     testUtil.startMiniDFSCluster(1);
@@ -86,7 +82,7 @@ public class TestRegionServerReportForDuty {
     cluster = new LocalHBaseCluster(testUtil.getConfiguration(), 0, 0);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     cluster.shutdown();
     cluster.join();
@@ -158,10 +154,10 @@ public class TestRegionServerReportForDuty {
     // Following asserts the actual retry number is in range (expectedRetry/2, expectedRetry*2).
     // Ideally we can assert the exact retry count. We relax here to tolerate contention error.
     int expectedRetry = (int) Math.ceil(Math.log(interval - msginterval));
-    assertTrue(String.format("reportForDuty retries %d times, less than expected min %d", count,
-      expectedRetry / 2), count > expectedRetry / 2);
-    assertTrue(String.format("reportForDuty retries %d times, more than expected max %d", count,
-      expectedRetry * 2), count < expectedRetry * 2);
+    assertTrue(count > expectedRetry / 2, String.format(
+      "reportForDuty retries %d times, less than expected min %d", count, expectedRetry / 2));
+    assertTrue(count < expectedRetry * 2, String.format(
+      "reportForDuty retries %d times, more than expected max %d", count, expectedRetry * 2));
   }
 
   /**

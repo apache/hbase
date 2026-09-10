@@ -65,7 +65,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import javax.management.MalformedObjectNameException;
 import javax.servlet.http.HttpServlet;
@@ -75,9 +74,11 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Abortable;
+import org.apache.hadoop.hbase.ActiveClusterSuffix;
 import org.apache.hadoop.hbase.CacheEvictionStats;
 import org.apache.hadoop.hbase.CallQueueTooBigException;
 import org.apache.hadoop.hbase.ClockOutOfSyncException;
+import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.ExecutorStatusChore;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -110,9 +111,7 @@ import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException;
@@ -158,10 +157,13 @@ import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
+import org.apache.hadoop.hbase.util.ConfigurationUtil;
 import org.apache.hadoop.hbase.util.CoprocessorConfigurationUtil;
+import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.util.FutureUtils;
@@ -170,6 +172,7 @@ import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.hadoop.hbase.util.RetryCounterFactory;
 import org.apache.hadoop.hbase.util.ServerRegionReplicaUtil;
+import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -470,7 +473,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private FileSystemUtilizationChore fsUtilizationChore;
 
-  private BootstrapNodeManager bootstrapNodeManager;
+  private volatile BootstrapNodeManager bootstrapNodeManager;
 
   /**
    * True if this RegionServer is coming up in a cluster where there is no Master; means it needs to
@@ -577,11 +580,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
           + UNSAFE_RS_HOSTNAME_KEY + " is used";
         throw new IOException(msg);
       } else {
-        return rpcServices.getSocketAddress().getHostName();
+        return DNS.getHostname(conf, DNS.ServerType.REGIONSERVER);
       }
     } else {
       return hostname;
     }
+  }
+
+  @Override
+  protected DNS.ServerType getDNSServerType() {
+    return DNS.ServerType.REGIONSERVER;
   }
 
   @Override
@@ -825,6 +833,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     try {
       if (!isStopped() && !isAborted()) {
         installShutdownHook();
+
+        CoprocessorConfigurationUtil.syncReadOnlyConfigurations(conf,
+          CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+
         // Initialize the RegionServerCoprocessorHost now that our ephemeral
         // node was created, in case any coprocessors want to use ZooKeeper
         this.rsHost = new RegionServerCoprocessorHost(this, this.conf);
@@ -1239,7 +1251,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         });
       });
     });
-
+    serverLoad.setCacheFreeSize(regionServerWrapper.getBlockCacheFreeSize());
+    if (DataTieringManager.getInstance() != null) {
+      DataTieringManager.getInstance().getRegionColdDataSize()
+        .forEach((regionName, coldDataSize) -> serverLoad.putRegionColdData(regionName,
+          roundSize(coldDataSize.getSecond(), unitMB)));
+    }
     serverLoad.setReportStartTime(reportStartTime);
     serverLoad.setReportEndTime(reportEndTime);
     if (this.infoServer != null) {
@@ -1419,8 +1436,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
             expectedHostName = rpcServices.getSocketAddress().getAddress().getHostAddress();
           }
           boolean isHostnameConsist = StringUtils.isBlank(useThisHostnameInstead)
-            ? hostnameFromMasterPOV.equals(expectedHostName)
-            : hostnameFromMasterPOV.equals(useThisHostnameInstead);
+            ? Strings.hostnamesEqual(hostnameFromMasterPOV, expectedHostName)
+            : Strings.hostnamesEqual(hostnameFromMasterPOV, useThisHostnameInstead);
+
           if (!isHostnameConsist) {
             String msg = "Master passed us a different hostname to use; was="
               + (StringUtils.isBlank(useThisHostnameInstead)
@@ -1539,15 +1557,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     }
   }
 
-  private void computeIfPersistentBucketCache(Consumer<BucketCache> computation) {
-    if (blockCache instanceof CombinedBlockCache) {
-      BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
-      if (l2 instanceof BucketCache && ((BucketCache) l2).isCachePersistent()) {
-        computation.accept((BucketCache) l2);
-      }
-    }
-  }
-
   /**
    * @param r               Region to get RegionLoad for.
    * @param regionLoadBldr  the RegionLoad.Builder, can be null
@@ -1613,6 +1622,16 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         }
       });
     });
+    final MutableFloat currentRegionColdDataRatio = new MutableFloat(0.0f);
+    if (DataTieringManager.getInstance() != null) {
+      DataTieringManager.getInstance().getRegionColdDataSize().computeIfPresent(regionEncodedName,
+        (k, v) -> {
+          int coldSizeMB = roundSize(v.getSecond(), unitMB);
+          currentRegionColdDataRatio
+            .setValue(regionSizeMB == 0 ? 0.0f : (float) coldSizeMB / regionSizeMB);
+          return v;
+        });
+    }
 
     HDFSBlocksDistribution hdfsBd = r.getHDFSBlocksDistribution();
     float dataLocality = hdfsBd.getBlockLocalityIndex(serverName.getHostname());
@@ -1644,7 +1663,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       .setBlocksLocalWithSsdWeight(blocksLocalWithSsdWeight).setBlocksTotalWeight(blocksTotalWeight)
       .setCompactionState(ProtobufUtil.createCompactionStateForRegionLoad(r.getCompactionState()))
       .setLastMajorCompactionTs(r.getOldestHfileTs(true)).setRegionSizeMB(regionSizeMB)
-      .setCurrentRegionCachedRatio(currentRegionCachedRatio.floatValue());
+      .setCurrentRegionCachedRatio(currentRegionCachedRatio.floatValue())
+      .setCurrentRegionColdDataRatio(currentRegionColdDataRatio.floatValue());
     r.setCompleteSequenceId(regionLoadBldr);
     return regionLoadBldr.build();
   }
@@ -1657,7 +1677,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         .setHostName(clientMetrics.getHostName())
         .setWriteRequestsCount(clientMetrics.getWriteRequestsCount())
         .setFilteredRequestsCount(clientMetrics.getFilteredReadRequests())
-        .setReadRequestsCount(clientMetrics.getReadRequestsCount()).build())
+        .setReadRequestsCount(clientMetrics.getReadRequestsCount())
+        .setHostAddress(clientMetrics.getHostAddress()).setUserName(clientMetrics.getUserName())
+        .setClientVersion(clientMetrics.getClientVersion())
+        .setServiceName(clientMetrics.getServiceName())
+        .setClientVersion(clientMetrics.getClientVersion()).build())
       .forEach(userLoadBldr::addClientMetrics);
     return userLoadBldr.build();
   }
@@ -1799,8 +1823,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       throw new RegionServerRunningException(
         "Region server has already created directory at " + this.serverName.toString());
     }
-    // Always create wal directory as now we need this when master restarts to find out the live
-    // region servers.
+    // Create wal directory here and we will never create it again in other places. This is
+    // important to make sure that our fencing way takes effect. See HBASE-29797 for more details.
     if (!this.walFs.mkdirs(logDir)) {
       throw new IOException("Can not create wal directory " + logDir);
     }
@@ -1972,6 +1996,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     final int logRollThreads = conf.getInt("hbase.regionserver.executor.log.roll.threads", 1);
     executorService.startExecutorService(executorService.new ExecutorConfig()
       .setExecutorType(ExecutorType.RS_LOG_ROLL).setCorePoolSize(logRollThreads));
+    final int rsRefreshHFilesThreads =
+      conf.getInt("hbase.regionserver.executor.refresh.hfiles.threads", 3);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_REFRESH_HFILES).setCorePoolSize(rsRefreshHFilesThreads));
 
     Threads.setDaemonThreadRunning(this.walRoller, getName() + ".logRoller",
       uncaughtExceptionHandler);
@@ -3144,6 +3172,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   @Override
   public boolean removeRegion(final HRegion r, ServerName destination) {
     HRegion toReturn = this.onlineRegions.remove(r.getRegionInfo().getEncodedName());
+    if (DataTieringManager.getInstance() != null) {
+      DataTieringManager.getInstance().getRegionColdDataSize()
+        .remove(r.getRegionInfo().getEncodedName());
+    }
     metricsRegionServerImpl.requestsCountCache.remove(r.getRegionInfo().getEncodedName());
     if (destination != null) {
       long closeSeqNum = r.getMaxFlushedSeqId();
@@ -3317,7 +3349,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     movedRegionInfoCache.put(encodedName, new MovedRegionInfo(destination, closeSeqNum));
   }
 
-  void removeFromMovedRegions(String encodedName) {
+  // public for being called in tests
+  @InterfaceAudience.Private
+  public void removeFromMovedRegions(String encodedName) {
     movedRegionInfoCache.invalidate(encodedName);
   }
 
@@ -3460,27 +3494,58 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     return getRegionServerAccounting().getFlushPressure();
   }
 
+  /**
+   * Dynamically updates HRegionServer's configuration. Since HRegionServer inherits from
+   * {@link HBaseServerBase}, the {@code updatedConf} parameter references the same
+   * {@link Configuration} object as HRegionServer's {@code this.conf} instance variable in a real
+   * HBase deployment. This isn't necessarily the case in unit tests.
+   * @param updatedConf the dynamically updated configuration
+   */
   @Override
-  public void onConfigurationChange(Configuration newConf) {
+  public void onConfigurationChange(Configuration updatedConf) {
     ThroughputController old = this.flushThroughputController;
     if (old != null) {
       old.stop("configuration change");
     }
-    this.flushThroughputController = FlushThroughputControllerFactory.create(this, newConf);
+    this.flushThroughputController = FlushThroughputControllerFactory.create(this, updatedConf);
     try {
-      Superusers.initialize(newConf);
+      Superusers.initialize(updatedConf);
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
 
-    // update region server coprocessor if the configuration has changed.
-    if (
-      CoprocessorConfigurationUtil.checkConfigurationChange(getConfiguration(), newConf,
-        CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY)
-    ) {
-      LOG.info("Update region server coprocessors because the configuration has changed");
-      this.rsHost = new RegionServerCoprocessorHost(this, newConf);
+    boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
+      .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY);
+    boolean newReadOnlyEnabled = ConfigurationUtil.isReadOnlyModeEnabledInConf(updatedConf);
+
+    // The updatedConf is potentially a shared Configuration object, so we do not want to directly
+    // revert its read-only value if another active cluster already exists. For now, we reference
+    // updatedConf and create a copy for modification below if necessary.
+    Configuration confForCoprocessors = updatedConf;
+
+    if (originalIsReadOnlyEnabled && !newReadOnlyEnabled) {
+      // Changing this cluster from a replica to an active cluster. There should not be another
+      // active cluster already.
+      ActiveClusterSuffix localSuffix =
+        ActiveClusterSuffix.fromConfig(this.conf, new ClusterId(getClusterId()));
+      if (
+        AbstractReadOnlyController.isAnotherClusterActive(getFileSystem(), getDataRootDir(),
+          localSuffix)
+      ) {
+        String activeClusterId =
+          FSUtils.getClusterIdFromActiveClusterFile(getFileSystem(), getDataRootDir());
+        // Revert read-only mode here
+        confForCoprocessors = this.blockReadOnlyTransition(updatedConf, activeClusterId);
+      }
     }
+
+    // In a real HBase deployment, confForCoprocessors may reference the same object as this.conf.
+    // This is assuming confForCoprocessors still references updatedConf, as mentioned in a previous
+    // comment. For unit tests, this Configuration object is not shared, so we need to make sure to
+    // update the coprocessors specifically for this.conf.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(confForCoprocessors, this.conf,
+      originalIsReadOnlyEnabled, this.rsHost, CoprocessorHost.REGIONSERVER_COPROCESSOR_CONF_KEY,
+      false, this.toString(), conf -> this.rsHost = new RegionServerCoprocessorHost(this, conf));
   }
 
   @Override
@@ -3664,7 +3729,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   @Override
   public Iterator<ServerName> getBootstrapNodes() {
-    return bootstrapNodeManager.getBootstrapNodes().iterator();
+    BootstrapNodeManager manager = bootstrapNodeManager;
+    return manager != null ? manager.getBootstrapNodes().iterator() : Collections.emptyIterator();
   }
 
   @Override

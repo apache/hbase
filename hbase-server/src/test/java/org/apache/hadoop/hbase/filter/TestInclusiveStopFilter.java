@@ -17,28 +17,23 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Tests the inclusive stop row filter
  */
-@Category({ FilterTests.class, SmallTests.class })
+@Tag(FilterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestInclusiveStopFilter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInclusiveStopFilter.class);
 
   private final byte[] STOP_ROW = Bytes.toBytes("stop_row");
   private final byte[] GOOD_ROW = Bytes.toBytes("good_row");
@@ -46,7 +41,7 @@ public class TestInclusiveStopFilter {
 
   Filter mainFilter;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     mainFilter = new InclusiveStopFilter(STOP_ROW);
   }
@@ -75,15 +70,15 @@ public class TestInclusiveStopFilter {
   }
 
   private void stopRowTests(Filter filter) throws Exception {
-    assertFalse("Filtering on " + Bytes.toString(GOOD_ROW),
-      filter.filterRowKey(KeyValueUtil.createFirstOnRow(GOOD_ROW)));
-    assertFalse("Filtering on " + Bytes.toString(STOP_ROW),
-      filter.filterRowKey(KeyValueUtil.createFirstOnRow(STOP_ROW)));
-    assertTrue("Filtering on " + Bytes.toString(PAST_STOP_ROW),
-      filter.filterRowKey(KeyValueUtil.createFirstOnRow(PAST_STOP_ROW)));
+    assertFalse(filter.filterRowKey(KeyValueUtil.createFirstOnRow(GOOD_ROW)),
+      "Filtering on " + Bytes.toString(GOOD_ROW));
+    assertFalse(filter.filterRowKey(KeyValueUtil.createFirstOnRow(STOP_ROW)),
+      "Filtering on " + Bytes.toString(STOP_ROW));
+    assertTrue(filter.filterRowKey(KeyValueUtil.createFirstOnRow(PAST_STOP_ROW)),
+      "Filtering on " + Bytes.toString(PAST_STOP_ROW));
 
-    assertTrue("FilterAllRemaining", filter.filterAllRemaining());
-    assertFalse("FilterNotNull", filter.filterRow());
+    assertTrue(filter.filterAllRemaining(), "FilterAllRemaining");
+    assertFalse(filter.filterRow(), "FilterNotNull");
   }
 
 }

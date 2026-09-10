@@ -17,37 +17,28 @@
  */
 package org.apache.hadoop.hbase.mob;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestMobFileLink {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobFileLink.class);
-
-  @Rule
-  public TestName name = new TestName();
-
   @Test
-  public void testMobFilePath() throws IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testMobFilePath(TestInfo testInfo) throws IOException {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     Configuration conf = HBaseConfiguration.create();
     FileSystem fs = FileSystem.get(conf);
     Path rootDir = CommonFSUtils.getRootDir(conf);
@@ -69,8 +60,8 @@ public class TestMobFileLink {
     String hfileLinkName = tableName.getNameAsString() + "=" + encodedRegionName + "-" + fileName;
     Path hfileLinkPath = new Path(columnFamily, hfileLinkName);
     HFileLink hfileLink = HFileLink.buildFromHFileLinkPattern(conf, hfileLinkPath);
-    Assert.assertEquals(expectedMobFilePath, hfileLink.getMobPath());
-    Assert.assertEquals(expectedOriginPath, hfileLink.getOriginPath());
-    Assert.assertEquals(expectedArchivePath, hfileLink.getArchivePath());
+    assertEquals(expectedMobFilePath, hfileLink.getMobPath());
+    assertEquals(expectedOriginPath, hfileLink.getOriginPath());
+    assertEquals(expectedArchivePath, hfileLink.getArchivePath());
   }
 }

@@ -17,17 +17,19 @@
  */
 package org.apache.hadoop.hbase;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.net.BindException;
 import java.net.InetSocketAddress;
-import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ConnectionUtils;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
+import org.apache.hadoop.hbase.coprocessor.ClientMetaCoprocessorHost;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.ipc.HBaseRPCErrorHandler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -39,9 +41,6 @@ import org.apache.hadoop.hbase.ipc.RpcServerFactory;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.namequeues.NamedQueuePayload;
 import org.apache.hadoop.hbase.namequeues.NamedQueueRecorder;
-import org.apache.hadoop.hbase.namequeues.RpcLogDetails;
-import org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest;
-import org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.security.User;
@@ -58,7 +57,6 @@ import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hbase.thirdparty.com.google.protobuf.Message;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -67,11 +65,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.AdminService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponseRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.ClearSlowLogResponses;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponseRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.SlowLogResponses;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.UpdateConfigurationResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RPCProtos.RequestHeader;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.ClientMetaService;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetActiveMasterRequest;
@@ -85,7 +80,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMaste
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.TooSlowLog.SlowLogPayload;
 
 /**
  * Base class for Master and RegionServer RpcServices.
@@ -109,6 +103,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   private final InetSocketAddress isa;
 
   protected final PriorityFunction priority;
+
+  private ClientMetaCoprocessorHost clientMetaCoprocessorHost;
 
   private AccessChecker accessChecker;
 
@@ -158,6 +154,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     // Set our address, however we need the final port that was given to rpcServer
     isa = new InetSocketAddress(initialIsa.getHostName(), address.getPort());
     rpcServer.setErrorHandler(this);
+
+    clientMetaCoprocessorHost = new ClientMetaCoprocessorHost(conf);
   }
 
   protected abstract boolean defaultReservoirEnabled();
@@ -197,6 +195,12 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     if (accessChecker != null) {
       accessChecker.requirePermission(RpcServer.getRequestUser().orElse(null), request, null, perm);
     }
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public ClientMetaCoprocessorHost getClientMetaCoprocessorHost() {
+    return clientMetaCoprocessorHost;
   }
 
   public AccessChecker getAccessChecker() {
@@ -261,15 +265,36 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   @Override
   public GetClusterIdResponse getClusterId(RpcController controller, GetClusterIdRequest request)
     throws ServiceException {
-    return GetClusterIdResponse.newBuilder().setClusterId(server.getClusterId()).build();
+    try {
+      clientMetaCoprocessorHost.preGetClusterId();
+
+      String clusterId = server.getClusterId();
+      String clusterIdReply = clientMetaCoprocessorHost.postGetClusterId(clusterId);
+
+      return GetClusterIdResponse.newBuilder().setClusterId(clusterIdReply).build();
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
   }
 
   @Override
   public GetActiveMasterResponse getActiveMaster(RpcController controller,
     GetActiveMasterRequest request) throws ServiceException {
     GetActiveMasterResponse.Builder builder = GetActiveMasterResponse.newBuilder();
-    server.getActiveMaster()
-      .ifPresent(name -> builder.setServerName(ProtobufUtil.toServerName(name)));
+
+    try {
+      clientMetaCoprocessorHost.preGetActiveMaster();
+
+      ServerName serverName = server.getActiveMaster().orElse(null);
+      ServerName serverNameReply = clientMetaCoprocessorHost.postGetActiveMaster(serverName);
+
+      if (serverNameReply != null) {
+        builder.setServerName(ProtobufUtil.toServerName(serverNameReply));
+      }
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
@@ -277,12 +302,25 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   public GetMastersResponse getMasters(RpcController controller, GetMastersRequest request)
     throws ServiceException {
     GetMastersResponse.Builder builder = GetMastersResponse.newBuilder();
-    server.getActiveMaster()
-      .ifPresent(activeMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(activeMaster)).setIsActive(true)));
-    server.getBackupMasters()
-      .forEach(backupMaster -> builder.addMasterServers(GetMastersResponseEntry.newBuilder()
-        .setServerName(ProtobufUtil.toServerName(backupMaster)).setIsActive(false)));
+
+    try {
+      clientMetaCoprocessorHost.preGetMasters();
+
+      Map<ServerName, Boolean> serverNames = new LinkedHashMap<>();
+
+      server.getActiveMaster().ifPresent(serverName -> serverNames.put(serverName, Boolean.TRUE));
+      server.getBackupMasters().forEach(serverName -> serverNames.put(serverName, Boolean.FALSE));
+
+      Map<ServerName, Boolean> serverNamesReply =
+        clientMetaCoprocessorHost.postGetMasters(serverNames);
+
+      serverNamesReply
+        .forEach((serverName, active) -> builder.addMasterServers(GetMastersResponseEntry
+          .newBuilder().setServerName(ProtobufUtil.toServerName(serverName)).setIsActive(active)));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
@@ -290,22 +328,46 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   public GetMetaRegionLocationsResponse getMetaRegionLocations(RpcController controller,
     GetMetaRegionLocationsRequest request) throws ServiceException {
     GetMetaRegionLocationsResponse.Builder builder = GetMetaRegionLocationsResponse.newBuilder();
-    server.getMetaLocations()
-      .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
+
+    try {
+      clientMetaCoprocessorHost.preGetMetaLocations();
+
+      List<HRegionLocation> metaLocations = server.getMetaLocations();
+      List<HRegionLocation> metaLocationsReply =
+        clientMetaCoprocessorHost.postGetMetaLocations(metaLocations);
+
+      metaLocationsReply
+        .forEach(location -> builder.addMetaLocations(ProtobufUtil.toRegionLocation(location)));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
   @Override
   public final GetBootstrapNodesResponse getBootstrapNodes(RpcController controller,
     GetBootstrapNodesRequest request) throws ServiceException {
-    int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
-      DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
-    ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
-    sample.add(server.getBootstrapNodes());
-
     GetBootstrapNodesResponse.Builder builder = GetBootstrapNodesResponse.newBuilder();
-    sample.getSamplingResult().stream().map(ProtobufUtil::toServerName)
-      .forEach(builder::addServerName);
+
+    try {
+      clientMetaCoprocessorHost.preGetBootstrapNodes();
+
+      int maxNodeCount = server.getConfiguration().getInt(CLIENT_BOOTSTRAP_NODE_LIMIT,
+        DEFAULT_CLIENT_BOOTSTRAP_NODE_LIMIT);
+      ReservoirSample<ServerName> sample = new ReservoirSample<>(maxNodeCount);
+      sample.add(server.getBootstrapNodes());
+
+      List<ServerName> bootstrapNodes = sample.getSamplingResult();
+      List<ServerName> bootstrapNodesReply =
+        clientMetaCoprocessorHost.postGetBootstrapNodes(bootstrapNodes);
+
+      bootstrapNodesReply
+        .forEach(serverName -> builder.addServerName(ProtobufUtil.toServerName(serverName)));
+    } catch (IOException e) {
+      throw new ServiceException(e);
+    }
+
     return builder.build();
   }
 
@@ -316,6 +378,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     try {
       requirePermission("updateConfiguration", Permission.Action.ADMIN);
       this.server.updateConfiguration();
+
+      clientMetaCoprocessorHost = new ClientMetaCoprocessorHost(getConfiguration());
     } catch (Exception e) {
       throw new ServiceException(e);
     }
@@ -339,50 +403,5 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     ClearSlowLogResponses clearSlowLogResponses =
       ClearSlowLogResponses.newBuilder().setIsCleaned(slowLogsCleaned).build();
     return clearSlowLogResponses;
-  }
-
-  private List<SlowLogPayload> getSlowLogPayloads(SlowLogResponseRequest request,
-    NamedQueueRecorder namedQueueRecorder) {
-    if (namedQueueRecorder == null) {
-      return Collections.emptyList();
-    }
-    List<SlowLogPayload> slowLogPayloads;
-    NamedQueueGetRequest namedQueueGetRequest = new NamedQueueGetRequest();
-    namedQueueGetRequest.setNamedQueueEvent(RpcLogDetails.SLOW_LOG_EVENT);
-    namedQueueGetRequest.setSlowLogResponseRequest(request);
-    NamedQueueGetResponse namedQueueGetResponse =
-      namedQueueRecorder.getNamedQueueRecords(namedQueueGetRequest);
-    slowLogPayloads = namedQueueGetResponse != null
-      ? namedQueueGetResponse.getSlowLogPayloads()
-      : Collections.emptyList();
-    return slowLogPayloads;
-  }
-
-  @Override
-  @QosPriority(priority = HConstants.ADMIN_QOS)
-  public HBaseProtos.LogEntry getLogEntries(RpcController controller,
-    HBaseProtos.LogRequest request) throws ServiceException {
-    try {
-      final String logClassName = request.getLogClassName();
-      Class<?> logClass = Class.forName(logClassName).asSubclass(Message.class);
-      Method method = logClass.getMethod("parseFrom", ByteString.class);
-      if (logClassName.contains("SlowLogResponseRequest")) {
-        SlowLogResponseRequest slowLogResponseRequest =
-          (SlowLogResponseRequest) method.invoke(null, request.getLogMessage());
-        final NamedQueueRecorder namedQueueRecorder = this.server.getNamedQueueRecorder();
-        final List<SlowLogPayload> slowLogPayloads =
-          getSlowLogPayloads(slowLogResponseRequest, namedQueueRecorder);
-        SlowLogResponses slowLogResponses =
-          SlowLogResponses.newBuilder().addAllSlowLogPayloads(slowLogPayloads).build();
-        return HBaseProtos.LogEntry.newBuilder()
-          .setLogClassName(slowLogResponses.getClass().getName())
-          .setLogMessage(slowLogResponses.toByteString()).build();
-      }
-    } catch (ClassNotFoundException | NoSuchMethodException | IllegalAccessException
-      | InvocationTargetException e) {
-      LOG.error("Error while retrieving log entries.", e);
-      throw new ServiceException(e);
-    }
-    throw new ServiceException("Invalid request params");
   }
 }

@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -30,30 +29,28 @@ import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category(MediumTests.class)
+@org.junit.jupiter.api.Tag(MediumTests.TAG)
 public class TestResultSizeEstimation {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestResultSizeEstimation.class);
 
   final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
   final static int TAG_DATA_SIZE = 2048;
   final static int SCANNER_DATA_LIMIT = TAG_DATA_SIZE + 256;
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
-  @BeforeClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    this.methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     // Need HFileV3
@@ -64,7 +61,7 @@ public class TestResultSizeEstimation {
     TEST_UTIL.startMiniCluster(1);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -77,7 +74,7 @@ public class TestResultSizeEstimation {
     byte[] QUALIFIER = Bytes.toBytes("testQualifier");
     byte[] VALUE = Bytes.toBytes("testValue");
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[][] FAMILIES = new byte[][] { FAMILY };
     Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     Put p = new Put(ROW1);
@@ -94,7 +91,7 @@ public class TestResultSizeEstimation {
     while (rs.next() != null) {
       count++;
     }
-    assertEquals("Result size estimation did not work properly", 2, count);
+    assertEquals(2, count, "Result size estimation did not work properly");
     rs.close();
     table.close();
   }
@@ -107,7 +104,7 @@ public class TestResultSizeEstimation {
     byte[] QUALIFIER = Bytes.toBytes("testQualifier");
     byte[] VALUE = Bytes.toBytes("testValue");
 
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     byte[][] FAMILIES = new byte[][] { FAMILY };
     Table table = TEST_UTIL.createTable(tableName, FAMILIES);
     Put p = new Put(ROW1);
@@ -126,7 +123,7 @@ public class TestResultSizeEstimation {
     while (rs.next() != null) {
       count++;
     }
-    assertEquals("Result size estimation did not work properly", 2, count);
+    assertEquals(2, count, "Result size estimation did not work properly");
     rs.close();
     table.close();
   }

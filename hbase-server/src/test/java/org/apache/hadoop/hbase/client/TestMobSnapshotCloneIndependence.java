@@ -18,38 +18,30 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotTestingUtils;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test to verify that the cloned table is independent of the table from which it was cloned
  */
-@Category(LargeTests.class)
-public class TestMobSnapshotCloneIndependence extends TestSnapshotCloneIndependence {
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+public class TestMobSnapshotCloneIndependence extends SnapshotCloneIndependenceTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobSnapshotCloneIndependence.class);
-
-  /**
-   * Setup the config for the cluster and start it
-   * @throws Exception on failure
-   */
-  @BeforeClass
+  @BeforeAll
   public static void setupCluster() throws Exception {
     setupConf(UTIL.getConfiguration());
     UTIL.startMiniCluster(NUM_RS);
   }
 
   protected static void setupConf(Configuration conf) {
-    TestSnapshotCloneIndependence.setupConf(conf);
+    SnapshotCloneIndependenceTestBase.setupConf(conf);
     conf.setInt(MobConstants.MOB_FILE_CACHE_SIZE_KEY, 0);
   }
 

@@ -32,7 +32,7 @@
   AssignmentManager assignmentManager = master.getAssignmentManager();
   int limit = 100;
 
-  SortedSet<RegionState> rit = assignmentManager.getRegionStates().getRegionsInTransitionOrderedByTimestamp();
+  SortedSet<RegionState> rit = assignmentManager.getRegionsStateInTransition();
 
 if (!rit.isEmpty()) {
   long currentTime = System.currentTimeMillis();

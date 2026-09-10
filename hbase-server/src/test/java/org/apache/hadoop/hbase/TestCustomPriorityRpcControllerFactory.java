@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -50,10 +50,9 @@ import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
@@ -64,12 +63,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
  * Tests that one can implement their own RpcControllerFactory and expect it to successfully pass
  * custom priority values to the server for all HTable calls.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestCustomPriorityRpcControllerFactory {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCustomPriorityRpcControllerFactory.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -93,7 +89,7 @@ public class TestCustomPriorityRpcControllerFactory {
   private static Connection CONN;
   private static Table TABLE;
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpClass() throws Exception {
     // Set RegionServer class and use default values for other options.
     UTIL.startMiniCluster(
@@ -249,8 +245,8 @@ public class TestCustomPriorityRpcControllerFactory {
     EXPECTED_PRIORITY.set(new Random().nextInt(MIN_CUSTOM_PRIORITY) + MIN_CUSTOM_PRIORITY);
     callable.call();
 
-    assertEquals("Expected state to change to SUCCESS. Check for assertion error in logs",
-      STATE.get(), State.SUCCESS);
+    assertEquals(State.SUCCESS, STATE.get(),
+      "Expected state to change to SUCCESS. Check for assertion error in logs");
   }
 
   private interface ThrowingCallable {

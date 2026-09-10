@@ -98,8 +98,8 @@ allowed_expr+="|^about.html$"
 allowed_expr+="|^jetty-dir.css$"
 # Coming from Guava, see https://github.com/google/guava/commit/2cc8c5eddb587db3ac12dacdd5563e79a4681ec4
 allowed_expr+="|^org/jspecify/$|^org/jspecify/annotations/$|^org/jspecify/annotations/.*\.class$"
-# Required by jetty 12 on ee8
-allowed_expr="(|^javax/$)"
+# Servlet API for jetty 12 on ee8, shipped unrelocated in hbase-shaded-mapreduce
+allowed_expr+="|^javax/$|^javax/servlet/"
 
 if [ -n "${allow_hadoop}" ]; then
   #   * classes in packages that start with org.apache.hadoop, which by
@@ -130,6 +130,12 @@ for artifact in "${artifact_list[@]}"; do
   class_count=$("${JAR}" tf "${artifact}" | grep -c -E '\.class$' || true)
   if [ ${#bad_contents[@]} -eq 0 ] && [ "${class_count}" -lt 1 ]; then
     bad_contents=("The artifact contains no java class files.")
+  fi
+  # dnsjava ships its provider class only under META-INF/versions/, which relocation leaves at an
+  # unrelocated path in a jar that is not multi-release, so the declaration names a class the JVM
+  # cannot load and every DNS lookup in the process fails. See HBASE-30211.
+  if "${JAR}" tf "${artifact}" | grep -q '^META-INF/services/java\.net\.spi\.InetAddressResolverProvider$'; then
+    bad_contents+=("Declares java.net.spi.InetAddressResolverProvider, which breaks all DNS resolution on JDK18+")
   fi
   if [ ${#bad_contents[@]} -gt 0 ]; then
     echo "[ERROR] Found artifact with unexpected contents: '${artifact}'"

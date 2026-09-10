@@ -19,19 +19,18 @@ package org.apache.hadoop.hbase.regionserver;
 
 import static org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder.NEW_VERSION_BEHAVIOR;
 import static org.apache.hadoop.hbase.regionserver.StoreFileWriter.ENABLE_HISTORICAL_COMPACTION_FILES;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.KeepDeletedCells;
 import org.apache.hadoop.hbase.MemoryCompactionPolicy;
@@ -43,16 +42,14 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 /**
  * Store file writer does not do any compaction. Each cell written to either the live or historical
@@ -68,12 +65,12 @@ import org.junit.runners.Parameterized;
  * historical files are generated only when historical file generation is enabled (by the config
  * hbase.enable.historical.compaction.files).
  */
-@Category({ MediumTests.class, RegionServerTests.class })
-@RunWith(Parameterized.class)
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(
+    name = "{index}: keepDeletedCells={0}, maxVersions={1}, newVersionBehavior={2}")
 public class TestStoreFileWriter {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestStoreFileWriter.class);
+
   private final int ROW_NUM = 100;
   private final Random RANDOM = new Random(11);
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
@@ -87,20 +84,23 @@ public class TestStoreFileWriter {
   private final Configuration conf = testUtil.getConfiguration();
   private int flushCount = 0;
 
-  @Parameterized.Parameter(0)
   public KeepDeletedCells keepDeletedCells;
-  @Parameterized.Parameter(1)
   public int maxVersions;
-  @Parameterized.Parameter(2)
   public boolean newVersionBehavior;
 
-  @Parameterized.Parameters(name = "keepDeletedCells={0}, maxVersions={1}, newVersionBehavior={2}")
-  public static synchronized Collection<Object[]> data() {
-    return Arrays.asList(
-      new Object[][] { { KeepDeletedCells.FALSE, 1, true }, { KeepDeletedCells.FALSE, 2, false },
-        { KeepDeletedCells.FALSE, 3, true }, { KeepDeletedCells.TRUE, 1, false },
-        // { KeepDeletedCells.TRUE, 2, true }, see HBASE-28442
-        { KeepDeletedCells.TRUE, 3, false } });
+  public TestStoreFileWriter(KeepDeletedCells keepDeletedCells, int maxVersions,
+    boolean newVersionBehavior) {
+    this.keepDeletedCells = keepDeletedCells;
+    this.maxVersions = maxVersions;
+    this.newVersionBehavior = newVersionBehavior;
+  }
+
+  public static synchronized Stream<Arguments> parameters() {
+    return Stream.of(Arguments.of(KeepDeletedCells.FALSE, 1, true),
+      Arguments.of(KeepDeletedCells.FALSE, 2, false), Arguments.of(KeepDeletedCells.FALSE, 3, true),
+      Arguments.of(KeepDeletedCells.TRUE, 1, false),
+      // { KeepDeletedCells.TRUE, 2, true }, see HBASE-28442
+      Arguments.of(KeepDeletedCells.TRUE, 3, false));
   }
 
   // In memory representation of a cell. We only need to know timestamp and type field for our
@@ -128,7 +128,7 @@ public class TestStoreFileWriter {
     regions[index] = testUtil.getMiniHBaseCluster().getRegions(tableName[index]).get(0);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     conf.setInt(CompactionConfiguration.HBASE_HSTORE_COMPACTION_MAX_KEY, 6);
     conf.set(CompactingMemStore.COMPACTING_MEMSTORE_TYPE_KEY,
@@ -145,13 +145,13 @@ public class TestStoreFileWriter {
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     this.testUtil.shutdownMiniCluster();
     testUtil.cleanupTestDir();
   }
 
-  @Test
+  @TestTemplate
   public void testCompactedFiles() throws Exception {
     for (int i = 0; i < 10; i++) {
       insertRows(ROW_NUM * maxVersions);
@@ -177,8 +177,14 @@ public class TestStoreFileWriter {
       stores[0].getStorefilesCount());
 
     regions[1].compact(false);
-    assertEquals(flushCount - stores[1].getCompactedFiles().size() + 2,
-      stores[1].getStorefilesCount());
+    // HBASE-30036 skips redundant delete markers during minor compaction, so the historical
+    // file may end up empty and not be created. The count can be +1 or +2.
+    int minorCompactedCount = stores[1].getStorefilesCount();
+    int expectedMin = flushCount - stores[1].getCompactedFiles().size() + 1;
+    int expectedMax = flushCount - stores[1].getCompactedFiles().size() + 2;
+    assertTrue(minorCompactedCount >= expectedMin && minorCompactedCount <= expectedMax,
+      "Expected store file count between " + expectedMin + " and " + expectedMax + " but was "
+        + minorCompactedCount);
 
     verifyCells();
 

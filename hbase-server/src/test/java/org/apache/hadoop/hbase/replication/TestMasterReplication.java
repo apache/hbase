@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.replication;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -34,7 +36,6 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -70,21 +71,16 @@ import org.apache.hadoop.hbase.util.HFileTestUtil;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.zookeeper.MiniZooKeeperCluster;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ ReplicationTests.class, LargeTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestMasterReplication {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterReplication.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestMasterReplication.class);
 
@@ -113,7 +109,7 @@ public class TestMasterReplication {
 
   private TableDescriptor table;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     baseConfiguration = HBaseConfiguration.create();
     // smaller block size and capacity to trigger more operations
@@ -173,12 +169,12 @@ public class TestMasterReplication {
    * {@link org.apache.hadoop.hbase.replication.regionserver.HBaseInterClusterReplicationEndpoint},
    * the replication peer should not be added.
    */
-  @Test(expected = DoNotRetryIOException.class)
+  @Test
   public void testLoopedReplication() throws Exception {
     LOG.info("testLoopedReplication");
     startMiniClusters(1);
     createTableOnClusters(table);
-    addPeer("1", 0, 0);
+    assertThrows(DoNotRetryIOException.class, () -> addPeer("1", 0, 0));
   }
 
   /**
@@ -321,7 +317,7 @@ public class TestMasterReplication {
         famName, htables, hfileRanges, numOfRows, expectedCounts, true);
 
       // Validate data is not replicated to cluster '2'.
-      assertEquals(0, utilities[2].countRows(htables[2]));
+      assertEquals(0, HBaseTestingUtil.countRows(htables[2]));
 
       rollWALAndWait(utilities[0], htables[0].getName(), row);
 
@@ -462,9 +458,9 @@ public class TestMasterReplication {
       Admin admin = utilities[0].getAdmin();
 
       // Validates base configs 1 is present for both peer.
-      Assert.assertEquals(firstCustomPeerConfigValue,
+      assertEquals(firstCustomPeerConfigValue,
         admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
-      Assert.assertEquals(firstCustomPeerConfigValue,
+      assertEquals(firstCustomPeerConfigValue,
         admin.getReplicationPeerConfig("2").getConfiguration().get(firstCustomPeerConfigKey));
 
       // override value of configuration 1 for peer "1".
@@ -481,9 +477,9 @@ public class TestMasterReplication {
       admin.updateReplicationPeerConfig("2", updatedReplicationConfigForPeer2);
 
       // validates configuration is overridden by updateReplicationPeerConfig
-      Assert.assertEquals(firstCustomPeerConfigUpdatedValue,
+      assertEquals(firstCustomPeerConfigUpdatedValue,
         admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
-      Assert.assertEquals(secondCustomPeerConfigUpdatedValue,
+      assertEquals(secondCustomPeerConfigUpdatedValue,
         admin.getReplicationPeerConfig("2").getConfiguration().get(secondCustomPeerConfigKey));
 
       // Add second config to base config and perform restart.
@@ -497,14 +493,14 @@ public class TestMasterReplication {
       admin = utilities[0].getAdmin();
 
       // Configurations should be updated after restart again
-      Assert.assertEquals(firstCustomPeerConfigValue,
+      assertEquals(firstCustomPeerConfigValue,
         admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
-      Assert.assertEquals(firstCustomPeerConfigValue,
+      assertEquals(firstCustomPeerConfigValue,
         admin.getReplicationPeerConfig("2").getConfiguration().get(firstCustomPeerConfigKey));
 
-      Assert.assertEquals(secondCustomPeerConfigValue,
+      assertEquals(secondCustomPeerConfigValue,
         admin.getReplicationPeerConfig("1").getConfiguration().get(secondCustomPeerConfigKey));
-      Assert.assertEquals(secondCustomPeerConfigValue,
+      assertEquals(secondCustomPeerConfigValue,
         admin.getReplicationPeerConfig("2").getConfiguration().get(secondCustomPeerConfigKey));
     } finally {
       shutDownMiniClusters();
@@ -526,7 +522,7 @@ public class TestMasterReplication {
       Admin admin = utilities[0].getAdmin();
 
       // Validates base configs 1 is present for both peer.
-      Assert.assertEquals(firstCustomPeerConfigValue,
+      assertEquals(firstCustomPeerConfigValue,
         admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
 
       utilities[0].getConfiguration()
@@ -540,7 +536,7 @@ public class TestMasterReplication {
       admin = utilities[0].getAdmin();
 
       // Configurations should be removed after restart again
-      Assert.assertNull(
+      assertNull(
         admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
     } finally {
       shutDownMiniClusters();
@@ -560,15 +556,16 @@ public class TestMasterReplication {
       addPeer("1", 0, 1);
       Admin admin = utilities[0].getAdmin();
 
-      Assert.assertNull("Config should not be there",
-        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey));
+      assertNull(
+        admin.getReplicationPeerConfig("1").getConfiguration().get(firstCustomPeerConfigKey),
+        "Config should not be there");
     } finally {
       shutDownMiniClusters();
       baseConfiguration.unset(ReplicationPeerConfigUtil.HBASE_REPLICATION_PEER_BASE_CONFIG);
     }
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     configurations = null;
     utilities = null;
@@ -672,8 +669,8 @@ public class TestMasterReplication {
   private void validateCounts(Table[] htables, byte[] type, int[] expectedCounts)
     throws IOException {
     for (int i = 0; i < htables.length; i++) {
-      assertEquals(Bytes.toString(type) + " were replicated back ", expectedCounts[i],
-        getCount(htables[i], type));
+      assertEquals(expectedCounts[i], getCount(htables[i], type),
+        Bytes.toString(type) + " were replicated back");
     }
   }
 
@@ -734,7 +731,7 @@ public class TestMasterReplication {
         fail("Waited too much time for bulkloaded data replication. Current count=" + count
           + ", expected count=" + expectedCount);
       }
-      count = utilities[slaveNumber].countRows(target);
+      count = HBaseTestingUtil.countRows(target);
       if (count != expectedCount) {
         LOG.info("Waiting more time for bulkloaded data replication.");
         Thread.sleep(SLEEP_TIME);
@@ -780,7 +777,7 @@ public class TestMasterReplication {
         break;
       }
     }
-    assertNotNull("Couldn't find the region for row '" + Arrays.toString(row) + "'", region);
+    assertNotNull(region, "Couldn't find the region for row '" + Arrays.toString(row) + "'");
 
     final CountDownLatch latch = new CountDownLatch(1);
 

@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Before;
+import org.junit.jupiter.api.BeforeEach;
 
 public class AbstractTestScanQueryMatcher {
 
@@ -48,7 +48,7 @@ public class AbstractTestScanQueryMatcher {
   protected CellComparator rowComparator;
   protected Scan scan;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     this.conf = HBaseConfiguration.create();
     row1 = Bytes.toBytes("row1");

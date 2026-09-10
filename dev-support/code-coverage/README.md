@@ -31,7 +31,7 @@ the related modules.
 
 Here is how you can generate the code coverage report:
 
-```sh dev/code-coverage/run-coverage.sh```
+```sh dev-support/code-coverage/run-coverage.sh```
 
 ## Publishing coverage results to SonarQube
 
@@ -45,5 +45,5 @@ The project name is an optional parameter.
 
 Here is an example command for running and publishing the coverage data:
 
-`./dev/code-coverage/run-coverage.sh -l ProjectCredentials
+`./dev-support/code-coverage/run-coverage.sh -l ProjectCredentials
 -u https://exampleserver.com -k Project_Key -n Project_Name`

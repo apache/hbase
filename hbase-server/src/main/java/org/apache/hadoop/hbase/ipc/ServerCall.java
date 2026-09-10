@@ -256,6 +256,14 @@ public abstract class ServerCall<T extends ServerRpcConnection> implements RpcCa
     return this.header.getPriority();
   }
 
+  /**
+   * Get the ServerRpcConnection associated with this call.
+   * @return the connection object
+   */
+  public T getConnection() {
+    return this.connection;
+  }
+
   /*
    * Short string representation without param info because param itself could be huge depends on
    * the payload of a command

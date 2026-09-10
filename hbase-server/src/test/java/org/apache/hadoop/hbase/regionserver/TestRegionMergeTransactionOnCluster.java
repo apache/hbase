@@ -17,10 +17,10 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -34,7 +34,6 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CatalogFamilyFormat;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
@@ -58,7 +57,6 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterRpcServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
-import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
@@ -74,13 +72,12 @@ import org.apache.hadoop.hbase.util.PairOfSameType;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.zookeeper.KeeperException;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -92,18 +89,14 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.ReportRegionStateTransitionResponse;
 
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionMergeTransactionOnCluster {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMergeTransactionOnCluster.class);
 
   private static final Logger LOG =
     LoggerFactory.getLogger(TestRegionMergeTransactionOnCluster.class);
 
-  @Rule
-  public TestName name = new TestName();
+  private String methodName;
 
   private static final int NB_SERVERS = 3;
 
@@ -122,7 +115,7 @@ public class TestRegionMergeTransactionOnCluster {
   private static HMaster MASTER;
   private static Admin ADMIN;
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeAllTests() throws Exception {
     // Start a cluster
     StartTestingClusterOption option = StartTestingClusterOption.builder()
@@ -134,7 +127,12 @@ public class TestRegionMergeTransactionOnCluster {
     ADMIN = TEST_UTIL.getConnection().getAdmin();
   }
 
-  @AfterClass
+  @BeforeEach
+  public void setUp(TestInfo testInfo) {
+    methodName = testInfo.getTestMethod().get().getName();
+  }
+
+  @AfterAll
   public static void afterAllTests() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
     if (ADMIN != null) {
@@ -144,8 +142,8 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testWholesomeMerge() throws Exception {
-    LOG.info("Starting " + name.getMethodName());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    LOG.info("Starting " + methodName);
+    final TableName tableName = TableName.valueOf(methodName);
 
     try {
       // Create table and load data.
@@ -165,15 +163,17 @@ public class TestRegionMergeTransactionOnCluster {
         : mergedRegions.getSecond();
       SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
       AssignmentManager am = cluster.getMaster().getAssignmentManager();
-      RegionStates regionStates = am.getRegionStates();
 
-      // We should not be able to assign it again
+      // We should not be able to assign it again, but we are able to do it here. Assertions are
+      // poor here and missing that assign is possible here. Created HBASE-29692 for resolving this.
       am.assign(hri);
-      assertFalse("Merged region can't be assigned", regionStates.isRegionInTransition(hri));
+      assertFalse(am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled(),
+        "Merged region can't be assigned");
 
       // We should not be able to unassign it either
       am.unassign(hri);
-      assertFalse("Merged region can't be unassigned", regionStates.isRegionInTransition(hri));
+      assertFalse(am.getRegionStates().getRegionStateNode(hri).isTransitionScheduled(),
+        "Merged region can't be unassigned");
 
       table.close();
     } finally {
@@ -187,7 +187,7 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMergeAndRestartingMaster() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
 
     try {
       // Create table and load data.
@@ -210,9 +210,9 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testCleanMergeReference() throws Exception {
-    LOG.info("Starting " + name.getMethodName());
+    LOG.info("Starting " + methodName);
     ADMIN.catalogJanitorSwitch(false);
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     try {
       // Create table and load data.
       Table table = createTableAndLoadData(MASTER, tableName);
@@ -332,8 +332,8 @@ public class TestRegionMergeTransactionOnCluster {
    */
   @Test
   public void testMerge() throws Exception {
-    LOG.info("Starting " + name.getMethodName());
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    LOG.info("Starting " + methodName);
+    final TableName tableName = TableName.valueOf(methodName);
     final Admin admin = TEST_UTIL.getAdmin();
 
     try {
@@ -362,9 +362,8 @@ public class TestRegionMergeTransactionOnCluster {
           .get(admin.mergeRegionsAsync(b.getEncodedNameAsBytes(), b.getEncodedNameAsBytes(), true));
         fail("A region should not be able to merge with itself, even forcfully");
       } catch (IOException ie) {
-        assertTrue("Exception should mention regions not online",
-          StringUtils.stringifyException(ie).contains("region to itself")
-            && ie instanceof MergeRegionException);
+        assertTrue(StringUtils.stringifyException(ie).contains("region to itself")
+          && ie instanceof MergeRegionException, "Exception should mention regions not online");
       }
 
       try {
@@ -372,7 +371,7 @@ public class TestRegionMergeTransactionOnCluster {
         FutureUtils.get(admin.mergeRegionsAsync(Bytes.toBytes("-f1"), Bytes.toBytes("-f2"), true));
         fail("Unknown region could not be merged");
       } catch (IOException ie) {
-        assertTrue("UnknownRegionException should be thrown", ie instanceof UnknownRegionException);
+        assertTrue(ie instanceof UnknownRegionException, "UnknownRegionException should be thrown");
       }
       table.close();
     } finally {
@@ -382,7 +381,7 @@ public class TestRegionMergeTransactionOnCluster {
 
   @Test
   public void testMergeWithReplicas() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(methodName);
     try {
       // Create table and load data.
       Table table = createTableAndLoadData(MASTER, tableName, 5, 2);
@@ -484,7 +483,7 @@ public class TestRegionMergeTransactionOnCluster {
 
   private Table createTableAndLoadData(HMaster master, TableName tablename, int numRegions,
     int replication) throws Exception {
-    assertTrue("ROWSIZE must > numregions:" + numRegions, ROWSIZE > numRegions);
+    assertTrue(ROWSIZE > numRegions, "ROWSIZE must > numregions:" + numRegions);
     byte[][] splitRows = new byte[numRegions - 1][];
     for (int i = 0; i < splitRows.length; i++) {
       splitRows[i] = ROWS[(i + 1) * ROWSIZE / numRegions];
@@ -506,8 +505,8 @@ public class TestRegionMergeTransactionOnCluster {
     LOG.info("All regions assigned for table - " + table.getName());
     tableRegions =
       MetaTableAccessor.getTableRegionsAndLocations(TEST_UTIL.getConnection(), tablename);
-    assertEquals("Wrong number of regions in table " + tablename, numRegions * replication,
-      tableRegions.size());
+    assertEquals(numRegions * replication, tableRegions.size(),
+      "Wrong number of regions in table " + tablename);
     LOG.info(tableRegions.size() + "Regions after load: " + Joiner.on(',').join(tableRegions));
     assertEquals(numRegions * replication, tableRegions.size());
     return table;
@@ -569,11 +568,11 @@ public class TestRegionMergeTransactionOnCluster {
         enabled.get() && req.getTransition(0).getTransitionCode() == TransitionCode.READY_TO_MERGE
           && !resp.hasErrorMessage()
       ) {
-        RegionStates regionStates = myMaster.getAssignmentManager().getRegionStates();
-        for (RegionState regionState : regionStates.getRegionsStateInTransition()) {
+        AssignmentManager am = myMaster.getAssignmentManager();
+        for (RegionState regionState : am.getRegionsStateInTransition()) {
           // Find the merging_new region and remove it
           if (regionState.isMergingNew()) {
-            regionStates.deleteRegion(regionState.getRegion());
+            am.getRegionStates().deleteRegion(regionState.getRegion());
           }
         }
       }

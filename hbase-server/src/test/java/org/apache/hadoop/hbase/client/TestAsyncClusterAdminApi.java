@@ -18,8 +18,8 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,10 +28,11 @@ import java.util.Collections;
 import java.util.EnumSet;
 import java.util.List;
 import java.util.Map;
+import java.util.function.Supplier;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
@@ -44,25 +45,24 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 
-@RunWith(Parameterized.class)
-@Category({ ClientTests.class, LargeTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClusterAdminApi.class);
+  public TestAsyncClusterAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
 
     setUpConfigurationFiles(TEST_UTIL);
@@ -77,13 +77,18 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     addResourceToRegionServerConfiguration(TEST_UTIL);
   }
 
-  @Test
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testGetMasterInfoPort() throws Exception {
     assertEquals(TEST_UTIL.getHBaseCluster().getMaster().getInfoServer().getPort(),
       (int) admin.getMasterInfoPort().get());
   }
 
-  @Test
+  @TestTemplate
   public void testRegionServerOnlineConfigChange() throws Exception {
     replaceHBaseSiteXML();
     admin.getRegionServers().get().forEach(server -> admin.updateConfiguration(server).join());
@@ -97,7 +102,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     restoreHBaseSiteXML();
   }
 
-  @Test
+  @TestTemplate
   public void testMasterOnlineConfigChange() throws Exception {
     replaceHBaseSiteXML();
     ServerName master = admin.getMaster().get();
@@ -114,7 +119,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     restoreHBaseSiteXML();
   }
 
-  @Test
+  @TestTemplate
   public void testAllClusterOnlineConfigChange() throws IOException {
     replaceHBaseSiteXML();
     admin.updateConfiguration().join();
@@ -134,7 +139,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     restoreHBaseSiteXML();
   }
 
-  @Test
+  @TestTemplate
   public void testRollWALWALWriter() throws Exception {
     setUpforLogRolling();
     String className = this.getClass().getName();
@@ -214,7 +219,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     return regionServer;
   }
 
-  @Test
+  @TestTemplate
   public void testGetRegionLoads() throws Exception {
     // Turn off the balancer
     admin.balancerSwitch(false).join();
@@ -257,7 +262,7 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testGetRegionServers() throws Exception {
     List<ServerName> serverNames = new ArrayList<>(admin.getRegionServers(true).get());
     assertEquals(2, serverNames.size());
@@ -280,8 +285,8 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
   private void compareRegionLoads(Collection<RegionMetrics> regionLoadCluster,
     Collection<RegionMetrics> regionLoads) {
 
-    assertEquals("No of regionLoads from clusterStatus and regionloads from RS doesn't match",
-      regionLoadCluster.size(), regionLoads.size());
+    assertEquals(regionLoadCluster.size(), regionLoads.size(),
+      "No of regionLoads from clusterStatus and regionloads from RS doesn't match");
 
     for (RegionMetrics loadCluster : regionLoadCluster) {
       boolean matched = false;
@@ -291,22 +296,23 @@ public class TestAsyncClusterAdminApi extends TestAsyncAdminBase {
           continue;
         }
       }
-      assertTrue("The contents of region load from cluster and server should match", matched);
+      assertTrue(matched, "The contents of region load from cluster and server should match");
     }
   }
 
   private void checkRegionsAndRegionLoads(Collection<RegionInfo> regions,
     Collection<RegionMetrics> regionLoads) {
 
-    assertEquals("No of regions and regionloads doesn't match", regions.size(), regionLoads.size());
+    assertEquals(regions.size(), regionLoads.size(), "No of regions and regionloads doesn't match");
 
     Map<byte[], RegionMetrics> regionLoadMap = Maps.newTreeMap(Bytes.BYTES_COMPARATOR);
     for (RegionMetrics regionLoad : regionLoads) {
       regionLoadMap.put(regionLoad.getRegionName(), regionLoad);
     }
     for (RegionInfo info : regions) {
-      assertTrue("Region not in regionLoadMap region:" + info.getRegionNameAsString()
-        + " regionMap: " + regionLoadMap, regionLoadMap.containsKey(info.getRegionName()));
+      assertTrue(regionLoadMap.containsKey(info.getRegionName()),
+        "Region not in regionLoadMap region:" + info.getRegionNameAsString() + " regionMap: "
+          + regionLoadMap);
     }
   }
 

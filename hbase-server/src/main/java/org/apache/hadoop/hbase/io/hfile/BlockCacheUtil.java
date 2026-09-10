@@ -285,7 +285,7 @@ public class BlockCacheUtil {
       .withOnDiskSizeWithoutHeader(block.getOnDiskSizeWithoutHeader())
       .withUncompressedSizeWithoutHeader(block.getUncompressedSizeWithoutHeader())
       .withPrevBlockOffset(block.getPrevBlockOffset()).withByteBuff(buff)
-      .withFillHeader(FILL_HEADER).withOffset(block.getOffset()).withNextBlockOnDiskSize(-1)
+      .withFillHeader(FILL_HEADER).withOffset(block.getOffset())
       .withOnDiskDataSizeWithHeader(block.getOnDiskDataSizeWithHeader() + numBytes)
       .withNextBlockOnDiskSize(block.getNextBlockOnDiskSize())
       .withHFileContext(cloneContext(block.getHFileContext()))
@@ -295,7 +295,7 @@ public class BlockCacheUtil {
   public static HFileContext cloneContext(HFileContext context) {
     HFileContext newContext = new HFileContextBuilder().withBlockSize(context.getBlocksize())
       .withBytesPerCheckSum(0).withChecksumType(ChecksumType.NULL) // no checksums in cached data
-      .withCompression(context.getCompression())
+      .withCompression(context.getCompression()).withHFileName(context.getHFileName())
       .withDataBlockEncoding(context.getDataBlockEncoding())
       .withHBaseCheckSum(context.isUseHBaseChecksum()).withCompressTags(context.isCompressTags())
       .withIncludesMvcc(context.isIncludesMvcc()).withIncludesTags(context.isIncludesTags())

@@ -18,21 +18,20 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.TableNameTestRule;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -56,23 +55,19 @@ import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ SecurityTests.class, MediumTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestAccessController2 extends SecureTestUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAccessController2.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestAccessController2.class);
 
@@ -107,14 +102,14 @@ public class TestAccessController2 extends SecureTestUtil {
   private static User TESTGROUP1_USER1;
   private static User TESTGROUP2_USER1;
 
-  @Rule
-  public TableNameTestRule testTable = new TableNameTestRule();
+  @RegisterExtension
+  public TableNameTestExtension testTable = new TableNameTestExtension();
   private String namespace = "testNamespace";
   private String tname = namespace + ":testtable1";
   private TableName tableName = TableName.valueOf(tname);
   private static String TESTGROUP_1_NAME;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     // Up the handlers; this test needs more than usual.
@@ -136,7 +131,7 @@ public class TestAccessController2 extends SecureTestUtil {
     systemUserConnection = ConnectionFactory.createConnection(conf);
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     createNamespace(TEST_UTIL, NamespaceDescriptor.create(namespace).build());
     try (Table table =
@@ -159,13 +154,13 @@ public class TestAccessController2 extends SecureTestUtil {
 
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     systemUserConnection.close();
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     // Clean the _acl_ table
     try {
@@ -362,8 +357,9 @@ public class TestAccessController2 extends SecureTestUtil {
           Scan s1 = new Scan();
           try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
-            assertTrue("User having table level access should be able to scan all "
-              + "the data in the table.", next1.length == 3);
+            assertTrue(next1.length == 3,
+              "User having table level access should be able to scan all "
+                + "the data in the table.");
           }
         }
         return null;
@@ -378,8 +374,9 @@ public class TestAccessController2 extends SecureTestUtil {
           Scan s1 = new Scan();
           try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
-            assertTrue("User having column family level access should be able to scan all "
-              + "the data belonging to that family.", next1.length == 2);
+            assertTrue(next1.length == 2,
+              "User having column family level access should be able to scan all "
+                + "the data belonging to that family.");
           }
         }
         return null;
@@ -409,8 +406,9 @@ public class TestAccessController2 extends SecureTestUtil {
           Scan s1 = new Scan();
           try (ResultScanner scanner1 = table.getScanner(s1)) {
             Result[] next1 = scanner1.next(5);
-            assertTrue("User having column qualifier level access should be able to scan "
-              + "that column family qualifier data.", next1.length == 1);
+            assertTrue(next1.length == 1,
+              "User having column qualifier level access should be able to scan "
+                + "that column family qualifier data.");
           }
         }
         return null;
@@ -519,18 +517,18 @@ public class TestAccessController2 extends SecureTestUtil {
     // Namespace needs this, as they follow the lazy creation of ACL znode.
     grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
     ZKWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
-    assertTrue("The acl znode for table should exist",
-      ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) != -1);
-    assertTrue("The acl znode for namespace should exist",
-      ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) != -1);
+    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) != -1,
+      "The acl znode for table should exist");
+    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) != -1,
+      "The acl znode for namespace should exist");
 
     revokeFromNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
     deleteTable(TEST_UTIL, table);
     deleteNamespace(TEST_UTIL, ns);
 
-    assertTrue("The acl znode for table should have been deleted",
-      ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1);
-    assertTrue("The acl znode for namespace should have been deleted",
-      ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1);
+    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1,
+      "The acl znode for table should have been deleted");
+    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1,
+      "The acl znode for namespace should have been deleted");
   }
 }

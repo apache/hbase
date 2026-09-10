@@ -21,11 +21,12 @@ import static org.apache.hadoop.hbase.replication.master.ReplicationSinkTrackerT
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.getRowKey;
 import static org.apache.hadoop.hbase.wal.WALEdit.METAFAMILY;
 import static org.apache.hadoop.hbase.wal.WALEdit.REPLICATION_MARKER;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeFalse;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -54,7 +55,6 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -86,15 +86,13 @@ import org.apache.hadoop.hbase.wal.WALSplitter.CorruptedLogFileException;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.server.namenode.LeaseExpiredException;
 import org.apache.hadoop.ipc.RemoteException;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
@@ -113,11 +111,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.WALProtos;
 /**
  * Testing {@link WAL} splitting code.
  */
-@Category({ RegionServerTests.class, LargeTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestWALSplit {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestWALSplit.class);
   private final static Logger LOG = LoggerFactory.getLogger(TestWALSplit.class);
 
   private static Configuration conf;
@@ -155,7 +151,7 @@ public class TestWALSplit {
     TRUNCATE_TRAILER
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     conf = TEST_UTIL.getConfiguration();
     conf.set(WALFactory.WAL_PROVIDER, "filesystem");
@@ -173,17 +169,17 @@ public class TestWALSplit {
     TEST_UTIL.startMiniDFSCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniDFSCluster();
   }
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
   private WALFactory wals = null;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName();
     LOG.info("Cleaning up cluster for new test.");
     fs = TEST_UTIL.getDFSCluster().getFileSystem();
     HBASEDIR = TEST_UTIL.createRootDir();
@@ -196,13 +192,13 @@ public class TestWALSplit {
     REGIONS.clear();
     Collections.addAll(REGIONS, "bbb", "ccc");
     InstrumentedLogWriter.activateFailure = false;
-    wals = new WALFactory(conf, name.getMethodName());
-    WALDIR = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(ServerName
-      .valueOf(name.getMethodName(), 16010, EnvironmentEdgeManager.currentTime()).toString()));
+    wals = new WALFactory(conf, testMethodName);
+    WALDIR = new Path(HBASELOGDIR, AbstractFSWALProvider.getWALDirectoryName(
+      ServerName.valueOf(testMethodName, 16010, EnvironmentEdgeManager.currentTime()).toString()));
     // fs.mkdirs(WALDIR);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     try {
       wals.close();
@@ -253,7 +249,7 @@ public class TestWALSplit {
           WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf2, wals);
           LOG.info("Finished splitting out from under zombie.");
           Path[] logfiles = getLogForRegion(TABLE_NAME, region);
-          assertEquals("wrong number of split files for region", numWriters, logfiles.length);
+          assertEquals(numWriters, logfiles.length, "wrong number of split files for region");
           int count = 0;
           for (Path logfile : logfiles) {
             count += countWAL(logfile);
@@ -262,10 +258,9 @@ public class TestWALSplit {
         }
       });
       LOG.info("zombie=" + counter.get() + ", robber=" + count);
-      assertTrue(
+      assertTrue(counter.get() == count || counter.get() + 1 == count,
         "The log file could have at most 1 extra log entry, but can't have less. "
-          + "Zombie could write " + counter.get() + " and logfile had only " + count,
-        counter.get() == count || counter.get() + 1 == count);
+          + "Zombie could write " + counter.get() + " and logfile had only " + count);
     } finally {
       stop.set(true);
       zombie.interrupt();
@@ -398,13 +393,13 @@ public class TestWALSplit {
 
     for (String region : REGIONS) {
       Path[] logfiles = getLogForRegion(TABLE_NAME, region);
-      assertEquals("wrong number of split files for region", numWriter, logfiles.length);
+      assertEquals(numWriter, logfiles.length, "wrong number of split files for region");
 
       int count = 0;
       for (Path lf : logfiles) {
         count += countWAL(lf);
       }
-      assertEquals("wrong number of edits for region " + region, entries, count);
+      assertEquals(entries, count, "wrong number of edits for region " + region);
     }
   }
 
@@ -426,7 +421,7 @@ public class TestWALSplit {
       try {
         boolean ret =
           WALSplitter.splitLogFile(HBASEDIR, logfile, fs, conf, null, this, null, wals, rsServices);
-        assertTrue("Both splitting should pass", ret);
+        assertTrue(ret, "Both splitting should pass");
       } catch (IOException e) {
         LOG.warn(getName() + " Worker exiting " + e);
       }
@@ -502,7 +497,7 @@ public class TestWALSplit {
     Path[] splitLog = getLogForRegion(TABLE_NAME, REGION);
     assertEquals(1, splitLog.length);
 
-    assertTrue("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
+    assertTrue(logsAreEqual(originalLog, splitLog[0]), "edits differ after split");
   }
 
   @Test
@@ -518,7 +513,7 @@ public class TestWALSplit {
     Path[] splitLog = getLogForRegion(TABLE_NAME, REGION);
     assertEquals(1, splitLog.length);
 
-    assertFalse("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
+    assertFalse(logsAreEqual(originalLog, splitLog[0]), "edits differ after split");
     // split log should only have the test edits
     assertEquals(10, countWAL(splitLog[0]));
   }
@@ -549,7 +544,7 @@ public class TestWALSplit {
     Path[] splitLog = getLogForRegion(TABLE_NAME, hri.getEncodedName());
     assertEquals(1, splitLog.length);
 
-    assertFalse("edits differ after split", logsAreEqual(originalLog, splitLog[0]));
+    assertFalse(logsAreEqual(originalLog, splitLog[0]), "edits differ after split");
     // split log should have 10 test edits plus 1 compaction marker
     assertEquals(11, countWAL(splitLog[0]));
   }
@@ -666,8 +661,8 @@ public class TestWALSplit {
     int goodEntries = (NUM_WRITERS - 1) * ENTRIES;
     int firstHalfEntries = (int) Math.ceil(ENTRIES / 2) - 1;
     int allRegionsCount = splitAndCount(NUM_WRITERS, -1);
-    assertTrue("The file up to the corrupted area hasn't been parsed",
-      REGIONS.size() * (goodEntries + firstHalfEntries) <= allRegionsCount);
+    assertTrue(REGIONS.size() * (goodEntries + firstHalfEntries) <= allRegionsCount,
+      "The file up to the corrupted area hasn't been parsed");
   }
 
   @Test
@@ -686,8 +681,8 @@ public class TestWALSplit {
         archivedLogs.add(log.getPath().getName());
       }
       LOG.debug(archived.toString());
-      assertEquals(failureType.name() + ": expected to find all of our wals corrupt.", archivedLogs,
-        walDirContents);
+      assertEquals(archivedLogs, walDirContents,
+        failureType.name() + ": expected to find all of our wals corrupt.");
     }
   }
 
@@ -720,7 +715,7 @@ public class TestWALSplit {
         LOG.debug("no previous CORRUPTDIR to clean.");
       }
       // change to the faulty reader
-      wals = new WALFactory(conf, name.getMethodName());
+      wals = new WALFactory(conf, testMethodName);
       generateWALs(-1);
       // Our reader will render all of these files corrupt.
       final Set<String> walDirContents = new HashSet<>();
@@ -739,10 +734,11 @@ public class TestWALSplit {
     }
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testTrailingGarbageCorruptionLogFileSkipErrorsFalseThrows() throws IOException {
     conf.setBoolean(WALSplitter.SPLIT_SKIP_ERRORS_KEY, false);
-    splitCorruptWALs(FaultyProtobufWALStreamReader.FailureType.BEGINNING);
+    assertThrows(IOException.class,
+      () -> splitCorruptWALs(FaultyProtobufWALStreamReader.FailureType.BEGINNING));
   }
 
   @Test
@@ -753,8 +749,8 @@ public class TestWALSplit {
     } catch (IOException e) {
       LOG.debug("split with 'skip errors' set to 'false' correctly threw");
     }
-    assertEquals("if skip.errors is false all files should remain in place", NUM_WRITERS,
-      fs.listStatus(WALDIR).length);
+    assertEquals(NUM_WRITERS, fs.listStatus(WALDIR).length,
+      "if skip.errors is false all files should remain in place");
   }
 
   private void ignoreCorruption(final Corruptions corruption, final int entryCount,
@@ -809,7 +805,7 @@ public class TestWALSplit {
     useDifferentDFSClient();
     WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
     FileStatus[] archivedLogs = fs.listStatus(OLDLOGDIR);
-    assertEquals("wrong number of files in the archive log", NUM_WRITERS, archivedLogs.length);
+    assertEquals(NUM_WRITERS, archivedLogs.length, "wrong number of files in the archive log");
   }
 
   @Test
@@ -834,7 +830,7 @@ public class TestWALSplit {
     }
   }
 
-  @Test(expected = IOException.class)
+  @Test
   public void testSplitWillFailIfWritingToRegionFails() throws Exception {
     // leave 5th log open so we could append the "trap"
     Writer writer = generateWALs(4);
@@ -851,11 +847,10 @@ public class TestWALSplit {
 
     try {
       InstrumentedLogWriter.activateFailure = true;
-      WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals);
-    } catch (IOException e) {
+      IOException e = assertThrows(IOException.class,
+        () -> WALSplitter.split(HBASELOGDIR, WALDIR, OLDLOGDIR, fs, conf, wals));
       assertTrue(e.getMessage()
         .contains("This exception is instrumented and should only be thrown for testing"));
-      throw e;
     } finally {
       InstrumentedLogWriter.activateFailure = false;
     }
@@ -883,7 +878,7 @@ public class TestWALSplit {
     generateWALs(-1);
     useDifferentDFSClient();
     FileStatus[] logfiles = fs.listStatus(WALDIR);
-    assertTrue("There should be some log file", logfiles != null && logfiles.length > 0);
+    assertTrue(logfiles != null && logfiles.length > 0, "There should be some log file");
     // wals with no entries (like the one we don't use in the factory)
     // won't cause a failure since nothing will ever be written.
     // pick the largest one since it's most likely to have entries.
@@ -895,7 +890,7 @@ public class TestWALSplit {
         largestSize = logfiles[i].getLen();
       }
     }
-    assertTrue("There should be some log greater than size 0.", 0 < largestSize);
+    assertTrue(0 < largestSize, "There should be some log greater than size 0.");
     // Set up a splitter that will throw an IOE on the output side
     WALSplitter logSplitter =
       new WALSplitter(wals, conf, HBASEDIR, fs, HBASEDIR, fs, null, null, null) {
@@ -1028,7 +1023,7 @@ public class TestWALSplit {
       conf.setInt("hbase.splitlog.report.period", 1000);
       boolean ret = WALSplitter.splitLogFile(HBASEDIR, logfile, spiedFs, conf, localReporter, null,
         Mockito.mock(SplitLogWorkerCoordination.class), wals, null);
-      assertFalse("Log splitting should failed", ret);
+      assertFalse(ret, "Log splitting should failed");
       assertTrue(count.get() > 0);
     } catch (IOException e) {
       fail("There shouldn't be any exception but: " + e.toString());
@@ -1152,7 +1147,7 @@ public class TestWALSplit {
       LOG.info("Got " + entry.getValue() + " output edits for region " + entry.getKey());
       assertEquals((long) entry.getValue(), numFakeEdits / regions.size());
     }
-    assertEquals("Should have as many outputs as regions", regions.size(), outputCounts.size());
+    assertEquals(regions.size(), outputCounts.size(), "Should have as many outputs as regions");
   }
 
   // Does leaving the writer open in testSplitDeletedRegion matter enough for two tests?
@@ -1227,7 +1222,7 @@ public class TestWALSplit {
 
     wals.getWAL(null);
     FileStatus[] logfiles = fs.listStatus(WALDIR);
-    assertTrue("There should be some log file", logfiles != null && logfiles.length > 0);
+    assertTrue(logfiles != null && logfiles.length > 0, "There should be some log file");
 
     WALSplitter logSplitter =
       new WALSplitter(wals, conf, HBASEDIR, fs, HBASEDIR, fs, null, null, null) {

@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.master.balancer;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.io.IOException;
 import java.util.HashSet;
@@ -130,16 +130,15 @@ public final class BalancerConditionalsTestUtil {
         Set<byte[]> startKeys = new HashSet<>();
         for (RegionInfo regionInfo : regionInfos) {
           // each region should have a distinct start key
-          assertFalse(
+          assertFalse(startKeys.contains(regionInfo.getStartKey()),
             "Each region should have its own start key, "
-              + "demonstrating it is not a replica of any others on this host",
-            startKeys.contains(regionInfo.getStartKey()));
+              + "demonstrating it is not a replica of any others on this host");
           startKeys.add(regionInfo.getStartKey());
         }
       }
     } else {
       // Ensure all replicas are on the same server
-      assertEquals("All regions should share one server", 1, serverToRegions.size());
+      assertEquals(1, serverToRegions.size(), "All regions should share one server");
     }
   }
 
@@ -153,19 +152,19 @@ public final class BalancerConditionalsTestUtil {
 
     if (shouldBeBalanced) {
       for (ServerName server : productServers) {
-        assertNotEquals("Meta table and product table should not share servers", server,
-          metaServer);
-        assertNotEquals("Quota table and product table should not share servers", server,
-          quotaServer);
+        assertNotEquals(server, metaServer,
+          "Meta table and product table should not share servers");
+        assertNotEquals(server, quotaServer,
+          "Quota table and product table should not share servers");
       }
-      assertNotEquals("The meta server and quotas server should be different", metaServer,
-        quotaServer);
+      assertNotEquals(metaServer, quotaServer,
+        "The meta server and quotas server should be different");
     } else {
       for (ServerName server : productServers) {
-        assertEquals("Meta table and product table must share servers", server, metaServer);
-        assertEquals("Quota table and product table must share servers", server, quotaServer);
+        assertEquals(server, metaServer, "Meta table and product table must share servers");
+        assertEquals(server, quotaServer, "Quota table and product table must share servers");
       }
-      assertEquals("The meta server and quotas server must be the same", metaServer, quotaServer);
+      assertEquals(metaServer, quotaServer, "The meta server and quotas server must be the same");
     }
   }
 

@@ -17,29 +17,23 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.ThrottleRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos.TimedQuota;
 
-@Category({ SmallTests.class })
+@Tag(SmallTests.TAG)
 public class TestThrottleSettings {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestThrottleSettings.class);
 
   @Test
   public void testMerge() throws IOException {
@@ -93,7 +87,7 @@ public class TestThrottleSettings {
     ThrottleRequest tr2 =
       ThrottleRequest.newBuilder().setType(QuotaProtos.ThrottleType.REQUEST_NUMBER).build();
 
-    assertTrue("The same object should be returned by merge, but it wasn't",
-      orig == orig.merge(new ThrottleSettings("joe", null, null, null, tr2)));
+    assertTrue(orig == orig.merge(new ThrottleSettings("joe", null, null, null, tr2)),
+      "The same object should be returned by merge, but it wasn't");
   }
 }

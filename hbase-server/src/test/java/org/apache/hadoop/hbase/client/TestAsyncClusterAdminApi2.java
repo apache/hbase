@@ -18,37 +18,40 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.api.TestTemplate;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
 /**
  * Only used to test stopMaster/stopRegionServer/shutdown methods.
  */
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncClusterAdminApi2.class);
+  public TestAsyncClusterAdminApi2(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_RPC_TIMEOUT_KEY, 60000);
     TEST_UTIL.getConfiguration().setInt(HConstants.HBASE_CLIENT_OPERATION_TIMEOUT, 120000);
@@ -56,27 +59,27 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
     TEST_UTIL.getConfiguration().setInt(START_LOG_ERRORS_AFTER_COUNT_KEY, 0);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     // do nothing
   }
 
-  @Before
+  @BeforeEach
   @Override
-  public void setUp() throws Exception {
+  public void setUp(TestInfo testInfo) throws Exception {
     TEST_UTIL.startMiniCluster(3);
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
     admin = ASYNC_CONN.getAdmin();
   }
 
-  @After
+  @AfterEach
   @Override
   public void tearDown() throws Exception {
     Closeables.close(ASYNC_CONN, true);
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Test
+  @TestTemplate
   public void testStop() throws Exception {
     HRegionServer rs = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0);
     assertFalse(rs.isStopped());
@@ -89,7 +92,7 @@ public class TestAsyncClusterAdminApi2 extends TestAsyncAdminBase {
     assertTrue(master.isStopped());
   }
 
-  @Test
+  @TestTemplate
   public void testShutdown() throws Exception {
     TEST_UTIL.getMiniHBaseCluster().getMasterThreads().forEach(thread -> {
       assertFalse(thread.getMaster().isStopped());

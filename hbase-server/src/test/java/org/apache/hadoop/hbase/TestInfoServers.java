@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -30,33 +30,25 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing, info servers are disabled. This test enables then and checks that they serve pages.
  */
-@Category({ MiscTests.class, MediumTests.class })
+@Tag(MiscTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestInfoServers {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestInfoServers.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestInfoServers.class);
   private final static HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
-
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     // The info servers do not run in tests by default.
     // Set them to ephemeral ports so they will start
@@ -71,7 +63,7 @@ public class TestInfoServers {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -97,7 +89,8 @@ public class TestInfoServers {
     assertContainsContent(new URL("http://localhost:" + port + "/master-status"), "master.jsp");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "rs-status");
+    assertContainsContent(new URL("http://localhost:" + port + "/index.html"), "regionserver.jsp");
+    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "regionserver.jsp");
   }
 
   /**
@@ -111,12 +104,12 @@ public class TestInfoServers {
     assertContainsContent(new URL("http://localhost:" + port + "/master.jsp"), "meta");
     port = UTIL.getHBaseCluster().getRegionServerThreads().get(0).getRegionServer().getInfoServer()
       .getPort();
-    assertContainsContent(new URL("http://localhost:" + port + "/rs-status"), "meta");
+    assertContainsContent(new URL("http://localhost:" + port + "/regionserver.jsp"), "meta");
   }
 
   @Test
-  public void testMasterServerReadOnly() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testMasterServerReadOnly(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
     byte[] cf = Bytes.toBytes("d");
     UTIL.createTable(tableName, cf);
     UTIL.waitTableAvailable(tableName);
@@ -132,14 +125,14 @@ public class TestInfoServers {
   private void assertContainsContent(final URL u, final String expected) throws IOException {
     LOG.info("Testing " + u.toString() + " has " + expected);
     String content = getUrlContent(u);
-    assertTrue("expected=" + expected + ", content=" + content, content.contains(expected));
+    assertTrue(content.contains(expected), "expected=" + expected + ", content=" + content);
   }
 
   private void assertDoesNotContainContent(final URL u, final String expected) throws IOException {
     LOG.info("Testing " + u.toString() + " does not have " + expected);
     String content = getUrlContent(u);
-    assertFalse("Does Not Contain =" + expected + ", content=" + content,
-      content.contains(expected));
+    assertFalse(content.contains(expected),
+      "Does Not Contain =" + expected + ", content=" + content);
   }
 
   private String getUrlContent(URL u) throws IOException {

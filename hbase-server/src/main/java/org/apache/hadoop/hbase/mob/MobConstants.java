@@ -76,6 +76,9 @@ public final class MobConstants {
   public static final String MOB_COMPACTION_CHORE_PERIOD = "hbase.mob.compaction.chore.period";
   public static final int DEFAULT_MOB_COMPACTION_CHORE_PERIOD = 24 * 60 * 60 * 7; // a week
   public static final String MOB_COMPACTOR_CLASS_KEY = "hbase.mob.compactor.class";
+  public static final String MOB_COMPACTION_READ_CACHE_BLOCKS =
+    "hbase.mob.compaction.read.cache.blocks";
+  public static final boolean DEFAULT_MOB_COMPACTION_READ_CACHE_BLOCKS = true;
 
   /**
    * Mob compaction type: "full", "optimized" "full" - run full major compaction (during migration)
@@ -143,6 +146,12 @@ public final class MobConstants {
   public static final int DEFAULT_MOB_COMPACTION_BATCH_SIZE = 100;
   public static final String MOB_COMPACTION_THREADS_MAX = "hbase.mob.compaction.threads.max";
   public static final int DEFAULT_MOB_COMPACTION_THREADS_MAX = 1;
+
+  public static final String MOB_CLEANER_THREAD_COUNT = "hbase.master.mob.cleaner.threads";
+  public static final int DEFAULT_MOB_CLEANER_THREAD_COUNT = 1;
+  public static final String MOB_FILE_CLEANER_CHORE_TIME_OUT =
+    "hbase.master.mob.cleaner.chore.timeout";
+  public static final int DEFAULT_MOB_FILE_CLEANER_CHORE_TIME_OUT = 5 * 60; // 5 minutes
 
   private MobConstants() {
 

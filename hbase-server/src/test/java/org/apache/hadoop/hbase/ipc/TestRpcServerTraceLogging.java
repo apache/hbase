@@ -17,25 +17,19 @@
  */
 package org.apache.hadoop.hbase.ipc;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category(SmallTests.class)
+@Tag(SmallTests.TAG)
 public class TestRpcServerTraceLogging {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRpcServerTraceLogging.class);
 
   private static final org.apache.logging.log4j.core.Logger rpcServerLog =
     (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
@@ -54,7 +48,7 @@ public class TestRpcServerTraceLogging {
 
   static final Configuration conf = new Configuration(false);
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() {
     Mockito.when(mockRpcServer.getConf()).thenReturn(conf);
     Mockito.when(mockRpcServer.truncateTraceLog(Mockito.any(String.class))).thenCallRealMethod();

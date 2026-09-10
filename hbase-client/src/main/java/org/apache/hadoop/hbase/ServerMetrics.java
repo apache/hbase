@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase;
 
 import edu.umd.cs.findbugs.annotations.Nullable;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -112,4 +113,21 @@ public interface ServerMetrics {
    *         rounded to MB
    */
   Map<String, Integer> getRegionCachedInfo();
+
+  /**
+   * The available cache space on this region server (bytes), if reported in the server load.
+   */
+  default long getCacheFreeSize() {
+    return 0L;
+  }
+
+  /**
+   * Returns the region cold data information for the regions hosted on this server. Here, cold data
+   * refers only to region data that is classified as cold by the DataTieringManager according to
+   * the configured priority logic. These data should be kept out of block cache.
+   * @return map of region encoded name and its total cold data size, rounded to MB
+   */
+  default Map<String, Integer> getRegionColdDataSize() {
+    return Collections.emptyMap();
+  }
 }

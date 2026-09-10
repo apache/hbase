@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.NavigableSet;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentSkipListSet;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
@@ -64,6 +65,12 @@ final class BucketProtoUtils {
 
   public static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize)
     throws IOException {
+    serializeAsPB(cache, fos, chunkSize, entry -> {
+    });
+  }
+
+  static void serializeAsPB(BucketCache cache, FileOutputStream fos, long chunkSize,
+    Consumer<Map.Entry<BlockCacheKey, BucketEntry>> entryCopiedAction) throws IOException {
     // Write the new version of magic number.
     fos.write(PB_MAGIC_V2);
 
@@ -79,6 +86,7 @@ final class BucketProtoUtils {
     for (Map.Entry<BlockCacheKey, BucketEntry> entry : cache.backingMap.entrySet()) {
       blockCount++;
       addEntryToBuilder(entry, entryBuilder, builder);
+      entryCopiedAction.accept(entry);
       if (blockCount % chunkSize == 0) {
         builder.build().writeDelimitedTo(fos);
         builder.clear();
@@ -100,9 +108,16 @@ final class BucketProtoUtils {
   }
 
   private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
-    return BucketCacheProtos.BlockCacheKey.newBuilder().setHfilename(key.getHfileName())
-      .setOffset(key.getOffset()).setPrimaryReplicaBlock(key.isPrimary())
-      .setBlockType(toPB(key.getBlockType())).build();
+    BucketCacheProtos.BlockCacheKey.Builder builder = BucketCacheProtos.BlockCacheKey.newBuilder()
+      .setHfilename(key.getHfileName()).setOffset(key.getOffset())
+      .setPrimaryReplicaBlock(key.isPrimary()).setBlockType(toPB(key.getBlockType()));
+    if (key.getCfName() != null) {
+      builder.setFamilyName(key.getCfName());
+    }
+    if (key.getRegionName() != null) {
+      builder.setRegionName(key.getRegionName());
+    }
+    return builder.build();
   }
 
   private static BucketCacheProtos.BlockType toPB(BlockType blockType) {
@@ -165,8 +180,9 @@ final class BucketProtoUtils {
       .comparing(BlockCacheKey::getHfileName).thenComparingLong(BlockCacheKey::getOffset));
     for (BucketCacheProtos.BackingMapEntry entry : backingMap.getEntryList()) {
       BucketCacheProtos.BlockCacheKey protoKey = entry.getKey();
-      BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getOffset(),
-        protoKey.getPrimaryReplicaBlock(), fromPb(protoKey.getBlockType()));
+      BlockCacheKey key = new BlockCacheKey(protoKey.getHfilename(), protoKey.getFamilyName(),
+        protoKey.getRegionName(), protoKey.getOffset(), protoKey.getPrimaryReplicaBlock(),
+        fromPb(protoKey.getBlockType()), protoKey.getArchived());
       BucketCacheProtos.BucketEntry protoValue = entry.getValue();
       // TODO:We use ByteBuffAllocator.HEAP here, because we could not get the ByteBuffAllocator
       // which created by RpcServer elegantly.

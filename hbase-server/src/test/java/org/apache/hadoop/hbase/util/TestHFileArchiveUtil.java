@@ -17,42 +17,33 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * Test that the utility works as expected
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHFileArchiveUtil {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileArchiveUtil.class);
 
   private Path rootDir = new Path("./");
 
-  @Rule
-  public TestName name = new TestName();
-
   @Test
-  public void testGetTableArchivePath() {
-    assertNotNull(
-      HFileArchiveUtil.getTableArchivePath(rootDir, TableName.valueOf(name.getMethodName())));
+  public void testGetTableArchivePath(TestInfo testInfo) {
+    assertNotNull(HFileArchiveUtil.getTableArchivePath(rootDir,
+      TableName.valueOf(testInfo.getTestMethod().get().getName())));
   }
 
   @Test
@@ -63,18 +54,19 @@ public class TestHFileArchiveUtil {
   }
 
   @Test
-  public void testRegionArchiveDir() {
+  public void testRegionArchiveDir(TestInfo testInfo) {
     Path regionDir = new Path("region");
     assertNotNull(HFileArchiveUtil.getRegionArchiveDir(rootDir,
-      TableName.valueOf(name.getMethodName()), regionDir));
+      TableName.valueOf(testInfo.getTestMethod().get().getName()), regionDir));
   }
 
   @Test
-  public void testGetStoreArchivePath() throws IOException {
+  public void testGetStoreArchivePath(TestInfo testInfo) throws IOException {
     byte[] family = Bytes.toBytes("Family");
-    Path tabledir = CommonFSUtils.getTableDir(rootDir, TableName.valueOf(name.getMethodName()));
-    RegionInfo region =
-      RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName())).build();
+    Path tabledir = CommonFSUtils.getTableDir(rootDir,
+      TableName.valueOf(testInfo.getTestMethod().get().getName()));
+    RegionInfo region = RegionInfoBuilder
+      .newBuilder(TableName.valueOf(testInfo.getTestMethod().get().getName())).build();
     Configuration conf = new Configuration();
     CommonFSUtils.setRootDir(conf, new Path("root"));
     assertNotNull(HFileArchiveUtil.getStoreArchivePath(conf, region, tabledir, family));

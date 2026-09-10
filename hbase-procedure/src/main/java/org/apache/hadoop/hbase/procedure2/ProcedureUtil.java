@@ -175,6 +175,10 @@ public final class ProcedureUtil {
       builder.setParentId(proc.getParentProcId());
     }
 
+    if (proc.isCriticalSystemTable()) {
+      builder.setIsCryticalSystemTable(true);
+    }
+
     if (proc.hasTimeout()) {
       builder.setTimeout(proc.getTimeout());
     }
@@ -242,6 +246,10 @@ public final class ProcedureUtil {
 
     if (proto.hasParentId()) {
       proc.setParentProcId(proto.getParentId());
+    }
+
+    if (proto.hasIsCryticalSystemTable()) {
+      proc.setCriticalSystemTable(proto.getIsCryticalSystemTable());
     }
 
     if (proto.hasOwner()) {

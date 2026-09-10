@@ -25,27 +25,21 @@ import static org.mockito.Mockito.verify;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.hbtop.RecordFilter;
 import org.apache.hadoop.hbase.hbtop.field.Field;
 import org.apache.hadoop.hbase.hbtop.field.FieldInfo;
 import org.apache.hadoop.hbase.hbtop.mode.Mode;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
-import org.mockito.junit.MockitoJUnitRunner;
+import org.mockito.junit.jupiter.MockitoExtension;
 
-@Category(SmallTests.class)
-@RunWith(MockitoJUnitRunner.class)
+@Tag(SmallTests.TAG)
+@ExtendWith(MockitoExtension.class)
 public class TestFilterDisplayModeScreenPresenter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestFilterDisplayModeScreenPresenter.class);
 
   @Mock
   private FilterDisplayModeScreenView filterDisplayModeScreenView;
@@ -55,7 +49,7 @@ public class TestFilterDisplayModeScreenPresenter {
 
   private FilterDisplayModeScreenPresenter filterDisplayModeScreenPresenter;
 
-  @Before
+  @BeforeEach
   public void setup() {
     List<Field> fields =
       Mode.REGION.getFieldInfos().stream().map(FieldInfo::getField).collect(Collectors.toList());

@@ -49,7 +49,7 @@ logic to internal code paths.
 [[background]]
 == Background
 
-Coprocessors are well link:http://hbase.apache.org/book.html#cp[documented in the refguide].
+Coprocessors are well link:https://hbase.apache.org/docs/cp[documented in the refguide].
 
 Here we give a little background information on involved classes, their responsibilities, and
 relationship to each other.
@@ -59,7 +59,7 @@ relationship to each other.
 *** All *Observer* interfaces derive from Coprocessor interface.
 **** Coprocessor Interface is a _Marker _Interface. It just has start/stop methods and enums for
 stages in the Coprocessor Lifecycle.
-** http://hbase.apache.org/book.html#_observer_coprocessors[Observers] (interface)
+** https://hbase.apache.org/docs/cp#observer-coprocessors[Observers] (interface)
 *** Contain hooks which third-party programs can override to inject functionality in various
 internal code paths. For e.g preCreateTable(...) will be called just before any table is created.
 *** Current set of observers: _MasterObserver, RegionObserver, RegionServerObserver, WALObserver,

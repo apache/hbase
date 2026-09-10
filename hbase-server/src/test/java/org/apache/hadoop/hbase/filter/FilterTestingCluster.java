@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.filter;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -36,40 +36,35 @@ import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.testclassification.FilterTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
 
 /**
  * By using this class as the super class of a set of tests you will have a HBase testing cluster
  * available that is very suitable for writing tests for scanning and filtering against.
  */
-@Category({ FilterTests.class, MediumTests.class })
-public class FilterTestingCluster {
+public abstract class FilterTestingCluster {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static Admin admin = null;
   private static List<TableName> createdTables = new ArrayList<>();
 
   protected static void createTable(TableName tableName, String columnFamilyName) {
-    assertNotNull("HBaseAdmin is not initialized successfully.", admin);
+    assertNotNull(admin, "HBaseAdmin is not initialized successfully.");
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(Bytes.toBytes(columnFamilyName))).build();
 
     try {
       admin.createTable(tableDescriptor);
       createdTables.add(tableName);
-      assertTrue("Fail to create the table", admin.tableExists(tableName));
+      assertTrue(admin.tableExists(tableName), "Fail to create the table");
     } catch (IOException e) {
-      assertNull("Exception found while creating table", e);
+      assertNull(e, "Exception found while creating table");
     }
   }
 
   protected static Table openTable(TableName tableName) throws IOException {
     Table table = TEST_UTIL.getConnection().getTable(tableName);
-    assertTrue("Fail to create the table", admin.tableExists(tableName));
+    assertTrue(admin.tableExists(tableName), "Fail to create the table");
     return table;
   }
 
@@ -82,7 +77,7 @@ public class FilterTestingCluster {
             admin.deleteTable(tableName);
           }
         } catch (IOException e) {
-          assertNull("Exception found deleting the table", e);
+          assertNull(e, "Exception found deleting the table");
         }
       }
     }
@@ -94,21 +89,20 @@ public class FilterTestingCluster {
     try {
       admin = TEST_UTIL.getAdmin();
     } catch (MasterNotRunningException e) {
-      assertNull("Master is not running", e);
+      assertNull(e, "Master is not running");
     } catch (ZooKeeperConnectionException e) {
-      assertNull("Cannot connect to ZooKeeper", e);
+      assertNull(e, "Cannot connect to ZooKeeper");
     } catch (IOException e) {
-      assertNull("IOException", e);
+      assertNull(e, "IOException");
     }
   }
 
-  @BeforeClass
   public static void setUp() throws Exception {
     TEST_UTIL.startMiniCluster(1);
     initialize(TEST_UTIL.getConfiguration());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     deleteTables();
     TEST_UTIL.shutdownMiniCluster();

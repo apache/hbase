@@ -17,6 +17,11 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.security.PrivilegedAction;
 import java.util.EnumSet;
@@ -58,19 +63,13 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.MasterThread;
 import org.apache.hadoop.hbase.util.JVMClusterUtil.RegionServerThread;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category(MediumTests.class)
+@Tag(MediumTests.TAG)
 public class TestClientClusterMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestClientClusterMetrics.class);
 
   private static HBaseTestingUtil UTIL;
   private static Admin ADMIN;
@@ -94,7 +93,7 @@ public class TestClientClusterMetrics {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     Configuration conf = HBaseConfiguration.create();
     conf.set(CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, MyObserver.class.getName());
@@ -120,23 +119,21 @@ public class TestClientClusterMetrics {
   public void testDefaults() throws Exception {
     ClusterMetrics origin = ADMIN.getClusterMetrics();
     ClusterMetrics defaults = ADMIN.getClusterMetrics(EnumSet.allOf(Option.class));
-    Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-    Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-    Assert.assertEquals(origin.getAverageLoad(), defaults.getAverageLoad(), 0);
-    Assert.assertEquals(origin.getBackupMasterNames().size(),
-      defaults.getBackupMasterNames().size());
-    Assert.assertEquals(origin.getDeadServerNames().size(), defaults.getDeadServerNames().size());
-    Assert.assertEquals(origin.getRegionCount(), defaults.getRegionCount());
-    Assert.assertEquals(origin.getLiveServerMetrics().size(),
-      defaults.getLiveServerMetrics().size());
-    Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
-    Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
-    Assert.assertEquals(ADMIN.getRegionServers().size(), defaults.getServersName().size());
+    assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
+    assertEquals(origin.getClusterId(), defaults.getClusterId());
+    assertEquals(origin.getAverageLoad(), defaults.getAverageLoad(), 0);
+    assertEquals(origin.getBackupMasterNames().size(), defaults.getBackupMasterNames().size());
+    assertEquals(origin.getDeadServerNames().size(), defaults.getDeadServerNames().size());
+    assertEquals(origin.getRegionCount(), defaults.getRegionCount());
+    assertEquals(origin.getLiveServerMetrics().size(), defaults.getLiveServerMetrics().size());
+    assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
+    assertEquals(origin.getServersName().size(), defaults.getServersName().size());
+    assertEquals(ADMIN.getRegionServers().size(), defaults.getServersName().size());
     // We decommission the first online region server and verify the metrics.
     List<ServerName> serverNames = origin.getServersName().subList(0, 1);
     ADMIN.decommissionRegionServers(serverNames, false);
-    Assert.assertEquals(1, ADMIN.getClusterMetrics().getDecommissionedServerNames().size());
-    Assert.assertEquals(ADMIN.getClusterMetrics().getDecommissionedServerNames().get(0),
+    assertEquals(1, ADMIN.getClusterMetrics().getDecommissionedServerNames().size());
+    assertEquals(ADMIN.getClusterMetrics().getDecommissionedServerNames().get(0),
       serverNames.get(0));
   }
 
@@ -150,23 +147,21 @@ public class TestClientClusterMetrics {
         asyncAdmin.getClusterMetrics(EnumSet.allOf(Option.class));
       ClusterMetrics origin = originFuture.get();
       ClusterMetrics defaults = defaultsFuture.get();
-      Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-      Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-      Assert.assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
-      Assert.assertEquals(origin.getClusterId(), defaults.getClusterId());
-      Assert.assertEquals(origin.getAverageLoad(), defaults.getAverageLoad(), 0);
-      Assert.assertEquals(origin.getBackupMasterNames().size(),
-        defaults.getBackupMasterNames().size());
-      Assert.assertEquals(origin.getDeadServerNames().size(), defaults.getDeadServerNames().size());
-      Assert.assertEquals(origin.getRegionCount(), defaults.getRegionCount());
-      Assert.assertEquals(origin.getLiveServerMetrics().size(),
-        defaults.getLiveServerMetrics().size());
-      Assert.assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
-      Assert.assertEquals(origin.getServersName().size(), defaults.getServersName().size());
+      assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
+      assertEquals(origin.getClusterId(), defaults.getClusterId());
+      assertEquals(origin.getHBaseVersion(), defaults.getHBaseVersion());
+      assertEquals(origin.getClusterId(), defaults.getClusterId());
+      assertEquals(origin.getAverageLoad(), defaults.getAverageLoad(), 0);
+      assertEquals(origin.getBackupMasterNames().size(), defaults.getBackupMasterNames().size());
+      assertEquals(origin.getDeadServerNames().size(), defaults.getDeadServerNames().size());
+      assertEquals(origin.getRegionCount(), defaults.getRegionCount());
+      assertEquals(origin.getLiveServerMetrics().size(), defaults.getLiveServerMetrics().size());
+      assertEquals(origin.getMasterInfoPort(), defaults.getMasterInfoPort());
+      assertEquals(origin.getServersName().size(), defaults.getServersName().size());
       origin.getTableRegionStatesCount().forEach(((tableName, regionStatesCount) -> {
         RegionStatesCount defaultRegionStatesCount =
           defaults.getTableRegionStatesCount().get(tableName);
-        Assert.assertEquals(defaultRegionStatesCount, regionStatesCount);
+        assertEquals(defaultRegionStatesCount, regionStatesCount);
       }));
     }
   }
@@ -188,7 +183,7 @@ public class TestClientClusterMetrics {
       @Override
       public boolean evaluate() throws Exception {
         ClusterMetrics metrics = ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS));
-        Assert.assertNotNull(metrics);
+        assertNotNull(metrics);
         return metrics.getRegionCount() > 0;
       }
     });
@@ -196,20 +191,20 @@ public class TestClientClusterMetrics {
     EnumSet<Option> options =
       EnumSet.of(Option.LIVE_SERVERS, Option.DEAD_SERVERS, Option.SERVERS_NAME);
     ClusterMetrics metrics = ADMIN.getClusterMetrics(options);
-    Assert.assertNotNull(metrics);
+    assertNotNull(metrics);
     // exclude a dead region server
-    Assert.assertEquals(SLAVES - 1, numRs);
+    assertEquals(SLAVES - 1, numRs);
     // live servers = nums of regionservers
     // By default, HMaster don't carry any regions so it won't report its load.
     // Hence, it won't be in the server list.
-    Assert.assertEquals(numRs, metrics.getLiveServerMetrics().size());
-    Assert.assertTrue(metrics.getRegionCount() > 0);
-    Assert.assertNotNull(metrics.getDeadServerNames());
-    Assert.assertEquals(1, metrics.getDeadServerNames().size());
+    assertEquals(numRs, metrics.getLiveServerMetrics().size());
+    assertTrue(metrics.getRegionCount() > 0);
+    assertNotNull(metrics.getDeadServerNames());
+    assertEquals(1, metrics.getDeadServerNames().size());
     ServerName deadServerName = metrics.getDeadServerNames().iterator().next();
-    Assert.assertEquals(DEAD.getServerName(), deadServerName);
-    Assert.assertNotNull(metrics.getServersName());
-    Assert.assertEquals(numRs, metrics.getServersName().size());
+    assertEquals(DEAD.getServerName(), deadServerName);
+    assertNotNull(metrics.getServersName());
+    assertEquals(numRs, metrics.getServersName().size());
   }
 
   @Test
@@ -220,22 +215,21 @@ public class TestClientClusterMetrics {
     table.put(new Put(Bytes.toBytes("k3")).addColumn(CF, Bytes.toBytes("q3"), Bytes.toBytes("v3")));
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
-    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
-    Assert.assertEquals(
+    assertEquals(metrics.getTableRegionStatesCount().size(), 2);
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getRegionsInTransition(),
       0);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getOpenRegions(), 1);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getTotalRegions(), 1);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getClosedRegions(), 0);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getSplitRegions(), 0);
-    Assert.assertEquals(
-      metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 1);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 1);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 1);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 1);
 
     UTIL.deleteTable(TABLE_NAME);
   }
@@ -251,18 +245,17 @@ public class TestClientClusterMetrics {
     insertData(TABLE_NAME, startRowNum, rowCount);
 
     ClusterMetrics metrics = ADMIN.getClusterMetrics();
-    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
-    Assert.assertEquals(
+    assertEquals(metrics.getTableRegionStatesCount().size(), 2);
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getRegionsInTransition(),
       0);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getOpenRegions(), 1);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getTotalRegions(), 1);
-    Assert.assertEquals(
-      metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 1);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 1);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 1);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 1);
 
     int splitRowNum = startRowNum + rowCount / 2;
     byte[] splitKey = Bytes.toBytes("" + splitRowNum);
@@ -271,20 +264,19 @@ public class TestClientClusterMetrics {
     ADMIN.split(TABLE_NAME, splitKey);
 
     metrics = ADMIN.getClusterMetrics();
-    Assert.assertEquals(metrics.getTableRegionStatesCount().size(), 2);
-    Assert.assertEquals(
+    assertEquals(metrics.getTableRegionStatesCount().size(), 2);
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getRegionsInTransition(),
       0);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getOpenRegions(), 1);
-    Assert.assertEquals(
+    assertEquals(
       metrics.getTableRegionStatesCount().get(TableName.META_TABLE_NAME).getTotalRegions(), 1);
-    Assert.assertEquals(
-      metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 2);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 3);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getSplitRegions(), 1);
-    Assert.assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getClosedRegions(), 0);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getRegionsInTransition(), 0);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getOpenRegions(), 2);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getTotalRegions(), 3);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getSplitRegions(), 1);
+    assertEquals(metrics.getTableRegionStatesCount().get(TABLE_NAME).getClosedRegions(), 0);
 
     UTIL.deleteTable(TABLE_NAME);
   }
@@ -305,14 +297,14 @@ public class TestClientClusterMetrics {
         activeName = active.getServerName();
       }
     }
-    Assert.assertNotNull(active);
-    Assert.assertEquals(1, numActive);
-    Assert.assertEquals(MASTERS, masterThreads.size());
+    assertNotNull(active);
+    assertEquals(1, numActive);
+    assertEquals(MASTERS, masterThreads.size());
     // Retrieve master and backup masters infos only.
     EnumSet<Option> options = EnumSet.of(Option.MASTER, Option.BACKUP_MASTERS);
     ClusterMetrics metrics = ADMIN.getClusterMetrics(options);
-    Assert.assertTrue(metrics.getMasterName().equals(activeName));
-    Assert.assertEquals(MASTERS - 1, metrics.getBackupMasterNames().size());
+    assertTrue(metrics.getMasterName().equals(activeName));
+    assertEquals(MASTERS - 1, metrics.getBackupMasterNames().size());
   }
 
   @Test
@@ -337,7 +329,7 @@ public class TestClientClusterMetrics {
         try {
           doPut();
         } catch (IOException e) {
-          Assert.fail("Exception:" + e.getMessage());
+          fail("Exception:" + e.getMessage());
         }
         return null;
       }
@@ -352,7 +344,7 @@ public class TestClientClusterMetrics {
         try {
           doGet();
         } catch (IOException e) {
-          Assert.fail("Exception:" + e.getMessage());
+          fail("Exception:" + e.getMessage());
         }
         return null;
       }
@@ -367,10 +359,10 @@ public class TestClientClusterMetrics {
         try {
           Table table = createConnection(UTIL.getConfiguration()).getTable(TABLE_NAME);
           for (Result result : table.getScanner(new Scan().setFilter(new FilterAllFilter()))) {
-            Assert.fail("Should have filtered all rows");
+            fail("Should have filtered all rows");
           }
         } catch (IOException e) {
-          Assert.fail("Exception:" + e.getMessage());
+          fail("Exception:" + e.getMessage());
         }
         return null;
       }
@@ -383,25 +375,22 @@ public class TestClientClusterMetrics {
     for (byte[] user : userMap.keySet()) {
       switch (Bytes.toString(user)) {
         case "FOO_USER_METRIC_TEST":
-          Assert.assertEquals(1,
-            userMap.get(user).getWriteRequestCount() - writeMetaMetricForUserFoo);
+          assertEquals(1, userMap.get(user).getWriteRequestCount() - writeMetaMetricForUserFoo);
           break;
         case "BAR_USER_METRIC_TEST":
-          Assert.assertEquals(1,
-            userMap.get(user).getReadRequestCount() - readMetaMetricForUserBar);
-          Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
+          assertEquals(1, userMap.get(user).getReadRequestCount() - readMetaMetricForUserBar);
+          assertEquals(0, userMap.get(user).getWriteRequestCount());
           break;
         case "TEST_USER_METRIC_TEST":
-          Assert.assertEquals(1,
+          assertEquals(1,
             userMap.get(user).getFilteredReadRequests() - filteredMetaReqeustForTestUser);
-          Assert.assertEquals(0, userMap.get(user).getWriteRequestCount());
+          assertEquals(0, userMap.get(user).getWriteRequestCount());
           break;
         default:
           // current user
-          Assert.assertEquals(UserProvider.instantiate(conf).getCurrent().getName(),
-            Bytes.toString(user));
+          assertEquals(UserProvider.instantiate(conf).getCurrent().getName(), Bytes.toString(user));
           // Read/write count because of Meta operations
-          Assert.assertTrue(userMap.get(user).getReadRequestCount() > 1);
+          assertTrue(userMap.get(user).getReadRequestCount() > 1);
           break;
       }
     }
@@ -431,7 +420,7 @@ public class TestClientClusterMetrics {
         break;
       }
     }
-    Assert.assertTrue("Expected task not found in master task list", found);
+    assertTrue(found, "Expected task not found in master task list");
     // Get the tasks information (carried in server metrics)
     found = false;
     for (ServerMetrics serverMetrics : clusterMetrics.getLiveServerMetrics().values()) {
@@ -447,7 +436,7 @@ public class TestClientClusterMetrics {
     }
     // We will fall through here if getClusterMetrics(TASKS) did not correctly process the
     // task list.
-    Assert.assertTrue("Expected task not found in server load", found);
+    assertTrue(found, "Expected task not found in server load");
   }
 
   private RegionMetrics getMetaMetrics() throws IOException {
@@ -459,7 +448,7 @@ public class TestClientClusterMetrics {
         return metaMetrics;
       }
     }
-    Assert.fail("Should have find meta metrics");
+    fail("Should have find meta metrics");
     return null;
   }
 
@@ -471,7 +460,7 @@ public class TestClientClusterMetrics {
       public boolean evaluate() throws Exception {
         Map<byte[], UserMetrics> metrics = ADMIN.getClusterMetrics(EnumSet.of(Option.LIVE_SERVERS))
           .getLiveServerMetrics().values().iterator().next().getUserMetrics();
-        Assert.assertNotNull(metrics);
+        assertNotNull(metrics);
         // including current user + noOfUsers
         return metrics.keySet().size() > noOfUsers;
       }
@@ -500,14 +489,14 @@ public class TestClientClusterMetrics {
     EnumSet<Option> options = EnumSet.of(Option.MASTER_COPROCESSORS, Option.HBASE_VERSION,
       Option.CLUSTER_ID, Option.BALANCER_ON);
     ClusterMetrics metrics = ADMIN.getClusterMetrics(options);
-    Assert.assertEquals(1, metrics.getMasterCoprocessorNames().size());
-    Assert.assertNotNull(metrics.getHBaseVersion());
-    Assert.assertNotNull(metrics.getClusterId());
-    Assert.assertTrue(metrics.getAverageLoad() == 0.0);
-    Assert.assertNotNull(metrics.getBalancerOn());
+    assertEquals(1, metrics.getMasterCoprocessorNames().size());
+    assertNotNull(metrics.getHBaseVersion());
+    assertNotNull(metrics.getClusterId());
+    assertTrue(metrics.getAverageLoad() == 0.0);
+    assertNotNull(metrics.getBalancerOn());
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     if (ADMIN != null) {
       ADMIN.close();
@@ -519,10 +508,10 @@ public class TestClientClusterMetrics {
   public void testObserver() throws IOException {
     int preCount = MyObserver.PRE_COUNT.get();
     int postCount = MyObserver.POST_COUNT.get();
-    Assert.assertTrue(ADMIN.getClusterMetrics().getMasterCoprocessorNames().stream()
+    assertTrue(ADMIN.getClusterMetrics().getMasterCoprocessorNames().stream()
       .anyMatch(s -> s.equals(MyObserver.class.getSimpleName())));
-    Assert.assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
-    Assert.assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
+    assertEquals(preCount + 1, MyObserver.PRE_COUNT.get());
+    assertEquals(postCount + 1, MyObserver.POST_COUNT.get());
   }
 
   private static void insertData(final TableName tableName, int startRow, int rowCount)

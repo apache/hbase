@@ -36,6 +36,7 @@ class BalancerRegionLoad {
   private final int storefileSizeMB;
   private final int regionSizeMB;
   private final float currentRegionPrefetchRatio;
+  private final float regionColdDataRatio;
 
   BalancerRegionLoad(RegionMetrics regionMetrics) {
     readRequestsCount = regionMetrics.getReadRequestCount();
@@ -45,6 +46,7 @@ class BalancerRegionLoad {
     storefileSizeMB = (int) regionMetrics.getStoreFileSize().get(Size.Unit.MEGABYTE);
     regionSizeMB = (int) regionMetrics.getRegionSizeMB().get(Size.Unit.MEGABYTE);
     currentRegionPrefetchRatio = regionMetrics.getCurrentRegionCachedRatio();
+    regionColdDataRatio = regionMetrics.getCurrentRegionColdDataRatio();
   }
 
   public long getReadRequestsCount() {
@@ -73,5 +75,9 @@ class BalancerRegionLoad {
 
   public float getCurrentRegionCacheRatio() {
     return currentRegionPrefetchRatio;
+  }
+
+  public float getRegionColdDataRatio() {
+    return regionColdDataRatio;
   }
 }

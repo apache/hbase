@@ -17,12 +17,11 @@
  */
 package org.apache.hadoop.hbase.wal;
 
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -32,27 +31,19 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestDisabledWAL {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDisabledWAL.class);
-
-  @Rule
-  public TestName name = new TestName();
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDisabledWAL.class);
   static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -60,7 +51,7 @@ public class TestDisabledWAL {
   private TableName tableName;
   private byte[] fam = Bytes.toBytes("f1");
 
-  @BeforeClass
+  @BeforeAll
   public static void beforeClass() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.regionserver.hlog.enabled", false);
@@ -72,19 +63,20 @@ public class TestDisabledWAL {
     }
   }
 
-  @AfterClass
+  @AfterAll
   public static void afterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setup() throws Exception {
-    tableName = TableName.valueOf(name.getMethodName().replaceAll("[^a-zA-Z0-9]", "_"));
+  @BeforeEach
+  public void setup(TestInfo testInfo) throws Exception {
+    tableName =
+      TableName.valueOf(testInfo.getTestMethod().get().getName().replaceAll("[^a-zA-Z0-9]", "_"));
     LOG.info("Creating table " + tableName);
     table = TEST_UTIL.createTable(tableName, fam);
   }
 
-  @After
+  @AfterEach
   public void cleanup() throws Exception {
     LOG.info("Deleting table " + tableName);
     TEST_UTIL.deleteTable(tableName);

@@ -17,19 +17,14 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
-import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.apache.hadoop.hbase.testclassification.LargeTests;
+import org.junit.jupiter.api.Tag;
 
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(ClientTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSnapshotWithAclAsyncAdmin extends SnapshotWithAclTestBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotWithAclAsyncAdmin.class);
 
   @Override
   protected void snapshot(String snapshotName, TableName tableName) throws Exception {

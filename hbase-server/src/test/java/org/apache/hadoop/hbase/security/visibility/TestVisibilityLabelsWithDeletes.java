@@ -17,21 +17,24 @@
  */
 package org.apache.hadoop.hbase.security.visibility;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.awaitility.Awaitility.await;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.io.InterruptedIOException;
 import java.security.PrivilegedExceptionAction;
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Random;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.TableNameTestExtension;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
@@ -44,37 +47,37 @@ import org.apache.hadoop.hbase.client.RetriesExhaustedWithDetailsException;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.VisibilityLabelsProtos.VisibilityLabelsResponse;
 
-@Category({ SecurityTests.class, LargeTests.class })
+@Tag(SecurityTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletesTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestVisibilityLabelsWithDeletes.class);
-
   @Override
-  protected Table createTable(byte[] fam) throws IOException {
-    TableName tableName = TableName.valueOf(testName.getMethodName());
+  protected Table createTable(byte[] fam, TestInfo testInfo) throws IOException {
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(fam)).build());
     return TEST_UTIL.getConnection().getTable(tableName);
   }
 
-  private TableName createTable() throws IOException {
-    return createTable(-1);
+  private TableName createTable(TestInfo testInfo) throws IOException {
+    return createTable(-1, testInfo);
   }
 
-  private TableName createTable(int maxVersions) throws IOException {
-    TableName tableName = TableName.valueOf(testName.getMethodName());
+  private TableName createTable(int maxVersions, TestInfo testInfo) throws IOException {
+    TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     createTable(tableName, maxVersions);
     return tableName;
   }
@@ -89,9 +92,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumnsWithMultipleVersions() throws Exception {
+  public void testVisibilityLabelsWithDeleteColumnsWithMultipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -144,10 +149,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumnsWithMultipleVersionsNoTimestamp()
-    throws Exception {
+  public void testVisibilityLabelsWithDeleteColumnsWithMultipleVersionsNoTimestamp(
+    TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -193,10 +199,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumnsNoMatchVisExpWithMultipleVersionsNoTimestamp()
-    throws Exception {
+  public void testVisibilityLabelsWithDeleteColumnsNoMatchVisExpWithMultipleVersionsNoTimestamp(
+    TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -246,10 +253,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteFamilyWithMultipleVersionsNoTimestamp()
+  public void testVisibilityLabelsWithDeleteFamilyWithMultipleVersionsNoTimestamp(TestInfo testInfo)
     throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -294,8 +302,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnsWithoutAndWithVisibilityLabels() throws Exception {
-    TableName tableName = createTable();
+  public void testDeleteColumnsWithoutAndWithVisibilityLabels(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(row1);
       put.addColumn(fam, qual, value);
@@ -342,8 +350,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnsWithAndWithoutVisibilityLabels() throws Exception {
-    TableName tableName = createTable();
+  public void testDeleteColumnsWithAndWithoutVisibilityLabels(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(row1);
       put.addColumn(fam, qual, value);
@@ -390,8 +398,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamiliesWithoutAndWithVisibilityLabels() throws Exception {
-    TableName tableName = createTable();
+  public void testDeleteFamiliesWithoutAndWithVisibilityLabels(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(row1);
       put.addColumn(fam, qual, value);
@@ -438,8 +446,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamiliesWithAndWithoutVisibilityLabels() throws Exception {
-    TableName tableName = createTable();
+  public void testDeleteFamiliesWithAndWithoutVisibilityLabels(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(row1);
       put.addColumn(fam, qual, value);
@@ -486,8 +494,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeletesWithoutAndWithVisibilityLabels() throws Exception {
-    TableName tableName = createTable();
+  public void testDeletesWithoutAndWithVisibilityLabels(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(row1);
       put.addColumn(fam, qual, value);
@@ -536,8 +544,9 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteFamilyWithPutsReAppearing() throws Exception {
-    TableName tableName = createTable(5);
+  public void testVisibilityLabelsWithDeleteFamilyWithPutsReAppearing(TestInfo testInfo)
+    throws Exception {
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual, value);
@@ -606,8 +615,9 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumnsWithPutsReAppearing() throws Exception {
-    TableName tableName = createTable(5);
+  public void testVisibilityLabelsWithDeleteColumnsWithPutsReAppearing(TestInfo testInfo)
+    throws Exception {
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual, value);
@@ -676,8 +686,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityCombinations() throws Exception {
-    TableName tableName = createTable(5);
+  public void testVisibilityCombinations(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual, 123L, value);
@@ -723,9 +733,9 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteColumnWithSpecificVersionWithPutsReAppearing()
-    throws Exception {
-    TableName tableName = createTable(5);
+  public void testVisibilityLabelsWithDeleteColumnWithSpecificVersionWithPutsReAppearing(
+    TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put1 = new Put(Bytes.toBytes("row1"));
       put1.addColumn(fam, qual, 123L, value);
@@ -778,10 +788,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityLabelsWithDeleteFamilyNoMatchingVisExpWithMultipleVersionsNoTimestamp()
-    throws Exception {
+  public void testVisibilityLabelsWithDeleteFamilyNoMatchingVisExpWithMultipleVersionsNoTimestamp(
+    TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -831,9 +842,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamilyAndDeleteColumnsWithAndWithoutVisibilityExp() throws Exception {
+  public void testDeleteFamilyAndDeleteColumnsWithAndWithoutVisibilityExp(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1010,10 +1023,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnWithSpecificTimeStampUsingMultipleVersionsUnMatchingVisExpression()
-    throws Exception {
+  public void testDeleteColumnWithSpecificTimeStampUsingMultipleVersionsUnMatchingVisExpression(
+    TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1076,9 +1090,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnWithLatestTimeStampUsingMultipleVersions() throws Exception {
+  public void testDeleteColumnWithLatestTimeStampUsingMultipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1135,9 +1151,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnWithLatestTimeStampWhenNoVersionMatches() throws Exception {
+  public void testDeleteColumnWithLatestTimeStampWhenNoVersionMatches(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       Put put = new Put(Bytes.toBytes("row1"));
@@ -1222,10 +1240,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnWithLatestTimeStampUsingMultipleVersionsAfterCompaction()
-    throws Exception {
+  public void testDeleteColumnWithLatestTimeStampUsingMultipleVersionsAfterCompaction(
+    TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1289,9 +1308,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamilyLatestTimeStampWithMulipleVersions() throws Exception {
+  public void testDeleteFamilyLatestTimeStampWithMulipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1338,9 +1359,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnswithMultipleColumnsWithMultipleVersions() throws Exception {
+  public void testDeleteColumnswithMultipleColumnsWithMultipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPutsWithDiffCols(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1396,8 +1419,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnsWithDiffColsAndTags() throws Exception {
-    TableName tableName = createTable(5);
+  public void testDeleteColumnsWithDiffColsAndTags(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual1, 125L, value);
@@ -1439,8 +1462,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnsWithDiffColsAndTags1() throws Exception {
-    TableName tableName = createTable(5);
+  public void testDeleteColumnsWithDiffColsAndTags1(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual1, 125L, value);
@@ -1482,9 +1505,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamilyWithoutCellVisibilityWithMulipleVersions() throws Exception {
+  public void testDeleteFamilyWithoutCellVisibilityWithMulipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPutsWithoutVisibility(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1520,10 +1545,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamilyLatestTimeStampWithMulipleVersionsWithoutCellVisibilityInPuts()
-    throws Exception {
+  public void testDeleteFamilyLatestTimeStampWithMulipleVersionsWithoutCellVisibilityInPuts(
+    TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPutsWithoutVisibility(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -1583,9 +1609,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteFamilySpecificTimeStampWithMulipleVersions() throws Exception {
+  public void testDeleteFamilySpecificTimeStampWithMulipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1638,9 +1666,10 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testScanAfterCompaction() throws Exception {
+  public void testScanAfterCompaction(TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1690,10 +1719,102 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
     }
   }
 
+  /**
+   * On a cell-visibility table, two DeleteColumn markers carrying different labels shadow disjoint
+   * cells, so neither is redundant w.r.t. the other. A minor compaction must not drop the
+   * lower-timestamp marker just because a higher-timestamp marker of a different label was tracked
+   * first; doing so would resurrect data that must stay deleted. This is the end-to-end regression
+   * guard for {@link VisibilityScanDeleteTracker#isRedundantDelete}.
+   * <p>
+   * The big put is larger than {@code hbase.hstore.compaction.max.size}, so minor compaction
+   * excludes its file and merges only the two small delete-marker files (isAllFiles=false, hence
+   * COMPACT_RETAIN_DELETES and MinorCompactionScanQueryMatcher, the path that calls
+   * isRedundantDelete). The put's data stays in its own file, so dropping the SECRET marker would
+   * make it visible again.
+   */
   @Test
-  public void testDeleteFamilySpecificTimeStampWithMulipleVersionsDoneTwice() throws Exception {
+  public void testDifferentLabelDeleteMarkersSurviveMinorCompaction(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
+    // Minor compaction merges at most two files and skips any file larger than 64KB.
+    ColumnFamilyDescriptorBuilder cfd = ColumnFamilyDescriptorBuilder.newBuilder(fam)
+      .setMaxVersions(5).setConfiguration("hbase.hstore.compaction.min", "2")
+      .setConfiguration("hbase.hstore.compaction.max", "2")
+      .setConfiguration("hbase.hstore.compaction.max.size", "65536");
+    // Disable automatic compaction while the three HFiles are laid down, so the minor compaction
+    // under test is exactly the one triggered explicitly below (no racing background compaction).
+    TEST_UTIL.getAdmin().createTable(TableDescriptorBuilder.newBuilder(tableName)
+      .setCompactionEnabled(false).setColumnFamily(cfd.build()).build());
+
+    SUPERUSER.runAs((PrivilegedExceptionAction<Void>) () -> {
+      try (Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName)) {
+        // Big SECRET-visible put at ts=40. Random bytes keep the file above max.size so it is
+        // excluded from the minor compaction and retains the data the SECRET delete shadows.
+        byte[] big = new byte[200 * 1024];
+        new Random(1).nextBytes(big);
+        Put put = new Put(row1);
+        put.addColumn(fam, qual, 40L, big);
+        put.setCellVisibility(new CellVisibility(SECRET));
+        table.put(put);
+        TEST_UTIL.getAdmin().flush(tableName);
+        // SECRET DeleteColumn at ts=50 shadows the SECRET put.
+        Delete dSecret = new Delete(row1);
+        dSecret.setCellVisibility(new CellVisibility(SECRET));
+        dSecret.addColumns(fam, qual, 50L);
+        table.delete(dSecret);
+        TEST_UTIL.getAdmin().flush(tableName);
+        // Newer CONFIDENTIAL DeleteColumn at ts=100 shadows disjoint (CONFIDENTIAL) cells.
+        Delete dConf = new Delete(row1);
+        dConf.setCellVisibility(new CellVisibility(CONFIDENTIAL));
+        dConf.addColumns(fam, qual, 100L);
+        table.delete(dConf);
+        TEST_UTIL.getAdmin().flush(tableName);
+      }
+      return null;
+    });
+
+    // Before compaction the SECRET put is correctly hidden by the SECRET delete.
+    assertEquals(0, countCells(tableName, SECRET));
+
+    // Synchronously minor-compact the two small delete files (the big put file is excluded).
+    HRegion region = TEST_UTIL.getHBaseCluster().getRegions(tableName).get(0);
+    region.compact(false);
+    // Two files remain: the untouched big put file plus the single merged delete file. This both
+    // confirms a minor compaction happened and that the big file was not swept into a major one.
+    await().atMost(Duration.ofSeconds(60))
+      .untilAsserted(() -> assertEquals(2, region.getStore(fam).getStorefilesCount()));
+
+    // The SECRET delete must still shadow the SECRET put: no resurrection.
+    assertEquals(0, countCells(tableName, SECRET));
+  }
+
+  private int countCells(TableName tableName, String... auths) throws Exception {
+    return SUPERUSER.runAs((PrivilegedExceptionAction<Integer>) () -> {
+      try (Connection connection = ConnectionFactory.createConnection(conf);
+        Table table = connection.getTable(tableName)) {
+        Scan s = new Scan();
+        s.readVersions(5);
+        s.setAuthorizations(new Authorizations(auths));
+        try (ResultScanner scanner = table.getScanner(s)) {
+          int count = 0;
+          for (Result r : scanner) {
+            count += r.size();
+          }
+          return count;
+        }
+      }
+    });
+  }
+
+  @Test
+  public void testDeleteFamilySpecificTimeStampWithMulipleVersionsDoneTwice(TestInfo testInfo)
+    throws Exception {
+    setAuths();
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     // Do not flush here.
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -1792,7 +1913,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testMultipleDeleteFamilyVersionWithDiffLabels() throws Exception {
+  public void testMultipleDeleteFamilyVersionWithDiffLabels(TestInfo testInfo) throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
       new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
         @Override
@@ -1806,7 +1927,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         }
       };
     SUPERUSER.runAs(action);
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -1856,9 +1978,10 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testSpecificDeletesFollowedByDeleteFamily() throws Exception {
+  public void testSpecificDeletesFollowedByDeleteFamily(TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -1943,7 +2066,7 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testSpecificDeletesFollowedByDeleteFamily1() throws Exception {
+  public void testSpecificDeletesFollowedByDeleteFamily1(TestInfo testInfo) throws Exception {
     PrivilegedExceptionAction<VisibilityLabelsResponse> action =
       new PrivilegedExceptionAction<VisibilityLabelsResponse>() {
         @Override
@@ -1957,7 +2080,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
         }
       };
     SUPERUSER.runAs(action);
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -2043,9 +2167,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnSpecificTimeStampWithMulipleVersionsDoneTwice() throws Exception {
+  public void testDeleteColumnSpecificTimeStampWithMulipleVersionsDoneTwice(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
         @Override
@@ -2147,9 +2273,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnSpecificTimeStampWithMulipleVersionsDoneTwice1() throws Exception {
+  public void testDeleteColumnSpecificTimeStampWithMulipleVersionsDoneTwice1(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     // Do not flush here.
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -2257,9 +2385,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnSpecificTimeStampWithMulipleVersionsDoneTwice2() throws Exception {
+  public void testDeleteColumnSpecificTimeStampWithMulipleVersionsDoneTwice2(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
 
     // Do not flush here.
     try (Table table = doPuts(tableName)) {
@@ -2374,10 +2504,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnAndDeleteFamilylSpecificTimeStampWithMulipleVersion()
+  public void testDeleteColumnAndDeleteFamilylSpecificTimeStampWithMulipleVersion(TestInfo testInfo)
     throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     // Do not flush here.
     try (Table table = doPuts(tableName)) {
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -2475,9 +2606,11 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDiffDeleteTypesForTheSameCellUsingMultipleVersions() throws Exception {
+  public void testDiffDeleteTypesForTheSameCellUsingMultipleVersions(TestInfo testInfo)
+    throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       // Do not flush here.
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -2580,9 +2713,10 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteColumnLatestWithNoCellVisibility() throws Exception {
+  public void testDeleteColumnLatestWithNoCellVisibility(TestInfo testInfo) throws Exception {
     setAuths();
-    final TableName tableName = TableName.valueOf(testName.getMethodName());
+    final TableName tableName = TableName
+      .valueOf(TableNameTestExtension.cleanUpTestName(testInfo.getTestMethod().get().getName()));
     try (Table table = doPuts(tableName)) {
       TEST_UTIL.getAdmin().flush(tableName);
       PrivilegedExceptionAction<Void> actiona = new PrivilegedExceptionAction<Void>() {
@@ -2771,9 +2905,9 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testVisibilityExpressionWithNotEqualORCondition() throws Exception {
+  public void testVisibilityExpressionWithNotEqualORCondition(TestInfo testInfo) throws Exception {
     setAuths();
-    TableName tableName = createTable(5);
+    TableName tableName = createTable(5, testInfo);
     try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
       Put put = new Put(Bytes.toBytes("row1"));
       put.addColumn(fam, qual, 123L, value);
@@ -2823,8 +2957,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteWithNoVisibilitiesForPutsAndDeletes() throws Exception {
-    TableName tableName = createTable(5);
+  public void testDeleteWithNoVisibilitiesForPutsAndDeletes(TestInfo testInfo) throws Exception {
+    TableName tableName = createTable(5, testInfo);
     Put p = new Put(Bytes.toBytes("row1"));
     p.addColumn(fam, qual, value);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -2854,8 +2988,9 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteWithFamilyDeletesOfSameTsButDifferentVisibilities() throws Exception {
-    TableName tableName = createTable(5);
+  public void testDeleteWithFamilyDeletesOfSameTsButDifferentVisibilities(TestInfo testInfo)
+    throws Exception {
+    TableName tableName = createTable(5, testInfo);
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     long t1 = 1234L;
     CellVisibility cellVisibility1 = new CellVisibility(SECRET);
@@ -2951,7 +3086,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteCellWithoutVisibility() throws IOException, InterruptedException {
+  public void testDeleteCellWithoutVisibility(TestInfo testInfo)
+    throws IOException, InterruptedException {
     for (DeleteMark mark : DeleteMark.values()) {
       testDeleteCellWithoutVisibility(mark);
     }
@@ -2986,7 +3122,8 @@ public class TestVisibilityLabelsWithDeletes extends VisibilityLabelsWithDeletes
   }
 
   @Test
-  public void testDeleteCellWithVisibility() throws IOException, InterruptedException {
+  public void testDeleteCellWithVisibility(TestInfo testInfo)
+    throws IOException, InterruptedException {
     for (DeleteMark mark : DeleteMark.values()) {
       testDeleteCellWithVisibility(mark);
       testDeleteCellWithVisibilityV2(mark);

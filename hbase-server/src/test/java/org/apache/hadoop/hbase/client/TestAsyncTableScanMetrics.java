@@ -18,13 +18,17 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME;
-import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.REGIONS_SCANNED_METRIC_NAME;
 import static org.apache.hadoop.hbase.client.metrics.ScanMetrics.RPC_CALLS_METRIC_NAME;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertTrue;
+import static org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME;
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.both;
+import static org.hamcrest.Matchers.greaterThan;
+import static org.hamcrest.Matchers.lessThan;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -33,7 +37,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ForkJoinPool;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.concurrent.TimeUnit;
+import java.util.stream.Stream;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -43,25 +49,18 @@ import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Pair;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameter;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
-@RunWith(Parameterized.class)
-@Category({ MediumTests.class, ClientTests.class })
+@Tag(MediumTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: scan={0}")
 public class TestAsyncTableScanMetrics {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncTableScanMetrics.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -82,24 +81,24 @@ public class TestAsyncTableScanMetrics {
     Pair<List<Result>, ScanMetrics> scan(Scan scan) throws Exception;
   }
 
-  @Parameter(0)
-  public String methodName;
+  private ScanWithMetrics method;
 
-  @Parameter(1)
-  public ScanWithMetrics method;
+  // methodName is just for naming
+  public TestAsyncTableScanMetrics(String methodName, ScanWithMetrics method) {
+    this.method = method;
+  }
 
-  @Parameters(name = "{index}: scan={0}")
-  public static List<Object[]> params() {
+  public static Stream<Arguments> parameters() {
     ScanWithMetrics doScanWithRawAsyncTable = TestAsyncTableScanMetrics::doScanWithRawAsyncTable;
     ScanWithMetrics doScanWithAsyncTableScan = TestAsyncTableScanMetrics::doScanWithAsyncTableScan;
     ScanWithMetrics doScanWithAsyncTableScanner =
       TestAsyncTableScanMetrics::doScanWithAsyncTableScanner;
-    return Arrays.asList(new Object[] { "doScanWithRawAsyncTable", doScanWithRawAsyncTable },
-      new Object[] { "doScanWithAsyncTableScan", doScanWithAsyncTableScan },
-      new Object[] { "doScanWithAsyncTableScanner", doScanWithAsyncTableScanner });
+    return Stream.of(Arguments.of("doScanWithRawAsyncTable", doScanWithRawAsyncTable),
+      Arguments.of("doScanWithAsyncTableScan", doScanWithAsyncTableScan),
+      Arguments.of("doScanWithAsyncTableScanner", doScanWithAsyncTableScanner));
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.startMiniCluster(3);
     // Create 3 rows in the table, with rowkeys starting with "xxx*", "yyy*" and "zzz*" so that
@@ -113,7 +112,7 @@ public class TestAsyncTableScanMetrics {
     NUM_REGIONS = UTIL.getHBaseCluster().getRegions(TABLE_NAME).size();
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     Closeables.close(CONN, true);
     UTIL.shutdownMiniCluster();
@@ -149,7 +148,7 @@ public class TestAsyncTableScanMetrics {
     }
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsDisabled() throws Exception {
     Pair<List<Result>, ScanMetrics> pair = method.scan(new Scan());
     assertEquals(3, pair.getFirst().size());
@@ -157,11 +156,13 @@ public class TestAsyncTableScanMetrics {
     assertNull(pair.getSecond());
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsWithScanMetricsByRegionDisabled() throws Exception {
     Scan scan = new Scan();
     scan.setScanMetricsEnabled(true);
+    long startNanos = System.nanoTime();
     Pair<List<Result>, ScanMetrics> pair = method.scan(scan);
+    long endNanos = System.nanoTime();
     List<Result> results = pair.getFirst();
     assertEquals(3, results.size());
     long bytes = getBytesOfResults(results);
@@ -171,9 +172,11 @@ public class TestAsyncTableScanMetrics {
     assertEquals(NUM_REGIONS, scanMetrics.countOfRPCcalls.get());
     // Assert scan metrics have not been collected by region
     assertTrue(scanMetrics.collectMetricsByRegion().isEmpty());
+    assertThat(scanMetrics.sumOfMillisSecBetweenNexts.get(),
+      both(greaterThan(0L)).and(lessThan(TimeUnit.NANOSECONDS.toMillis(endNanos - startNanos))));
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionForSingleRegionScan() throws Exception {
     Scan scan = new Scan();
     scan.withStartRow(Bytes.toBytes("zzz1"), true);
@@ -201,13 +204,17 @@ public class TestAsyncTableScanMetrics {
       // was scanned.
       assertEquals(scanMetrics.getMetricsMap(false), metrics);
     }
+    // we only have 1 rpc call so there is no millis 'between nexts'
+    assertEquals(0, scanMetrics.sumOfMillisSecBetweenNexts.get());
   }
 
-  @Test
+  @TestTemplate
   public void testScanMetricsByRegionForMultiRegionScan() throws Exception {
     Scan scan = new Scan();
     scan.setEnableScanMetricsByRegion(true);
+    long startNanos = System.nanoTime();
     Pair<List<Result>, ScanMetrics> pair = method.scan(scan);
+    long endNanos = System.nanoTime();
     List<Result> results = pair.getFirst();
     assertEquals(3, results.size());
     long bytes = getBytesOfResults(results);
@@ -241,6 +248,8 @@ public class TestAsyncTableScanMetrics {
       }
     }
     assertEquals(3, rowsScannedAcrossAllRegions);
+    assertThat(scanMetrics.sumOfMillisSecBetweenNexts.get(),
+      both(greaterThan(0L)).and(lessThan(TimeUnit.NANOSECONDS.toMillis(endNanos - startNanos))));
   }
 
   static long getBytesOfResults(List<Result> results) {

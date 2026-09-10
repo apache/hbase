@@ -17,14 +17,15 @@
  */
 package org.apache.hadoop.hbase.master.procedure;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.hbase.ConcurrentTableModificationException;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.InvalidFamilyOperationException;
 import org.apache.hadoop.hbase.TableName;
@@ -35,6 +36,8 @@ import org.apache.hadoop.hbase.client.PerClientRandomNonceGenerator;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.constraint.ConstraintProcessor;
+import org.apache.hadoop.hbase.coprocessor.SimpleRegionObserver;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility.StepHook;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -46,22 +49,32 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.NonceKey;
 import org.apache.hadoop.hbase.util.TableDescriptorChecker;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
+  @BeforeAll
+  public static void setupCluster() throws Exception {
+    TestTableDDLProcedureBase.setupCluster();
+  }
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestModifyTableProcedure.class);
+  @AfterAll
+  public static void cleanupTest() throws Exception {
+    TestTableDDLProcedureBase.cleanupTest();
+  }
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
+
+  @BeforeEach
+  public void setTestMethod(TestInfo testInfo) {
+    testMethodName = testInfo.getTestMethod().get().getName();
+  }
 
   private static final String column_Family1 = "cf1";
   private static final String column_Family2 = "cf2";
@@ -69,7 +82,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testModifyTable() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
@@ -107,7 +120,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testModifyTableAddCF() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf1");
@@ -150,7 +163,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testModifyTableDeleteCF() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String cf1 = "cf1";
     final String cf2 = "cf2";
     final String cf3 = "cf3";
@@ -197,15 +210,15 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     final Procedure<?> result = procExec.getResult(procId3);
     assertEquals(true, result.isFailed());
     Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
-    assertTrue("expected DoNotRetryIOException, got " + cause,
-      cause instanceof DoNotRetryIOException);
+    assertTrue(cause instanceof DoNotRetryIOException,
+      "expected DoNotRetryIOException, got " + cause);
     assertEquals(1, currentHtd.getColumnFamilyNames().size());
     assertTrue(currentHtd.hasColumnFamily(Bytes.toBytes(cf1)));
   }
 
   @Test
   public void testRecoveryAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String cf2 = "cf2";
     final String cf3 = "cf3";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -244,7 +257,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testRecoveryAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String cf2 = "cf2";
     final String cf3 = "cf3";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -286,7 +299,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testColumnFamilyAdditionTwiceWithNonce() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String cf2 = "cf2";
     final String cf3 = "cf3";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
@@ -331,7 +344,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
       UTIL.getHBaseCluster().getMaster().addColumn(tableName,
         ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(cf2)).build(), nonceGroup,
         nonceGenerator.newNonce());
-      Assert.fail();
+      fail();
     } catch (InvalidFamilyOperationException e) {
     }
 
@@ -349,7 +362,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testRollbackAndDoubleExecutionOnline() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String familyName = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -378,7 +391,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testRollbackAndDoubleExecutionOffline() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final String familyName = "cf2";
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
@@ -411,7 +424,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
   @Test
   public void testConcurrentAddColumnFamily() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     UTIL.createTable(tableName, column_Family1);
 
     class ConcurrentAddColumnFamily extends Thread {
@@ -449,13 +462,14 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     t1.join();
     t2.join();
     int noOfColumnFamilies = UTIL.getAdmin().getDescriptor(tableName).getColumnFamilies().length;
-    assertTrue("Expected ConcurrentTableModificationException.",
-      ((t1.exception || t2.exception) && noOfColumnFamilies == 2) || noOfColumnFamilies == 3);
+    assertTrue(
+      ((t1.exception || t2.exception) && noOfColumnFamilies == 2) || noOfColumnFamilies == 3,
+      "Expected ConcurrentTableModificationException.");
   }
 
   @Test
   public void testConcurrentDeleteColumnFamily() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     TableDescriptorBuilder tableDescriptorBuilder = TableDescriptorBuilder.newBuilder(tableName);
     ColumnFamilyDescriptor columnFamilyDescriptor =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(column_Family1)).build();
@@ -498,13 +512,14 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     t1.join();
     t2.join();
     int noOfColumnFamilies = UTIL.getAdmin().getDescriptor(tableName).getColumnFamilies().length;
-    assertTrue("Expected ConcurrentTableModificationException.",
-      ((t1.exception || t2.exception) && noOfColumnFamilies == 2) || noOfColumnFamilies == 1);
+    assertTrue(
+      ((t1.exception || t2.exception) && noOfColumnFamilies == 2) || noOfColumnFamilies == 1,
+      "Expected ConcurrentTableModificationException.");
   }
 
   @Test
   public void testConcurrentModifyColumnFamily() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     UTIL.createTable(tableName, column_Family1);
 
     class ConcurrentModifyColumnFamily extends Thread {
@@ -544,13 +559,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     int maxVersions = UTIL.getAdmin().getDescriptor(tableName)
       .getColumnFamily(column_Family1.getBytes()).getMaxVersions();
-    assertTrue("Expected ConcurrentTableModificationException.", (t1.exception && maxVersions == 5)
-      || (t2.exception && maxVersions == 6) || !(t1.exception && t2.exception));
+    assertTrue((t1.exception && maxVersions == 5) || (t2.exception && maxVersions == 6)
+      || !(t1.exception && t2.exception), "Expected ConcurrentTableModificationException.");
   }
 
   @Test
   public void testConcurrentModifyTable() throws IOException, InterruptedException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     UTIL.createTable(tableName, column_Family1);
 
     class ConcurrentModifyTable extends Thread {
@@ -586,13 +601,13 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
 
     t1.join();
     t2.join();
-    assertFalse("Expected ConcurrentTableModificationException.", (t1.exception || t2.exception));
+    assertFalse((t1.exception || t2.exception), "Expected ConcurrentTableModificationException.");
   }
 
   @Test
   public void testModifyWillNotReopenRegions() throws IOException {
     final boolean reopenRegions = false;
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
 
     MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
@@ -608,7 +623,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     assertEquals("test.hbase.conf.value", currentHtd.getValue("test.hbase.conf"));
     // Regions should not aware of any changes.
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
-      Assert.assertNull(r.getTableDescriptor().getValue("test.hbase.conf"));
+      assertNull(r.getTableDescriptor().getValue("test.hbase.conf"));
     }
     // Force regions to reopen
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
@@ -626,8 +641,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     try {
       ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
         procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
-      Assert.fail(
-        "An exception should have been thrown while modifying region replication properties.");
+      fail("An exception should have been thrown while modifying region replication properties.");
     } catch (HBaseIOException e) {
       assertTrue(e.getMessage().contains("Can not modify"));
     }
@@ -643,12 +657,12 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     try {
       ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
         procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
-      Assert.fail("Should have thrown an exception while modifying CF!");
+      fail("Should have thrown an exception while modifying CF!");
     } catch (HBaseIOException e) {
       assertTrue(e.getMessage().contains("Cannot add or remove column families"));
     }
     currentHtd = UTIL.getAdmin().getDescriptor(tableName);
-    Assert.assertNull(currentHtd.getColumnFamily("NewCF".getBytes()));
+    assertNull(currentHtd.getColumnFamily("NewCF".getBytes()));
 
     // Test 4: Modifying CF property is allowed
     htd = UTIL.getAdmin().getDescriptor(tableName);
@@ -660,14 +674,14 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
       procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
-      Assert.assertEquals(Compression.Algorithm.NONE,
+      assertEquals(Compression.Algorithm.NONE,
         r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType());
     }
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
       getMaster().getAssignmentManager().move(r.getRegionInfo());
     }
     for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
-      Assert.assertEquals(Compression.Algorithm.SNAPPY,
+      assertEquals(Compression.Algorithm.SNAPPY,
         r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType());
     }
 
@@ -679,7 +693,7 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     try {
       ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
         procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
-      Assert.fail("Should have thrown an exception while modifying coprocessor!");
+      fail("Should have thrown an exception while modifying coprocessor!");
     } catch (HBaseIOException e) {
       assertTrue(e.getMessage().contains("Can not modify Coprocessor"));
     }
@@ -692,10 +706,89 @@ public class TestModifyTableProcedure extends TestTableDDLProcedureBase {
     try {
       ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
         procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
-      Assert.fail("Should have thrown an exception while modifying coprocessor!");
+      fail("Should have thrown an exception while modifying coprocessor!");
     } catch (HBaseIOException e) {
       System.out.println(e.getMessage());
       assertTrue(e.getMessage().contains("Can not modify REGION_REPLICATION"));
+    }
+  }
+
+  @Test
+  public void testModifyTableWithCoprocessorAndColumnFamilyPropertyChange() throws IOException {
+    // HBASE-29706 - This test validates the fix for the bug where modifying only column family
+    // properties
+    // (like COMPRESSION) with REOPEN_REGIONS=false would incorrectly throw an error when
+    // coprocessors are present. The bug was caused by comparing collection hash codes
+    // instead of actual descriptor content, which failed when HashMap iteration order varied.
+
+    final boolean reopenRegions = false;
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+
+    MasterProcedureTestingUtility.createTable(procExec, tableName, null, "cf");
+
+    // Step 1: Add coprocessors to the table
+    TableDescriptor htd = UTIL.getAdmin().getDescriptor(tableName);
+    final String cp2 = ConstraintProcessor.class.getName();
+    TableDescriptor descriptorWithCoprocessor = TableDescriptorBuilder.newBuilder(htd)
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(SimpleRegionObserver.class.getName())
+        .setPriority(100).build())
+      .setCoprocessor(CoprocessorDescriptorBuilder.newBuilder(cp2).setPriority(200).build())
+      .build();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+      procExec.getEnvironment(), descriptorWithCoprocessor, null, htd, false, true));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId));
+
+    // Verify coprocessors were added
+    TableDescriptor currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals(2, currentHtd.getCoprocessorDescriptors().size());
+    assertTrue(currentHtd.hasCoprocessor(SimpleRegionObserver.class.getName()),
+      "First coprocessor should be present");
+    assertTrue(currentHtd.hasCoprocessor(cp2), "Second coprocessor should be present");
+
+    // Step 2: Modify only the column family property (COMPRESSION) with REOPEN_REGIONS=false
+    // This should SUCCEED because we're not actually modifying the coprocessor,
+    // just the column family compression setting.
+    htd = UTIL.getAdmin().getDescriptor(tableName);
+    TableDescriptor modifiedDescriptor =
+      TableDescriptorBuilder
+        .newBuilder(htd).modifyColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder("cf".getBytes()).setCompressionType(Compression.Algorithm.SNAPPY).build())
+        .build();
+
+    // This should NOT throw an error - the fix ensures order-independent coprocessor comparison
+    long procId2 = ProcedureTestingUtility.submitAndWait(procExec, new ModifyTableProcedure(
+      procExec.getEnvironment(), modifiedDescriptor, null, htd, false, reopenRegions));
+    ProcedureTestingUtility.assertProcNotFailed(procExec.getResult(procId2));
+
+    // Verify the modification succeeded
+    currentHtd = UTIL.getAdmin().getDescriptor(tableName);
+    assertEquals(2, currentHtd.getCoprocessorDescriptors().size(),
+      "Coprocessors should still be present");
+    assertTrue(currentHtd.hasCoprocessor(SimpleRegionObserver.class.getName()),
+      "First coprocessor should still be present");
+    assertTrue(currentHtd.hasCoprocessor(cp2), "Second coprocessor should still be present");
+    assertEquals(Compression.Algorithm.SNAPPY,
+      currentHtd.getColumnFamily("cf".getBytes()).getCompressionType(),
+      "Compression should be updated in table descriptor");
+
+    // Verify regions haven't picked up the change yet (since reopenRegions=false)
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      assertEquals(Compression.Algorithm.NONE,
+        r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType(),
+        "Regions should still have old compression");
+    }
+
+    // Force regions to reopen
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      getMaster().getAssignmentManager().move(r.getRegionInfo());
+    }
+
+    // After reopen, regions should have the new compression setting
+    for (HRegion r : UTIL.getHBaseCluster().getRegions(tableName)) {
+      assertEquals(Compression.Algorithm.SNAPPY,
+        r.getTableDescriptor().getColumnFamily("cf".getBytes()).getCompressionType(),
+        "Regions should now have new compression after reopen");
     }
   }
 }

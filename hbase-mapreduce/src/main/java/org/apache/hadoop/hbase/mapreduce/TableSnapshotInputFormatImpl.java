@@ -43,6 +43,7 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
+import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
@@ -361,6 +362,11 @@ public class TableSnapshotInputFormatImpl {
       if (hri.isOffline() && (hri.isSplit() || hri.isSplitParent())) {
         continue;
       }
+      // The mob region is a dummy region used only to organise mob files under mobdir. It has no
+      // region directory under the table dir to open. See HBASE-30365.
+      if (MobUtils.isMobRegionInfo(hri)) {
+        continue;
+      }
       regionInfos.add(hri);
     }
     return regionInfos;
@@ -562,7 +568,7 @@ public class TableSnapshotInputFormatImpl {
     return getBestLocations(conf, blockDistribution, 3);
   }
 
-  private static String getSnapshotName(Configuration conf) {
+  public static String getSnapshotName(Configuration conf) {
     String snapshotName = conf.get(SNAPSHOT_NAME_KEY);
     if (snapshotName == null) {
       throw new IllegalArgumentException("Snapshot name must be provided");

@@ -30,11 +30,6 @@ import org.apache.hadoop.hbase.chaos.policies.PeriodicRandomActionPolicy;
  */
 public class MasterKillingMonkeyFactory extends MonkeyFactory {
 
-  private long action1Period;
-  private long action2Period;
-
-  private long restartActiveMasterSleepTime;
-
   @Override
   public ChaosMonkey build() {
     loadProperties();
@@ -50,18 +45,4 @@ public class MasterKillingMonkeyFactory extends MonkeyFactory {
       new PeriodicRandomActionPolicy(action1Period, actions1),
       new PeriodicRandomActionPolicy(action2Period, actions2));
   }
-
-  private void loadProperties() {
-
-    action1Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION1_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION1_PERIOD + ""));
-    action2Period =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.PERIODIC_ACTION2_PERIOD,
-        MonkeyConstants.DEFAULT_PERIODIC_ACTION2_PERIOD + ""));
-    restartActiveMasterSleepTime =
-      Long.parseLong(this.properties.getProperty(MonkeyConstants.RESTART_ACTIVE_MASTER_SLEEP_TIME,
-        MonkeyConstants.DEFAULT_RESTART_ACTIVE_MASTER_SLEEP_TIME + ""));
-  }
-
 }

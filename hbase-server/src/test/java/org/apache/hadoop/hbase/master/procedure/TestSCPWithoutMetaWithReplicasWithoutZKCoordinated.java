@@ -18,20 +18,15 @@
 package org.apache.hadoop.hbase.master.procedure;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 
-@Category({ MasterTests.class, LargeTests.class })
+@Tag(MasterTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestSCPWithoutMetaWithReplicasWithoutZKCoordinated
   extends TestSCPWithoutMetaWithReplicas {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSCPWithoutMetaWithReplicasWithoutZKCoordinated.class);
 
   @Override
   protected void setupConf(Configuration conf) {

@@ -109,6 +109,7 @@ public class TruncateRegionProcedure
           setNextState(TruncateRegionState.TRUNCATE_REGION_MAKE_ONLINE);
           break;
         case TRUNCATE_REGION_MAKE_ONLINE:
+          createRegionOnFileSystem(env);
           addChildProcedure(createAssignProcedures(env));
           setNextState(TruncateRegionState.TRUNCATE_REGION_POST_OPERATION);
           break;
@@ -128,6 +129,20 @@ public class TruncateRegionProcedure
       }
     }
     return Flow.HAS_MORE_STATE;
+  }
+
+  private void createRegionOnFileSystem(final MasterProcedureEnv env) throws IOException {
+    RegionStateNode regionNode =
+      env.getAssignmentManager().getRegionStates().getRegionStateNode(getRegion());
+    regionNode.lock();
+    try {
+      final MasterFileSystem mfs = env.getMasterServices().getMasterFileSystem();
+      final Path tableDir = CommonFSUtils.getTableDir(mfs.getRootDir(), getTableName());
+      HRegionFileSystem.createRegionOnFileSystem(env.getMasterConfiguration(), mfs.getFileSystem(),
+        tableDir, getRegion());
+    } finally {
+      regionNode.unlock();
+    }
   }
 
   private void deleteRegionFromFileSystem(final MasterProcedureEnv env) throws IOException {

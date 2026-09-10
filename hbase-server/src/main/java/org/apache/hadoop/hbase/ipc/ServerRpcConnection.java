@@ -55,7 +55,6 @@ import org.apache.hadoop.hbase.security.SaslStatus;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProvider;
-import org.apache.hadoop.hbase.security.provider.SaslServerAuthenticationProviders;
 import org.apache.hadoop.hbase.security.provider.SimpleSaslServerAuthenticationProvider;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -97,7 +96,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.TracingProtos.RPCTInfo;
 @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "VO_VOLATILE_INCREMENT",
     justification = "False positive according to http://sourceforge.net/p/findbugs/bugs/1032/")
 @InterfaceAudience.Private
-abstract class ServerRpcConnection implements Closeable {
+public abstract class ServerRpcConnection implements Closeable {
 
   private static final TextMapGetter<RPCTInfo> getter = new RPCTInfoGetter();
 
@@ -137,13 +136,11 @@ abstract class ServerRpcConnection implements Closeable {
 
   protected User user = null;
   protected UserGroupInformation ugi = null;
-  protected SaslServerAuthenticationProviders saslProviders = null;
   protected X509Certificate[] clientCertificateChain = null;
 
   public ServerRpcConnection(RpcServer rpcServer) {
     this.rpcServer = rpcServer;
     this.callCleanup = null;
-    this.saslProviders = SaslServerAuthenticationProviders.getInstance(rpcServer.getConf());
   }
 
   @Override
@@ -490,6 +487,10 @@ abstract class ServerRpcConnection implements Closeable {
       this.hostAddress, this.remotePort, version, this.useSasl, this.ugi, serviceName);
   }
 
+  public ConnectionHeader getConnectionHeader() {
+    return connectionHeader;
+  }
+
   /**
    * Send the response for connection header
    */
@@ -784,7 +785,7 @@ abstract class ServerRpcConnection implements Closeable {
       return PreambleResponse.CLOSE;
     }
 
-    this.provider = this.saslProviders.selectProvider(authByte);
+    this.provider = rpcServer.saslProviders.selectProvider(authByte);
     if (this.provider == null) {
       String msg = getFatalConnectionString(version, authByte);
       doBadPreambleHandling(msg, new BadAuthException(msg));
@@ -804,7 +805,7 @@ abstract class ServerRpcConnection implements Closeable {
     if (!this.rpcServer.isSecurityEnabled && !isSimpleAuthentication()) {
       doRawSaslReply(SaslStatus.SUCCESS, new IntWritable(SaslUtil.SWITCH_TO_SIMPLE_AUTH), null,
         null);
-      provider = saslProviders.getSimpleProvider();
+      provider = rpcServer.saslProviders.getSimpleProvider();
       // client has already sent the initial Sasl message and we
       // should ignore it. Both client and server should fall back
       // to simple auth from now on.
@@ -853,8 +854,14 @@ abstract class ServerRpcConnection implements Closeable {
     }
 
     @Override
+    public long readLong(int offset) {
+      return this.buf.getLong(offset);
+    }
+
+    @Override
     public int size() {
       return this.length;
     }
+
   }
 }

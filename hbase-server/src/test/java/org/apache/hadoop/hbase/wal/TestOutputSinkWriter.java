@@ -17,24 +17,21 @@
  */
 package org.apache.hadoop.hbase.wal;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ RegionServerTests.class, MediumTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestOutputSinkWriter {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestOutputSinkWriter.class);
 
   @Test
   public void testExeptionHandling() throws IOException, InterruptedException {
@@ -80,9 +77,9 @@ public class TestOutputSinkWriter {
     // make sure the exception is stored
     try {
       controller.checkForErrors();
-      Assert.fail();
+      fail();
     } catch (RuntimeException re) {
-      Assert.assertTrue(true);
+      assertTrue(true);
     }
 
     sink.restartWriterThreadsIfNeeded();
@@ -91,7 +88,7 @@ public class TestOutputSinkWriter {
     try {
       controller.checkForErrors();
     } catch (RuntimeException re) {
-      Assert.fail();
+      fail();
     }
 
     // prep another exception and wait for it to be thrown
@@ -101,9 +98,9 @@ public class TestOutputSinkWriter {
     // make sure the exception is stored
     try {
       controller.checkForErrors();
-      Assert.fail();
+      fail();
     } catch (RuntimeException re) {
-      Assert.assertTrue(true);
+      assertTrue(true);
     }
   }
 

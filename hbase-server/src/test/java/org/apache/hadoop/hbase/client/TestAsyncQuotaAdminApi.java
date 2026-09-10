@@ -18,13 +18,14 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncConnectionConfiguration.START_LOG_ERRORS_AFTER_COUNT_KEY;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import java.util.function.Supplier;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.quotas.QuotaCache;
@@ -37,22 +38,21 @@ import org.apache.hadoop.hbase.quotas.ThrottleType;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.TestTemplate;
 
-@RunWith(Parameterized.class)
-@Category({ ClientTests.class, MediumTests.class })
+@Tag(ClientTests.TAG)
+@Tag(MediumTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: policy = {0}")
 public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestAsyncQuotaAdminApi.class);
+  public TestAsyncQuotaAdminApi(Supplier<AsyncAdmin> admin) {
+    super(admin);
+  }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
     TEST_UTIL.getConfiguration().setInt(QuotaCache.REFRESH_CONF_KEY, 2000);
@@ -65,7 +65,12 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     ASYNC_CONN = ConnectionFactory.createAsyncConnection(TEST_UTIL.getConfiguration()).get();
   }
 
-  @Test
+  @AfterAll
+  public static void tearDownAfterClass() throws Exception {
+    TestAsyncAdminBase.tearDownAfterClass();
+  }
+
+  @TestTemplate
   public void testThrottleType() throws Exception {
     String userName = User.getCurrent().getShortName();
 
@@ -101,7 +106,7 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     assertNumResults(0, null);
   }
 
-  @Test
+  @TestTemplate
   public void testQuotaRetrieverFilter() throws Exception {
     TableName[] tables = new TableName[] { TableName.valueOf("T0"), TableName.valueOf("T01"),
       TableName.valueOf("NS0:T2"), };
@@ -181,7 +186,7 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     assertNumResults(0, null);
   }
 
-  @Test
+  @TestTemplate
   public void testSwitchRpcThrottle() throws Exception {
     CompletableFuture<Boolean> future1 = ASYNC_CONN.getAdmin().switchRpcThrottle(true);
     assertEquals(true, future1.get().booleanValue());
@@ -189,7 +194,7 @@ public class TestAsyncQuotaAdminApi extends TestAsyncAdminBase {
     assertEquals(true, future2.get().booleanValue());
   }
 
-  @Test
+  @TestTemplate
   public void testSwitchExceedThrottleQuota() throws Exception {
     AsyncAdmin admin = ASYNC_CONN.getAdmin();
     assertEquals(false, admin.exceedThrottleQuotaSwitch(false).get().booleanValue());

@@ -24,6 +24,8 @@
 FROM ubuntu:22.04 AS base_image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 
+ARG NODE_VERSION=v20.15.0
+
 RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
   DEBIAN_FRONTEND=noninteractive apt-get -qq install --no-install-recommends -y \
     ca-certificates=20211016 \
@@ -55,6 +57,7 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     shellcheck='0.8.0-*' \
     libxml2-dev='2.9.13+dfsg-*' \
     libxml2-utils='2.9.13+dfsg-*' \
+    zip='3.0-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* \
@@ -69,6 +72,16 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     && \
     locale-gen en_US.UTF-8
 ENV LANG=en_US.UTF-8 LANGUAGE=en_US:en LC_ALL=en_US.UTF-8
+
+# Install Node.js. Needed for Playwright.
+RUN curl -fsSL "https://nodejs.org/dist/$NODE_VERSION/node-$NODE_VERSION-linux-x64.tar.gz" -o node.tar.gz \
+    && tar -xzf node.tar.gz -C /usr/local --strip-components=1 \
+    && rm node.tar.gz
+
+# Install OS-level dependencies for Playwright browsers used in CI.
+# Only chromium and firefox — webkit crashes on Ubuntu 22.04 due to
+# libsoup2/libsoup3 conflict (HBASE-30168).
+RUN npx -y playwright install-deps chromium firefox
 
 ##
 # download sundry dependencies

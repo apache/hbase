@@ -1078,6 +1078,47 @@ public interface Admin extends Abortable, Closeable {
   Future<Void> modifyTableAsync(TableDescriptor td, boolean reopenRegions) throws IOException;
 
   /**
+   * Reopen all regions of a table. This is useful after calling
+   * {@link #modifyTableAsync(TableDescriptor, boolean)} with reopenRegions=false to gradually roll
+   * out table descriptor changes to regions. Regions are reopened in-place (no move).
+   * @param tableName table whose regions to reopen
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void reopenTableRegions(TableName tableName) throws IOException {
+    get(reopenTableRegionsAsync(tableName), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Reopen specific regions of a table. Useful for canary testing table descriptor changes on a
+   * subset of regions before rolling out to the entire table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @throws IOException if a remote or network exception occurs
+   */
+  default void reopenTableRegions(TableName tableName, List<RegionInfo> regions)
+    throws IOException {
+    get(reopenTableRegionsAsync(tableName, regions), getSyncWaitTimeout(), TimeUnit.MILLISECONDS);
+  }
+
+  /**
+   * Asynchronously reopen all regions of a table.
+   * @param tableName table whose regions to reopen
+   * @return Future for tracking completion
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> reopenTableRegionsAsync(TableName tableName) throws IOException;
+
+  /**
+   * Asynchronously reopen specific regions of a table.
+   * @param tableName table whose regions to reopen
+   * @param regions   specific regions to reopen
+   * @return Future for tracking completion
+   * @throws IOException if a remote or network exception occurs
+   */
+  Future<Void> reopenTableRegionsAsync(TableName tableName, List<RegionInfo> regions)
+    throws IOException;
+
+  /**
    * Change the store file tracker of the given table.
    * @param tableName the table you want to change
    * @param dstSFT    the destination store file tracker
@@ -2661,6 +2702,34 @@ public interface Admin extends Abortable, Closeable {
    * Get the list of cached files
    */
   List<String> getCachedFilesList(ServerName serverName) throws IOException;
+
+  /**
+   * Perform hbase:meta table refresh
+   */
+  long refreshMeta() throws IOException;
+
+  /**
+   * Refresh HFiles for the table
+   * @param tableName table to refresh HFiles for
+   * @return ID of the procedure started for refreshing HFiles
+   * @throws IOException if a remote or network exception occurs
+   */
+  long refreshHFiles(final TableName tableName) throws IOException;
+
+  /**
+   * Refresh HFiles for all the tables under given namespace
+   * @param namespace Namespace for which we should call refresh HFiles for all tables under it
+   * @return ID of the procedure started for refreshing HFiles
+   * @throws IOException if a remote or network exception occurs
+   */
+  long refreshHFiles(final String namespace) throws IOException;
+
+  /**
+   * Refresh HFiles for all the tables
+   * @return ID of the procedure started for refreshing HFiles
+   * @throws IOException if a remote or network exception occurs
+   */
+  long refreshHFiles() throws IOException;
 
   @InterfaceAudience.Private
   void restoreBackupSystemTable(String snapshotName) throws IOException;

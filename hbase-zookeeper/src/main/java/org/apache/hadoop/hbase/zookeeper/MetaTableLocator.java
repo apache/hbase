@@ -21,6 +21,7 @@ import com.google.errorprone.annotations.RestrictedApi;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NotAllMetaRegionsOnlineException;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
@@ -165,11 +166,12 @@ public final class MetaTableLocator {
   public static void setMetaLocation(ZKWatcher zookeeper, ServerName serverName, int replicaId,
     RegionState.State state) throws KeeperException {
     if (serverName == null) {
-      LOG.warn("Tried to set null ServerName in hbase:meta; skipping -- ServerName required");
+      LOG.warn("Tried to set null ServerName in {}; skipping -- ServerName required",
+        TableName.META_TABLE_NAME);
       return;
     }
-    LOG.info("Setting hbase:meta replicaId={} location in ZooKeeper as {}, state={}", replicaId,
-      serverName, state);
+    LOG.info("Setting {} replicaId={} location in ZooKeeper as {}, state={}",
+      TableName.META_TABLE_NAME, replicaId, serverName, state);
     // Make the MetaRegionServer pb and then get its bytes and save this as
     // the znode content.
     MetaRegionServer pbrsr =
@@ -180,10 +182,10 @@ public final class MetaTableLocator {
       ZKUtil.setData(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId), data);
     } catch (KeeperException.NoNodeException nne) {
       if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-        LOG.debug("hbase:meta region location doesn't exist, create it");
+        LOG.debug("{} region location doesn't exist, create it", TableName.META_TABLE_NAME);
       } else {
-        LOG.debug(
-          "hbase:meta region location doesn't exist for replicaId=" + replicaId + ", create it");
+        LOG.debug("{} region location doesn't exist for replicaId={}, create it",
+          TableName.META_TABLE_NAME, replicaId);
       }
       ZKUtil.createAndWatch(zookeeper, zookeeper.getZNodePaths().getZNodeForReplica(replicaId),
         data);
@@ -233,9 +235,10 @@ public final class MetaTableLocator {
 
   public static void deleteMetaLocation(ZKWatcher zookeeper, int replicaId) throws KeeperException {
     if (replicaId == RegionInfo.DEFAULT_REPLICA_ID) {
-      LOG.info("Deleting hbase:meta region location in ZooKeeper");
+      LOG.info("Deleting {} region location in ZooKeeper", TableName.META_TABLE_NAME);
     } else {
-      LOG.info("Deleting hbase:meta for {} region location in ZooKeeper", replicaId);
+      LOG.info("Deleting {} for {} region location in ZooKeeper", TableName.META_TABLE_NAME,
+        replicaId);
     }
     try {
       // Just delete the node. Don't need any watches.

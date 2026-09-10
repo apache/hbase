@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -186,7 +187,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
      * Creates a new configuration and sets region mover specific overrides
      */
     private static Configuration createConf() {
-      Configuration conf = HBaseConfiguration.create();
+      final Configuration conf = HBaseConfiguration.create();
+      return overrideConf(conf);
+    }
+
+    private static Configuration overrideConf(Configuration conf) {
       conf.setInt("hbase.client.prefetch.limit", 1);
       conf.setInt("hbase.client.pause", 500);
       conf.setInt("hbase.client.retries.number", 100);
@@ -208,7 +213,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
       }
       this.filename = defaultDir + File.separator + System.getProperty("user.name") + this.hostname
         + ":" + Integer.toString(this.port);
-      this.conf = conf;
+      this.conf = overrideConf(new Configuration(conf));
     }
 
     /**
@@ -522,9 +527,6 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   @InterfaceAudience.Private
   Collection<ServerName> filterRSGroupServers(RSGroupInfo rsgroup,
     Collection<ServerName> onlineServers) {
-    if (rsgroup.getName().equals(RSGroupInfo.DEFAULT_GROUP)) {
-      return onlineServers;
-    }
     List<ServerName> serverLists = new ArrayList<>(rsgroup.getServers().size());
     for (ServerName server : onlineServers) {
       Address address = Address.fromParts(server.getHostname(), server.getPort());
@@ -586,13 +588,13 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
           // For isolating hbase:meta, it should move explicitly in Ack mode,
           // hence the forceMoveRegionByAck = true.
           if (!metaSeverName.equals(server)) {
-            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " is on server "
-              + metaSeverName + " moving to " + server);
+            LOG.info("Region of {} {} is on server {} moving to {}", TableName.META_TABLE_NAME,
+              metaRegionInfo.getEncodedName(), metaSeverName, server);
             submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
               movedRegions, Collections.singletonList(metaRegionInfo), true);
           } else {
-            LOG.info("Region of hbase:meta " + metaRegionInfo.getEncodedName() + " already exists"
-              + " on server : " + server);
+            LOG.info("Region of {} {} already exists on server: {}", TableName.META_TABLE_NAME,
+              metaRegionInfo.getEncodedName(), server);
           }
           isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
         }
@@ -602,8 +604,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
             isolateRegionInfo = hRegionLocation.getRegion();
             isolateRegionInfoList.add(isolateRegionInfo);
             if (hRegionLocation.getServerName() == server) {
-              LOG.info("Region " + hRegionLocation.getRegion().getEncodedName() + " already exists"
-                + " on server : " + server.getHostname());
+              LOG.info("Region {} already exists on server: {}",
+                hRegionLocation.getRegion().getEncodedName(), server);
             } else {
               Future<Boolean> isolateRegionTask =
                 isolateRegionPool.submit(new MoveWithAck(conn, isolateRegionInfo,
@@ -627,14 +629,14 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
             break;
           }
         } else {
-          LOG.info("All regions already exists on server : " + server.getHostname());
+          LOG.info("All regions already exists on server: {}", server);
         }
         // Once region has been moved to target RS, put the target RS into decommission mode,
         // so master doesn't assign new region to the target RS while we unload the target RS.
         // Also pass 'offload' flag as false since we don't want master to offload the target RS.
         List<ServerName> listOfServer = new ArrayList<>();
         listOfServer.add(server);
-        LOG.info("Putting server : " + server.getHostname() + " in decommission/draining mode");
+        LOG.info("Putting server: {} in decommission/draining mode", server);
         admin.decommissionRegionServers(listOfServer, false);
       }
       List<RegionInfo> regionsToMove = admin.getRegions(server);
@@ -647,7 +649,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         break;
       }
       LOG.info("Moving {} regions from {} to {} servers using {} threads .Ack Mode: {}",
-        regionsToMove.size(), this.hostname, regionServers.size(), this.maxthreads, ack);
+        regionsToMove.size(), server, regionServers.size(), this.maxthreads, ack);
 
       Optional<RegionInfo> metaRegion = getMetaRegionInfoIfToBeMoved(regionsToMove);
       if (metaRegion.isPresent()) {
@@ -703,10 +705,11 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     try {
       return task.get(5, TimeUnit.SECONDS);
     } catch (InterruptedException e) {
-      LOG.warn("Interrupted while " + operation + " Regions on " + this.hostname, e);
+      LOG.warn("Interrupted while {} regions on {}:{}", operation, this.hostname, this.port, e);
       throw e;
     } catch (ExecutionException e) {
-      LOG.error("Error while " + operation + " regions on RegionServer " + this.hostname, e);
+      LOG.error("Error while {} regions on RegionServer {}:{}", operation, this.hostname, this.port,
+        e);
       throw e;
     }
   }
@@ -871,7 +874,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     if (fileName != null) {
       List<String> servers = readServersFromFile(fileName);
       if (servers.isEmpty()) {
-        LOG.warn("No servers provided in the file: {}." + fileName);
+        LOG.warn("No servers provided in the file: {}.", fileName);
         return;
       }
       Iterator<ServerName> i = regionServers.iterator();
@@ -947,7 +950,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
   @Override
   protected void processOptions(CommandLine cmd) {
     String hostname = cmd.getOptionValue("r");
-    rmbuilder = new RegionMoverBuilder(hostname);
+    rmbuilder = new RegionMoverBuilder(hostname, getConf());
     this.loadUnload = cmd.getOptionValue("o").toLowerCase(Locale.ROOT);
     if (cmd.hasOption('m')) {
       rmbuilder.maxthreads(Integer.parseInt(cmd.getOptionValue('m')));

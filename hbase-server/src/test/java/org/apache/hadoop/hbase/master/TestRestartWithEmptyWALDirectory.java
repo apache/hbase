@@ -17,11 +17,10 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.junit.Assert.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
@@ -32,22 +31,18 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * Simulate the scenario described in HBASE-26245, where we clean the WAL directory and try to start
  * the cluster.
  */
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestRestartWithEmptyWALDirectory {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRestartWithEmptyWALDirectory.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -57,7 +52,7 @@ public class TestRestartWithEmptyWALDirectory {
 
   private static byte[] QUALIFIER = Bytes.toBytes("qualifier");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     // in the test we shutdown the only master and after restarting its port will be changed, so the
     // default rpc region server can not work
@@ -68,7 +63,7 @@ public class TestRestartWithEmptyWALDirectory {
     UTIL.waitTableAvailable(NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws IOException {
     UTIL.shutdownMiniCluster();
   }

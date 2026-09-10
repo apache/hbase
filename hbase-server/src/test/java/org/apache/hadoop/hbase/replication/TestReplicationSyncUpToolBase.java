@@ -32,8 +32,8 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.regionserver.ReplicationSyncUp;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 import org.apache.hbase.thirdparty.com.google.common.io.Closeables;
 
@@ -66,7 +66,7 @@ public abstract class TestReplicationSyncUpToolBase {
   protected void customizeClusterConf(Configuration conf) {
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     customizeClusterConf(UTIL1.getConfiguration());
     customizeClusterConf(UTIL2.getConfiguration());
@@ -96,7 +96,7 @@ public abstract class TestReplicationSyncUpToolBase {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(NO_REP_FAMILY)).build();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     Closeables.close(ht1Source, true);
     Closeables.close(ht2Source, true);

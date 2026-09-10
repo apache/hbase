@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.coprocessor;
 
-import static org.junit.Assert.assertArrayEquals;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -43,25 +42,21 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
 /**
  * This test runs batch mutation with Increments which have custom TimeRange. Custom Observer
  * records the TimeRange. We then verify that the recorded TimeRange has same bounds as the initial
  * TimeRange. See HBASE-15698
  */
-@Category({ CoprocessorTests.class, MediumTests.class })
+@Tag(CoprocessorTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestIncrementTimeRange {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementTimeRange.class);
 
   private static final HBaseTestingUtil util = new HBaseTestingUtil();
   private static ManualEnvironmentEdge mee = new ManualEnvironmentEdge();
@@ -82,7 +77,7 @@ public class TestIncrementTimeRange {
   private Table hTableInterface;
   private Table table;
 
-  @BeforeClass
+  @BeforeAll
   public static void setupBeforeClass() throws Exception {
     util.getConfiguration().set(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       MyObserver.class.getName());
@@ -93,12 +88,12 @@ public class TestIncrementTimeRange {
     EnvironmentEdgeManager.injectEdge(mee);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     util.shutdownMiniCluster();
   }
 
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     table = util.createTable(TEST_TABLE, TEST_FAMILY);
 
@@ -115,7 +110,7 @@ public class TestIncrementTimeRange {
     table.put(putc);
   }
 
-  @After
+  @AfterEach
   public void after() throws Exception {
     try {
       if (table != null) {

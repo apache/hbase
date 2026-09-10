@@ -17,10 +17,11 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.Optional;
 import java.util.concurrent.CountDownLatch;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -37,23 +38,18 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.JVMClusterUtil;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-@Category({ MasterTests.class, MediumTests.class })
+@Tag(MasterTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestMasterAbortAndRSGotKilled {
   private static Logger LOG =
     LoggerFactory.getLogger(TestMasterAbortAndRSGotKilled.class.getName());
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMasterAbortAndRSGotKilled.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
@@ -63,7 +59,7 @@ public class TestMasterAbortAndRSGotKilled {
 
   private static byte[] CF = Bytes.toBytes("cf");
 
-  @BeforeClass
+  @BeforeAll
   public static void setUp() throws Exception {
     UTIL.getConfiguration().setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,
       DelayCloseCP.class.getName());
@@ -73,7 +69,7 @@ public class TestMasterAbortAndRSGotKilled {
     UTIL.waitTableAvailable(TABLE_NAME);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDown() throws Exception {
     UTIL.shutdownMiniCluster();
   }
@@ -104,8 +100,8 @@ public class TestMasterAbortAndRSGotKilled {
     // wait until master initialized
     UTIL.waitFor(30000, () -> UTIL.getMiniHBaseCluster().getMaster() != null
       && UTIL.getMiniHBaseCluster().getMaster().isInitialized());
-    Assert.assertTrue("Should be 3 RS after master restart",
-      UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 3);
+    assertTrue(UTIL.getMiniHBaseCluster().getLiveRegionServerThreads().size() == 3,
+      "Should be 3 RS after master restart");
 
   }
 

@@ -17,6 +17,9 @@
  */
 package org.apache.hadoop.hbase;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.fail;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +33,8 @@ import org.apache.hadoop.hbase.util.LoadTestTool;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.Assert;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,7 +45,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
  * A base class for tests that do something with the cluster while running {@link LoadTestTool} to
  * write and verify some data.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestIngest extends IntegrationTestBase {
   public static final char HIPHEN = '-';
   private static final int SERVER_COUNT = 1; // number of slaves for the smallest cluster
@@ -93,7 +95,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
 
   protected void initTable() throws IOException {
     int ret = loadTool.run(getArgsForLoadTestToolInitTable());
-    Assert.assertEquals("Failed to initialize LoadTestTool", 0, ret);
+    assertEquals(0, ret, "Failed to initialize LoadTestTool");
   }
 
   @Override
@@ -173,7 +175,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       if (0 != ret) {
         String errorMsg = "Load failed with error code " + ret;
         LOG.error(errorMsg);
-        Assert.fail(errorMsg);
+        fail(errorMsg);
       }
 
       ret = loadTool.run(getArgsForLoadTestTool("-update", String.format("60:%d:1", writeThreads),
@@ -181,7 +183,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
       if (0 != ret) {
         String errorMsg = "Update failed with error code " + ret;
         LOG.error(errorMsg);
-        Assert.fail(errorMsg);
+        fail(errorMsg);
       }
 
       ret = loadTool.run(
@@ -195,7 +197,7 @@ public class IntegrationTestIngest extends IntegrationTestBase {
         if (0 != ret) {
           LOG.error("Rerun of Verification failed with error code " + ret);
         }
-        Assert.fail(errorMsg);
+        fail(errorMsg);
       }
       startKey += numKeys;
     }

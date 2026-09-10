@@ -264,6 +264,9 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
 
   @Override
   protected boolean waitInitialized(MasterProcedureEnv env) {
+    if (isCriticalSystemTable()) {
+      return false;
+    }
     if (getTableName().isSystemTable()) {
       // Creating system table is part of the initialization, so only wait for meta loaded instead
       // of waiting for master fully initialized.
@@ -290,6 +293,14 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
     if (regionReplicationCount > MAX_REGION_REPLICATION) {
       setFailure("master-create-table", new IllegalArgumentException(
         "Region Replication cannot exceed " + MAX_REGION_REPLICATION + "."));
+      return false;
+    }
+
+    try {
+      ModifyRegionUtils.checkForEncodedNameCollisions(newRegions,
+        env.getAssignmentManager().getRegionStates());
+    } catch (DoNotRetryIOException e) {
+      setFailure("master-create-table", e);
       return false;
     }
 
@@ -360,8 +371,7 @@ public class CreateTableProcedure extends AbstractStateMachineTableProcedure<Cre
         throws IOException {
         RegionInfo[] regions =
           newRegions != null ? newRegions.toArray(new RegionInfo[newRegions.size()]) : null;
-        return ModifyRegionUtils.createRegions(env.getMasterConfiguration(), tableRootDir,
-          tableDescriptor, regions, null);
+        return ModifyRegionUtils.createRegions(env, tableRootDir, tableDescriptor, regions, null);
       }
     });
   }

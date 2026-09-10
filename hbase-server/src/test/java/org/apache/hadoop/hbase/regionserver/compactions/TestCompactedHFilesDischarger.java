@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.regionserver.compactions;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 
 import java.io.IOException;
@@ -31,7 +31,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -51,19 +50,15 @@ import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 
-@Category({ MediumTests.class, RegionServerTests.class })
+@Tag(MediumTests.TAG)
+@Tag(RegionServerTests.TAG)
 public class TestCompactedHFilesDischarger {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestCompactedHFilesDischarger.class);
 
   private final HBaseTestingUtil testUtil = new HBaseTestingUtil();
   private HRegion region;
@@ -75,7 +70,7 @@ public class TestCompactedHFilesDischarger {
   private static AtomicInteger scanCompletedCounter = new AtomicInteger(0);
   private RegionServerServices rss;
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     TableName tableName = TableName.valueOf(getClass().getSimpleName());
     TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
@@ -90,7 +85,7 @@ public class TestCompactedHFilesDischarger {
     Mockito.doReturn(regions).when(rss).getRegions();
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     counter.set(0);
     scanCompletedCounter.set(0);
@@ -217,12 +212,12 @@ public class TestCompactedHFilesDischarger {
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     for (HStoreFile file : compactedfiles) {
-      assertEquals("Refcount should be 3", 0, ((HStoreFile) file).getRefCount());
+      assertEquals(0, ((HStoreFile) file).getRefCount(), "Refcount should be 3");
       unusedReaderCount++;
     }
     // Though there are files we are not using them for reads
-    assertEquals("unused reader count should be 3", 3, unusedReaderCount);
-    assertEquals("used reader count should be 1", 1, usedReaderCount);
+    assertEquals(3, unusedReaderCount, "unused reader count should be 3");
+    assertEquals(1, usedReaderCount, "used reader count should be 1");
     // now run the cleaner
     cleaner.chore();
     countDown();
@@ -288,12 +283,12 @@ public class TestCompactedHFilesDischarger {
     }
     compactedfiles = store.getStoreEngine().getStoreFileManager().getCompactedfiles();
     for (HStoreFile file : compactedfiles) {
-      assertEquals("Refcount should be 3", 3, ((HStoreFile) file).getRefCount());
+      assertEquals(3, ((HStoreFile) file).getRefCount(), "Refcount should be 3");
       usedReaderCount++;
     }
     // The newly compacted file will not be used by any scanner
-    assertEquals("unused reader count should be 1", 1, unusedReaderCount);
-    assertEquals("used reader count should be 3", 3, usedReaderCount);
+    assertEquals(1, unusedReaderCount, "unused reader count should be 1");
+    assertEquals(3, usedReaderCount, "used reader count should be 3");
     // now run the cleaner
     cleaner.chore();
     countDown();
@@ -320,12 +315,12 @@ public class TestCompactedHFilesDischarger {
     }
     compactedfiles = ((HStore) store).getStoreEngine().getStoreFileManager().getCompactedfiles();
     for (HStoreFile file : compactedfiles) {
-      assertEquals("Refcount should be 0", 0, file.getRefCount());
+      assertEquals(0, file.getRefCount(), "Refcount should be 0");
       unusedReaderCount++;
     }
     // Though there are files we are not using them for reads
-    assertEquals("unused reader count should be 3", 3, unusedReaderCount);
-    assertEquals("used reader count should be 1", 1, usedReaderCount);
+    assertEquals(3, unusedReaderCount, "unused reader count should be 3");
+    assertEquals(1, usedReaderCount, "used reader count should be 1");
     countDown();
     while (scanCompletedCounter.get() != 3) {
       Thread.sleep(100);

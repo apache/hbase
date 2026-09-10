@@ -17,12 +17,16 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.ServerName;
@@ -31,11 +35,15 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
+import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
+import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -43,16 +51,13 @@ import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
-import org.junit.After;
-import org.junit.AfterClass;
-import org.junit.Assert;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -60,39 +65,37 @@ import org.slf4j.LoggerFactory;
  * Tests for Region Mover Load/Unload functionality with and without ack mode and also to test
  * exclude functionality useful for rack decommissioning
  */
-@Category({ MiscTests.class, LargeTests.class })
+@Tag(MiscTests.TAG)
+@Tag(LargeTests.TAG)
 public class TestRegionMover2 {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestRegionMover2.class);
   private static final String CF = "fam1";
 
-  @Rule
-  public TestName name = new TestName();
+  private String testMethodName;
 
   private static final Logger LOG = LoggerFactory.getLogger(TestRegionMover2.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.startMiniCluster(3);
     TEST_UTIL.getAdmin().balancerSwitch(false, true);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
 
-  @Before
-  public void setUp() throws Exception {
-    createTable(name.getMethodName());
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    testMethodName = testInfo.getTestMethod().get().getName();
+    createTable(testMethodName);
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     TEST_UTIL.getAdmin().disableTable(tableName);
     TEST_UTIL.getAdmin().deleteTable(tableName);
   }
@@ -109,37 +112,63 @@ public class TestRegionMover2 {
 
   @Test
   public void testWithMergedRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
     List<Put> puts = createPuts(10000);
     table.put(puts);
     admin.flush(tableName);
-    HRegionServer regionServer = cluster.getRegionServer(0);
+    HRegionServer regionServer = null;
+    RegionInfo regionA = null;
+    RegionInfo regionB = null;
+    for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
+      HRegionServer rs = rst.getRegionServer();
+      for (HRegion region : rs.getRegions(tableName)) {
+        if (!region.getRegionInfo().isLast()) {
+          regionServer = rs;
+          regionA = region.getRegionInfo();
+          regionB = admin.getRegions(tableName).stream()
+            .filter(ri -> Bytes.equals(ri.getStartKey(), region.getRegionInfo().getEndKey()))
+            .findFirst().get();
+          break;
+        }
+      }
+    }
+    assertNotNull(regionServer);
+    // if regionB is not this regionServer, move it
+    AssignmentManager am = cluster.getMaster().getAssignmentManager();
+    while (
+      !regionServer.getServerName()
+        .equals(am.getRegionStates().getRegionState(regionB).getServerName())
+    ) {
+      TransitRegionStateProcedure trsp =
+        am.createMoveRegionProcedure(regionB, regionServer.getServerName());
+      ProcedureSyncWait.submitAndWaitProcedure(cluster.getMaster().getMasterProcedureExecutor(),
+        trsp);
+    }
+
     String rsName = regionServer.getServerName().getAddress().toString();
     int numRegions = regionServer.getNumberOfOnlineRegions();
-    List<HRegion> hRegions = regionServer.getRegions().stream()
-      .filter(hRegion -> hRegion.getRegionInfo().getTable().equals(tableName))
-      .collect(Collectors.toList());
     RegionMover.RegionMoverBuilder rmBuilder =
       new RegionMover.RegionMoverBuilder(rsName, TEST_UTIL.getConfiguration()).ack(true)
         .maxthreads(8);
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
-      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
       LOG.debug("Successfully Unloaded, now Loading");
-      admin.mergeRegionsAsync(new byte[][] { hRegions.get(0).getRegionInfo().getRegionName(),
-        hRegions.get(1).getRegionInfo().getRegionName() }, true).get(5, TimeUnit.SECONDS);
-      Assert.assertTrue(rm.load());
-      Assert.assertEquals(numRegions - 2, regionServer.getNumberOfOnlineRegions());
+      admin
+        .mergeRegionsAsync(new byte[][] { regionA.getRegionName(), regionB.getRegionName() }, true)
+        .get(15, TimeUnit.SECONDS);
+      assertTrue(rm.load());
+      assertEquals(numRegions - 2, regionServer.getNumberOfOnlineRegions());
     }
   }
 
   @Test
   public void testWithSplitRegions() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -160,7 +189,7 @@ public class TestRegionMover2 {
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
-      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
       LOG.debug("Successfully Unloaded, now Loading");
       HRegion hRegion = hRegions.get(1);
       if (hRegion.getRegionInfo().getStartKey().length == 0) {
@@ -177,14 +206,14 @@ public class TestRegionMover2 {
       int midKey = startKey + (endKey - startKey) / 2;
       admin.splitRegionAsync(hRegion.getRegionInfo().getRegionName(), Bytes.toBytes(midKey)).get(5,
         TimeUnit.SECONDS);
-      Assert.assertTrue(rm.load());
-      Assert.assertEquals(numRegions - 1, regionServer.getNumberOfOnlineRegions());
+      assertTrue(rm.load());
+      assertEquals(numRegions - 1, regionServer.getNumberOfOnlineRegions());
     }
   }
 
   @Test
   public void testFailedRegionMove() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     Table table = TEST_UTIL.getConnection().getTable(tableName);
@@ -202,17 +231,17 @@ public class TestRegionMover2 {
     try (RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
-      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
       LOG.debug("Successfully Unloaded, now Loading");
       admin.offline(hRegions.get(0).getRegionInfo().getRegionName());
       // loading regions will fail because of offline region
-      Assert.assertFalse(rm.load());
+      assertFalse(rm.load());
     }
   }
 
   @Test
   public void testDeletedTable() throws Exception {
-    TableName tableNameToDelete = createTable(name.getMethodName() + "ToDelete");
+    TableName tableNameToDelete = createTable(testMethodName + "ToDelete");
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     HRegionServer regionServer = cluster.getRegionServer(0);
     String rsName = regionServer.getServerName().getAddress().toString();
@@ -222,11 +251,11 @@ public class TestRegionMover2 {
     try (Admin admin = TEST_UTIL.getAdmin(); RegionMover rm = rmBuilder.build()) {
       LOG.debug("Unloading {}", regionServer.getServerName());
       rm.unload();
-      Assert.assertEquals(0, regionServer.getNumberOfOnlineRegions());
+      assertEquals(0, regionServer.getNumberOfOnlineRegions());
       LOG.debug("Successfully Unloaded, now delete table");
       admin.disableTable(tableNameToDelete);
       admin.deleteTable(tableNameToDelete);
-      Assert.assertTrue(rm.load());
+      assertTrue(rm.load());
     }
   }
 
@@ -240,7 +269,7 @@ public class TestRegionMover2 {
 
   @Test
   public void testIsolateSingleRegionOnTheSameServer() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     loadDummyDataInTable(tableName);
     ServerName sourceServerName = findSourceServerName(tableName);
     // Isolating 1 region on the same region server.
@@ -249,7 +278,7 @@ public class TestRegionMover2 {
 
   @Test
   public void testIsolateSingleRegionOnTheDifferentServer() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     loadDummyDataInTable(tableName);
     ServerName sourceServerName = findSourceServerName(tableName);
     ServerName destinationServerName = findDestinationServerName(sourceServerName);
@@ -259,7 +288,7 @@ public class TestRegionMover2 {
 
   @Test
   public void testIsolateMultipleRegionsOnTheSameServer() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     loadDummyDataInTable(tableName);
     ServerName sourceServerName = findSourceServerName(tableName);
     // Isolating 2 regions on the same region server.
@@ -268,7 +297,7 @@ public class TestRegionMover2 {
 
   @Test
   public void testIsolateMultipleRegionsOnTheDifferentServer() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     loadDummyDataInTable(tableName);
     // Isolating 2 regions on the different region server.
     ServerName sourceServerName = findSourceServerName(tableName);
@@ -291,7 +320,7 @@ public class TestRegionMover2 {
 
   @Test
   public void testIsolateMetaAndRandomRegionOnTheMetaServer() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     loadDummyDataInTable(tableName);
     ServerName metaServerSource = findMetaRSLocation();
     ServerName randomSeverRegion = findSourceServerName(tableName);
@@ -300,7 +329,7 @@ public class TestRegionMover2 {
 
   @Test
   public void testIsolateMetaAndRandomRegionOnTheRandomServer() throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     loadDummyDataInTable(tableName);
     ServerName randomSeverRegion = findSourceServerName(tableName);
     regionIsolationOperation(randomSeverRegion, randomSeverRegion, 2, true);
@@ -367,7 +396,7 @@ public class TestRegionMover2 {
   public void regionIsolationOperation(ServerName sourceServerName,
     ServerName destinationServerName, int numRegionsToIsolate, boolean isolateMetaAlso)
     throws Exception {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+    final TableName tableName = TableName.valueOf(testMethodName);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     Admin admin = TEST_UTIL.getAdmin();
     HRegionServer sourceRS = cluster.getRegionServer(sourceServerName);
@@ -393,10 +422,10 @@ public class TestRegionMover2 {
       LOG.debug("Unloading {} except regions: {}", destinationRS.getServerName(),
         listOfRegionIDsToIsolate);
       rm.isolateRegions();
-      Assert.assertEquals(numRegionsToIsolate, destinationRS.getNumberOfOnlineRegions());
+      assertEquals(numRegionsToIsolate, destinationRS.getNumberOfOnlineRegions());
       List<HRegion> onlineRegions = destinationRS.getRegions();
       for (int i = 0; i < numRegionsToIsolate; i++) {
-        Assert.assertTrue(
+        assertTrue(
           listOfRegionIDsToIsolate.contains(onlineRegions.get(i).getRegionInfo().getEncodedName()));
       }
       LOG.debug("Successfully Isolated {} regions: {} on {}", listOfRegionIDsToIsolate.size(),

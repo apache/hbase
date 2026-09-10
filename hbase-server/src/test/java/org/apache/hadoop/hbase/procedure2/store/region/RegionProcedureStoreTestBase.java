@@ -21,14 +21,14 @@ import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
-import org.apache.hadoop.hbase.Server;
+import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility.LoadCounter;
 import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
-import org.junit.After;
-import org.junit.Before;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 
 /**
  * This runs on local filesystem. hsync and hflush are not supported. May lose data! Only use where
@@ -42,7 +42,7 @@ public class RegionProcedureStoreTestBase {
 
   protected RegionProcedureStore store;
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     htu = new HBaseCommonTestingUtil();
     Configuration conf = htu.getConfiguration();
@@ -51,12 +51,12 @@ public class RegionProcedureStoreTestBase {
     conf.setBoolean(CommonFSUtils.UNSAFE_STREAM_CAPABILITY_ENFORCE, false);
     Path testDir = htu.getDataTestDir();
     CommonFSUtils.setRootDir(htu.getConfiguration(), testDir);
-    Server server = RegionProcedureStoreTestHelper.mockServer(conf);
+    MasterServices server = RegionProcedureStoreTestHelper.mockServer(conf);
     region = MasterRegionFactory.create(server);
     store = RegionProcedureStoreTestHelper.createStore(server, region, new LoadCounter());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws IOException {
     store.stop(true);
     region.close(true);

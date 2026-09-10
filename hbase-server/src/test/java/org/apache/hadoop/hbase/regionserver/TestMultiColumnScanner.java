@@ -17,13 +17,12 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -33,6 +32,7 @@ import java.util.Random;
 import java.util.Set;
 import java.util.TreeSet;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.stream.Stream;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparatorImpl;
 import org.apache.hadoop.hbase.CellUtil;
@@ -50,8 +50,8 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.junit.Test;
-import org.junit.runners.Parameterized.Parameter;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -107,14 +107,18 @@ public abstract class TestMultiColumnScanner {
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
 
-  @Parameter(0)
-  public Compression.Algorithm comprAlgo;
+  private final Compression.Algorithm comprAlgo;
 
-  @Parameter(1)
-  public BloomType bloomType;
+  private final BloomType bloomType;
 
-  @Parameter(2)
-  public DataBlockEncoding dataBlockEncoding;
+  private final DataBlockEncoding dataBlockEncoding;
+
+  protected TestMultiColumnScanner(Compression.Algorithm comprAlgo, BloomType bloomType,
+    DataBlockEncoding dataBlockEncoding) {
+    this.comprAlgo = comprAlgo;
+    this.bloomType = bloomType;
+    this.dataBlockEncoding = dataBlockEncoding;
+  }
 
   // Some static sanity-checking.
   static {
@@ -125,18 +129,18 @@ public abstract class TestMultiColumnScanner {
       assertTrue(TIMESTAMPS[i] < TIMESTAMPS[i + 1]);
   }
 
-  public static Collection<Object[]> generateParams(Compression.Algorithm algo,
+  public static Stream<Arguments> generateParams(Compression.Algorithm algo,
     boolean useDataBlockEncoding) {
-    List<Object[]> parameters = new ArrayList<>();
+    List<Arguments> parameters = new ArrayList<>();
     for (BloomType bloomType : BloomType.values()) {
       DataBlockEncoding dataBlockEncoding =
         useDataBlockEncoding ? DataBlockEncoding.PREFIX : DataBlockEncoding.NONE;
-      parameters.add(new Object[] { algo, bloomType, dataBlockEncoding });
+      parameters.add(Arguments.of(algo, bloomType, dataBlockEncoding));
     }
-    return parameters;
+    return parameters.stream();
   }
 
-  @Test
+  @TestTemplate
   public void testMultiColumnScanner() throws IOException {
     TEST_UTIL.getConfiguration().setInt(BloomFilterUtil.PREFIX_LENGTH_KEY, 10);
     HRegion region = TEST_UTIL.createTestRegion(TABLE_NAME,
@@ -233,11 +237,10 @@ public abstract class TestMultiColumnScanner {
               deleteInfo =
                 "; last timestamp when row/column " + rowQual + " was deleted: " + lastDelTS;
             }
-            assertTrue(
-              "Scanner returned additional key/value: " + kv + ", " + queryInfo + deleteInfo + ";",
-              kvPos < kvs.size());
-            assertTrue("Scanner returned wrong key/value; " + queryInfo + deleteInfo + ";",
-              PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), kv));
+            assertTrue(kvPos < kvs.size(),
+              "Scanner returned additional key/value: " + kv + ", " + queryInfo + deleteInfo + ";");
+            assertTrue(PrivateCellUtil.equalsIgnoreMvccVersion(kvs.get(kvPos), kv),
+              "Scanner returned wrong key/value; " + queryInfo + deleteInfo + ";");
             ++kvPos;
             ++numResults;
           }
@@ -245,15 +248,14 @@ public abstract class TestMultiColumnScanner {
         }
         for (; kvPos < kvs.size(); ++kvPos) {
           KeyValue remainingKV = kvs.get(kvPos);
-          assertFalse(
+          assertFalse(matchesQuery(remainingKV, qualSet, maxVersions, lastDelTimeMap),
             "Matching column not returned by scanner: " + remainingKV + ", " + queryInfo
-              + ", results returned: " + numResults,
-            matchesQuery(remainingKV, qualSet, maxVersions, lastDelTimeMap));
+              + ", results returned: " + numResults);
         }
       }
     }
-    assertTrue("This test is supposed to delete at least some row/column " + "pairs",
-      lastDelTimeMap.size() > 0);
+    assertTrue(lastDelTimeMap.size() > 0,
+      "This test is supposed to delete at least some row/column " + "pairs");
     LOG.info("Number of row/col pairs deleted at least once: " + lastDelTimeMap.size());
     HBaseTestingUtil.closeRegionAndWAL(region);
   }

@@ -17,27 +17,24 @@
  */
 package org.apache.hadoop.hbase.replication;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+
 import java.io.IOException;
 import java.util.EnumSet;
 import org.apache.hadoop.hbase.ClusterMetrics;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
-import org.junit.Assert;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 
-@Category({ ReplicationTests.class, MediumTests.class })
+@Tag(ReplicationTests.TAG)
+@Tag(MediumTests.TAG)
 public class TestReplicationStatusSink extends TestReplicationBase {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestReplicationStatusSink.class);
 
   @Test
   public void testReplicationStatusSink() throws Exception {
@@ -46,7 +43,7 @@ public class TestReplicationStatusSink extends TestReplicationBase {
       ReplicationLoadSink loadSink = getLatestSinkMetric(admin, server);
       // First checks if status of timestamp of last applied op is same as RS start, since no edits
       // were replicated yet
-      Assert.assertEquals(loadSink.getTimestampStarted(), loadSink.getTimestampsOfLastAppliedOp());
+      assertEquals(loadSink.getTimestampStarted(), loadSink.getTimestampsOfLastAppliedOp());
       // now insert some rows on source, so that it gets delivered to target
       TestReplicationStatus.insertRowsOnSource();
       long wait =
@@ -54,7 +51,7 @@ public class TestReplicationStatusSink extends TestReplicationBase {
           ReplicationLoadSink loadSink1 = getLatestSinkMetric(admin, server);
           return loadSink1.getTimestampsOfLastAppliedOp() > loadSink1.getTimestampStarted();
         });
-      Assert.assertNotEquals(-1, wait);
+      assertNotEquals(-1, wait);
     }
   }
 

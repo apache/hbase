@@ -17,41 +17,35 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Threads;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
-@Category({ RegionServerTests.class, SmallTests.class })
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestMemStoreFlusher {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMemStoreFlusher.class);
-
-  @Rule
-  public TestName name = new TestName();
+  private String name;
 
   public MemStoreFlusher msf;
 
-  @Before
-  public void setUp() throws Exception {
+  @BeforeEach
+  public void setUp(TestInfo testInfo) throws Exception {
+    this.name = testInfo.getTestMethod().get().getName();
     Configuration conf = new Configuration();
     conf.set("hbase.hstore.flusher.count", "0");
     msf = new MemStoreFlusher(conf, null);
@@ -59,8 +53,8 @@ public class TestMemStoreFlusher {
 
   @Test
   public void testReplaceDelayedFlushEntry() {
-    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setRegionId(1).setReplicaId(0).build();
+    RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name)).setRegionId(1).setReplicaId(0).build();
     HRegion r = mock(HRegion.class);
     doReturn(hri).when(r).getRegionInfo();
 
@@ -77,8 +71,8 @@ public class TestMemStoreFlusher {
 
   @Test
   public void testNotReplaceDelayedFlushEntryWhichExpired() {
-    RegionInfo hri = RegionInfoBuilder.newBuilder(TableName.valueOf(name.getMethodName()))
-      .setRegionId(1).setReplicaId(0).build();
+    RegionInfo hri =
+      RegionInfoBuilder.newBuilder(TableName.valueOf(name)).setRegionId(1).setReplicaId(0).build();
     HRegion r = mock(HRegion.class);
     doReturn(hri).when(r).getRegionInfo();
 

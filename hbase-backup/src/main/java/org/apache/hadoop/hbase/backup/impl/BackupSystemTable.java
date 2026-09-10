@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup.impl;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withRoot;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.BackupInfo.withType;
+
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.Closeable;
 import java.io.IOException;
@@ -36,7 +40,9 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
@@ -54,7 +60,6 @@ import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
-import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -76,6 +81,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.base.Splitter;
 import org.apache.hbase.thirdparty.com.google.common.collect.Iterators;
 
@@ -169,6 +175,13 @@ public final class BackupSystemTable implements Closeable {
   private final static byte[] ACTIVE_SESSION_NO = Bytes.toBytes("no");
 
   private final static String INCR_BACKUP_SET = "incrbackupset:";
+  private final static String CONTINUOUS_BACKUP_SET = "continuousbackupset";
+  /**
+   * Row key identifier for storing the last replicated WAL timestamp in the backup system table for
+   * continuous backup.
+   */
+  private static final String CONTINUOUS_BACKUP_REPLICATION_TIMESTAMP_ROW =
+    "continuous_backup_last_replicated";
   private final static String TABLE_RS_LOG_MAP_PREFIX = "trslm:";
   private final static String RS_LOG_TS_PREFIX = "rslogts:";
 
@@ -373,26 +386,37 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Reads all registered bulk loads.
+   * Reads the rows from backup table recording bulk loaded hfiles
    */
   public List<BulkLoad> readBulkloadRows() throws IOException {
     Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(null);
-    return processBulkLoadRowScan(scan);
+    return processBulkLoadRowScan(scan, Long.MAX_VALUE);
   }
 
   /**
-   * Reads the registered bulk loads for the given tables.
+   * Reads the rows from backup table recording bulk loaded hfiles
+   * @param tableList list of table names
    */
   public List<BulkLoad> readBulkloadRows(Collection<TableName> tableList) throws IOException {
+    return readBulkloadRows(tableList, Long.MAX_VALUE);
+  }
+
+  /**
+   * Reads the rows from backup table recording bulk loaded hfiles
+   * @param tableList    list of table names
+   * @param endTimestamp upper bound timestamp for bulkload entries retrieval
+   */
+  public List<BulkLoad> readBulkloadRows(Collection<TableName> tableList, long endTimestamp)
+    throws IOException {
     List<BulkLoad> result = new ArrayList<>();
     for (TableName table : tableList) {
       Scan scan = BackupSystemTable.createScanForOrigBulkLoadedFiles(table);
-      result.addAll(processBulkLoadRowScan(scan));
+      result.addAll(processBulkLoadRowScan(scan, endTimestamp));
     }
     return result;
   }
 
-  private List<BulkLoad> processBulkLoadRowScan(Scan scan) throws IOException {
+  private List<BulkLoad> processBulkLoadRowScan(Scan scan, long endTimestamp) throws IOException {
     List<BulkLoad> result = new ArrayList<>();
     try (Table bulkLoadTable = connection.getTable(bulkLoadTableName);
       ResultScanner scanner = bulkLoadTable.getScanner(scan)) {
@@ -404,8 +428,10 @@ public final class BackupSystemTable implements Closeable {
         String path = null;
         String region = null;
         byte[] row = null;
+        long timestamp = 0L;
         for (Cell cell : res.listCells()) {
           row = CellUtil.cloneRow(cell);
+          timestamp = cell.getTimestamp();
           String rowStr = Bytes.toString(row);
           region = BackupSystemTable.getRegionNameFromOrigBulkLoadRow(rowStr);
           if (
@@ -425,8 +451,11 @@ public final class BackupSystemTable implements Closeable {
             path = Bytes.toString(CellUtil.cloneValue(cell));
           }
         }
-        result.add(new BulkLoad(table, region, fam, path, row));
-        LOG.debug("Found bulk load entry for table {}, family {}: {}", table, fam, path);
+        LOG.debug("Found orig path {} for family {} of table {} and region {} with timestamp {}",
+          path, fam, table, region, timestamp);
+        if (timestamp <= endTimestamp) {
+          result.add(new BulkLoad(table, region, fam, path, row, timestamp));
+        }
       }
     }
     return result;
@@ -449,48 +478,6 @@ public final class BackupSystemTable implements Closeable {
         return null;
       }
       return resultToBackupInfo(res);
-    }
-  }
-
-  /**
-   * Read the last backup start code (timestamp) of last successful backup. Will return null if
-   * there is no start code stored on hbase or the value is of length 0. These two cases indicate
-   * there is no successful backup completed so far.
-   * @param backupRoot directory path to backup destination
-   * @return the timestamp of last successful backup
-   * @throws IOException exception
-   */
-  public String readBackupStartCode(String backupRoot) throws IOException {
-    LOG.trace("read backup start code from backup system table");
-
-    try (Table table = connection.getTable(tableName)) {
-      Get get = createGetForStartCode(backupRoot);
-      Result res = table.get(get);
-      if (res.isEmpty()) {
-        return null;
-      }
-      Cell cell = res.listCells().get(0);
-      byte[] val = CellUtil.cloneValue(cell);
-      if (val.length == 0) {
-        return null;
-      }
-      return new String(val, StandardCharsets.UTF_8);
-    }
-  }
-
-  /**
-   * Write the start code (timestamp) to backup system table. If passed in null, then write 0 byte.
-   * @param startCode  start code
-   * @param backupRoot root directory path to backup
-   * @throws IOException exception
-   */
-  public void writeBackupStartCode(Long startCode, String backupRoot) throws IOException {
-    if (LOG.isTraceEnabled()) {
-      LOG.trace("write backup start code to backup system table " + startCode);
-    }
-    try (Table table = connection.getTable(tableName)) {
-      Put put = createPutForStartCode(startCode.toString(), backupRoot);
-      table.put(put);
     }
   }
 
@@ -592,123 +579,14 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Get all completed backup information (in desc order by time)
-   * @param onlyCompleted true, if only successfully completed sessions
-   * @return history info of BackupCompleteData
-   * @throws IOException exception
-   */
-  public ArrayList<BackupInfo> getBackupHistory(boolean onlyCompleted) throws IOException {
-    LOG.trace("get backup history from backup system table");
-
-    BackupState state = onlyCompleted ? BackupState.COMPLETE : BackupState.ANY;
-    ArrayList<BackupInfo> list = getBackupInfos(state);
-    return BackupUtils.sortHistoryListDesc(list);
-  }
-
-  /**
-   * Get all backups history
-   * @return list of backup info
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistory() throws IOException {
-    return getBackupHistory(false);
-  }
-
-  /**
-   * Get first n backup history records
-   * @param n number of records, if n== -1 - max number is ignored
-   * @return list of records
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getHistory(int n) throws IOException {
-    List<BackupInfo> history = getBackupHistory();
-    if (n == -1 || history.size() <= n) {
-      return history;
-    }
-    return Collections.unmodifiableList(history.subList(0, n));
-  }
-
-  /**
-   * Get backup history records filtered by list of filters.
-   * @param n       max number of records, if n == -1 , then max number is ignored
-   * @param filters list of filters
-   * @return backup records
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistory(int n, BackupInfo.Filter... filters) throws IOException {
-    if (filters.length == 0) {
-      return getHistory(n);
-    }
-
-    List<BackupInfo> history = getBackupHistory();
-    List<BackupInfo> result = new ArrayList<>();
-    for (BackupInfo bi : history) {
-      if (n >= 0 && result.size() == n) {
-        break;
-      }
-
-      boolean passed = true;
-      for (int i = 0; i < filters.length; i++) {
-        if (!filters[i].apply(bi)) {
-          passed = false;
-          break;
-        }
-      }
-      if (passed) {
-        result.add(bi);
-      }
-    }
-    return result;
-  }
-
-  /**
-   * Retrieve all table names that are part of any known backup
+   * Retrieve all table names that are part of any known completed backup
    */
   public Set<TableName> getTablesIncludedInBackups() throws IOException {
-    Set<TableName> names = new HashSet<>();
-    List<BackupInfo> infos = getBackupHistory(true);
-    for (BackupInfo info : infos) {
-      // Incremental backups have the same tables as the preceding full backups
-      if (info.getType() == BackupType.FULL) {
-        names.addAll(info.getTableNames());
-      }
-    }
-    return names;
-  }
-
-  /**
-   * Get history for backup destination
-   * @param backupRoot backup destination path
-   * @return List of backup info
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistory(String backupRoot) throws IOException {
-    ArrayList<BackupInfo> history = getBackupHistory(false);
-    for (Iterator<BackupInfo> iterator = history.iterator(); iterator.hasNext();) {
-      BackupInfo info = iterator.next();
-      if (!backupRoot.equals(info.getBackupRootDir())) {
-        iterator.remove();
-      }
-    }
-    return history;
-  }
-
-  /**
-   * Get history for a table
-   * @param name table name
-   * @return history for a table
-   * @throws IOException if getting the backup history fails
-   */
-  public List<BackupInfo> getBackupHistoryForTable(TableName name) throws IOException {
-    List<BackupInfo> history = getBackupHistory();
-    List<BackupInfo> tableHistory = new ArrayList<>();
-    for (BackupInfo info : history) {
-      List<TableName> tables = info.getTableNames();
-      if (tables.contains(name)) {
-        tableHistory.add(info);
-      }
-    }
-    return tableHistory;
+    // Incremental backups have the same tables as the preceding full backups
+    List<BackupInfo> infos =
+      getBackupHistory(withState(BackupState.COMPLETE), withType(BackupType.FULL));
+    return infos.stream().flatMap(info -> info.getTableNames().stream())
+      .collect(Collectors.toSet());
   }
 
   /**
@@ -722,7 +600,7 @@ public final class BackupSystemTable implements Closeable {
    */
   public Map<TableName, List<BackupInfo>> getBackupHistoryForTableSet(Set<TableName> set,
     String backupRoot) throws IOException {
-    List<BackupInfo> history = getBackupHistory(backupRoot);
+    List<BackupInfo> history = getBackupHistory(withRoot(backupRoot));
     Map<TableName, List<BackupInfo>> tableHistoryMap = new HashMap<>();
     for (BackupInfo info : history) {
       List<TableName> tables = info.getTableNames();
@@ -738,16 +616,32 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Get all backup sessions with a given state (in descending order by time)
-   * @param state backup session state
-   * @return history info of backup info objects
-   * @throws IOException exception
+   * Get all backup information passing the given filters, ordered by descending backupId. I.e. from
+   * newest to oldest.
    */
-  public ArrayList<BackupInfo> getBackupInfos(BackupState state) throws IOException {
+  public List<BackupInfo> getBackupHistory(BackupInfo.Filter... toInclude) throws IOException {
+    return getBackupHistory(Order.NEW_TO_OLD, Integer.MAX_VALUE, toInclude);
+  }
+
+  /**
+   * Retrieves the first n entries of the sorted, filtered list of backup infos.
+   * @param order desired ordering of the results.
+   * @param n     number of entries to return
+   */
+  public List<BackupInfo> getBackupHistory(Order order, int n, BackupInfo.Filter... toInclude)
+    throws IOException {
+    Preconditions.checkArgument(n >= 0, "n should be >= 0");
     LOG.trace("get backup infos from backup system table");
 
-    Scan scan = createScanForBackupHistory();
-    ArrayList<BackupInfo> list = new ArrayList<>();
+    if (n == 0) {
+      return Collections.emptyList();
+    }
+
+    Predicate<BackupInfo> combinedPredicate = Stream.of(toInclude)
+      .map(filter -> (Predicate<BackupInfo>) filter).reduce(Predicate::and).orElse(x -> true);
+
+    Scan scan = createScanForBackupHistory(order);
+    List<BackupInfo> list = new ArrayList<>();
 
     try (Table table = connection.getTable(tableName);
       ResultScanner scanner = table.getScanner(scan)) {
@@ -755,10 +649,12 @@ public final class BackupSystemTable implements Closeable {
       while ((res = scanner.next()) != null) {
         res.advance();
         BackupInfo context = cellToBackupInfo(res.current());
-        if (state != BackupState.ANY && context.getState() != state) {
-          continue;
+        if (combinedPredicate.test(context)) {
+          list.add(context);
+          if (list.size() == n) {
+            break;
+          }
         }
-        list.add(context);
       }
       return list;
     }
@@ -893,6 +789,37 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Retrieves the current set of tables covered by continuous backup along with the timestamp
+   * indicating when continuous backup started for each table.
+   * @return a map where the key is the table name and the value is the timestamp representing the
+   *         start time of continuous backup for that table.
+   * @throws IOException if an I/O error occurs while accessing the backup system table.
+   */
+  public Map<TableName, Long> getContinuousBackupTableSet() throws IOException {
+    LOG.trace("Retrieving continuous backup table set from the backup system table.");
+    Map<TableName, Long> tableMap = new TreeMap<>();
+
+    try (Table systemTable = connection.getTable(tableName)) {
+      Get getOperation = createGetForContinuousBackupTableSet();
+      Result result = systemTable.get(getOperation);
+
+      if (result.isEmpty()) {
+        return tableMap;
+      }
+
+      // Extract table names and timestamps from the result cells
+      List<Cell> cells = result.listCells();
+      for (Cell cell : cells) {
+        TableName tableName = TableName.valueOf(CellUtil.cloneQualifier(cell));
+        long timestamp = Bytes.toLong(CellUtil.cloneValue(cell));
+        tableMap.put(tableName, timestamp);
+      }
+    }
+
+    return tableMap;
+  }
+
+  /**
    * Add tables to global incremental backup set
    * @param tables     set of tables
    * @param backupRoot root directory path to backup
@@ -914,6 +841,170 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Add tables to the global continuous backup set. Only updates tables that are not already in the
+   * continuous backup set.
+   * @param tables         set of tables to add
+   * @param startTimestamp timestamp indicating when continuous backup started
+   * @throws IOException if an error occurs while updating the backup system table
+   */
+  public void addContinuousBackupTableSet(Set<TableName> tables, long startTimestamp)
+    throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Add continuous backup table set to backup system table. tables ["
+        + StringUtils.join(tables, " ") + "]");
+    }
+    if (LOG.isDebugEnabled()) {
+      tables.forEach(table -> LOG.debug(Objects.toString(table)));
+    }
+
+    // Get existing continuous backup tables
+    Map<TableName, Long> existingTables = getContinuousBackupTableSet();
+
+    try (Table table = connection.getTable(tableName)) {
+      Put put = createPutForContinuousBackupTableSet(tables, existingTables, startTimestamp);
+      if (!put.isEmpty()) {
+        table.put(put);
+      }
+    }
+  }
+
+  /**
+   * Updates the system table with the new start timestamps for continuous backup tables.
+   * @param tablesToUpdate    The set of tables that need their start timestamps updated.
+   * @param newStartTimestamp The new start timestamp to be set.
+   */
+  public void updateContinuousBackupTableSet(Set<TableName> tablesToUpdate, long newStartTimestamp)
+    throws IOException {
+    if (tablesToUpdate == null || tablesToUpdate.isEmpty()) {
+      LOG.warn("No tables provided for updating start timestamps.");
+      return;
+    }
+
+    try (Table table = connection.getTable(tableName)) {
+      Put put = new Put(rowkey(CONTINUOUS_BACKUP_SET));
+
+      for (TableName tableName : tablesToUpdate) {
+        put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(tableName.getNameAsString()),
+          Bytes.toBytes(newStartTimestamp));
+      }
+
+      table.put(put);
+      LOG.info("Successfully updated start timestamps for {} tables in the backup system table.",
+        tablesToUpdate.size());
+    }
+  }
+
+  /**
+   * Removes tables from the global continuous backup set. Only removes entries that currently exist
+   * in the backup system table.
+   * @param tables set of tables to remove
+   * @throws IOException if an error occurs while updating the backup system table
+   */
+  public void removeContinuousBackupTableSet(Set<TableName> tables) throws IOException {
+    if (LOG.isTraceEnabled()) {
+      LOG.trace("Remove continuous backup table set from backup system table. tables ["
+        + StringUtils.join(tables, " ") + "]");
+    }
+    if (LOG.isDebugEnabled()) {
+      tables.forEach(table -> LOG.debug("Removing: " + table));
+    }
+
+    Map<TableName, Long> existingTables = getContinuousBackupTableSet();
+    Set<TableName> toRemove =
+      tables.stream().filter(existingTables::containsKey).collect(Collectors.toSet());
+
+    if (toRemove.isEmpty()) {
+      LOG.debug("No matching tables found to remove from continuous backup set.");
+      return;
+    }
+
+    try (Table table = connection.getTable(tableName)) {
+      Delete delete = createDeleteForContinuousBackupTableSet(toRemove);
+      table.delete(delete);
+    }
+  }
+
+  /**
+   * Updates the latest replicated WAL timestamp for a region server in the backup system table.
+   * This is used to track the replication checkpoint for continuous backup and PITR (Point-in-Time
+   * Restore).
+   * @param serverName the server for which the latest WAL timestamp is being recorded
+   * @param timestamp  the timestamp (in milliseconds) of the last WAL entry replicated
+   * @throws IOException if an error occurs while writing to the backup system table
+   */
+  public void updateBackupCheckpointTimestamp(ServerName serverName, long timestamp)
+    throws IOException {
+
+    HBaseProtos.ServerName.Builder serverProto =
+      HBaseProtos.ServerName.newBuilder().setHostName(serverName.getHostname())
+        .setPort(serverName.getPort()).setStartCode(serverName.getStartCode());
+
+    try (Table table = connection.getTable(tableName)) {
+      Put put = createPutForBackupCheckpoint(serverProto.build().toByteArray(), timestamp);
+      if (!put.isEmpty()) {
+        table.put(put);
+      }
+    }
+  }
+
+  /**
+   * Retrieves the latest replicated WAL timestamps for all region servers from the backup system
+   * table. This is used to track the replication checkpoint state for continuous backup and PITR
+   * (Point-in-Time Restore).
+   * @return a map where the key is {@link ServerName} and the value is the latest replicated WAL
+   *         timestamp in milliseconds
+   * @throws IOException if an error occurs while reading from the backup system table
+   */
+  public Map<ServerName, Long> getBackupCheckpointTimestamps() throws IOException {
+    LOG.trace("Fetching latest backup checkpoint timestamps for all region servers.");
+
+    Map<ServerName, Long> checkpointMap = new HashMap<>();
+
+    byte[] rowKey = rowkey(CONTINUOUS_BACKUP_REPLICATION_TIMESTAMP_ROW);
+    Get get = new Get(rowKey);
+    get.addFamily(BackupSystemTable.META_FAMILY);
+
+    try (Table table = connection.getTable(tableName)) {
+      Result result = table.get(get);
+
+      if (result.isEmpty()) {
+        LOG.debug("No checkpoint timestamps found in backup system table.");
+        return checkpointMap;
+      }
+
+      List<Cell> cells = result.listCells();
+      for (Cell cell : cells) {
+        try {
+          HBaseProtos.ServerName protoServer =
+            HBaseProtos.ServerName.parseFrom(CellUtil.cloneQualifier(cell));
+          ServerName serverName = ServerName.valueOf(protoServer.getHostName(),
+            protoServer.getPort(), protoServer.getStartCode());
+
+          long timestamp = Bytes.toLong(CellUtil.cloneValue(cell));
+          checkpointMap.put(serverName, timestamp);
+        } catch (IllegalArgumentException e) {
+          LOG.warn("Failed to parse server name or timestamp from cell: {}", cell, e);
+        }
+      }
+    }
+
+    return checkpointMap;
+  }
+
+  /**
+   * Constructs a {@link Put} operation to update the last replicated WAL timestamp for a given
+   * server in the backup system table.
+   * @param serverNameBytes the serialized server name as bytes
+   * @param timestamp       the WAL entry timestamp to store
+   * @return a {@link Put} object ready to be written to the system table
+   */
+  private Put createPutForBackupCheckpoint(byte[] serverNameBytes, long timestamp) {
+    Put put = new Put(rowkey(CONTINUOUS_BACKUP_REPLICATION_TIMESTAMP_ROW));
+    put.addColumn(BackupSystemTable.META_FAMILY, serverNameBytes, Bytes.toBytes(timestamp));
+    return put;
+  }
+
+  /**
    * Deletes incremental backup set for a backup destination
    * @param backupRoot backup root
    */
@@ -930,21 +1021,17 @@ public final class BackupSystemTable implements Closeable {
   /**
    * Checks if we have at least one backup session in backup system table This API is used by
    * BackupLogCleaner
-   * @return true, if - at least one session exists in backup system table table
+   * @return true, if at least one session exists in backup system table
    * @throws IOException exception
    */
   public boolean hasBackupSessions() throws IOException {
     LOG.trace("Has backup sessions from backup system table");
 
-    boolean result = false;
-    Scan scan = createScanForBackupHistory();
+    Scan scan = createScanForBackupHistory(Order.OLD_TO_NEW);
     scan.setCaching(1);
     try (Table table = connection.getTable(tableName);
       ResultScanner scanner = table.getScanner(scan)) {
-      if (scanner.next() != null) {
-        result = true;
-      }
-      return result;
+      return scanner.next() != null;
     }
   }
 
@@ -1207,35 +1294,24 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
-   * Creates Get operation to retrieve start code from backup system table
-   * @return get operation
-   * @throws IOException exception
-   */
-  private Get createGetForStartCode(String rootPath) throws IOException {
-    Get get = new Get(rowkey(START_CODE_ROW, rootPath));
-    get.addFamily(BackupSystemTable.META_FAMILY);
-    get.readVersions(1);
-    return get;
-  }
-
-  /**
-   * Creates Put operation to store start code to backup system table
-   * @return put operation
-   */
-  private Put createPutForStartCode(String startCode, String rootPath) {
-    Put put = new Put(rowkey(START_CODE_ROW, rootPath));
-    put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes("startcode"),
-      Bytes.toBytes(startCode));
-    return put;
-  }
-
-  /**
    * Creates Get to retrieve incremental backup table set from backup system table
    * @return get operation
    * @throws IOException exception
    */
   private Get createGetForIncrBackupTableSet(String backupRoot) throws IOException {
     Get get = new Get(rowkey(INCR_BACKUP_SET, backupRoot));
+    get.addFamily(BackupSystemTable.META_FAMILY);
+    get.readVersions(1);
+    return get;
+  }
+
+  /**
+   * Creates a Get operation to retrieve the continuous backup table set from the backup system
+   * table.
+   * @return a Get operation for retrieving the table set
+   */
+  private Get createGetForContinuousBackupTableSet() throws IOException {
+    Get get = new Get(rowkey(CONTINUOUS_BACKUP_SET));
     get.addFamily(BackupSystemTable.META_FAMILY);
     get.readVersions(1);
     return get;
@@ -1256,6 +1332,28 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Creates a Put operation to store the continuous backup table set. Only includes tables that are
+   * not already in the set.
+   * @param tables         tables to add
+   * @param existingTables tables that already have continuous backup enabled
+   * @param startTimestamp timestamp indicating when continuous backup started
+   * @return put operation
+   */
+  private Put createPutForContinuousBackupTableSet(Set<TableName> tables,
+    Map<TableName, Long> existingTables, long startTimestamp) {
+    Put put = new Put(rowkey(CONTINUOUS_BACKUP_SET));
+
+    for (TableName table : tables) {
+      if (!existingTables.containsKey(table)) {
+        put.addColumn(BackupSystemTable.META_FAMILY, Bytes.toBytes(table.getNameAsString()),
+          Bytes.toBytes(startTimestamp));
+      }
+    }
+
+    return put;
+  }
+
+  /**
    * Creates Delete for incremental backup table set
    * @param backupRoot backup root
    * @return delete operation
@@ -1267,16 +1365,37 @@ public final class BackupSystemTable implements Closeable {
   }
 
   /**
+   * Creates Delete for continuous backup table set
+   * @param tables tables to remove
+   * @return delete operation
+   */
+  private Delete createDeleteForContinuousBackupTableSet(Set<TableName> tables) {
+    Delete delete = new Delete(rowkey(CONTINUOUS_BACKUP_SET));
+    for (TableName tableName : tables) {
+      delete.addColumn(META_FAMILY, Bytes.toBytes(tableName.getNameAsString()));
+    }
+    return delete;
+  }
+
+  /**
    * Creates Scan operation to load backup history
+   * @param order order of the scan results
    * @return scan operation
    */
-  private Scan createScanForBackupHistory() {
+  private Scan createScanForBackupHistory(Order order) {
     Scan scan = new Scan();
     byte[] startRow = Bytes.toBytes(BACKUP_INFO_PREFIX);
-    byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
-    stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
-    scan.withStartRow(startRow);
-    scan.withStopRow(stopRow);
+    if (order == Order.NEW_TO_OLD) {
+      byte[] stopRow = Arrays.copyOf(startRow, startRow.length);
+      stopRow[stopRow.length - 1] = (byte) (stopRow[stopRow.length - 1] + 1);
+      scan.setReversed(true);
+      scan.withStartRow(stopRow, false);
+      scan.withStopRow(startRow);
+    } else if (order == Order.OLD_TO_NEW) {
+      scan.setStartStopRowForPrefixScan(startRow);
+    } else {
+      throw new IllegalArgumentException("Unsupported order: " + order);
+    }
     scan.addFamily(BackupSystemTable.SESSIONS_FAMILY);
     scan.readVersions(1);
     return scan;
@@ -1730,5 +1849,16 @@ public final class BackupSystemTable implements Closeable {
         LOG.info("Table {} is not disabled, ignoring enable request", tableName);
       }
     }
+  }
+
+  public enum Order {
+    /**
+     * Old backups first, most recents last. I.e. sorted by ascending backupId.
+     */
+    OLD_TO_NEW,
+    /**
+     * New backups first, oldest last. I.e. sorted by descending backupId.
+     */
+    NEW_TO_OLD
   }
 }

@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
 import java.util.List;
@@ -25,7 +25,6 @@ import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.coprocessor.ObserverContext;
@@ -37,32 +36,23 @@ import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.hbase.wal.WALEdit;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.AfterAll;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 
 /**
  * This class is for testing HBaseConnectionManager ServerBusyException. Be careful adding to this
  * class. It sets a low HBASE_CLIENT_PERSERVER_REQUESTS_THRESHOLD
  */
-@Category({ LargeTests.class })
+@Tag(LargeTests.TAG)
 public class TestServerBusyException {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestServerBusyException.class);
 
   private final static HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final byte[] FAM_NAM = Bytes.toBytes("f");
   private static final byte[] ROW = Bytes.toBytes("bbb");
   private static final int RPC_RETRY = 5;
-
-  @Rule
-  public TestName name = new TestName();
 
   public static class SleepCoprocessor implements RegionCoprocessor, RegionObserver {
     public static final int SLEEP_TIME = 5000;
@@ -122,7 +112,7 @@ public class TestServerBusyException {
     }
   }
 
-  @BeforeClass
+  @BeforeAll
   public static void setUpBeforeClass() throws Exception {
     TEST_UTIL.getConfiguration().setBoolean(HConstants.STATUS_PUBLISHED, true);
     // Up the handlers; this test needs more than usual.
@@ -135,7 +125,7 @@ public class TestServerBusyException {
     TEST_UTIL.startMiniCluster(2);
   }
 
-  @AfterClass
+  @AfterAll
   public static void tearDownAfterClass() throws Exception {
     TEST_UTIL.shutdownMiniCluster();
   }
@@ -183,9 +173,10 @@ public class TestServerBusyException {
   }
 
   @Test()
-  public void testServerBusyException() throws Exception {
-    TableDescriptor hdt = TEST_UTIL.createModifyableTableDescriptor(name.getMethodName())
-      .setCoprocessor(SleepCoprocessor.class.getName()).build();
+  public void testServerBusyException(TestInfo testInfo) throws Exception {
+    TableDescriptor hdt =
+      TEST_UTIL.createModifyableTableDescriptor(testInfo.getTestMethod().get().getName())
+        .setCoprocessor(SleepCoprocessor.class.getName()).build();
     Configuration c = new Configuration(TEST_UTIL.getConfiguration());
     TEST_UTIL.createTable(hdt, new byte[][] { FAM_NAM }, c);
 

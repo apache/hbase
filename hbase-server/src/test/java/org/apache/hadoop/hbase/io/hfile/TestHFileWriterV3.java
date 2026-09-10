@@ -17,17 +17,17 @@
  */
 package org.apache.hadoop.hbase.io.hfile;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.Random;
+import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -35,8 +35,8 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ArrayBackedTag;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.CellComparator;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
@@ -53,26 +53,19 @@ import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.Writables;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.WritableUtils;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.runner.RunWith;
-import org.junit.runners.Parameterized;
-import org.junit.runners.Parameterized.Parameters;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.TestTemplate;
+import org.junit.jupiter.params.provider.Arguments;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Testing writing a version 3 {@link HFile}.
  */
-@RunWith(Parameterized.class)
-@Category({ IOTests.class, SmallTests.class })
+@org.junit.jupiter.api.Tag(IOTests.TAG)
+@org.junit.jupiter.api.Tag(SmallTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: useTags={0}")
 public class TestHFileWriterV3 {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestHFileWriterV3.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestHFileWriterV3.class);
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
@@ -86,18 +79,17 @@ public class TestHFileWriterV3 {
     this.useTags = useTags;
   }
 
-  @Parameters
-  public static Collection<Object[]> parameters() {
-    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED;
+  public static Stream<Arguments> parameters() {
+    return HBaseCommonTestingUtil.BOOLEAN_PARAMETERIZED.stream().map(arr -> Arguments.of(arr));
   }
 
-  @Before
+  @BeforeEach
   public void setUp() throws IOException {
     conf = TEST_UTIL.getConfiguration();
     fs = FileSystem.get(conf);
   }
 
-  @Test
+  @TestTemplate
   public void testHFileFormatV3() throws IOException {
     testHFileFormatV3Internals(useTags);
   }
@@ -109,7 +101,7 @@ public class TestHFileWriterV3 {
     writeDataAndReadFromHFile(hfilePath, compressAlgo, entryCount, false, useTags);
   }
 
-  @Test
+  @TestTemplate
   public void testMidKeyInHFile() throws IOException {
     testMidKeyInHFileInternals(useTags);
   }
@@ -197,7 +189,7 @@ public class TestHFileWriterV3 {
     hfile.initMetaAndIndex(reader);
     if (findMidKey) {
       Cell midkey = dataBlockIndexReader.midkey(reader);
-      assertNotNull("Midkey should not be null", midkey);
+      assertNotNull(midkey, "Midkey should not be null");
     }
 
     // Meta index.

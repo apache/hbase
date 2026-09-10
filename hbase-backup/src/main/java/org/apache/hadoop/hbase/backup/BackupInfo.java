@@ -27,6 +27,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import java.util.function.Predicate;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
@@ -46,13 +47,22 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private static final Logger LOG = LoggerFactory.getLogger(BackupInfo.class);
   private static final int MAX_FAILED_MESSAGE_LENGTH = 1024;
 
-  public interface Filter {
-    /**
-     * Filter interface
-     * @param info backup info
-     * @return true if info passes filter, false otherwise
-     */
-    boolean apply(BackupInfo info);
+  public interface Filter extends Predicate<BackupInfo> {
+    /** Returns true if the BackupInfo passes the filter, false otherwise */
+    @Override
+    boolean test(BackupInfo backupInfo);
+  }
+
+  public static Filter withRoot(String backupRoot) {
+    return info -> info.getBackupRootDir().equals(backupRoot);
+  }
+
+  public static Filter withType(BackupType type) {
+    return info -> info.getType() == type;
+  }
+
+  public static Filter withState(BackupState state) {
+    return info -> info.getState() == state;
   }
 
   /**
@@ -61,8 +71,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
   public enum BackupState {
     RUNNING,
     COMPLETE,
-    FAILED,
-    ANY
+    FAILED
   }
 
   /**
@@ -71,6 +80,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   public enum BackupPhase {
     REQUEST,
+    SETUP_WAL_REPLICATION,
     SNAPSHOT,
     PREPARE_INCREMENTAL,
     SNAPSHOTCOPY,
@@ -124,6 +134,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private long completeTs;
 
   /**
+   * Committed WAL timestamp for incremental backup
+   */
+  private long incrCommittedWalTs;
+
+  /**
    * Total bytes of incremental logs copied
    */
   private long totalBytesCopied;
@@ -139,8 +154,11 @@ public class BackupInfo implements Comparable<BackupInfo> {
   private List<String> incrBackupFileList;
 
   /**
-   * New region server log timestamps for table set after distributed log roll key - table name,
-   * value - map of RegionServer hostname -> last log rolled timestamp
+   * New region server log timestamps for table set after distributed log roll. The keys consist of
+   * all tables that are part of the backup chain of the backup root (not just the tables that were
+   * specified when creating the backup, which could be a subset). The value is a map of
+   * RegionServer hostname to the last log-roll timestamp, i.e. the point up to which logs are
+   * included in the backup.
    */
   private Map<TableName, Map<String, Long>> tableSetTimestampMap;
 
@@ -170,6 +188,8 @@ public class BackupInfo implements Comparable<BackupInfo> {
    */
   private boolean noChecksumVerify;
 
+  private boolean continuousBackupEnabled;
+
   public BackupInfo() {
     backupTableInfoMap = new HashMap<>();
   }
@@ -185,6 +205,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     }
     this.startTs = 0;
     this.completeTs = 0;
+    this.continuousBackupEnabled = false;
   }
 
   public int getWorkers() {
@@ -287,6 +308,14 @@ public class BackupInfo implements Comparable<BackupInfo> {
 
   public void setCompleteTs(long endTs) {
     this.completeTs = endTs;
+  }
+
+  public long getIncrCommittedWalTs() {
+    return incrCommittedWalTs;
+  }
+
+  public void setIncrCommittedWalTs(long timestamp) {
+    this.incrCommittedWalTs = timestamp;
   }
 
   public long getTotalBytesCopied() {
@@ -423,6 +452,20 @@ public class BackupInfo implements Comparable<BackupInfo> {
     builder.setBackupType(BackupProtos.BackupType.valueOf(getType().name()));
     builder.setWorkersNumber(workers);
     builder.setBandwidth(bandwidth);
+    builder.setTotalBytesCopied(totalBytesCopied);
+    builder.setNoChecksumVerify(noChecksumVerify);
+    if (incrBackupFileList != null) {
+      builder.addAllIncrBackupFileList(incrBackupFileList);
+    }
+    if (incrTimestampMap != null) {
+      for (Entry<TableName, Map<String, Long>> entry : incrTimestampMap.entrySet()) {
+        builder.putIncrTimestampMap(entry.getKey().getNameAsString(),
+          BackupProtos.BackupInfo.RSTimestampMap.newBuilder().putAllRsTimestamp(entry.getValue())
+            .build());
+      }
+    }
+    builder.setContinuousBackupEnabled(isContinuousBackupEnabled());
+    builder.setIncrCommittedWalTs(getIncrCommittedWalTs());
     return builder.build();
   }
 
@@ -518,6 +561,16 @@ public class BackupInfo implements Comparable<BackupInfo> {
     context.setType(BackupType.valueOf(proto.getBackupType().name()));
     context.setWorkers(proto.getWorkersNumber());
     context.setBandwidth(proto.getBandwidth());
+    context.setTotalBytesCopied(proto.getTotalBytesCopied());
+    context.setNoChecksumVerify(proto.getNoChecksumVerify());
+    if (proto.getIncrBackupFileListCount() > 0) {
+      context.setIncrBackupFileList(new ArrayList<>(proto.getIncrBackupFileListList()));
+    }
+    if (proto.getIncrTimestampMapCount() > 0) {
+      context.setIncrTimestampMap(getTableSetTimestampMap(proto.getIncrTimestampMapMap()));
+    }
+    context.setContinuousBackupEnabled(proto.getContinuousBackupEnabled());
+    context.setIncrCommittedWalTs(proto.getIncrCommittedWalTs());
     return context;
   }
 
@@ -545,6 +598,7 @@ public class BackupInfo implements Comparable<BackupInfo> {
     sb.append("{");
     sb.append("ID=" + backupId).append(",");
     sb.append("Type=" + getType()).append(",");
+    sb.append("IsContinuous=" + isContinuousBackupEnabled()).append(",");
     sb.append("Tables=" + getTableListAsString()).append(",");
     sb.append("State=" + getState()).append(",");
     Calendar cal = Calendar.getInstance();
@@ -560,6 +614,12 @@ public class BackupInfo implements Comparable<BackupInfo> {
       cal.setTimeInMillis(getCompleteTs());
       date = cal.getTime();
       sb.append("End time=" + date).append(",");
+      if (getType() == BackupType.INCREMENTAL) {
+        cal = Calendar.getInstance();
+        cal.setTimeInMillis(getIncrCommittedWalTs());
+        date = cal.getTime();
+        sb.append("Committed WAL time for incremental backup=" + date).append(",");
+      }
     }
     sb.append("Progress=" + getProgress() + "%");
     sb.append("}");
@@ -591,5 +651,13 @@ public class BackupInfo implements Comparable<BackupInfo> {
       Long.valueOf(this.getBackupId().substring(this.getBackupId().lastIndexOf("_") + 1));
     Long otherTS = Long.valueOf(o.getBackupId().substring(o.getBackupId().lastIndexOf("_") + 1));
     return thisTS.compareTo(otherTS);
+  }
+
+  public void setContinuousBackupEnabled(boolean continuousBackupEnabled) {
+    this.continuousBackupEnabled = continuousBackupEnabled;
+  }
+
+  public boolean isContinuousBackupEnabled() {
+    return this.continuousBackupEnabled;
   }
 }

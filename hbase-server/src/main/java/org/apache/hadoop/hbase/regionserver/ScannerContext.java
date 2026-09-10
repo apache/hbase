@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.util.List;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
@@ -264,6 +265,17 @@ public class ScannerContext {
    */
   void clearProgress() {
     progress.setFields(0, 0, 0, getBlockSizeProgress());
+  }
+
+  /**
+   * Clear away the block size progress. Mainly used in compaction, as we will use a single
+   * ScannerContext across all the compaction lifetime, and we will call Shipper.shipped to clear
+   * the block reference, so it is safe to clear the block size progress in compaction.
+   */
+  @RestrictedApi(explanation = "Should only be called in Compactor", link = "",
+      allowedOnPath = ".*/org/apache/hadoop/hbase/.*/*Compactor.java|.*/src/test/.*")
+  public void clearBlockSizeProgress() {
+    progress.setBlockSize(0);
   }
 
   /**

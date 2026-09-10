@@ -22,6 +22,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -113,5 +114,24 @@ public final class ConfigurationUtil {
       rtn.add(new AbstractMap.SimpleImmutableEntry<>(splitKvp[0], splitKvp[1]));
     }
     return rtn;
+  }
+
+  /**
+   * Returns true if the provided Configuration object has
+   * {@link HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY} set to true; false otherwise.
+   */
+  public static boolean isReadOnlyModeEnabledInConf(Configuration conf) {
+    return conf.getBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY,
+      HConstants.HBASE_GLOBAL_READONLY_ENABLED_DEFAULT);
+  }
+
+  /**
+   * Returns a copied version of the provided Configuration object that has
+   * {@link HConstants#HBASE_GLOBAL_READONLY_ENABLED_KEY} set to true.
+   */
+  public static Configuration copyWithReadOnlyModeEnabled(Configuration conf) {
+    Configuration readOnlyConf = new Configuration(conf);
+    readOnlyConf.setBoolean(HConstants.HBASE_GLOBAL_READONLY_ENABLED_KEY, true);
+    return readOnlyConf;
   }
 }

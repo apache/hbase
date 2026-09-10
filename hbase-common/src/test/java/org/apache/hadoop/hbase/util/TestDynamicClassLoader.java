@@ -17,31 +17,26 @@
  */
 package org.apache.hadoop.hbase.util;
 
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
  * Test TestDynamicClassLoader
  */
-@Category({ MiscTests.class, SmallTests.class })
+@Tag(MiscTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestDynamicClassLoader {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestDynamicClassLoader.class);
 
   private static final Logger LOG = LoggerFactory.getLogger(TestDynamicClassLoader.class);
 
@@ -53,7 +48,7 @@ public class TestDynamicClassLoader {
       TEST_UTIL.getDataTestDir().toString());
   }
 
-  @Before
+  @BeforeEach
   public void initializeConfiguration() {
     conf = new Configuration(TEST_UTIL.getConfiguration());
   }
@@ -131,14 +126,14 @@ public class TestDynamicClassLoader {
     String jarFileName = className + ".jar";
     File file = new File(TEST_UTIL.getDataTestDir().toString(), jarFileName);
     file.delete();
-    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+    assertFalse(file.exists(), "Should be deleted: " + file.getPath());
 
     file = new File(conf.get("hbase.dynamic.jars.dir"), jarFileName);
     file.delete();
-    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+    assertFalse(file.exists(), "Should be deleted: " + file.getPath());
 
     file = new File(ClassLoaderTestHelper.localDirPath(conf), jarFileName);
     file.delete();
-    assertFalse("Should be deleted: " + file.getPath(), file.exists());
+    assertFalse(file.exists(), "Should be deleted: " + file.getPath());
   }
 }

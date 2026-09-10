@@ -224,7 +224,7 @@ public final class BlockCacheFactory {
     }
     if (c.get("hbase.bucketcache.percentage.in.combinedcache") != null) {
       LOG.warn("Configuration 'hbase.bucketcache.percentage.in.combinedcache' is no longer "
-        + "respected. See comments in http://hbase.apache.org/book.html#_changes_of_note");
+        + "respected. See comments in https://hbase.apache.org/docs/upgrading/paths#changes-of-note");
     }
     int writerThreads =
       c.getInt(BUCKET_CACHE_WRITER_THREADS_KEY, DEFAULT_BUCKET_CACHE_WRITER_THREADS);

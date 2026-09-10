@@ -17,17 +17,16 @@
  */
 package org.apache.hadoop.hbase.master.snapshot;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import static org.junit.Assert.fail;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
@@ -52,27 +51,21 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.zookeeper.KeeperException;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.experimental.categories.Category;
-import org.junit.rules.TestName;
+import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInfo;
 import org.mockito.Mockito;
 
 /**
  * Test basic snapshot manager functionality
  */
-@Category({ MasterTests.class, SmallTests.class })
+@Tag(MasterTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestSnapshotManager {
-
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestSnapshotManager.class);
 
   private static final HBaseTestingUtil UTIL = new HBaseTestingUtil();
 
-  @Rule
-  public TestName name = new TestName();
+  private String currentTestName;
 
   MasterServices services = Mockito.mock(MasterServices.class);
   ProcedureCoordinator coordinator = Mockito.mock(ProcedureCoordinator.class);
@@ -106,23 +99,24 @@ public class TestSnapshotManager {
   }
 
   @Test
-  public void testCleanFinishedHandler() throws Exception {
-    TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testCleanFinishedHandler(TestInfo testInfo) throws Exception {
+    currentTestName = testInfo.getTestMethod().get().getName();
+    TableName tableName = TableName.valueOf(currentTestName);
     Configuration conf = UTIL.getConfiguration();
     try {
       conf.setLong(SnapshotManager.HBASE_SNAPSHOT_SENTINELS_CLEANUP_TIMEOUT_MILLIS, 5 * 1000L);
       SnapshotManager manager = getNewManager(conf, 1);
       TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
-      assertFalse("Manager is in process when there is no current handler",
-        manager.isTakingSnapshot(tableName));
+      assertFalse(manager.isTakingSnapshot(tableName),
+        "Manager is in process when there is no current handler");
       manager.setSnapshotHandlerForTesting(tableName, handler);
       Mockito.when(handler.isFinished()).thenReturn(false);
       assertTrue(manager.isTakingAnySnapshot());
-      assertTrue("Manager isn't in process when handler is running",
-        manager.isTakingSnapshot(tableName));
+      assertTrue(manager.isTakingSnapshot(tableName),
+        "Manager isn't in process when handler is running");
       Mockito.when(handler.isFinished()).thenReturn(true);
-      assertFalse("Manager is process when handler isn't running",
-        manager.isTakingSnapshot(tableName));
+      assertFalse(manager.isTakingSnapshot(tableName),
+        "Manager is process when handler isn't running");
       assertTrue(manager.isTakingAnySnapshot());
       Thread.sleep(6 * 1000);
       assertFalse(manager.isTakingAnySnapshot());
@@ -132,19 +126,20 @@ public class TestSnapshotManager {
   }
 
   @Test
-  public void testInProcess() throws KeeperException, IOException {
-    final TableName tableName = TableName.valueOf(name.getMethodName());
+  public void testInProcess(TestInfo testInfo) throws KeeperException, IOException {
+    currentTestName = testInfo.getTestMethod().get().getName();
+    final TableName tableName = TableName.valueOf(currentTestName);
     SnapshotManager manager = getNewManager();
     TakeSnapshotHandler handler = Mockito.mock(TakeSnapshotHandler.class);
-    assertFalse("Manager is in process when there is no current handler",
-      manager.isTakingSnapshot(tableName));
+    assertFalse(manager.isTakingSnapshot(tableName),
+      "Manager is in process when there is no current handler");
     manager.setSnapshotHandlerForTesting(tableName, handler);
     Mockito.when(handler.isFinished()).thenReturn(false);
-    assertTrue("Manager isn't in process when handler is running",
-      manager.isTakingSnapshot(tableName));
+    assertTrue(manager.isTakingSnapshot(tableName),
+      "Manager isn't in process when handler is running");
     Mockito.when(handler.isFinished()).thenReturn(true);
-    assertFalse("Manager is process when handler isn't running",
-      manager.isTakingSnapshot(tableName));
+    assertFalse(manager.isTakingSnapshot(tableName),
+      "Manager is process when handler isn't running");
   }
 
   /**
@@ -155,19 +150,19 @@ public class TestSnapshotManager {
     // No configuration (no cleaners, not enabled): snapshot feature disabled
     Configuration conf = new Configuration();
     SnapshotManager manager = getNewManager(conf);
-    assertFalse("Snapshot should be disabled with no configuration", isSnapshotSupported(manager));
+    assertFalse(isSnapshotSupported(manager), "Snapshot should be disabled with no configuration");
 
     // force snapshot feature to be enabled
     conf = new Configuration();
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, true);
     manager = getNewManager(conf);
-    assertTrue("Snapshot should be enabled", isSnapshotSupported(manager));
+    assertTrue(isSnapshotSupported(manager), "Snapshot should be enabled");
 
     // force snapshot feature to be disabled
     conf = new Configuration();
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
     manager = getNewManager(conf);
-    assertFalse("Snapshot should be disabled", isSnapshotSupported(manager));
+    assertFalse(isSnapshotSupported(manager), "Snapshot should be disabled");
 
     // force snapshot feature to be disabled, even if cleaners are present
     conf = new Configuration();
@@ -175,15 +170,15 @@ public class TestSnapshotManager {
       HFileLinkCleaner.class.getName());
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
     manager = getNewManager(conf);
-    assertFalse("Snapshot should be disabled", isSnapshotSupported(manager));
+    assertFalse(isSnapshotSupported(manager), "Snapshot should be disabled");
 
     // cleaners are present, but missing snapshot enabled property
     conf = new Configuration();
     conf.setStrings(HFileCleaner.MASTER_HFILE_CLEANER_PLUGINS, SnapshotHFileCleaner.class.getName(),
       HFileLinkCleaner.class.getName());
     manager = getNewManager(conf);
-    assertTrue("Snapshot should be enabled, because cleaners are present",
-      isSnapshotSupported(manager));
+    assertTrue(isSnapshotSupported(manager),
+      "Snapshot should be enabled, because cleaners are present");
 
     // Create a "test snapshot"
     Path rootDir = UTIL.getDataTestDir();
@@ -204,7 +199,8 @@ public class TestSnapshotManager {
   }
 
   @Test
-  public void testDisableSnapshotAndNotDeleteBackReference() throws Exception {
+  public void testDisableSnapshotAndNotDeleteBackReference(TestInfo testInfo) throws Exception {
+    currentTestName = testInfo.getTestMethod().get().getName();
     Configuration conf = new Configuration();
     conf.setBoolean(SnapshotManager.HBASE_SNAPSHOT_ENABLED, false);
     SnapshotManager manager = getNewManager(conf);
@@ -213,8 +209,8 @@ public class TestSnapshotManager {
     Path rootDir = UTIL.getDataTestDir();
     CommonFSUtils.setRootDir(conf, rootDir);
 
-    TableName tableName = TableName.valueOf(name.getMethodName());
-    TableName tableLinkName = TableName.valueOf(name.getMethodName() + "-link");
+    TableName tableName = TableName.valueOf(currentTestName);
+    TableName tableLinkName = TableName.valueOf(currentTestName + "-link");
     String hfileName = "1234567890";
     String familyName = "cf";
     RegionInfo hri = RegionInfoBuilder.newBuilder(tableName).build();
@@ -254,10 +250,10 @@ public class TestSnapshotManager {
       CommonFSUtils.getTableDir(archiveDir, tableLinkName));
     // Link backref can be removed
     cleaner.choreForTesting();
-    assertFalse("Link should be deleted", fs.exists(linkBackRef));
+    assertFalse(fs.exists(linkBackRef), "Link should be deleted");
     // HFile can be removed
     cleaner.choreForTesting();
-    assertFalse("HFile should be deleted", fs.exists(hfilePath));
+    assertFalse(fs.exists(hfilePath), "HFile should be deleted");
   }
 
   private Path getFamilyDirPath(final Path rootDir, final TableName table, final String region,

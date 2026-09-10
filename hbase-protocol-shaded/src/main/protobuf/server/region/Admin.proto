@@ -420,4 +420,13 @@ service AdminService {
 
   rpc GetCachedFilesList(GetCachedFilesListRequest)
     returns(GetCachedFilesListResponse);
+
+  rpc RefreshSystemKeyCache(EmptyMsg)
+    returns(EmptyMsg);
+
+  rpc EjectManagedKeyDataCacheEntry(ManagedKeyEntryRequest)
+    returns(BooleanMsg);
+
+  rpc ClearManagedKeyDataCache(EmptyMsg)
+    returns(EmptyMsg);
 }

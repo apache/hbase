@@ -18,28 +18,24 @@
 package org.apache.hadoop.hbase.client;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.coprocessor.MultiRowMutationEndpoint;
 import org.apache.hadoop.hbase.regionserver.NoOpScanPolicyObserver;
+import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.Before;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Tag;
 
 /**
  * Test all {@link Increment} client operations with a coprocessor that just implements the default
  * flush/compact/scan policy. This test takes a long time. The test it derives from is parameterized
  * so we run through both options of the test.
  */
-@Category(LargeTests.class)
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
 public class TestIncrementFromClientSideWithCoprocessor extends TestIncrementsFromClientSide {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestIncrementFromClientSideWithCoprocessor.class);
-
-  @Before
+  @BeforeEach
   public void before() throws Exception {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setStrings(CoprocessorHost.REGION_COPROCESSOR_CONF_KEY,

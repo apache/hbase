@@ -19,27 +19,28 @@ package org.apache.hadoop.hbase.client;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseClassTestRule;
+import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
-import org.junit.BeforeClass;
-import org.junit.ClassRule;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Tag;
 
-@Category({ LargeTests.class, ClientTests.class })
+@Tag(LargeTests.TAG)
+@Tag(ClientTests.TAG)
+@HBaseParameterizedTestTemplate(name = "{index}: regionReplication={0}")
 public class TestMobRestoreSnapshotFromClientAfterTruncate
   extends RestoreSnapshotFromClientAfterTruncateTestBase {
 
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-    HBaseClassTestRule.forClass(TestMobRestoreSnapshotFromClientAfterTruncate.class);
+  public TestMobRestoreSnapshotFromClientAfterTruncate(int numReplicas) {
+    super(numReplicas);
+  }
 
-  @BeforeClass
-  public static void setupCluster() throws Exception {
+  @BeforeAll
+  public static void setUpBeforeClass() throws Exception {
     setupConf(TEST_UTIL.getConfiguration());
     TEST_UTIL.startMiniCluster(3);
   }
@@ -51,7 +52,7 @@ public class TestMobRestoreSnapshotFromClientAfterTruncate
 
   @Override
   protected void createTable() throws Exception {
-    MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName, getNumReplicas(), FAMILY);
+    MobSnapshotTestingUtils.createMobTable(TEST_UTIL, tableName, numReplicas, FAMILY);
   }
 
   @Override

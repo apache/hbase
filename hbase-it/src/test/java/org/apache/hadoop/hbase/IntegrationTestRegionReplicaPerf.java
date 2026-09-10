@@ -18,9 +18,9 @@
 package org.apache.hadoop.hbase;
 
 import static java.lang.String.format;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.codahale.metrics.Histogram;
 import java.util.ArrayDeque;
@@ -44,7 +44,7 @@ import org.apache.hadoop.hbase.util.YammerHistogramUtils;
 import org.apache.hadoop.mapreduce.Counters;
 import org.apache.hadoop.mapreduce.Job;
 import org.apache.hadoop.util.ToolRunner;
-import org.junit.experimental.categories.Category;
+import org.junit.jupiter.api.Tag;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -58,7 +58,7 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
  * IntegrationTestBase is incompatible with the JUnit runner. Hence no @Test annotations either. See
  * {@code -help} for full list of options.
  */
-@Category(IntegrationTests.class)
+@Tag(IntegrationTests.TAG)
 public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
   private static final Logger LOG = LoggerFactory.getLogger(IntegrationTestRegionReplicaPerf.class);
@@ -164,12 +164,12 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     // sanity check cluster
     // TODO: this should reach out to master and verify online state instead
-    assertEquals("Master must be configured with StochasticLoadBalancer",
-      "org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer",
-      conf.get("hbase.master.loadbalancer.class"));
+    assertEquals("org.apache.hadoop.hbase.master.balancer.StochasticLoadBalancer",
+      conf.get("hbase.master.loadbalancer.class"),
+      "Master must be configured with StochasticLoadBalancer");
     // TODO: this should reach out to master and verify online state instead
-    assertTrue("hbase.regionserver.storefile.refresh.period must be greater than zero.",
-      conf.getLong("hbase.regionserver.storefile.refresh.period", 0) > 0);
+    assertTrue(conf.getLong("hbase.regionserver.storefile.refresh.period", 0) > 0,
+      "hbase.regionserver.storefile.refresh.period must be greater than zero.");
 
     // enable client-side settings
     conf.setBoolean(RpcClient.SPECIFIC_WRITE_THREAD, true);
@@ -241,7 +241,7 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
 
     for (TimingResult tr : results) {
       for (PerformanceEvaluation.RunResult r : tr.results) {
-        assertNotNull("One of the run results is missing detailed run data.", r.hist);
+        assertNotNull(r.hist, "One of the run results is missing detailed run data.");
         sum += stat.apply(r.hist);
         count += 1;
         LOG.debug(desc + "{" + YammerHistogramUtils.getHistogramReport(r.hist) + "}");
@@ -269,9 +269,9 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
     new PerfEvalCallable(util.getAdmin(), writeOpts).call();
 
     // one last sanity check, then send in the clowns!
-    assertEquals("Table must be created with DisabledRegionSplitPolicy. Broken test.",
-      DisabledRegionSplitPolicy.class.getName(),
-      util.getAdmin().getDescriptor(tableName).getRegionSplitPolicyClassName());
+    assertEquals(DisabledRegionSplitPolicy.class.getName(),
+      util.getAdmin().getDescriptor(tableName).getRegionSplitPolicyClassName(),
+      "Table must be created with DisabledRegionSplitPolicy. Broken test.");
     startMonkey();
 
     // collect a baseline without region replicas.
@@ -313,16 +313,14 @@ public class IntegrationTestRegionReplicaPerf extends IntegrationTestBase {
       .add("withReplicasStdevMean", withReplicasStdevMean)
       .add("withReplicas99.99Mean", withReplicas9999Mean).toString());
 
-    assertTrue(
+    assertTrue(withReplicasStdevMean <= withoutReplicasStdevMean,
       "Running with region replicas under chaos should have less request variance than without. "
         + "withReplicas.stdev.mean: " + withReplicasStdevMean + "ms "
-        + "withoutReplicas.stdev.mean: " + withoutReplicasStdevMean + "ms.",
-      withReplicasStdevMean <= withoutReplicasStdevMean);
-    assertTrue(
+        + "withoutReplicas.stdev.mean: " + withoutReplicasStdevMean + "ms.");
+    assertTrue(withReplicas9999Mean <= withoutReplicas9999Mean,
       "Running with region replicas under chaos should improve 99.99pct latency. "
         + "withReplicas.99.99.mean: " + withReplicas9999Mean + "ms "
-        + "withoutReplicas.99.99.mean: " + withoutReplicas9999Mean + "ms.",
-      withReplicas9999Mean <= withoutReplicas9999Mean);
+        + "withoutReplicas.99.99.mean: " + withoutReplicas9999Mean + "ms.");
   }
 
   public static void main(String[] args) throws Exception {
