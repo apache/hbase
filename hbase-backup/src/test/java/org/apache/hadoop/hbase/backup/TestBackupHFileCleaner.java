@@ -24,6 +24,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -92,9 +93,11 @@ public class TestBackupHFileCleaner {
     FileStatus file2 = createFile("file2");
     FileStatus file3 = createFile("file3");
 
+    AtomicInteger referenceLoads = new AtomicInteger();
     BackupHFileCleaner cleaner = new BackupHFileCleaner() {
       @Override
       protected Set<TableName> fetchFullyBackedUpTables(BackupSystemTable tbl) {
+        referenceLoads.incrementAndGet();
         return Set.of(tableNameWithBackup);
       }
     };
@@ -102,13 +105,19 @@ public class TestBackupHFileCleaner {
 
     Iterable<FileStatus> deletable;
 
-    // The first call will not allow any deletions because of the timestamp mechanism.
-    deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
+    // The first cleaning run will not allow any deletions because of the timestamp mechanism.
+    cleaner.preClean();
+    deletable = cleaner.getDeletableFiles(List.of(file1, file1Archived, file2, file3));
     assertEquals(Set.of(), Sets.newHashSet(deletable));
+    deletable = cleaner.getDeletableFiles(List.of(file1, file1Archived, file2, file3));
+    assertEquals(Set.of(), Sets.newHashSet(deletable));
+    cleaner.postClean();
+    assertEquals(1, referenceLoads.get());
 
     // No bulk loads registered, so all files can be deleted.
     deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
     assertEquals(Set.of(file1, file1Archived, file2, file3), Sets.newHashSet(deletable));
+    assertEquals(2, referenceLoads.get());
 
     // Register some bulk loads.
     try (BackupSystemTable backupSystem = new BackupSystemTable(TEST_UTIL.getConnection())) {
@@ -122,6 +131,31 @@ public class TestBackupHFileCleaner {
     // File 1 can no longer be deleted, because it is registered as a bulk load.
     deletable = callCleaner(cleaner, List.of(file1, file1Archived, file2, file3));
     assertEquals(Set.of(file2, file3), Sets.newHashSet(deletable));
+    assertEquals(3, referenceLoads.get());
+  }
+
+  @Test
+  public void testFailedReferenceLoadKeepsFiles() throws IOException {
+    FileStatus file = createFile("file");
+    AtomicInteger referenceLoads = new AtomicInteger();
+    BackupHFileCleaner cleaner = new BackupHFileCleaner() {
+      @Override
+      protected Set<TableName> fetchFullyBackedUpTables(BackupSystemTable tbl) throws IOException {
+        if (referenceLoads.getAndIncrement() == 0) {
+          return Set.of(tableNameWithBackup);
+        }
+        throw new IOException("Failed to load references");
+      }
+    };
+    cleaner.setConf(conf);
+
+    // Complete one successful run so the file is old enough to otherwise be deletable.
+    callCleaner(cleaner, List.of(file));
+
+    cleaner.preClean();
+    Iterable<FileStatus> deletable = cleaner.getDeletableFiles(List.of(file));
+    cleaner.postClean();
+    assertEquals(Set.of(), Sets.newHashSet(deletable));
   }
 
   private Iterable<FileStatus> callCleaner(BackupHFileCleaner cleaner, Iterable<FileStatus> files) {
