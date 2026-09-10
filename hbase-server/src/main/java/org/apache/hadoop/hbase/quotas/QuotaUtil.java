@@ -122,6 +122,17 @@ public class QuotaUtil extends QuotaTableUtil {
     return conf.getBoolean(QUOTA_CONF_KEY, QUOTA_ENABLED_DEFAULT);
   }
 
+  /**
+   * Returns true if the given table can never be throttled. These tables are read while a master is
+   * still initializing, before quotas can be served, so throttling them could prevent a throttle
+   * from ever being lifted.
+   */
+  @SuppressWarnings("deprecation") // hbase:namespace still exists on pre-3.x clusters
+  public static boolean isThrottleExempt(final TableName tableName) {
+    return TableName.META_TABLE_NAME.equals(tableName) || QUOTA_TABLE_NAME.equals(tableName)
+      || TableName.NAMESPACE_TABLE_NAME.equals(tableName);
+  }
+
   /*
    * ========================================================================= Quota "settings"
    * helpers
