@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
@@ -420,6 +421,54 @@ public class TestFSHLog extends AbstractTestFSWAL {
       assertNotNull(pipeline, "getPipeline() must never return null");
       assertEquals(0, pipeline.length,
         "Should normalize a null underlying pipeline to an empty array");
+    }
+  }
+
+  /**
+   * HBASE-30341: an exception out of {@code getSyncFuture} used to leave the claimed ring buffer
+   * sequence unpublished, wedging the WAL. If it regresses, this test times out on the final sync.
+   */
+  @Test
+  public void testGetSyncFutureThrowDoesNotWedgeWAL() throws IOException {
+    class DodgyFSHLog extends FSHLog {
+      volatile boolean throwException = false;
+
+      DodgyFSHLog(FileSystem fs, Path rootDir, String logDir, Configuration conf)
+        throws IOException {
+        super(fs, rootDir, logDir, conf);
+      }
+
+      @Override
+      protected SyncFuture getSyncFuture(long sequence, boolean forceSync) {
+        if (throwException) {
+          throw new RuntimeException("FAKE! getSyncFuture blew up");
+        }
+        return super.getSyncFuture(sequence, forceSync);
+      }
+    }
+
+    TableDescriptor td = TableDescriptorBuilder.newBuilder(TableName.valueOf(name))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("row")).build();
+    RegionInfo ri = RegionInfoBuilder.newBuilder(td.getTableName()).build();
+    MultiVersionConcurrencyControl mvcc = new MultiVersionConcurrencyControl();
+    NavigableMap<byte[], Integer> scopes = new TreeMap<>(Bytes.BYTES_COMPARATOR);
+    for (byte[] fam : td.getColumnFamilyNames()) {
+      scopes.put(fam, 0);
+    }
+
+    DodgyFSHLog wal = new DodgyFSHLog(FS, CommonFSUtils.getWALRootDir(CONF), DIR.toString(), CONF);
+    wal.init();
+    try {
+      addEdits(wal, ri, td, 1, mvcc, scopes, "row");
+
+      wal.throwException = true;
+      assertThrows(Exception.class, () -> addEdits(wal, ri, td, 1, mvcc, scopes, "row"));
+
+      // WAL must still be usable; pre-fix this hangs forever on the leaked sequence.
+      wal.throwException = false;
+      addEdits(wal, ri, td, 1, mvcc, scopes, "row");
+    } finally {
+      wal.close();
     }
   }
 }
