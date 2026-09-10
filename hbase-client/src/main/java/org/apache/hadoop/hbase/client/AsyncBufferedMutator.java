@@ -57,6 +57,9 @@ public interface AsyncBufferedMutator extends Closeable {
    * @param mutation The data to send.
    */
   default CompletableFuture<Void> mutate(Mutation mutation) {
+    if (!(mutation instanceof Put) && !(mutation instanceof Delete)) {
+      throw new UnsupportedOperationException("Only supports Put and Delete mutation");
+    }
     return Iterables.getOnlyElement(mutate(Collections.singletonList(mutation)));
   }
 
