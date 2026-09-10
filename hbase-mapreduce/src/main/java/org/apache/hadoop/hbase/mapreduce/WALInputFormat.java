@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -382,7 +384,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         // Recurse into sub directories
         result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));
       } else {
-        addFile(result, file, startTime, endTime);
+        addFile(result, fs, file, startTime, endTime);
       }
     }
     // TODO: These results should be sorted? Results could be content of recovered.edits directory
@@ -391,18 +393,44 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     return result;
   }
 
-  static void addFile(List<FileStatus> result, LocatedFileStatus lfs, long startTime,
+  /**
+   * Whether the file is known to be closed. Only a closed file has a final modification time, so
+   * only then can it be used as an upper bound on the entries inside. Anything we cannot answer
+   * for, including non-HDFS filesystems, is reported as open so that the file is kept.
+   */
+  private static boolean isClosed(FileSystem fs, Path path) {
+    try {
+      FileSystem backing = fs instanceof HFileSystem ? ((HFileSystem) fs).getBackingFs() : fs;
+      return backing instanceof DistributedFileSystem
+        && ((DistributedFileSystem) backing).isFileClosed(path);
+    } catch (IOException e) {
+      LOG.debug("Could not tell whether {} is closed, keeping it", path, e);
+      return false;
+    }
+  }
+
+  static void addFile(List<FileStatus> result, FileSystem fs, LocatedFileStatus lfs, long startTime,
     long endTime) {
     long timestamp = AbstractFSWALProvider.getTimestamp(lfs.getPath().getName());
     if (timestamp > 0) {
-      // Looks like a valid timestamp.
-      if (timestamp <= endTime && timestamp >= startTime) {
-        LOG.info("Found {}", lfs.getPath());
-        result.add(lfs);
-      } else {
-        LOG.info("Skipped {}, outside range [{}/{} - {}/{}]", lfs.getPath(), startTime,
-          Instant.ofEpochMilli(startTime), endTime, Instant.ofEpochMilli(endTime));
+      // The name carries the WAL's creation time, which only bounds its entries from below. A WAL
+      // stays open until it rolls, so one created before startTime can still hold entries in
+      // range and must not be dropped on the strength of its name alone.
+      if (timestamp > endTime) {
+        LOG.info("Skipped {}, created after endTime [{}/{}]", lfs.getPath(), endTime,
+          Instant.ofEpochMilli(endTime));
+        return;
       }
+      // The modification time is the upper bound, but HDFS leaves it at the creation time until
+      // the file is closed, so it is only meaningful once the file is. Order the checks so the
+      // extra RPC is only paid for files that the modification time alone would prune.
+      if (lfs.getModificationTime() < startTime && isClosed(fs, lfs.getPath())) {
+        LOG.info("Skipped {}, closed before startTime [{}/{}]", lfs.getPath(), startTime,
+          Instant.ofEpochMilli(startTime));
+        return;
+      }
+      LOG.info("Found {}", lfs.getPath());
+      result.add(lfs);
     } else {
       // If no timestamp, add it regardless.
       LOG.info("Found (no-timestamp!) {}", lfs);
