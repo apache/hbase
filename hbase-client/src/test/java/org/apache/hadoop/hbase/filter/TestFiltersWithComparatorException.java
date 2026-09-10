@@ -58,17 +58,11 @@ public class TestFiltersWithComparatorException {
   }
 
   // Every filterX method that Filter implements to test
-  final List<FilterFunctionThrowable> filterFunctionsToTest = Arrays.asList((Filter filter) -> {
-    filter.filterRowKey(testCell);
-  }, (Filter filter) -> {
-    filter.filterAllRemaining();
-  }, (Filter filter) -> {
-    filter.filterCell(testCell);
-  }, (Filter filter) -> {
-    filter.filterRowCells(new ArrayList<>(Collections.singletonList(testCell)));
-  }, (Filter filter) -> {
-    filter.filterRow();
-  });
+  final List<FilterFunctionThrowable> filterFunctionsToTest =
+    Arrays.asList(filter -> filter.filterRowKey(testCell), Filter::filterAllRemaining,
+      filter -> filter.filterCell(testCell),
+      filter -> filter.filterRowCells(new ArrayList<>(Collections.singletonList(testCell))),
+      Filter::filterRow);
 
   /**
    * Comparator which throws RuntimeException for every `compareTo` method that
