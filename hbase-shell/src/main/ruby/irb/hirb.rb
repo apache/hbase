@@ -51,6 +51,8 @@ module IRB
         `stty icrnl <&2`
       end
       @interactive = interactive
+      # Errors must abort a script run to set the exit code, but not a live prompt
+      @exit_on_error = !interactive || input_method.is_a?(::IRB::FileInputMethod)
       super(workspace, input_method)
     ensure
       f.close
@@ -130,16 +132,13 @@ module IRB
           rescue Interrupt => exc
           rescue SystemExit, SignalException
             raise
-          rescue SyntaxError => exc
-            raise exc unless @interactive
-          rescue NameError => exc
-            raise exc unless @interactive
-            # HBASE-26880: Ignore NameError to prevent exiting Shell on mistyped commands.
           rescue Exception => exc
             # HBASE-26741: Raise exception so Shell::exception_handler can catch it.
             # This modifies this copied method from JRuby so that the HBase shell can
             # manage the exception and set a proper exit code on the process.
-            raise exc
+            # Otherwise keep the session alive and report the error, as the shell did before
+            # HBASE-26741. Supersedes HBASE-26880 (NameError) and HBASE-27726 (SyntaxError).
+            raise if @exit_on_error
           else
             exc = nil
             next

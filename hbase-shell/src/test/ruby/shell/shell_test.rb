@@ -21,6 +21,7 @@ require 'hbase_constants'
 require 'hbase_shell'
 require 'irb/hirb'
 require 'stringio'
+require 'tempfile'
 
 class ShellTest < Test::Unit::TestCase
   include Hbase::TestHelpers
@@ -225,5 +226,26 @@ class ShellTest < Test::Unit::TestCase
     assert_match(/WARN: 'list_snapshots' is a reserved HBase command/, err_output)
     assert_match(/WARN: 'scan' is a reserved HBase command/, err_output)
     assert_match(/WARN: 'processlist' is a reserved HBase command/, err_output)
+  end
+
+  def new_hirb(input_method)
+    IRB.setup(__FILE__) unless IRB.conf[:IRB_NAME]
+    IRB::HIRB.new(@shell.get_workspace, true, input_method)
+  end
+
+  define_test 'Shell::Shell should keep an interactive session alive on any error' do
+    hirb = new_hirb(MockInputMethod.new(["1 + '2'\n", "my_var = 5\n"]))
+    capture_stdout { hirb.eval_input }
+    assert_equal(5, hirb.context.workspace.binding.local_variable_get(:my_var))
+  end
+
+  define_test 'Shell::Shell should abort a script on error even when interactive' do
+    Tempfile.create(['hirb_test', '.rb']) do |file|
+      file.write("1 + '2'\n")
+      file.close
+      # interactive is true, as it is for `hbase shell script.rb` without -n
+      hirb = new_hirb(IRB::HBaseLoader.file_for_load(file.path))
+      assert_raise(TypeError) { capture_stdout { hirb.eval_input } }
+    end
   end
 end
