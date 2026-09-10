@@ -90,11 +90,11 @@ public class TestHBackupFileSystem {
       // The backupRoot/.tmp dir should not be checked for a .backup.manifest file because it will
       // not have one. Verify an ERROR is not logged with the following message:
       // Cannot load backup manifest from: /path/to/.tmp
-      verify(mockAppender, never()).append(
-        argThat((org.apache.logging.log4j.core.LogEvent event) ->
-          event.getLevel().equals(org.apache.logging.log4j.Level.ERROR)
-            && event.getMessage().getFormattedMessage().contains("Cannot load backup manifest from: ")
-            && event.getMessage().getFormattedMessage().contains(".tmp")));
+      verify(mockAppender, never())
+        .append(argThat((org.apache.logging.log4j.core.LogEvent event) -> event.getLevel()
+          .equals(org.apache.logging.log4j.Level.ERROR)
+          && event.getMessage().getFormattedMessage().contains("Cannot load backup manifest from: ")
+          && event.getMessage().getFormattedMessage().contains(".tmp")));
 
       assertEquals(2, images.size());
       assertEquals(backupId2, images.get(0).getBackupId());
