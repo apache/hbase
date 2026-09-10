@@ -424,7 +424,7 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       throw new IOException(e);
     } finally {
       if (backupInfo.isContinuousBackupEnabled()) {
-        deleteBulkLoadDirectory();
+        deleteTmpBackupDirectory();
       }
     }
   }
@@ -467,10 +467,19 @@ public class IncrementalTableBackupClient extends TableBackupClient {
   protected void deleteBulkLoadDirectory() throws IOException {
     // delete original bulk load directory on method exit
     Path path = getBulkOutputDir();
+    deleteDirectory(path);
+  }
+
+  protected void deleteTmpBackupDirectory() throws IOException {
+    Path path = getTmpBackupDir();
+    deleteDirectory(path);
+  }
+
+  private void deleteDirectory(Path path) throws IOException {
     FileSystem fs = FileSystem.get(path.toUri(), conf);
     boolean result = fs.delete(path, true);
     if (!result) {
-      LOG.warn("Could not delete " + path);
+      LOG.warn("Could not delete {}", path);
     }
   }
 
@@ -646,11 +655,16 @@ public class IncrementalTableBackupClient extends TableBackupClient {
    * @return A Path object representing the directory
    */
   protected Path getBulkOutputDir() {
-    String backupId = backupInfo.getBackupId();
-    Path path = new Path(backupInfo.getBackupRootDir());
-    path = new Path(path, ".tmp");
-    path = new Path(path, backupId);
-    return path;
+    return new Path(getTmpBackupDir(), backupId);
+  }
+
+  /**
+   * Creates a path to the backup root directory's temporary subdirectory. The directory will look
+   * like: .../backupRoot/.tmp
+   * @return A Path object representing the directory
+   */
+  protected Path getTmpBackupDir() {
+    return new Path(backupInfo.getBackupRootDir(), ".tmp");
   }
 
   /**
