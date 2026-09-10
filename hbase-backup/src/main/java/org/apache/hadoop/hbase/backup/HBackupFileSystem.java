@@ -146,7 +146,7 @@ public final class HBackupFileSystem {
   }
 
   @RestrictedApi(explanation = "Should only be called internally or in tests", link = "",
-    allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/HBackupFileSystem.java)")
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/HBackupFileSystem.java)")
   public static List<BackupImage> getAllBackupImages(Configuration conf, Path backupRootPath)
     throws IOException {
     FileSystem fs = FileSystem.get(backupRootPath.toUri(), conf);
