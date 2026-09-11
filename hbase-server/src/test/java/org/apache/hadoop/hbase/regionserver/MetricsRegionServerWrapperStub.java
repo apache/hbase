@@ -88,6 +88,16 @@ public class MetricsRegionServerWrapperStub implements MetricsRegionServerWrappe
   }
 
   @Override
+  public long getStoreFileUncompressedSize() {
+    return 3800;
+  }
+
+  @Override
+  public double getStoreFileCompressionRatio() {
+    return 2;
+  }
+
+  @Override
   public double getStoreFileSizeGrowthRate() {
     return 50.0;
   }
