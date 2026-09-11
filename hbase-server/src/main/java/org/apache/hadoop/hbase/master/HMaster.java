@@ -4494,26 +4494,32 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     return masterRegion;
   }
 
+  /**
+   * Dynamically updates HMaster's configuration. Since HMaster inherits from
+   * {@link HBaseServerBase}, the {@code updatedConf} parameter references the same
+   * {@link Configuration} object as HMaster's {@code this.conf} instance variable in a real HBase
+   * deployment. This isn't necessarily the case in unit tests.
+   * @param updatedConf the dynamically updated configuration
+   */
   @Override
-  public void onConfigurationChange(Configuration newConf) {
+  public void onConfigurationChange(Configuration updatedConf) {
     try {
-      Superusers.initialize(newConf);
+      Superusers.initialize(updatedConf);
     } catch (IOException e) {
       LOG.warn("Failed to initialize SuperUsers on reloading of the configuration");
     }
     // append the quotas observer back to the master coprocessor key
-    setQuotasObserver(newConf);
+    setQuotasObserver(updatedConf);
 
     boolean originalIsReadOnlyEnabled = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
 
-    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(newConf, originalIsReadOnlyEnabled,
-      this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY, this.maintenanceMode,
-      this.toString(), conf -> {
-        this.initializeCoprocessorHost(conf);
-        CoprocessorConfigurationUtil.updateCoprocessorListInConf(this.conf, conf,
-          CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
-      });
+    // updatedConf and this.conf reference the same Configuration object in an actual HBase
+    // deployment. However, in unit test cases they reference different Configuration objects, so
+    // this.conf needs to be updated.
+    CoprocessorConfigurationUtil.maybeUpdateCoprocessors(updatedConf, this.conf,
+      originalIsReadOnlyEnabled, this.cpHost, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY,
+      this.maintenanceMode, this.toString(), this::initializeCoprocessorHost);
 
     boolean maybeUpdatedReadOnlyMode = CoprocessorConfigurationUtil
       .areReadOnlyCoprocessorsLoaded(this.conf, CoprocessorHost.MASTER_COPROCESSOR_CONF_KEY);
