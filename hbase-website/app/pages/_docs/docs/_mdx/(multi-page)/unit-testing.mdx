@@ -39,12 +39,15 @@ The first step is to add JUnit dependencies to your Maven POM file:
 
 ```xml
 <dependency>
-  <groupId>junit</groupId>
-  <artifactId>junit</artifactId>
-  <version>4.11</version>
+  <groupId>org.junit.jupiter</groupId>
+  <artifactId>junit-jupiter</artifactId>
+  <version>5.13.4</version>
   <scope>test</scope>
 </dependency>
 ```
+
+Make sure your build uses a Surefire 3.x version (for example 3.5.3); older 2.x Surefire
+does not run JUnit 5.13.x tests and reports `Tests run: 0`.
 
 Next, add some unit tests to your code.
 Tests are annotated with `@Test`.
@@ -68,7 +71,7 @@ public class TestMyHbaseDAOData {
 
 These tests ensure that your `createPut` method creates, populates, and returns a `Put` object with expected values.
 Of course, JUnit can do much more than this.
-For an introduction to JUnit, see https://github.com/junit-team/junit/wiki/Getting-started.
+For an introduction to JUnit, see https://docs.junit.org/5.13.4/user-guide/.
 
 ## Mockito
 
@@ -81,21 +84,28 @@ For instance, you can mock a `org.apache.hadoop.hbase.Server` instance or a `org
 
 This example builds upon the example code in [unit.tests](/docs/unit-testing), to test the `insertRecord` method.
 
-First, add a dependency for Mockito to your Maven POM file.
+First, add the Mockito dependencies to your Maven POM file. `@ExtendWith(MockitoExtension.class)`
+lives in `mockito-junit-jupiter`, so add that alongside `mockito-core`.
 
 ```xml
 <dependency>
     <groupId>org.mockito</groupId>
     <artifactId>mockito-core</artifactId>
-    <version>2.1.0</version>
+    <version>4.11.0</version>
+    <scope>test</scope>
+</dependency>
+<dependency>
+    <groupId>org.mockito</groupId>
+    <artifactId>mockito-junit-jupiter</artifactId>
+    <version>4.11.0</version>
     <scope>test</scope>
 </dependency>
 ```
 
-Next, add a `@RunWith` annotation to your test class, to direct it to use Mockito.
+Next, add an `@ExtendWith` annotation to your test class, to direct it to use Mockito.
 
 ```java
-@RunWith(MockitoJUnitRunner.class)
+@ExtendWith(MockitoExtension.class)
 public class TestMyHBaseDAO{
   @Mock
   Configuration config = HBaseConfiguration.create();
@@ -182,7 +192,7 @@ public class MyReducerTest {
     byte[] CF = "CF".getBytes();
     byte[] QUALIFIER = "CQ-1".getBytes();
 
-    @Before
+    @BeforeEach
     public void setUp() {
       MyReducer reducer = new MyReducer();
       reduceDriver = ReduceDriver.newReduceDriver(reducer);
@@ -250,7 +260,7 @@ public class MyHBaseIntegrationTest {
     byte[] CQ1 = "CQ-1".getBytes();
     byte[] CQ2 = "CQ-2".getBytes();
 
-    @Before
+    @BeforeEach
     public void setup() throws Exception {
         utility = new HBaseTestingUtility();
         utility.startMiniCluster();
@@ -295,7 +305,7 @@ public class MyHBaseIntegrationTest {
   byte[] CQ1 = "CQ-1".getBytes();
   byte[] CQ2 = "CQ-2".getBytes();
 
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
     cluster = TestingHBaseCluster.create(TestingHBaseClusterOption.builder().build());
     cluster.start();
@@ -305,7 +315,7 @@ public class MyHBaseIntegrationTest {
       .setColumnFamily(ColumnFamilyDescriptorBuilder.of(CF)).build());
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
     admin.close();
     conn.close();

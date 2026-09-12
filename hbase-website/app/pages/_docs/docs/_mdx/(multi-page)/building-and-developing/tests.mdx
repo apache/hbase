@@ -87,18 +87,15 @@ Also, keep in mind that if you are running tests in the `hbase-server` module yo
 
 ## Unit Tests [#building-and-developing-unit-tests]
 
-Apache HBase unit tests must carry a Category annotation and
-as of `hbase-2.0.0`, must be stamped with the HBase `ClassRule`.
-Here is an example of what a Test Class looks like with a
-Category and ClassRule included:
+Apache HBase runs its unit tests with [JUnit 5](https://docs.junit.org/5.13.4/user-guide/). Every unit
+test must carry a sizing tag, applied with the JUnit 5 `@Tag` annotation. Here is an
+example of what a Test Class looks like:
 
 ```java
 ...
-@Category(SmallTests.class)
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestHRegionInfo {
-  @ClassRule
-  public static final HBaseClassTestRule CLASS_RULE =
-      HBaseClassTestRule.forClass(TestHRegionInfo.class);
 
   @Test
   public void testCreateHRegionInfoName() throws Exception {
@@ -107,22 +104,35 @@ public class TestHRegionInfo {
 }
 ```
 
-Here the Test Class is `TestHRegionInfo`. The `CLASS_RULE` has
-the same form in every test class only the `.class` you pass
-is that of the local test; i.e. in the TestTimeout Test Class, you'd
-pass `TestTimeout.class` to the `CLASS_RULE` instead of the
-`TestHRegionInfo.class` we have above. The `CLASS_RULE`
-is where we'll enforce timeouts (currently set at a hard-limit of
-thirteen! minutes for all tests — 780 seconds) and other cross-unit test facility.
-The test is in the `SmallTest` Category.
+Here the Test Class is `TestHRegionInfo`, tagged as a `SmallTests` (plus the functional
+tag `RegionServerTests`). Prior to the JUnit 5 migration, tests were categorized with
+`@Category(...)` and, as of `hbase-2.0.0`, had to declare an `HBaseClassTestRule`
+`@ClassRule` — both are gone now. The cross-cutting facilities the old `ClassRule`
+provided are now applied automatically by the `HBaseJupiterExtension`:
 
-Categories can be arbitrary and provided as a list but each test MUST
-carry one from the following list of sizings: `small`, `medium`, `large`, and
-`integration`. The test sizing is designated using the JUnit
-[categories](https://github.com/junit-team/junit4/wiki/Categories): `SmallTests`, `MediumTests`, `LargeTests`, `IntegrationTests`.
-JUnit Categories are denoted using java annotations (a special unit test looks
-for the presence of the @Category annotation in all unit tess and will fail if it
-finds a test suite missing a sizing marking).
+- it enforces a per-class timeout derived from the sizing tag (three minutes for `small`,
+  six for `medium`, and a hard limit of thirteen! minutes — 780 seconds — for `large`;
+  `integration` tests have no timeout);
+- it dumps a thread stack to the log output when a test class times out;
+- it runs the resource-leak checker (see the [Test Resource Checker](/docs/building-and-developing/tests#test-resource-checker) section below);
+- and it fails any test class that is missing a sizing tag.
+
+`HBaseJupiterExtension` is auto-registered for the Surefire unit-test runs in every module
+through the JUnit 5 `ServiceLoader` mechanism
+(`junit.jupiter.extensions.autodetection.enabled=true` in the Surefire configuration plus a
+`META-INF/services/org.junit.jupiter.api.extension.Extension` entry), so individual test
+classes no longer need any `@ClassRule` boilerplate. Integration tests (run under Failsafe
+or the `IntegrationTestsDriver`) do not currently enable this auto-registration.
+
+Tags can be arbitrary and provided as a list, but each test MUST carry one from the
+following list of sizings: `small`, `medium`, `large`, and `integration`. The test sizing
+is designated with a JUnit 5
+[tag](https://docs.junit.org/5.13.4/user-guide/#writing-tests-tagging-and-filtering)
+referencing one of `SmallTests`, `MediumTests`, `LargeTests`, or `IntegrationTests` — use
+the `TAG` constant on each of those interfaces in the
+`org.apache.hadoop.hbase.testclassification` package (a special extension checks for the
+presence of a sizing `@Tag` in all unit tests and will fail if it finds a test class
+missing a sizing marking).
 
 The first three categories, `small`, `medium`, and `large`, are for test cases which run when you
 type `$ mvn test`.
@@ -291,11 +301,13 @@ Running `./dev-support/hbasetests.sh replayFailed` will rerun the failed tests a
 
 ### Test Timeouts
 
-The HBase unit test sizing Categorization timeouts are not strictly enforced.
+`HBaseJupiterExtension` enforces a per-class timeout based on the sizing tag: three minutes
+for `small`, six minutes for `medium`, and thirteen minutes for `large` tests
+(`integration` tests have no timeout). When a test class exceeds its deadline it is failed
+and a thread dump is logged. Independently, Surefire kills any forked JVM that runs longer
+than `surefire.timeout` (900 seconds by default).
 
-Any test that runs longer than ten minutes will be timedout/killed.
-
-As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
+As of hbase-2.0.0, we have purged the old JUnit 4 per-test-method timeouts, i.e.
 
 ```java
 ...
@@ -305,15 +317,16 @@ As of hbase-2.0.0, we have purged all per-test-method timeouts: i.e.
   }
 ```
 
-They are discouraged and don't make much sense given we are timing
-base of how long the whole Test Fixture/Class/Suite takes and
+Blanket per-method timeouts are discouraged and don't make much sense given we are timing
+based on how long the whole Test Fixture/Class/Suite takes and
 that the variance in how long a test method takes varies wildly
 dependent upon context (loaded Apache Infrastructure versus
-developer machine with nothing else running on it).
+developer machine with nothing else running on it). JUnit 5's `@Timeout` may still be
+applied sparingly to an individual method that genuinely needs its own deadline.
 
 ### Test Resource Checker
 
-A custom Maven SureFire plugin listener checks a number of resources before and after each HBase unit test runs and logs its findings at the end of the test output files which can be found in _target/surefire-reports_ per Maven module (Tests write test reports named for the test class into this directory.
+The `ResourceChecker`, wired in through `HBaseJupiterExtension`'s `BeforeEachCallback`/`AfterEachCallback`, checks a number of resources before and after each HBase unit test runs and logs its findings in the test output files which can be found in _target/surefire-reports_ per Maven module (Tests write test reports named for the test class into this directory.
 Check the _\*-out.txt_ files). The resources counted are the number of threads, the number of file descriptors, etc.
 If the number has increased, it adds a _LEAK?_ comment in the logs.
 As you can have an HBase instance running in the background, some threads can be deleted/created without any specific action in the test.
@@ -369,42 +382,39 @@ This will allow to share the cluster later.
 
 ### Tests Skeleton Code
 
-Here is a test skeleton code with Categorization and a Category-based timeout rule to copy and paste and use as basis for test contribution.
+Here is a test skeleton code with sizing tags to copy and paste and use as basis for test contribution.
 
 ```java
 /**
- * Describe what this testcase tests. Talk about resources initialized in @BeforeClass (before
+ * Describe what this testcase tests. Talk about resources initialized in @BeforeAll (before
  * any test is run) and before each test is run, etc.
  */
-// Specify the category as explained in Unit Tests section.
-@Category(SmallTests.class)
+// Specify the sizing tag as explained in the Unit Tests section. Most tests also carry a
+// functional tag such as RegionServerTests, ClientTests, MasterTests, etc.
+@Tag(RegionServerTests.TAG)
+@Tag(SmallTests.TAG)
 public class TestExample {
   // Replace the TestExample.class in the below with the name of your test fixture class.
-  private static final Log LOG = LogFactory.getLog(TestExample.class);
+  private static final Logger LOG = LoggerFactory.getLogger(TestExample.class);
 
-  // Handy test rule that allows you subsequently get the name of the current method. See
-  // down in 'testExampleFoo()' where we use it to log current test's name.
-  @Rule public TestName testName = new TestName();
+  // There is no per-class timeout rule to declare. HBaseJupiterExtension is auto-registered
+  // and, based on the sizing tag above, enforces the whole-class timeout, dumps a thread
+  // stack if the class times out, and runs the resource checker.
+  //
+  // To get the current test's display name, inject a JUnit 5 TestInfo into your setUp or test
+  // methods. See down in 'testExampleFoo()' where we log it.
 
-  // The below rule does two things. It decides the timeout based on the category
-  // (small/medium/large) of the testcase. This @Rule requires that the full testcase runs
-  // within this timeout irrespective of individual test methods' times. The second
-  // feature is we'll dump in the log when the test is done a count of threads still
-  // running.
-  @Rule public static TestRule timeout = CategoryBasedTimeout.builder().
-    withTimeout(this.getClass()).withLookingForStuckThread(true).build();
-
-  @Before
+  @BeforeEach
   public void setUp() throws Exception {
   }
 
-  @After
+  @AfterEach
   public void tearDown() throws Exception {
   }
 
   @Test
-  public void testExampleFoo() {
-    LOG.info("Running test " + testName.getMethodName());
+  public void testExampleFoo(TestInfo testInfo) {
+    LOG.info("Running test " + testInfo.getDisplayName());
   }
 }
 ```
@@ -417,7 +427,7 @@ Integration tests are what you would run when you need to more elaborate proofin
 They are not generally run on the Apache Continuous Integration build server, however, some sites opt to run integration tests as a part of their continuous testing on an actual cluster.
 
 Integration tests currently live under the _src/test_ directory in the hbase-it submodule and will match the regex: _*IntegrationTest*.java_.
-All integration tests are also annotated with `@Category(IntegrationTests.class)`.
+All integration tests are also annotated with `@Tag(IntegrationTests.TAG)`.
 
 Integration tests can be run in two modes: using a mini cluster, or against an actual distributed cluster.
 Maven failsafe is used to run the tests using the mini cluster.
@@ -525,10 +535,10 @@ bin/hbase [--config config_dir] org.apache.hadoop.hbase.IntegrationTestsDriver
 ```
 
 Pass `-h` to get usage on this sweet tool.
-Running the IntegrationTestsDriver without any argument will launch tests found under `hbase-it/src/test`, having `@Category(IntegrationTests.class)` annotation, and a name starting with `IntegrationTests`.
+Running the IntegrationTestsDriver without any argument will launch tests found under `hbase-it/src/test`, having `@Tag(IntegrationTests.TAG)` annotation, and a name starting with `IntegrationTest`.
 See the usage, by passing -h, to see how to filter test classes.
 You can pass a regex which is checked against the full class name; so, part of class name can be used.
-IntegrationTestsDriver uses Junit to run the tests.
+IntegrationTestsDriver uses JUnit 5 to run the tests.
 Currently there is no support for running integration tests against a distributed cluster using maven (see [HBASE-6201](https://issues.apache.org/jira/browse/HBASE-6201)).
 
 The tests interact with the distributed cluster by using the methods in the `DistributedHBaseCluster` (implementing `HBaseCluster`) class, which in turn uses a pluggable `ClusterManager`.
