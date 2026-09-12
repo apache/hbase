@@ -268,12 +268,12 @@ public abstract class RegionRemoteProcedureBase extends Procedure<MasterProcedur
   }
 
   protected abstract void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode,
-    long seqId) throws IOException;
+    TransitionCode transitionCode, long seqId) throws IOException;
 
   void stateLoaded(AssignmentManager am, RegionStateNode regionNode) {
     if (state == RegionRemoteProcedureBaseState.REGION_REMOTE_PROCEDURE_REPORT_SUCCEED) {
       try {
-        restoreSucceedState(am, regionNode, seqId);
+        restoreSucceedState(am, regionNode, transitionCode, seqId);
       } catch (IOException e) {
         // should not happen as we are just restoring the state
         throw new AssertionError(e);
