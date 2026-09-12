@@ -43,6 +43,7 @@ import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.NavigableSet;
 import java.util.Properties;
@@ -3731,19 +3732,49 @@ public class HBaseTestingUtil extends HBaseZKTestingUtil {
         dir = new File(getDataTestDir("kdc").toUri().getPath());
         kdc = new MiniKdc(conf, dir);
         kdc.start();
-      } catch (BindException e) {
-        FileUtils.deleteDirectory(dir); // clean directory
+      } catch (Exception e) {
+        // Catch Exception, not BindException/KrbException: Kerby wraps the bind failure in a
+        // KrbException whose shape varies by version (see isBindException), so we recognise the
+        // port conflict via that predicate rather than a type. We also avoid importing kerby types
+        // here (see HBASE-29117).
+        FileUtils.deleteDirectory(dir); // clean directory regardless of failure type
+        if (!isBindException(e)) {
+          throw e; // not a port conflict, do not mask the real failure behind a retry
+        }
         numTries++;
         if (numTries == 3) {
           LOG.error("Failed setting up MiniKDC. Tried " + numTries + " times.");
           throw e;
         }
-        LOG.error("BindException encountered when setting up MiniKdc. Trying again.");
+        LOG.error("Bind conflict encountered when setting up MiniKdc, retrying (attempt " + numTries
+          + ").");
         bindException = true;
       }
     } while (bindException);
     HBaseKerberosUtils.setKeytabFileForTesting(keytabFile.getAbsolutePath());
     return kdc;
+  }
+
+  /**
+   * The Kerby-backed {@link MiniKdc} wraps a failure to bind the KDC port in a
+   * {@code org.apache.kerby...KrbException} rather than surfacing a {@link BindException} directly,
+   * so we inspect the whole cause chain plus the message to recognise a port conflict. Both checks
+   * are load-bearing across Kerby versions: kerby 1.x preserves the original {@link BindException}
+   * as the cause (caught by the cause-chain check) while kerby 2.x drops the cause and only appends
+   * the bind message (caught by the message check). The message match is lower-cased since the
+   * wording is JDK/OS specific.
+   */
+  static boolean isBindException(Throwable t) {
+    for (Throwable cause = t; cause != null; cause = cause.getCause()) {
+      if (cause instanceof BindException) {
+        return true;
+      }
+      String msg = cause.getMessage();
+      if (msg != null && msg.toLowerCase(Locale.ROOT).contains("address already in use")) {
+        return true;
+      }
+    }
+    return false;
   }
 
   public int getNumHFiles(final TableName tableName, final byte[] family) {
