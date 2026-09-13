@@ -2287,6 +2287,10 @@ public class AssignmentManager {
     RegionInfo regionInfo = regionNode.getRegionInfo();
     regionStates.addRegionToServer(regionNode);
     regionStates.removeFromFailedOpen(regionInfo);
+    // HBASE-30335: seed the master's flushed sequence cache with openSeqNum so a subsequent
+    // WAL split (e.g. source RS crashes after drain-move) recognizes already-durable edits
+    // instead of writing orphaned recovered.edits.
+    master.getServerManager().reportRegionOpen(regionInfo, regionNode.getOpenSeqNum());
   }
 
   // should be called under the RegionStateNode lock
