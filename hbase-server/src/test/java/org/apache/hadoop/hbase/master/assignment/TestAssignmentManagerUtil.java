@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.assignment;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
@@ -25,18 +26,25 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -125,5 +133,51 @@ public class TestAssignmentManagerUtil {
       .mapToObj(i -> RegionReplicaUtil.getRegionInfoForReplica(regionA, i))
       .map(AM.getRegionStates()::getRegionStateNode).forEachOrdered(
         rn -> assertFalse(rn.isTransitionScheduled(), "Should have unset the proc for " + rn));
+  }
+
+  @Test
+  public void testCheckClosedRegionDropsStaleRecoveredEdits() throws Exception {
+    try (Table t = UTIL.getConnection().getTable(TABLE_NAME)) {
+      for (int i = 0; i < 10; i++) {
+        t.put(new Put(Bytes.toBytes(i)).addColumn(Bytes.toBytes("cf"), Bytes.toBytes("q"),
+          Bytes.toBytes(i)));
+      }
+    }
+    UTIL.getAdmin().flush(TABLE_NAME);
+    UTIL.waitFor(30_000,
+      () -> getPrimaryRegions().stream().anyMatch(r -> ENV.getMasterServices().getServerManager()
+        .getLastFlushedSequenceId(r.getEncodedNameAsBytes()).getLastFlushedSequenceId() > 0L));
+
+    RegionInfo region = getPrimaryRegions().stream()
+      .filter(r -> ENV.getMasterServices().getServerManager()
+        .getLastFlushedSequenceId(r.getEncodedNameAsBytes()).getLastFlushedSequenceId() > 0L)
+      .findFirst().orElseThrow(() -> new AssertionError("no region has a durable seqid yet"));
+    long durable = ENV.getMasterServices().getServerManager()
+      .getLastFlushedSequenceId(region.getEncodedNameAsBytes()).getLastFlushedSequenceId();
+
+    Configuration conf = ENV.getMasterConfiguration();
+    Path walRegionDir =
+      CommonFSUtils.getWALRegionDir(conf, region.getTable(), region.getEncodedName());
+    Path editsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(walRegionDir);
+    FileSystem fs = CommonFSUtils.getWALFileSystem(conf);
+    fs.mkdirs(editsDir);
+
+    Path staleFile = new Path(editsDir, String.format("%019d", 1L));
+    fs.create(staleFile).close();
+    assertTrue(fs.exists(staleFile));
+
+    AssignmentManagerUtil.checkClosedRegion(ENV, region);
+    assertFalse(fs.exists(staleFile), "stale recovered.edits should have been removed");
+
+    Path freshFile = new Path(editsDir, String.format("%019d", durable + 1000L));
+    fs.create(freshFile).close();
+    try {
+      AssignmentManagerUtil.checkClosedRegion(ENV, region);
+      fail("checkClosedRegion should have thrown for a fresh recovered.edits file");
+    } catch (IOException expected) {
+      // expected
+    } finally {
+      fs.delete(freshFile, false);
+    }
   }
 }
