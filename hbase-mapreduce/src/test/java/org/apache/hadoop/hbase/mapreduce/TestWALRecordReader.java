@@ -190,9 +190,12 @@ public class TestWALRecordReader {
     jobConf.setLong(WALInputFormat.START_TIME_KEY, ts + 1);
     jobConf.setLong(WALInputFormat.END_TIME_KEY, ts1 + 1);
     splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
-    assertEquals(1, splits.size());
+    assertEquals(2, splits.size());
+    // The 1st file was created before startTime but stayed open until it rolled, so its 2nd
+    // entry, written at exactly startTime, is in-range.
+    testSplit(splits.get(0), Bytes.toBytes("2"));
     // Only the 1st entry from the 2nd file is in-range.
-    testSplit(splits.get(0), Bytes.toBytes("3"));
+    testSplit(splits.get(1), Bytes.toBytes("3"));
   }
 
   /**
