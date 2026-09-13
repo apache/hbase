@@ -306,11 +306,8 @@ final class AssignmentManagerUtil {
     if (!WALSplitUtil.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
       return;
     }
-    // A recovered.edits file whose max seqid is <= the region's last flushed seqid is stale:
-    // its edits are already durable in HFiles. This happens e.g. when a graceful region move
-    // is followed by a WAL split of the source RS - the split creates recovered.edits for a
-    // region that has already been reopened elsewhere and flushed. Cleaning up such files here
-    // (rather than aborting split/merge) matches the tolerance HRegion itself applies at open.
+    // Robustness: corner cases can leave behind recovered.edits whose max seqid is already
+    // covered by the region's durable seqid. Drop those and proceed instead of aborting.
     if (tryDropStaleRecoveredEdits(env, regionInfo)) {
       return;
     }
@@ -354,13 +351,9 @@ final class AssignmentManagerUtil {
       return true;
     }
     for (Path p : files) {
-      long fileMaxSeqId;
-      try {
-        fileMaxSeqId = Long.parseLong(p.getName());
-      } catch (NumberFormatException e) {
-        LOG.warn("Non-numeric recovered.edits filename {} for {}; not dropping", p, regionInfo);
-        return false;
-      }
+      // getSplitEditFilesSorted restricts filenames to WALSplitUtil.EDITFILES_NAME_PATTERN
+      // (`-?[0-9]+`), so parseLong cannot throw here.
+      long fileMaxSeqId = Long.parseLong(p.getName());
       if (fileMaxSeqId > durableSeqId) {
         LOG.info("Recovered.edits {} for {} has maxSeqId={} > durableSeqId={}; needs replay", p,
           regionInfo, fileMaxSeqId, durableSeqId);
