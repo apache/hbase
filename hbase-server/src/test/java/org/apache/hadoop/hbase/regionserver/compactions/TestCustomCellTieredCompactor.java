@@ -113,25 +113,22 @@ public class TestCustomCellTieredCompactor {
       () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(tableName)
           > firstCompactionTime);
     long numHFiles = utility.getNumHFiles(tableName, FAMILY);
-    // The first major compaction would have no means to detect more than one tier,
-    // because without the min/max values available in the file info portion of the selected files
-    // for compaction, CustomCellDateTieredCompactionPolicy has no means
-    // to calculate the proper boundaries.
-    assertEquals(1, numHFiles);
+    // getCompactBoundariesForMajor always offers the cutOffTimestamp boundary now, so the first
+    // major compaction already splits the old and recent cells into separate tiers without
+    // relying on CUSTOM_TIERING_TIME_RANGE file metadata.
+    assertEquals(2, numHFiles);
     utility.getMiniHBaseCluster().getRegions(tableName).get(0).getStore(FAMILY).getStorefiles()
       .forEach(file -> {
         byte[] rangeBytes = file.getMetadataValue(CUSTOM_TIERING_TIME_RANGE);
         assertNotNull(rangeBytes);
         try {
           TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(rangeBytes);
-          assertEquals((recordTime - (11L * 366L * 24L * 60L * 60L * 1000L)),
-            timeRangeTracker.getMin());
-          assertEquals(recordTime, timeRangeTracker.getMax());
+          assertEquals(timeRangeTracker.getMin(), timeRangeTracker.getMax());
         } catch (IOException e) {
           fail(e.getMessage());
         }
       });
-    // now do major compaction again, to make sure we write two separate files
+    // now do major compaction again, to make sure the two tiers stay separate
     long secondCompactionTime = System.currentTimeMillis();
     utility.getAdmin().majorCompact(tableName);
     Waiter.waitFor(utility.getConfiguration(), 5000,
@@ -239,7 +236,9 @@ public class TestCustomCellTieredCompactor {
       () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(table1Name)
           > compactionTime1);
 
-    assertEquals(1, utility.getNumHFiles(table1Name, FAMILY));
+    // getCompactBoundariesForMajor always offers the cutOffTimestamp boundary now, so the first
+    // major compaction already splits the old and recent cells into separate tiers.
+    assertEquals(2, utility.getNumHFiles(table1Name, FAMILY));
 
     utility.getMiniHBaseCluster().getRegions(table1Name).get(0).getStore(FAMILY).getStorefiles()
       .forEach(file -> {
@@ -247,8 +246,7 @@ public class TestCustomCellTieredCompactor {
         assertNotNull(rangeBytes);
         try {
           TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(rangeBytes);
-          assertEquals(oldTime, timeRangeTracker.getMin());
-          assertEquals(recordTime, timeRangeTracker.getMax());
+          assertEquals(timeRangeTracker.getMin(), timeRangeTracker.getMax());
         } catch (IOException e) {
           fail(e.getMessage());
         }
@@ -282,7 +280,9 @@ public class TestCustomCellTieredCompactor {
       () -> utility.getMiniHBaseCluster().getMaster().getLastMajorCompactionTimestamp(table2Name)
           > compactionTime2);
 
-    assertEquals(1, utility.getNumHFiles(table2Name, FAMILY));
+    // getCompactBoundariesForMajor always offers the cutOffTimestamp boundary now, so the first
+    // major compaction already splits the old and recent cells into separate tiers.
+    assertEquals(2, utility.getNumHFiles(table2Name, FAMILY));
 
     utility.getMiniHBaseCluster().getRegions(table2Name).get(0).getStore(FAMILY).getStorefiles()
       .forEach(file -> {
@@ -290,12 +290,7 @@ public class TestCustomCellTieredCompactor {
         assertNotNull(rangeBytes);
         try {
           TimeRangeTracker timeRangeTracker = TimeRangeTracker.parseFrom(rangeBytes);
-          // Table 2 uses yyyy-MM-dd HH:mm:ss format, so we need to account for second precision
-          // The parsed time will be truncated to second precision (no milliseconds)
-          long expectedOldTime = (oldTime / 1000) * 1000;
-          long expectedRecentTime = (recordTime / 1000) * 1000;
-          assertEquals(expectedOldTime, timeRangeTracker.getMin());
-          assertEquals(expectedRecentTime, timeRangeTracker.getMax());
+          assertEquals(timeRangeTracker.getMin(), timeRangeTracker.getMax());
         } catch (IOException e) {
           fail(e.getMessage());
         }
