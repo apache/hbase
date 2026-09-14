@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.hfile;
 
 import java.io.DataInput;
 import java.io.IOException;
+import java.util.Optional;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -217,6 +218,9 @@ public class CompoundBloomFilter extends CompoundBloomFilterBase implements Bloo
     sb.append(BloomFilterUtil.STATS_RECORD_SEP + ((comparator != null)
       ? "Comparator: " + comparator.getClass().getSimpleName()
       : "Comparator: " + Bytes.BYTES_RAWCOMPARATOR.getClass().getSimpleName()));
+    sb.append(BloomFilterUtil.STATS_RECORD_SEP + "Hash type: " + hashType)
+      .append(" (" + Optional.ofNullable(Hash.getInstance(hashType))
+        .map(i -> i.getClass().getSimpleName()).orElse("UNKNOWN") + ")");
     return sb.toString();
   }
 
