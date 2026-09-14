@@ -166,6 +166,10 @@
                     <shadedPattern>${shaded.prefix}.com.dropwizard</shadedPattern>
                   </relocation>
                   <relocation>
+                    <pattern>com.dynatrace.hash4j</pattern>
+                    <shadedPattern>${shaded.prefix}.com.dynatrace.hash4j</shadedPattern>
+                  </relocation>
+                  <relocation>
                     <pattern>com.fasterxml</pattern>
                     <shadedPattern>${shaded.prefix}.com.fasterxml</shadedPattern>
                   </relocation>
