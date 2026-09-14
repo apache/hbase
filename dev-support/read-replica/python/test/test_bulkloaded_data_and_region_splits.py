@@ -26,9 +26,8 @@ import time
 from python.src import get_logger, HBaseDockerClient
 from python.src.environment_loader import get_env
 from python.src.hbase_docker_client import DockerExecCommandError
-from python.src.utils import (add_common_skip_container_stop_or_restart_arg, reset_cluster_setup,
-                              load_env_and_set_up_clients, swap_cluster_roles,
-                              log_script_start, log_script_end)
+from python.src.utils import (add_common_new_containers_arg, swap_cluster_roles,
+                              log_script_start, log_script_end, reset_docker_container_environment)
 
 logger = get_logger(__name__)
 
@@ -76,36 +75,18 @@ def assert_cannot_split_regions_on_replica(replica_cluster: HBaseDockerClient, t
         logger.info(f"Region splitting on replica cluster {replica_cluster.name} failed as expected")
 
 
-def main():
+def run_test(new_containers: bool = False):
     start_time = log_script_start(__file__, logger)
 
-    parser = argparse.ArgumentParser()
-    parser = add_common_skip_container_stop_or_restart_arg(parser)
-    args = parser.parse_args()
-
-    skip_container_restart = args.skip_container_start_or_restart
-
-    if skip_container_restart:
-        logger.info("Docker containers will NOT be started/restarted at the beginning of this test run")
-    else:
-        logger.info("Docker containers will be started/restarted at the beginning of this test run")
-
-    cluster1, cluster2 = load_env_and_set_up_clients()
-
-    data_store_root = get_env("HBASE_DATA_STORE_ROOT")
-    docker_compose_file = get_env("DOCKER_COMPOSE_FILE")
-    container_utils_dir = get_env("CONTAINER_UTILS_DIR")
+    cluster1, cluster2 = reset_docker_container_environment(new_containers=new_containers)
 
     table1 = 'blt1'
     table2 = 'blt2'
     table3 = 'blt3'
     tables = [table1, table2, table3]
+    container_utils_dir = get_env("CONTAINER_UTILS_DIR")
 
     bulkloader = Bulkloader(bulkload_script=f"{container_utils_dir}/bulkload.sh")
-
-    reset_cluster_setup(active_cluster=cluster1, replica_cluster=cluster2,
-                        skip_container_restart=skip_container_restart, docker_compose_file=docker_compose_file,
-                        data_store_root=data_store_root)
 
     logger.info(f"The active cluster is {cluster1.name} and the replica cluster is {cluster2.name}")
 
@@ -239,6 +220,16 @@ def main():
         cluster2.assert_region_count_for_table(table, num_regions)
 
     log_script_end(__file__, logger, start_time)
+
+
+def main(args=None):
+    parser = argparse.ArgumentParser()
+    parser = add_common_new_containers_arg(parser)
+    parsed_args = parser.parse_args(args)
+
+    run_test(
+        new_containers=parsed_args.new_containers
+    )
 
 
 if __name__ == '__main__':

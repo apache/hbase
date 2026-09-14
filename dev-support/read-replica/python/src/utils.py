@@ -47,15 +47,16 @@ def log_script_end(file: str, script_logger=None, start_time=None):
     (script_logger or logger).info(f"========== END {os.path.basename(file)}{elapsed} ==========")
 
 
-def add_common_skip_table_cleanup_arg(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    parser.add_argument('-t', '--skip-table-cleanup-on-start', action='store_true',
-                        help='Skip cleaning up tables at the start of the test')
+def add_common_drop_existing_tables_arg(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument('-d', '--drop-existing-tables', action='store_true',
+                        help='Drop all existing tables on the active cluster and '
+                             'sync the replica cluster by the refreshing meta')
     return parser
 
 
-def add_common_skip_container_stop_or_restart_arg(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
-    parser.add_argument('-s', '--skip-container-start-or-restart', action='store_true',
-                        help='Skip stopping, starting, and waiting for the Docker containers to be ready')
+def add_common_new_containers_arg(parser: argparse.ArgumentParser) -> argparse.ArgumentParser:
+    parser.add_argument('-n', '--new-containers', action='store_true',
+                        help='Starts or restarts a clean slate of Docker containers with no pre-existing HBase data')
     return parser
 
 
@@ -150,21 +151,22 @@ def assert_correct_active_cluster_suffix(cluster: HBaseDockerClient, data_store_
 
 
 def reset_cluster_setup(active_cluster: HBaseDockerClient, replica_cluster: HBaseDockerClient,
-                        skip_container_restart: bool, docker_compose_file: str, data_store_root: str, sudo=False):
+                        new_containers: bool, docker_compose_file: str, data_store_root: str, sudo: bool = False):
     """
     Resets the Read-Replica cluster setup where one cluster is the active cluster (read-write mode) and the other
     cluster is the replica cluster (read-only mode).
     """
-    if not skip_container_restart:
-        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=data_store_root, sudo=sudo)
+    if new_containers:
+        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_store_root=data_store_root,
+                                          sudo=sudo)
 
     # If the containers are still running, then we need to run update_all_config in the HBase shell to update
     # read-only mode on each cluster. Otherwise, we can just modify the conf files and the containers will be restarted
     # in the desired read-only mode.
-    if skip_container_restart:
-        run_update_all_config = True
-    else:
+    if new_containers:
         run_update_all_config = False
+    else:
+        run_update_all_config = True
 
     # First, make sure both clusters are read-only to prevent an error due to trying to have two active clusters
     active_cluster.enable_read_only_mode(run_update_all_config=run_update_all_config)
@@ -173,10 +175,27 @@ def reset_cluster_setup(active_cluster: HBaseDockerClient, replica_cluster: HBas
     # Now activate read-write mode on our active cluster
     active_cluster.disable_read_only_mode(run_update_all_config=run_update_all_config)
 
-    if not skip_container_restart:
+    if new_containers:
         HBaseDockerClient.start_or_restart_containers(docker_compose_file=docker_compose_file,
                                                       data_store_root=f'{data_store_root}')
         HBaseDockerClient.wait_for_clusters_to_start([active_cluster, replica_cluster])
+
+
+def reset_docker_container_environment(new_containers: bool = False,
+                                       cluster1_name: str = "Cluster 1",
+                                       cluster2_name: str = "Cluster 2") -> tuple[HBaseDockerClient, HBaseDockerClient]:
+    if new_containers:
+        logger.info("Docker containers will be started/restarted with a fresh data store directory")
+
+    cluster1, cluster2 = load_env_and_set_up_clients(cluster1_name, cluster2_name)
+    data_store_root = get_env("HBASE_DATA_STORE_ROOT")
+    docker_compose_file = get_env("DOCKER_COMPOSE_FILE")
+
+    reset_cluster_setup(active_cluster=cluster1, replica_cluster=cluster2,
+                        new_containers=new_containers, docker_compose_file=docker_compose_file,
+                        data_store_root=data_store_root)
+
+    return cluster1, cluster2
 
 
 def clean_up_tables(active_cluster: HBaseDockerClient, replica_cluster: HBaseDockerClient) -> None:

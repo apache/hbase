@@ -110,12 +110,10 @@ echo "Building hbase-docker image"
 
 # Run read-replica integration test suite
 echo "Starting read-replica integration test scripts"
-python3 python/scripts/test_dual_active_cluster_startup.py --clean-up-containers
-python3 python/scripts/verify_hbase_start.py
-python3 python/scripts/test_create_drop_behavior.py --skip-table-cleanup-on-start
-python3 python/scripts/test_put_get_delete_behavior.py --skip-table-cleanup-on-start
-python3 python/scripts/test_read_only_flag_flipping.py --skip-container-start-or-restart
-python3 python/scripts/test_cannot_promote_second_active_cluster.py --skip-container-start-or-restart
-python3 python/scripts/test_bulkloaded_data_and_region_splits.py --skip-container-start-or-restart
+echo "Starting read-replica integration test suite via Pytest..."
+pytest --html="${OUTPUT_DIR}/pytest-report.html" \
+       --self-contained-html \
+       --junitxml="${OUTPUT_DIR}/pytest-results.xml" \
+       python/test/test_read_replica_feature.py
 
 echo "=== Success: All read-replica integration tests passed. ==="

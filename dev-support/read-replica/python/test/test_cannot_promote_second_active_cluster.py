@@ -34,15 +34,15 @@ Before implementing the fix for HBASE-30220, a cluster could be promoted to from
 even when another active cluster already existed.
 """
 import argparse
+from time import sleep
 
 from python.src.environment_loader import get_env
 from python.src.hbase_docker_client import HBaseDockerClient, DockerExecCommandError
 from python.src.logger_config import get_logger
 from python.src.utils import (assert_crud_operations_work_on_active_cluster, assert_correct_active_cluster_suffix,
-                              add_common_skip_container_stop_or_restart_arg, clean_up_tables, reset_cluster_setup,
-                              load_env_and_set_up_clients, create_table_and_test_active_and_replica_clusters,
-                              log_script_start, log_script_end)
-from time import sleep
+                              add_common_new_containers_arg, clean_up_tables,
+                              create_table_and_test_active_and_replica_clusters,
+                              log_script_start, log_script_end, reset_docker_container_environment)
 
 logger = get_logger(__name__)
 
@@ -82,26 +82,11 @@ def run_test_iteration(active_cluster: HBaseDockerClient, replica_cluster: HBase
     assert_correct_active_cluster_suffix(active_cluster, data_root)
 
 
-def main():
+def run_test(new_containers: bool = False):
     start_time = log_script_start(__file__, logger)
-    parser = argparse.ArgumentParser()
-    parser = add_common_skip_container_stop_or_restart_arg(parser)
-    args = parser.parse_args()
 
-    skip_container_restart = args.skip_container_start_or_restart
-
-    if skip_container_restart:
-        logger.info("Docker containers will NOT be started/restarted at the beginning of this test run")
-    else:
-        logger.info("Docker containers will be started/restarted at the beginning of this test run")
-
-    cluster1, cluster2 = load_env_and_set_up_clients()
+    cluster1, cluster2 = reset_docker_container_environment(new_containers=new_containers)
     data_store_root = get_env("HBASE_DATA_STORE_ROOT")
-    docker_compose_file = get_env("DOCKER_COMPOSE_FILE")
-
-    reset_cluster_setup(active_cluster=cluster1, replica_cluster=cluster2,
-                        skip_container_restart=skip_container_restart, docker_compose_file=docker_compose_file,
-                        data_store_root=data_store_root)
 
     assert_correct_active_cluster_suffix(cluster1, data_store_root)
     clean_up_tables(active_cluster=cluster1, replica_cluster=cluster2)
@@ -115,6 +100,16 @@ def main():
             run_test_iteration(active_cluster=cluster2, replica_cluster=cluster1, data_root=data_store_root)
         logger.info(f"Finished iteration {i} of {test_iterations}")
     log_script_end(__file__, logger, start_time)
+
+
+def main(args=None):
+    parser = argparse.ArgumentParser()
+    parser = add_common_new_containers_arg(parser)
+    parsed_args = parser.parse_args(args)
+
+    run_test(
+        new_containers=parsed_args.new_containers
+    )
 
 
 if __name__ == '__main__':

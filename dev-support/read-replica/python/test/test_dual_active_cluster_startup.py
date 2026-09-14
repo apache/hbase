@@ -29,7 +29,7 @@ import os
 import time
 
 from python.src.environment_loader import get_env
-from python.src.hbase_docker_client import HBaseDockerClient, DockerExecCommandError
+from python.src.hbase_docker_client import HBaseDockerClient, DockerExecCommandError, HBaseInitializationError
 from python.src.logger_config import get_logger
 from python.src.utils import load_env_and_set_up_clients, log_script_start, log_script_end
 
@@ -81,19 +81,13 @@ def wait_for_active_cluster_file(data_store_root: str, timeout_seconds: int = 30
     start = time.time()
     while not os.path.exists(file_path):
         if time.time() - start > timeout_seconds:
-            raise RuntimeError(f"Timed out after {timeout_seconds}s waiting for: {file_path}")
+            raise HBaseInitializationError(f"Timed out after {timeout_seconds}s waiting for: {file_path}")
         time.sleep(1)
     logger.info(f"Active cluster suffix id file detected: {file_path}")
 
 
-def main():
+def run_test(clean_up_containers: bool = False):
     start_time = log_script_start(__file__, logger)
-
-    parser = argparse.ArgumentParser()
-    parser.add_argument('-c', '--clean-up-containers', action='store_true',
-                        help='Stop Docker containers and revert cluster configurations to one '
-                             'active cluster and one replica cluster after the test finishes')
-    args = parser.parse_args()
 
     cluster1, cluster2 = load_env_and_set_up_clients()
     data_store_root = get_env("HBASE_DATA_STORE_ROOT")
@@ -103,7 +97,7 @@ def main():
     for i in range(1, test_iterations+1):
         logger.info(f"---------- Iteration {i} ----------")
 
-        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=f'{data_store_root}/*')
+        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_store_root=data_store_root)
 
         # Make both clusters an active cluster (read-only disabled)
         cluster1.disable_read_only_mode(run_update_all_config=False)
@@ -135,9 +129,11 @@ def main():
         first_running = check_cluster_processes(first_cluster)
         second_running = check_cluster_processes(second_cluster)
 
-        assert first_running, (
-            f"Expected {first_cluster.name} (started first) to be running, but HMaster is down"
-        )
+        if not first_running:
+            raise HBaseInitializationError(
+                f"Expected {first_cluster.name} (started first) to be running, but HMaster is down"
+            )
+
         assert not second_running, (
             f"Expected {second_cluster.name} (started second) to have failed, "
             f"but HMaster is still running"
@@ -154,14 +150,26 @@ def main():
     logger.info("TEST PASSED: All dual active cluster startups were correctly rejected")
     logger.info("=" * 70)
 
-    if args.clean_up_containers:
+    if clean_up_containers:
         logger.info("Stopping Docker containers and reverting test environment to having "
                     "one active cluster and one replica cluster")
-        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_dir=f'{data_store_root}/*')
+        HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_store_root=data_store_root)
         cluster1.disable_read_only_mode(run_update_all_config=False)
         cluster2.enable_read_only_mode(run_update_all_config=False)
 
     log_script_end(__file__, logger, start_time)
+
+
+def main(args=None):
+    parser = argparse.ArgumentParser()
+    parser.add_argument('-c', '--clean-up-containers', action='store_true',
+                        help='Stop Docker containers and revert cluster configurations to one '
+                             'active cluster and one replica cluster after the test finishes')
+    parsed_args = parser.parse_args(args)
+
+    run_test(
+        clean_up_containers=parsed_args.clean_up_containers
+    )
 
 
 if __name__ == '__main__':

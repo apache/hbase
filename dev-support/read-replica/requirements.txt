@@ -21,7 +21,17 @@ docker==7.2.0
 grpcio==1.80.0
 grpcio-tools==1.80.0
 idna==3.11
+iniconfig==2.3.0
+Jinja2==3.1.6
+MarkupSafe==3.0.3
+packaging==26.3
+pluggy==1.6.0
 protobuf==6.33.6
+Pygments==2.21.0
+pytest==9.1.1
+pytest-html==4.2.0
+pytest-metadata==3.1.1
+pytest-rerunfailures==16.6.1
 python-dotenv==1.2.2
 requests==2.33.1
 setuptools==82.0.1

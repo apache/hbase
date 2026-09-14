@@ -45,6 +45,10 @@ class DockerExecCommandTimeoutError(DockerExecCommandError):
     pass
 
 
+class HBaseInitializationError(Exception):
+    pass
+
+
 class HBaseDockerClient:
     def __init__(self, container_name: str, local_conf: str, hbase_ui_port: int = 16010,
                  cluster_name: str = "HBase Cluster", max_retries: int = 12, sleep_time: int = 5,
@@ -153,9 +157,11 @@ class HBaseDockerClient:
             logging.info(f"Waiting {self._sleep_time} seconds before requesting HBase UI again")
             time.sleep(self._sleep_time)
 
-        raise RuntimeError(f"\nTIMEOUT: {self._cluster_name} UI failed to respond after "
-                           f"{self._max_retries} attempts. "
-                           f"Last raised exception was: {last_exception}")
+        raise HBaseInitializationError(
+            f"\nTIMEOUT: {self._cluster_name} UI failed to respond after "
+            f"{self._max_retries} attempts. "
+            f"Last raised exception was: {last_exception}"
+        )
 
     def wait_for_master_initialization(self) -> bool:
         """Waits for the current HMaster process to log 'Master has completed initialization'."""
@@ -177,9 +183,10 @@ class HBaseDockerClient:
             logging.info(f"Waiting {self._sleep_time} seconds before checking Master initialization again")
             time.sleep(self._sleep_time)
 
-        raise RuntimeError(
+        raise HBaseInitializationError(
             f"\nTIMEOUT: {self._cluster_name} Master failed to initialize after "
-            f"{self._max_retries} attempts.")
+            f"{self._max_retries} attempts."
+        )
 
     def wait_for_region_server_initialization(self) -> bool:
         """Waits for the current HRegionServer process to log 'Serving as' message."""
@@ -201,9 +208,10 @@ class HBaseDockerClient:
             logging.info(f"Waiting {self._sleep_time} seconds before checking RegionServer initialization again")
             time.sleep(self._sleep_time)
 
-        raise RuntimeError(
+        raise HBaseInitializationError(
             f"\nTIMEOUT: {self._cluster_name} RegionServer failed to initialize after "
-            f"{self._max_retries} attempts.")
+            f"{self._max_retries} attempts."
+        )
 
     def check_server_status(self, desired_status: dict | None = None) -> bool:
         """Runs 'status' inside the HBase shell and validates the output."""
@@ -238,8 +246,9 @@ class HBaseDockerClient:
             logging.info(f"Waiting {self._sleep_time} seconds before getting status on {self.name} again")
             time.sleep(self._sleep_time)
 
-        raise RuntimeError(
-            f"\nTIMEOUT: {self._cluster_name} shell check failed after {self._max_retries} attempts.")
+        raise HBaseInitializationError(
+            f"\nTIMEOUT: {self._cluster_name} shell check failed after {self._max_retries} attempts."
+        )
 
     def get_hbase_status(self) -> str:
         logger.debug(f"Getting status of {self.name}")
@@ -595,6 +604,15 @@ class HBaseDockerClient:
                                                              f"and its sub-dirs full permissions")
 
     @staticmethod
+    def remove_data_store_dir(data_store_root: str, sudo: bool = False) -> None:
+        command = ["rm", "-rf", data_store_root]
+        if sudo:
+            command = ["sudo"] + command
+        logger.info(f"Deleting HBase data root dir at: {data_store_root}")
+        HBaseDockerClient.__run_subprocess_command(command,
+                                                   f"Could not delete data store root: {data_store_root}")
+
+    @staticmethod
     def start_or_restart_containers(docker_compose_file: str | None = None, data_store_root: str | None = None) -> None:
         if data_store_root:
             HBaseDockerClient.set_up_data_store_dir(data_store_root)
@@ -627,17 +645,15 @@ class HBaseDockerClient:
         HBaseDockerClient.__run_subprocess_command(command, f"Failed to start service '{service_name}'")
 
     @staticmethod
-    def stop_containers(docker_compose_file: str | None = None, data_dir: str | None = None,
+    def stop_containers(docker_compose_file: str | None = None, data_store_root: str | None = None,
                         sudo: bool = False) -> None:
-        command = "docker compose"
+        command = ["docker", "compose"]
         if docker_compose_file:
-            command += f" -f {docker_compose_file}"
-        command += " down"
-        log_msg = "Stopping docker containers"
-        if data_dir:
-            rm_cmd = "sudo rm -rf" if sudo else "rm -rf"
-            command += f" && {rm_cmd} {data_dir}"
-            log_msg += f" and deleting HBase data root dir at: {data_dir}"
-        logger.info(f"{log_msg}")
-        HBaseDockerClient.__run_subprocess_command(command, "stop_containers failed", shell=True)
+            command += ["-f", docker_compose_file]
+        command += ["down"]
+        logger.info("Stopping docker containers")
+        HBaseDockerClient.__run_subprocess_command(command, "stop_containers failed")
         logger.info("Successfully stopped docker containers")
+
+        if data_store_root:
+            HBaseDockerClient.remove_data_store_dir(data_store_root, sudo)

@@ -26,8 +26,8 @@ import argparse
 
 from python.src.hbase_docker_client import HBaseDockerClient, DockerExecCommandError, DockerExecCommandTimeoutError
 from python.src.logger_config import get_logger
-from python.src.utils import (add_common_skip_table_cleanup_arg, clean_up_tables, load_env_and_set_up_clients,
-                              log_script_start, log_script_end)
+from python.src.utils import (add_common_drop_existing_tables_arg, add_common_new_containers_arg, clean_up_tables,
+                              log_script_start, log_script_end, reset_docker_container_environment)
 
 logger = get_logger(__name__)
 
@@ -104,20 +104,20 @@ def test_put_delete_behavior(active_cluster, replica_cluster, table_name, column
     replica_cluster.assert_table_row_count(table_name, 0)
 
 
-def main():
+def run_test(drop_existing_tables: bool = False, new_containers: bool = False):
     start_time = log_script_start(__file__, logger)
 
-    parser = argparse.ArgumentParser()
-    parser = add_common_skip_table_cleanup_arg(parser)
-    args = parser.parse_args()
+    active_cluster, replica_cluster = reset_docker_container_environment(
+        new_containers=new_containers,
+        cluster1_name="Active Cluster",
+        cluster2_name="Replica Cluster"
+    )
 
-    active_cluster, replica_cluster = load_env_and_set_up_clients(cluster1_name="Active Cluster",
-                                                                  cluster2_name="Read-Replica Cluster")
     table_name = "t1"
     column_family = "cf"
     column = f"{column_family}:c1"
 
-    if not args.skip_table_cleanup_on_start:
+    if drop_existing_tables:
         clean_up_tables(active_cluster, replica_cluster)
 
     # Create a table on the active cluster and have it appear on the read-replica cluster
@@ -127,6 +127,18 @@ def main():
     test_put_delete_behavior(active_cluster, replica_cluster, table_name, column)
 
     log_script_end(__file__, logger, start_time)
+
+
+def main(args=None):
+    parser = argparse.ArgumentParser()
+    parser = add_common_drop_existing_tables_arg(parser)
+    parser = add_common_new_containers_arg(parser)
+    parsed_args = parser.parse_args(args)
+
+    run_test(
+        drop_existing_tables=parsed_args.drop_existing_tables,
+        new_containers=parsed_args.new_containers
+    )
 
 
 if __name__ == '__main__':
