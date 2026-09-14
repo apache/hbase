@@ -794,8 +794,11 @@ public class FSHLog extends AbstractFSWAL<Writer> {
 
   protected SyncFuture publishSyncOnRingBuffer(long sequence, boolean forceSync) {
     // here we use ring buffer sequence as transaction id
-    SyncFuture syncFuture = getSyncFuture(sequence, forceSync);
+    // getSyncFuture must stay inside the try: the sequence is already claimed, so we must publish
+    // it even if this throws, else the consumer wedges.
+    SyncFuture syncFuture = null;
     try {
+      syncFuture = getSyncFuture(sequence, forceSync);
       RingBufferTruck truck = this.disruptor.getRingBuffer().get(sequence);
       truck.load(syncFuture);
     } finally {
@@ -1079,11 +1082,13 @@ public class FSHLog extends AbstractFSWAL<Writer> {
           } finally {
             entry.release();
           }
+        } else if (truck.type() == RingBufferTruck.Type.EMPTY) {
+          // publishSyncOnRingBuffer claimed the sequence but threw before loading the truck.
+          LOG.warn("Empty RingBufferTruck at sequence {}", sequence);
+          return;
         } else {
-          // What is this if not an append or sync. Fail all up to this!!!
           cleanupOutstandingSyncsOnException(sequence,
-            new IllegalStateException("Neither append nor sync"));
-          // Return to keep processing.
+            new IllegalStateException("Unexpected truck type: " + truck.type()));
           return;
         }
 
