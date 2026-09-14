@@ -291,7 +291,7 @@ public class BackupManifest {
       this.completeTs = completeTs;
     }
 
-    public ArrayList<BackupImage> getAncestors() {
+    public List<BackupImage> getAncestors() {
       if (this.ancestors == null) {
         this.ancestors = new ArrayList<>();
       }
