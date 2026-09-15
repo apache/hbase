@@ -424,7 +424,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       // The modification time is the upper bound, but HDFS leaves it at the creation time until
       // the file is closed, so it is only meaningful once the file is. Order the checks so the
       // extra RPC is only paid for files that the modification time alone would prune.
-      if (lfs.getModificationTime() < startTime && isClosed(fs, lfs.getPath())) {
+      if (timestamp < startTime && lfs.getModificationTime() < startTime && isClosed(fs, lfs.getPath())) {
         LOG.info("Skipped {}, closed before startTime [{}/{}]", lfs.getPath(), startTime,
           Instant.ofEpochMilli(startTime));
         return;
