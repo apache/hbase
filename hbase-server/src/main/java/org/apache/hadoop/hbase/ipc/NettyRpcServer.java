@@ -465,7 +465,7 @@ public class NettyRpcServer extends RpcServer {
         keyStoreWatcher.get() == null && trustStoreWatcher.get() == null
           && conf.getBoolean(X509Util.TLS_CERT_RELOAD, false)
       ) {
-        X509Util.enableCertFileReloading(conf, keyStoreWatcher, trustStoreWatcher,
+        X509Util.enableCertFileReloadingForServer(conf, keyStoreWatcher, trustStoreWatcher,
           () -> sslContextForServer.set(null));
       }
     }

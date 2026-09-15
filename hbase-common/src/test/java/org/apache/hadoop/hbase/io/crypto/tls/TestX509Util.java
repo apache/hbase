@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.crypto.tls;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -373,6 +374,144 @@ public class TestX509Util extends AbstractTestX509Parameterized {
         "wrong password".toCharArray(), KeyStoreFileType.PKCS12.getPropertyValue(), true, true,
         true, true);
     });
+  }
+
+  // ---------------------------------------------------------------------------
+  // Role-scoped configuration resolution (single-EKU certificate support)
+  // ---------------------------------------------------------------------------
+
+  @TestTemplate
+  public void testResolveConfigPrefersRoleScopedOverLegacy() {
+    conf.set("test.role", "role-value");
+    conf.set("test.legacy", "legacy-value");
+    assertEquals("role-value",
+      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
+  }
+
+  @TestTemplate
+  public void testResolveConfigFallsBackToLegacyWhenRoleUnset() {
+    conf.unset("test.role");
+    conf.set("test.legacy", "legacy-value");
+    assertEquals("legacy-value",
+      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
+  }
+
+  @TestTemplate
+  public void testResolveConfigReturnsDefaultWhenBothUnset() {
+    conf.unset("test.role");
+    conf.unset("test.legacy");
+    assertEquals("default-value",
+      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
+  }
+
+  @TestTemplate
+  public void testResolvePasswordPrefersRoleScopedOverLegacy() throws Exception {
+    conf.set("test.role.password", "role-pw");
+    conf.set("test.legacy.password", "legacy-pw");
+    assertArrayEquals("role-pw".toCharArray(),
+      X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
+  }
+
+  @TestTemplate
+  public void testResolvePasswordFallsBackToLegacyWhenRoleUnset() throws Exception {
+    conf.unset("test.role.password");
+    conf.set("test.legacy.password", "legacy-pw");
+    assertArrayEquals("legacy-pw".toCharArray(),
+      X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
+  }
+
+  @TestTemplate
+  public void testResolvePasswordReturnsNullWhenBothUnset() throws Exception {
+    conf.unset("test.role.password");
+    conf.unset("test.legacy.password");
+    assertNull(X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForClientUsesRoleScopedKeystoreWhenSet() throws Exception {
+    // Move the legacy keystore values to the client-scoped keys and clear the legacy keys, so
+    // that a successful context build proves the client-scoped keys were consulted.
+    String location = conf.get(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    String password = conf.get(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    String type = conf.get(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, location);
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD, password);
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_TYPE, type);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+
+    SslContext sslContext = X509Util.createSslContextForClient(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    // Handshake would fail if the key manager weren't wired; smoke-test that engine creation works.
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
+        > 0);
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForClientFallsBackToLegacyKeystore() throws Exception {
+    // The base setUp() only sets the legacy TLS_CONFIG_KEYSTORE_* / TLS_CONFIG_TRUSTSTORE_* keys.
+    // The role-scoped keys are intentionally unset; the context must still build using the legacy
+    // values (backward-compat regression guard).
+    conf.unset(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_TYPE);
+    conf.unset(X509Util.TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_CLIENT_TRUSTSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_CLIENT_TRUSTSTORE_TYPE);
+
+    SslContext sslContext = X509Util.createSslContextForClient(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
+        > 0);
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForServerUsesRoleScopedKeystoreWhenSet() throws Exception {
+    String location = conf.get(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    String password = conf.get(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    String type = conf.get(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+    conf.set(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION, location);
+    conf.set(X509Util.TLS_CONFIG_SERVER_KEYSTORE_PASSWORD, password);
+    conf.set(X509Util.TLS_CONFIG_SERVER_KEYSTORE_TYPE, type);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
+        > 0);
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForServerFallsBackToLegacyKeystore() throws Exception {
+    // Base setUp() only sets legacy keys. Assert server-side context still builds; backward
+    // compatibility for existing deployments that only know about the legacy key namespace.
+    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_TYPE);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_TRUSTSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_TRUSTSTORE_TYPE);
+
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
+        > 0);
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForServerThrowsWhenNeitherKeystoreSet() {
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION);
+    SSLContextException ex =
+      assertThrows(SSLContextException.class, () -> X509Util.createSslContextForServer(conf));
+    // The error should name both keys so the operator knows what to set.
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION),
+      "message should mention role-scoped key, got: " + ex.getMessage());
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_KEYSTORE_LOCATION),
+      "message should mention legacy key, got: " + ex.getMessage());
   }
 
 }
