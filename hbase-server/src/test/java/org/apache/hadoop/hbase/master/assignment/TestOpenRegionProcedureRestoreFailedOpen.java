@@ -87,10 +87,7 @@ public class TestOpenRegionProcedureRestoreFailedOpen {
       ReportRegionStateTransitionRequest req) throws PleaseHoldException {
       RegionStateTransition transition = req.getTransition(0);
       RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
-      if (
-        transition.getTransitionCode() != TransitionCode.OPENED
-          || !hri.getTable().equals(NAME)
-      ) {
+      if (transition.getTransitionCode() != TransitionCode.OPENED || !hri.getTable().equals(NAME)) {
         return super.reportRegionStateTransition(req);
       }
       CountDownLatch arrive = ARRIVE.getAndSet(null);
@@ -102,7 +99,7 @@ public class TestOpenRegionProcedureRestoreFailedOpen {
           .setOpenSeqNum(HConstants.NO_SEQNUM).build())
         .build();
       RegionStateNode regionNode = getRegionStates().getRegionStateNode(hri);
-      // RegionRemoteProcedureBase#reportTransition() (called from super.reportRegionStateTransition
+      // AssignmentManager#updateRegionTransition() (called from super.reportRegionStateTransition
       // below) also locks this same RegionStateNode; that only works here because the lock is
       // reentrant for the same thread (see RegionStateNodeLock#lock0).
       regionNode.lock();
