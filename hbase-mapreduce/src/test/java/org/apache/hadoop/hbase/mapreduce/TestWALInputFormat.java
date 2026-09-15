@@ -151,6 +151,13 @@ public class TestWALInputFormat {
     // Race condition: file closed between listLocatedStatus and isFileClosed. The stale mtime
     // from the listing predates the window, but the refreshed mtime (after close) does not.
     assertTrue(isKept(closed, now - 100, now - 50, now + 10, now, now + 100));
+
+    // ViewDistributedFileSystem wrapping non-HDFS storage: isFileClosed throws
+    // UnsupportedOperationException. The file must be kept (same as non-HDFS).
+    DistributedFileSystem unsupported = Mockito.mock(DistributedFileSystem.class);
+    Mockito.when(unsupported.isFileClosed(Mockito.any()))
+      .thenThrow(new UnsupportedOperationException("mounted fs"));
+    assertTrue(isKept(unsupported, now - 100, now - 50, now, now + 100));
   }
 
   @Test

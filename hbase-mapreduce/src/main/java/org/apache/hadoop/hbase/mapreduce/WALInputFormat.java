@@ -414,7 +414,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
       }
       FileStatus refreshed = fs.getFileStatus(lfs.getPath());
       return refreshed.getModificationTime() < time;
-    } catch (IOException e) {
+    } catch (IOException | UnsupportedOperationException e) {
       LOG.debug("Could not confirm closure of {}, keeping it", lfs.getPath(), e);
       return false;
     }
