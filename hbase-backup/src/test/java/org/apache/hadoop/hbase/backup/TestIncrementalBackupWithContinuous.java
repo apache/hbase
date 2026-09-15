@@ -138,9 +138,8 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
 
       // Verify the temporary backup directory was deleted
       Path backupTmpDir = new Path(BACKUP_ROOT_DIR, ".tmp");
-      Path bulkLoadOutputDir = new Path(backupTmpDir, backup2);
-      assertFalse(fs.exists(bulkLoadOutputDir),
-        "Bulk load output directory " + bulkLoadOutputDir + " should have been deleted");
+      assertFalse(fs.exists(backupTmpDir),
+        "Temporary backup directory " + backupTmpDir + " should have been deleted");
 
       // Verify backup history increased and all the backups are succeeded
       backups = backupSystemTable.getBackupHistory();
