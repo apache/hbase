@@ -249,6 +249,9 @@ public class MonitoredRPCHandlerImpl extends MonitoredTaskImpl implements Monito
         paramList.add(Bytes.toStringBinary((byte[]) param));
       } else if (param instanceof Operation) {
         paramList.add(((Operation) param).toMap());
+      } else if (param instanceof Message) {
+        // Do not stringify protobufs, as large requests can OOM the monitoring path.
+        paramList.add(param.getClass().getSimpleName());
       } else {
         paramList.add(param.toString());
       }
