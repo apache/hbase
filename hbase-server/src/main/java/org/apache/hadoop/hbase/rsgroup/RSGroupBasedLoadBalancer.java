@@ -322,12 +322,18 @@ public class RSGroupBasedLoadBalancer implements LoadBalancer {
       } catch (IOException exp) {
         LOG.debug("RSGroup information null for region of table " + tableName, exp);
       }
+      List<ServerName> candidateServers = Collections.emptyList();
+      if (targetRSGInfo != null) {
+        List<ServerName> onlineServers = Lists.newArrayList(clusterLoad.keySet());
+        candidateServers = filterOfflineServers(targetRSGInfo, onlineServers);
+        if (isFallbackEnabled() && candidateServers.isEmpty()) {
+          candidateServers = getFallBackCandidates(onlineServers);
+        }
+      }
       for (Map.Entry<ServerName, List<RegionInfo>> serverRegionMap : clusterLoad.entrySet()) {
         ServerName currentHostServer = serverRegionMap.getKey();
         List<RegionInfo> regionInfoList = serverRegionMap.getValue();
-        if (
-          targetRSGInfo == null || !targetRSGInfo.containsServer(currentHostServer.getAddress())
-        ) {
+        if (!candidateServers.contains(currentHostServer)) {
           regionInfoList.forEach(regionInfo -> {
             regionPlansForMisplacedRegions.add(new RegionPlan(regionInfo, currentHostServer, null));
           });
