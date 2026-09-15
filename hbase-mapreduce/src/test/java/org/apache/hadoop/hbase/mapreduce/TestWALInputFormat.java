@@ -100,10 +100,23 @@ public class TestWALInputFormat {
   }
 
   private static boolean isKept(FileSystem fs, long created, long mtime, long start, long end) {
+    return isKept(fs, created, mtime, mtime, start, end);
+  }
+
+  private static boolean isKept(FileSystem fs, long created, long staleMtime, long refreshedMtime,
+    long start, long end) {
     List<FileStatus> result = new ArrayList<>();
+    Path path = new Path("/name." + created);
     LocatedFileStatus lfs = Mockito.mock(LocatedFileStatus.class);
-    Mockito.when(lfs.getPath()).thenReturn(new Path("/name." + created));
-    Mockito.when(lfs.getModificationTime()).thenReturn(mtime);
+    Mockito.when(lfs.getPath()).thenReturn(path);
+    Mockito.when(lfs.getModificationTime()).thenReturn(staleMtime);
+    try {
+      FileStatus refreshed = Mockito.mock(FileStatus.class);
+      Mockito.when(refreshed.getModificationTime()).thenReturn(refreshedMtime);
+      Mockito.when(fs.getFileStatus(path)).thenReturn(refreshed);
+    } catch (IOException e) {
+      throw new RuntimeException(e);
+    }
     WALInputFormat.addFile(result, fs, lfs, start, end);
     return !result.isEmpty();
   }
@@ -134,6 +147,10 @@ public class TestWALInputFormat {
 
     // Created after the window closed: every entry in it is later still.
     assertFalse(isKept(closed, now + 200, now + 200, now, now + 100));
+
+    // Race condition: file closed between listLocatedStatus and isFileClosed. The stale mtime
+    // from the listing predates the window, but the refreshed mtime (after close) does not.
+    assertTrue(isKept(closed, now - 100, now - 50, now + 10, now, now + 100));
   }
 
   @Test

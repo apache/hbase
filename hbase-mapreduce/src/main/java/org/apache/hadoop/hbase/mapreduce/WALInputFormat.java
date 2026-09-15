@@ -394,17 +394,28 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   }
 
   /**
-   * Whether the file is known to be closed. Only a closed file has a final modification time, so
-   * only then can it be used as an upper bound on the entries inside. Anything we cannot answer
-   * for, including non-HDFS filesystems, is reported as open so that the file is kept.
+   * Whether the file is closed and its final modification time precedes {@code time}. Only a closed
+   * file has a reliable modification time, so an open file or a non-HDFS file always returns
+   * {@code false} (kept). When the file is confirmed closed, its status is re-fetched because the
+   * {@code lfs} from {@code listLocatedStatus} may carry a stale creation-time mtime from when the
+   * file was still open.
    */
-  private static boolean isClosed(FileSystem fs, Path path) {
+  private static boolean isClosedBefore(FileSystem fs, LocatedFileStatus lfs, long time) {
+    if (lfs.getModificationTime() >= time) {
+      return false;
+    }
     try {
       FileSystem backing = fs instanceof HFileSystem ? ((HFileSystem) fs).getBackingFs() : fs;
-      return backing instanceof DistributedFileSystem
-        && ((DistributedFileSystem) backing).isFileClosed(path);
+      if (
+        !(backing instanceof DistributedFileSystem)
+          || !((DistributedFileSystem) backing).isFileClosed(lfs.getPath())
+      ) {
+        return false;
+      }
+      FileStatus refreshed = fs.getFileStatus(lfs.getPath());
+      return refreshed.getModificationTime() < time;
     } catch (IOException e) {
-      LOG.debug("Could not tell whether {} is closed, keeping it", path, e);
+      LOG.debug("Could not confirm closure of {}, keeping it", lfs.getPath(), e);
       return false;
     }
   }
@@ -421,10 +432,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
           Instant.ofEpochMilli(endTime));
         return;
       }
-      // The modification time is the upper bound, but HDFS leaves it at the creation time until
-      // the file is closed, so it is only meaningful once the file is. Order the checks so the
-      // extra RPC is only paid for files that the modification time alone would prune.
-      if (timestamp < startTime && lfs.getModificationTime() < startTime && isClosed(fs, lfs.getPath())) {
+      if (timestamp < startTime && isClosedBefore(fs, lfs, startTime)) {
         LOG.info("Skipped {}, closed before startTime [{}/{}]", lfs.getPath(), startTime,
           Instant.ofEpochMilli(startTime));
         return;
