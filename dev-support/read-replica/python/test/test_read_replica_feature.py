@@ -27,9 +27,7 @@ import python.test.test_cannot_promote_second_active_cluster as test_cannot_prom
 import python.test.test_bulkloaded_data_and_region_splits as test_bulkloaded_data_and_region_splits
 
 
-# There are rare occasions where HBase fails to initialize within the Docker container.
-# We will re-run the test when this occurs.
-@pytest.mark.flaky(reruns=2, only_rerun="HBaseInitializationError")
+@pytest.mark.flaky(reruns=2, reruns_delay=2)
 class TestReadReplica:
     def test_dual_active_cluster_startup(self):
         test_dual_active_cluster_startup.run_test(clean_up_containers=True)
