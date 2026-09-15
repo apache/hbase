@@ -115,7 +115,8 @@ provided are now applied automatically by the `HBaseJupiterExtension`:
   `integration` tests have no timeout);
 - it dumps a thread stack to the log output when a test class times out;
 - it runs the resource-leak checker (see the [Test Resource Checker](/docs/building-and-developing/tests#test-resource-checker) section below);
-- and it fails any test class that is missing a sizing tag.
+- and, for every test class selected for execution, it verifies that the class has exactly
+  one sizing tag.
 
 `HBaseJupiterExtension` is auto-registered for the Surefire unit-test runs in every module
 through the JUnit 5 `ServiceLoader` mechanism
@@ -131,8 +132,8 @@ is designated with a JUnit 5
 referencing one of `SmallTests`, `MediumTests`, `LargeTests`, or `IntegrationTests` — use
 the `TAG` constant on each of those interfaces in the
 `org.apache.hadoop.hbase.testclassification` package (a special extension checks for the
-presence of a sizing `@Tag` in all unit tests and will fail if it finds a test class
-missing a sizing marking).
+presence of exactly one sizing `@Tag` in every test class selected for execution; it does
+not inspect classes excluded by tag filters).
 
 The first three categories, `small`, `medium`, and `large`, are for test cases which run when you
 type `$ mvn test`.
