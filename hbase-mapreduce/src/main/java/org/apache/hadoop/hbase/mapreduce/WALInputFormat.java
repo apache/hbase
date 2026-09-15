@@ -363,12 +363,10 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   }
 
   /**
-   * @param startTime If file looks like it has a timestamp in its name, we'll check if newer or
-   *                  equal to this value else we will filter out the file. If name does not seem to
-   *                  have a timestamp, we will just return it w/o filtering.
-   * @param endTime   If file looks like it has a timestamp in its name, we'll check if older or
-   *                  equal to this value else we will filter out the file. If name does not seem to
-   *                  have a timestamp, we will just return it w/o filtering.
+   * @param startTime Files created before this time are dropped only if confirmed closed before it.
+   *                  Files without a parseable timestamp in their name are always included.
+   * @param endTime   Files created after this time are dropped. Files without a parseable timestamp
+   *                  in their name are always included.
    */
   List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
     Configuration conf) throws IOException {
