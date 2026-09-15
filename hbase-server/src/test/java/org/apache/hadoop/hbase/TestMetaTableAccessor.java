@@ -41,7 +41,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.filter.PrefixFilter;
 import org.apache.hadoop.hbase.ipc.CallRunner;
 import org.apache.hadoop.hbase.ipc.DelegatingRpcScheduler;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
@@ -428,6 +430,17 @@ public class TestMetaTableAccessor {
     doReturn(true).when(visitor).visit(any());
     MetaTableAccessor.scanMeta(connection, visitor, tableName, Bytes.toBytes("region_ac"), 1);
     verify(visitor, times(1)).visit(any());
+
+    byte[] prefix = Bytes.add(tableName.getName(), new byte[] { HConstants.DELIMITER });
+    try (Table metaTable = connection.getTable(TableName.META_TABLE_NAME)) {
+      Scan rangeScan = new Scan().withStartRow(prefix)
+        .withStopRow(Bytes.add(tableName.getName(), new byte[] { HConstants.DELIMITER + 1 }));
+      assertEquals(3, HBaseTestingUtil.countRows(metaTable, rangeScan));
+
+      Scan prefixScan = new Scan();
+      prefixScan.setFilter(new PrefixFilter(prefix));
+      assertEquals(3, HBaseTestingUtil.countRows(metaTable, prefixScan));
+    }
     table.close();
   }
 
