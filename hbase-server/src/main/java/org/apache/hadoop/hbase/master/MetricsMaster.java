@@ -43,6 +43,7 @@ public class MetricsMaster {
   private MetricsMasterQuotaSource masterQuotaSource;
 
   private ProcedureMetrics serverCrashProcMetrics;
+  private ProcedureMetrics splitWALProcMetrics;
 
   public MetricsMaster(MetricsMasterWrapper masterWrapper) {
     masterSource = CompatibilitySingletonFactory.getInstance(MetricsMasterSourceFactory.class)
@@ -53,6 +54,7 @@ public class MetricsMaster {
       .getInstance(MetricsMasterQuotaSourceFactory.class).create(masterWrapper);
 
     serverCrashProcMetrics = convertToProcedureMetrics(masterSource.getServerCrashMetrics());
+    splitWALProcMetrics = convertToProcedureMetrics(masterSource.getSplitWALMetrics());
   }
 
   // for unit-test usage
@@ -130,9 +132,14 @@ public class MetricsMaster {
     masterQuotaSource.incrementSpaceQuotaObserverChoreTime(executionTime);
   }
 
-  /** Returns Set of metrics for assign procedure */
+  /** Returns Set of metrics for server crash procedure */
   public ProcedureMetrics getServerCrashProcMetrics() {
     return serverCrashProcMetrics;
+  }
+
+  /** Returns Set of metrics for split WAL procedure */
+  public ProcedureMetrics getSplitWALProcMetrics() {
+    return splitWALProcMetrics;
   }
 
   /**
