@@ -248,9 +248,9 @@ public class TestWALRecordReader {
     assertEquals(1, splits.size());
     testSplit(splits.get(0), Bytes.toBytes("1"));
 
-    // now set a start time
+    // now set a start time strictly after the last WAL's modification time
     jobConf.setLong(WALInputFormat.END_TIME_KEY, Long.MAX_VALUE);
-    jobConf.setLong(WALInputFormat.START_TIME_KEY, thirdTs);
+    jobConf.setLong(WALInputFormat.START_TIME_KEY, thirdTs + 1);
     splits = input.getSplits(MapreduceTestingShim.createJobContext(jobConf));
     assertTrue(splits.isEmpty());
   }
