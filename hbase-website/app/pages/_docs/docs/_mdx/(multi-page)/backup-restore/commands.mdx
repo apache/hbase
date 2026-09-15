@@ -75,6 +75,16 @@ are different, we should use -i option to skip checksum-checks.
 (Optional) Allows specification of the name of a YARN queue which the MapReduce job to create the backup should be executed in. This option
 is useful to prevent backup tasks from stealing resources away from other MapReduce jobs of high importance.
 
+**_--continuous-backup-enabled_** (or **_-cb_**)  
+(Optional, full backups only) Enables continuous backup for the specified tables. On the first run with
+this flag, HBase creates a full backup, registers the tables with a dedicated replication peer
+(`continuous_backup_replication_peer`), and begins streaming WAL entries to the WAL directory
+configured by `hbase.backup.continuous.wal.dir`. After continuous backup is enabled for a table,
+subsequent full backups for that table do not require this flag. This flag cannot be used with
+incremental backups. All tables in a single backup request must either all have continuous backup
+enabled or none of them must; mixing tables with and without continuous backup in one request is
+not allowed.
+
 #### Example usage [#backup-restore-commands-creating-a-backup-image-example-usage]
 
 ```bash
@@ -83,6 +93,16 @@ $ hbase backup create full hdfs://host5:9000/data/backup -t SALES2,SALES3 -w 3
 
 This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance who NameNode is host5:9000
 in the path _/data/backup_. The _-w_ option specifies that no more than three parallel works complete the operation.
+
+To create a full backup with continuous backup enabled:
+
+```bash
+$ hbase backup create full hdfs://host5:9000/data/backup -t SALES2 -cb
+```
+
+This command creates a full backup of `SALES2` and starts continuous WAL replication to the WAL
+directory configured in `hbase.backup.continuous.wal.dir`. After this initial setup, run incremental
+backups on a schedule to convert accumulated WALs into HFiles, which reduces recovery time during PITR.
 
 ### Restoring a Backup Image
 
@@ -142,6 +162,85 @@ This command restores two tables of an incremental backup image. In this example
   If the namespace of a table being restored does not exist in the target environment, it will be
   automatically created during the restore operation.
   [HBASE-25707](https://issues.apache.org/jira/browse/HBASE-25707)
+</Callout>
+
+The `hbase restore` command restores a table to the state captured at a specific backup ID. To restore
+to an arbitrary timestamp within the PITR window, use the `hbase pitr` command described below.
+
+### Point-in-Time Recovery (PITR)
+
+Point-in-Time Recovery restores tables to a specific timestamp by combining full or incremental
+backups with WAL replay from the continuous backup store. PITR requires that continuous backup was
+previously enabled for the tables being restored and that `hbase.backup.continuous.wal.dir` is
+configured.
+
+Run the following command as an HBase superuser:
+
+```bash
+hbase pitr [options]
+```
+
+For each table, PITR locates the most recent valid backup completed before the target time, restores
+that backup, and replays WAL entries from the WAL directory to bring the table to the requested
+timestamp. If no `--to-datetime` is specified, PITR restores to the last known safe replication
+checkpoint.
+
+#### Named Command-Line Arguments
+
+**_-t \<table_name\[,table_name\]\>_**  
+A comma-separated list of source tables to restore. Mutually exclusive with the _-s_ option.
+
+**_-s \<backup_set_name\>_**  
+Restore tables from a named backup set. Mutually exclusive with the _-t_ option.
+
+**_-q \<name\>_**  
+(Optional) YARN queue name for the MapReduce jobs used during WAL replay.
+
+**_-c_**  
+(Optional) Perform a dry-run. Validates that PITR can succeed without executing the restore.
+
+**_-m \<target_tables\>_**  
+(Optional) A comma-separated list of destination tables. If omitted, tables are restored to their
+original names. When provided, there must be an equal number of entries in the `-t` option.
+
+**_-o_**  
+(Optional) Overwrite the target table if it already exists.
+
+**_--to-datetime \<end_time\>_** (or **_-td \<end_time\>_**)  
+(Optional) Target timestamp for the restore, expressed as a Unix timestamp in milliseconds or seconds.
+If omitted, PITR restores to the last known safe replication checkpoint. The requested time must fall
+within the PITR window (`hbase.backup.continuous.pitr.window.days`) and must not exceed the
+replication checkpoint.
+
+**_--backup-path \<custom_backup_path\>_** (or **_-bp \<custom_backup_path\>_**)  
+(Optional) Restore from a custom backup location instead of using backup metadata from the
+`hbase:backup` system table. This is useful when backup images have been moved to archival storage
+that is not recorded in the system table.
+
+#### Example usage
+
+Restore `mytable` to a specific point in time:
+
+```bash
+$ hbase pitr -t mytable --to-datetime 1710500000000
+```
+
+Restore `mytable` into a new table `mytable_restored` at the last known safe replication checkpoint:
+
+```bash
+$ hbase pitr -t mytable -m mytable_restored
+```
+
+Restore from a custom backup location:
+
+```bash
+$ hbase pitr -t mytable --to-datetime 1710500000000 --backup-path s3a://archive/backups
+```
+
+<Callout type="info">
+  For best recovery performance, run periodic incremental backups on tables with continuous backup
+  enabled. Incremental backups convert WALs into HFiles, so PITR replays fewer WAL entries on top of
+  the most recent incremental checkpoint.
 </Callout>
 
 ### Merging Incremental Backup Images

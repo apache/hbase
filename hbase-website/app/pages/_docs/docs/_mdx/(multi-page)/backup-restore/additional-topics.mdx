@@ -43,6 +43,24 @@ configuration property.
 **_hbase.backup.logroll.timeout.millis_**: The amount of time (in milliseconds) to wait for RegionServers to execute a WAL rolling
 in the Master's procedure framework (default: 30000).
 
+### Continuous backup and PITR properties
+
+**_hbase.backup.continuous.wal.dir_**: Filesystem path for continuously backed-up WALs. Required to enable
+continuous backup and PITR. Only one WAL directory is supported per cluster. Must be an HDFS-compatible
+URI (for example, `hdfs://`, `s3a://`).
+
+**_hbase.backup.continuous.pitr.window.days_**: Maximum number of days in the past from which point-in-time
+recovery is allowed (default: `30`). This is a cluster-level setting.
+
+**_hbase.backup.continuous.offset.update.interval.ms_**: Interval in milliseconds at which the continuous
+backup replication endpoint flushes buffered WAL data to the WAL directory (default: `300000`, 5 minutes).
+
+**_hbase.backup.continuous.offset.update.size.threshold_**: Size threshold in bytes at which buffered WAL
+data is flushed to the WAL directory (default: `134217728`, 128 MB).
+
+**_hbase.replication.bulkload.enabled_**: When set to `true`, bulk-loaded HFiles are replicated through the
+continuous backup replication peer. Required if tables under continuous backup use bulk load operations.
+
 ## Best Practices
 
 ### Formulate a restore strategy and test it.
@@ -64,6 +82,16 @@ As a baseline, you must complete a full backup of HBase data at least once befor
 backup should be stored outside of the source cluster. To ensure complete dataset recovery, you must run the restore utility
 with the option to restore baseline full backup. The full backup is the foundation of your dataset. Incremental backup data
 is applied on top of the full backup during the restore operation to return you to the point in time when backup was last taken.
+
+### Combine continuous backup with scheduled incremental backups.
+
+For production environments that require low RPO and fast recovery, enable continuous backup on the
+initial full backup (`--continuous-backup-enabled`) and continue running incremental backups on a
+schedule. Continuous backup streams WALs to external storage in near real time, minimizing data loss
+between backup jobs. Incremental backups convert accumulated WALs into HFiles, which serve as
+checkpoints that reduce the amount of WAL replay required during PITR and lower Recovery Time
+Objective (RTO). A typical strategy is weekly full backups, daily incremental backups, and continuous
+WAL replication enabled from the first full backup.
 
 ### Define and use backup sets for groups of tables that are logical subsets of the entire dataset.
 
@@ -107,14 +135,24 @@ to recover the data later. All commands are run when logged in as HBase superuse
       $ hbase backup set add green_set customer
       ```
 
-- The first backup of green_set data must be a full backup. The following command example shows how credentials are passed to Amazon
-  S3 and specifies the file system with the s3a: prefix.
+- Before enabling continuous backup, configure the WAL directory in `hbase-site.xml`:
+
+      ```xml
+      <property>
+        <name>hbase.backup.continuous.wal.dir</name>
+        <value>s3a://prodhbasebackups/wal-backup</value>
+      </property>
+      ```
+
+- The first backup of green_set data must be a full backup with continuous backup enabled. The following
+  command example shows how credentials are passed to Amazon S3 and specifies the file system with the
+  s3a: prefix.
 
       ```bash
       $ ACCESS_KEY=ABCDEFGHIJKLMNOPQRST
       $ SECRET_KEY=123456789abcdefghijklmnopqrstuvwxyzABCD
       $ sudo -u hbase hbase backup create full\
-        s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set
+        s3a://$ACCESS_KEY:SECRET_KEY@prodhbasebackups/backups -s green_set --continuous-backup-enabled
       ```
 
 - Incremental backups should be run according to a schedule that ensures essential data recovery in the event of a catastrophe. At
@@ -152,13 +190,24 @@ to recover the data later. All commands are run when logged in as HBase superuse
       /prodhbasebackups/backups/backup_1467823988425`
       ```
 
-- The admin restores green_set invoking the backup ID and the -overwrite option. The -overwrite option truncates all existing data
-  in the destination and populates the tables with data from the backup dataset. Without this flag, the backup data is appended to the
-  existing data in the destination. In this case, the admin decides to overwrite the data because it is corrupted.
+- Because continuous backup is enabled, the admin can restore to a specific point in time rather than
+  being limited to the nearest scheduled backup. The admin determines the Unix timestamp corresponding
+  to the recovery objective and runs PITR:
+
+      ```bash
+      $ sudo -u hbase hbase pitr -s green_set --to-datetime 1467823988425 -o
+      ```
+
+  PITR selects the most recent valid backup before the target time, restores it, and replays WALs
+  from the WAL directory to bring the tables to the requested timestamp. The `-o` flag overwrites
+  existing data in the destination tables because the current data is corrupted.
+
+  Alternatively, if recovery to a specific backup ID is sufficient, the admin can use the standard
+  restore command:
 
       ```bash
       $ sudo -u hbase hbase restore -s green_set \
-        s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 \ -overwrite
+        s3a://$ACCESS_KEY:$SECRET_KEY@prodhbasebackups/backups backup_1467823988425 -o
       ```
 
 ## Security of Backup Data
@@ -201,14 +250,66 @@ HBase Bulk Load utility.
 
 You can only restore on a live HBase cluster because the data must be redistributed to complete the restore operation successfully.
 
+## Technical Details of Continuous Backup and PITR
+
+Continuous backup uses a dedicated replication peer (`continuous_backup_replication_peer`) with a
+custom replication endpoint (`ContinuousBackupReplicationEndpoint`) to stream WAL entries from the
+source cluster to the WAL directory. WAL files are organized by date under the WAL directory:
+
+```text
+<wal-directory>/WALs/<YYYY-MM-DD>/<wal-file>
+<wal-directory>/bulk-load-files/<bulk-loaded-hfiles>
+```
+
+When a full backup is created with `--continuous-backup-enabled`, HBase performs the following steps:
+
+1. Sets the replication scope of every column family on the backed-up tables to GLOBAL.
+2. Creates or updates the `continuous_backup_replication_peer` to include the specified tables.
+3. Records the tables and their continuous backup start timestamps in the `hbase:backup` system table.
+4. Takes and exports a full snapshot to the backup directory.
+
+From that point forward, WAL entries are continuously replicated to the WAL directory. The replication
+endpoint groups WAL entries by day and periodically flushes data to avoid large partially-written
+files and replication lag.
+
+### Incremental backups with continuous backup
+
+When incremental backups are run for tables that have continuous backup enabled, the backup process
+reads WALs from the WAL directory instead of collecting them from the source cluster. This eliminates
+the need to retain WALs on the source cluster between incremental backup runs and reduces pressure on
+the source cluster's log management. The incremental backup command itself is unchanged; the system
+detects whether tables are under continuous backup and selects the appropriate WAL source
+automatically.
+
+### Point-in-Time Recovery process
+
+PITR restores a table to a specific timestamp using the following steps:
+
+1. **Select a backup**: Locate the most recent valid full or incremental backup completed before the
+   target time. The backup must have started after continuous backup was enabled for the table.
+2. **Restore the backup**: Restore the selected backup image to the target table using the standard
+   restore process.
+3. **Replay WALs**: Run a distributed WAL replay (MapReduce-based WALPlayer) over WAL files from the
+   WAL directory for the time range between the backup start time and the target timestamp.
+4. **Re-apply bulk loads**: Bulk-loaded HFiles discovered in the WAL directory for the same time range
+   are bulk-loaded into the target table.
+
+If `--to-datetime` is not specified, PITR restores to the last known safe replication checkpoint,
+which is the earliest timestamp across all RegionServers at which all prior WAL entries are known to
+have been replicated to the WAL directory.
+
 ## A Warning on File System Growth
 
 As a reminder, incremental backups are implemented via retaining the write-ahead logs which HBase primarily uses for data durability.
 Thus, to ensure that all data needing to be included in a backup is still available in the system, the HBase backup and restore feature
-retains all write-ahead logs since the last backup until the next incremental backup is executed.
+retains all write-ahead logs since the last backup until the next incremental backup is executed. With continuous backup enabled,
+WALs are additionally replicated to the WAL directory and retained there for the duration of the PITR window.
 
 Like HBase Snapshots, this can have an expectedly large impact on the HDFS usage of HBase for high volume tables. Take care in enabling
 and using the backup and restore feature, specifically with a mind to removing backup sessions when they are not actively being used.
+Running incremental backups on a regular schedule reduces WAL retention on the source cluster for tables under continuous backup,
+because WALs are read from the WAL directory rather than from the source cluster. WAL files in the WAL directory are cleaned up
+automatically after backup deletions when they are no longer needed for PITR.
 
 The only automated, upper-bound on retained write-ahead logs for backup and restore is based on the TTL of the `hbase:backup` system table which,
 as of the time this document is written, is infinite (backup table entries are never automatically deleted). This requires that administrators
