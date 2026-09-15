@@ -28,6 +28,8 @@ import java.security.cert.X509CertSelector;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
@@ -88,6 +90,44 @@ public final class X509Util {
   public static final String TLS_CIPHER_SUITES = CONFIG_PREFIX + "ciphersuites";
   public static final String TLS_CERT_RELOAD = CONFIG_PREFIX + "certReload";
   public static final String TLS_USE_OPENSSL = CONFIG_PREFIX + "useOpenSsl";
+
+  //
+  // Role-scoped keystore/truststore configs for single-EKU certificate support.
+  //
+
+  /**
+   * When set, these take precedence over the unscoped keys above; when unset, the
+   * unscoped keys are used as a fallback so existing deployments keep working
+   * unchanged.
+   */
+  static final String CLIENT_CONFIG_PREFIX = CONFIG_PREFIX + "client.";
+  static final String SERVER_CONFIG_PREFIX = CONFIG_PREFIX + "server.";
+
+  public static final String TLS_CONFIG_CLIENT_KEYSTORE_LOCATION =
+    CLIENT_CONFIG_PREFIX + "keystore.location";
+  public static final String TLS_CONFIG_CLIENT_KEYSTORE_TYPE =
+    CLIENT_CONFIG_PREFIX + "keystore.type";
+  public static final String TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD =
+    CLIENT_CONFIG_PREFIX + "keystore.password";
+  public static final String TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION =
+    CLIENT_CONFIG_PREFIX + "truststore.location";
+  public static final String TLS_CONFIG_CLIENT_TRUSTSTORE_TYPE =
+    CLIENT_CONFIG_PREFIX + "truststore.type";
+  public static final String TLS_CONFIG_CLIENT_TRUSTSTORE_PASSWORD =
+    CLIENT_CONFIG_PREFIX + "truststore.password";
+
+  public static final String TLS_CONFIG_SERVER_KEYSTORE_LOCATION =
+    SERVER_CONFIG_PREFIX + "keystore.location";
+  public static final String TLS_CONFIG_SERVER_KEYSTORE_TYPE =
+    SERVER_CONFIG_PREFIX + "keystore.type";
+  public static final String TLS_CONFIG_SERVER_KEYSTORE_PASSWORD =
+    SERVER_CONFIG_PREFIX + "keystore.password";
+  public static final String TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION =
+    SERVER_CONFIG_PREFIX + "truststore.location";
+  public static final String TLS_CONFIG_SERVER_TRUSTSTORE_TYPE =
+    SERVER_CONFIG_PREFIX + "truststore.type";
+  public static final String TLS_CONFIG_SERVER_TRUSTSTORE_PASSWORD =
+    SERVER_CONFIG_PREFIX + "truststore.password";
 
   //
   // Server-side specific configs
@@ -165,6 +205,78 @@ public final class X509Util {
     }
   }
 
+  /**
+   * Identifies which side of a TLS connection is being configured. Used by role-aware helpers
+   * to pick the correct role-scoped configuration key for keystore/truststore material.
+   */
+  enum Role {
+    CLIENT,
+    SERVER
+  }
+
+  /**
+   * Tracks which configuration keys have already been logged as the effective source of a piece of
+   * TLS material, so {@link #resolveConfig} / {@link #resolvePassword} emit at most one INFO line
+   * per key per JVM. Keys are unique full property names (role-scoped or legacy).
+   */
+  private static final Set<String> LOGGED_RESOLVED_KEYS = ConcurrentHashMap.newKeySet();
+
+  private static void logResolvedKeyOnce(String key) {
+    if (LOGGED_RESOLVED_KEYS.add(key)) {
+      LOG.info("Using configuration key '{}' for TLS material", key);
+    }
+  }
+
+  /**
+   * Returns the value of a role-scoped TLS configuration key, falling back to the unscoped legacy
+   * key if the role-scoped key is unset, and finally to {@code defaultValue} if both are unset.
+   * Logs (once per JVM at INFO) which key supplied the effective value, to aid diagnosing which
+   * keystore/truststore is actually in use on each side of a TLS handshake.
+   * @param config       the configuration to read from
+   * @param roleKey      the role-scoped key name (e.g. {@code hbase.rpc.tls.client.keystore.location})
+   * @param legacyKey    the unscoped fallback key name (e.g. {@code hbase.rpc.tls.keystore.location})
+   * @param defaultValue value to return when neither key is set; may be {@code null}
+   * @return the resolved value, or {@code defaultValue} if neither key is set
+   */
+  public static String resolveConfig(Configuration config, String roleKey, String legacyKey,
+    String defaultValue) {
+    String value = config.get(roleKey);
+    if (value != null) {
+      logResolvedKeyOnce(roleKey);
+      return value;
+    }
+    value = config.get(legacyKey);
+    if (value != null) {
+      logResolvedKeyOnce(legacyKey);
+      return value;
+    }
+    return defaultValue;
+  }
+
+  /**
+   * Password-flavored counterpart to {@link #resolveConfig}. Uses
+   * {@link Configuration#getPassword(String)} so that credential providers configured via
+   * {@code hadoop.security.credential.provider.path} are honored. Returns {@code null} if neither
+   * the role-scoped nor the legacy key resolves to a value.
+   * @param config    the configuration to read from
+   * @param roleKey   the role-scoped password key name
+   * @param legacyKey the unscoped fallback password key name
+   * @return the resolved password as a char array, or {@code null} if neither key is set
+   */
+  public static char[] resolvePassword(Configuration config, String roleKey, String legacyKey)
+    throws IOException {
+    char[] value = config.getPassword(roleKey);
+    if (value != null) {
+      logResolvedKeyOnce(roleKey);
+      return value;
+    }
+    value = config.getPassword(legacyKey);
+    if (value != null) {
+      logResolvedKeyOnce(legacyKey);
+    }
+    return value;
+  }
+
   private X509Util() {
     // disabled
   }
@@ -175,20 +287,27 @@ public final class X509Util {
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
     configureOpenSslIfAvailable(sslContextBuilder, config);
-    String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
-    String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
+    String keyStoreLocation =
+      resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, TLS_CONFIG_KEYSTORE_LOCATION, "");
+    char[] keyStorePassword =
+      resolvePassword(config, TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD, TLS_CONFIG_KEYSTORE_PASSWORD);
+    String keyStoreType =
+      resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_TYPE, TLS_CONFIG_KEYSTORE_TYPE, "");
 
     if (keyStoreLocation.isEmpty()) {
-      LOG.warn(TLS_CONFIG_KEYSTORE_LOCATION + " not specified");
+      LOG.warn("Neither {} nor {} specified", TLS_CONFIG_CLIENT_KEYSTORE_LOCATION,
+        TLS_CONFIG_KEYSTORE_LOCATION);
     } else {
       sslContextBuilder
         .keyManager(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
     }
 
-    String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
-    String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
+    String trustStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION,
+      TLS_CONFIG_TRUSTSTORE_LOCATION, "");
+    char[] trustStorePassword = resolvePassword(config, TLS_CONFIG_CLIENT_TRUSTSTORE_PASSWORD,
+      TLS_CONFIG_TRUSTSTORE_PASSWORD);
+    String trustStoreType =
+      resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_TYPE, TLS_CONFIG_TRUSTSTORE_TYPE, "");
 
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
@@ -198,7 +317,8 @@ public final class X509Util {
     boolean allowReverseDnsLookup = config.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true);
 
     if (trustStoreLocation.isEmpty()) {
-      LOG.warn(TLS_CONFIG_TRUSTSTORE_LOCATION + " not specified");
+      LOG.warn("Neither {} nor {} specified", TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION,
+        TLS_CONFIG_TRUSTSTORE_LOCATION);
     } else {
       sslContextBuilder
         .trustManager(createTrustManager(trustStoreLocation, trustStorePassword, trustStoreType,
@@ -249,13 +369,16 @@ public final class X509Util {
 
   public static SslContext createSslContextForServer(Configuration config)
     throws X509Exception, IOException {
-    String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
-    char[] keyStorePassword = config.getPassword(TLS_CONFIG_KEYSTORE_PASSWORD);
-    String keyStoreType = config.get(TLS_CONFIG_KEYSTORE_TYPE, "");
+    String keyStoreLocation =
+      resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_LOCATION, TLS_CONFIG_KEYSTORE_LOCATION, "");
+    char[] keyStorePassword =
+      resolvePassword(config, TLS_CONFIG_SERVER_KEYSTORE_PASSWORD, TLS_CONFIG_KEYSTORE_PASSWORD);
+    String keyStoreType =
+      resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_TYPE, TLS_CONFIG_KEYSTORE_TYPE, "");
 
     if (keyStoreLocation.isEmpty()) {
-      throw new SSLContextException(
-        "Keystore is required for SSL server: " + TLS_CONFIG_KEYSTORE_LOCATION);
+      throw new SSLContextException("Keystore is required for SSL server: set either "
+        + TLS_CONFIG_SERVER_KEYSTORE_LOCATION + " or " + TLS_CONFIG_KEYSTORE_LOCATION);
     }
 
     SslContextBuilder sslContextBuilder;
@@ -263,9 +386,12 @@ public final class X509Util {
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
     configureOpenSslIfAvailable(sslContextBuilder, config);
-    String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    char[] trustStorePassword = config.getPassword(TLS_CONFIG_TRUSTSTORE_PASSWORD);
-    String trustStoreType = config.get(TLS_CONFIG_TRUSTSTORE_TYPE, "");
+    String trustStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION,
+      TLS_CONFIG_TRUSTSTORE_LOCATION, "");
+    char[] trustStorePassword = resolvePassword(config, TLS_CONFIG_SERVER_TRUSTSTORE_PASSWORD,
+      TLS_CONFIG_TRUSTSTORE_PASSWORD);
+    String trustStoreType =
+      resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_TYPE, TLS_CONFIG_TRUSTSTORE_TYPE, "");
 
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
@@ -277,7 +403,8 @@ public final class X509Util {
     boolean allowReverseDnsLookup = config.getBoolean(TLS_CONFIG_REVERSE_DNS_LOOKUP_ENABLED, true);
 
     if (trustStoreLocation.isEmpty()) {
-      LOG.warn(TLS_CONFIG_TRUSTSTORE_LOCATION + " not specified");
+      LOG.warn("Neither {} nor {} specified", TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION,
+        TLS_CONFIG_TRUSTSTORE_LOCATION);
     } else {
       sslContextBuilder
         .trustManager(createTrustManager(trustStoreLocation, trustStorePassword, trustStoreType,
@@ -422,20 +549,53 @@ public final class X509Util {
   }
 
   /**
-   * Enable certificate file reloading by creating FileWatchers for keystore and truststore.
-   * AtomicReferences will be set with the new instances. resetContext - if not null - will be
-   * called when the file has been modified.
+   * Enable certificate file reloading for the RPC <em>client</em> side by creating FileWatchers for
+   * the keystore and truststore whose paths are resolved by
+   * {@link Role#CLIENT} (role-scoped keys first, legacy keys as fallback). AtomicReferences will be
+   * set with the new instances. {@code resetContext} - if not null - will be called when the file
+   * has been modified.
    * @param keystoreWatcher   Reference to keystoreFileWatcher.
    * @param trustStoreWatcher Reference to truststoreFileWatcher.
    * @param resetContext      Callback for file changes.
    */
-  public static void enableCertFileReloading(Configuration config,
+  public static void enableCertFileReloadingForClient(Configuration config,
     AtomicReference<FileChangeWatcher> keystoreWatcher,
     AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
     throws IOException {
-    String keyStoreLocation = config.get(TLS_CONFIG_KEYSTORE_LOCATION, "");
+    enableCertFileReloading(config, Role.CLIENT, keystoreWatcher, trustStoreWatcher, resetContext);
+  }
+
+  /**
+   * Enable certificate file reloading for the RPC <em>server</em> side. See
+   * {@link #enableCertFileReloadingForClient} for parameter semantics; the only difference is that
+   * paths are resolved via the {@link Role#SERVER} role-scoped keys, falling back to the legacy
+   * unscoped keys when unset.
+   */
+  public static void enableCertFileReloadingForServer(Configuration config,
+    AtomicReference<FileChangeWatcher> keystoreWatcher,
+    AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
+    throws IOException {
+    enableCertFileReloading(config, Role.SERVER, keystoreWatcher, trustStoreWatcher, resetContext);
+  }
+
+  private static void enableCertFileReloading(Configuration config, Role role,
+    AtomicReference<FileChangeWatcher> keystoreWatcher,
+    AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
+    throws IOException {
+    String keyStoreLocation;
+    String trustStoreLocation;
+    if (role == Role.CLIENT) {
+      keyStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_LOCATION,
+        TLS_CONFIG_KEYSTORE_LOCATION, "");
+      trustStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION,
+        TLS_CONFIG_TRUSTSTORE_LOCATION, "");
+    } else {
+      keyStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_LOCATION,
+        TLS_CONFIG_KEYSTORE_LOCATION, "");
+      trustStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION,
+        TLS_CONFIG_TRUSTSTORE_LOCATION, "");
+    }
     keystoreWatcher.set(newFileChangeWatcher(config, keyStoreLocation, resetContext));
-    String trustStoreLocation = config.get(TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     // we are using the same callback for both. there's no reason to kick off two
     // threads if keystore/truststore are both at the same location
     if (!keyStoreLocation.equals(trustStoreLocation)) {

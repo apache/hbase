@@ -68,11 +68,19 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_CIPHER
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_PROTOCOLS_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_INCLUDE_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_INCLUDE_PROTOCOLS_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_CLIENT_AUTH_MODE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_STORE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_TYPE_DEFAULT;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_TYPE_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_KEYPASSWORD_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_PASSWORD_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_TYPE_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_TRUSTSTORE_PASSWORD_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_TRUSTSTORE_STORE_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_TRUSTSTORE_TYPE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SUPPORT_PROXYUSER_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.USE_HTTP_CONF_KEY;
 
@@ -93,6 +101,7 @@ import javax.security.auth.callback.UnsupportedCallbackException;
 import javax.security.sasl.AuthorizeCallback;
 import javax.security.sasl.SaslServer;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -100,6 +109,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SaslUtil;
 import org.apache.hadoop.hbase.security.SecurityUtil;
@@ -413,16 +423,56 @@ public class ThriftServer extends Configured implements Tool {
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
-      String keystore = conf.get(THRIFT_SSL_KEYSTORE_STORE_KEY);
-      String password =
-        HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_PASSWORD_KEY, null);
-      String keyPassword =
-        HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY, password);
+      // Prefer the role-scoped hbase.thrift.ssl.server.* keys, falling back to the historical
+      // unscoped hbase.thrift.ssl.* keys for backward compatibility with existing deployments.
+      String keystore = X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY,
+        THRIFT_SSL_KEYSTORE_STORE_KEY, null);
+      String password = HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_KEYSTORE_PASSWORD_KEY,
+        HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_PASSWORD_KEY, null));
+      String keyPassword = HBaseConfiguration.getPassword(conf,
+        THRIFT_SSL_SERVER_KEYSTORE_KEYPASSWORD_KEY,
+        HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY, password));
       sslCtxFactory.setKeyStorePath(keystore);
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
-      sslCtxFactory
-        .setKeyStoreType(conf.get(THRIFT_SSL_KEYSTORE_TYPE_KEY, THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
+      sslCtxFactory.setKeyStoreType(X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_TYPE_KEY,
+        THRIFT_SSL_KEYSTORE_TYPE_KEY, THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
+
+      // Truststore is entirely new for Thrift — no legacy fallback because there is no historical
+      // hbase.thrift.ssl.truststore.* configuration. When left unset, no truststore is configured
+      // on the connector and any hbase.thrift.ssl.server.client.auth.mode = WANT/NEED setting
+      // will fail the handshake for lack of a peer-cert trust root.
+      String trustStore = conf.get(THRIFT_SSL_SERVER_TRUSTSTORE_STORE_KEY);
+      if (StringUtils.isNotBlank(trustStore)) {
+        sslCtxFactory.setTrustStorePath(trustStore);
+        String trustStorePassword =
+          HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_TRUSTSTORE_PASSWORD_KEY, null);
+        if (StringUtils.isNotBlank(trustStorePassword)) {
+          sslCtxFactory.setTrustStorePassword(trustStorePassword);
+        }
+        String trustStoreType = conf.get(THRIFT_SSL_SERVER_TRUSTSTORE_TYPE_KEY);
+        if (StringUtils.isNotBlank(trustStoreType)) {
+          sslCtxFactory.setTrustStoreType(trustStoreType);
+        }
+      }
+
+      // Activate mTLS if configured. Default is NONE, which preserves today's behavior of never
+      // requesting a client certificate on the Thrift-over-HTTP connector. Set
+      // hbase.thrift.ssl.server.client.auth.mode to WANT or NEED to opt in.
+      X509Util.ClientAuth clientAuth = X509Util.ClientAuth
+        .fromPropertyValue(conf.get(THRIFT_SSL_CLIENT_AUTH_MODE_KEY, X509Util.ClientAuth.NONE.name()));
+      switch (clientAuth) {
+        case NEED:
+          sslCtxFactory.setNeedClientAuth(true);
+          break;
+        case WANT:
+          sslCtxFactory.setWantClientAuth(true);
+          break;
+        case NONE:
+        default:
+          // no-op; both flags default to false on SslContextFactory.Server
+          break;
+      }
 
       String[] excludeCiphers =
         conf.getStrings(THRIFT_SSL_EXCLUDE_CIPHER_SUITES_KEY, ArrayUtils.EMPTY_STRING_ARRAY);
