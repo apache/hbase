@@ -37,8 +37,8 @@ import org.mockito.invocation.InvocationOnMock;
 import org.mockito.stubbing.Answer;
 
 /**
- * This should be in the hbase-logging module but the {@link HBaseClassTestRule} is in hbase-common
- * so we can only put the class in hbase-common module for now...
+ * This should be in the hbase-logging module but hbase-logging cannot depend on hbase-common, so
+ * the class stays in hbase-common.
  */
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
