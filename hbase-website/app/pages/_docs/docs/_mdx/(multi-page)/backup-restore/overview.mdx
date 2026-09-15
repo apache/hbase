@@ -56,9 +56,9 @@ system.
 - _Continuous backup_: A mode in which WAL entries are continuously replicated to external storage via a dedicated replication peer, enabling low-RPO recovery and PITR.
 - _Point-in-Time Recovery (PITR)_: Restoring table data to a specific timestamp by applying a full or incremental backup and replaying WALs from the continuous backup store.
 - _Backup directory_: The filesystem location where full and incremental backup images are stored.
-- _WAL directory_: The filesystem location where continuously backed-up WALs are stored. Configured via `hbase.backup.continuous.wal.dir`. Only one WAL directory exists per cluster.
+- _WAL directory_: The filesystem location where continuously backed-up WALs are stored. Configured via `hbase.backup.continuous.wal.dir`.
 - _PITR window_: The maximum duration, in days, for which point-in-time recovery is supported. Configured via `hbase.backup.continuous.pitr.window.days` (default: 30).
-- _Replication checkpoint_: The earliest timestamp across all RegionServers such that every WAL entry before that point is known to have been replicated to the WAL directory. PITR cannot restore beyond this checkpoint.
+- _Replication checkpoint_: The earliest timestamp across the active RegionServers for which WAL entries before that point are known to have been persisted to the continuous backup WAL directory. PITR cannot restore beyond this checkpoint.
 - _Backup set_: A user-defined name which references one or more tables over which a backup can be executed.
 - _Backup ID_: A unique names which identifies one backup from the rest, e.g. `backupId_1467823988425`
 
@@ -179,7 +179,7 @@ To enable continuous backup and point-in-time recovery, add the following proper
   <value>s3a://my-bucket/wal-backup</value>
   <description>
     Filesystem path for continuously backed-up WALs. Required for continuous backup and PITR.
-    Must be an HDFS-compatible URI (hdfs:, s3a:, etc.). Only one WAL directory is supported per cluster.
+    Must be an HDFS-compatible URI (hdfs:, s3a:, etc.).
   </description>
 </property>
 <property>
@@ -200,6 +200,10 @@ also enable bulk load replication:
   <value>true</value>
 </property>
 ```
+
+When bulk-load replication is enabled, bulk-load operations are represented in the WAL and the
+corresponding HFiles are copied to the continuous backup storage. During PITR, applicable bulk-loaded
+HFiles are restored for the requested time range.
 
 <Callout type="warn">
   When continuous backup is enabled for a table, the replication scope of every column family on that

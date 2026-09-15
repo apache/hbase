@@ -212,6 +212,11 @@ If omitted, PITR restores to the last known safe replication checkpoint. The req
 within the PITR window (`hbase.backup.continuous.pitr.window.days`) and must not exceed the
 replication checkpoint.
 
+<Callout type="info">
+  If `--to-datetime` is omitted, PITR does not attempt to restore to the current wall-clock time. It
+  restores to the latest safe replication checkpoint.
+</Callout>
+
 **_--backup-path \<custom_backup_path\>_** (or **_-bp \<custom_backup_path\>_**)  
 (Optional) Restore from a custom backup location instead of using backup metadata from the
 `hbase:backup` system table. This is useful when backup images have been moved to archival storage
