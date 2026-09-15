@@ -712,7 +712,7 @@ pipeline {
           steps {
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}" && mkdir "${OUTPUT_DIR}"
+              rm -rf "${OUTPUT_DIR}" && mkdir -p "${OUTPUT_DIR}"
               echo '(x) {color:red}-1 read-replica checks{color}' >"${OUTPUT_DIR}/commentfile"
               echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
             '''
@@ -721,7 +721,7 @@ pipeline {
             }
             sh '''#!/usr/bin/env bash
               set -e
-              rm -rf "${OUTPUT_DIR}/machine" && mkdir "${OUTPUT_DIR}/machine"
+              rm -rf "${OUTPUT_DIR}/machine" && mkdir -p "${OUTPUT_DIR}/machine"
               "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
               echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
               ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
@@ -738,7 +738,7 @@ pipeline {
                     echo '(x) {color:red}-1 read-replica checks{color}' > "${OUTPUT_DIR}/commentfile"
                     status=1
                   fi
-                  echo "-- For more information [see console output|${BUILD_URL}/console]" >> "${OUTPUT_DIR}/commentfile"
+                  echo "-- For more information [see read-replica test report|${BUILD_URL}Read_20Replica_20Nightly_20Test_20Report/]" >> "${OUTPUT_DIR}/commentfile"
                   exit "${status}"
                 '''
               )
@@ -751,6 +751,17 @@ pipeline {
           }
           post {
             always {
+              junit testResults: "${env.OUTPUT_DIR_RELATIVE}/read-replica-nightly-test-results.xml", allowEmptyResults: true
+
+              publishHTML target: [
+                allowMissing         : true,
+                keepAll              : true,
+                alwaysLinkToLastBuild: true,
+                reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+                reportFiles          : 'read-replica-nightly-test-report.html',
+                reportName           : 'Read Replica Nightly Test Report'
+              ]
+
               stash name: 'read-replica-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*", allowEmptyArchive: true
             }

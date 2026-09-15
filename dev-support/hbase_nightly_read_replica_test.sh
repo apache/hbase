@@ -65,18 +65,13 @@ cleanup() {
   if [ ${exit_code} -ne 0 ]; then
     echo "=== FAILURE ==="
     echo "An error occurred during this stage in the Jenkins run."
-    echo "The HBase logs will be copied to: ${OUTPUT_DIR}"
-    echo "Check the Jenkins run's Build Artifacts on the Status page."
+    echo "The Docker containers and image will be cleaned up."
   fi
-  echo "=== Cleanup: Copying HBase logs to ${OUTPUT_DIR} ==="
-  mkdir -p ${OUTPUT_DIR}/hbase-docker-logs ${OUTPUT_DIR}/hbase-docker-2-logs || true
-  cp -r ${ACTIVE_CLUSTER_LOGS_DIR}/*log   ${OUTPUT_DIR}/hbase-docker-logs    || true
-  cp -r ${REPLICA_CLUSTER_LOGS_DIR}/*log  ${OUTPUT_DIR}/hbase-docker-2-logs  || true
-  echo "Logs can be found with the Jenkins run's Build Artifacts on the Status page"
   echo "=== Cleanup: Stopping Docker containers ==="
   docker compose -f "${DOCKER_COMPOSE_FILE}" down 2>/dev/null || true
   echo "=== Cleanup: Removing Docker image: ${HBASE_IMAGE} ==="
   docker rmi --force "${HBASE_IMAGE}" 2>/dev/null || true
+  echo "=== Cleanup: Deleting cloned HBase directory: ${REPLICA_DIR}/hbase ==="
   rm -rf "${REPLICA_DIR}/hbase"
   exit "${exit_code}"
 }
@@ -111,9 +106,9 @@ echo "Building hbase-docker image"
 # Run read-replica integration test suite
 echo "Starting read-replica integration test scripts"
 echo "Starting read-replica integration test suite via Pytest..."
-pytest --html="${OUTPUT_DIR}/pytest-report.html" \
+pytest --html="${OUTPUT_DIR}/read-replica-nightly-test-report.html" \
        --self-contained-html \
-       --junitxml="${OUTPUT_DIR}/pytest-results.xml" \
+       --junitxml="${OUTPUT_DIR}/read-replica-nightly-test-results.xml" \
        python/test/test_read_replica_feature.py
 
 echo "=== Success: All read-replica integration tests passed. ==="
