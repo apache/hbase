@@ -110,8 +110,7 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
           }
           try (InputStream is =
             compression.createDecompressionStream(dataInputStream, decompressor, 0)) {
-            BlockIOUtils.readFullyWithHeapBuffer(is, blockBufferWithoutHeader,
-              uncompressedSizeWithoutHeader);
+            BlockIOUtils.readFully(is, blockBufferWithoutHeader, uncompressedSizeWithoutHeader);
           }
         } finally {
           if (decompressor != null) {
@@ -119,8 +118,7 @@ public class HFileBlockDefaultDecodingContext implements HFileBlockDecodingConte
           }
         }
       } else {
-        BlockIOUtils.readFullyWithHeapBuffer(dataInputStream, blockBufferWithoutHeader,
-          onDiskSizeWithoutHeader);
+        BlockIOUtils.readFully(dataInputStream, blockBufferWithoutHeader, onDiskSizeWithoutHeader);
       }
     } finally {
       byteBuffInputStream.close();
