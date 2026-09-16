@@ -335,9 +335,8 @@ public class TestMergeTableRegionsProcedure {
 
   /**
    * HBASE-30334 repro. Plant a stale recovered.edits file on a parent region so that
-   * MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS throws (the exact failure from the 49-min stuck-RIT
-   * incident). After rollback the parents MUST be OPEN. If they stay stuck (e.g. CLOSED / MERGING),
-   * we've reproduced the incident locally and the rollback path as-is is broken.
+   * MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS throws. After rollback the parents MUST be OPEN. If
+   * they stay stuck (e.g. CLOSED / MERGING), the rollback path is broken.
    */
   @Test
   public void testRollbackReopensParentsAfterCheckClosedRegionsFailure() throws Exception {
