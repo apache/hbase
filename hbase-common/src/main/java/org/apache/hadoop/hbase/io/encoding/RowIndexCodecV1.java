@@ -46,7 +46,8 @@ public class RowIndexCodecV1 extends AbstractDataBlockEncoder {
     RowIndexEncoderV1 encoder = null;
 
     @Override
-    public void beforeShipped() {
+    public void beforeShipped(byte[] encodedBlockBuffer, int streamBaseOffset,
+        int encodedBlockLength) {
       if (encoder != null) {
         encoder.beforeShipped();
       }
