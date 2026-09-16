@@ -18,12 +18,23 @@
 package org.apache.hadoop.hbase.master;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.when;
 
+import java.util.Collections;
+import java.util.concurrent.CyclicBarrier;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.RegionMetricsBuilder;
+import org.apache.hadoop.hbase.ServerMetrics;
+import org.apache.hadoop.hbase.ServerMetricsBuilder;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -31,6 +42,7 @@ import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -95,5 +107,66 @@ public class TestServerManager {
   public void testReportRegionOpenIgnoresNegativeSeqNum() {
     sm.reportRegionOpen(region, -5L);
     assertEquals(HConstants.NO_SEQNUM, lastFlushed(region));
+  }
+
+  /**
+   * HBASE-30335: the OPEN-time seed ({@link ServerManager#reportRegionOpen}, which uses
+   * {@code merge(Math::max)}) and the heartbeat handler ({@link ServerManager#regionServerReport})
+   * both write {@code flushedSequenceIdByRegion}. A stale in-flight heartbeat from the
+   * soon-to-be-dead source RS carries a lower {@code completedSequenceId}. Whatever the
+   * interleaving, the watermark must never regress below the seed: if the heartbeat lands first the
+   * seed lifts it to {@code openSeqNum}; if it lands after, the heartbeat's read-modify-write must
+   * refuse to lower it. Only a non-atomic check-then-put in the heartbeat path (the pre-fix bug)
+   * could let the stale value clobber the seed. This drives both writers concurrently over many
+   * rounds to catch that race.
+   */
+  @Test
+  public void testConcurrentStaleHeartbeatDoesNotClobberOpenSeed() throws Exception {
+    final long seedSeqId = 200L;
+    final long staleSeqId = 100L;
+    // Register the server so regionServerReport takes the heartbeat (updateLastFlushedSequenceIds)
+    // path instead of the new-server-registration path.
+    ServerName sn = ServerName.valueOf("rs.example.org", 16020, 1L);
+    sm.recordNewServerWithLock(sn, ServerMetricsBuilder.of(sn));
+
+    ExecutorService pool = Executors.newFixedThreadPool(2);
+    try {
+      for (int i = 0; i < 500; i++) {
+        // Fresh region per round so no round is masked by a prior round's watermark.
+        final RegionInfo ri = RegionInfoBuilder.newBuilder(TableName.valueOf("concurrentSeed"))
+          .setStartKey(Bytes.toBytes(i)).setEndKey(Bytes.toBytes(i + 1)).build();
+        final ServerMetrics staleReport = ServerMetricsBuilder.newBuilder(sn)
+          .setRegionMetrics(Collections.singletonList(RegionMetricsBuilder
+            .newBuilder(ri.getRegionName()).setCompletedSequenceId(staleSeqId).build()))
+          .build();
+        final CyclicBarrier barrier = new CyclicBarrier(2);
+        Future<?> seedTask = pool.submit(() -> {
+          await(barrier);
+          sm.reportRegionOpen(ri, seedSeqId);
+        });
+        Future<?> heartbeatTask = pool.submit(() -> {
+          await(barrier);
+          try {
+            sm.regionServerReport(sn, staleReport);
+          } catch (Exception e) {
+            throw new RuntimeException(e);
+          }
+        });
+        seedTask.get(30, TimeUnit.SECONDS);
+        heartbeatTask.get(30, TimeUnit.SECONDS);
+        assertTrue(lastFlushed(ri) >= seedSeqId, "round " + i + ": watermark regressed to "
+          + lastFlushed(ri) + ", stale heartbeat clobbered the openSeqNum seed");
+      }
+    } finally {
+      pool.shutdownNow();
+    }
+  }
+
+  private static void await(CyclicBarrier barrier) {
+    try {
+      barrier.await(30, TimeUnit.SECONDS);
+    } catch (Exception e) {
+      throw new RuntimeException(e);
+    }
   }
 }
