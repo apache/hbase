@@ -43,12 +43,15 @@ public class TieredExclusiveTopology implements CacheTopology {
   private final CacheEngine l1;
   private final CacheEngine l2;
   private final CacheTopologyView view;
+  private final CacheStats stats;
 
   public TieredExclusiveTopology(String name, CacheEngine l1, CacheEngine l2) {
     this.name = name;
     this.l1 = l1;
     this.l2 = l2;
     this.view = new CacheTopologyView(this);
+    this.stats = new AggregateCacheStats(name, l1.getStats(), l2.getStats());
+
   }
 
   @Override
@@ -90,8 +93,7 @@ public class TieredExclusiveTopology implements CacheTopology {
 
   @Override
   public CacheStats getStats() {
-    // TODO: replace with aggregate topology stats in follow-up metrics ticket.
-    return l1.getStats();
+    return stats;
   }
 
   @Override
@@ -122,5 +124,26 @@ public class TieredExclusiveTopology implements CacheTopology {
   public void shutdown() {
     l1.shutdown();
     l2.shutdown();
+  }
+
+  /**
+   * Handles a capacity-driven eviction from an engine in this exclusive topology.
+   * <p>
+   * An L1 pressure eviction is demoted to L2. An L2 pressure eviction leaves the topology entirely,
+   * because there is no lower tier.
+   * </p>
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   * @param sourceEngine engine that evicted the block
+   * @return {@code true} if the block was demoted to L2
+   */
+  @Override
+  public boolean handleEviction(BlockCacheKey cacheKey, Cacheable block, CacheEngine sourceEngine) {
+    if (sourceEngine != l1) {
+      return false;
+    }
+
+    l2.cacheBlock(cacheKey, block);
+    return true;
   }
 }

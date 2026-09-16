@@ -79,6 +79,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.ReaderContext.ReaderType;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
 import org.apache.hadoop.hbase.monitoring.ThreadLocalServerSideScanMetrics;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
@@ -272,16 +276,24 @@ public class TestHFile {
     Path storeFilePath = writeStoreFile();
 
     // Initialize the block cache and HFile reader
-    CacheAccessService lru = CacheAccessServiceTestFactory.fromConfiguration(conf);
-    assertTrue(CacheAccessServiceTestFactory.blockCache(lru) instanceof LruBlockCache);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, lru, ByteBuffAllocator.HEAP);
+    CacheAccessService cacheAccessService = CacheAccessServiceTestFactory.fromConfiguration(conf);
+
+    assertTrue(cacheAccessService instanceof TopologyBackedCacheAccessService);
+
+    TopologyBackedCacheAccessService topologyService =
+      (TopologyBackedCacheAccessService) cacheAccessService;
+    CacheEngine engine = topologyService.getTopology().getEngine(CacheTier.SINGLE).orElseThrow();
+    assertTrue(engine instanceof LruCacheEngine);
+
+    CacheConfig cacheConfig =
+      new CacheConfig(conf, null, cacheAccessService, ByteBuffAllocator.HEAP);
     HFileReaderImpl reader =
       (HFileReaderImpl) HFile.createReader(fs, storeFilePath, cacheConfig, true, conf);
 
     // Read the first block in HFile from the block cache.
     final int offset = 0;
     BlockCacheKey cacheKey = new BlockCacheKey(storeFilePath.getName(), offset);
-    HFileBlock block = (HFileBlock) lru.getBlock(cacheKey, false, false, true);
+    HFileBlock block = (HFileBlock) cacheAccessService.getBlock(cacheKey, false, false, true);
     assertNull(block);
 
     // Assert that first block has not been cached in the block cache and no disk I/O happened to

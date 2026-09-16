@@ -344,4 +344,17 @@ public interface CacheEngine {
   default Optional<Iterable<CachedBlock>> asCachedBlockIterable() {
     return Optional.empty();
   }
+
+  /**
+   * Sets the listener that receives capacity-driven block eviction events.
+   * <p>
+   * Cache engines that can expose pressure evictions should invoke the listener before the evicted
+   * block becomes unavailable. Explicit invalidation operations must not be reported through this
+   * listener.
+   * </p>
+   * @param listener eviction listener, or {@code null} to remove the current listener
+   */
+  default void setEvictionListener(CacheEvictionListener listener) {
+    // noop
+  }
 }

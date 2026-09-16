@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -98,8 +99,9 @@ public class TestForceCacheImportantBlocks {
   public void testCacheBlocks() throws IOException {
     // Set index block size to be the same as normal block size.
     TEST_UTIL.getConfiguration().setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, BLOCK_SIZE);
-    CacheAccessService cache =
-      CacheAccessServiceTestFactory.fromConfiguration(TEST_UTIL.getConfiguration());
+
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
+    CacheAccessService cache = CacheAccessServices.fromBlockCache(blockCache);
     ColumnFamilyDescriptor cfd =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF)).setMaxVersions(MAX_VERSIONS)
         .setCompressionType(COMPRESSION_ALGORITHM).setBloomFilterType(BLOOM_TYPE)
@@ -117,8 +119,11 @@ public class TestForceCacheImportantBlocks {
     assertTrue(HFile.DATABLOCK_READ_COUNT.sum() > 0);
     long missCount = stats.getMissCount();
     region.get(new Get(Bytes.toBytes("row" + 0)));
-    if (this.cfCacheEnabled) assertEquals(missCount, stats.getMissCount());
-    else assertTrue(stats.getMissCount() > missCount);
+    if (this.cfCacheEnabled) {
+      assertEquals(missCount, stats.getMissCount());
+    } else {
+      assertTrue(stats.getMissCount() > missCount);
+    }
   }
 
   private void writeTestData(HRegion region) throws IOException {

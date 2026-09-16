@@ -43,12 +43,14 @@ public class TieredInclusiveTopology implements CacheTopology {
   private final CacheEngine l1;
   private final CacheEngine l2;
   private final CacheTopologyView view;
+  private final CacheStats stats;
 
   public TieredInclusiveTopology(String name, CacheEngine l1, CacheEngine l2) {
     this.name = name;
     this.l1 = l1;
     this.l2 = l2;
     this.view = new CacheTopologyView(this);
+    this.stats = new AggregateCacheStats(name, l1.getStats(), l2.getStats());
   }
 
   @Override
@@ -90,8 +92,7 @@ public class TieredInclusiveTopology implements CacheTopology {
 
   @Override
   public CacheStats getStats() {
-    // TODO: replace with aggregate topology stats in follow-up metrics ticket.
-    return l1.getStats();
+    return stats;
   }
 
   @Override
@@ -109,5 +110,27 @@ public class TieredInclusiveTopology implements CacheTopology {
   public void shutdown() {
     l1.shutdown();
     l2.shutdown();
+  }
+
+  /**
+   * Handles a capacity-driven eviction from this inclusive topology.
+   * <p>
+   * L1 eviction does not require demotion because inclusive placement normally maintains a
+   * corresponding block in L2. Cache placement is best-effort and is not atomic across tiers, so
+   * there may be short windows where an L2 copy is not present. The topology deliberately does not
+   * perform an L2 membership check on every L1 eviction to avoid adding cross-tier lookup overhead
+   * to the eviction path. A missing copy results only in a subsequent cache miss.
+   * </p>
+   * <p>
+   * L2 pressure eviction likewise does not cause movement to another tier.
+   * </p>
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   * @param sourceEngine engine that evicted the block
+   * @return {@code false}, because no additional placement is required
+   */
+  @Override
+  public boolean handleEviction(BlockCacheKey cacheKey, Cacheable block, CacheEngine sourceEngine) {
+    return false;
   }
 }
