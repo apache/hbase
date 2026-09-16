@@ -27,6 +27,27 @@ export HBASE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
 
+KEEP_IMAGE=false
+KEEP_CONTAINERS=false
+
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -i|--keep-image)
+      KEEP_IMAGE=true
+      shift
+      ;;
+    -c|--keep-containers)
+      KEEP_CONTAINERS=true
+      shift
+      ;;
+    *)
+      echo "Unknown option: $1"
+      echo "Usage: $0 [-i|--keep-image] [-c|--keep-containers]"
+      exit 1
+      ;;
+  esac
+done
+
 echo "Script dir: ${SCRIPT_DIR}"
 echo "Replica dir: ${REPLICA_DIR}"
 echo "Output dir: ${OUTPUT_DIR}"
@@ -65,12 +86,19 @@ cleanup() {
   if [ ${exit_code} -ne 0 ]; then
     echo "=== FAILURE ==="
     echo "An error occurred during this stage in the Jenkins run."
-    echo "The Docker containers and image will be cleaned up."
   fi
-  echo "=== Cleanup: Stopping Docker containers ==="
-  docker compose -f "${DOCKER_COMPOSE_FILE}" down 2>/dev/null || true
-  echo "=== Cleanup: Removing Docker image: ${HBASE_IMAGE} ==="
-  docker rmi --force "${HBASE_IMAGE}" 2>/dev/null || true
+  if [ "${KEEP_CONTAINERS}" = "false" ]; then
+    echo "=== Cleanup: Stopping Docker containers ==="
+    docker compose -f "${DOCKER_COMPOSE_FILE}" down 2>/dev/null || true
+  else
+    echo "=== Cleanup: Keeping Docker containers (--keep-containers) ==="
+  fi
+  if [ "${KEEP_IMAGE}" = "false" ]; then
+    echo "=== Cleanup: Removing Docker image: ${HBASE_IMAGE} ==="
+    docker rmi --force "${HBASE_IMAGE}" 2>/dev/null || true
+  else
+    echo "=== Cleanup: Keeping Docker image: ${HBASE_IMAGE} (--keep-image) ==="
+  fi
   echo "=== Cleanup: Deleting cloned HBase directory: ${REPLICA_DIR}/hbase ==="
   rm -rf "${REPLICA_DIR}/hbase"
   exit "${exit_code}"
