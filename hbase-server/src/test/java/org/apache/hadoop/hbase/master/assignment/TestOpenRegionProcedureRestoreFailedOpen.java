@@ -17,7 +17,6 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
-import static org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RegionStateTransitionState.REGION_STATE_TRANSITION_CONFIRM_OPENED_VALUE;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -170,14 +169,8 @@ public class TestOpenRegionProcedureRestoreFailedOpen {
     PROCEED.set(proceed);
     Future<byte[]> future = am.moveAsync(
       new RegionPlan(region, regionNode.getRegionLocation(), regionNode.getRegionLocation()));
-    TransitRegionStateProcedure proc =
-      procExec.getProcedures().stream().filter(p -> p instanceof TransitRegionStateProcedure)
-        .filter(p -> !p.isFinished()).map(p -> (TransitRegionStateProcedure) p).findAny().get();
-    // wait until we are suspended waiting on the RS to report the open, then let it report; the
-    // AssignmentManagerForTest above rewrites that report to FAILED_OPEN and blocks the RPC handler
-    // thread, still holding the RegionStateNode lock, until we tell it to proceed
-    UTIL.waitFor(30000,
-      () -> proc.getCurrentStateId() == REGION_STATE_TRANSITION_CONFIRM_OPENED_VALUE);
+    // arrive counts down only after the RS's OPENED report is intercepted, rewritten to
+    // FAILED_OPEN, and persisted, so waiting on it alone is sufficient synchronization
     assertTrue(arrive.await(AWAIT_TIMEOUT_SECONDS, TimeUnit.SECONDS));
 
     MasterProcedureTestingUtility.restartMasterProcedureExecutor(procExec);
