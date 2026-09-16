@@ -353,7 +353,13 @@ final class AssignmentManagerUtil {
     for (Path p : files) {
       // getSplitEditFilesSorted restricts filenames to WALSplitUtil.EDITFILES_NAME_PATTERN
       // (`-?[0-9]+`), so parseLong cannot throw here.
-      long fileMaxSeqId = Long.parseLong(p.getName());
+      long fileMaxSeqId;
+      try {
+        fileMaxSeqId = Long.parseLong(p.getName());
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse recovered.edits sequence id from {}; falling back to abort", p, e);
+        return false;
+      }
       if (fileMaxSeqId > durableSeqId) {
         LOG.info("Recovered.edits {} for {} has maxSeqId={} > durableSeqId={}; needs replay", p,
           regionInfo, fileMaxSeqId, durableSeqId);
