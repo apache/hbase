@@ -27,6 +27,9 @@ import java.util.concurrent.ForkJoinPool;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngines;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -71,8 +74,8 @@ public final class BlockCacheFactory {
    */
   public static final String BLOCKCACHE_BLOCKSIZE_KEY = "hbase.blockcache.minblocksize";
 
-  private static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
-  private static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
+  public static final String EXTERNAL_BLOCKCACHE_KEY = "hbase.blockcache.use.external";
+  public static final boolean EXTERNAL_BLOCKCACHE_DEFAULT = false;
 
   private static final String EXTERNAL_BLOCKCACHE_CLASS_KEY = "hbase.blockcache.external.class";
 
@@ -133,6 +136,62 @@ public final class BlockCacheFactory {
 
   public static BlockCache createBlockCache(Configuration conf) {
     return createBlockCache(conf, null);
+  }
+
+  /**
+   * Creates the configured first-level cache as a cache engine.
+   * <p>
+   * Cache implementations that have been migrated to {@link CacheEngine} are instantiated directly.
+   * Legacy {@link FirstLevelBlockCache} implementations are adapted until their migration is
+   * complete.
+   * @param c cache configuration
+   * @return first-level cache engine, or {@code null} when the on-heap cache is disabled
+   */
+  public static CacheEngine createFirstLevelCacheEngine(final Configuration c) {
+    final long cacheSize = MemorySizeUtil.getOnHeapCacheSize(c);
+    if (cacheSize < 0) {
+      return null;
+    }
+
+    String policy = c.get(BLOCKCACHE_POLICY_KEY, BLOCKCACHE_POLICY_DEFAULT);
+    int blockSize = c.getInt(BLOCKCACHE_BLOCKSIZE_KEY, HConstants.DEFAULT_BLOCKSIZE);
+    LOG.info("Allocating CacheEngine size=" + StringUtils.byteDesc(cacheSize) + ", blockSize="
+      + StringUtils.byteDesc(blockSize));
+
+    if (policy.equalsIgnoreCase("LRU")) {
+      return new LruCacheEngine(cacheSize, blockSize, true, c);
+    } else if (policy.equalsIgnoreCase("IndexOnlyLRU")) {
+      return CacheEngines.fromBlockCache(new IndexOnlyLruBlockCache(cacheSize, blockSize, true, c));
+    } else if (policy.equalsIgnoreCase("TinyLFU")) {
+      return CacheEngines
+        .fromBlockCache(new TinyLfuBlockCache(cacheSize, blockSize, ForkJoinPool.commonPool(), c));
+    } else if (policy.equalsIgnoreCase("AdaptiveLRU")) {
+      return CacheEngines.fromBlockCache(new LruAdaptiveBlockCache(cacheSize, blockSize, true, c));
+    } else {
+      throw new IllegalArgumentException("Unknown policy: " + policy);
+    }
+  }
+
+  /**
+   * Creates the configured external second-level cache as a cache engine.
+   * @param c cache configuration
+   * @return external cache engine, or {@code null} when no external cache can be created
+   */
+  public static CacheEngine createExternalCacheEngine(Configuration c) {
+    BlockCache blockCache = createExternalBlockcache(c);
+    return blockCache == null ? null : CacheEngines.fromBlockCache(blockCache);
+  }
+
+  /**
+   * Creates the configured bucket cache as a cache engine.
+   * @param c             cache configuration
+   * @param onlineRegions currently online regions
+   * @return bucket cache engine, or {@code null} when BucketCache is disabled
+   */
+  public static CacheEngine createBucketCacheEngine(Configuration c,
+    Map<String, HRegion> onlineRegions) {
+    BucketCache bucketCache = createBucketCache(c, onlineRegions);
+    return bucketCache == null ? null : CacheEngines.fromBlockCache(bucketCache);
   }
 
   private static FirstLevelBlockCache createFirstLevelCache(final Configuration c) {

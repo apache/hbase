@@ -753,4 +753,26 @@ public final class CacheAccessServiceTestFactory {
 
     return ((BlockCacheBackedCacheEngine) engine).getBlockCache();
   }
+
+  /**
+   * Returns the cache engine for the requested tier.
+   * @param service cache access service
+   * @param tier    cache tier
+   * @return cache engine for the requested tier
+   * @throws IllegalArgumentException if the service is not topology-backed or the requested tier
+   *                                  does not exist
+   */
+  public static CacheEngine getCacheEngine(CacheAccessService service, CacheTier tier) {
+    Objects.requireNonNull(service, "service must not be null");
+    Objects.requireNonNull(tier, "tier must not be null");
+
+    if (!(service instanceof TopologyBackedCacheAccessService)) {
+      throw new IllegalArgumentException("Cache access service is not topology-backed");
+    }
+
+    TopologyBackedCacheAccessService topologyService = (TopologyBackedCacheAccessService) service;
+
+    return topologyService.getTopology().getEngine(tier)
+      .orElseThrow(() -> new IllegalArgumentException("Cache tier is not present: " + tier));
+  }
 }
