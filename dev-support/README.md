@@ -60,6 +60,12 @@ configurations in this directory:
 
 - `docker/` -- Dockerfile for CI build environment
 - `hbase_docker/`, `hbase_docker.sh` -- Docker-based local test cluster
+- `hbase_nightly_read_replica_test.sh` -- Builds a Docker image and runs two
+  HBase clusters (primary + read-replica) to execute end-to-end replication
+  integration tests via pytest. Optional `--keep-containers` and `--keep-image`
+  flags skip cleanup on exit.
+- `read-replica/` -- Python test suite, Docker Compose configuration, and
+  cluster config used by `hbase_nightly_read_replica_test.sh`
 - `adhoc_run_tests/` -- Scripts for running test suites outside CI
 - `integration-test/` -- Integration test support
 
