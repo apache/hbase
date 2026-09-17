@@ -284,9 +284,13 @@ public class MergeTableRegionsProcedure
           cleanupMergedRegion(env);
           break;
         case MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS:
+          rollbackCloseRegionsForMerge(env);
           break;
         case MERGE_TABLE_REGIONS_CLOSE_REGIONS:
-          rollbackCloseRegionsForMerge(env);
+          // No-op. The reopen TransitRegionStateProcedures for the two parents were already
+          // submitted by the rollback of MERGE_TABLE_REGIONS_CHECK_CLOSED_REGIONS above;
+          // submitting a second batch here would race the first. Mirrors
+          // SplitTableRegionProcedure's rollback of SPLIT_TABLE_REGION_CLOSE_PARENT_REGION.
           break;
         case MERGE_TABLE_REGIONS_PRE_MERGE_OPERATION:
           postRollBackMergeRegions(env);
