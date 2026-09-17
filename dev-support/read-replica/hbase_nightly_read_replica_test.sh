@@ -20,10 +20,9 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPLICA_DIR="${SCRIPT_DIR}/read-replica"
+REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPLICA_DIR}/output}"
-export HBASE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 
 export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
 
@@ -48,12 +47,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "Script dir: ${SCRIPT_DIR}"
 echo "Replica dir: ${REPLICA_DIR}"
 echo "Output dir: ${OUTPUT_DIR}"
 echo "HBase root: ${HBASE_ROOT}"
 
-echo "Changing to replica dir: REPLICA_DIR"
+echo "Changing to replica dir: ${REPLICA_DIR}"
 cd "${REPLICA_DIR}"
 
 echo "Sourcing environment file: $(pwd)/.env"

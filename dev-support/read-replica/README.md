@@ -113,13 +113,13 @@ read-replica/
 ## CI: Jenkins Nightly Pipeline
 
 **Files:**
-- `dev-support/Jenkinsfile` — stage definition (`hbase read-replica feature checks`)
-- `dev-support/hbase_nightly_read_replica_test.sh` — test driver script
+- `dev-support/read-replica/Jenkinsfile` — pipeline definition (`hbase read-replica feature checks`)
+- `dev-support/read-replica/hbase_nightly_read_replica_test.sh` — test driver script
 
 ### When It Runs
 
-The read-replica stage runs as part of the HBase nightly build on the `master` and `branch-3`
-branches. It executes in parallel alongside the other nightly check stages (Yetus, JDK8/11/17).
+The read-replica tests run as their own standalone nightly pipeline on the `master` and `branch-3`
+branches, separate from the main HBase nightly build.
 
 ### What the Test Driver Does
 
@@ -208,7 +208,7 @@ useful for reproducing test failures seen in CI.
 
 ```bash
 # From the repo root — run the full suite
-dev-support/hbase_nightly_read_replica_test.sh
+dev-support/read-replica/hbase_nightly_read_replica_test.sh
 ```
 
 The script accepts two flags for local debugging:
@@ -220,7 +220,7 @@ The script accepts two flags for local debugging:
 
 ```bash
 # Keep the image and containers for debugging
-dev-support/hbase_nightly_read_replica_test.sh --keep-image --keep-containers
+dev-support/read-replica/hbase_nightly_read_replica_test.sh --keep-image --keep-containers
 ```
 
 ### Running Manually
