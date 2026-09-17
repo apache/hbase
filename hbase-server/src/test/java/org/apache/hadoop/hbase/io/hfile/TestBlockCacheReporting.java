@@ -105,6 +105,22 @@ public class TestBlockCacheReporting {
     LOG.info(BlockCacheUtil.toJSON(cbsbf));
   }
 
+  @Test
+  public void testCachedBlocksByFileToString() {
+    BlockCacheUtil.CachedBlocksByFile cbsbf = new BlockCacheUtil.CachedBlocksByFile();
+    for (int age = 1; age <= 1000; age++) {
+      cbsbf.hist.add(age, 1);
+    }
+    AgeSnapshot snapshot = cbsbf.getAgeInCacheSnapshot();
+    assertTrue(snapshot.get999thPercentile() > snapshot.get99thPercentile(),
+      "Test data must distinguish the 99th and 99.9th percentiles");
+
+    String report = cbsbf.toString();
+    assertTrue(report.contains(", 99th percentile age=" + snapshot.get99thPercentile() + ", "),
+      report);
+    assertTrue(report.endsWith(", 99.9th percentile age=" + snapshot.get999thPercentile()), report);
+  }
+
   private void bucketCacheReport(final BlockCache bc) {
     LOG.info(bc.getClass().getSimpleName() + ": " + bc.getStats());
     BlockCache[] bcs = bc.getBlockCaches();
