@@ -357,7 +357,8 @@ final class AssignmentManagerUtil {
       try {
         fileMaxSeqId = Long.parseLong(p.getName());
       } catch (NumberFormatException e) {
-        LOG.warn("Unable to parse recovered.edits sequence id from {}; falling back to abort", p, e);
+        LOG.warn("Unable to parse recovered.edits sequence id from {}; falling back to abort", p,
+          e);
         return false;
       }
       if (fileMaxSeqId > durableSeqId) {
