@@ -342,7 +342,7 @@ public class BlockCacheUtil {
         + snapshot.getMin() + ", max age=" + snapshot.getMax() + ", 75th percentile age="
         + snapshot.get75thPercentile() + ", 95th percentile age=" + snapshot.get95thPercentile()
         + ", 98th percentile age=" + snapshot.get98thPercentile() + ", 99th percentile age="
-        + snapshot.get99thPercentile() + ", 99.9th percentile age=" + snapshot.get99thPercentile();
+        + snapshot.get99thPercentile() + ", 99.9th percentile age=" + snapshot.get999thPercentile();
     }
   }
 }
