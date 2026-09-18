@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static java.util.Objects.requireNonNull;
-
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Policy.Eviction;
@@ -30,14 +29,15 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.LongAdder;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
 import org.apache.hbase.thirdparty.com.google.common.base.MoreObjects;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
@@ -67,6 +67,10 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
   private transient BlockCache victimCache;
 
   transient final Cache<BlockCacheKey, Cacheable> cache;
+
+  private final LongAdder dataBlockSize;
+
+  private final LongAdder dataBlockElements;
 
   /**
    * Creates a block cache.
@@ -98,6 +102,8 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
     this.maxBlockSize = maxBlockSize;
     this.policy = cache.policy().eviction().get();
     this.stats = new CacheStats(getClass().getSimpleName());
+    this.dataBlockSize = new LongAdder();
+    this.dataBlockElements = new LongAdder();
 
     statsThreadPool = Executors.newSingleThreadScheduledExecutor(new ThreadFactoryBuilder()
       .setNameFormat("TinyLfuBlockCacheStatsExecutor").setDaemon(true).build());
@@ -194,6 +200,7 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
     } else {
       value = asReferencedHeapBlock(value);
       cache.put(key, value);
+      updateDataBlockMetrics(value, false);
     }
   }
 
@@ -228,6 +235,7 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
     Cacheable value = cache.asMap().remove(cacheKey);
     if (value != null) {
       value.release();
+      updateDataBlockMetrics(value, true);
     }
     return (value != null);
   }
@@ -305,6 +313,7 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
       }
 
       recordEviction();
+      updateDataBlockMetrics(value, true);
 
       if (victimCache == null) {
         return;
@@ -410,11 +419,23 @@ public final class TinyLfuBlockCache implements FirstLevelBlockCache {
 
   @Override
   public long getCurrentDataSize() {
-    return getCurrentSize();
+    return this.dataBlockSize.sum();
   }
 
   @Override
   public long getDataBlockCount() {
-    return getBlockCount();
+    return this.dataBlockElements.sum();
+  }
+
+  /**
+   * Helper function that updates the data block size and count
+   */
+  private void updateDataBlockMetrics(Cacheable block, boolean evict) {
+    long size = ClassSize.align(block.heapSize());
+    BlockType type = block.getBlockType();
+    if (type != null && type.isData()) {
+      dataBlockSize.add(evict ? -1 * size : size);
+      dataBlockElements.add(evict ? -1 : 1);
+    }
   }
 }
