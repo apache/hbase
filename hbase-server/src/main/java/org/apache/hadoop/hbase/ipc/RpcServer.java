@@ -419,6 +419,25 @@ public abstract class RpcServer implements RpcServerInterface, ConfigurationObse
       int processingTime = (int) (endTime - startTime);
       int qTime = (int) (startTime - receiveTime);
       int totalTime = (int) (endTime - receiveTime);
+      switch (call.getQueueType()) {
+        case READ:
+          metrics.dequeuedReadCall(qTime);
+          metrics.processReadCall(processingTime);
+          metrics.totalReadCall(totalTime);
+          break;
+        case WRITE:
+          metrics.dequeuedWriteCall(qTime);
+          metrics.processWriteCall(processingTime);
+          metrics.totalWriteCall(totalTime);
+          break;
+        case SCAN:
+          metrics.dequeuedScanCall(qTime);
+          metrics.processScanCall(processingTime);
+          metrics.totalScanCall(totalTime);
+          break;
+        case DEFAULT:
+          break;
+      }
       if (LOG.isTraceEnabled()) {
         LOG.trace(
           "{}, response: {}, receiveTime: {}, queueTime: {}, processingTime: {}, totalTime: {}",
