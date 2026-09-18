@@ -178,9 +178,10 @@ public class TestOpenRegionProcedureRestoreFailedOpen {
     // still OPENING: restarting the ProcedureExecutor re-triggers AssignmentManager#joinCluster's
     // meta scan, which reloads the state from the persisted hbase:meta column before
     // restoreSucceedState() runs; regionFailedOpen(regionNode, false) then only detaches the
-    // region from its (now-defunct) server, it does not change the state. TransitRegionStateProcedure
-    // is the one that decides to give up (and thus set FAILED_OPEN) or retry the open, and with the
-    // default (effectively unbounded) hbase.assignment.maximum.attempts, it never gives up here.
+    // region from its (now-defunct) server, it does not change the state.
+    // TransitRegionStateProcedure is the one that decides to give up (and thus set FAILED_OPEN)
+    // or retry the open, and with the default (effectively unbounded)
+    // hbase.assignment.maximum.attempts, it never gives up here.
     assertEquals(RegionState.State.OPENING, reloaded.getState());
 
     proceed.countDown();
