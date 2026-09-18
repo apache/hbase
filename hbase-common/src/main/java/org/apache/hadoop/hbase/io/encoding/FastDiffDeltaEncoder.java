@@ -53,6 +53,11 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   static final int FLAG_SAME_TYPE = 1 << 5;
   static final int FLAG_SAME_VALUE = 1 << 6;
 
+  @Override
+  protected EncodingState createEncodingState() {
+    return new FastDiffEncodingState();
+  }
+
   private static class FastDiffCompressionState extends CompressionState {
     byte[] timestamp = new byte[KeyValue.TIMESTAMP_SIZE];
     int prevTimestampOffset;
@@ -217,15 +222,17 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
   @Override
   public int internalEncode(ExtendedCell cell, HFileBlockDefaultEncodingContext encodingContext,
     DataOutputStream out) throws IOException {
-    EncodingState state = encodingContext.getEncodingState();
-    int size = compressSingleKeyValue(out, cell, state.prevCell);
+    FastDiffEncodingState state = (FastDiffEncodingState) encodingContext.getEncodingState();
+    state.beginCellEncoding();
+    int size = compressSingleKeyValue(out, cell, state);
     size += afterEncodingKeyValue(cell, out, encodingContext);
-    state.prevCell = cell;
+    state.setPreviousCell(cell);
     return size;
   }
 
-  private int compressSingleKeyValue(DataOutputStream out, ExtendedCell cell, ExtendedCell prevCell)
-    throws IOException {
+  private int compressSingleKeyValue(DataOutputStream out, ExtendedCell cell,
+    FastDiffEncodingState state) throws IOException {
+    ExtendedCell prevCell = state.prevCell;
     int flag = 0; // Do not use more bits than will fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
     int vLength = cell.getValueLength();
@@ -238,17 +245,19 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
       ByteBufferUtils.putCompressedInt(out, 0);
       PrivateCellUtil.writeFlatKey(cell, (DataOutput) out);
       // Write the value part
+      int valueStreamOffset = out.size();
       PrivateCellUtil.writeValue(out, cell, cell.getValueLength());
+      state.setCurrentCellValueStreamOffset(valueStreamOffset);
     } else {
       int preKeyLength = KeyValueUtil.keyLength(prevCell);
-      int preValLength = prevCell.getValueLength();
+      int preValLength = state.getPreviousValueLength();
       // find a common prefix and skip it
       int commonPrefix = PrivateCellUtil.findCommonPrefixInFlatKey(cell, prevCell, true, false);
 
       if (kLength == preKeyLength) {
         flag |= FLAG_SAME_KEY_LENGTH;
       }
-      if (vLength == prevCell.getValueLength()) {
+      if (vLength == preValLength) {
         flag |= FLAG_SAME_VALUE_LENGTH;
       }
       if (cell.getTypeByte() == prevCell.getTypeByte()) {
@@ -263,10 +272,7 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
       // Check if current and previous values are the same. Compare value
       // length first as an optimization.
-      if (
-        vLength == preValLength
-          && PrivateCellUtil.matchingValue(cell, prevCell, vLength, preValLength)
-      ) {
+      if (vLength == preValLength && state.matchingPreviousValue(cell)) {
         flag |= FLAG_SAME_VALUE;
       }
 
@@ -304,7 +310,9 @@ public class FastDiffDeltaEncoder extends BufferedDataBlockEncoder {
 
       // Write the value if it is not the same as before.
       if ((flag & FLAG_SAME_VALUE) == 0) {
+        int valueStreamOffset = out.size();
         PrivateCellUtil.writeValue(out, cell, vLength);
+        state.setCurrentCellValueStreamOffset(valueStreamOffset);
       }
     }
     return kLength + vLength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
