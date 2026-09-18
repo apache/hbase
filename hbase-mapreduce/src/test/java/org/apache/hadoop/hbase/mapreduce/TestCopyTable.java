@@ -244,7 +244,7 @@ public class TestCopyTable extends CopyTableTestBase {
   }
 
   @Test
-  public void tsetLoadingSnapshotToMobTable() throws Exception {
+  public void testLoadingSnapshotToMobTable() throws Exception {
     testCopyTableBySnapshot("testLoadingSnapshotToMobTable", false, true);
   }
 
