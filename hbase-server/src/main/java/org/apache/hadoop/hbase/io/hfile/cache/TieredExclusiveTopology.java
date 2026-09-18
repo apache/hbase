@@ -123,4 +123,25 @@ public class TieredExclusiveTopology implements CacheTopology {
     l1.shutdown();
     l2.shutdown();
   }
+
+  /**
+   * Handles a capacity-driven eviction from an engine in this exclusive topology.
+   * <p>
+   * An L1 pressure eviction is demoted to L2. An L2 pressure eviction leaves the topology entirely,
+   * because there is no lower tier.
+   * </p>
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   * @param sourceEngine engine that evicted the block
+   * @return {@code true} if the block was demoted to L2
+   */
+  @Override
+  public boolean handleEviction(BlockCacheKey cacheKey, Cacheable block, CacheEngine sourceEngine) {
+    if (sourceEngine != l1) {
+      return false;
+    }
+
+    l2.cacheBlock(cacheKey, block);
+    return true;
+  }
 }

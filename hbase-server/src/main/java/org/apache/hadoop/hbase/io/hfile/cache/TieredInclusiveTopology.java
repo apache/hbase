@@ -110,4 +110,20 @@ public class TieredInclusiveTopology implements CacheTopology {
     l1.shutdown();
     l2.shutdown();
   }
+
+  /**
+   * Handles a capacity-driven eviction from this inclusive topology.
+   * <p>
+   * L1 eviction does not require demotion because inclusive placement maintains the corresponding
+   * block in L2. L2 pressure eviction likewise does not cause movement to another tier.
+   * </p>
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   * @param sourceEngine engine that evicted the block
+   * @return {@code false}, because no additional placement is required
+   */
+  @Override
+  public boolean handleEviction(BlockCacheKey cacheKey, Cacheable block, CacheEngine sourceEngine) {
+    return false;
+  }
 }

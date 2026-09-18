@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -25,20 +26,15 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.InclusiveCombinedBlockCache;
+import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
  * Utility methods for creating {@link CacheAccessService} instances.
  * <p>
- * This class keeps service construction centralized without introducing a full factory or plugin
- * loader in the initial {@code CacheAccessService} ticket. The first supported construction modes
- * are a legacy {@link BlockCache}-backed service, a topology-backed service, and a disabled no-op
- * service.
- * </p>
- * <p>
- * A later integration step can move construction into {@code BlockCacheFactory} once HBase runtime
- * wiring starts returning {@link CacheAccessService} instead of, or alongside, raw
- * {@link BlockCache}.
+ * This class is the construction entry point for cache access services. Native {@link CacheEngine}
+ * implementations are used directly, while legacy {@link BlockCache} implementations are adapted to
+ * cache engines during migration.
  * </p>
  */
 @InterfaceAudience.Private
@@ -83,31 +79,57 @@ public final class CacheAccessServices {
 
   /**
    * Creates a {@link CacheAccessService} from the block cache configuration.
-   * <p>
-   * This method is a compatibility factory for tests and transitional code paths that want to
-   * obtain a {@link CacheAccessService} directly from {@link Configuration}, while still using the
-   * existing {@link BlockCacheFactory} and legacy {@link BlockCache} implementations underneath.
-   * </p>
-   * <p>
-   * The method delegates block-cache construction to
-   * {@link BlockCacheFactory#createBlockCache(Configuration)}. If the legacy factory creates a
-   * {@link BlockCache}, the returned service is backed by that cache through
-   * {@link TopologyBackedCacheAccessService}. If the legacy factory does not create a cache, this
-   * method returns the disabled/no-op cache access service.
-   * </p>
-   * <p>
-   * This method does not introduce new cache-engine or topology-based runtime wiring. It is
-   * intended only as a bridge while existing HBase tests and integration paths migrate from direct
-   * {@link BlockCache} usage to {@link CacheAccessService}.
-   * </p>
-   * @param conf configuration used by {@link BlockCacheFactory}
-   * @return cache access service created from the configured legacy block cache, or disabled when
-   *         no block cache is configured
+   * @param conf cache configuration
+   * @return configured cache access service, or a disabled service when block caching is disabled
    * @throws NullPointerException if {@code conf} is {@code null}
    */
   public static CacheAccessService fromConfiguration(Configuration conf) {
+    return fromConfiguration(conf, null);
+  }
+
+  /**
+   * Creates a {@link CacheAccessService} from the block cache configuration.
+   * <p>
+   * Cache implementations that implement {@link CacheEngine} natively are used directly. Legacy
+   * {@link BlockCache} implementations are adapted to {@link CacheEngine} until their migration is
+   * complete.
+   * </p>
+   * @param conf          cache configuration
+   * @param onlineRegions currently online regions, or {@code null} when unavailable
+   * @return configured cache access service, or a disabled service when block caching is disabled
+   * @throws NullPointerException if {@code conf} is {@code null}
+   */
+  public static CacheAccessService fromConfiguration(Configuration conf,
+    Map<String, HRegion> onlineRegions) {
     Objects.requireNonNull(conf, "conf must not be null");
-    return fromBlockCache(BlockCacheFactory.createBlockCache(conf));
+
+    CacheEngine l1 = BlockCacheFactory.createFirstLevelCacheEngine(conf);
+    if (l1 == null) {
+      return disabled();
+    }
+
+    CachePlacementAdmissionPolicy policy = DefaultHBaseCachePlacementAdmissionPolicy.INSTANCE;
+
+    boolean useExternal = conf.getBoolean(BlockCacheFactory.EXTERNAL_BLOCKCACHE_KEY,
+      BlockCacheFactory.EXTERNAL_BLOCKCACHE_DEFAULT);
+
+    if (useExternal) {
+      CacheEngine l2 = BlockCacheFactory.createExternalCacheEngine(conf);
+      if (l2 == null) {
+        return TopologyBackedCacheAccessServices.fromSingleCacheEngine("single", l1, policy);
+      }
+
+      return TopologyBackedCacheAccessServices.fromTieredInclusiveCacheEngines("inclusive", l1, l2,
+        policy);
+    }
+
+    CacheEngine l2 = BlockCacheFactory.createBucketCacheEngine(conf, onlineRegions);
+    if (l2 == null) {
+      return TopologyBackedCacheAccessServices.fromSingleCacheEngine("single", l1, policy);
+    }
+
+    return TopologyBackedCacheAccessServices.fromTieredExclusiveCacheEngines("combined", l1, l2,
+      policy);
   }
 
   /**

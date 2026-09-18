@@ -199,4 +199,20 @@ public interface CacheTopology {
    */
   CacheTopologyView getView();
 
+  /**
+   * Handles a block evicted by one of this topology's cache engines because of cache pressure.
+   * <p>
+   * The default implementation discards the event. Topologies that support eviction-driven demotion
+   * may override this method.
+   * </p>
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   * @param sourceEngine engine that evicted the block
+   * @return {@code true} if the topology placed the block in another engine
+   */
+  default boolean handleEviction(BlockCacheKey cacheKey, Cacheable block,
+    CacheEngine sourceEngine) {
+    return false;
+  }
+
 }

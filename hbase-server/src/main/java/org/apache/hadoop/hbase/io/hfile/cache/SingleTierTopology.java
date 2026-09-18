@@ -177,4 +177,19 @@ public class SingleTierTopology implements CacheTopology {
   public void shutdown() {
     engine.shutdown();
   }
+
+  /**
+   * Handles a capacity-driven eviction from the single cache engine.
+   * <p>
+   * A single-tier topology has no lower tier to which a block can be demoted.
+   * </p>
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   * @param sourceEngine engine that evicted the block
+   * @return {@code false}
+   */
+  @Override
+  public boolean handleEviction(BlockCacheKey cacheKey, Cacheable block, CacheEngine sourceEngine) {
+    return false;
+  }
 }

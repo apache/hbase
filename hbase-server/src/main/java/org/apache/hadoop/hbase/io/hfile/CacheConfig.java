@@ -320,6 +320,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
 
   /**
    * Constructs a cache configuration copied from the specified configuration.
+   * @param cacheConf cache configuration to copy
    */
   public CacheConfig(CacheConfig cacheConf) {
     this.cacheDataOnRead = cacheConf.cacheDataOnRead;
@@ -337,9 +338,7 @@ public class CacheConfig implements PropagatingConfigurationObserver {
     this.blockCache = cacheConf.blockCache;
     this.byteBuffAllocator = cacheConf.byteBuffAllocator;
     this.heapUsageThreshold = cacheConf.heapUsageThreshold;
-    this.cacheAccessService = blockCache != null
-      ? CacheAccessServices.fromBlockCache(blockCache)
-      : CacheAccessServices.disabled();
+    this.cacheAccessService = cacheConf.cacheAccessService;
   }
 
   private CacheConfig() {
@@ -551,8 +550,12 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   }
 
   /**
-   * Returns the block cache.
-   * @return the block cache, or null if caching is completely disabled
+   * Returns the legacy block cache when this configuration exposes one.
+   * <p>
+   * Native cache-engine configurations do not necessarily expose a {@link BlockCache}. Callers
+   * should use {@link #getCacheAccessService()} for cache access and diagnostics.
+   * </p>
+   * @return legacy block cache when available
    */
   public Optional<BlockCache> getBlockCache() {
     return Optional.ofNullable(this.blockCache);
@@ -561,10 +564,9 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   /**
    * Returns the cache access service used by HFile read/write path callers.
    * <p>
-   * This service is the migration-facing cache abstraction. For now it is backed by the existing
-   * {@link BlockCache} when block cache is configured, or by a disabled no-op implementation when
-   * block cache is unavailable. This keeps cache construction unchanged while allowing callers such
-   * as {@code HFileReaderImpl} to depend on {@link CacheAccessService}.
+   * The cache access service is the primary cache abstraction exposed by this configuration. It may
+   * be backed by native {@link CacheEngine} implementations, legacy {@link BlockCache}
+   * implementations adapted as cache engines, or a combination of both.
    * </p>
    * @return cache access service
    */

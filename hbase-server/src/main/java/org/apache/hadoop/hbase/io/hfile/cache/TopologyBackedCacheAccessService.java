@@ -73,6 +73,10 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     this.policy = Objects.requireNonNull(policy, "policy must not be null");
     this.topologyView =
       Objects.requireNonNull(topology.getView(), "topology view must not be null");
+    for (CacheTier tier : topology.getTiers()) {
+      topology.getEngine(tier)
+        .ifPresent(engine -> engine.setEvictionListener(this::handleEngineEviction));
+    }
   }
 
   /**
@@ -742,5 +746,16 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
   @Override
   public Iterator<CachedBlock> iterator() {
     return asCachedBlockIterable().orElse(Collections.emptyList()).iterator();
+  }
+
+  /**
+   * Handles a capacity-driven eviction reported by a cache engine.
+   * @param sourceEngine engine that evicted the block
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   */
+  private void handleEngineEviction(CacheEngine sourceEngine, BlockCacheKey cacheKey,
+    Cacheable block) {
+    topology.handleEviction(cacheKey, block, sourceEngine);
   }
 }

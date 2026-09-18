@@ -2084,7 +2084,7 @@ public class HFileBlock implements Cacheable {
     return true;
   }
 
-  DataBlockEncoding getDataBlockEncoding() {
+  public DataBlockEncoding getDataBlockEncoding() {
     if (blockType == BlockType.ENCODED_DATA) {
       return DataBlockEncoding.getEncodingById(getDataBlockEncodingId());
     }
@@ -2211,7 +2211,7 @@ public class HFileBlock implements Cacheable {
     return createBuilder(blk, newBuf).build();
   }
 
-  static HFileBlock deepCloneOnHeap(HFileBlock blk) {
+  public static HFileBlock deepCloneOnHeap(HFileBlock blk) {
     ByteBuff deepCloned = ByteBuff
       .wrap(ByteBuffer.wrap(blk.bufWithoutChecksum.toBytes(0, blk.bufWithoutChecksum.limit())));
     return createBuilder(blk, deepCloned).build();
