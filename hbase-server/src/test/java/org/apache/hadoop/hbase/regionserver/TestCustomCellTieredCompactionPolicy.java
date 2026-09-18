@@ -113,7 +113,9 @@ public class TestCustomCellTieredCompactionPolicy {
       EnvironmentEdgeManager.currentTime(), 1024, 0));
     files.add(createFile(file, EnvironmentEdgeManager.currentTime(),
       EnvironmentEdgeManager.currentTime(), 1024, 1));
-    assertEquals(1,
+    // getCompactBoundariesForMajor always offers [MIN_VALUE, cutOffTimestamp] now, regardless of
+    // the files being compacted, so the boundary count is always 2.
+    assertEquals(2,
       ((DateTieredCompactionRequest) policy.selectMajorCompaction(files)).getBoundaries().size());
   }
 
@@ -138,7 +140,7 @@ public class TestCustomCellTieredCompactionPolicy {
     files.add(createFile(file, 0, 1, 1024, 0));
     files.add(createFile(file, EnvironmentEdgeManager.currentTime(),
       EnvironmentEdgeManager.currentTime(), 1024, 1));
-    assertEquals(3,
+    assertEquals(2,
       ((DateTieredCompactionRequest) policy.selectMajorCompaction(files)).getBoundaries().size());
   }
 
@@ -148,7 +150,7 @@ public class TestCustomCellTieredCompactionPolicy {
     Path file = preparePath();
     ArrayList<HStoreFile> files = new ArrayList<>();
     files.add(createFile(file, 0, EnvironmentEdgeManager.currentTime(), 1024, 0));
-    assertEquals(3,
+    assertEquals(2,
       ((DateTieredCompactionRequest) policy.selectMajorCompaction(files)).getBoundaries().size());
   }
 
