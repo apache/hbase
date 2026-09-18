@@ -15,9 +15,16 @@
 // specific language governing permissions and limitations
 // under the License.
 pipeline {
-  agent any
+  agent {
+    node {
+      label 'hbase'
+    }
+  }
+  triggers {
+    pollSCM(getCronParams(env.BRANCH_NAME))
+  }
   options {
-    buildDiscarder(logRotator(numToKeepStr: '10'))
+    buildDiscarder(logRotator(numToKeepStr: '20'))
     timeout (time: 2, unit: 'HOURS')
     timestamps()
     skipDefaultCheckout()
@@ -25,6 +32,9 @@ pipeline {
   }
   environment {
     OUTPUT_DIR_RELATIVE_READ_REPLICA = 'output-read-replica'
+  }
+  parameters {
+    booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
   }
   stages {
     stage ('scm-checkout') {
@@ -40,6 +50,12 @@ pipeline {
       }
     }
     stage ('hbase read-replica feature checks') {
+      when {
+        anyOf {
+          branch 'master'
+          branch 'branch-3*'
+        }
+      }
       environment {
         BASEDIR = "${env.WORKSPACE}/component"
         OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}"
@@ -86,10 +102,8 @@ pipeline {
       }
       post {
         always {
-          // 1. Publish JUnit XML metrics for Jenkins trend charts
           junit testResults: "${env.OUTPUT_DIR_RELATIVE}/read-replica-nightly-test-results.xml", allowEmptyResults: true
 
-          // 2. Render interactive HTML test report in the Jenkins UI navigation bar
           publishHTML target: [
             allowMissing         : true,
             keepAll              : true,
@@ -132,13 +146,66 @@ pipeline {
           echo ""
           echo "[DEBUG] trying to aggregate step-wise results"
           comment += results.collect { fileExists(file: it) ? readFile(file: it) : "" }.join("\n\n")
-          echo "[INFO] Final aggregated comment (would be posted to JIRA in production):"
+          echo "[INFO] Comment:"
           echo comment
+          echo ""
+          echo "[DEBUG] checking to see if feature branch"
+          def jiras = getJirasToComment(env.BRANCH_NAME, [])
+          if (jiras.isEmpty()) {
+            echo "[DEBUG] non-feature branch, checking change messages for jira keys."
+            echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
+            jiras = getJirasToCommentFromChangesets(currentBuild)
+          }
+          jiras.each { currentIssue ->
+            jiraComment issueKey: currentIssue, body: comment
+          }
         } catch (Exception exception) {
           echo "Got exception: ${exception}"
           echo "    ${exception.getStackTrace()}"
         }
       }
     }
+  }
+}
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
+@NonCPS
+List<String> getJirasToCommentFromChangesets(RunWrapper thisBuild) {
+  def seenJiras = []
+  thisBuild.changeSets.each { cs ->
+    cs.getItems().each { change ->
+      CharSequence msg = change.msg
+      echo "change: ${change}"
+      echo "     ${msg}"
+      echo "     ${change.commitId}"
+      echo "     ${change.author}"
+      echo ""
+      seenJiras = getJirasToComment(msg, seenJiras)
+    }
+  }
+  return seenJiras
+}
+@NonCPS
+List<String> getJirasToComment(CharSequence source, List<String> seen) {
+  source.eachMatch("HBASE-[0-9]+") { currentIssue ->
+    echo "[DEBUG] found jira key: ${currentIssue}"
+    if (currentIssue in seen) {
+      echo "[DEBUG] already commented on ${currentIssue}."
+    } else {
+      echo "[INFO] commenting on ${currentIssue}."
+      seen << currentIssue
+    }
+  }
+  return seen
+}
+@NonCPS
+String getCronParams(String branchName) {
+  if (branchName == 'master') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-3') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-2') {
+    return 'H H 2-31/3 * *'
+  } else {
+    return 'H H 3-31/3 * *'
   }
 }
