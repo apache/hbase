@@ -122,6 +122,16 @@ public class MetricsRegionServer {
     return regionServerWrapper;
   }
 
+  /**
+   * Returns the per-table metrics container (may be {@code null} if
+   * {@link #RS_ENABLE_TABLE_METRICS_KEY} is disabled). Exposed so that callers such as
+   * {@link MetricsTableWrapperAggregateImpl} can clean up per-table latency / query meter metrics
+   * when a table leaves the RegionServer.
+   */
+  public RegionServerTableMetrics getRegionServerTableMetrics() {
+    return tableMetrics;
+  }
+
   public void updatePutBatch(TableName tn, long t) {
     if (tableMetrics != null && tn != null) {
       tableMetrics.updatePutBatch(tn, t);
