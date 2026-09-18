@@ -27,6 +27,8 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.RandomAccessFile;
+import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.util.ArrayList;
@@ -191,5 +193,25 @@ public class TestFileIOEngine {
     for (int i = 1; i < fileChannels.length; i++) {
       assertEquals(fileChannels[i], reopenedFileChannels[i]);
     }
+  }
+
+  @Test
+  public void testShutdownClosesRandomAccessFileWhenChannelCloseFails() throws Exception {
+    FileChannel[] channels = fileIOEngine.getFileChannels();
+
+    // rafs is private
+    Field rafsField = FileIOEngine.class.getDeclaredField("rafs");
+    rafsField.setAccessible(true);
+    RandomAccessFile[] rafs = (RandomAccessFile[]) rafsField.get(fileIOEngine);
+
+    FileChannel failingChannel = Mockito.mock(FileChannel.class);
+    Mockito.doThrow(new IOException("channel close failed")).when(failingChannel).close();
+    RandomAccessFile raf = Mockito.mock(RandomAccessFile.class);
+    channels[0] = failingChannel;
+    rafs[0] = raf;
+
+    fileIOEngine.shutdown();
+
+    Mockito.verify(raf).close();
   }
 }
