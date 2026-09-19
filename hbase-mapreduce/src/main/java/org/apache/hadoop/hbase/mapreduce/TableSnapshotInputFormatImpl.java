@@ -248,7 +248,8 @@ public class TableSnapshotInputFormatImpl {
     private Result result = null;
     private ImmutableBytesWritable row = null;
     private ClientSideRegionScanner scanner;
-    private int numOfCompleteRows = 0;
+    private int numOfRows = 0;
+    private byte[] lastRow;
     private int rowLimitPerSplit;
 
     public ClientSideRegionScanner getScanner() {
@@ -274,14 +275,22 @@ public class TableSnapshotInputFormatImpl {
     }
 
     public boolean nextKeyValue() throws IOException {
+      if (rowLimitPerSplit > 0 && numOfRows > rowLimitPerSplit) {
+        return false;
+      }
       result = scanner.next();
       if (result == null) {
         // we are done
         return false;
       }
 
-      if (rowLimitPerSplit > 0 && ++this.numOfCompleteRows > rowLimitPerSplit) {
-        return false;
+      // A row's last visible fragment may still be partial when its remaining cells are filtered.
+      if (rowLimitPerSplit > 0 && !Bytes.equals(lastRow, result.getRow())) {
+        lastRow = result.getRow();
+        if (++numOfRows > rowLimitPerSplit) {
+          result = null;
+          return false;
+        }
       }
       if (this.row == null) {
         this.row = new ImmutableBytesWritable();
