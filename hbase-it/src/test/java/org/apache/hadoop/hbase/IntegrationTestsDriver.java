@@ -94,7 +94,7 @@ public class IntegrationTestsDriver extends AbstractHBaseTool {
   }
 
   /**
-   * Returns test classes annotated with @Category(IntegrationTests.class), according to the filter
+   * Returns test classes annotated with @Tag(IntegrationTests.TAG), according to the filter
    * specific on the command line (if any).
    */
   private Class<?>[] findIntegrationTestClasses()
