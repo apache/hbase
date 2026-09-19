@@ -25,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -44,6 +45,16 @@ public class InfoServer {
 
   private static final String HADOOP_WEB_TLS_CONFIG_PREFIX = "ssl.server.";
   private static final String HBASE_WEB_TLS_CONFIG_PREFIX = "hbase.ui.ssl.";
+  // Role-scoped prefix for single-EKU certificate support. When set, takes precedence over both
+  // HBASE_WEB_TLS_CONFIG_PREFIX and HADOOP_WEB_TLS_CONFIG_PREFIX. The UI process only ever plays
+  // the TLS-server role, so no parallel .client. prefix is defined.
+  private static final String HBASE_WEB_TLS_SERVER_CONFIG_PREFIX = "hbase.ui.ssl.server.";
+  /**
+   * Config key controlling whether the UI's TLS connector requests or requires a client
+   * certificate. Valid values: {@code NONE} (default), {@code WANT}, {@code NEED}.
+   */
+  static final String HBASE_UI_SSL_CLIENT_AUTH_MODE =
+    HBASE_WEB_TLS_SERVER_CONFIG_PREFIX + "client.auth.mode";
 
   /**
    * Create a status server on the given port. The jsp scripts are taken from
@@ -83,6 +94,16 @@ public class InfoServer {
         .setExcludeProtocols(getTLSProperty(c, "exclude.protocols"))
         .setIncludeCiphers(getTLSProperty(c, "include.cipher.list"))
         .setExcludeCiphers(getTLSProperty(c, "exclude.cipher.list"));
+
+      // Activate mutual TLS if configured. Default is NONE, which preserves today's behavior of
+      // never requesting a client certificate on the UI connector (leaving any configured
+      // truststore inert for peer verification). Set hbase.ui.ssl.server.client.auth.mode to
+      // WANT or NEED to opt in. The client.auth.mode key is looked up directly on
+      // HBASE_WEB_TLS_SERVER_CONFIG_PREFIX; there is no legacy or Hadoop-prefixed fallback.
+      X509Util.ClientAuth clientAuth = X509Util.ClientAuth
+        .fromPropertyValue(c.get(HBASE_UI_SSL_CLIENT_AUTH_MODE, X509Util.ClientAuth.NONE.name()));
+      builder.needsClientAuth(clientAuth == X509Util.ClientAuth.NEED)
+        .wantsClientAuth(clientAuth == X509Util.ClientAuth.WANT);
     }
 
     final String httpAuthType = c.get(HttpServer.HTTP_UI_AUTHENTICATION, "").toLowerCase();
@@ -104,18 +125,31 @@ public class InfoServer {
     this.httpServer = builder.build();
   }
 
-  private String getTLSPassword(Configuration c, String postfix) throws IOException {
-    return HBaseConfiguration.getPassword(c, HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
-      HBaseConfiguration.getPassword(c, HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, null));
+  /**
+   * Resolves a TLS-related password with a 3-tier fallback: the role-scoped
+   * {@code hbase.ui.ssl.server.<postfix>} key is checked first, then the unscoped
+   * {@code hbase.ui.ssl.<postfix>} key, and finally Hadoop's {@code ssl.server.<postfix>}.
+   * Package-private for direct testing.
+   */
+  static String getTLSPassword(Configuration c, String postfix) throws IOException {
+    return HBaseConfiguration.getPassword(c, HBASE_WEB_TLS_SERVER_CONFIG_PREFIX + postfix,
+      HBaseConfiguration.getPassword(c, HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
+        HBaseConfiguration.getPassword(c, HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, null)));
   }
 
-  private String getTLSProperty(Configuration c, String postfix) {
+  static String getTLSProperty(Configuration c, String postfix) {
     return getTLSProperty(c, postfix, null);
   }
 
-  private String getTLSProperty(Configuration c, String postfix, String defaultValue) {
-    return c.get(HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
-      c.get(HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, defaultValue));
+  /**
+   * Resolves a TLS-related property with a 3-tier fallback: role-scoped
+   * {@code hbase.ui.ssl.server.<postfix>} → {@code hbase.ui.ssl.<postfix>} →
+   * {@code ssl.server.<postfix>} → {@code defaultValue}. Package-private for direct testing.
+   */
+  static String getTLSProperty(Configuration c, String postfix, String defaultValue) {
+    return c.get(HBASE_WEB_TLS_SERVER_CONFIG_PREFIX + postfix,
+      c.get(HBASE_WEB_TLS_CONFIG_PREFIX + postfix,
+        c.get(HADOOP_WEB_TLS_CONFIG_PREFIX + postfix, defaultValue)));
   }
 
   /**
