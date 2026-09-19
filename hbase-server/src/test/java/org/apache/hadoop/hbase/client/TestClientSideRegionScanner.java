@@ -26,6 +26,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
 import org.apache.hadoop.hbase.regionserver.StoreScanner;
 import org.apache.hadoop.hbase.testclassification.ClientTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -170,14 +172,14 @@ public class TestClientSideRegionScanner {
         clientSideRegionScanner.scanner = scannerSpy;
         Result result = clientSideRegionScanner.next();
 
-        verify(scannerSpy, times(6)).nextRaw(anyList());
+        verify(scannerSpy, times(6)).nextRaw(anyList(), any(ScannerContext.class));
         assertNotNull(result);
         assertEquals(Bytes.toInt(result.getRow()), 5);
         assertTrue(clientSideRegionScanner.hasMore);
 
         for (int i = 6; i < 10; ++i) {
           result = clientSideRegionScanner.next();
-          verify(scannerSpy, times(i + 1)).nextRaw(anyList());
+          verify(scannerSpy, times(i + 1)).nextRaw(anyList(), any(ScannerContext.class));
           assertNotNull(result);
           assertEquals(Bytes.toInt(result.getRow()), i);
         }
