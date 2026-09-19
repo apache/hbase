@@ -45,7 +45,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.util.Tool;
@@ -227,7 +226,6 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       String fileName = p.toString();
       if (
         fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
-          || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0
           || fileName.indexOf(BackupManifest.MANIFEST_FILE_NAME) > 0
       ) {
         toKeep.add(p);
