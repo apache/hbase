@@ -326,6 +326,56 @@ public class TestInclusiveCombinedBlockCacheCompatibleTopologyBackedCacheAccessS
   }
 
   /**
+   * Verifies that an L1 access is propagated to L2 as a touch notification.
+   */
+  @Test
+  public void testL1AccessTouchesL2() {
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    TieredInclusiveTopology topology = new TieredInclusiveTopology("tiered-inclusive", l1, l2);
+    BlockCacheKey cacheKey = new BlockCacheKey("file", 0);
+
+    topology.handleAccess(cacheKey, l1);
+
+    verify(l2).touch(cacheKey);
+    verify(l1, never()).touch(any());
+  }
+
+  /**
+   * Verifies that an L2 access does not generate an additional touch notification.
+   */
+  @Test
+  public void testL2AccessDoesNotTouchAnyTier() {
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    TieredInclusiveTopology topology = new TieredInclusiveTopology("tiered-inclusive", l1, l2);
+    BlockCacheKey cacheKey = new BlockCacheKey("file", 0);
+
+    topology.handleAccess(cacheKey, l2);
+
+    verify(l1, never()).touch(any());
+    verify(l2, never()).touch(any());
+  }
+
+  /**
+   * Verifies that an access reported from an engine that does not belong to the topology does not
+   * generate a touch notification.
+   */
+  @Test
+  public void testUnknownEngineAccessDoesNotTouchAnyTier() {
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    CacheEngine other = mock(CacheEngine.class);
+    TieredInclusiveTopology topology = new TieredInclusiveTopology("tiered-inclusive", l1, l2);
+    BlockCacheKey cacheKey = new BlockCacheKey("file", 0);
+
+    topology.handleAccess(cacheKey, other);
+
+    verify(l1, never()).touch(any());
+    verify(l2, never()).touch(any());
+  }
+
+  /**
    * Creates a topology-backed cache access service using a tiered inclusive topology.
    * @param l1     first-level block cache
    * @param l2     second-level block cache

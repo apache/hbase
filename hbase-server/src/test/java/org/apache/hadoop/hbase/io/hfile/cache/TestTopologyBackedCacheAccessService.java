@@ -84,6 +84,7 @@ public class TestTopologyBackedCacheAccessService {
 
     verify(l1).getBlock(key, true, false, true, BlockType.DATA);
     verify(l2).getBlock(key, true, false, true, BlockType.DATA);
+    verify(topology).handleAccess(key, l2);
     verify(policy).shouldPromote(key, block, CacheTier.L2, context, topologyView);
   }
 
@@ -460,6 +461,65 @@ public class TestTopologyBackedCacheAccessService {
     assertInstanceOf(TopologyBackedCacheAccessService.class, service);
     assertSame(topology, ((TopologyBackedCacheAccessService) service).getTopology());
     assertSame(policy, ((TopologyBackedCacheAccessService) service).getPolicy());
+  }
+
+  /**
+   * Verifies that a successful L1 lookup notifies the topology about the access.
+   */
+  @Test
+  void testGetBlockNotifiesTopologyOnL1Hit() {
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
+    Cacheable block = mock(Cacheable.class);
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    CacheRequestContext context = requestContext();
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getTiers()).thenReturn(List.of(CacheTier.L1, CacheTier.L2));
+    when(topology.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
+    when(topology.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
+    when(l1.getBlock(key, true, false, true, BlockType.DATA)).thenReturn(block);
+    when(policy.shouldPromote(key, block, CacheTier.L1, context, topologyView))
+      .thenReturn(PromotionDecision.none());
+
+    CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
+
+    assertSame(block, service.getBlock(key, context));
+
+    verify(l1).getBlock(key, true, false, true, BlockType.DATA);
+    verify(l2, never()).getBlock(key, true, false, true, BlockType.DATA);
+    verify(topology).handleAccess(key, l1);
+  }
+
+  /**
+   * Verifies that a cache miss does not generate an access notification.
+   */
+  @Test
+  void testGetBlockDoesNotNotifyTopologyOnMiss() {
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    CacheRequestContext context = requestContext();
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getTiers()).thenReturn(List.of(CacheTier.L1, CacheTier.L2));
+    when(topology.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
+    when(topology.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
+    when(l1.getBlock(key, true, false, true, BlockType.DATA)).thenReturn(null);
+    when(l2.getBlock(key, true, false, true, BlockType.DATA)).thenReturn(null);
+
+    CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
+
+    assertSame(null, service.getBlock(key, context));
+
+    verify(topology, never()).handleAccess(key, l1);
+    verify(topology, never()).handleAccess(key, l2);
   }
 
   private static CacheRequestContext requestContext() {

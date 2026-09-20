@@ -215,4 +215,14 @@ public interface CacheTopology {
     return false;
   }
 
+  /**
+   * Handles an access to a block found in the specified cache engine.
+   * <p>
+   * Topologies may use this notification to propagate the access to other cache tiers. The default
+   * implementation does nothing.
+   * @param cacheKey     key identifying the accessed block
+   * @param sourceEngine engine in which the block was found
+   */
+  default void handleAccess(BlockCacheKey cacheKey, CacheEngine sourceEngine) {
+  }
 }
