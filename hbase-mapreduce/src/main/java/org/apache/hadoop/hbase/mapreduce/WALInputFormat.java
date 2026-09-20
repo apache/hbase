@@ -32,6 +32,7 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
+import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALFactory;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALStreamReader;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.mapreduce.InputFormat;
 import org.apache.hadoop.mapreduce.InputSplit;
@@ -354,12 +356,10 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
   }
 
   /**
-   * @param startTime If file looks like it has a timestamp in its name, we'll check if newer or
-   *                  equal to this value else we will filter out the file. If name does not seem to
-   *                  have a timestamp, we will just return it w/o filtering.
-   * @param endTime   If file looks like it has a timestamp in its name, we'll check if older or
-   *                  equal to this value else we will filter out the file. If name does not seem to
-   *                  have a timestamp, we will just return it w/o filtering.
+   * @param startTime Files created before this time are dropped only if confirmed closed before it.
+   *                  Files without a parseable timestamp in their name are always included.
+   * @param endTime   Files created after this time are dropped. Files without a parseable timestamp
+   *                  in their name are always included.
    */
   private List<FileStatus> getFiles(FileSystem fs, Path dir, long startTime, long endTime,
     Configuration conf) throws IOException {
@@ -375,7 +375,7 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
         // Recurse into sub directories
         result.addAll(getFiles(fs, file.getPath(), startTime, endTime, conf));
       } else {
-        addFile(result, file, startTime, endTime);
+        addFile(result, fs, file, startTime, endTime);
       }
     }
     // TODO: These results should be sorted? Results could be content of recovered.edits directory
@@ -384,18 +384,52 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
     return result;
   }
 
-  static void addFile(List<FileStatus> result, LocatedFileStatus lfs, long startTime,
+  /**
+   * Whether the file is closed and its final modification time precedes {@code time}. Only a closed
+   * file has a reliable modification time, so an open file or a non-HDFS file always returns
+   * {@code false} (kept). When the file is confirmed closed, its status is re-fetched because the
+   * {@code lfs} from {@code listLocatedStatus} may carry a stale creation-time mtime from when the
+   * file was still open.
+   */
+  private static boolean isClosedBefore(FileSystem fs, LocatedFileStatus lfs, long time) {
+    if (lfs.getModificationTime() >= time) {
+      return false;
+    }
+    try {
+      FileSystem backing = fs instanceof HFileSystem ? ((HFileSystem) fs).getBackingFs() : fs;
+      if (
+        !(backing instanceof DistributedFileSystem)
+          || !((DistributedFileSystem) backing).isFileClosed(lfs.getPath())
+      ) {
+        return false;
+      }
+      FileStatus refreshed = fs.getFileStatus(lfs.getPath());
+      return refreshed.getModificationTime() < time;
+    } catch (IOException | UnsupportedOperationException e) {
+      LOG.debug("Could not confirm closure of {}, keeping it", lfs.getPath(), e);
+      return false;
+    }
+  }
+
+  static void addFile(List<FileStatus> result, FileSystem fs, LocatedFileStatus lfs, long startTime,
     long endTime) {
     long timestamp = AbstractFSWALProvider.getTimestamp(lfs.getPath().getName());
     if (timestamp > 0) {
-      // Looks like a valid timestamp.
-      if (timestamp <= endTime && timestamp >= startTime) {
-        LOG.info("Found {}", lfs.getPath());
-        result.add(lfs);
-      } else {
-        LOG.info("Skipped {}, outside range [{}/{} - {}/{}]", lfs.getPath(), startTime,
-          Instant.ofEpochMilli(startTime), endTime, Instant.ofEpochMilli(endTime));
+      // The name carries the WAL's creation time, which only bounds its entries from below. A WAL
+      // stays open until it rolls, so one created before startTime can still hold entries in
+      // range and must not be dropped on the strength of its name alone.
+      if (timestamp > endTime) {
+        LOG.info("Skipped {}, created after endTime [{}/{}]", lfs.getPath(), endTime,
+          Instant.ofEpochMilli(endTime));
+        return;
       }
+      if (timestamp < startTime && isClosedBefore(fs, lfs, startTime)) {
+        LOG.info("Skipped {}, closed before startTime [{}/{}]", lfs.getPath(), startTime,
+          Instant.ofEpochMilli(startTime));
+        return;
+      }
+      LOG.info("Found {}", lfs.getPath());
+      result.add(lfs);
     } else {
       // If no timestamp, add it regardless.
       LOG.info("Found (no-timestamp!) {}", lfs);
