@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
@@ -156,6 +157,10 @@ public class TestOpenRegionProcedureRestoreFailedOpen {
   }
 
   @Test
+  @Disabled("branch-2 lacks the HBASE-28199/HBASE-28240 suspend-lock backport, so this test's "
+    + "crash-window setup deadlocks a real PEWorker against the RPC-handler thread instead of "
+    + "suspending; it only 'passes' via the 30s AWAIT_TIMEOUT_SECONDS unwinding the deadlock, "
+    + "which is not a deterministic regression test. See PR discussion on HBASE-30357.")
   public void testRestoreDoesNotForceOpenAfterFailedOpen() throws Exception {
     HMaster master = UTIL.getMiniHBaseCluster().getMaster();
     ProcedureExecutor<MasterProcedureEnv> procExec = master.getMasterProcedureExecutor();
