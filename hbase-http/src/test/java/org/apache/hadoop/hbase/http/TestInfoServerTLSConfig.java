@@ -28,8 +28,8 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Unit tests for {@link InfoServer}'s TLS-config resolution: the 3-tier fallback chain
- * ({@code hbase.ui.ssl.server.*} → {@code hbase.ui.ssl.*} → {@code ssl.server.*}) that
- * underpins single-EKU certificate support on the UI surface, and the client-auth-mode key.
+ * ({@code hbase.ui.ssl.server.*} → {@code hbase.ui.ssl.*} → {@code ssl.server.*}) that underpins
+ * single-EKU certificate support on the UI surface, and the client-auth-mode key.
  */
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)

@@ -444,8 +444,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     SslContext sslContext = X509Util.createSslContextForClient(conf);
     ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
     // Handshake would fail if the key manager weren't wired; smoke-test that engine creation works.
-    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
-        > 0);
+    assertTrue(
+      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
   }
 
   @TestTemplate
@@ -462,8 +462,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
 
     SslContext sslContext = X509Util.createSslContextForClient(conf);
     ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
-    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
-        > 0);
+    assertTrue(
+      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
   }
 
   @TestTemplate
@@ -480,8 +480,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
 
     SslContext sslContext = X509Util.createSslContextForServer(conf);
     ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
-    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
-        > 0);
+    assertTrue(
+      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
   }
 
   @TestTemplate
@@ -497,8 +497,8 @@ public class TestX509Util extends AbstractTestX509Parameterized {
 
     SslContext sslContext = X509Util.createSslContextForServer(conf);
     ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
-    assertTrue(sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length
-        > 0);
+    assertTrue(
+      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
   }
 
   @TestTemplate

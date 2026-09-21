@@ -314,8 +314,9 @@ public class RESTServer implements Constants {
         X509Util.resolveConfig(conf, REST_SSL_SERVER_KEYSTORE_TYPE, REST_SSL_KEYSTORE_TYPE, null);
       String password = HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_PASSWORD,
         HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_PASSWORD, null));
-      String keyPassword = HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_KEYPASSWORD,
-        HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password));
+      String keyPassword =
+        HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_KEYPASSWORD,
+          HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password));
       sslCtxFactory.setKeyStorePath(keystore);
       if (StringUtils.isNotBlank(keystoreType)) {
         sslCtxFactory.setKeyStoreType(keystoreType);

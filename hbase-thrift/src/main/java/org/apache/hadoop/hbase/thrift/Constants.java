@@ -72,12 +72,10 @@ public final class Constants {
   public static final String THRIFT_SSL_KEYSTORE_TYPE_DEFAULT = "jks";
 
   /**
-   * Role-scoped SSL configuration for single-EKU certificate support.
-   *
-   * The server-scoped hbase.thrift.ssl.server.* keys are what ThriftServer reads on the
-   * Thrift-over-HTTP transport; when set they take precedence over the corresponding
-   * unscoped hbase.thrift.ssl.* keys; when unset the unscoped keys are used as a fallback
-   * so existing deployments keep working.
+   * Role-scoped SSL configuration for single-EKU certificate support. The server-scoped
+   * hbase.thrift.ssl.server.* keys are what ThriftServer reads on the Thrift-over-HTTP transport;
+   * when set they take precedence over the corresponding unscoped hbase.thrift.ssl.* keys; when
+   * unset the unscoped keys are used as a fallback so existing deployments keep working.
    */
   public static final String THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY =
     "hbase.thrift.ssl.server.keystore.store";
@@ -97,8 +95,7 @@ public final class Constants {
   /**
    * Client-auth mode for the Thrift server's HTTP-transport TLS connector. Valid values:
    * {@code NONE}, {@code WANT}, {@code NEED} (see {@code X509Util.ClientAuth}). Default is
-   * {@code NONE}, which preserves the historical behavior of never requesting client
-   * certificates.
+   * {@code NONE}, which preserves the historical behavior of never requesting client certificates.
    */
   public static final String THRIFT_SSL_CLIENT_AUTH_MODE_KEY =
     "hbase.thrift.ssl.server.client.auth.mode";

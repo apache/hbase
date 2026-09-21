@@ -64,9 +64,9 @@ import org.apache.hbase.thirdparty.org.apache.thrift.protocol.TProtocol;
 import org.apache.hbase.thirdparty.org.apache.thrift.transport.TMemoryBuffer;
 
 /**
- * Exercises the role-scoped {@code hbase.thrift.ssl.server.*} configuration and the new
- * mutual-TLS activation on the Thrift-over-HTTP transport. Complements
- * {@link TestThriftHttpServerSSL}, which covers plain (server-only) TLS termination.
+ * Exercises the role-scoped {@code hbase.thrift.ssl.server.*} configuration and the new mutual-TLS
+ * activation on the Thrift-over-HTTP transport. Complements {@link TestThriftHttpServerSSL}, which
+ * covers plain (server-only) TLS termination.
  */
 @Tag(ClientTests.TAG)
 @Tag(LargeTests.TAG)
@@ -105,16 +105,16 @@ public class TestThriftServerSSLMutualAuth {
     // Server identity + a truststore holding the server's cert (used by the test client to
     // trust the server).
     KeyPair serverKeyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    X509Certificate serverCertificate = KeyStoreTestUtil.generateCertificate(
-      "CN=localhost, O=server", serverKeyPair, 30, "SHA1withRSA");
+    X509Certificate serverCertificate = KeyStoreTestUtil
+      .generateCertificate("CN=localhost, O=server", serverKeyPair, 30, "SHA1withRSA");
     generateTrustStore(getServerTruststoreFilePath(), serverCertificate);
     generateKeyStore(getServerKeystoreFilePath(), serverKeyPair, serverCertificate);
 
     // Distinct client cert (single-EKU clientAuth in spirit) and a truststore holding that cert
     // — this is what the server uses to validate presented client certificates.
     KeyPair clientKeyPair = KeyStoreTestUtil.generateKeyPair("RSA");
-    X509Certificate clientCertificate = KeyStoreTestUtil.generateCertificate("CN=client, O=client",
-      clientKeyPair, 30, "SHA1withRSA");
+    X509Certificate clientCertificate =
+      KeyStoreTestUtil.generateCertificate("CN=client, O=client", clientKeyPair, 30, "SHA1withRSA");
     generateTrustStore(getClientCaTruststoreFilePath(), clientCertificate);
     generateKeyStoreWithPassword(getClientKeystoreFilePath(), clientKeyPair, clientCertificate,
       CLIENT_KEY_STORE_PASSWORD);
@@ -170,8 +170,8 @@ public class TestThriftServerSSLMutualAuth {
   // ---------------------------------------------------------------------------
 
   /**
-   * With {@code client.auth.mode=NONE} (default), a client presenting no certificate is
-   * accepted — matches today's behavior.
+   * With {@code client.auth.mode=NONE} (default), a client presenting no certificate is accepted —
+   * matches today's behavior.
    */
   @Test
   public void testClientAuthNoneAcceptsClientWithoutCert() throws Exception {
@@ -258,8 +258,8 @@ public class TestThriftServerSSLMutualAuth {
   }
 
   /**
-   * Builds a client that (a) trusts the server's cert and (b) presents the client keystore. Used
-   * to satisfy {@code client.auth.mode=NEED}.
+   * Builds a client that (a) trusts the server's cert and (b) presents the client keystore. Used to
+   * satisfy {@code client.auth.mode=NEED}.
    */
   private HttpClientBuilder clientBuilderWithMutualTrust() throws Exception {
     KeyStore trustStore = loadJksTrustStore(getServerTruststoreFilePath(), TRUST_STORE_PASSWORD);

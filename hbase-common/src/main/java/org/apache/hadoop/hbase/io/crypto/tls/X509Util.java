@@ -96,9 +96,8 @@ public final class X509Util {
   //
 
   /**
-   * When set, these take precedence over the unscoped keys above; when unset, the
-   * unscoped keys are used as a fallback so existing deployments keep working
-   * unchanged.
+   * When set, these take precedence over the unscoped keys above; when unset, the unscoped keys are
+   * used as a fallback so existing deployments keep working unchanged.
    */
   static final String CLIENT_CONFIG_PREFIX = CONFIG_PREFIX + "client.";
   static final String SERVER_CONFIG_PREFIX = CONFIG_PREFIX + "server.";
@@ -206,8 +205,8 @@ public final class X509Util {
   }
 
   /**
-   * Identifies which side of a TLS connection is being configured. Used by role-aware helpers
-   * to pick the correct role-scoped configuration key for keystore/truststore material.
+   * Identifies which side of a TLS connection is being configured. Used by role-aware helpers to
+   * pick the correct role-scoped configuration key for keystore/truststore material.
    */
   enum Role {
     CLIENT,
@@ -233,8 +232,10 @@ public final class X509Util {
    * Logs (once per JVM at INFO) which key supplied the effective value, to aid diagnosing which
    * keystore/truststore is actually in use on each side of a TLS handshake.
    * @param config       the configuration to read from
-   * @param roleKey      the role-scoped key name (e.g. {@code hbase.rpc.tls.client.keystore.location})
-   * @param legacyKey    the unscoped fallback key name (e.g. {@code hbase.rpc.tls.keystore.location})
+   * @param roleKey      the role-scoped key name (e.g.
+   *                     {@code hbase.rpc.tls.client.keystore.location})
+   * @param legacyKey    the unscoped fallback key name (e.g.
+   *                     {@code hbase.rpc.tls.keystore.location})
    * @param defaultValue value to return when neither key is set; may be {@code null}
    * @return the resolved value, or {@code defaultValue} if neither key is set
    */
@@ -550,10 +551,9 @@ public final class X509Util {
 
   /**
    * Enable certificate file reloading for the RPC <em>client</em> side by creating FileWatchers for
-   * the keystore and truststore whose paths are resolved by
-   * {@link Role#CLIENT} (role-scoped keys first, legacy keys as fallback). AtomicReferences will be
-   * set with the new instances. {@code resetContext} - if not null - will be called when the file
-   * has been modified.
+   * the keystore and truststore whose paths are resolved by {@link Role#CLIENT} (role-scoped keys
+   * first, legacy keys as fallback). AtomicReferences will be set with the new instances.
+   * {@code resetContext} - if not null - will be called when the file has been modified.
    * @param keystoreWatcher   Reference to keystoreFileWatcher.
    * @param trustStoreWatcher Reference to truststoreFileWatcher.
    * @param resetContext      Callback for file changes.

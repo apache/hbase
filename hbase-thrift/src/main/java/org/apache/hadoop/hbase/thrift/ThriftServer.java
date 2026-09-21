@@ -63,12 +63,12 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SERVER_SOCKET_READ
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SERVER_SOCKET_READ_TIMEOUT_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SPNEGO_KEYTAB_FILE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SPNEGO_PRINCIPAL_KEY;
+import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_CLIENT_AUTH_MODE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_ENABLED_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_PROTOCOLS_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_INCLUDE_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_INCLUDE_PROTOCOLS_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_CLIENT_AUTH_MODE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_STORE_KEY;
@@ -427,16 +427,18 @@ public class ThriftServer extends Configured implements Tool {
       // unscoped hbase.thrift.ssl.* keys for backward compatibility with existing deployments.
       String keystore = X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY,
         THRIFT_SSL_KEYSTORE_STORE_KEY, null);
-      String password = HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_KEYSTORE_PASSWORD_KEY,
-        HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_PASSWORD_KEY, null));
-      String keyPassword = HBaseConfiguration.getPassword(conf,
-        THRIFT_SSL_SERVER_KEYSTORE_KEYPASSWORD_KEY,
-        HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY, password));
+      String password =
+        HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_KEYSTORE_PASSWORD_KEY,
+          HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_PASSWORD_KEY, null));
+      String keyPassword =
+        HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_KEYSTORE_KEYPASSWORD_KEY,
+          HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY, password));
       sslCtxFactory.setKeyStorePath(keystore);
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
-      sslCtxFactory.setKeyStoreType(X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_TYPE_KEY,
-        THRIFT_SSL_KEYSTORE_TYPE_KEY, THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
+      sslCtxFactory
+        .setKeyStoreType(X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_TYPE_KEY,
+          THRIFT_SSL_KEYSTORE_TYPE_KEY, THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
 
       // Truststore is entirely new for Thrift — no legacy fallback because there is no historical
       // hbase.thrift.ssl.truststore.* configuration. When left unset, no truststore is configured
@@ -459,8 +461,8 @@ public class ThriftServer extends Configured implements Tool {
       // Activate mTLS if configured. Default is NONE, which preserves today's behavior of never
       // requesting a client certificate on the Thrift-over-HTTP connector. Set
       // hbase.thrift.ssl.server.client.auth.mode to WANT or NEED to opt in.
-      X509Util.ClientAuth clientAuth = X509Util.ClientAuth
-        .fromPropertyValue(conf.get(THRIFT_SSL_CLIENT_AUTH_MODE_KEY, X509Util.ClientAuth.NONE.name()));
+      X509Util.ClientAuth clientAuth = X509Util.ClientAuth.fromPropertyValue(
+        conf.get(THRIFT_SSL_CLIENT_AUTH_MODE_KEY, X509Util.ClientAuth.NONE.name()));
       switch (clientAuth) {
         case NEED:
           sslCtxFactory.setNeedClientAuth(true);

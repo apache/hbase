@@ -324,9 +324,9 @@ public class HttpServer implements FilterContainer {
 
     /**
      * Specify whether the server should request a client certificate during the SSL handshake but
-     * still accept clients that do not present one. Weaker than
-     * {@link #needsClientAuth(boolean)}: use this to signal "opportunistic mTLS" where a client
-     * cert is validated when supplied but its absence is tolerated.
+     * still accept clients that do not present one. Weaker than {@link #needsClientAuth(boolean)}:
+     * use this to signal "opportunistic mTLS" where a client cert is validated when supplied but
+     * its absence is tolerated.
      */
     public Builder wantsClientAuth(boolean value) {
       this.wantsClientAuth = value;

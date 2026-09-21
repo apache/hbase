@@ -165,8 +165,8 @@ public class TestRESTServerSSL {
   // ---------------------------------------------------------------------------
 
   /**
-   * Server started with only the role-scoped hbase.rest.ssl.server.* keys (and legacy keys
-   * unset). A successful SSL connection proves the server-scoped keys were consulted.
+   * Server started with only the role-scoped hbase.rest.ssl.server.* keys (and legacy keys unset).
+   * A successful SSL connection proves the server-scoped keys were consulted.
    */
   @Test
   public void testSslConnectionUsingRoleScopedServerKeys() throws Exception {
@@ -215,8 +215,8 @@ public class TestRESTServerSSL {
   }
 
   /**
-   * With {@code client.auth.mode=NONE} (the default), a client that presents no client
-   * certificate is accepted — matching today's behavior.
+   * With {@code client.auth.mode=NONE} (the default), a client that presents no client certificate
+   * is accepted — matching today's behavior.
    */
   @Test
   public void testClientAuthNoneAcceptsClientWithoutCert() throws Exception {
@@ -228,8 +228,8 @@ public class TestRESTServerSSL {
   }
 
   /**
-   * With {@code client.auth.mode=WANT}, an anonymous client (no client cert) is still accepted;
-   * the server requests a cert but does not require it.
+   * With {@code client.auth.mode=WANT}, an anonymous client (no client cert) is still accepted; the
+   * server requests a cert but does not require it.
    */
   @Test
   public void testClientAuthWantAllowsAnonymousClient() throws Exception {
@@ -241,8 +241,8 @@ public class TestRESTServerSSL {
   }
 
   /**
-   * With {@code client.auth.mode=NEED}, an anonymous client (no client cert) is rejected during
-   * the TLS handshake. The base {@link Client} configures truststore-only, so it presents no key
+   * With {@code client.auth.mode=NEED}, an anonymous client (no client cert) is rejected during the
+   * TLS handshake. The base {@link Client} configures truststore-only, so it presents no key
    * material to the server.
    */
   @Test

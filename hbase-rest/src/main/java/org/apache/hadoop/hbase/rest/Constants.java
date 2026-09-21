@@ -78,10 +78,10 @@ public interface Constants {
   String REST_SSL_SERVER_TRUSTSTORE_TYPE = "hbase.rest.ssl.server.truststore.type";
 
   /**
-   * Client-auth mode for the REST server's TLS connector. Valid values: {@code NONE},
-   * {@code WANT}, {@code NEED} (see {@code X509Util.ClientAuth}). Default is {@code NONE}, which
-   * preserves the historical behavior of never requesting client certificates. Set to
-   * {@code NEED} to enforce mTLS.
+   * Client-auth mode for the REST server's TLS connector. Valid values: {@code NONE}, {@code WANT},
+   * {@code NEED} (see {@code X509Util.ClientAuth}). Default is {@code NONE}, which preserves the
+   * historical behavior of never requesting client certificates. Set to {@code NEED} to enforce
+   * mTLS.
    */
   String REST_SSL_CLIENT_AUTH_MODE = "hbase.rest.ssl.server.client.auth.mode";
 
