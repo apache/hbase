@@ -23,10 +23,6 @@ services:
     image: ${HBASE_IMAGE}
     container_name: ${HBASE_CONTAINER_NAME}
     hostname: ${HBASE_CONTAINER_NAME}
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - ${ACTIVE_CLUSTER_PORT}:16010 # Master UI
     volumes:
       - ./utils:${CONTAINER_UTILS_DIR}
       - ${HBASE_DATA_STORE_ROOT}/data-store/hbase:/data-store/hbase
@@ -39,10 +35,6 @@ services:
     image: ${HBASE_IMAGE}
     container_name: ${HBASE_CONTAINER_NAME}-2
     hostname: ${HBASE_CONTAINER_NAME}-2
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    ports:
-      - ${REPLICA_CLUSTER_PORT}:16010 # Master UI
     volumes:
       - ./utils:${CONTAINER_UTILS_DIR}
       - ${HBASE_DATA_STORE_ROOT}/data-store/hbase:/data-store/hbase

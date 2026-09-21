@@ -23,7 +23,6 @@ import re
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
 import docker
-import requests
 import subprocess
 import time
 import xml.etree.ElementTree as ET
@@ -51,22 +50,20 @@ class HBaseInitializationError(Exception):
 
 class HBaseDockerClient:
     def __init__(self, container_name: str, local_conf: str, hbase_ui_port: int = 16010,
-                 cluster_name: str = "HBase Cluster", max_retries: int = 12, sleep_time: int = 5,
-                 hbase_host: str = "localhost") -> None:
+                 cluster_name: str = "HBase Cluster", max_retries: int = 12, sleep_time: int = 5) -> None:
         self._container_name = container_name
         self._local_conf = local_conf
         self._hbase_ui_port = hbase_ui_port
         self._cluster_name = cluster_name
         self._max_retries = max_retries
         self._sleep_time = sleep_time
-        self._hbase_host = hbase_host
         self._docker_client = docker.from_env()
 
     @property
     def name(self) -> str:
         return self._cluster_name
 
-    def run_docker_exec_command(self, bash_cmd: str, timeout: int | None = None) -> str:
+    def run_docker_exec_command(self, bash_cmd: str, timeout: int | None = None) -> str | None:
         """
         Uses the Docker SDK to exec a Bash command in the object's Docker container.
         Equivalent to: docker exec <container> bash -c <bash_cmd>
@@ -93,8 +90,6 @@ class HBaseDockerClient:
                     pool.shutdown(wait=False, cancel_futures=True)
             else:
                 result = container.exec_run(cmd, demux=True)
-        except DockerExecCommandError:
-            raise
         except docker.errors.DockerException as e:
             raise DockerExecCommandError(
                 f"The following command failed on {self._cluster_name} ({self._container_name}): {bash_cmd}\n"
@@ -141,26 +136,27 @@ class HBaseDockerClient:
         return None
 
     def wait_for_hbase_ui(self) -> bool:
-        """Checks for a 200 OK on the HBase Master UI."""
-        # Read HBASE_HOST from environment, falling back to 'localhost' for host-native execution
-        url = f"http://{self._hbase_host}:{self._hbase_ui_port}"
-        logger.info(f"Waiting for HBase UI: {self._cluster_name} on {url}")
-        last_exception = None
+        """
+        Checks for a 200 OK on the HBase Master UI inside the container using curl.
+        """
+        check_cmd = f"curl -s -f --max-time 3 http://{self._container_name}:{self._hbase_ui_port} > /dev/null"
+
+        logger.info(f"Waiting for HBase UI inside container: {self._cluster_name} ({self._container_name})")
+        last_error = None
         for attempt in range(1, self._max_retries + 1):
             try:
-                response = requests.get(url, timeout=self._sleep_time)
-                if response.status_code == 200:
-                    logger.info(f"SUCCESS: {self._cluster_name} UI is up.")
-                    return True
-            except requests.exceptions.RequestException as e:
-                last_exception = e
-            logging.info(f"Waiting {self._sleep_time} seconds before requesting HBase UI again")
+                self.run_docker_exec_command(check_cmd, timeout=self._sleep_time)
+                logger.info(f"SUCCESS: {self._cluster_name} HBase UI is up.")
+                return True
+            except DockerExecCommandError as e:
+                last_error = e
+
+            logger.info(f"Waiting {self._sleep_time} seconds before checking HBase UI inside container again")
             time.sleep(self._sleep_time)
 
         raise HBaseInitializationError(
-            f"\nTIMEOUT: {self._cluster_name} UI failed to respond after "
-            f"{self._max_retries} attempts. "
-            f"Last raised exception was: {last_exception}"
+            f"\nTIMEOUT: {self._cluster_name} UI failed to respond inside container after "
+            f"{self._max_retries} attempts.\nLast error: {last_error}"
         )
 
     def wait_for_master_initialization(self) -> bool:
