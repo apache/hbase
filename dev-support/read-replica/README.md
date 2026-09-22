@@ -128,7 +128,7 @@ branches, separate from the main HBase nightly build.
 | # | Step | Description |
 |---|------|-------------|
 | 1 | Clone HBase source | `git clone --local` into `read-replica/hbase/` for the Docker build context (Docker COPY can't follow symlinks) |
-| 2 | Source `.env` and clean old logs | Loads environment variables and removes log directories from prior runs |
+| 2 | Source `.env` | Loads environment variables |
 | 3 | Register cleanup trap | On exit: runs `docker compose down` (unless `--keep-containers`), removes the Docker image (unless `--keep-image`), and deletes the cloned source |
 | 4 | Copy Protobuf | Copies the latest `ActiveClusterSuffix.proto` from the source tree into `python/proto/` |
 | 5 | Set up Python environment | Creates a venv, installs dependencies from `requirements.txt` |
@@ -263,16 +263,13 @@ docker compose -f docker-compose.yml down
 
 ### Mounted Volumes
 
-The data-store directory (`tmp-read-replica-data/`) and log directories (`cluster1/logs/`,
-`cluster2/logs/`) are mounted into the containers. Between `docker compose down` and
-`docker compose up`, consider removing these directories to start with a clean state:
+The data-store directory (`tmp-read-replica-data/`) is mounted into the containers. Between
+`docker compose down` and `docker compose up`, consider removing this directory to start with
+a clean state:
 
 ```bash
-rm -rf tmp-read-replica-data cluster1/logs cluster2/logs
+rm -rf tmp-read-replica-data
 ```
-
-The shell script automatically cleans the log directories on each run, but the data-store
-directory persists across runs.
 
 **Prerequisites:** Docker, Docker Compose, Python 3, Maven, JDK 17.
 
