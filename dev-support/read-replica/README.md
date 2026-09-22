@@ -191,7 +191,6 @@ Defines environment variables consumed by Docker Compose, the build script, and 
 
 - `HBASE_IMAGE` — Docker image tag
 - `HBASE_DATA_STORE_ROOT` — Host path for the shared data store
-- `ACTIVE_CLUSTER_PORT` / `REPLICA_CLUSTER_PORT` — Mapped HBase Master UI ports (16010 / 26010)
 - `DOCKER_COMPOSE_FILE` — Absolute path to `docker-compose.yml`
 
 ### Protobuf Verification

@@ -63,7 +63,7 @@ class HBaseDockerClient:
     def name(self) -> str:
         return self._cluster_name
 
-    def run_docker_exec_command(self, bash_cmd: str, timeout: int | None = None) -> str | None:
+    def run_docker_exec_command(self, bash_cmd: str, timeout: int | None = None) -> str:
         """
         Uses the Docker SDK to exec a Bash command in the object's Docker container.
         Equivalent to: docker exec <container> bash -c <bash_cmd>
