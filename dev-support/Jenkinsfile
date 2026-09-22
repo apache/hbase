@@ -321,7 +321,7 @@ pipeline {
                 else
                   echo "No archiver directory, skipping compressing."
                 fi
-'''
+              '''
               sshPublisher(publishers: [
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
@@ -340,7 +340,7 @@ pipeline {
                 else
                   echo "No test_logs.zip, skipping"
                 fi
-'''
+              '''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -434,7 +434,7 @@ pipeline {
                 else
                   echo "No archiver directory, skipping compressing."
                 fi
-'''
+              '''
               sshPublisher(publishers: [
                 sshPublisherDesc(configName: 'Nightlies',
                   transfers: [
@@ -453,7 +453,7 @@ pipeline {
                 else
                   echo "No test_logs.zip, skipping"
                 fi
-'''
+              '''
               // Has to be relative to WORKSPACE.
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/*"
               archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*"
@@ -582,7 +582,6 @@ pipeline {
             }
           }
         }
-
         stage ('yetus jdk17 hadoop3 checks') {
           agent {
             node {
