@@ -51,4 +51,9 @@ public interface MetricsMasterProcSource extends BaseSource {
 
   String NUM_MASTER_WALS_DESC = "Number of master WAL files";
 
+  String OLDEST_PROCEDURE_AGE_NAME = "oldestProcedureAge";
+
+  String OLDEST_PROCEDURE_AGE_DESC =
+    "Age in milliseconds of the oldest active master procedure (Gauge).";
+
 }
