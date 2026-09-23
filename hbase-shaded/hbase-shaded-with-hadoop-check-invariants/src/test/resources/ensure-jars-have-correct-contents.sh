@@ -137,6 +137,14 @@ for artifact in "${artifact_list[@]}"; do
   if "${JAR}" tf "${artifact}" | grep -q '^META-INF/services/java\.net\.spi\.InetAddressResolverProvider$'; then
     bad_contents+=("Declares java.net.spi.InetAddressResolverProvider, which breaks all DNS resolution on JDK18+")
   fi
+  if "${JAR}" tf "${artifact}" | grep -q '^org/apache/hadoop/hbase/shaded/com/google/errorprone/annotations/'; then
+    bad_contents+=("Contains relocated Error Prone annotations")
+  fi
+  if "${JAR}" tf "${artifact}" | grep -q '^org/apache/hadoop/hbase/nio/ByteBuff.class$' &&
+    ! "${JAVA_HOME}/bin/javap" -v -classpath "${artifact}" org.apache.hadoop.hbase.nio.ByteBuff |
+      grep -q 'Lcom/google/errorprone/annotations/RestrictedApi;'; then
+    bad_contents+=("ByteBuff no longer references the original RestrictedApi annotation")
+  fi
   if [ ${#bad_contents[@]} -gt 0 ]; then
     echo "[ERROR] Found artifact with unexpected contents: '${artifact}'"
     echo "    Please check the following and either correct the build or update"
