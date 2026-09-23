@@ -113,13 +113,13 @@ read-replica/
 ## CI: Jenkins Nightly Pipeline
 
 **Files:**
-- `dev-support/Jenkinsfile` — stage definition (`hbase read-replica feature checks`)
-- `dev-support/hbase_nightly_read_replica_test.sh` — test driver script
+- `dev-support/read-replica/Jenkinsfile` — pipeline definition (`hbase read-replica feature checks`)
+- `dev-support/read-replica/hbase_nightly_read_replica_test.sh` — test driver script
 
 ### When It Runs
 
-The read-replica stage runs as part of the HBase nightly build on the `master` and `branch-3`
-branches. It executes in parallel alongside the other nightly check stages (Yetus, JDK8/11/17).
+The read-replica tests run as their own standalone nightly pipeline on the `master` and `branch-3`
+branches, separate from the main HBase nightly build.
 
 ### What the Test Driver Does
 
@@ -128,7 +128,7 @@ branches. It executes in parallel alongside the other nightly check stages (Yetu
 | # | Step | Description |
 |---|------|-------------|
 | 1 | Clone HBase source | `git clone --local` into `read-replica/hbase/` for the Docker build context (Docker COPY can't follow symlinks) |
-| 2 | Source `.env` and clean old logs | Loads environment variables and removes log directories from prior runs |
+| 2 | Source `.env` | Loads environment variables |
 | 3 | Register cleanup trap | On exit: runs `docker compose down` (unless `--keep-containers`), removes the Docker image (unless `--keep-image`), and deletes the cloned source |
 | 4 | Copy Protobuf | Copies the latest `ActiveClusterSuffix.proto` from the source tree into `python/proto/` |
 | 5 | Set up Python environment | Creates a venv, installs dependencies from `requirements.txt` |
@@ -191,7 +191,6 @@ Defines environment variables consumed by Docker Compose, the build script, and 
 
 - `HBASE_IMAGE` — Docker image tag
 - `HBASE_DATA_STORE_ROOT` — Host path for the shared data store
-- `ACTIVE_CLUSTER_PORT` / `REPLICA_CLUSTER_PORT` — Mapped HBase Master UI ports (16010 / 26010)
 - `DOCKER_COMPOSE_FILE` — Absolute path to `docker-compose.yml`
 
 ### Protobuf Verification
@@ -208,7 +207,7 @@ useful for reproducing test failures seen in CI.
 
 ```bash
 # From the repo root — run the full suite
-dev-support/hbase_nightly_read_replica_test.sh
+dev-support/read-replica/hbase_nightly_read_replica_test.sh
 ```
 
 The script accepts two flags for local debugging:
@@ -220,7 +219,7 @@ The script accepts two flags for local debugging:
 
 ```bash
 # Keep the image and containers for debugging
-dev-support/hbase_nightly_read_replica_test.sh --keep-image --keep-containers
+dev-support/read-replica/hbase_nightly_read_replica_test.sh --keep-image --keep-containers
 ```
 
 ### Running Manually
@@ -264,16 +263,13 @@ docker compose -f docker-compose.yml down
 
 ### Mounted Volumes
 
-The data-store directory (`tmp-read-replica-data/`) and log directories (`cluster1/logs/`,
-`cluster2/logs/`) are mounted into the containers. Between `docker compose down` and
-`docker compose up`, consider removing these directories to start with a clean state:
+The data-store directory (`tmp-read-replica-data/`) is mounted into the containers. Between
+`docker compose down` and `docker compose up`, consider removing this directory to start with
+a clean state:
 
 ```bash
-rm -rf tmp-read-replica-data cluster1/logs cluster2/logs
+rm -rf tmp-read-replica-data
 ```
-
-The shell script automatically cleans the log directories on each run, but the data-store
-directory persists across runs.
 
 **Prerequisites:** Docker, Docker Compose, Python 3, Maven, JDK 17.
 

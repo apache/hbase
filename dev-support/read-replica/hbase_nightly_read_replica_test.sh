@@ -20,10 +20,9 @@
 
 set -e
 
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REPLICA_DIR="${SCRIPT_DIR}/read-replica"
+REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPLICA_DIR}/output}"
-export HBASE_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
+export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 
 export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
 
@@ -48,12 +47,11 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-echo "Script dir: ${SCRIPT_DIR}"
 echo "Replica dir: ${REPLICA_DIR}"
 echo "Output dir: ${OUTPUT_DIR}"
 echo "HBase root: ${HBASE_ROOT}"
 
-echo "Changing to replica dir: REPLICA_DIR"
+echo "Changing to replica dir: ${REPLICA_DIR}"
 cd "${REPLICA_DIR}"
 
 echo "Sourcing environment file: $(pwd)/.env"
@@ -67,13 +65,6 @@ echo "REPLICA_CLUSTER_CONF_DIR=${REPLICA_CLUSTER_CONF_DIR}"
 echo "DOCKER_COMPOSE_FILE=${DOCKER_COMPOSE_FILE}"
 echo "HBASE_DATA_STORE_ROOT=${HBASE_DATA_STORE_ROOT}"
 echo "realpath of HBASE_DATA_STORE_ROOT=$(realpath ${HBASE_DATA_STORE_ROOT})"
-
-echo "Removing HBase log directories from mounted volumes that may exist from a previous test run:"
-echo "ACTIVE_CLUSTER_LOGS_DIR=${ACTIVE_CLUSTER_LOGS_DIR}"
-echo "REPLICA_CLUSTER_LOGS_DIR=${REPLICA_CLUSTER_LOGS_DIR}"
-rm -rf "${ACTIVE_CLUSTER_LOGS_DIR}" "${REPLICA_CLUSTER_LOGS_DIR}"
-mkdir -p "${ACTIVE_CLUSTER_LOGS_DIR}" "${REPLICA_CLUSTER_LOGS_DIR}"
-chmod 777 "${ACTIVE_CLUSTER_LOGS_DIR}" "${REPLICA_CLUSTER_LOGS_DIR}"
 
 # Clone HBase source for Docker build context (Docker COPY doesn't follow symlinks)
 echo "Cloning HBase source into ${REPLICA_DIR}/hbase for Docker build context..."
