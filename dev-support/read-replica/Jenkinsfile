@@ -54,6 +54,7 @@ pipeline {
         anyOf {
           branch 'master'
           branch 'branch-3*'
+          branch 'HBASE-30087'
         }
       }
       environment {
