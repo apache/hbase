@@ -17,9 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_REPLICATION_PEER;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;

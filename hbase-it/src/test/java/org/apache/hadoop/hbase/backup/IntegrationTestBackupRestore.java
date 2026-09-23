@@ -26,8 +26,8 @@ import org.apache.hadoop.hbase.backup.impl.BackupManager;
 import org.apache.hadoop.hbase.testclassification.IntegrationTests;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.Tag;
+import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
