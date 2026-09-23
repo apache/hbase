@@ -36,13 +36,21 @@ import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplica
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.OFFSET_UPDATE_INTERVAL_MS_KEY;
 import static org.apache.hadoop.hbase.replication.ReplicationUtils.OFFSET_UPDATE_SIZE_THRESHOLD_KEY;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -60,7 +68,9 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -208,7 +218,12 @@ public class FullTableBackupClient extends TableBackupClient {
   }
 
   private void handleNonContinuousBackup(Admin admin) throws IOException {
-    performLogRoll();
+    Map<String, Long> previousLogRollsByHost = backupManager.readRegionServerLastLogRollResult();
+    Map<String, Long> latestLogRollsByHost = performLogRoll();
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    newTimestamps = computeLogBoundaries(walRootDir.getFileSystem(conf), walRootDir,
+      BackupUtils.getRolledHosts(previousLogRollsByHost, latestLogRollsByHost), admin);
+
     performBackupSnapshots(admin);
     backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
 
@@ -219,7 +234,7 @@ public class FullTableBackupClient extends TableBackupClient {
     updateBackupMetadata();
   }
 
-  private void performLogRoll() throws IOException {
+  private Map<String, Long> performLogRoll() throws IOException {
     // We roll log here before we do the snapshot. It is possible there is duplicate data
     // in the log that is already in the snapshot. But if we do it after the snapshot, we
     // could have data loss.
@@ -227,7 +242,7 @@ public class FullTableBackupClient extends TableBackupClient {
     // the snapshot.
     LOG.info("Execute roll log procedure for full backup ...");
     BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
-    newTimestamps = backupManager.readRegionServerLastLogRollResult();
+    return backupManager.readRegionServerLastLogRollResult();
   }
 
   private void performBackupSnapshots(Admin admin) throws IOException {
@@ -246,6 +261,75 @@ public class FullTableBackupClient extends TableBackupClient {
       snapshotTable(admin, tableName, snapshotName);
       backupInfo.setSnapshotName(tableName, snapshotName);
     }
+  }
+
+  /**
+   * Computes the per-host log boundaries stored by this full backup, using
+   * {@link BackupUtils#computeLogBoundaries}. A host that took part in this backup's log roll gets
+   * its roll result: WALs created after the roll are included in the next incremental backup, even
+   * though some of their edits may already be in the snapshot, which is safe because deletes are
+   * replayed along with the puts. For any other host, its archived WALs and the WALs of dead
+   * servers are covered by the snapshot, so the next incremental backup does not replay them. The
+   * WALs of a live server that did not take part in the roll (for example one that started during
+   * it) are pending, because they can still receive edits that are not in the snapshot. The live
+   * servers are read only after the WAL directories are listed: a region server creates its WAL
+   * directory only after the master registers it, so every live server whose directory was listed
+   * is found. If the live servers do not include every host that took part in the roll, the
+   * master's server list is incomplete (for example right after a master failover), and the backup
+   * fails instead of treating live servers as dead. It must run right after the log roll, before
+   * the snapshot is taken, so that a host starting later gets no boundary and has all of its WALs
+   * included in the next incremental backup.
+   */
+  @RestrictedApi(
+      explanation = "Package-private for test visibility only. Do not use outside tests.",
+      link = "",
+      allowedOnPath = "(.*/src/test/.*|.*/org/apache/hadoop/hbase/backup/impl/FullTableBackupClient.java)")
+  static Map<String, Long> computeLogBoundaries(FileSystem fs, Path walRootDir,
+    Map<String, Long> rolledHosts, Admin admin) throws IOException {
+    Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
+    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+
+    Map<ServerName, List<String>> logsByServer = new HashMap<>();
+    for (FileStatus serverLogDir : fs.listStatus(logDir)) {
+      ServerName serverName =
+        AbstractFSWALProvider.getServerNameFromWALDirectoryName(serverLogDir.getPath());
+      if (serverName == null) {
+        continue;
+      }
+      List<String> logs = logsByServer.computeIfAbsent(serverName, k -> new ArrayList<>());
+      for (FileStatus log : fs.listStatus(serverLogDir.getPath())) {
+        if (!AbstractFSWALProvider.isMetaFile(log.getPath())) {
+          logs.add(log.getPath().toString());
+        }
+      }
+    }
+
+    Set<ServerName> live = new HashSet<>(admin.getRegionServers());
+    Set<String> liveAddresses =
+      live.stream().map(sn -> sn.getAddress().toString()).collect(Collectors.toSet());
+    if (!liveAddresses.containsAll(rolledHosts.keySet())) {
+      throw new IOException("Live region servers " + live + " do not include every host that took"
+        + " part in this backup's log roll " + rolledHosts.keySet() + ". The master's server list"
+        + " may be incomplete, for example during a master failover, so the backup is failed to be"
+        + " retried.");
+    }
+
+    List<String> coveredLogs = new ArrayList<>();
+    List<String> pendingLogs = new ArrayList<>();
+    for (Map.Entry<ServerName, List<String>> entry : logsByServer.entrySet()) {
+      if (live.contains(entry.getKey())) {
+        pendingLogs.addAll(entry.getValue());
+      } else {
+        coveredLogs.addAll(entry.getValue());
+      }
+    }
+
+    if (fs.exists(oldLogDir)) {
+      BackupUtils.getFiles(fs, oldLogDir, coveredLogs,
+        path -> !AbstractFSWALProvider.isMetaFile(path));
+    }
+
+    return BackupUtils.computeLogBoundaries(rolledHosts, coveredLogs, pendingLogs);
   }
 
   private void updateBackupMetadata() throws IOException {

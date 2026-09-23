@@ -31,6 +31,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
@@ -38,6 +39,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
+import java.util.Set;
 import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.function.Predicate;
@@ -204,6 +206,84 @@ public final class BackupUtils {
       LOG.error("Skip log file (can't parse): " + p, e);
       return null;
     }
+  }
+
+  /**
+   * Returns the log roll result of every region server that took part in the log roll that happened
+   * between reading {@code previousLogRolls} and {@code latestLogRolls}. A region server that did
+   * not take part (for example because it is offline) keeps its old roll result, which is never
+   * removed, so it is recognized by its roll result not changing.
+   * @param previousLogRolls roll results by host, read before the log roll
+   * @param latestLogRolls   roll results by host, read after the log roll
+   * @return roll results by host, for the hosts that took part in the log roll
+   */
+  public static Map<String, Long> getRolledHosts(Map<String, Long> previousLogRolls,
+    Map<String, Long> latestLogRolls) {
+    return latestLogRolls.entrySet().stream()
+      .filter(entry -> !entry.getValue().equals(previousLogRolls.get(entry.getKey())))
+      .collect(Collectors.toMap(Entry::getKey, Entry::getValue));
+  }
+
+  /**
+   * Computes the per-host log boundaries stored by a backup that has no previous boundaries to
+   * carry forward, such as a full backup. See
+   * {@link #computeLogBoundaries(Map, Map, Set, Collection, Collection)}.
+   */
+  public static Map<String, Long> computeLogBoundaries(Map<String, Long> rolledHosts,
+    Collection<String> coveredLogs, Collection<String> pendingLogs) throws IOException {
+    return computeLogBoundaries(rolledHosts, Collections.emptyMap(), Collections.emptySet(),
+      coveredLogs, pendingLogs);
+  }
+
+  /**
+   * Computes the per-host log boundaries stored by a backup. Everything up to a host's boundary is
+   * covered by backups, so later incremental backups only include that host's logs that are newer.
+   * <ul>
+   * <li>A host that took part in the backup's log roll gets its roll result.</li>
+   * <li>Any other host gets the creation time of its newest covered log, capped to just below its
+   * oldest pending log, so that pending logs are included in a later backup.</li>
+   * <li>A host without covered or pending logs keeps its previous boundary while it still has logs,
+   * and otherwise gets no boundary.</li>
+   * </ul>
+   * Capping is needed because a host's logs can still be pending while some of its newer logs are
+   * already covered, for example when a dead server's logs are split and archived out of order. A
+   * host is also kept while any of its logs are pending, even if none are covered, because without
+   * a boundary the next backup would treat it as unknown and skip its older logs. For the same
+   * reason a host keeps its previous boundary while it still has logs: without it, the next backup
+   * would include its logs that are already covered, which can bring back deleted data.
+   * @param rolledHosts        roll results of the hosts that took part in the log roll
+   * @param previousBoundaries boundaries stored by the previous backup
+   * @param hostsWithLogs      hosts that still have logs, whether or not this backup includes them
+   * @param coveredLogs        logs whose edits are covered by this backup
+   * @param pendingLogs        logs whose edits might not be covered by this backup
+   * @return boundaries by host
+   */
+  public static Map<String, Long> computeLogBoundaries(Map<String, Long> rolledHosts,
+    Map<String, Long> previousBoundaries, Set<String> hostsWithLogs, Collection<String> coveredLogs,
+    Collection<String> pendingLogs) throws IOException {
+    Map<String, Long> otherHosts = new HashMap<>();
+    for (String log : coveredLogs) {
+      Path path = new Path(log);
+      String host = parseHostNameFromLogFile(path);
+      if (host != null && !rolledHosts.containsKey(host)) {
+        otherHosts.merge(host, getCreationTime(path), Math::max);
+      }
+    }
+    for (String log : pendingLogs) {
+      Path path = new Path(log);
+      String host = parseHostNameFromLogFile(path);
+      if (host != null && !rolledHosts.containsKey(host)) {
+        otherHosts.merge(host, getCreationTime(path) - 1, Math::min);
+      }
+    }
+    Map<String, Long> boundaries = new HashMap<>(rolledHosts);
+    boundaries.putAll(otherHosts);
+    for (Entry<String, Long> previous : previousBoundaries.entrySet()) {
+      if (hostsWithLogs.contains(previous.getKey())) {
+        boundaries.putIfAbsent(previous.getKey(), previous.getValue());
+      }
+    }
+    return boundaries;
   }
 
   /**
