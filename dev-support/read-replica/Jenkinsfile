@@ -1,0 +1,211 @@
+// Licensed to the Apache Software Foundation (ASF) under one
+// or more contributor license agreements.  See the NOTICE file
+// distributed with this work for additional information
+// regarding copyright ownership.  The ASF licenses this file
+// to you under the Apache License, Version 2.0 (the
+// "License"); you may not use this file except in compliance
+// with the License.  You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing,
+// software distributed under the License is distributed on an
+// "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+// KIND, either express or implied.  See the License for the
+// specific language governing permissions and limitations
+// under the License.
+pipeline {
+  agent {
+    node {
+      label 'hbase'
+    }
+  }
+  triggers {
+    pollSCM(getCronParams(env.BRANCH_NAME))
+  }
+  options {
+    buildDiscarder(logRotator(numToKeepStr: '20'))
+    timeout (time: 2, unit: 'HOURS')
+    timestamps()
+    skipDefaultCheckout()
+    disableConcurrentBuilds()
+  }
+  environment {
+    OUTPUT_DIR_RELATIVE_READ_REPLICA = 'output-read-replica'
+  }
+  parameters {
+    booleanParam(name: 'DEBUG', defaultValue: false, description: 'Produce a lot more meta-information.')
+  }
+  stages {
+    stage ('scm-checkout') {
+      steps {
+        dir('component') {
+          checkout scm
+        }
+      }
+    }
+    stage ('init health results') {
+      steps {
+        stash name: 'read-replica-result', allowEmpty: true, includes: "${OUTPUT_DIR_RELATIVE_READ_REPLICA}/doesn't-match"
+      }
+    }
+    stage ('hbase read-replica feature checks') {
+      when {
+        anyOf {
+          branch 'master'
+          branch 'branch-3*'
+        }
+      }
+      environment {
+        BASEDIR = "${env.WORKSPACE}/component"
+        OUTPUT_DIR_RELATIVE = "${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}"
+        OUTPUT_DIR = "${env.WORKSPACE}/${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}"
+      }
+      steps {
+        sh '''#!/usr/bin/env bash
+          set -e
+          rm -rf "${OUTPUT_DIR}" && mkdir -p "${OUTPUT_DIR}"
+          echo '(x) {color:red}-1 read-replica checks{color}' >"${OUTPUT_DIR}/commentfile"
+          echo "-- Something went wrong running this stage, please [check relevant console output|${BUILD_URL}/console]." >> "${OUTPUT_DIR}/commentfile"
+        '''
+        dir('component') {
+          checkout scm
+        }
+        sh '''#!/usr/bin/env bash
+          set -e
+          rm -rf "${OUTPUT_DIR}/machine" && mkdir -p "${OUTPUT_DIR}/machine"
+          "${BASEDIR}/dev-support/gather_machine_environment.sh" "${OUTPUT_DIR_RELATIVE}/machine"
+          echo "got the following saved stats in '${OUTPUT_DIR_RELATIVE}/machine'"
+          ls -lh "${OUTPUT_DIR_RELATIVE}/machine"
+        '''
+        script {
+          def ret = sh(
+            returnStatus: true,
+            script: '''#!/usr/bin/env bash
+              set -e
+              declare -i status=0
+              if "${BASEDIR}/dev-support/read-replica/hbase_nightly_read_replica_test.sh" ; then
+                echo '(/) {color:green}+1 read-replica checks{color}' > "${OUTPUT_DIR}/commentfile"
+              else
+                echo '(x) {color:red}-1 read-replica checks{color}' > "${OUTPUT_DIR}/commentfile"
+                status=1
+              fi
+              echo "-- For more information [see read-replica test report|${BUILD_URL}Read_20Replica_20Nightly_20Test_20Report/]" >> "${OUTPUT_DIR}/commentfile"
+              exit "${status}"
+            '''
+          )
+          if (ret != 0) {
+            // mark the build as UNSTABLE instead of FAILURE to allow post processing of test reports (HBASE-26339)
+            currentBuild.result = 'UNSTABLE'
+          }
+        }
+      }
+      post {
+        always {
+          junit testResults: "${env.OUTPUT_DIR_RELATIVE}/read-replica-nightly-test-results.xml", allowEmptyResults: true
+
+          publishHTML target: [
+            allowMissing         : true,
+            keepAll              : true,
+            alwaysLinkToLastBuild: true,
+            reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
+            reportFiles          : 'read-replica-nightly-test-report.html',
+            reportName           : 'Read Replica Nightly Test Report'
+          ]
+
+          stash name: 'read-replica-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"
+          archiveArtifacts artifacts: "${env.OUTPUT_DIR_RELATIVE}/**/*", allowEmptyArchive: true
+        }
+      }
+    }
+  }
+  post {
+    always {
+      script {
+        try {
+          sh "printenv"
+          sh '''
+            echo "Clean up result directories"
+            rm -rf ${OUTPUT_DIR_RELATIVE_READ_REPLICA}
+          '''
+          unstash 'read-replica-result'
+
+          def results = ["${env.OUTPUT_DIR_RELATIVE_READ_REPLICA}/commentfile"]
+          echo env.BRANCH_NAME
+          echo env.BUILD_URL
+          echo currentBuild.result
+          echo currentBuild.durationString
+          def comment = "Results for branch ${env.BRANCH_NAME}\n"
+          comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
+          if (currentBuild.result == null || currentBuild.result == "SUCCESS") {
+             comment += "(/) *{color:green}+1 overall{color}*\n"
+          } else {
+             comment += "(x) *{color:red}-1 overall{color}*\n"
+          }
+          comment += "----\ndetails (if available):\n\n"
+          echo ""
+          echo "[DEBUG] trying to aggregate step-wise results"
+          comment += results.collect { fileExists(file: it) ? readFile(file: it) : "" }.join("\n\n")
+          echo "[INFO] Comment:"
+          echo comment
+          echo ""
+          echo "[DEBUG] checking to see if feature branch"
+          def jiras = getJirasToComment(env.BRANCH_NAME, [])
+          if (jiras.isEmpty()) {
+            echo "[DEBUG] non-feature branch, checking change messages for jira keys."
+            echo "[INFO] There are ${currentBuild.changeSets.size()} change sets."
+            jiras = getJirasToCommentFromChangesets(currentBuild)
+          }
+          jiras.each { currentIssue ->
+            jiraComment issueKey: currentIssue, body: comment
+          }
+        } catch (Exception exception) {
+          echo "Got exception: ${exception}"
+          echo "    ${exception.getStackTrace()}"
+        }
+      }
+    }
+  }
+}
+import org.jenkinsci.plugins.workflow.support.steps.build.RunWrapper
+@NonCPS
+List<String> getJirasToCommentFromChangesets(RunWrapper thisBuild) {
+  def seenJiras = []
+  thisBuild.changeSets.each { cs ->
+    cs.getItems().each { change ->
+      CharSequence msg = change.msg
+      echo "change: ${change}"
+      echo "     ${msg}"
+      echo "     ${change.commitId}"
+      echo "     ${change.author}"
+      echo ""
+      seenJiras = getJirasToComment(msg, seenJiras)
+    }
+  }
+  return seenJiras
+}
+@NonCPS
+List<String> getJirasToComment(CharSequence source, List<String> seen) {
+  source.eachMatch("HBASE-[0-9]+") { currentIssue ->
+    echo "[DEBUG] found jira key: ${currentIssue}"
+    if (currentIssue in seen) {
+      echo "[DEBUG] already commented on ${currentIssue}."
+    } else {
+      echo "[INFO] commenting on ${currentIssue}."
+      seen << currentIssue
+    }
+  }
+  return seen
+}
+@NonCPS
+String getCronParams(String branchName) {
+  if (branchName == 'master') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-3') {
+    return 'H H 1-31/3 * *'
+  } else if (branchName == 'branch-2') {
+    return 'H H 2-31/3 * *'
+  } else {
+    return 'H H 3-31/3 * *'
+  }
+}

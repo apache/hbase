@@ -67,12 +67,10 @@ def load_env_and_set_up_clients(cluster1_name: str = "Cluster 1",
 
     active_cluster = HBaseDockerClient(container_name=container_name,
                                        local_conf=f"{get_env('ACTIVE_CLUSTER_CONF_DIR')}/hbase-site.xml",
-                                       hbase_ui_port=get_env('ACTIVE_CLUSTER_PORT'),
-                                       cluster_name=cluster1_name, hbase_host=get_env('HBASE_HOST'))
+                                       cluster_name=cluster1_name)
     replica_cluster = HBaseDockerClient(container_name=f'{container_name}-2',
                                         local_conf=f"{get_env('REPLICA_CLUSTER_CONF_DIR')}/hbase-site.xml",
-                                        hbase_ui_port=get_env('REPLICA_CLUSTER_PORT'),
-                                        cluster_name=cluster2_name, hbase_host=get_env('HBASE_HOST'))
+                                        cluster_name=cluster2_name)
     return active_cluster, replica_cluster
 
 
