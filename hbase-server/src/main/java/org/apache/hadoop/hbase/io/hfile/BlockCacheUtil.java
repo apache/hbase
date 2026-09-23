@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -244,6 +245,51 @@ public class BlockCacheUtil {
       }
     } finally {
       // Release this block to decrement the reference count.
+      existingBlock.release();
+    }
+  }
+
+  /**
+   * Because of region splitting, it is possible that the split key is located in the middle of a
+   * block. As a result, both daughter regions may load the same block from their parent HFile.
+   * <p>
+   * When using positional reads, HBase does not force the read to include the complete next-block
+   * header. Therefore, when two threads try to cache the same block, one thread may have read the
+   * complete next-block header while the other did not. If the already cached block does not
+   * contain {@code nextBlockOnDiskSize} but the new block does, replacing the existing block with
+   * the new one improves subsequent read performance. See HBASE-20447.
+   * </p>
+   * @param cacheEngine cache engine to check
+   * @param cacheKey    block cache key
+   * @param newBlock    new block being considered for insertion
+   * @return {@code true} if the existing cached block should be replaced by {@code newBlock};
+   *         {@code false} if the existing cached block should be retained
+   */
+  public static boolean shouldReplaceExistingCacheBlock(CacheEngine cacheEngine,
+    BlockCacheKey cacheKey, Cacheable newBlock) {
+    // NOTICE: getBlock retains the existingBlock before returning it.
+    Cacheable existingBlock = cacheEngine.getBlock(cacheKey, false, false, false);
+    if (existingBlock == null) {
+      return true;
+    }
+
+    try {
+      int comparison = BlockCacheUtil.validateBlockAddition(existingBlock, newBlock, cacheKey);
+      if (comparison < 0) {
+        LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the new block has "
+          + "nextBlockOnDiskSize set. Caching new block.");
+        return true;
+      } else if (comparison > 0) {
+        LOG.warn("Cached block contents differ by nextBlockOnDiskSize, the existing block has "
+          + "nextBlockOnDiskSize set. Keeping cached block.");
+        return false;
+      } else {
+        LOG.debug("Caching an already cached block: {}. This is harmless and can happen in rare "
+          + "cases (see HBASE-8547)", cacheKey);
+        return false;
+      }
+    } finally {
+      // Release the reference retained by CacheEngine#getBlock.
       existingBlock.release();
     }
   }

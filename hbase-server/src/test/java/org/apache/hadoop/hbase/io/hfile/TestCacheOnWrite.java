@@ -166,8 +166,8 @@ public class TestCacheOnWrite {
     Configuration conf = TEST_UTIL.getConfiguration();
     List<CacheAccessService> caches = new ArrayList<>();
     // default
-    caches.add(CacheAccessServiceTestFactory.fromConfiguration(conf));
-
+    BlockCache defaultBlockCache = BlockCacheFactory.createBlockCache(conf);
+    caches.add(CacheAccessServices.fromBlockCache(defaultBlockCache));
     // set LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
     TEST_UTIL.getConfiguration().setFloat(LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
       2.0f);

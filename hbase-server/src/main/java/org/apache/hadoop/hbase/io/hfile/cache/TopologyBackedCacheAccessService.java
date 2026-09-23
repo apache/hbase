@@ -73,6 +73,10 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     this.policy = Objects.requireNonNull(policy, "policy must not be null");
     this.topologyView =
       Objects.requireNonNull(topology.getView(), "topology view must not be null");
+    for (CacheTier tier : topology.getTiers()) {
+      topology.getEngine(tier)
+        .ifPresent(engine -> engine.setEvictionListener(this::handleEngineEviction));
+    }
   }
 
   /**
@@ -138,6 +142,7 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
 
   private Cacheable getBlockFromTieredExclusiveTopology(BlockCacheKey cacheKey,
     CacheRequestContext context) {
+
     Optional<CacheEngine> l1 = topology.getEngine(CacheTier.L1);
     Optional<CacheEngine> l2 = topology.getEngine(CacheTier.L2);
 
@@ -163,11 +168,6 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     }
 
     Cacheable block = getBlockFromEngine(selectedEngine, cacheKey, context);
-    boolean updateCacheMetrics = context.isUpdateCacheMetrics();
-    boolean caching = context.isCaching();
-    if (updateCacheMetrics) {
-      updateBlockMetrics(block, cacheKey, selectedEngine, caching);
-    }
 
     if (block != null) {
       maybePromote(cacheKey, block, selectedTier, selectedEngine, context);
@@ -193,19 +193,6 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     }
 
     return null;
-  }
-
-  private void updateBlockMetrics(Cacheable block, BlockCacheKey key, CacheEngine engine,
-    boolean caching) {
-    CacheStats stats = engine.getStats();
-    if (stats == null) {
-      return;
-    }
-    if (block == null) {
-      stats.miss(caching, key.isPrimary(), key.getBlockType());
-    } else {
-      stats.hit(caching, key.isPrimary(), key.getBlockType());
-    }
   }
 
   /**
@@ -742,5 +729,16 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
   @Override
   public Iterator<CachedBlock> iterator() {
     return asCachedBlockIterable().orElse(Collections.emptyList()).iterator();
+  }
+
+  /**
+   * Handles a capacity-driven eviction reported by a cache engine.
+   * @param sourceEngine engine that evicted the block
+   * @param cacheKey     key identifying the evicted block
+   * @param block        evicted block
+   */
+  private void handleEngineEviction(CacheEngine sourceEngine, BlockCacheKey cacheKey,
+    Cacheable block) {
+    topology.handleEviction(cacheKey, block, sourceEngine);
   }
 }

@@ -86,16 +86,12 @@ public final class TopologyBackedCacheAccessServices {
   }
 
   /**
-   * Creates a topology-backed cache access service from existing L1 and L2 block caches.
-   * <p>
-   * The resulting service uses {@link TieredExclusiveTopology}, which models the current
-   * CombinedBlockCache-compatible L1/L2 behavior where promotion can move a block from one tier to
-   * another.
-   * </p>
-   * @param name   human-readable topology/service name
-   * @param l1     L1 block cache
-   * @param l2     L2 block cache
-   * @param policy placement and admission policy
+   * Creates a topology-backed cache access service by adapting two legacy block caches as an
+   * exclusive tiered topology.
+   * @param name   topology name
+   * @param l1     first-level legacy block cache
+   * @param l2     second-level legacy block cache
+   * @param policy cache placement and admission policy
    * @return topology-backed cache access service
    */
   public static TopologyBackedCacheAccessService fromTieredExclusiveBlockCaches(String name,
@@ -107,10 +103,8 @@ public final class TopologyBackedCacheAccessServices {
     if (l1 instanceof FirstLevelBlockCache) {
       ((FirstLevelBlockCache) l1).unsetVictimCache();
     }
-    CacheEngine l1Engine = CacheEngines.fromBlockCache(l1);// fromL1BlockCache(l1);
-    CacheEngine l2Engine = CacheEngines.fromBlockCache(l2);
-    CacheTopology topology = new TieredExclusiveTopology(name, l1Engine, l2Engine);
-    return new TopologyBackedCacheAccessService(topology, policy);
+    return fromTieredExclusiveCacheEngines(name, CacheEngines.fromBlockCache(l1),
+      CacheEngines.fromBlockCache(l2), policy);
   }
 
   /**
@@ -146,27 +140,13 @@ public final class TopologyBackedCacheAccessServices {
   }
 
   /**
-   * Creates a topology-backed cache access service from two legacy block caches using an inclusive
-   * tiered topology.
-   * <p>
-   * The first supplied block cache is treated as the L1 tier and the second supplied block cache is
-   * treated as the L2 tier. Both legacy caches are adapted to {@link CacheEngine} instances using
-   * {@link CacheEngines#fromBlockCache(BlockCache)} and then assembled into a
-   * {@link TieredInclusiveTopology}.
-   * </p>
-   * <p>
-   * This helper is intended for compatibility with legacy inclusive combined-cache configurations
-   * while moving cache access and diagnostics to the {@link CacheAccessService} abstraction.
-   * Inclusive topology semantics differ from exclusive topology semantics: a block may exist in
-   * both tiers, and eviction from one tier does not necessarily imply eviction from the other tier.
-   * </p>
-   * @param name   topology name used for diagnostics
-   * @param l1     first-level block cache
-   * @param l2     second-level block cache
-   * @param policy cache placement and admission policy to use with the topology-backed service
-   * @return topology-backed cache access service backed by a tiered inclusive topology
-   * @throws NullPointerException if {@code name}, {@code l1}, {@code l2}, or {@code policy} is
-   *                              {@code null}
+   * Creates a topology-backed cache access service by adapting two legacy block caches as an
+   * inclusive tiered topology.
+   * @param name   topology name
+   * @param l1     first-level legacy block cache
+   * @param l2     second-level legacy block cache
+   * @param policy cache placement and admission policy
+   * @return topology-backed cache access service
    */
   public static TopologyBackedCacheAccessService fromTieredInclusiveBlockCaches(String name,
     BlockCache l1, BlockCache l2, CachePlacementAdmissionPolicy policy) {
@@ -177,37 +157,24 @@ public final class TopologyBackedCacheAccessServices {
     if (l1 instanceof FirstLevelBlockCache) {
       ((FirstLevelBlockCache) l1).unsetVictimCache();
     }
-    CacheEngine l1Engine = CacheEngines.fromBlockCache(l1);
-    CacheEngine l2Engine = CacheEngines.fromBlockCache(l2);
-    CacheTopology topology = new TieredInclusiveTopology(name, l1Engine, l2Engine);
 
-    return new TopologyBackedCacheAccessService(topology, policy);
+    return fromTieredInclusiveCacheEngines(name, CacheEngines.fromBlockCache(l1),
+      CacheEngines.fromBlockCache(l2), policy);
   }
 
   /**
-   * Creates a topology-backed cache access service for a single legacy {@link BlockCache}.
-   * <p>
-   * The supplied block cache is adapted to a {@link CacheEngine} and placed behind a
-   * {@link SingleTierTopology}. This makes single-tier caches use the same
-   * {@link TopologyBackedCacheAccessService} path as combined caches while preserving the existing
-   * block cache implementation underneath.
-   * </p>
-   * @param name       topology name used for diagnostics
-   * @param blockCache legacy block cache to adapt
+   * Creates a topology-backed cache access service by adapting a legacy block cache as a single
+   * cache engine.
+   * @param name       topology name
+   * @param blockCache legacy block cache
    * @param policy     cache placement and admission policy
-   * @return topology-backed cache access service backed by a single-tier topology
-   * @throws NullPointerException if {@code name}, {@code blockCache}, or {@code policy} is
-   *                              {@code null}
+   * @return topology-backed cache access service
    */
   public static TopologyBackedCacheAccessService fromSingleBlockCache(String name,
     BlockCache blockCache, CachePlacementAdmissionPolicy policy) {
-    Objects.requireNonNull(name, "name must not be null");
     Objects.requireNonNull(blockCache, "blockCache must not be null");
-    Objects.requireNonNull(policy, "policy must not be null");
 
-    CacheEngine engine = CacheEngines.fromBlockCache(blockCache);
-    CacheTopology topology = new SingleTierTopology(name, engine);
-    return new TopologyBackedCacheAccessService(topology, policy);
+    return fromSingleCacheEngine(name, CacheEngines.fromBlockCache(blockCache), policy);
   }
 
   /**
@@ -289,4 +256,62 @@ public final class TopologyBackedCacheAccessServices {
 
     return getBlockCache(cacheAccessService, CacheTier.SINGLE);
   }
+
+  /**
+   * Creates a topology-backed cache access service using a single cache engine.
+   * @param name   topology name
+   * @param engine cache engine
+   * @param policy cache placement and admission policy
+   * @return topology-backed cache access service
+   */
+  public static TopologyBackedCacheAccessService fromSingleCacheEngine(String name,
+    CacheEngine engine, CachePlacementAdmissionPolicy policy) {
+    Objects.requireNonNull(name, "name must not be null");
+    Objects.requireNonNull(engine, "engine must not be null");
+    Objects.requireNonNull(policy, "policy must not be null");
+
+    CacheTopology topology = new SingleTierTopology(name, engine);
+    return new TopologyBackedCacheAccessService(topology, policy);
+  }
+
+  /**
+   * Creates a topology-backed cache access service using two independent cache engines in an
+   * exclusive tiered topology.
+   * @param name   topology name
+   * @param l1     first-level cache engine
+   * @param l2     second-level cache engine
+   * @param policy cache placement and admission policy
+   * @return topology-backed cache access service
+   */
+  public static TopologyBackedCacheAccessService fromTieredExclusiveCacheEngines(String name,
+    CacheEngine l1, CacheEngine l2, CachePlacementAdmissionPolicy policy) {
+    Objects.requireNonNull(name, "name must not be null");
+    Objects.requireNonNull(l1, "l1 must not be null");
+    Objects.requireNonNull(l2, "l2 must not be null");
+    Objects.requireNonNull(policy, "policy must not be null");
+
+    CacheTopology topology = new TieredExclusiveTopology(name, l1, l2);
+    return new TopologyBackedCacheAccessService(topology, policy);
+  }
+
+  /**
+   * Creates a topology-backed cache access service using two independent cache engines in an
+   * inclusive tiered topology.
+   * @param name   topology name
+   * @param l1     first-level cache engine
+   * @param l2     second-level cache engine
+   * @param policy cache placement and admission policy
+   * @return topology-backed cache access service
+   */
+  public static TopologyBackedCacheAccessService fromTieredInclusiveCacheEngines(String name,
+    CacheEngine l1, CacheEngine l2, CachePlacementAdmissionPolicy policy) {
+    Objects.requireNonNull(name, "name must not be null");
+    Objects.requireNonNull(l1, "l1 must not be null");
+    Objects.requireNonNull(l2, "l2 must not be null");
+    Objects.requireNonNull(policy, "policy must not be null");
+
+    CacheTopology topology = new TieredInclusiveTopology(name, l1, l2);
+    return new TopologyBackedCacheAccessService(topology, policy);
+  }
+
 }

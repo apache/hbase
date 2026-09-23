@@ -248,6 +248,11 @@
   </Match>
 
   <Match>
+    <Class name="org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine"/>
+    <Bug pattern="SC_START_IN_CTOR"/>
+  </Match>
+
+  <Match>
     <Class name="org.apache.hadoop.hbase.io.hfile.LruAdaptiveBlockCache"/>
     <Bug pattern="SC_START_IN_CTOR"/>
   </Match>
