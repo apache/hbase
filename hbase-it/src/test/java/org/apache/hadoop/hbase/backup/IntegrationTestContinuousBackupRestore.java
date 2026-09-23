@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD;
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_EMPTY_FILES;
 import static org.apache.hadoop.hbase.mapreduce.WALPlayer.IGNORE_MISSING_FILES;
 import static org.apache.hadoop.hbase.replication.regionserver.ReplicationMarkerChore.REPLICATION_MARKER_ENABLED_KEY;
@@ -56,6 +58,8 @@ public class IntegrationTestContinuousBackupRestore extends IntegrationTestBacku
     conf.setBoolean(REPLICATION_MARKER_ENABLED_KEY, true);
     conf.setBoolean(IGNORE_EMPTY_FILES, true);
     conf.setBoolean(IGNORE_MISSING_FILES, true);
+    conf.setLong(CONTINUOUS_BACKUP_OFFSET_UPDATE_INTERVAL_MS, 2000L); // 2 seconds
+    conf.setLong(CONTINUOUS_BACKUP_OFFSET_UPDATE_SIZE_THRESHOLD, 1024L); // 1 KB
 
     LOG.info("Initializing cluster with {} region server(s)", regionServerCount);
     util.initializeCluster(regionServerCount);
