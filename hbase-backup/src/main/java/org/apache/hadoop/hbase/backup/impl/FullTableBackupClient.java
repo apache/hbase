@@ -43,6 +43,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.apache.hadoop.fs.FileStatus;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupCopyJob;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -60,7 +64,9 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -208,7 +214,9 @@ public class FullTableBackupClient extends TableBackupClient {
   }
 
   private void handleNonContinuousBackup(Admin admin) throws IOException {
+    Map<String, Long> previousLogRollsByHost = backupManager.readRegionServerLastLogRollResult();
     performLogRoll();
+    Map<String, Long> latestLogRollsByHost = newTimestamps;
     performBackupSnapshots(admin);
     backupManager.addIncrementalBackupTableSet(backupInfo.getTables());
 
@@ -216,6 +224,14 @@ public class FullTableBackupClient extends TableBackupClient {
     // After this checkpoint, even if entering cancel process, will let the backup finished
     backupInfo.setState(BackupState.COMPLETE);
 
+    try {
+      adjustTimestampsForOfflineHosts(previousLogRollsByHost, latestLogRollsByHost);
+    } catch (Exception e) {
+      LOG.warn("Failed to adjust timestamps for offline hosts. Falling back to log-roll"
+        + " timestamps. Subsequent incremental backups may include WALs already covered by this"
+        + " full backup's snapshot.", e);
+      newTimestamps = latestLogRollsByHost;
+    }
     updateBackupMetadata();
   }
 
@@ -245,6 +261,59 @@ public class FullTableBackupClient extends TableBackupClient {
         tableName.getNamespaceAsString(), tableName.getQualifierAsString());
       snapshotTable(admin, tableName, snapshotName);
       backupInfo.setSnapshotName(tableName, snapshotName);
+    }
+  }
+
+  /**
+   * Scan all WAL files to find offline/decommissioned hosts and record their max WAL timestamps in
+   * newTimestamps. This ensures subsequent incremental backups won't reinclude WALs already covered
+   * by this full backup's snapshot.
+   */
+  private void adjustTimestampsForOfflineHosts(Map<String, Long> previousLogRollsByHost,
+    Map<String, Long> latestLogRollsByHost) throws IOException {
+    Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
+    Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
+    FileSystem fs = walRootDir.getFileSystem(conf);
+
+    List<String> allLogPaths = new ArrayList<>();
+    for (FileStatus hostLogDir : fs.listStatus(logDir)) {
+      String host = BackupUtils.parseHostNameFromLogFile(hostLogDir.getPath());
+      if (host == null) {
+        continue;
+      }
+      for (FileStatus log : fs.listStatus(hostLogDir.getPath())) {
+        allLogPaths.add(log.getPath().toString());
+      }
+    }
+    if (fs.exists(oldLogDir)) {
+      BackupUtils.getFiles(fs, oldLogDir, allLogPaths, path -> true);
+    }
+
+    newTimestamps = new HashMap<>();
+
+    for (String logFile : allLogPaths) {
+      Path logPath = new Path(logFile);
+      if (AbstractFSWALProvider.isMetaFile(logPath)) {
+        continue;
+      }
+      String host = BackupUtils.parseHostNameFromLogFile(logPath);
+      if (host == null) {
+        continue;
+      }
+      long timestamp = BackupUtils.getCreationTime(logPath);
+      Long previousLogRoll = previousLogRollsByHost.get(host);
+      Long latestLogRoll = latestLogRollsByHost.get(host);
+      boolean isInactive = latestLogRoll == null || latestLogRoll.equals(previousLogRoll);
+
+      if (isInactive) {
+        long currentTs = newTimestamps.getOrDefault(host, 0L);
+        if (timestamp > currentTs) {
+          newTimestamps.put(host, timestamp);
+        }
+      } else {
+        newTimestamps.put(host, latestLogRoll);
+      }
     }
   }
 
