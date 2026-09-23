@@ -20,7 +20,6 @@
 
 <%@ page contentType="text/html;charset=UTF-8"
          import="java.util.*"
-         import="org.apache.hadoop.hbase.NamespaceDescriptor"
          import="org.apache.hadoop.hbase.TableName"
          import="org.apache.hadoop.hbase.master.HMaster"
          import="org.apache.hadoop.hbase.quotas.QuotaUtil"
@@ -35,8 +34,11 @@
 
   Map<String, Integer> frags = (Map<String, Integer>) request.getAttribute(MasterStatusConstants.FRAGS);
 
-  List<TableDescriptor> sysTables = master.isInitialized() ?
-  master.listTableDescriptorsByNamespace(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR) : null;
+  List<TableDescriptor> sysTables = null;
+  if (master.isInitialized()) {
+    sysTables = master.listTableDescriptors(null, null, null, true);
+    sysTables.removeIf(desc -> !desc.getTableName().isSystemTable());
+  }
 %>
 
 <%if (sysTables != null && sysTables.size() > 0) { %>
