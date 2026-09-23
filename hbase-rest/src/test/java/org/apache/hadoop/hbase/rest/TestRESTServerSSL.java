@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
+import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
@@ -241,18 +242,15 @@ public class TestRESTServerSSL {
   }
 
   /**
-   * With {@code client.auth.mode=NEED}, an anonymous client (no client cert) is rejected during the
-   * TLS handshake. The base {@link Client} configures truststore-only, so it presents no key
-   * material to the server.
+   * With {@code client.auth.mode=NEED}, an anonymous client (no client cert) is rejected by the
+   * server. The base {@link Client} configures truststore-only, so it presents no key material to
+   * the server.
    */
   @Test
   public void testClientAuthNeedRejectsClientWithoutCert() throws Exception {
     conf.set(Constants.REST_SSL_CLIENT_AUTH_MODE, "NEED");
     startRESTServerWithDefaultKeystoreType();
-
-    // The mTLS handshake fails before any HTTP-level status is returned; Apache HttpClient
-    // surfaces this as ClientProtocolException (same failure mode as testNonSslClientDenied).
-    assertThrows(ClientProtocolException.class, () -> sslClient.get("/version"));
+    assertThrows(SSLException.class, () -> sslClient.get("/version"));
   }
 
   private static File initKeystoreDir() {
