@@ -27,6 +27,7 @@ import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -44,6 +45,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.master.RackManager;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -494,6 +496,42 @@ public class TestStochasticLoadBalancer extends StochasticBalancerTestBase {
         assertEquals(expectedCost, actualCost, 0);
       }
     }
+  }
+
+  @Test
+  public void testSearchDeadlineIsSetAfterInitialization() throws Exception {
+    Configuration testConf = new Configuration(conf);
+    testConf.setInt(StochasticLoadBalancer.MAX_STEPS_KEY, 0);
+    boolean[] needsBalanceCalled = { false };
+    boolean[] deadlineSet = { false };
+    StochasticLoadBalancer balancer =
+      new StochasticLoadBalancer(new DummyMetricsStochasticBalancer()) {
+        @Override
+        protected BalancerClusterState createState(Map<ServerName, List<RegionInfo>> clusterState,
+          Map<String, Deque<BalancerRegionLoad>> loads, RegionHDFSBlockLocationFinder finder,
+          RackManager rackManager) {
+          return new BalancerClusterState(clusterState, loads, finder, rackManager) {
+            @Override
+            void setStopRequestedAt(long stopRequestedAt) {
+              deadlineSet[0] = true;
+              assertTrue(needsBalanceCalled[0]);
+              super.setStopRequestedAt(stopRequestedAt);
+            }
+          };
+        }
+
+        @Override
+        boolean needsBalance(TableName tableName, BalancerClusterState cluster) {
+          needsBalanceCalled[0] = true;
+          return true;
+        }
+      };
+    balancer.setClusterInfoProvider(new DummyClusterInfoProvider(testConf));
+    balancer.initialize();
+
+    balancer.balanceTable(HConstants.ENSEMBLE_TABLE_NAME, createServerMap(2, 2, 1, 1, 1));
+
+    assertTrue(deadlineSet[0]);
   }
 
   @Test
