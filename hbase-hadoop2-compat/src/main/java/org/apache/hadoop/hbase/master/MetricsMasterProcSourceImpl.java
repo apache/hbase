@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import java.util.Map;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.hbase.metrics.Interns;
 import org.apache.hadoop.metrics2.MetricsCollector;
@@ -56,6 +57,13 @@ public class MetricsMasterProcSourceImpl extends BaseSourceImpl implements Metri
     if (masterWrapper != null) {
       metricsRecordBuilder.addGauge(Interns.info(NUM_MASTER_WALS_NAME, NUM_MASTER_WALS_DESC),
         masterWrapper.getNumWALFiles());
+      Map<String, Long> oldestProcedureAgeByType = masterWrapper.getOldestProcedureAgeByType();
+      metricsRecordBuilder.addGauge(
+        Interns.info(OLDEST_PROCEDURE_AGE_NAME, OLDEST_PROCEDURE_AGE_DESC),
+        oldestProcedureAgeByType.values().stream().mapToLong(Long::longValue).max().orElse(0L));
+      oldestProcedureAgeByType.forEach((procedureType, age) -> metricsRecordBuilder.addGauge(
+        Interns.info(OLDEST_PROCEDURE_AGE_NAME + "_" + procedureType, OLDEST_PROCEDURE_AGE_DESC),
+        age));
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);
