@@ -227,6 +227,7 @@ public class HttpServer implements FilterContainer {
     private String usernameConfKey;
     private String keytabConfKey;
     private boolean needsClientAuth;
+    private boolean wantsClientAuth;
     private String includeCiphers;
     private String excludeCiphers;
     private String includeProtocols;
@@ -311,10 +312,24 @@ public class HttpServer implements FilterContainer {
     }
 
     /**
-     * Specify whether the server should authorize the client in SSL connections.
+     * Specify whether the server should require a client certificate during the SSL handshake
+     * (mTLS). When true, clients that do not present a valid certificate are rejected.
+     * <p>
+     * Takes precedence over {@link #wantsClientAuth(boolean)} in Jetty when both are set.
      */
     public Builder needsClientAuth(boolean value) {
       this.needsClientAuth = value;
+      return this;
+    }
+
+    /**
+     * Specify whether the server should request a client certificate during the SSL handshake but
+     * still accept clients that do not present one. Weaker than {@link #needsClientAuth(boolean)}:
+     * use this to signal "opportunistic mTLS" where a client cert is validated when supplied but
+     * its absence is tolerated.
+     */
+    public Builder wantsClientAuth(boolean value) {
+      this.wantsClientAuth = value;
       return this;
     }
 
@@ -476,6 +491,7 @@ public class HttpServer implements FilterContainer {
           httpsConfig.addCustomizer(new SecureRequestCustomizer());
           SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
           sslCtxFactory.setNeedClientAuth(needsClientAuth);
+          sslCtxFactory.setWantClientAuth(wantsClientAuth);
           sslCtxFactory.setKeyManagerPassword(keyPassword);
 
           if (keyStore != null) {

@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
@@ -305,11 +306,17 @@ public class RESTServer implements Constants {
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
-      String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
-      String keystoreType = conf.get(REST_SSL_KEYSTORE_TYPE);
-      String password = HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_PASSWORD, null);
+      // Prefer the role-scoped hbase.rest.ssl.server.* keys, falling back to the historical
+      // unscoped hbase.rest.ssl.* keys for backward compatibility with existing deployments.
+      String keystore =
+        X509Util.resolveConfig(conf, REST_SSL_SERVER_KEYSTORE_STORE, REST_SSL_KEYSTORE_STORE, null);
+      String keystoreType =
+        X509Util.resolveConfig(conf, REST_SSL_SERVER_KEYSTORE_TYPE, REST_SSL_KEYSTORE_TYPE, null);
+      String password = HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_PASSWORD,
+        HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_PASSWORD, null));
       String keyPassword =
-        HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password);
+        HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_KEYPASSWORD,
+          HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password));
       sslCtxFactory.setKeyStorePath(keystore);
       if (StringUtils.isNotBlank(keystoreType)) {
         sslCtxFactory.setKeyStoreType(keystoreType);
@@ -317,18 +324,39 @@ public class RESTServer implements Constants {
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
 
-      String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
+      String trustStore = X509Util.resolveConfig(conf, REST_SSL_SERVER_TRUSTSTORE_STORE,
+        REST_SSL_TRUSTSTORE_STORE, null);
       if (StringUtils.isNotBlank(trustStore)) {
         sslCtxFactory.setTrustStorePath(trustStore);
       }
       String trustStorePassword =
-        HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
+        HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_TRUSTSTORE_PASSWORD,
+          HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null));
       if (StringUtils.isNotBlank(trustStorePassword)) {
         sslCtxFactory.setTrustStorePassword(trustStorePassword);
       }
-      String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
+      String trustStoreType = X509Util.resolveConfig(conf, REST_SSL_SERVER_TRUSTSTORE_TYPE,
+        REST_SSL_TRUSTSTORE_TYPE, null);
       if (StringUtils.isNotBlank(trustStoreType)) {
         sslCtxFactory.setTrustStoreType(trustStoreType);
+      }
+
+      // Activate mTLS if configured. Default is NONE, which preserves today's behavior of never
+      // requesting a client certificate — even when a truststore is configured. Set
+      // hbase.rest.ssl.server.client.auth.mode to WANT or NEED to opt in.
+      X509Util.ClientAuth clientAuth = X509Util.ClientAuth
+        .fromPropertyValue(conf.get(REST_SSL_CLIENT_AUTH_MODE, X509Util.ClientAuth.NONE.name()));
+      switch (clientAuth) {
+        case NEED:
+          sslCtxFactory.setNeedClientAuth(true);
+          break;
+        case WANT:
+          sslCtxFactory.setWantClientAuth(true);
+          break;
+        case NONE:
+        default:
+          // no-op; both flags default to false on SslContextFactory.Server
+          break;
       }
 
       String[] excludeCiphers = servlet.getConfiguration()

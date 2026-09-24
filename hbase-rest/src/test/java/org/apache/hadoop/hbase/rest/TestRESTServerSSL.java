@@ -25,6 +25,7 @@ import java.lang.reflect.Method;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
+import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
@@ -158,6 +159,98 @@ public class TestRESTServerSSL {
 
     Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
     assertEquals(200, response.getCode());
+  }
+
+  // ---------------------------------------------------------------------------
+  // Role-scoped configuration + mTLS (single-EKU certificate support).
+  // ---------------------------------------------------------------------------
+
+  /**
+   * Server started with only the role-scoped hbase.rest.ssl.server.* keys (and legacy keys unset).
+   * A successful SSL connection proves the server-scoped keys were consulted.
+   */
+  @Test
+  public void testSslConnectionUsingRoleScopedServerKeys() throws Exception {
+    // Move the legacy passwords set in beforeEachTest onto the role-scoped keys and clear the
+    // legacy passwords so a successful start proves the server-scoped keys are what the code
+    // actually picked up.
+    conf.unset(Constants.REST_SSL_KEYSTORE_PASSWORD);
+    conf.unset(Constants.REST_SSL_KEYSTORE_KEYPASSWORD);
+    conf.unset(Constants.REST_SSL_TRUSTSTORE_PASSWORD);
+    conf.set(Constants.REST_SSL_SERVER_KEYSTORE_PASSWORD, KEY_STORE_PASSWORD);
+    conf.set(Constants.REST_SSL_SERVER_KEYSTORE_KEYPASSWORD, KEY_STORE_PASSWORD);
+    conf.set(Constants.REST_SSL_SERVER_TRUSTSTORE_PASSWORD, TRUST_STORE_PASSWORD);
+    conf.set(Constants.REST_SSL_SERVER_KEYSTORE_STORE, getKeystoreFilePath("jks"));
+    conf.set(Constants.REST_SSL_SERVER_TRUSTSTORE_STORE, getTruststoreFilePath("jks"));
+
+    REST_TEST_UTIL.startServletContainer(conf);
+    Cluster localCluster = new Cluster().add("localhost", REST_TEST_UTIL.getServletPort());
+    sslClient = new Client(localCluster, getTruststoreFilePath("jks"),
+      Optional.of(TRUST_STORE_PASSWORD), Optional.empty());
+
+    Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
+    assertEquals(200, response.getCode());
+  }
+
+  /**
+   * Backward-compatibility regression: existing deployments that know only about the legacy
+   * unscoped keys must continue to work exactly as before. This mirrors {@link #testSslConnection}
+   * but names the intent explicitly.
+   */
+  @Test
+  public void testSslConnectionFallsBackToLegacyKeystoreKeys() throws Exception {
+    // Make sure no role-scoped key is set — the beforeEachTest configures only legacy passwords,
+    // so this is a fresh state check.
+    conf.unset(Constants.REST_SSL_SERVER_KEYSTORE_STORE);
+    conf.unset(Constants.REST_SSL_SERVER_KEYSTORE_PASSWORD);
+    conf.unset(Constants.REST_SSL_SERVER_KEYSTORE_KEYPASSWORD);
+    conf.unset(Constants.REST_SSL_SERVER_KEYSTORE_TYPE);
+    conf.unset(Constants.REST_SSL_SERVER_TRUSTSTORE_STORE);
+    conf.unset(Constants.REST_SSL_SERVER_TRUSTSTORE_PASSWORD);
+    conf.unset(Constants.REST_SSL_SERVER_TRUSTSTORE_TYPE);
+
+    startRESTServerWithDefaultKeystoreType();
+
+    Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
+    assertEquals(200, response.getCode());
+  }
+
+  /**
+   * With {@code client.auth.mode=NONE} (the default), a client that presents no client certificate
+   * is accepted — matching today's behavior.
+   */
+  @Test
+  public void testClientAuthNoneAcceptsClientWithoutCert() throws Exception {
+    conf.set(Constants.REST_SSL_CLIENT_AUTH_MODE, "NONE");
+    startRESTServerWithDefaultKeystoreType();
+
+    Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
+    assertEquals(200, response.getCode());
+  }
+
+  /**
+   * With {@code client.auth.mode=WANT}, an anonymous client (no client cert) is still accepted; the
+   * server requests a cert but does not require it.
+   */
+  @Test
+  public void testClientAuthWantAllowsAnonymousClient() throws Exception {
+    conf.set(Constants.REST_SSL_CLIENT_AUTH_MODE, "WANT");
+    startRESTServerWithDefaultKeystoreType();
+
+    Response response = sslClient.get("/version", Constants.MIMETYPE_TEXT);
+    assertEquals(200, response.getCode());
+  }
+
+  /**
+   * With {@code client.auth.mode=NEED}, an anonymous client (no client cert) is rejected by the
+   * server. The base {@link Client} configures truststore-only, so it presents no key material to
+   * the server.
+   */
+  @Test
+  public void testClientAuthNeedRejectsClientWithoutCert() throws Exception {
+    conf.set(Constants.REST_SSL_CLIENT_AUTH_MODE, "NEED");
+    startRESTServerWithDefaultKeystoreType();
+    assertThrows(SSLException.class, () -> sslClient.get("/version"));
   }
 
   private static File initKeystoreDir() {
