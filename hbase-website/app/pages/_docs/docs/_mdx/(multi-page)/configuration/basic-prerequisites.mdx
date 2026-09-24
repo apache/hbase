@@ -7,7 +7,14 @@ description: "This section lists required services and some required system conf
 
 HBase runs on the Java Virtual Machine, thus all HBase deployments require a JVM runtime.
 
-The following table summarizes the recommendations of the HBase community with respect to running on various Java versions. The ✅ symbol indicates a base level of testing and willingness to help diagnose and address issues you might run into; these are the expected deployment combinations. An entry of ⚠️ means that there may be challenges with this combination, and you should look for more information before deciding to pursue this as your deployment strategy. The ❌ means this combination does not work; either an older Java version is considered deprecated by the HBase community, or this combination is known to not work. For combinations of newer JDK with older HBase releases, it's likely there are known compatibility issues that cannot be addressed under our compatibility guarantees, making the combination impossible. In some cases, specific guidance on limitations (e.g. whether compiling / unit tests work, specific operational issues, etc) are also noted. Assume any combination not listed here is considered ❌.
+The following table summarizes the HBase community's recommendations for Java versions:
+
+- ✅ indicates a recommended deployment combination with a base level of testing. The community is willing to help diagnose and address issues.
+- ⚠️ indicates possible compatibility challenges. Review the available guidance before choosing this combination.
+- ❌ indicates an unsupported combination. The Java version is deprecated by the HBase community, or the combination is known not to work.
+- Treat any combination not listed in the table as ❌.
+- Newer JDKs may have compatibility issues with older HBase releases that cannot be fixed within HBase's compatibility guarantees.
+- Check the table notes for limitations, including build failures, test failures, and operational issues.
 
 <Callout type="warn">
   HBase recommends downstream users rely only on JDK releases that are marked as Long-Term Supported
@@ -22,26 +29,36 @@ The following table summarizes the recommendations of the HBase community with r
   JVM. When selecting your JDK distribution, please take this into consideration.
 </Callout>
 
-**Java support by release line**
+### Java support by release line
 
-| HBase Version | JDK 6 | JDK 7 | JDK 8 | JDK 11 | JDK 17 |
-| :-----------: | :---: | :---: | :---: | :----: | :----: |
-|   HBase 2.6   |  ❌   |  ❌   |  ✅   |   ✅   |   ✅   |
-|   HBase 2.5   |  ❌   |  ❌   |  ✅   |   ✅   |  ⚠️\*  |
-|   HBase 2.4   |  ❌   |  ❌   |  ✅   |   ✅   |   ❌   |
-|   HBase 2.3   |  ❌   |  ❌   |  ✅   |  ⚠️\*  |   ❌   |
-| HBase 2.0-2.2 |  ❌   |  ❌   |  ✅   |   ❌   |   ❌   |
-|  HBase 1.2+   |  ❌   |  ✅   |  ✅   |   ❌   |   ❌   |
-| HBase 1.0-1.1 |  ❌   |  ✅   |  ⚠️   |   ❌   |   ❌   |
-|  HBase 0.98   |  ✅   |  ✅   |  ⚠️   |   ❌   |   ❌   |
-|  HBase 0.94   |  ✅   |  ✅   |  ❌   |   ❌   |   ❌   |
+| HBase Version | JDK 6 | JDK 7 | JDK 8 | JDK 11 | JDK 17 |   JDK 21    |
+| :-----------: | :---: | :---: | :---: | :----: | :----: | :---------: |
+|   HBase 3.1   |  ❌   |  ❌   |  ❌   |   ❌   |   ✅   |     ✅      |
+|   HBase 3.0   |  ❌   |  ❌   |  ❌   |   ❌   |   ✅   | ✅ (3.0.1+) |
+|   HBase 2.7   |  ❌   |  ❌   |  ✅   |   ✅   |   ✅   |     ✅      |
+|   HBase 2.6   |  ❌   |  ❌   |  ✅   |   ✅   |   ✅   | ✅ (2.6.8+) |
+|   HBase 2.5   |  ❌   |  ❌   |  ✅   |   ✅   |   ⚠️   |     ⚠️      |
+|   HBase 2.4   |  ❌   |  ❌   |  ✅   |   ✅   |   ❌   |     ❌      |
+|   HBase 2.3   |  ❌   |  ❌   |  ✅   |   ⚠️   |   ❌   |     ❌      |
+| HBase 2.0-2.2 |  ❌   |  ❌   |  ✅   |   ❌   |   ❌   |     ❌      |
+|  HBase 1.2+   |  ❌   |  ✅   |  ✅   |   ❌   |   ❌   |     ❌      |
+| HBase 1.0-1.1 |  ❌   |  ✅   |  ⚠️   |   ❌   |   ❌   |     ❌      |
+|  HBase 0.98   |  ✅   |  ✅   |  ⚠️   |   ❌   |   ❌   |     ❌      |
+|  HBase 0.94   |  ✅   |  ✅   |  ❌   |   ❌   |   ❌   |     ❌      |
 
 <Callout type="warn">
-Preliminary support for JDK11 is introduced with HBase 2.3.0, and for JDK17 is introduced with HBase 2.5.x. We will compile and run test suites with JDK11/17 in pre commit checks and nightly checks. We will mark the support as ✅ as long as we have run some ITs with the JDK version and also there are users in the community use the JDK version in real production clusters.
+Preliminary support for JDK 11 was introduced with HBase 2.3.0, and for JDK 17 with HBase 2.5.x. JDK 11 and JDK 17 have precommit and nightly coverage on applicable branches. We mark support as ✅ after running some integration tests with that JDK version and confirming that community members use it in production clusters.
 
-For JDK11/JDK17 support in HBase, please refer to [HBASE-22972](https://issues.apache.org/jira/browse/HBASE-22972) and [HBASE-26038](https://issues.apache.org/jira/browse/HBASE-26038)
+For JDK 11/JDK 17 support in HBase, please refer to [HBASE-22972](https://issues.apache.org/jira/browse/HBASE-22972) and [HBASE-26038](https://issues.apache.org/jira/browse/HBASE-26038)
 
-For JDK11/JDK17 support in Hadoop, which may also affect HBase, please refer to [HADOOP-15338](https://issues.apache.org/jira/browse/HADOOP-15338) and [HADOOP-17177](https://issues.apache.org/jira/browse/HADOOP-17177)
+For JDK 11/JDK 17 support in Hadoop, which may also affect HBase, please refer to [HADOOP-15338](https://issues.apache.org/jira/browse/HADOOP-15338) and [HADOOP-17177](https://issues.apache.org/jira/browse/HADOOP-17177)
+
+</Callout>
+
+<Callout type="info" title="JDK 21 support">
+See [HBASE-29546](https://issues.apache.org/jira/browse/HBASE-29546) for JDK 21 compatibility work and [HBASE-30354](https://issues.apache.org/jira/browse/HBASE-30354) for nightly coverage. HBase's precommit checks do not yet test JDK 21.
+
+JDK 21 validation for HBase 2.5 remains incomplete.
 
 </Callout>
 
