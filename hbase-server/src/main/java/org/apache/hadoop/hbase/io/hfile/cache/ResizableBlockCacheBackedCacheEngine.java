@@ -18,35 +18,37 @@
 package org.apache.hadoop.hbase.io.hfile.cache;
 
 import java.util.Objects;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Factory helpers for {@link CacheEngine} instances.
+ * A {@link CacheEngine} adapter for a legacy {@link ResizableBlockCache}.
  * <p>
- * These helpers are intended to keep transitional wiring concise while existing cache
- * implementations are still based on {@link BlockCache}. Once built-in caches implement
- * {@link CacheEngine} directly, callers can construct or obtain those engines without going through
- * a legacy adapter.
+ * This adapter preserves the dynamic sizing capability while legacy block caches are being migrated
+ * to native {@link CacheEngine} implementations.
  * </p>
  */
 @InterfaceAudience.Private
-public final class CacheEngines {
+public class ResizableBlockCacheBackedCacheEngine extends BlockCacheBackedCacheEngine
+  implements ResizableCacheEngine {
 
-  private CacheEngines() {
+  private final ResizableBlockCache blockCache;
+
+  /**
+   * Creates an engine backed by the supplied resizable block cache.
+   * @param blockCache legacy resizable block cache
+   */
+  public ResizableBlockCacheBackedCacheEngine(ResizableBlockCache blockCache) {
+    super(Objects.requireNonNull(blockCache, "blockCache must not be null"));
+    this.blockCache = blockCache;
   }
 
   /**
-   * Wraps an existing {@link BlockCache} as a {@link CacheEngine}.
-   * @param blockCache block cache to adapt
-   * @return cache engine backed by the supplied block cache
+   * Changes the maximum size of the underlying block cache.
+   * @param maxSize new maximum cache size in bytes
    */
-  public static CacheEngine fromBlockCache(BlockCache blockCache) {
-    Objects.requireNonNull(blockCache, "blockCache must not be null");
-    if (blockCache instanceof ResizableBlockCache) {
-      return new ResizableBlockCacheBackedCacheEngine((ResizableBlockCache) blockCache);
-    }
-    return new BlockCacheBackedCacheEngine(blockCache);
+  @Override
+  public void setMaxSize(long maxSize) {
+    blockCache.setMaxSize(maxSize);
   }
 }

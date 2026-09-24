@@ -88,7 +88,7 @@ import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFacto
  * </p>
  */
 @InterfaceAudience.Private
-public class LruCacheEngine implements CacheEngine, HeapSize, Iterable<CachedBlock> {
+public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<CachedBlock> {
 
   private static final Logger LOG = LoggerFactory.getLogger(LruCacheEngine.class);
 
@@ -376,6 +376,7 @@ public class LruCacheEngine implements CacheEngine, HeapSize, Iterable<CachedBlo
    * </p>
    * @param maxSize new maximum size, in bytes
    */
+  @Override
   public void setMaxSize(long maxSize) {
     this.maxSize = maxSize;
     if (size.get() > acceptableSize() && !evictionInProgress) {
