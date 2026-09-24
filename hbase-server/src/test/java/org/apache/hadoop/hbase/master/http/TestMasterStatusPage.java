@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.master.http;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -30,8 +31,10 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -124,6 +127,33 @@ public class TestMasterStatusPage {
     assertTrue(page.contains("ServerInfo"));
 
     assertTrue(page.contains(VersionInfo.getVersion()));
+
+    List<String> backupTables =
+      List.of("backup:system", "backup:system_bulk", "backup:custom_system");
+    try (Admin admin = master.getConnection().getAdmin()) {
+      admin.createNamespace(
+        NamespaceDescriptor.create(NamespaceDescriptor.BACKUP_NAMESPACE_NAME_STR).build());
+      for (String tableName : backupTables) {
+        admin.createTable(TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName))
+          .setColumnFamily(ColumnFamilyDescriptorBuilder.of("CF")).build());
+      }
+    }
+
+    page = TestServerHttpUtils.getPageContent(url, "text/html;charset=utf-8");
+    String userTables = page.substring(page.indexOf("id=\"tab_userTables\""),
+      page.indexOf("id=\"tab_catalogTables\""));
+    String systemTables = page.substring(page.indexOf("id=\"tab_catalogTables\""),
+      page.indexOf("id=\"tab_userSnapshots\""));
+    assertTableLinks(master, userTables);
+    for (String tableName : backupTables) {
+      assertTrue(
+        systemTables.contains("<a href=\"table.jsp?name=" + tableName + "\">" + tableName + "</a>"),
+        () -> "Missing system table link: " + tableName);
+      assertFalse(userTables.contains(tableName));
+    }
+    assertTrue(systemTables.contains("table.jsp?name=hbase:meta"));
+    assertFalse(systemTables.contains(TEST_TABLE_NAME_1));
+    assertFalse(systemTables.contains(TEST_TABLE_NAME_2));
   }
 
   private static void createTestTables(HMaster master) throws IOException {
