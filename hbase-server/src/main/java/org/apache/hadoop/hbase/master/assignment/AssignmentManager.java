@@ -768,6 +768,13 @@ public class AssignmentManager {
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException(UNEXPECTED_STATE_REGION + regionNode);
     }
+    // A split parent is permanently retired — it must never be re-opened. Guard both the normal
+    // assign path (state=SPLIT) and the post-failover path where loadMeta may have reconstructed
+    // the node with state=CLOSED but regionInfo.isSplit()=true. See HBASE-30353.
+    if (regionNode.isSplit()) {
+      throw new DoNotRetryRegionException(
+        regionNode.getRegionInfo().getEncodedName() + " is a split parent and cannot be assigned");
+    }
     if (isTableDisabled(regionNode.getTable())) {
       throw new DoNotRetryIOException(regionNode.getTable() + " is disabled for " + regionNode);
     }
@@ -786,6 +793,13 @@ public class AssignmentManager {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     regionNode.lock();
     try {
+      // Guard the override (HBCK2) path too: even with override=true or force=true a split parent
+      // must never be assigned. preTransitCheck is skipped when force=true, so this check must
+      // come first. See HBASE-30353.
+      if (regionNode.isSplit()) {
+        throw new DoNotRetryRegionException(regionNode.getRegionInfo().getEncodedName()
+          + " is a split parent and cannot be assigned");
+      }
       if (override) {
         if (!force) {
           preTransitCheck(regionNode, STATES_EXPECTED_ON_ASSIGN);
@@ -1812,6 +1826,12 @@ public class AssignmentManager {
   // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
   // Needs to be done after the table state manager has been started.
   public void processOfflineRegions() {
+    // This method calls TransitRegionStateProcedure.assign() directly, bypassing both
+    // preTransitCheck and createAssignProcedure (and their isSplit() guards). Split parents are
+    // safe here only because RegionStateStore.splitRegion() writes info:state=SPLIT to meta, so
+    // loadMeta reconstructs them with state=SPLIT rather than falling through the null-state
+    // fallback to OFFLINE. If that meta write were ever removed, split parents could enter this
+    // path unchecked and be re-opened. See HBASE-30353.
     TransitRegionStateProcedure[] procs =
       regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
         .filter(rsn -> isTableEnabled(rsn.getRegionInfo().getTable())).map(rsn -> {

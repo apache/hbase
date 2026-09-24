@@ -20,11 +20,13 @@ package org.apache.hadoop.hbase.master.assignment;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Collections;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
@@ -326,5 +328,31 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     } finally {
       this.util.killMiniHBaseCluster();
     }
+  }
+
+  @Test
+  public void testSplitParentCannotBeAssignedWhenStateIsClosedAfterFailover() throws Exception {
+    // Simulate the post-failover condition: regionInfo.isSplit()=true but state=CLOSED because the
+    // old code path did not write SPLIT to info:state. See HBASE-30353.
+    RegionInfo splitParent = RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-closed"))
+      .setSplit(true).setOffline(true).build();
+    RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
+    rsn.setState(State.CLOSED);
+
+    assertThrows(DoNotRetryIOException.class, () -> am.assign(splitParent));
+    assertNull(am.createOneAssignProcedure(splitParent, true, false));
+  }
+
+  @Test
+  public void testSplitParentCannotBeAssignedWhenStateIsSplit() throws Exception {
+    // Simulate the normal post-fix state: regionInfo.isSplit()=true and state=SPLIT (written to
+    // info:state by RegionStateStore.splitRegion). See HBASE-30353.
+    RegionInfo splitParent = RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-split"))
+      .setSplit(true).setOffline(true).build();
+    RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
+    rsn.setState(State.SPLIT);
+
+    assertThrows(DoNotRetryIOException.class, () -> am.assign(splitParent));
+    assertNull(am.createOneAssignProcedure(splitParent, true, false));
   }
 }
