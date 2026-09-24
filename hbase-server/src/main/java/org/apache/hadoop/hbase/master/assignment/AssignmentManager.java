@@ -1862,27 +1862,33 @@ public class AssignmentManager {
         LOG.info(regionInfo.getEncodedName() + " regionState=null; presuming " + State.OFFLINE);
         localState = State.OFFLINE;
       }
+      // hbase:meta keeps stale info:sn / info:server after a region transitions to a non-online
+      // state, so retain regionLocation only for states that have "current host" semantics. The
+      // set below mirrors the one that drives addRegionToServer(regionNode), preserving the
+      // invariant: non-null regionLocation iff member of a ServerStateNode.
+      boolean hasCurrentHostSemantics = localState.matches(State.OPEN, State.OPENING,
+        State.CLOSING, State.SPLITTING, State.MERGING);
+      ServerName normalizedLocation = hasCurrentHostSemantics ? regionLocation : null;
+
       RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
       // Do not need to lock on regionNode, as we can make sure that before we finish loading
       // meta, all the related procedures can not be executed. The only exception is for meta
       // region related operations, but here we do not load the informations for meta region.
       regionNode.setState(localState);
       regionNode.setLastHost(lastHost);
-      regionNode.setRegionLocation(regionLocation);
+      regionNode.setRegionLocation(normalizedLocation);
       regionNode.setOpenSeqNum(openSeqNum);
 
       // Note: keep consistent with other methods, see region(Opening|Opened|Closing)
-      // RIT/ServerCrash handling should take care of the transiting regions.
-      if (
-        localState.matches(State.OPEN, State.OPENING, State.CLOSING, State.SPLITTING, State.MERGING)
-      ) {
-        assert regionLocation != null : "found null region location for " + regionNode;
+      //       RIT/ServerCrash handling should take care of the transiting regions.
+      if (hasCurrentHostSemantics) {
+        assert normalizedLocation != null : "found null region location for " + regionNode;
         // TODO: this could lead to some orphan server state nodes, as it is possible that the
         // region server is already dead and its SCP has already finished but we have
         // persisted an opening state on this region server. Finally the TRSP will assign the
         // region to another region server, so it will not cause critical problems, just waste
         // some memory as no one will try to cleanup these orphan server state nodes.
-        regionStates.createServer(regionLocation);
+        regionStates.createServer(normalizedLocation);
         regionStates.addRegionToServer(regionNode);
       } else if (localState == State.OFFLINE || regionInfo.isOffline()) {
         regionStates.addToOfflineRegions(regionNode);
