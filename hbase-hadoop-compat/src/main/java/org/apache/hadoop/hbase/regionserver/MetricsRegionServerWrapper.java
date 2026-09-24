@@ -117,6 +117,17 @@ public interface MetricsRegionServerWrapper {
   long getStoreFileSize();
 
   /**
+   * Get the total uncompressed size of the store files this region server is serving from.
+   */
+  long getStoreFileUncompressedSize();
+
+  /**
+   * Get the compression ratio of store files on this region server. This is the ratio of
+   * uncompressed data size to compressed on-disk size. Returns 0.0 when there is no data.
+   */
+  double getStoreFileCompressionRatio();
+
+  /**
    * Get the growth rate of the store files this region server is serving from.
    */
   double getStoreFileSizeGrowthRate();
