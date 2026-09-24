@@ -68,6 +68,7 @@ Options:
   --hosts HOSTS        Override the list in 'regionservers' file
   --auth-as-server     Authenticate to ZooKeeper using servers configuration
   --internal-classpath Skip attempting to use client facing jars (WARNING: unstable results between versions)
+  --slf4j2           Include SLF4J 2 and Log4j 2 jars in classpath or mapredcp output
   --help or -h         Print this help message
 EOF
 show_usage() {
@@ -148,6 +149,12 @@ fi
 # get arguments
 COMMAND=$1
 shift
+
+if [ "${SLF4J2_CLASSPATH}" = "true" ] && [ "${COMMAND}" != "classpath" ] && \
+   [ "${COMMAND}" != "mapredcp" ]; then
+  echo "--slf4j2 is only supported with classpath and mapredcp" >&2
+  exit 1
+fi
 
 JAVA=$JAVA_HOME/bin/java
 
@@ -398,6 +405,37 @@ fi
 # Add user-specified CLASSPATH prefix first
 if [ "$HBASE_CLASSPATH_PREFIX" != "" ]; then
   CLASSPATH=${HBASE_CLASSPATH_PREFIX}:${CLASSPATH}
+fi
+
+if [ "${SLF4J2_CLASSPATH}" = "true" ]; then
+  # Keep one SLF4J API and use the provider for that API. Hadoop may add 1.x jars.
+  without_old_slf4j() {
+    local path result=""
+    local IFS=:
+    local -a paths
+    read -r -a paths <<< "$1"
+    for path in "${paths[@]}"; do
+      case "${path##*/}" in
+        slf4j-api-*.jar|log4j-slf4j-impl-*.jar|slf4j-reload4j-*.jar|slf4j-log4j12-*.jar) continue ;;
+      esac
+      result="${result:+${result}:}${path}"
+    done
+    printf '%s' "$result"
+  }
+
+  SLF4J2_CP=""
+  for f in "${HBASE_HOME}"/lib/slf4j2/slf4j-api-*.jar \
+           "${HBASE_HOME}"/lib/slf4j2/log4j-slf4j2-impl-*.jar \
+           "${HBASE_HOME}"/lib/client-facing-thirdparty/log4j-api-*.jar \
+           "${HBASE_HOME}"/lib/client-facing-thirdparty/log4j-core-*.jar \
+           "${HBASE_HOME}"/lib/client-facing-thirdparty/log4j-1.2-api-*.jar; do
+    if [ ! -f "${f}" ]; then
+      echo "Missing SLF4J 2 logging jar: ${f}" >&2
+      exit 1
+    fi
+    SLF4J2_CP="${SLF4J2_CP:+${SLF4J2_CP}:}${f}"
+  done
+  CLASSPATH="${SLF4J2_CP}:$(without_old_slf4j "${CLASSPATH}")"
 fi
 
 # cygwin path translation
@@ -726,6 +764,16 @@ elif [ "$COMMAND" = "clean" ] ; then
   "$bin"/hbase-cleanup.sh --config ${HBASE_CONF_DIR} $@
   exit $?
 elif [ "$COMMAND" = "mapredcp" ] ; then
+  if [ "${SLF4J2_CLASSPATH}" = "true" ]; then
+    mapredcp_options=()
+    if [ "${INTERNAL_CLASSPATH}" = "true" ]; then
+      mapredcp_options+=(--internal-classpath)
+    fi
+    mapredcp=$(HBASE_CONF_DIR="${HBASE_CONF_DIR}" "$bin/hbase" \
+      "${mapredcp_options[@]}" mapredcp "$@") || exit $?
+    echo "${SLF4J2_CP}:$(without_old_slf4j "${mapredcp}")"
+    exit 0
+  fi
   # If we didn't find a jar above, this will just be blank and the
   # check below will then default back to the internal classpath.
   shaded_jar="${shaded_mapreduce}"
