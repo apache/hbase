@@ -768,9 +768,12 @@ public class AssignmentManager {
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException(UNEXPECTED_STATE_REGION + regionNode);
     }
-    // A split parent is permanently retired — it must never be re-opened. Guard both the normal
-    // assign path (state=SPLIT) and the post-failover path where loadMeta may have reconstructed
-    // the node with state=CLOSED but regionInfo.isSplit()=true. See HBASE-30353.
+    // if we don't write the state as SPLIT to the meta, we would need this check.
+
+    // if we want to write the state as SPLIT to the meta, tbd if we would need this.
+    // we would want this to be safe as we roll out the change. there may be some regionservers that
+    // are split but don't have the SPLIT state persisted to the meta because they split before this
+    // change. the actual chances of that happening are low (but 0).
     if (regionNode.isSplit()) {
       throw new DoNotRetryRegionException(
         regionNode.getRegionInfo().getEncodedName() + " is a split parent and cannot be assigned");
@@ -793,9 +796,10 @@ public class AssignmentManager {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     regionNode.lock();
     try {
-      // Guard the override (HBCK2) path too: even with override=true or force=true a split parent
-      // must never be assigned. preTransitCheck is skipped when force=true, so this check must
-      // come first. See HBASE-30353.
+      // we'd still need this check.
+      // if createAssignProcedure is called with override=true, it skips the preTansitCheck that
+      //
+      // would validate the state (checks if it's CLOSED or OFFLINE)
       if (regionNode.isSplit()) {
         throw new DoNotRetryRegionException(regionNode.getRegionInfo().getEncodedName()
           + " is a split parent and cannot be assigned");
