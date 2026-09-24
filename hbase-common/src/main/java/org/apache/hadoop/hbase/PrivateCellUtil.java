@@ -807,6 +807,20 @@ public final class PrivateCellUtil {
       right.getValueArray(), right.getValueOffset(), rvlength);
   }
 
+  public static boolean matchingValue(final Cell left, final byte[] right, int rightOffset,
+    int rightLength) {
+    if (left.getValueLength() != rightLength) {
+      return false;
+    }
+    if (left instanceof ByteBufferExtendedCell) {
+      return ByteBufferUtils.equals(((ByteBufferExtendedCell) left).getValueByteBuffer(),
+        ((ByteBufferExtendedCell) left).getValuePosition(), rightLength, right, rightOffset,
+        rightLength);
+    }
+    return Bytes.equals(left.getValueArray(), left.getValueOffset(), rightLength, right,
+      rightOffset, rightLength);
+  }
+
   public static boolean matchingType(ExtendedCell a, ExtendedCell b) {
     return a.getTypeByte() == b.getTypeByte();
   }
