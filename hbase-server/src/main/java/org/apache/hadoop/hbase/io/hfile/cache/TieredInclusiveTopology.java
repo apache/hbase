@@ -133,4 +133,20 @@ public class TieredInclusiveTopology implements CacheTopology {
   public boolean handleEviction(BlockCacheKey cacheKey, Cacheable block, CacheEngine sourceEngine) {
     return false;
   }
+
+  /**
+   * Handles an access to a block found in this inclusive topology.
+   * <p>
+   * A block found in L1 is also expected to be present in L2. Notify L2 about the access so that it
+   * can update any access-based metadata without reading the block. An L2 hit requires no
+   * additional notification because L2 observed the access directly.
+   * @param cacheKey     key identifying the accessed block
+   * @param sourceEngine engine in which the block was found
+   */
+  @Override
+  public void handleAccess(BlockCacheKey cacheKey, CacheEngine sourceEngine) {
+    if (sourceEngine == l1) {
+      l2.touch(cacheKey);
+    }
+  }
 }

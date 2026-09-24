@@ -139,6 +139,17 @@ public interface CacheEngine {
   }
 
   /**
+   * Notifies this cache engine that the specified block was accessed without fetching the block
+   * from this engine.
+   * <p>
+   * Engines that maintain access metadata for blocks that may be accessed through another cache
+   * engine may override this method. The default implementation does nothing.
+   * @param cacheKey key identifying the accessed block
+   */
+  default void touch(BlockCacheKey cacheKey) {
+  }
+
+  /**
    * Evicts a single block from the cache.
    * @param cacheKey block to evict
    * @return {@code true} if the block existed and was evicted, {@code false} otherwise

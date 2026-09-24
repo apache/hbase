@@ -137,9 +137,14 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
       return getBlockFromTieredExclusiveTopology(cacheKey, context);
     }
     return getBlockFromAllTiers(cacheKey, context);
-
   }
 
+  /**
+   * Gets a block from a tiered-exclusive topology.
+   * @param cacheKey cache key identifying the block
+   * @param context  cache request context
+   * @return cached block, or {@code null} if the block is not cached
+   */
   private Cacheable getBlockFromTieredExclusiveTopology(BlockCacheKey cacheKey,
     CacheRequestContext context) {
 
@@ -151,11 +156,19 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     }
 
     if (!l1.isPresent()) {
-      return getBlockFromEngine(l2.get(), cacheKey, context);
+      Cacheable block = getBlockFromEngine(l2.get(), cacheKey, context);
+      if (block != null) {
+        topology.handleAccess(cacheKey, l2.get());
+      }
+      return block;
     }
 
     if (!l2.isPresent()) {
-      return getBlockFromEngine(l1.get(), cacheKey, context);
+      Cacheable block = getBlockFromEngine(l1.get(), cacheKey, context);
+      if (block != null) {
+        topology.handleAccess(cacheKey, l1.get());
+      }
+      return block;
     }
 
     CacheEngine selectedEngine = l1.get();
@@ -170,11 +183,18 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     Cacheable block = getBlockFromEngine(selectedEngine, cacheKey, context);
 
     if (block != null) {
+      topology.handleAccess(cacheKey, selectedEngine);
       maybePromote(cacheKey, block, selectedTier, selectedEngine, context);
     }
     return block;
   }
 
+  /**
+   * Gets a block by searching the cache topology tiers in order.
+   * @param cacheKey cache key identifying the block
+   * @param context  cache request context
+   * @return cached block, or {@code null} if the block is not cached
+   */
   private Cacheable getBlockFromAllTiers(BlockCacheKey cacheKey, CacheRequestContext context) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     Objects.requireNonNull(context, "context must not be null");
@@ -185,13 +205,14 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
         continue;
       }
 
-      Cacheable block = getBlockFromEngine(engine.get(), cacheKey, context);
+      CacheEngine cacheEngine = engine.get();
+      Cacheable block = getBlockFromEngine(cacheEngine, cacheKey, context);
       if (block != null) {
-        maybePromote(cacheKey, block, tier, engine.get(), context);
+        topology.handleAccess(cacheKey, cacheEngine);
+        maybePromote(cacheKey, block, tier, cacheEngine, context);
         return block;
       }
     }
-
     return null;
   }
 
