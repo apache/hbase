@@ -1142,31 +1142,23 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   Map<TableName, Map<ServerName, List<RegionInfo>>> getRSGroupAssignmentsByTable(
     TableStateManager tableStateManager, String groupName) throws IOException {
     Map<TableName, Map<ServerName, List<RegionInfo>>> result = Maps.newHashMap();
-    Set<TableName> tablesInGroupCache = new HashSet<>();
-    for (Map.Entry<RegionInfo, ServerName> entry : masterServices.getAssignmentManager()
-      .getRegionStates().getRegionAssignments().entrySet()) {
-      RegionInfo region = entry.getKey();
-      TableName tn = region.getTable();
-      ServerName server = entry.getValue();
-      if (isTableInGroup(tn, groupName, tablesInGroupCache)) {
-        if (
-          tableStateManager.isTableState(tn, TableState.State.DISABLED, TableState.State.DISABLING)
-        ) {
-          continue;
-        }
-        if (region.isSplitParent()) {
-          continue;
-        }
-        result.computeIfAbsent(tn, k -> new HashMap<>())
-          .computeIfAbsent(server, k -> new ArrayList<>()).add(region);
+    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
+    List<ServerName> onlineServersInGroup = new ArrayList<>();
+    for (ServerName serverName : masterServices.getServerManager().getOnlineServersList()) {
+      if (rsGroupInfo.containsServer(serverName.getAddress())) {
+        onlineServersInGroup.add(serverName);
       }
     }
-    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    for (ServerName serverName : masterServices.getServerManager().getOnlineServers().keySet()) {
-      if (rsGroupInfo.containsServer(serverName.getAddress())) {
-        for (Map<ServerName, List<RegionInfo>> map : result.values()) {
-          map.computeIfAbsent(serverName, k -> Collections.emptyList());
-        }
+    Map<TableName, Map<ServerName, List<RegionInfo>>> assignments = masterServices
+      .getAssignmentManager().getRegionStates()
+      .getAssignmentsForBalancer(tableStateManager, onlineServersInGroup);
+
+    Set<TableName> tablesInGroupCache = new HashSet<>();
+    for (Map.Entry<TableName, Map<ServerName, List<RegionInfo>>> entry : assignments.entrySet()) {
+      TableName tableName = entry.getKey();
+      if (isTableInGroup(tableName, groupName, tablesInGroupCache)) {
+        result.put(tableName, entry.getValue());
+        LOG.debug("Adding assignments for {}: {}", tableName, entry.getValue());
       }
     }
     return result;
