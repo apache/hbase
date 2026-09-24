@@ -189,7 +189,7 @@ of this codebase. The canonical chain for discovering it is:
   AGENTS.md  ->  SECURITY.md  ->  https://hbase.apache.org/security-model/
 
 `SECURITY.md` at the repo root is a short pointer to the published model
-and the `security@apache.org` reporting flow. The full model (source at
+and the `security@hbase.apache.org` reporting flow. The full model (source at
 `hbase-website/app/pages/_landing/security-model/content.md`, published
 at <https://hbase.apache.org/security-model/>) details trust boundaries,
 what constitutes a valid vulnerability, and what does not.
