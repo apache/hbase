@@ -1838,6 +1838,8 @@ public class AssignmentManager {
     // path unchecked and be re-opened. See HBASE-30353.
     TransitRegionStateProcedure[] procs =
       regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
+        // if we don't persist the SPLIT state, we'll need to add an extra filter here.
+        // .filter(rsn -> !rsn.getRegionInfo().isSplit())
         .filter(rsn -> isTableEnabled(rsn.getRegionInfo().getTable())).map(rsn -> {
           rsn.lock();
           try {
