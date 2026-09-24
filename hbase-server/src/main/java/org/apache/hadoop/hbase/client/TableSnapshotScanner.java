@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.regionserver.MemStoreLAB;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -81,7 +82,8 @@ public class TableSnapshotScanner extends AbstractClientScanner {
   private ClientSideRegionScanner currentRegionScanner = null;
   private int currentRegion = -1;
 
-  private int numOfCompleteRows = 0;
+  private int numOfRows = 0;
+  private byte[] lastRow;
 
   /**
    * Creates a TableSnapshotScanner.
@@ -182,6 +184,9 @@ public class TableSnapshotScanner extends AbstractClientScanner {
 
   @Override
   public Result next() throws IOException {
+    if (scan.getLimit() > 0 && numOfRows > scan.getLimit()) {
+      return null;
+    }
     Result result = null;
     while (true) {
       if (currentRegionScanner == null) {
@@ -201,8 +206,12 @@ public class TableSnapshotScanner extends AbstractClientScanner {
       try {
         result = currentRegionScanner.next();
         if (result != null) {
-          if (scan.getLimit() > 0 && ++this.numOfCompleteRows > scan.getLimit()) {
-            result = null;
+          // Count row keys, since a partial result does not guarantee another fragment will follow.
+          if (scan.getLimit() > 0 && !Bytes.equals(lastRow, result.getRow())) {
+            lastRow = result.getRow();
+            if (++numOfRows > scan.getLimit()) {
+              result = null;
+            }
           }
           return result;
         }
