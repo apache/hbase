@@ -376,9 +376,6 @@ public class RegionStateStore {
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(
       RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
     MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
-    // Persist the terminal SPLIT state so that after a master failover loadMeta reconstructs the
-    // parent as state=SPLIT rather than falling back to OFFLINE, which would make it eligible for
-    // re-assignment via processOfflineRegions. See HBASE-30353.
     MetaTableAccessor.addRegionStateToPut(putParent, RegionInfo.DEFAULT_REPLICA_ID,
       RegionState.State.SPLIT);
 

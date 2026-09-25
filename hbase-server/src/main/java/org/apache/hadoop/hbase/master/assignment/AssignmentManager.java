@@ -768,16 +768,7 @@ public class AssignmentManager {
     if (!regionNode.isInState(expectedStates)) {
       throw new DoNotRetryRegionException(UNEXPECTED_STATE_REGION + regionNode);
     }
-    // if we don't write the state as SPLIT to the meta, we would need this check.
 
-    // if we want to write the state as SPLIT to the meta, tbd if we would need this.
-    // we would want this to be safe as we roll out the change. there may be some regionservers that
-    // are split but don't have the SPLIT state persisted to the meta because they split before this
-    // change. the actual chances of that happening are low (but 0).
-    if (regionNode.isSplit()) {
-      throw new DoNotRetryRegionException(
-        regionNode.getRegionInfo().getEncodedName() + " is a split parent and cannot be assigned");
-    }
     if (isTableDisabled(regionNode.getTable())) {
       throw new DoNotRetryIOException(regionNode.getTable() + " is disabled for " + regionNode);
     }
@@ -1830,16 +1821,8 @@ public class AssignmentManager {
   // Public so can be run by the Master as part of the startup. Needs hbase:meta to be online.
   // Needs to be done after the table state manager has been started.
   public void processOfflineRegions() {
-    // This method calls TransitRegionStateProcedure.assign() directly, bypassing both
-    // preTransitCheck and createAssignProcedure (and their isSplit() guards). Split parents are
-    // safe here only because RegionStateStore.splitRegion() writes info:state=SPLIT to meta, so
-    // loadMeta reconstructs them with state=SPLIT rather than falling through the null-state
-    // fallback to OFFLINE. If that meta write were ever removed, split parents could enter this
-    // path unchecked and be re-opened. See HBASE-30353.
     TransitRegionStateProcedure[] procs =
       regionStates.getRegionStateNodes().stream().filter(rsn -> rsn.isInState(State.OFFLINE))
-        // if we don't persist the SPLIT state, we'll need to add an extra filter here.
-        // .filter(rsn -> !rsn.getRegionInfo().isSplit())
         .filter(rsn -> isTableEnabled(rsn.getRegionInfo().getTable())).map(rsn -> {
           rsn.lock();
           try {
