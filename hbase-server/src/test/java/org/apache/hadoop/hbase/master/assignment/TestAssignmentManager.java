@@ -230,6 +230,21 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     assertNull(am.createOneAssignProcedure(splitParent, true, false));
   }
 
+  // Simulate the pre-fix failover scenario: regionInfo.isSplit()=true but state=OFFLINE because
+  // the old code path did not write SPLIT to info:state, causing loadMeta to fall back to OFFLINE.
+  // See HBASE-30353.
+  @Test
+  public void testAssignThrowsWithASplitParentInOfflineState() throws Exception {
+    RegionInfo splitParent =
+      RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-offline")).setSplit(true)
+        .setOffline(true).build();
+    RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
+    rsn.setState(State.OFFLINE);
+
+    assertThrows(DoNotRetryIOException.class, () -> am.assign(splitParent));
+    assertNull(am.createOneAssignProcedure(splitParent, true, false));
+  }
+
   /**
    * It is possible that when AM send assign meta request to a RS successfully, but RS can not send
    * back any response, which cause master startup hangs forever
