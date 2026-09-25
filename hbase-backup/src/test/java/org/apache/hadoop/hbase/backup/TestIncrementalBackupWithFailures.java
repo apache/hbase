@@ -19,9 +19,11 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -103,6 +105,25 @@ public class TestIncrementalBackupWithFailures extends TestBackupBase {
 
     // #3 - incremental backup for multiple tables
     incrementalBackupWithFailures();
+
+    String failedBackupId;
+    try (BackupSystemTable table = new BackupSystemTable(conn)) {
+      failedBackupId =
+        table.getBackupHistory(BackupInfo.withState(BackupState.FAILED)).get(0).getBackupId();
+    }
+
+    conf1.unset(TableBackupClient.BACKUP_CLIENT_IMPL_CLASS);
+    String backupIdIncremental = client.backupTables(createBackupRequest(BackupType.INCREMENTAL,
+      Lists.newArrayList(table1, table2), BACKUP_ROOT_DIR));
+    assertTrue(checkSucceeded(backupIdIncremental));
+
+    assertEquals(1, client.deleteBackups(new String[] { failedBackupId }));
+    assertTrue(checkSucceeded(backupIdIncremental));
+    try (BackupSystemTable table = new BackupSystemTable(conn)) {
+      assertNull(table.readBackupInfo(failedBackupId));
+      assertEquals(Set.of(table1, table2),
+        Set.copyOf(table.readBackupInfo(backupIdIncremental).getTableNames()));
+    }
 
     admin.close();
     conn.close();
