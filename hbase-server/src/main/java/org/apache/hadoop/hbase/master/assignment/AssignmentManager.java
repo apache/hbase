@@ -787,10 +787,6 @@ public class AssignmentManager {
     RegionStateNode regionNode = regionStates.getOrCreateRegionStateNode(regionInfo);
     regionNode.lock();
     try {
-      // we'd still need this check.
-      // if createAssignProcedure is called with override=true, it skips the preTansitCheck that
-      //
-      // would validate the state (checks if it's CLOSED or OFFLINE)
       if (regionNode.isSplit()) {
         throw new DoNotRetryRegionException(regionNode.getRegionInfo().getEncodedName()
           + " is a split parent and cannot be assigned");
