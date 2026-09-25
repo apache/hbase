@@ -103,8 +103,7 @@ public class TestSnapshotQuotaObserverChore {
     helper = new SpaceQuotaHelperForTests(TEST_UTIL, () -> testName, COUNTER);
     master = TEST_UTIL.getHBaseCluster().getMaster();
     helper.removeAllQuotas(conn);
-    testChore = new SnapshotQuotaObserverChore(TEST_UTIL.getConnection(),
-      TEST_UTIL.getConfiguration(), master.getFileSystem(), master, null);
+    testChore = new SnapshotQuotaObserverChore(master, null);
   }
 
   @Test
