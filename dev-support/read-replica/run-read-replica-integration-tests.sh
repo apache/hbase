@@ -29,6 +29,7 @@ export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
 JAVA_VERSION=17
 KEEP_IMAGE=false
 KEEP_CONTAINERS=false
+PYTEST_K_VALUE=""
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
@@ -49,9 +50,18 @@ while [[ $# -gt 0 ]]; do
       KEEP_CONTAINERS=true
       shift
       ;;
+    -k)
+      if [[ -n "$2" && "$2" != -* ]]; then
+        PYTEST_K_VALUE="$2"
+        shift 2
+      else
+        echo "Error: Argument for $1 is missing"
+        exit 1
+      fi
+      ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [-j|--java-version <version>] [-i|--keep-image] [-c|--keep-containers]"
+      echo "Usage: $0 [-j|--java-version <version>] [-i|--keep-image] [-c|--keep-containers] [-k <expression>]"
       exit 1
       ;;
   esac
@@ -141,10 +151,16 @@ echo "Building hbase-docker image"
 ./build-images.sh
 
 # Run read-replica integration test suite
+PYTEST_K_ARGS=()
+if [[ -n "${PYTEST_K_VALUE}" ]]; then
+  PYTEST_K_ARGS=(-k "${PYTEST_K_VALUE}")
+fi
+
 echo "Starting read-replica integration test suite via Pytest..."
 pytest --html="${OUTPUT_DIR}/read-replica-nightly-test-report.html" \
        --self-contained-html \
        --junitxml="${OUTPUT_DIR}/read-replica-nightly-test-results.xml" \
-       python/test/test_read_replica_feature.py
+       python/test/test_read_replica_feature.py \
+       "${PYTEST_K_ARGS[@]}"
 
 echo "=== Success: All read-replica integration tests passed. ==="
