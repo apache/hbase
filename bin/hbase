@@ -54,8 +54,19 @@
 #   HBASE_SHELL_OPTS Extra options passed to the hbase shell.
 #                    Empty by default.
 #
-#   HBASE_JSHELL_ARGS Additional arguments passed to the jshell.
-#                     Defaults to `--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh`
+#   HBASE_JSHELL_ARGS Additional arguments passed to jshell (interactive `jshell`
+#                    and `*.jsh` script dispatch). When unset, defaults to
+#                    `--startup DEFAULT --startup PRINTING` plus
+#                    `--startup ${HBASE_HOME}/bin/hbase_startup.jsh` when that
+#                    file exists, and `--execution local` unless --execution is
+#                    already set here (so System.exit in scripts propagates).
+#
+#   HBASE_JSH_ARG_N / HBASE_JSH_ARG_COUNT
+#                    Positional args for `hbase path/to/script.jsh [args...]`.
+#                    JShell script mode has no String[] args, so bin/hbase
+#                    exports HBASE_JSH_ARG_0..HBASE_JSH_ARG_{N-1} and
+#                    HBASE_JSH_ARG_COUNT=N for the script to read (see
+#                    hbase_startup.jsh for an example).
 #
 #   HBASE_HBCK_OPTS  Extra options passed to hbck.
 #                    Defaults to HBASE_SERVER_JAAS_OPTS if specified, or HBASE_REGIONSERVER_OPTS.
@@ -94,6 +105,8 @@ show_usage() {
     echo "  clean            Run the HBase clean up script"
   fi
   echo "  jshell           Run a jshell with HBase on the classpath"
+  echo "  script.jsh       Run a JShell script non-interactively (args via HBASE_JSH_ARG_N)"
+  echo "  Script.java      Run a single-file .java source (JEP 330) with HBase on the classpath"
   echo "  classpath        Dump hbase CLASSPATH"
   echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
   echo "  pe               Run PerformanceEvaluation"
@@ -172,6 +185,50 @@ add_size_suffix() {
     else
         echo ${val}m
     fi
+}
+
+# Resolve a script under bin/: keep paths that already contain a slash, otherwise
+# look in HBASE_HOME/bin. Sets RESOLVED_BIN_SCRIPT or exits.
+resolve_bin_script() {
+  local name="$1"
+  local kind="$2"
+  if [[ "$name" == */* ]]; then
+    RESOLVED_BIN_SCRIPT="$name"
+  else
+    RESOLVED_BIN_SCRIPT="${HBASE_HOME}/bin/${name}"
+  fi
+  if [ ! -f "$RESOLVED_BIN_SCRIPT" ]; then
+    echo "${kind} not found: $RESOLVED_BIN_SCRIPT"
+    exit 1
+  fi
+}
+
+# Populate JSHELL_ARGS for both interactive `jshell` and `*.jsh` script dispatch.
+# Shared so the two paths cannot drift. Honors HBASE_JSHELL_ARGS when set; otherwise
+# DEFAULT + PRINTING + optional hbase_startup.jsh. Defaults to --execution local
+# unless the user already passed --execution / --execution=<spec>.
+init_jshell_args() {
+  if [ -n "${HBASE_JSHELL_ARGS}" ]; then
+    read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS}"
+  else
+    JSHELL_ARGS=(--startup DEFAULT --startup PRINTING)
+    if [ -f "${HBASE_HOME}/bin/hbase_startup.jsh" ]; then
+      JSHELL_ARGS+=(--startup "${HBASE_HOME}/bin/hbase_startup.jsh")
+    fi
+  fi
+  # --execution local runs snippets in-process so System.exit() propagates as the
+  # process exit code (JDI remote mode only kills the forked VM).
+  local has_execution=false
+  local arg
+  for arg in "${JSHELL_ARGS[@]}"; do
+    if [ "$arg" = "--execution" ] || [[ "$arg" == --execution=* ]]; then
+      has_execution=true
+      break
+    fi
+  done
+  if [ "$has_execution" = false ]; then
+    JSHELL_ARGS+=(--execution local)
+  fi
 }
 
 if [[ -n "$HBASE_HEAPSIZE" ]]; then
@@ -579,8 +636,7 @@ if [ "$COMMAND" = "shell" ] ; then
   HBASE_OPTS="$HBASE_OPTS $HBASE_SHELL_OPTS"
 elif [ "$COMMAND" = 'jshell' ] ; then
   CLASS='jdk.internal.jshell.tool.JShellToolProvider'
-  # set default values for HBASE_JSHELL_ARGS
-  read -r -a JSHELL_ARGS <<< "${HBASE_JSHELL_ARGS:-"--startup DEFAULT --startup PRINTING --startup ${HBASE_HOME}/bin/hbase_startup.jsh"}"
+  init_jshell_args
   HBASE_OPTS="$HBASE_OPTS $HBASE_JSHELL_OPTS"
 elif [ "$COMMAND" = "hbck" ] ; then
   # Look for the -j /path/to/HBCK2.jar parameter. Else pass through to hbck.
@@ -795,6 +851,54 @@ elif [ "$COMMAND" = "credential" ] ; then
   CLASS='org.apache.hadoop.security.alias.CredentialShell'
 elif [ "$COMMAND" = "copyreppeers" ] ; then
   CLASS='org.apache.hadoop.hbase.replication.CopyReplicationPeers'
+elif [[ "$COMMAND" == *.jsh ]] ; then
+  # No JDK version guard here: hbase-config.sh already requires JDK 17+.
+  resolve_bin_script "$COMMAND" "jshell script"
+  JSH_SCRIPT="$RESOLVED_BIN_SCRIPT"
+  # pass positional args to the script via env vars: jshell script mode has no
+  # String[] args equivalent, and re-joining/re-splitting args into one string
+  # breaks on embedded spaces, so each arg gets its own env var instead.
+  # See HBASE_JSH_ARG_N / HBASE_JSH_ARG_COUNT in the header and hbase_startup.jsh.
+  i=0
+  for a in "$@"; do
+    export HBASE_JSH_ARG_$i="$a"
+    i=$((i+1))
+  done
+  export HBASE_JSH_ARG_COUNT=$i
+  set --
+  CLASS='jdk.internal.jshell.tool.JShellToolProvider'
+  init_jshell_args
+  # Default to -q (concise feedback) for non-interactive scripts, but jshell
+  # allows only one feedback option (--feedback / -q / -s / -v); honor any the
+  # user already set via HBASE_JSHELL_ARGS.
+  has_feedback=false
+  for arg in "${JSHELL_ARGS[@]}"; do
+    if [ "$arg" = "--feedback" ] || [[ "$arg" == --feedback=* ]] \
+        || [ "$arg" = "-q" ] || [ "$arg" = "-s" ] || [ "$arg" = "-v" ]; then
+      has_feedback=true
+      break
+    fi
+  done
+  if [ "$has_feedback" = false ]; then
+    JSHELL_ARGS+=(-q)
+  fi
+  JSHELL_ARGS+=("$JSH_SCRIPT")
+  HBASE_OPTS="$HBASE_OPTS $HBASE_JSHELL_OPTS"
+  # run the script and exit rather than dropping into an interactive REPL
+  HBASE_JSH_SCRIPT_MODE=true
+elif [[ "$COMMAND" == *.java ]] ; then
+  # JEP 330 single-file source launch: java forwards the remaining args
+  # directly to main(String[] args), so no env-var passthrough is needed here
+  # (unlike the .jsh case above). No JDK version guard: hbase-config.sh already
+  # requires JDK 17+, which covers JEP 330 (JDK 11+).
+  #
+  # Keep the source path out of $CLASS: the java invocation expands $CLASS
+  # unquoted (so multi-token CLASS values like the JRuby shell launcher still
+  # word-split), which would break paths containing spaces. Prepend the path
+  # onto "$@" instead; it is then carried via the quoted "${CMD_ARGS[@]}" array.
+  resolve_bin_script "$COMMAND" "java source script"
+  set -- "$RESOLVED_BIN_SCRIPT" "$@"
+  CLASS=
 else
   CLASS=$COMMAND
 fi
@@ -855,9 +959,34 @@ if [ "${#JSHELL_ARGS[@]}" -gt 0 ] ; then
   CMD_ARGS=("${JSHELL_ARGS[@]}" "${CMD_ARGS[@]}")
 fi
 
+# Keep -Dproc_* as a plain keyword even when COMMAND is a .jsh/.java path.
+case "$COMMAND" in
+  *.jsh) HBASE_PROC_NAME=jsh ;;
+  *.java) HBASE_PROC_NAME=java ;;
+  *) HBASE_PROC_NAME="$COMMAND" ;;
+esac
+
+# JShell script mode: detach stdin so an interactive tty does not keep jshell
+# open after the script finishes. Do this once here rather than duplicating the
+# java invocation for the redirect.
+if [ "${HBASE_JSH_SCRIPT_MODE}" = "true" ]; then
+  exec < /dev/null
+fi
+
+# $CLASS is left unquoted historically so multi-token values (rare) still
+# word-split, but for .java JEP 330 we keep CLASS empty and put the source
+# path in CMD_ARGS (quoted). Build the trailing argv so an empty CLASS does
+# not become a spurious "" argument the way quoting "$CLASS" would.
+JAVA_MAIN=()
+if [ -n "$CLASS" ]; then
+  # shellcheck disable=SC2206
+  JAVA_MAIN+=($CLASS)
+fi
+JAVA_MAIN+=("${CMD_ARGS[@]}")
+
 if [ "${HBASE_NOEXEC}" != "" ]; then
-  "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
+  "$JAVA" "-Dproc_${HBASE_PROC_NAME}" -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS "${JAVA_MAIN[@]}"
 else
   export JVM_PID="$$"
-  exec "$JAVA" -Dproc_$COMMAND -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS $CLASS "${CMD_ARGS[@]}"
+  exec "$JAVA" "-Dproc_${HBASE_PROC_NAME}" -XX:OnOutOfMemoryError="kill -9 %p" $HEAP_SETTINGS $HBASE_OPTS "${JAVA_MAIN[@]}"
 fi
