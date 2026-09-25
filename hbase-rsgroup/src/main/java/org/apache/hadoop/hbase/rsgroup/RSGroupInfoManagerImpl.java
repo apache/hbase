@@ -384,8 +384,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public synchronized Set<Address> moveServers(Set<Address> servers, String srcGroup,
     String dstGroup) throws IOException {
-    RSGroupInfo src = getRSGroupInfo(srcGroup);
-    RSGroupInfo dst = getRSGroupInfo(dstGroup);
+    // Mutate copies, not the live rsGroupMap entries -- flushConfig() below can still reject
+    // this change (e.g. the regex-membership invariant), and the live state must stay untouched
+    // until the change is actually persisted.
+    RSGroupInfo src = new RSGroupInfo(getRSGroupInfo(srcGroup));
+    RSGroupInfo dst = new RSGroupInfo(getRSGroupInfo(dstGroup));
     Set<Address> movedServers = new HashSet<>();
     // If destination is 'default' rsgroup, only add servers that are online. If not online, drop
     // it. If not 'default' group, add server to 'dst' rsgroup EVEN IF IT IS NOT online (could be a
@@ -490,9 +493,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   @Override
   public void moveServersAndTables(Set<Address> servers, Set<TableName> tables, String srcGroup,
     String dstGroup) throws IOException {
-    // get server's group
-    RSGroupInfo srcGroupInfo = getRSGroupInfo(srcGroup);
-    RSGroupInfo dstGroupInfo = getRSGroupInfo(dstGroup);
+    // get server's group; mutate copies, not the live rsGroupMap entries -- flushConfig() below
+    // can still reject this change, and the live state must stay untouched until persisted.
+    RSGroupInfo srcGroupInfo = new RSGroupInfo(getRSGroupInfo(srcGroup));
+    RSGroupInfo dstGroupInfo = new RSGroupInfo(getRSGroupInfo(dstGroup));
 
     // move servers
     for (Address el : servers) {
@@ -520,8 +524,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       if (rsGroupInfo != null) {
         RSGroupInfo newRsGroupInfo = rsGroupInfos.get(rsGroupInfo.getName());
         if (newRsGroupInfo == null) {
-          rsGroupInfo.removeServer(el);
-          rsGroupInfos.put(rsGroupInfo.getName(), rsGroupInfo);
+          // Mutate a copy, not the live rsGroupMap entry -- flushConfig() below can still
+          // reject this change, and the live state must stay untouched until persisted.
+          newRsGroupInfo = new RSGroupInfo(rsGroupInfo);
+          newRsGroupInfo.removeServer(el);
+          rsGroupInfos.put(newRsGroupInfo.getName(), newRsGroupInfo);
         } else {
           newRsGroupInfo.removeServer(el);
           rsGroupInfos.put(newRsGroupInfo.getName(), newRsGroupInfo);
@@ -941,10 +948,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         continue;
       }
       if (!expectedRSGroupName.equals(actualRSGroupName)) {
-        throw new DoNotRetryIOException("Server " + server + " hostname matches configured regex "
+        if (rsGroupMap.containsKey(expectedRSGroupName)) {
+          throw new DoNotRetryIOException("Server " + server + " hostname matches configured regex "
           + RS_GROUP_REGEX_PREFIX + expectedRSGroupName + " and must belong to RSGroup '"
           + expectedRSGroupName + "' but would be placed in RSGroup '" + actualRSGroupName
           + "'. Fix/remove the " + RS_GROUP_REGEX_PREFIX + expectedRSGroupName + " config.");
+        }
+        continue;
       }
     }
   }
