@@ -53,7 +53,7 @@ public class QualifierFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     if (compareQualifier(getCompareOperator(), this.comparator, c)) {
       return ReturnCode.SKIP;
     }
