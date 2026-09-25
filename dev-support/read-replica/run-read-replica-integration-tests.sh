@@ -15,9 +15,9 @@
 # KIND, either express or implied.  See the License for the
 # specific language governing permissions and limitations
 # under the License.
-#
-# Run the read-replica Docker integration test suite.
 
+# Inner test runner executed INSIDE the Docker container built
+# using hbase/dev-support/docker/Dockerfile
 set -e
 
 REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -26,11 +26,21 @@ export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 
 export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
 
+JAVA_VERSION=17
 KEEP_IMAGE=false
 KEEP_CONTAINERS=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -j|--java-version)
+      if [[ -n "$2" && "$2" != -* ]]; then
+        JAVA_VERSION="$2"
+        shift 2
+      else
+        echo "Error: Argument for $1 is missing"
+        exit 1
+      fi
+      ;;
     -i|--keep-image)
       KEEP_IMAGE=true
       shift
@@ -41,12 +51,20 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [-i|--keep-image] [-c|--keep-containers]"
+      echo "Usage: $0 [-j|--java-version <version>] [-i|--keep-image] [-c|--keep-containers]"
       exit 1
       ;;
   esac
 done
 
+# Set JAVA_HOME and update PATH for the selected JVM (e.g. 8, 11, 17, 21)
+# MAVEN_HOME is set in hbase/dev-support/docker/Dockerfile
+export JAVA_HOME="/usr/lib/jvm/java-${JAVA_VERSION}"
+export PATH="${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
+
+echo "Using JAVA_HOME=${JAVA_HOME}"
+
+echo "=== Inside Dev Container Environment ==="
 echo "Replica dir: ${REPLICA_DIR}"
 echo "Output dir: ${OUTPUT_DIR}"
 echo "HBase root: ${HBASE_ROOT}"
@@ -76,7 +94,7 @@ cleanup() {
   local exit_code=$?
   if [ ${exit_code} -ne 0 ]; then
     echo "=== FAILURE ==="
-    echo "An error occurred during this stage in the Jenkins run."
+    echo "An error occurred during this stage of the run."
   fi
   if [ "${KEEP_CONTAINERS}" = "false" ]; then
     echo "=== Cleanup: Stopping Docker containers ==="
@@ -123,7 +141,6 @@ echo "Building hbase-docker image"
 ./build-images.sh
 
 # Run read-replica integration test suite
-echo "Starting read-replica integration test scripts"
 echo "Starting read-replica integration test suite via Pytest..."
 pytest --html="${OUTPUT_DIR}/read-replica-nightly-test-report.html" \
        --self-contained-html \
