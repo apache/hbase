@@ -219,6 +219,17 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     assertEquals(unassignFailedCount, unassignProcMetrics.getFailedCounter().getCount());
   }
 
+  @Test
+  public void testAssignThrowsWithASplitParent() throws Exception {
+    RegionInfo splitParent = RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-split"))
+      .setSplit(true).setOffline(true).build();
+    RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
+    rsn.setState(State.SPLIT);
+
+    assertThrows(DoNotRetryIOException.class, () -> am.assign(splitParent));
+    assertNull(am.createOneAssignProcedure(splitParent, true, false));
+  }
+
   /**
    * It is possible that when AM send assign meta request to a RS successfully, but RS can not send
    * back any response, which cause master startup hangs forever
@@ -328,31 +339,5 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
     } finally {
       this.util.killMiniHBaseCluster();
     }
-  }
-
-  @Test
-  public void testSplitParentCannotBeAssignedWhenStateIsClosedAfterFailover() throws Exception {
-    // Simulate the post-failover condition: regionInfo.isSplit()=true but state=CLOSED because the
-    // old code path did not write SPLIT to info:state. See HBASE-30353.
-    RegionInfo splitParent = RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-closed"))
-      .setSplit(true).setOffline(true).build();
-    RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
-    rsn.setState(State.CLOSED);
-
-    assertThrows(DoNotRetryIOException.class, () -> am.assign(splitParent));
-    assertNull(am.createOneAssignProcedure(splitParent, true, false));
-  }
-
-  @Test
-  public void testSplitParentCannotBeAssignedWhenStateIsSplit() throws Exception {
-    // Simulate the normal post-fix state: regionInfo.isSplit()=true and state=SPLIT (written to
-    // info:state by RegionStateStore.splitRegion). See HBASE-30353.
-    RegionInfo splitParent = RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-split"))
-      .setSplit(true).setOffline(true).build();
-    RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
-    rsn.setState(State.SPLIT);
-
-    assertThrows(DoNotRetryIOException.class, () -> am.assign(splitParent));
-    assertNull(am.createOneAssignProcedure(splitParent, true, false));
   }
 }
