@@ -88,7 +88,8 @@ if [ "$RUNNING_IN_DOCKER" = "1" ]; then
     export PATH="$JAVA_HOME/bin:$PATH"
   else
     # JAVA_HOME for the openjdk package.
-    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64/
+    arch=`uname -m | sed -e s/aarch64/arm64/ | sed -e s/x86_64/amd64/`
+    export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-${arch}/
   fi
 else
   # Outside docker, need to ask for information about the release.
