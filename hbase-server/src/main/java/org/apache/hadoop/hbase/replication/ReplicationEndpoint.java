@@ -166,7 +166,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.REPLICATION)
   static class ReplicateContext {
     List<Entry> entries;
-    int size;
+    long size;
     String walGroupId;
     int timeout;
 
@@ -179,7 +179,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
       return this;
     }
 
-    public ReplicateContext setSize(int size) {
+    public ReplicateContext setSize(long size) {
       this.size = size;
       return this;
     }
@@ -193,7 +193,7 @@ public interface ReplicationEndpoint extends ReplicationPeerConfigListener {
       return entries;
     }
 
-    public int getSize() {
+    public long getSize() {
       return size;
     }
 

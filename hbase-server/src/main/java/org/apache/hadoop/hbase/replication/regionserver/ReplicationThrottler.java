@@ -59,7 +59,7 @@ public class ReplicationThrottler {
    * @param size is the size of edits to be pushed
    * @return sleep interval for throttling control
    */
-  public long getNextSleepInterval(final int size) {
+  public long getNextSleepInterval(final long size) {
     if (!this.enabled) {
       return 0;
     }
