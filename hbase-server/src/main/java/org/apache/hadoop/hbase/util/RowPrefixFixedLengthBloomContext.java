@@ -33,15 +33,23 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class RowPrefixFixedLengthBloomContext extends RowBloomContext {
   private final int prefixLength;
+  private final int startOffset;
 
   public RowPrefixFixedLengthBloomContext(BloomFilterWriter bloomFilterWriter,
-    CellComparator comparator, int prefixLength) {
+    CellComparator comparator, int prefixLength, int startOffset) {
     super(bloomFilterWriter, comparator);
     this.prefixLength = prefixLength;
+    this.startOffset = startOffset;
   }
 
   @Override
   public void writeBloom(ExtendedCell cell) throws IOException {
+    // Skip rows shorter than startOffset. They have no bytes at the prefix window, and the read
+    // path bypasses the bloom entirely when the query row is this short (returns true to scan),
+    // so any entry we would write here is unreachable and only inflates the false positive rate.
+    if (cell.getRowLength() <= startOffset) {
+      return;
+    }
     super.writeBloom(getRowPrefixCell(cell));
   }
 
@@ -51,7 +59,8 @@ public class RowPrefixFixedLengthBloomContext extends RowBloomContext {
    */
   private ExtendedCell getRowPrefixCell(ExtendedCell cell) {
     byte[] row = CellUtil.copyRow(cell);
+    int length = Math.min(prefixLength, row.length - startOffset);
     return ExtendedCellBuilderFactory.create(CellBuilderType.DEEP_COPY)
-      .setRow(row, 0, Math.min(prefixLength, row.length)).setType(Cell.Type.Put).build();
+      .setRow(row, startOffset, length).setType(Cell.Type.Put).build();
   }
 }
