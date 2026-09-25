@@ -18,3 +18,16 @@
 
 import org.apache.hadoop.hbase.*;
 import org.apache.hadoop.hbase.client.*;
+
+/*
+ * Positional args for non-interactive scripts launched as:
+ *   hbase path/to/script.jsh arg0 arg1 ...
+ *
+ * JShell has no String[] args equivalent, so bin/hbase exports:
+ *   HBASE_JSH_ARG_COUNT  - number of args (decimal string)
+ *   HBASE_JSH_ARG_0 .. HBASE_JSH_ARG_{N-1}  - each positional arg
+ *
+ * Example in a .jsh script:
+ *   int n = Integer.parseInt(System.getenv().getOrDefault("HBASE_JSH_ARG_COUNT", "0"));
+ *   String first = System.getenv("HBASE_JSH_ARG_0");
+ */
