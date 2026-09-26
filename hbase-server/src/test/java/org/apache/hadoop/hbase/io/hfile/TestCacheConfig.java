@@ -23,10 +23,13 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -36,6 +39,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
@@ -467,5 +471,33 @@ public class TestCacheConfig {
     });
 
     assertTrue(l2.getBlockCount() > initialL2BlockCount);
+  }
+
+  /**
+   * Verifies that CacheConfig registers its CacheAccessService as a configuration child.
+   */
+  @Test
+  public void testRegistersCacheAccessServiceAsConfigurationChild1() {
+    ConfigurationManager manager = mock(ConfigurationManager.class);
+    CacheConfig cacheConfig = new CacheConfig(conf);
+    CacheAccessService cacheAccessService = cacheConfig.getCacheAccessService();
+
+    cacheConfig.registerChildren(manager);
+
+    verify(manager).registerObserver(cacheAccessService);
+  }
+
+  /**
+   * Verifies that CacheConfig deregisters its CacheAccessService as a configuration child.
+   */
+  @Test
+  public void testDeregistersCacheAccessServiceAsConfigurationChild() {
+    ConfigurationManager manager = mock(ConfigurationManager.class);
+    CacheConfig cacheConfig = new CacheConfig(conf);
+    CacheAccessService cacheAccessService = cacheConfig.getCacheAccessService();
+
+    cacheConfig.deregisterChildren(manager);
+
+    verify(manager).deregisterObserver(cacheAccessService);
   }
 }

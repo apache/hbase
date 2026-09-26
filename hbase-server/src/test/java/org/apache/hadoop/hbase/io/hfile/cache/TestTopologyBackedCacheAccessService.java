@@ -522,6 +522,40 @@ public class TestTopologyBackedCacheAccessService {
     verify(topology, never()).handleAccess(key, l2);
   }
 
+  /**
+   * Verifies that configuration changes are propagated to the engine in a single-tier topology.
+   */
+  @Test
+  public void testConfigurationChangePropagatedToSingleTierEngine() {
+    CacheEngine engine = mock(CacheEngine.class);
+    CacheTopology topology = new SingleTierTopology("single", engine);
+    TopologyBackedCacheAccessService service =
+      new TopologyBackedCacheAccessService(topology, new DefaultHBaseCachePlacementAdmissionPolicy());
+    Configuration conf = new Configuration(false);
+
+    service.onConfigurationChange(conf);
+
+    verify(engine).onConfigurationChange(conf);
+  }
+
+  /**
+   * Verifies that configuration changes are propagated to every engine in a tiered topology.
+   */
+  @Test
+  public void testConfigurationChangePropagatedToTieredEngines() {
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    CacheTopology topology = new TieredExclusiveTopology("tiered",l1, l2);
+    TopologyBackedCacheAccessService service =
+      new TopologyBackedCacheAccessService(topology, new DefaultHBaseCachePlacementAdmissionPolicy());
+    Configuration conf = new Configuration(false);
+
+    service.onConfigurationChange(conf);
+
+    verify(l1).onConfigurationChange(conf);
+    verify(l2).onConfigurationChange(conf);
+  }
+  
   private static CacheRequestContext requestContext() {
     return CacheRequestContext.newBuilder().withCaching(true).withRepeat(false)
       .withUpdateCacheMetrics(true).withBlockType(BlockType.DATA).build();
