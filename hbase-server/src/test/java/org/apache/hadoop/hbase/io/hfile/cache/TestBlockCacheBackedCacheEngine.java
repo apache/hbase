@@ -217,4 +217,16 @@ public class TestBlockCacheBackedCacheEngine {
 
     assertFalse(engine.isCacheEnabled());
   }
+  
+  /**
+   * Verifies that configuration changes are propagated to the wrapped legacy block cache.
+   */
+  @Test
+  public void testConfigurationChangePropagatedToLegacyBlockCache() {
+    BlockCache blockCache = mock(BlockCache.class);
+    BlockCacheBackedCacheEngine engine = new BlockCacheBackedCacheEngine(blockCache);
+    Configuration conf = new Configuration(false);
+    engine.onConfigurationChange(conf);
+    verify(blockCache).onConfigurationChange(conf);
+  }
 }
