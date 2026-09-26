@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -203,6 +205,12 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     }
     rsGroupAdmin.moveServers(set, groupName);
     RSGroupInfo result = rsGroupAdmin.getRSGroupInfo(groupName);
+    assertEquals(set, result.getServers());
+    Set<Address> remainingDefaultServers =
+      rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers();
+    for (Address server : set) {
+      assertFalse(remainingDefaultServers.contains(server));
+    }
     return result;
   }
 
@@ -211,6 +219,24 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     rsGroupAdmin.moveTables(groupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.moveServers(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(groupName);
+    assertFalse(
+      rsGroupAdmin.listRSGroups().stream().anyMatch(g -> g.getName().equals(groupName)));
+    Set<Address> onlineServers = new HashSet<>();
+    for (ServerName sn : master.getServerManager().getOnlineServersList()) {
+      onlineServers.add(sn.getAddress());
+    }
+    RSGroupInfo defaultInfo = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+    for (Address server : groupInfo.getServers()) {
+      // moveServers()-to-'default' silently drops servers that are no longer online (see
+      // RSGroupInfoManagerImpl#moveServers), so only online servers are guaranteed to land
+      // in 'default'; an offline server's former group membership is simply dropped.
+      if (onlineServers.contains(server)) {
+        assertTrue(defaultInfo.getServers().contains(server));
+      }
+    }
+    for (TableName table : groupInfo.getTables()) {
+      assertTrue(defaultInfo.getTables().contains(table));
+    }
   }
 
   protected void deleteTableIfNecessary() throws IOException {
