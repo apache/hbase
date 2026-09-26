@@ -369,11 +369,17 @@ public class ProtobufLogReader extends ReaderBase {
       try {
         walKey = ProtobufUtil.parseDelimitedFrom(inputStream, WALKey.parser());
       } catch (InvalidProtocolBufferException e) {
-        if (ProtobufUtil.isEOF(e) || isWALTrailer(originalPosition)) {
-          // only rethrow EOF if it indicates an EOF, or we have reached the partial WALTrailer
+        if (ProtobufUtil.isEOF(e)) {
+          // only rethrow EOF if it indicates an EOF
           resetPosition = true;
           throw (EOFException) new EOFException("Invalid PB, EOF? Ignoring; originalPosition="
             + originalPosition + ", currentPosition=" + this.inputStream.getPos()).initCause(e);
+        } else if (isWALTrailer(originalPosition)) {
+          // Reached the WAL trailer. Do not seek back: the position must stay at the end of the
+          // file so WALEntryStream counts all bytes as parsed.
+          LOG.debug("Reached WAL trailer at {}, currentPosition={}", originalPosition,
+            this.inputStream.getPos());
+          return false;
         } else {
           throw e;
         }
