@@ -529,8 +529,8 @@ public class TestTopologyBackedCacheAccessService {
   public void testConfigurationChangePropagatedToSingleTierEngine() {
     CacheEngine engine = mock(CacheEngine.class);
     CacheTopology topology = new SingleTierTopology("single", engine);
-    TopologyBackedCacheAccessService service =
-      new TopologyBackedCacheAccessService(topology, new DefaultHBaseCachePlacementAdmissionPolicy());
+    TopologyBackedCacheAccessService service = new TopologyBackedCacheAccessService(topology,
+      new DefaultHBaseCachePlacementAdmissionPolicy());
     Configuration conf = new Configuration(false);
 
     service.onConfigurationChange(conf);
@@ -545,9 +545,9 @@ public class TestTopologyBackedCacheAccessService {
   public void testConfigurationChangePropagatedToTieredEngines() {
     CacheEngine l1 = mock(CacheEngine.class);
     CacheEngine l2 = mock(CacheEngine.class);
-    CacheTopology topology = new TieredExclusiveTopology("tiered",l1, l2);
-    TopologyBackedCacheAccessService service =
-      new TopologyBackedCacheAccessService(topology, new DefaultHBaseCachePlacementAdmissionPolicy());
+    CacheTopology topology = new TieredExclusiveTopology("tiered", l1, l2);
+    TopologyBackedCacheAccessService service = new TopologyBackedCacheAccessService(topology,
+      new DefaultHBaseCachePlacementAdmissionPolicy());
     Configuration conf = new Configuration(false);
 
     service.onConfigurationChange(conf);
@@ -555,7 +555,7 @@ public class TestTopologyBackedCacheAccessService {
     verify(l1).onConfigurationChange(conf);
     verify(l2).onConfigurationChange(conf);
   }
-  
+
   private static CacheRequestContext requestContext() {
     return CacheRequestContext.newBuilder().withCaching(true).withRepeat(false)
       .withUpdateCacheMetrics(true).withBlockType(BlockType.DATA).build();

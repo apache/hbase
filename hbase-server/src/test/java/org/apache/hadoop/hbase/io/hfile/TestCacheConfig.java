@@ -29,7 +29,6 @@ import static org.mockito.Mockito.verify;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.concurrent.atomic.AtomicInteger;
-
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -477,7 +476,7 @@ public class TestCacheConfig {
    * Verifies that CacheConfig registers its CacheAccessService as a configuration child.
    */
   @Test
-  public void testRegistersCacheAccessServiceAsConfigurationChild1() {
+  public void testRegistersCacheAccessServiceAsConfigurationChild() {
     ConfigurationManager manager = mock(ConfigurationManager.class);
     CacheConfig cacheConfig = new CacheConfig(conf);
     CacheAccessService cacheAccessService = cacheConfig.getCacheAccessService();

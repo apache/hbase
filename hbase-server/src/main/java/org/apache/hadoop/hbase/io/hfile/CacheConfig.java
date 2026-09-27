@@ -641,20 +641,14 @@ public class CacheConfig implements PropagatingConfigurationObserver {
 
   @Override
   public void registerChildren(ConfigurationManager manager) {
-    if (blockCache != null) {
-      manager.registerObserver(blockCache);
-    }
-    if(cacheAccessService != null) {
+    if (cacheAccessService != null) {
       manager.registerObserver(cacheAccessService);
     }
   }
 
   @Override
   public void deregisterChildren(ConfigurationManager manager) {
-    if (blockCache != null) {
-      manager.deregisterObserver(blockCache);
-    }
-    if(cacheAccessService != null) {
+    if (cacheAccessService != null) {
       manager.deregisterObserver(cacheAccessService);
     }
   }

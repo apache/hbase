@@ -217,7 +217,7 @@ public class TestBlockCacheBackedCacheEngine {
 
     assertFalse(engine.isCacheEnabled());
   }
-  
+
   /**
    * Verifies that configuration changes are propagated to the wrapped legacy block cache.
    */
