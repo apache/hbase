@@ -97,6 +97,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     }
     regexConfigKeysSet.clear();
     tearDownAfterMethod();
+    RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
   }
 
   // ============================== helpers ==============================
@@ -142,6 +143,15 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     TEST_UTIL.waitFor(WAIT_TIMEOUT,
       () -> !master.getServerManager().getOnlineServersList().contains(sn));
     LOG.info("Stopped fake-hostname RS {}", sn);
+  }
+
+  private void killFakeRegionServer(JVMClusterUtil.RegionServerThread rst) throws Exception {
+    fakeRegionServers.remove(rst);
+    final ServerName sn = rst.getRegionServer().getServerName();
+    ((MiniHBaseCluster) cluster).killRegionServer(sn);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT,
+      () -> !master.getServerManager().getOnlineServersList().contains(sn));
+    LOG.info("Killed fake-hostname RS {}", sn);
   }
 
   /**
@@ -758,6 +768,105 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     } finally {
       clearRegex(groupName);
       removeGroup(groupName);
+    }
+  }
+
+  @Test
+  public void testUngracefulCrashOfRegexMemberReassignsRegionsOnlyToOtherGroupMembers()
+    throws Exception {
+    // ServerCrashProcedure recovers a dead server's regions by default with
+    // hbase.master.scp.retain.assignment=false, i.e. forceNewPlan=true for every ASSIGN TRSP it
+    // creates -- which routes through roundRobinAssignment rather than retainAssignment (see
+    // ServerCrashProcedure#assignRegions). This test's job is to confirm
+    // RSGroupBasedLoadBalancer#roundRobinAssignment still confines the
+    // crashed regex member's regions to the *other* online members of its own group -- never to
+    // default or an unrelated group -- rather than trusting the RSGroup-partitioning logic to
+    // "just work".
+    String groupName = getGroupName("crashroundrobin");
+    rsGroupAdmin.addRSGroup(groupName);
+    // "127.0.0.1" and "localhost" are the only two distinct, real, independently-reachable
+    // identities startFakeHostnameRS supports (its RPC bind address is always "localhost"
+    // regardless of advertised hostname).
+    setRegex(groupName, "127\\.0\\.0\\.1|localhost");
+    // A second, unrelated RSGroup holding one server borrowed from default -- proves crash
+    // recovery's per-group candidate filtering excludes every other group, not just default.
+    String otherGroupName = getGroupName("crashroundrobinother");
+    RSGroupInfo otherGroupInfo = addGroup(otherGroupName, 1);
+    ServerName otherGroupServer = getServerName(otherGroupInfo.getServers().iterator().next());
+    try {
+      JVMClusterUtil.RegionServerThread rst1 = startFakeHostnameRS("127.0.0.1");
+      Address addr1 = addressOf(rst1);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr1));
+      ServerName sn1 = getServerName(addr1);
+
+      JVMClusterUtil.RegionServerThread rst2 = startFakeHostnameRS("localhost");
+      Address addr2 = addressOf(rst2);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr2));
+      ServerName sn2 = getServerName(addr2);
+
+      TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      // moveTables synchronously relocates every region of a table with no RSGroup-scoped
+      // descriptor yet onto the target group's servers (moveTableRegionsToGroup blocks on the
+      // move futures before returning), so confinement to {sn1, sn2} is already guaranteed once
+      // this call returns.
+      RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
+      // moveTableRegionsToGroup picks each region's destination via randomAssignment, then moves
+      // it there via a TRSP with a non-null target (forceNewPlan=false), which the
+      // AssignmentManager
+      // queue routes through retainAssignment to commit.
+      assertTrue(RSGroupBasedLoadBalancer.isRandomAssignmentInvoked);
+      assertTrue(RSGroupBasedLoadBalancer.isRetainAssignmentInvoked);
+      assertFalse(RSGroupBasedLoadBalancer.isRoundRobinAssignmentInvoked);
+      Map<ServerName, List<String>> perServerBeforeCrash = getTableServerRegionMap().get(tableName);
+      int totalBeforeCrash = 0;
+      for (Map.Entry<ServerName, List<String>> entry : perServerBeforeCrash.entrySet()) {
+        assertTrue(entry.getKey().equals(sn1) || entry.getKey().equals(sn2));
+        totalBeforeCrash += entry.getValue().size();
+      }
+      assertEquals(6, totalBeforeCrash);
+
+      // Simulate an ungraceful crash of sn1
+      RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
+      killFakeRegionServer(rst1);
+
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
+        Map<ServerName, List<String>> perServer = getTableServerRegionMap().get(tableName);
+        if (perServer == null) {
+          return false;
+        }
+        int total = 0;
+        for (Map.Entry<ServerName, List<String>> entry : perServer.entrySet()) {
+          // Every region must have landed on the group's sole remaining member -- never on
+          // default or any other group, and never back on the now-dead sn1.
+          if (!entry.getKey().equals(sn2)) {
+            return false;
+          }
+          total += entry.getValue().size();
+        }
+        return total == 6;
+      });
+      // Confirms the crash-recovery ASSIGN TRSPs went through roundRobinAssignment, not
+      // retainAssignment -- expected since hbase.master.scp.retain.assignment defaults to false.
+      assertTrue(RSGroupBasedLoadBalancer.isRoundRobinAssignmentInvoked);
+      assertFalse(RSGroupBasedLoadBalancer.isRetainAssignmentInvoked);
+
+      // The surviving group member must host nothing but this table's regions.
+      for (RegionInfo region : admin.getRegions(sn2)) {
+        assertEquals(tableName, region.getTable());
+      }
+      // The unrelated group's own member must not have received any of the crashed member's
+      // regions either -- recovery must stay confined to sn1's own group.
+      for (RegionInfo region : admin.getRegions(otherGroupServer)) {
+        assertFalse(region.getTable().equals(tableName));
+      }
+    } finally {
+      clearRegex(groupName);
+      removeGroup(groupName);
+      removeGroup(otherGroupName);
     }
   }
 }
