@@ -56,8 +56,8 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 /**
  * Black-box tests for regex-based automatic RSGroup membership
  * (hbase.rsgroup.regex.&lt;groupname&gt;=&lt;regex&gt;), driven entirely through the public
- * {@link RSGroupAdmin} API, live RegionServer add/remove against the minicluster, and captured
- * log output -- no reflection or visibility changes against {@link RSGroupInfoManagerImpl}.
+ * {@link RSGroupAdmin} API, live RegionServer add/remove against the minicluster, and captured log
+ * output -- no reflection or visibility changes against {@link RSGroupInfoManagerImpl}.
  */
 @Tag(MediumTests.TAG)
 public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
@@ -106,10 +106,10 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
    * itself under a caller-chosen hostname, so regex membership rules can target it individually.
    * The base cluster's real RS all share one real, resolvable hostname (this machine's address);
    * {@link RSRpcServices}'s constructor unconditionally resolves whatever hostname is configured
-   * (independent of any RPC bind-address override), so the caller-chosen hostname here must
-   * itself be a real, resolvable, bindable literal -- "127.0.0.1" and "localhost" both work and
-   * are guaranteed distinct from the base cluster's real hostname, which is exactly what every
-   * test in this class relies on to get a controllable, non-shared identity.
+   * (independent of any RPC bind-address override), so the caller-chosen hostname here must itself
+   * be a real, resolvable, bindable literal -- "127.0.0.1" and "localhost" both work and are
+   * guaranteed distinct from the base cluster's real hostname, which is exactly what every test in
+   * this class relies on to get a controllable, non-shared identity.
    */
   private JVMClusterUtil.RegionServerThread startFakeHostnameRS(String hostname) throws Exception {
     Configuration rsConf = new Configuration(TEST_UTIL.getConfiguration());
@@ -145,12 +145,12 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
   }
 
   /**
-   * The listener thread that drives automatic regex-based reassignment only wakes up on an
-   * actual server add/remove event -- a bare config mutation is not enough. Forces a wake-up
-   * cycle (add+remove a bystander RS) so a config change just made takes effect without
-   * requiring an explicit RSGroupAdmin RPC. Only used by tests that *want* the automatic
-   * reconciliation to run and correct things; the trigger RS's own transient membership doesn't
-   * affect assertions elsewhere since those only check for specific other servers' addresses.
+   * The listener thread that drives automatic regex-based reassignment only wakes up on an actual
+   * server add/remove event -- a bare config mutation is not enough. Forces a wake-up cycle
+   * (add+remove a bystander RS) so a config change just made takes effect without requiring an
+   * explicit RSGroupAdmin RPC. Only used by tests that *want* the automatic reconciliation to run
+   * and correct things; the trigger RS's own transient membership doesn't affect assertions
+   * elsewhere since those only check for specific other servers' addresses.
    */
   private void triggerListenerCycle() throws Exception {
     JVMClusterUtil.RegionServerThread trigger = startFakeHostnameRS("127.0.0.1");
@@ -196,8 +196,9 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
   }
 
   private static LogCapturer captureRSGroupInfoManagerLog() {
-    return new LogCapturer((org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
-      .getLogger(RSGroupInfoManagerImpl.class));
+    return new LogCapturer(
+      (org.apache.logging.log4j.core.Logger) org.apache.logging.log4j.LogManager
+        .getLogger(RSGroupInfoManagerImpl.class));
   }
 
   // ============================== tests ==============================
@@ -224,8 +225,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
       // No explicit moveServers call was made -- the server auto-joined purely from the
       // ServerEventsListenerThread reacting to its own arrival.
-      assertFalse(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers()
-        .contains(addr));
+      assertFalse(
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
     } finally {
       clearRegex(groupName);
       removeGroup(groupName);
@@ -242,11 +243,11 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     Address addr = addressOf(rst);
     try {
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
-          () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
       // No explicit moveServers call was made -- the server auto-joined purely from the
       // ServerEventsListenerThread reacting to its own arrival.
-      assertFalse(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers()
-        .contains(addr));
+      assertFalse(
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
     } finally {
       clearRegex(groupName);
       removeGroup(groupName);
@@ -395,8 +396,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       Address addr = addressOf(rst);
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
         () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
-      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> capturer.getOutput()
-        .contains("matches regexes for multiple RSGroups"));
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> capturer.getOutput().contains("matches regexes for multiple RSGroups"));
       assertFalse(rsGroupAdmin.getRSGroupInfo(groupOne).getServers().contains(addr));
       assertFalse(rsGroupAdmin.getRSGroupInfo(groupTwo).getServers().contains(addr));
 
@@ -471,8 +472,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         () -> rsGroupAdmin.moveServers(Sets.newHashSet(addr), groupName));
 
       // No partial mutation: server is still exactly where it started.
-      assertTrue(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers()
-        .contains(addr));
+      assertTrue(
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
       assertFalse(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
     } finally {
       clearRegex(groupName);
@@ -661,8 +662,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 10);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
-      Map<ServerName, List<String>> perServerAfterMove =
-        getTableServerRegionMap().get(tableName);
+      Map<ServerName, List<String>> perServerAfterMove = getTableServerRegionMap().get(tableName);
       assertEquals(10, perServerAfterMove.get(sn1).size());
 
       admin.balancerSwitch(true, true);

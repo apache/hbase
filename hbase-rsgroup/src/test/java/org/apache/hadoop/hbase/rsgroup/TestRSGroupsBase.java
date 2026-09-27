@@ -219,8 +219,7 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     rsGroupAdmin.moveTables(groupInfo.getTables(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.moveServers(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
     rsGroupAdmin.removeRSGroup(groupName);
-    assertFalse(
-      rsGroupAdmin.listRSGroups().stream().anyMatch(g -> g.getName().equals(groupName)));
+    assertFalse(rsGroupAdmin.listRSGroups().stream().anyMatch(g -> g.getName().equals(groupName)));
     Set<Address> onlineServers = new HashSet<>();
     for (ServerName sn : master.getServerManager().getOnlineServersList()) {
       onlineServers.add(sn.getAddress());
