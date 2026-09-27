@@ -27,6 +27,7 @@ import java.io.StringWriter;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
@@ -34,6 +35,7 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -628,6 +630,134 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       } else {
         removeGroup(bystanderGroup);
       }
+    }
+  }
+
+  @Test
+  public void testNewlyJoinedRegexMemberReceivesRegionsOnBalance() throws Exception {
+    // A new RS auto-joins an already-regex-governed group while the group's sole existing
+    // member holds every region of a table bound to that group; running the balancer must then
+    // hand some of those regions to the newly-joined RS too. The first-member baseline is
+    // established by moveTables itself: RSGroupAdminServer#moveTables synchronously relocates
+    // every region of a table with no RSGroup-scoped descriptor yet onto the target group's
+    // servers (see moveTableRegionsToGroup, which blocks on the move futures before returning),
+    // so with sn1 as the sole group member at that point all regions are already there once
+    // moveTables returns -- no separate balance step is needed for that part. Only the
+    // second-member handoff genuinely needs an explicit balance: adding a group member does not
+    // by itself retrigger any region movement.
+    String groupName = getGroupName("balancenewmember");
+    rsGroupAdmin.addRSGroup(groupName);
+    // "127.0.0.1" and "localhost" are the only two distinct, real, independently-reachable
+    // identities startFakeHostnameRS supports (its RPC bind address is always "localhost"
+    // regardless of advertised hostname).
+    setRegex(groupName, "127\\.0\\.0\\.1|localhost");
+    try {
+      JVMClusterUtil.RegionServerThread rst1 = startFakeHostnameRS("127.0.0.1");
+      Address addr1 = addressOf(rst1);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr1));
+      ServerName sn1 = getServerName(addr1);
+
+      TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 10);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
+      Map<ServerName, List<String>> perServerAfterMove =
+        getTableServerRegionMap().get(tableName);
+      assertEquals(10, perServerAfterMove.get(sn1).size());
+
+      admin.balancerSwitch(true, true);
+      try {
+        // A second RS matching the same regex joins while the group is already active; it must
+        // auto-join with no explicit RPC.
+        JVMClusterUtil.RegionServerThread rst2 = startFakeHostnameRS("localhost");
+        Address addr2 = addressOf(rst2);
+        TEST_UTIL.waitFor(WAIT_TIMEOUT,
+          () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr2));
+        ServerName sn2 = getServerName(addr2);
+
+        rsGroupAdmin.balanceRSGroup(groupName);
+        TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
+          Map<ServerName, List<String>> perServer = getTableServerRegionMap().get(tableName);
+          if (perServer == null) {
+            return false;
+          }
+          List<String> onNewMember = perServer.get(sn2);
+          if (onNewMember == null || onNewMember.isEmpty()) {
+            return false;
+          }
+          int total = perServer.values().stream().mapToInt(List::size).sum();
+          return total == 10;
+        });
+      } finally {
+        admin.balancerSwitch(false, true);
+      }
+    } finally {
+      clearRegex(groupName);
+      removeGroup(groupName);
+    }
+  }
+
+  @Test
+  public void testRestartTriggeredMembershipConfinesTableToGroupServers() throws Exception {
+    // RS join normally (no regex active yet), landing in default like any other RS. Only
+    // afterward is a regex configured targeting their hostnames; a bare config change does not
+    // reconcile membership by itself, so an actual lifecycle event -- restarting one of the two
+    // RS -- is used to force the listener thread to notice and migrate both into the new group
+    // (the recompute triggered by one server's add/remove event considers every online server,
+    // not just the one that triggered it). A table is then bound to that group, and its regions
+    // must land only on the group's members, with those members hosting only that table's
+    // regions -- a bidirectional isolation check.
+    String groupName = getGroupName("restartisolation");
+    // "127.0.0.1" and "localhost" are the only two distinct, real, independently-reachable
+    // identities startFakeHostnameRS supports (its RPC bind address is always "localhost"
+    // regardless of advertised hostname -- an arbitrary loopback alias like "127.0.0.2" would
+    // advertise an address nothing is actually listening on, stalling any real region-open RPC).
+    JVMClusterUtil.RegionServerThread rst1 = startFakeHostnameRS("127.0.0.1");
+    JVMClusterUtil.RegionServerThread rst2 = startFakeHostnameRS("localhost");
+    Address addr2 = addressOf(rst2);
+    TEST_UTIL.waitFor(WAIT_TIMEOUT,
+      () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr2));
+
+    rsGroupAdmin.addRSGroup(groupName);
+    setRegex(groupName, "127\\.0\\.0\\.1|localhost");
+    try {
+      stopFakeRegionServer(rst1);
+      JVMClusterUtil.RegionServerThread rst1Restarted = startFakeHostnameRS("127.0.0.1");
+      Address addr1Restarted = addressOf(rst1Restarted);
+
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr1Restarted));
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr2));
+
+      ServerName sn1 = getServerName(addr1Restarted);
+      ServerName sn2 = getServerName(addr2);
+
+      TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      // moveTables synchronously relocates every region of a table with no RSGroup-scoped
+      // descriptor yet onto one of the target group's servers (moveTableRegionsToGroup blocks on
+      // the move futures before returning), so confinement to {sn1, sn2} is already guaranteed
+      // once this call returns -- no separate balance step is needed.
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
+      Map<ServerName, List<String>> perServerAfterMove = getTableServerRegionMap().get(tableName);
+      int totalAfterMove = 0;
+      for (Map.Entry<ServerName, List<String>> entry : perServerAfterMove.entrySet()) {
+        assertTrue(entry.getKey().equals(sn1) || entry.getKey().equals(sn2));
+        totalAfterMove += entry.getValue().size();
+      }
+      assertEquals(6, totalAfterMove);
+
+      // Bidirectional isolation: the group's own members must host nothing but this table.
+      for (RegionInfo region : admin.getRegions(sn1)) {
+        assertEquals(tableName, region.getTable());
+      }
+      for (RegionInfo region : admin.getRegions(sn2)) {
+        assertEquals(tableName, region.getTable());
+      }
+    } finally {
+      clearRegex(groupName);
+      removeGroup(groupName);
     }
   }
 }
