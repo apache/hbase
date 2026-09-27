@@ -24,10 +24,14 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.ListIterator;
+import java.util.NavigableSet;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -37,8 +41,12 @@ import org.apache.hadoop.hbase.favored.FavoredNodesManager;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
+import org.apache.hadoop.hbase.util.CommonFSUtils;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.WALSplitUtil;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
@@ -53,6 +61,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.AdminProtos.GetRegionIn
  */
 @InterfaceAudience.Private
 final class AssignmentManagerUtil {
+  private static final Logger LOG = LoggerFactory.getLogger(AssignmentManagerUtil.class);
   private static final int DEFAULT_REGION_REPLICA = 1;
 
   private AssignmentManagerUtil() {
@@ -304,10 +313,79 @@ final class AssignmentManagerUtil {
   }
 
   static void checkClosedRegion(MasterProcedureEnv env, RegionInfo regionInfo) throws IOException {
-    if (WALSplitUtil.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
-      throw new IOException("Recovered.edits are found in Region: " + regionInfo
-        + ", abort split/merge to prevent data loss");
+    if (!WALSplitUtil.hasRecoveredEdits(env.getMasterConfiguration(), regionInfo)) {
+      return;
     }
+    // Robustness: corner cases can leave behind recovered.edits whose max seqid is already
+    // covered by the region's durable seqid. Drop those and proceed instead of aborting.
+    if (tryDropStaleRecoveredEdits(env, regionInfo)) {
+      return;
+    }
+    throw new IOException("Recovered.edits are found in Region: " + regionInfo
+      + ", abort split/merge to prevent data loss");
+  }
+
+  /**
+   * Try to remove recovered.edits files that are provably below the region's last flushed seqid.
+   * @return true if, after cleanup, no recovered.edits remain for the region
+   */
+  private static boolean tryDropStaleRecoveredEdits(MasterProcedureEnv env, RegionInfo regionInfo) {
+    long durableSeqId = env.getMasterServices().getServerManager()
+      .getLastFlushedSequenceId(regionInfo.getEncodedNameAsBytes()).getLastFlushedSequenceId();
+    if (durableSeqId <= 0L) {
+      // No authoritative durability info at the master; play safe and let the caller abort.
+      return false;
+    }
+    try {
+      Configuration conf = env.getMasterConfiguration();
+      Path regionWALDir =
+        CommonFSUtils.getWALRegionDir(conf, regionInfo.getTable(), regionInfo.getEncodedName());
+      Path regionDir = FSUtils.getRegionDirFromRootDir(CommonFSUtils.getRootDir(conf), regionInfo);
+      Path wrongRegionWALDir = CommonFSUtils.getWrongWALRegionDir(conf, regionInfo.getTable(),
+        regionInfo.getEncodedName());
+      FileSystem walFs = CommonFSUtils.getWALFileSystem(conf);
+      FileSystem rootFs = CommonFSUtils.getRootDirFileSystem(conf);
+      return dropStaleEditsUnder(walFs, regionWALDir, durableSeqId, regionInfo)
+        && dropStaleEditsUnder(rootFs, regionDir, durableSeqId, regionInfo)
+        && dropStaleEditsUnder(walFs, wrongRegionWALDir, durableSeqId, regionInfo);
+    } catch (IOException e) {
+      LOG.warn("Failed to inspect recovered.edits for {}; falling back to abort", regionInfo, e);
+      return false;
+    }
+  }
+
+  private static boolean dropStaleEditsUnder(FileSystem fs, Path regionDir, long durableSeqId,
+    RegionInfo regionInfo) throws IOException {
+    NavigableSet<Path> files = WALSplitUtil.getSplitEditFilesSorted(fs, regionDir);
+    if (files.isEmpty()) {
+      return true;
+    }
+    for (Path p : files) {
+      // getSplitEditFilesSorted restricts filenames to WALSplitUtil.EDITFILES_NAME_PATTERN
+      // (`-?[0-9]+`), so parseLong cannot throw here.
+      long fileMaxSeqId;
+      try {
+        fileMaxSeqId = Long.parseLong(p.getName());
+      } catch (NumberFormatException e) {
+        LOG.warn("Unable to parse recovered.edits sequence id from {}; falling back to abort", p,
+          e);
+        return false;
+      }
+      if (fileMaxSeqId > durableSeqId) {
+        LOG.info("Recovered.edits {} for {} has maxSeqId={} > durableSeqId={}; needs replay", p,
+          regionInfo, fileMaxSeqId, durableSeqId);
+        return false;
+      }
+    }
+    for (Path p : files) {
+      LOG.info("Removing stale recovered.edits {} for {} (durableSeqId={})", p, regionInfo,
+        durableSeqId);
+      if (!fs.delete(p, false)) {
+        LOG.warn("Failed to delete stale recovered.edits {} for {}", p, regionInfo);
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
