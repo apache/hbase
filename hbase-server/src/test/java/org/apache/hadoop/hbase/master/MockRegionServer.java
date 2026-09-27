@@ -802,4 +802,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   public KeyManagementService getKeyManagementService() {
     return null;
   }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return false;
+  }
 }

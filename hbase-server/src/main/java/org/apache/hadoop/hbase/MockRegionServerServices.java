@@ -410,4 +410,9 @@ public class MockRegionServerServices implements RegionServerServices {
   public KeyManagementService getKeyManagementService() {
     return this;
   }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return false;
+  }
 }
