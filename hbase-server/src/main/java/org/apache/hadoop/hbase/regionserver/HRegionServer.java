@@ -223,6 +223,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockS
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
@@ -3642,6 +3644,29 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
       throw ProtobufUtil.getRemoteException(se);
     }
+  }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    if (rss == null) { // Try to connect one more time
+      createRegionServerStatusStub();
+      rss = rssStub;
+      if (rss == null) {
+        // Still no luck, we tried
+        throw new IOException("failed to connect to master");
+      }
+    }
+    GetThrottleStateResponse resp;
+    try {
+      resp = rss.getThrottleState(null, GetThrottleStateRequest.getDefaultInstance());
+    } catch (ServiceException e) {
+      if (rssStub == rss) {
+        rssStub = null;
+      }
+      throw ProtobufUtil.getRemoteException(e);
+    }
+    return resp.getRpcThrottleEnabled();
   }
 
   /**
