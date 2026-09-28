@@ -25,6 +25,7 @@ export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 DEV_IMAGE_NAME="hbase-dev-support:${BUILD_NUMBER:-local}"
 
 PYTEST_K_VALUE=""
+JAVA_VERSION=""
 DEV_MODE=false
 
 while [[ $# -gt 0 ]]; do
@@ -32,6 +33,15 @@ while [[ $# -gt 0 ]]; do
     -d|--dev)
       DEV_MODE=true
       shift
+      ;;
+    -j|--java-version)
+      if [[ -n "$2" && "$2" != -* ]]; then
+        JAVA_VERSION="$2"
+        shift 2
+      else
+        echo "Error: Argument for $1 is missing"
+        exit 1
+      fi
       ;;
     -k)
       if [[ -n "$2" && "$2" != -* ]]; then
@@ -44,7 +54,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [-d|--dev] [-k <expression>]"
+      echo "Usage: $0 [-d|--dev] [-j|--java-version <version>] [-k <expression>]"
       exit 1
       ;;
   esac
@@ -105,6 +115,11 @@ if [ "${DEV_MODE}" = "true" ]; then
   echo "docker stop ${CONTAINER_ID} && docker rm ${CONTAINER_ID}"
   echo ""
 else
+  JAVA_VERSION_ARGS=()
+  if [[ -n "${JAVA_VERSION}" ]]; then
+    JAVA_VERSION_ARGS=(-j "${JAVA_VERSION}")
+  fi
+
   PYTEST_K_ARGS=()
   if [[ -n "${PYTEST_K_VALUE}" ]]; then
     PYTEST_K_ARGS=(-k "${PYTEST_K_VALUE}")
@@ -121,5 +136,5 @@ else
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
-    ./run-read-replica-integration-tests.sh "${PYTEST_K_ARGS[@]}"
+    ./run-read-replica-integration-tests.sh "${JAVA_VERSION_ARGS[@]}" "${PYTEST_K_ARGS[@]}"
 fi
