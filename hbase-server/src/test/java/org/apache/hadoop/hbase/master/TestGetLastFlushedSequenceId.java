@@ -143,4 +143,60 @@ public class TestGetLastFlushedSequenceId {
       table.close();
     }
   }
+
+  /**
+   * HBASE-30335 follow-up: on graceful region CLOSE the RS reports the region's final durable
+   * flushed seqid, and the master must lift its flushedSequenceIdByRegion watermark to that value.
+   * This complements the OPEN-time seed and covers the drain-move / disable window: if the source
+   * RS crashes after the close, a subsequent WAL split must see the already-durable edits as
+   * flushed and not resurrect them as orphaned recovered.edits. Writes and flushes so the region's
+   * maxFlushedSeqId advances well past its openSeqNum, then disables the table (a graceful close
+   * that keeps the region - unlike delete/split/merge, disable does not call
+   * ServerManager#removeRegion) and asserts the watermark reflects the post-close flushed seqid.
+   */
+  @Test
+  public void testFlushedSequenceIdSeededOnRegionClose() throws IOException, InterruptedException {
+    TableName freshTable = TableName.valueOf(getClass().getSimpleName(), "closeseed");
+    testUtil.getAdmin()
+      .createNamespace(NamespaceDescriptor.create(freshTable.getNamespaceAsString()).build());
+    Table table = testUtil.createTable(freshTable, families);
+    try {
+      SingleProcessHBaseCluster cluster = testUtil.getMiniHBaseCluster();
+      HRegion region = null;
+      for (JVMClusterUtil.RegionServerThread rst : cluster.getRegionServerThreads()) {
+        for (HRegion r : rst.getRegionServer().getRegions(freshTable)) {
+          region = r;
+          break;
+        }
+        if (region != null) {
+          break;
+        }
+      }
+      assertNotNull(region);
+      long openSeqNum = region.getOpenSeqNum();
+      // Write and flush a few times so the region's durable flushed seqid advances past openSeqNum;
+      // this makes the CLOSE-time seed distinguishable from the OPEN-time seed.
+      for (int i = 0; i < 3; i++) {
+        table.put(new Put(Bytes.toBytes("k" + i)).addColumn(family, Bytes.toBytes("q"),
+          Bytes.toBytes("v" + i)));
+        testUtil.getAdmin().flush(freshTable);
+      }
+      long flushedSeqId = region.getMaxFlushedSeqId();
+      assertTrue(flushedSeqId > openSeqNum,
+        "test setup: flushed seqid " + flushedSeqId + " must exceed openSeqNum " + openSeqNum);
+      byte[] encodedName = region.getRegionInfo().getEncodedNameAsBytes();
+      // Gracefully close the region (disable keeps the region entry - it is not removed like a
+      // delete/split/merge would), driving a CLOSED transition that carries the flushed seqid.
+      testUtil.getAdmin().disableTable(freshTable);
+      RegionStoreSequenceIds ids = testUtil.getHBaseCluster().getMaster().getServerManager()
+        .getLastFlushedSequenceId(encodedName);
+      assertNotEquals(HConstants.NO_SEQNUM, ids.getLastFlushedSequenceId(),
+        "flushedSequenceIdByRegion should be seeded on region CLOSE");
+      assertTrue(ids.getLastFlushedSequenceId() >= flushedSeqId,
+        "CLOSE seed " + ids.getLastFlushedSequenceId() + " must be >= the region's flushed seqid "
+          + flushedSeqId);
+    } finally {
+      table.close();
+    }
+  }
 }
