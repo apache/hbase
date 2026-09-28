@@ -123,7 +123,20 @@ Add the following to the `hbase-site.xml` file for every Thrift gateway:
   <name>hbase.thrift.dns.nameserver</name>
   <value>default</value>
 </property>
+<!-- Set this when the Thrift gateway is exposed through a service hostname
+     different from its DNS-discovered hostname. -->
+<property>
+  <name>hbase.unsafe.thrift.hostname</name>
+  <value>hbase-thrift.example.com</value>
+</property>
 ```
+
+When `hbase.unsafe.thrift.hostname` is set to a non-empty value, the Thrift gateway uses the
+configured value instead of the hostname discovered through `hbase.thrift.dns.interface` and
+`hbase.thrift.dns.nameserver`. The configured hostname is used for Kerberos `_HOST`
+substitution and as the SASL server hostname. This can be useful when multiple Thrift gateways
+are exposed through a common DNS name, VIP, or layer-4 load balancer. Each gateway using the
+common hostname must have a keytab containing the corresponding service principal.
 
 Substitute the appropriate credential and keytab for _\$USER_ and _\$KEYTAB_ respectively.
 
