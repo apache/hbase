@@ -421,7 +421,6 @@ public class TestBackupBase {
 
       BackupRequest request =
         createBackupRequest(type, new ArrayList<>(tables), path, false, isContinuousBackup);
-      BackupRequest request = createBackupRequest(type, new ArrayList<>(tables), path);
       backupId = badmin.backupTables(request).getBackupId();
     } finally {
       if (badmin != null) {
