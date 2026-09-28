@@ -21,7 +21,6 @@ import static java.util.Objects.requireNonNull;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.StandardCopyOption;
@@ -455,14 +454,12 @@ public final class X509TestContext {
   private void createCertificates(String... subjectAltNames)
     throws GeneralSecurityException, IOException, OperatorCreationException {
     X500NameBuilder caNameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-    caNameBuilder.addRDN(BCStyle.CN,
-      MethodHandles.lookup().lookupClass().getCanonicalName() + " Root CA");
+    caNameBuilder.addRDN(BCStyle.CN, getClass().getSimpleName() + " Root CA");
     trustStoreCertificate =
       X509TestHelpers.newSelfSignedCACert(caNameBuilder.build(), trustStoreKeyPair);
 
     X500NameBuilder nameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-    nameBuilder.addRDN(BCStyle.CN,
-      MethodHandles.lookup().lookupClass().getCanonicalName() + " Zookeeper Test");
+    nameBuilder.addRDN(BCStyle.CN, getClass().getSimpleName() + " Zookeeper Test");
     keyStoreCertificate = newCert(nameBuilder.build(), subjectAltNames);
   }
 
