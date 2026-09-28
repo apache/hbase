@@ -23,6 +23,7 @@ import org.apache.hadoop.hbase.master.BooleanStateStore;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
+import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
@@ -44,7 +45,8 @@ public class RpcThrottleStateStore extends BooleanStateStore {
 
   public RpcThrottleStateStore(MasterRegion masterRegion, ZKWatcher watcher, String zkPath)
     throws IOException, KeeperException, DeserializationException {
-    super(masterRegion, STATE_NAME, watcher, zkPath);
+    super(masterRegion, STATE_NAME, watcher,
+      ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, zkPath));
   }
 
   @Override
