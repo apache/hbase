@@ -308,6 +308,10 @@ public class RESTServer implements Constants {
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
       // Prefer the role-scoped hbase.rest.ssl.server.* keys, falling back to the historical
       // unscoped hbase.rest.ssl.* keys for backward compatibility with existing deployments.
+      // The fallback is per key, so reject configs that would mix the two prefixes within one
+      // store and pair, say, a new keystore file with the old keystore's password.
+      X509Util.validateConfigPrefixConsistency(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
+        "keystore.store", "keystore.password", "keystore.keypassword", "keystore.type");
       String keystore =
         X509Util.resolveConfig(conf, REST_SSL_SERVER_KEYSTORE_STORE, REST_SSL_KEYSTORE_STORE, null);
       String keystoreType =
@@ -324,6 +328,8 @@ public class RESTServer implements Constants {
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
 
+      X509Util.validateConfigPrefixConsistency(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
+        "truststore.store", "truststore.password", "truststore.type");
       String trustStore = X509Util.resolveConfig(conf, REST_SSL_SERVER_TRUSTSTORE_STORE,
         REST_SSL_TRUSTSTORE_STORE, null);
       if (StringUtils.isNotBlank(trustStore)) {
@@ -344,8 +350,13 @@ public class RESTServer implements Constants {
       // Activate mTLS if configured. Default is NONE, which preserves today's behavior of never
       // requesting a client certificate — even when a truststore is configured. Set
       // hbase.rest.ssl.server.client.auth.mode to WANT or NEED to opt in.
-      X509Util.ClientAuth clientAuth = X509Util.ClientAuth
-        .fromPropertyValue(conf.get(REST_SSL_CLIENT_AUTH_MODE, X509Util.ClientAuth.NONE.name()));
+      // getTrimmed + defaultIfBlank so that an empty or whitespace-only <value></value> in
+      // hbase-site.xml behaves like an absent key. A bare fromPropertyValue("") would return NEED.
+      X509Util.ClientAuth clientAuth =
+        X509Util.ClientAuth.fromPropertyValue(StringUtils.defaultIfBlank(
+          conf.getTrimmed(REST_SSL_CLIENT_AUTH_MODE), X509Util.ClientAuth.NONE.name()));
+      X509Util.validateClientAuthTrustStore(clientAuth, trustStore, REST_SSL_CLIENT_AUTH_MODE,
+        REST_SSL_SERVER_TRUSTSTORE_STORE, REST_SSL_TRUSTSTORE_STORE);
       switch (clientAuth) {
         case NEED:
           sslCtxFactory.setNeedClientAuth(true);

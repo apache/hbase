@@ -22,6 +22,7 @@ import java.net.URI;
 import javax.servlet.ServletContext;
 import javax.servlet.http.HttpServlet;
 import javax.servlet.http.HttpServletRequest;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -100,8 +101,11 @@ public class InfoServer {
       // truststore inert for peer verification). Set hbase.ui.ssl.server.client.auth.mode to
       // WANT or NEED to opt in. The client.auth.mode key is looked up directly on
       // HBASE_WEB_TLS_SERVER_CONFIG_PREFIX; there is no legacy or Hadoop-prefixed fallback.
-      X509Util.ClientAuth clientAuth = X509Util.ClientAuth
-        .fromPropertyValue(c.get(HBASE_UI_SSL_CLIENT_AUTH_MODE, X509Util.ClientAuth.NONE.name()));
+      // getTrimmed + defaultIfBlank so that an empty or whitespace-only <value></value> in
+      // hbase-site.xml behaves like an absent key. A bare fromPropertyValue("") would return NEED.
+      X509Util.ClientAuth clientAuth =
+        X509Util.ClientAuth.fromPropertyValue(StringUtils.defaultIfBlank(
+          c.getTrimmed(HBASE_UI_SSL_CLIENT_AUTH_MODE), X509Util.ClientAuth.NONE.name()));
       builder.needsClientAuth(clientAuth == X509Util.ClientAuth.NEED)
         .wantsClientAuth(clientAuth == X509Util.ClientAuth.WANT);
     }

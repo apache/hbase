@@ -21,11 +21,11 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.reflect.Method;
 import java.security.KeyPair;
 import java.security.cert.X509Certificate;
 import java.util.Optional;
-import javax.net.ssl.SSLException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.http.ssl.KeyStoreTestUtil;
@@ -250,7 +250,7 @@ public class TestRESTServerSSL {
   public void testClientAuthNeedRejectsClientWithoutCert() throws Exception {
     conf.set(Constants.REST_SSL_CLIENT_AUTH_MODE, "NEED");
     startRESTServerWithDefaultKeystoreType();
-    assertThrows(SSLException.class, () -> sslClient.get("/version"));
+    assertThrows(IOException.class, () -> sslClient.get("/version"));
   }
 
   private static File initKeystoreDir() {

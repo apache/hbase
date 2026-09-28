@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -490,6 +491,16 @@ public class HttpServer implements FilterContainer {
           HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
           httpsConfig.addCustomizer(new SecureRequestCustomizer());
           SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
+          // Requesting a client certificate without an explicit truststore would leave Jetty
+          // falling back to the keystore (or the JVM cacerts) as the client-cert trust anchor,
+          // silently trusting issuers the operator never configured. Fail fast instead.
+          X509Util.validateClientAuthTrustStore(
+            needsClientAuth
+              ? X509Util.ClientAuth.NEED
+              : (wantsClientAuth ? X509Util.ClientAuth.WANT : X509Util.ClientAuth.NONE),
+            trustStore, InfoServer.HBASE_UI_SSL_CLIENT_AUTH_MODE,
+            "hbase.ui.ssl.server.truststore.location", "hbase.ui.ssl.truststore.location",
+            "ssl.server.truststore.location");
           sslCtxFactory.setNeedClientAuth(needsClientAuth);
           sslCtxFactory.setWantClientAuth(wantsClientAuth);
           sslCtxFactory.setKeyManagerPassword(keyPassword);

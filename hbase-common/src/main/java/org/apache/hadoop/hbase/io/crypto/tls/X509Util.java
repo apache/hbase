@@ -39,6 +39,7 @@ import javax.net.ssl.TrustManagerFactory;
 import javax.net.ssl.X509ExtendedTrustManager;
 import javax.net.ssl.X509KeyManager;
 import javax.net.ssl.X509TrustManager;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
@@ -278,6 +279,44 @@ public final class X509Util {
     return value;
   }
 
+  // resolveConfig falls back per key, so a store whose location comes from one prefix and whose
+  // password/type come from the other would open the wrong file, or the right file with the wrong
+  // credentials. A store is a unit: reject configs that straddle both prefixes.
+  public static void validateConfigPrefixConsistency(Configuration config, String rolePrefix,
+    String legacyPrefix, String... keyPostfixes) {
+    String roleKey = null;
+    String legacyKey = null;
+    for (String postfix : keyPostfixes) {
+      if (config.get(rolePrefix + postfix) != null) {
+        roleKey = roleKey != null ? roleKey : rolePrefix + postfix;
+      } else if (config.get(legacyPrefix + postfix) != null) {
+        legacyKey = legacyKey != null ? legacyKey : legacyPrefix + postfix;
+      }
+      // absent under both prefixes: nothing is mixed, the caller's default applies
+    }
+    if (roleKey == null || legacyKey == null) {
+      return;
+    }
+    throw new IllegalArgumentException(roleKey + " is set, so " + legacyKey
+      + " would be silently ignored: a store's location, password, and type must come from the same"
+      + " prefix. Set all of " + rolePrefix + "{" + String.join(", ", keyPostfixes)
+      + "} that your store needs, or none of them to use " + legacyPrefix + " throughout.");
+  }
+
+  // Jetty never leaves the peer-certificate trust anchors empty: with no truststore configured it
+  // falls back to the keystore, or to the JVM cacerts when no keystore is set either. WANT/NEED
+  // would then appear to work while trusting issuers the operator never configured, so fail fast.
+  public static void validateClientAuthTrustStore(ClientAuth clientAuth, String trustStoreLocation,
+    String clientAuthModeKey, String... trustStoreLocationKeys) {
+    if (clientAuth == ClientAuth.NONE || StringUtils.isNotBlank(trustStoreLocation)) {
+      return;
+    }
+    throw new IllegalArgumentException(clientAuthModeKey + "=" + clientAuth
+      + " requires a client-certificate trust root, but no truststore is configured."
+      + " Configure a truststore via [" + String.join(", ", trustStoreLocationKeys)
+      + "], or disable client certificate checking with " + clientAuthModeKey + "=NONE.");
+  }
+
   private X509Util() {
     // disabled
   }
@@ -288,6 +327,8 @@ public final class X509Util {
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
     configureOpenSslIfAvailable(sslContextBuilder, config);
+    validateConfigPrefixConsistency(config, CLIENT_CONFIG_PREFIX, CONFIG_PREFIX,
+      "keystore.location", "keystore.password", "keystore.type");
     String keyStoreLocation =
       resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, TLS_CONFIG_KEYSTORE_LOCATION, "");
     char[] keyStorePassword =
@@ -303,6 +344,8 @@ public final class X509Util {
         .keyManager(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
     }
 
+    validateConfigPrefixConsistency(config, CLIENT_CONFIG_PREFIX, CONFIG_PREFIX,
+      "truststore.location", "truststore.password", "truststore.type");
     String trustStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION,
       TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     char[] trustStorePassword = resolvePassword(config, TLS_CONFIG_CLIENT_TRUSTSTORE_PASSWORD,
@@ -370,6 +413,8 @@ public final class X509Util {
 
   public static SslContext createSslContextForServer(Configuration config)
     throws X509Exception, IOException {
+    validateConfigPrefixConsistency(config, SERVER_CONFIG_PREFIX, CONFIG_PREFIX,
+      "keystore.location", "keystore.password", "keystore.type");
     String keyStoreLocation =
       resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_LOCATION, TLS_CONFIG_KEYSTORE_LOCATION, "");
     char[] keyStorePassword =
@@ -387,6 +432,8 @@ public final class X509Util {
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
     configureOpenSslIfAvailable(sslContextBuilder, config);
+    validateConfigPrefixConsistency(config, SERVER_CONFIG_PREFIX, CONFIG_PREFIX,
+      "truststore.location", "truststore.password", "truststore.type");
     String trustStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION,
       TLS_CONFIG_TRUSTSTORE_LOCATION, "");
     char[] trustStorePassword = resolvePassword(config, TLS_CONFIG_SERVER_TRUSTSTORE_PASSWORD,

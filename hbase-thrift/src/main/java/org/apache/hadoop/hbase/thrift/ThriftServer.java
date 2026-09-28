@@ -425,6 +425,11 @@ public class ThriftServer extends Configured implements Tool {
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
       // Prefer the role-scoped hbase.thrift.ssl.server.* keys, falling back to the historical
       // unscoped hbase.thrift.ssl.* keys for backward compatibility with existing deployments.
+      // The fallback is per key, so reject configs that would mix the two prefixes within one
+      // store and pair, say, a new keystore file with the old keystore's password.
+      X509Util.validateConfigPrefixConsistency(conf, "hbase.thrift.ssl.server.",
+        "hbase.thrift.ssl.", "keystore.store", "keystore.password", "keystore.keypassword",
+        "keystore.type");
       String keystore = X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY,
         THRIFT_SSL_KEYSTORE_STORE_KEY, null);
       String password =
@@ -441,9 +446,8 @@ public class ThriftServer extends Configured implements Tool {
           THRIFT_SSL_KEYSTORE_TYPE_KEY, THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
 
       // Truststore is entirely new for Thrift — no legacy fallback because there is no historical
-      // hbase.thrift.ssl.truststore.* configuration. When left unset, no truststore is configured
-      // on the connector and any hbase.thrift.ssl.server.client.auth.mode = WANT/NEED setting
-      // will fail the handshake for lack of a peer-cert trust root.
+      // hbase.thrift.ssl.truststore.* configuration. Leaving it unset is only valid when client
+      // auth is NONE
       String trustStore = conf.get(THRIFT_SSL_SERVER_TRUSTSTORE_STORE_KEY);
       if (StringUtils.isNotBlank(trustStore)) {
         sslCtxFactory.setTrustStorePath(trustStore);
@@ -461,8 +465,13 @@ public class ThriftServer extends Configured implements Tool {
       // Activate mTLS if configured. Default is NONE, which preserves today's behavior of never
       // requesting a client certificate on the Thrift-over-HTTP connector. Set
       // hbase.thrift.ssl.server.client.auth.mode to WANT or NEED to opt in.
-      X509Util.ClientAuth clientAuth = X509Util.ClientAuth.fromPropertyValue(
-        conf.get(THRIFT_SSL_CLIENT_AUTH_MODE_KEY, X509Util.ClientAuth.NONE.name()));
+      // getTrimmed + defaultIfBlank so that an empty or whitespace-only <value></value> in
+      // hbase-site.xml behaves like an absent key. A bare fromPropertyValue("") would return NEED.
+      X509Util.ClientAuth clientAuth =
+        X509Util.ClientAuth.fromPropertyValue(StringUtils.defaultIfBlank(
+          conf.getTrimmed(THRIFT_SSL_CLIENT_AUTH_MODE_KEY), X509Util.ClientAuth.NONE.name()));
+      X509Util.validateClientAuthTrustStore(clientAuth, trustStore, THRIFT_SSL_CLIENT_AUTH_MODE_KEY,
+        THRIFT_SSL_SERVER_TRUSTSTORE_STORE_KEY);
       switch (clientAuth) {
         case NEED:
           sslCtxFactory.setNeedClientAuth(true);

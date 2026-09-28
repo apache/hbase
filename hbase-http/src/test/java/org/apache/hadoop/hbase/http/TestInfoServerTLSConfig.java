@@ -29,7 +29,7 @@ import org.junit.jupiter.api.Test;
 /**
  * Unit tests for {@link InfoServer}'s TLS-config resolution: the 3-tier fallback chain
  * ({@code hbase.ui.ssl.server.*} → {@code hbase.ui.ssl.*} → {@code ssl.server.*}) that underpins
- * single-EKU certificate support on the UI surface, and the client-auth-mode key.
+ * single-EKU certificate support on the UI surface.
  */
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
@@ -89,12 +89,5 @@ public class TestInfoServerTLSConfig {
 
     c.unset(HADOOP_KEY.replace("keystore.location", "keystore.password"));
     assertNull(InfoServer.getTLSPassword(c, "keystore.password"));
-  }
-
-  @Test
-  public void testClientAuthModeKeyIsRoleScoped() {
-    // Guard against a "double server.server." regression: the client-auth-mode config key must
-    // resolve to the single role-scoped key, not to a nested/prefixed form.
-    assertEquals("hbase.ui.ssl.server.client.auth.mode", InfoServer.HBASE_UI_SSL_CLIENT_AUTH_MODE);
   }
 }

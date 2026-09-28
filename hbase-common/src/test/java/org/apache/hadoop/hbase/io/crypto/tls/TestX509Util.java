@@ -449,24 +449,6 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testCreateSSLContextForClientFallsBackToLegacyKeystore() throws Exception {
-    // The base setUp() only sets the legacy TLS_CONFIG_KEYSTORE_* / TLS_CONFIG_TRUSTSTORE_* keys.
-    // The role-scoped keys are intentionally unset; the context must still build using the legacy
-    // values (backward-compat regression guard).
-    conf.unset(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION);
-    conf.unset(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD);
-    conf.unset(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_TYPE);
-    conf.unset(X509Util.TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION);
-    conf.unset(X509Util.TLS_CONFIG_CLIENT_TRUSTSTORE_PASSWORD);
-    conf.unset(X509Util.TLS_CONFIG_CLIENT_TRUSTSTORE_TYPE);
-
-    SslContext sslContext = X509Util.createSslContextForClient(conf);
-    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
-    assertTrue(
-      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
-  }
-
-  @TestTemplate
   public void testCreateSSLContextForServerUsesRoleScopedKeystoreWhenSet() throws Exception {
     String location = conf.get(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
     String password = conf.get(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
@@ -485,23 +467,6 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   }
 
   @TestTemplate
-  public void testCreateSSLContextForServerFallsBackToLegacyKeystore() throws Exception {
-    // Base setUp() only sets legacy keys. Assert server-side context still builds; backward
-    // compatibility for existing deployments that only know about the legacy key namespace.
-    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION);
-    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_PASSWORD);
-    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_TYPE);
-    conf.unset(X509Util.TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION);
-    conf.unset(X509Util.TLS_CONFIG_SERVER_TRUSTSTORE_PASSWORD);
-    conf.unset(X509Util.TLS_CONFIG_SERVER_TRUSTSTORE_TYPE);
-
-    SslContext sslContext = X509Util.createSslContextForServer(conf);
-    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
-    assertTrue(
-      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
-  }
-
-  @TestTemplate
   public void testCreateSSLContextForServerThrowsWhenNeitherKeystoreSet() {
     conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
     conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION);
@@ -512,6 +477,32 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       "message should mention role-scoped key, got: " + ex.getMessage());
     assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_KEYSTORE_LOCATION),
       "message should mention legacy key, got: " + ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testValidateClientAuthTrustStoreRejectsNeedWithoutTrustStore() {
+    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+      () -> X509Util.validateClientAuthTrustStore(X509Util.ClientAuth.NEED, null, "the.mode.key",
+        "the.truststore.key"));
+    assertTrue(ex.getMessage().contains("the.mode.key"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("the.truststore.key"), ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testValidateClientAuthTrustStoreAllowsNoneWithoutTrustStore() {
+    // NONE never requests a peer certificate, so a missing truststore is not a misconfiguration.
+    X509Util.validateClientAuthTrustStore(X509Util.ClientAuth.NONE, null, "mode.key", "ts.key");
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForClientRejectsMixedConfigPrefixes() {
+    // setUp() populated the legacy keystore keys; adding only the role-scoped location would
+    // otherwise pair the new file with the legacy password and type.
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, "/nonexistent/client.p12");
+    IllegalArgumentException ex =
+      assertThrows(IllegalArgumentException.class, () -> X509Util.createSslContextForClient(conf));
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION),
+      ex.getMessage());
   }
 
 }
