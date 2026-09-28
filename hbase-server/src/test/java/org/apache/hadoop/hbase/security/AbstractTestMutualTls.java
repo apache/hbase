@@ -23,7 +23,6 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.invoke.MethodHandles;
 import java.net.InetSocketAddress;
 import java.security.Security;
 import java.security.cert.X509Certificate;
@@ -182,10 +181,10 @@ public abstract class AbstractTestMutualTls {
         // to simulate a good cert with a bad host, we need to create a new cert using the existing
         // context's CA/truststore. Here we can pass any random SANS, as long as it won't match
         // localhost or any reasonable name that this test might run on.
-        X509Certificate cert = x509TestContext.newCert(new X500NameBuilder(BCStyle.INSTANCE)
-          .addRDN(BCStyle.CN,
-            MethodHandles.lookup().lookupClass().getCanonicalName() + " With Bad Host Test")
-          .build(), "www.example.com");
+        X509Certificate cert = x509TestContext.newCert(
+          new X500NameBuilder(BCStyle.INSTANCE)
+            .addRDN(BCStyle.CN, getClass().getSimpleName() + " With Bad Host Test").build(),
+          "www.example.com");
         x509TestContext.cloneWithNewKeystoreCert(cert)
           .setKeystoreConfigurations(KeyStoreFileType.JKS, confToSet);
         break;
