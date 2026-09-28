@@ -60,6 +60,8 @@
 #                    `--startup ${HBASE_HOME}/bin/hbase_startup.jsh` when that
 #                    file exists, and `--execution local` unless --execution is
 #                    already set here (so System.exit in scripts propagates).
+#                    Split on whitespace like HBASE_OPTS -- individual argument
+#                    values (e.g. a --startup file path) cannot contain spaces.
 #
 #   HBASE_JSH_ARG_N / HBASE_JSH_ARG_COUNT
 #                    Positional args for `hbase path/to/script.jsh [args...]`.
@@ -105,8 +107,6 @@ show_usage() {
     echo "  clean            Run the HBase clean up script"
   fi
   echo "  jshell           Run a jshell with HBase on the classpath"
-  echo "  script.jsh       Run a JShell script non-interactively (args via HBASE_JSH_ARG_N)"
-  echo "  Script.java      Run a single-file .java source (JEP 330) with HBase on the classpath"
   echo "  classpath        Dump hbase CLASSPATH"
   echo "  mapredcp         Dump CLASSPATH entries required by mapreduce"
   echo "  pe               Run PerformanceEvaluation"
@@ -125,6 +125,8 @@ show_usage() {
   echo "  credential       Run the Hadoop Credential Shell"
   echo "  copyreppeers     Run CopyReplicationPeers tool"
   echo "  CLASSNAME        Run the class named CLASSNAME"
+  echo "  <path>.jsh       Run <path> as a JShell script non-interactively (args via HBASE_JSH_ARG_N)"
+  echo "  <path>.java      Run <path> as a single-file .java source (JEP 330) with HBase on the classpath"
 }
 
 if [ "--help" = "$1" ] || [ "-h" = "$1" ]; then
