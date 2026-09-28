@@ -71,7 +71,7 @@ public class TestIncrementalBackupManager extends TestBackupBase {
     try (Connection conn = ConnectionFactory.createConnection(testConf);
       BackupAdminImpl backupAdmin = new BackupAdminImpl(conn)) {
       String fullBackupId =
-        backupAdmin.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
+        backupAdmin.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR)).getBackupId();
       assertTrue(checkSucceeded(fullBackupId));
 
       try (IncrementalBackupManager manager = new IncrementalBackupManager(conn, testConf)) {

@@ -300,7 +300,7 @@ public class TestBackupDeleteWithCleanup extends TestBackupBase {
     try (BackupAdmin admin = new BackupAdminImpl(TEST_UTIL.getConnection())) {
       BackupRequest request =
         createBackupRequest(BackupType.FULL, new ArrayList<>(tables), BACKUP_ROOT_DIR, false, true);
-      return admin.backupTables(request);
+      return admin.backupTables(request).getBackupId();
     }
   }
 

@@ -66,7 +66,7 @@ public class IncrementalBackupRestoreTestBase extends TestBackupBase {
     boolean noChecksumVerify) throws IOException {
     BackupRequest req =
       createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR, noChecksumVerify);
-    String backupId = backupAdmin.backupTables(req);
+    String backupId = backupAdmin.backupTables(req).getBackupId();
     checkSucceeded(backupId);
     return backupId;
   }
