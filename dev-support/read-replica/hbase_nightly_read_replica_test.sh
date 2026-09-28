@@ -25,9 +25,14 @@ export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 DEV_IMAGE_NAME="hbase-dev-support:${BUILD_NUMBER:-local}"
 
 PYTEST_K_VALUE=""
+DEV_MODE=false
 
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -d|--dev)
+      DEV_MODE=true
+      shift
+      ;;
     -k)
       if [[ -n "$2" && "$2" != -* ]]; then
         PYTEST_K_VALUE="$2"
@@ -39,7 +44,7 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 [-k <expression>]"
+      echo "Usage: $0 [-d|--dev] [-k <expression>]"
       exit 1
       ;;
   esac
@@ -50,7 +55,7 @@ echo "HBase Root: ${HBASE_ROOT}"
 echo "Replica Dir: ${REPLICA_DIR}"
 echo "Dev Container Image: ${DEV_IMAGE_NAME}"
 
-# 1. Build the dev-support container image using HBASE_ROOT as the build context
+# Build the dev-support container image using HBASE_ROOT as the build context
 echo "Building dev-support Docker image..."
 docker build --platform linux/amd64 \
   -t "${DEV_IMAGE_NAME}" \
@@ -72,20 +77,49 @@ trap cleanup_host EXIT
 # Ensure host .m2 directory exists for caching
 mkdir -p "${HOME}/.m2"
 
-PYTEST_K_ARGS=()
-if [[ -n "${PYTEST_K_VALUE}" ]]; then
-  PYTEST_K_ARGS=(-k "${PYTEST_K_VALUE}")
-fi
+if [ "${DEV_MODE}" = "true" ]; then
+  # Start a detached dev container for interactive exploration
+  echo "Starting dev container in background..."
+  CONTAINER_ID=$(docker run -d \
+    --platform linux/amd64 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "${HBASE_ROOT}:${HBASE_ROOT}" \
+    -v "${HOME}/.m2:/root/.m2" \
+    -e OUTPUT_DIR="${OUTPUT_DIR}" \
+    -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
+    -w "${REPLICA_DIR}" \
+    "${DEV_IMAGE_NAME}" \
+    sleep infinity)
 
-# 2. Run the inner test script inside the dev-support container via DooD
-echo "Launching dev container and starting test suite..."
-docker run --rm \
-  --platform linux/amd64 \
-  -v /var/run/docker.sock:/var/run/docker.sock \
-  -v "${HBASE_ROOT}:${HBASE_ROOT}" \
-  -v "${HOME}/.m2:/root/.m2" \
-  -e OUTPUT_DIR="${OUTPUT_DIR}" \
-  -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
-  -w "${REPLICA_DIR}" \
-  "${DEV_IMAGE_NAME}" \
-  ./run-read-replica-integration-tests.sh "${PYTEST_K_ARGS[@]}"
+  echo ""
+  echo "=== Dev container is ready ==="
+  echo "Container ID: ${CONTAINER_ID}"
+  echo "Image:        ${DEV_IMAGE_NAME}"
+  echo ""
+  echo "Enter the container:"
+  echo ""
+  echo "docker exec -it ${CONTAINER_ID} bash"
+  echo ""
+  echo "Stop and remove the container when done:"
+  echo ""
+  echo "docker stop ${CONTAINER_ID} && docker rm ${CONTAINER_ID}"
+  echo ""
+else
+  PYTEST_K_ARGS=()
+  if [[ -n "${PYTEST_K_VALUE}" ]]; then
+    PYTEST_K_ARGS=(-k "${PYTEST_K_VALUE}")
+  fi
+
+  # Run the inner test script inside the dev-support container via DooD
+  echo "Launching dev container and starting test suite..."
+  docker run --rm \
+    --platform linux/amd64 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v "${HBASE_ROOT}:${HBASE_ROOT}" \
+    -v "${HOME}/.m2:/root/.m2" \
+    -e OUTPUT_DIR="${OUTPUT_DIR}" \
+    -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
+    -w "${REPLICA_DIR}" \
+    "${DEV_IMAGE_NAME}" \
+    ./run-read-replica-integration-tests.sh "${PYTEST_K_ARGS[@]}"
+fi
