@@ -221,11 +221,11 @@ public class TestRegionStateStore {
     }
   }
 
-
   @Test
   public void testSplitRegionWritesSplitStateForParentInMeta() throws IOException {
     long regionId = EnvironmentEdgeManager.currentTime();
-    ServerName serverName = ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
+    ServerName serverName =
+      ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
     TableName tableName = name.getTableName();
     RegionInfo parent = RegionInfoBuilder.newBuilder(tableName)
       .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
@@ -241,7 +241,6 @@ public class TestRegionStateStore {
       UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStateStore();
     regionStateStore.splitRegion(parent, splitA, splitB, serverName,
       TableDescriptorBuilder.newBuilder(tableName).build());
-
 
     try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
       Result result = meta.get(new Get(parent.getRegionName()));

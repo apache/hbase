@@ -235,9 +235,8 @@ public class TestAssignmentManager extends TestAssignmentManagerBase {
   // See HBASE-30353.
   @Test
   public void testAssignThrowsWithASplitParentInOfflineState() throws Exception {
-    RegionInfo splitParent =
-      RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-offline")).setSplit(true)
-        .setOffline(true).build();
+    RegionInfo splitParent = RegionInfoBuilder.newBuilder(TableName.valueOf("test-split-offline"))
+      .setSplit(true).setOffline(true).build();
     RegionStateNode rsn = am.getRegionStates().getOrCreateRegionStateNode(splitParent);
     rsn.setState(State.OFFLINE);
 
