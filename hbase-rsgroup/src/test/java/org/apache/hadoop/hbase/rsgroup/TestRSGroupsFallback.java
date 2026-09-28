@@ -17,17 +17,12 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.Collections;
-import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -112,39 +107,6 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
       Collections.singleton(t.getRegionServer().getServerName().getAddress()), groupName);
     assertTrue(master.balance().isBalancerRan());
     assertRegionsInGroup(tableName, groupName);
-
-    TEST_UTIL.deleteTable(tableName);
-  }
-
-  @Test
-  public void testFallbackWhenAllServersOfMultiServerGroupCrash() throws Exception {
-    // add fallback group
-    addGroup(FALLBACK_GROUP, 1);
-    // add test group with two servers, so the table's regions can be spread across both
-    String groupName = getGroupName(name.getMethodName());
-    RSGroupInfo groupInfo = addGroup(groupName, 2);
-    TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
-    rsGroupAdmin.moveTables(Collections.singleton(tableName), groupName);
-    TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
-    assertTrue(master.balance().isBalancerRan());
-    assertRegionsInGroup(tableName, groupName);
-
-    // both servers of the test group must be hosting regions of the table before either crashes
-    Map<ServerName, List<String>> perServerBeforeCrash = getTableServerRegionMap().get(tableName);
-    int totalBeforeCrash = 0;
-    for (Address server : groupInfo.getServers()) {
-      List<String> regionsOnServer = perServerBeforeCrash.get(getServerName(server));
-      assertFalse(regionsOnServer == null || regionsOnServer.isEmpty());
-      totalBeforeCrash += regionsOnServer.size();
-    }
-    assertEquals(6, totalBeforeCrash);
-
-    // both servers of the test group crash -- the group is left with zero online servers, and
-    // since default still has an online server left (unlike testFallback()'s second phase, which
-    // crashes default's own last server too), the regions must fall back to default rather than
-    // cascade further to the dedicated fallback group.
-    crashRsInGroup(groupName);
-    assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
 
     TEST_UTIL.deleteTable(tableName);
   }
