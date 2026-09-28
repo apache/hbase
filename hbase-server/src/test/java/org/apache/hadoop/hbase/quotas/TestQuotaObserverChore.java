@@ -18,15 +18,25 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,5 +91,32 @@ public class TestQuotaObserverChore {
     assertEquals(numTable1Regions, Iterables.size(store.filterBySubject(tn1)));
     assertEquals(numTable2Regions, Iterables.size(store.filterBySubject(tn2)));
     assertEquals(numTable3Regions, Iterables.size(store.filterBySubject(tn3)));
+  }
+
+  @Test
+  public void testRetriesEnableAfterSnapshotTransition() throws Exception {
+    TableName table = TableName.valueOf("tableToEnable");
+    Admin admin = mock(Admin.class);
+    SpaceQuotaSnapshotNotifier notifier = mock(SpaceQuotaSnapshotNotifier.class);
+    when(conn.getAdmin()).thenReturn(admin);
+    doThrow(new IOException("injected enable failure")).doNothing().when(admin).enableTable(table);
+
+    QuotaObserverChore realChore = new QuotaObserverChore(conn, new Configuration(false), notifier,
+      mock(MasterQuotaManager.class), mock(Stoppable.class), null);
+    realChore.initializeSnapshotStores(Collections.emptyMap());
+    SpaceQuotaSnapshot previous =
+      new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 2048L, 1024L);
+    SpaceQuotaSnapshot target =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 2048L, 4096L);
+    realChore.setTableQuotaSnapshot(table, previous);
+
+    assertThrows(IOException.class,
+      () -> realChore.updateTableQuota(table, realChore.getTableQuotaSnapshot(table), target));
+    assertEquals(previous, realChore.getTableQuotaSnapshot(table));
+
+    realChore.updateTableQuota(table, realChore.getTableQuotaSnapshot(table), target);
+    assertEquals(target, realChore.getTableQuotaSnapshot(table));
+    verify(admin, times(2)).enableTable(table);
+    verify(notifier, times(2)).transitionTable(table, target);
   }
 }

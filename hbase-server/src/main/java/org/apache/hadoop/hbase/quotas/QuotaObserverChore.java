@@ -193,12 +193,13 @@ public class QuotaObserverChore extends ScheduledChore {
           new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), currentSnapshot.getUsage(),
             currentSnapshot.getLimit());
         this.snapshotNotifier.transitionTable(tableInLimbo, targetSnapshot);
-        // Update it in the Table QuotaStore so that memory is consistent with no violation.
-        tableSnapshotStore.setCurrentState(tableInLimbo, targetSnapshot);
         // In case of Disable SVP, we need to enable the table as it moves out of violation
         if (SpaceViolationPolicy.DISABLE == currentStatus.getPolicy().orElse(null)) {
           QuotaUtil.enableTableIfNotEnabled(conn, tableInLimbo);
         }
+        // Only advance the in-memory state after the table has been enabled. If enabling fails,
+        // retain the old state so that the next chore can retry.
+        tableSnapshotStore.setCurrentState(tableInLimbo, targetSnapshot);
       }
     }
 
@@ -321,8 +322,6 @@ public class QuotaObserverChore extends ScheduledChore {
     // If we're changing something, log it.
     if (!currentSnapshot.equals(targetSnapshot)) {
       this.snapshotNotifier.transitionTable(table, targetSnapshot);
-      // Update it in memory
-      tableSnapshotStore.setCurrentState(table, targetSnapshot);
 
       // If the target is none, we're moving out of violation. Update the hbase:quota table
       SpaceViolationPolicy currPolicy = currentStatus.getPolicy().orElse(null);
@@ -349,6 +348,8 @@ public class QuotaObserverChore extends ScheduledChore {
             table + " moved into violation of table space quota with policy of " + targetPolicy);
         }
       }
+      // Keep the previous state if a table operation failed so the next chore retries it.
+      tableSnapshotStore.setCurrentState(table, targetSnapshot);
     } else if (LOG.isTraceEnabled()) {
       // Policies are the same, so we have nothing to do except log this. Don't need to re-update
       // the quota table
