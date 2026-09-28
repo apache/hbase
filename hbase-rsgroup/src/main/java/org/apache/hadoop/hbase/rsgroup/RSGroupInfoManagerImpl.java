@@ -202,6 +202,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           e.getKey(), RS_GROUP_REGEX_PREFIX, e.getKey());
       }
     }
+    LOG.info("Resolved regex-based RSGroup membership config: {}", rsGroupNameToPatternMap);
     return rsGroupNameToPatternMap;
   }
 
@@ -213,6 +214,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         rsGroupNames.add(e.getKey());
       }
     }
+    LOG.info("Hostname '{}' matches RSGroup name(s) {}", hostname, rsGroupNames);
     return rsGroupNames;
   }
 
@@ -228,6 +230,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       List<String> matchingRSGroupNames =
         getMatchingRSGroupNames(sn.getHostname(), rsGroupNameToPatternMap);
       if (matchingRSGroupNames.isEmpty()) {
+        LOG.info("Server {} hostname does not match any regex-based RSGroup names", server);
         continue;
       }
       if (matchingRSGroupNames.size() > 1) {
@@ -246,6 +249,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           RS_GROUP_REGEX_PREFIX, rsGroupName, server, rsGroupName);
       }
     }
+    LOG.info("Resolved server address to RSGroup name map: {}", serverAddrToRSGroupName);
     return serverAddrToRSGroupName;
   }
 
@@ -277,6 +281,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       this.adminManagedServers = adminManagedServers;
       this.serverAddrToRSGroupName = serverAddrToRSGroupName;
       this.wouldEmptyDefaultGroup = wouldEmptyDefaultGroup;
+      LOG.info(
+        "Regex-based RSGroup membership resolution: onlineServers={}, adminManagedServers={}, serverAddrToRSGroupName={}, wouldEmptyDefaultGroup={}",
+        onlineServers, adminManagedServers, serverAddrToRSGroupName, wouldEmptyDefaultGroup);
     }
   }
 
@@ -678,6 +685,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * startup of the manager.
    */
   private synchronized void refresh(boolean forceOnline) throws IOException {
+    LOG.info("Refreshing RSGroup info from source of truth: forceOnline={}, isOnline={}",
+      forceOnline, isOnline());
     List<RSGroupInfo> groupList = new LinkedList<>();
 
     // Overwrite anything read from zk, group table is source of truth
@@ -701,7 +710,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
     }
 
+    LOG.info("Reconciling regex-based RSGroup membership");
     reconcileRegexBasedRSGroupMembership(groupList);
+    Map<String, Set<Address>> reconciledGroupToServers = new HashMap<>();
+    for (RSGroupInfo group : groupList) {
+      reconciledGroupToServers.put(group.getName(), group.getServers());
+    }
+    LOG.info("Reconciled regex-based RSGroup membership: groupToServers={}",
+      reconciledGroupToServers);
 
     // This is added to the last of the list so it overwrites the 'default' rsgroup loaded
     // from region group table or zk
@@ -719,6 +735,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
     resetRSGroupAndTableMaps(newGroupMap, newTableMap);
     updateCacheOfRSGroups(rsGroupMap.keySet());
+    LOG.info("Refresh completed successfully");
   }
 
   private void reconcileRegexBasedRSGroupMembership(List<RSGroupInfo> groupList)
@@ -900,9 +917,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private void checkRegexBasedRSGroupMembership(Map<String, RSGroupInfo> newGroupMap)
     throws IOException {
+    LOG.info("Validating regex-based RSGroup membership");
     Map<String, Pattern> rsGroupNameToPatternMap =
       getRegexGroupMap(masterServices.getConfiguration());
     if (rsGroupNameToPatternMap.isEmpty()) {
+      LOG.info("No regex-based RSGroup membership config found");
       return;
     }
 
@@ -966,6 +985,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         continue;
       }
     }
+    LOG.info("Regex-based RSGroup membership validation completed successfully");
   }
 
   private void checkOnlyServerSetsDifferForAutoUpdate(Map<String, RSGroupInfo> newGroupMap)
@@ -1040,11 +1060,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         defaultServers.add(server);
       }
     }
+    LOG.info("Default servers: {}", defaultServers);
     return defaultServers;
   }
 
   private synchronized Map<String, SortedSet<Address>> computeRegexBasedRSGroupMembership()
     throws IOException {
+    LOG.info("Computing regex-based RSGroup membership");
     List<RSGroupInfo> currentGroups = listRSGroups();
     Set<String> existingGroupNames = new HashSet<>();
     for (RSGroupInfo group : currentGroups) {
@@ -1078,6 +1100,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
       result.get(RSGroupInfo.DEFAULT_GROUP).add(server);
     }
+    LOG.info("Computed regex-based RSGroup membership: {}", result);
     return result;
   }
 

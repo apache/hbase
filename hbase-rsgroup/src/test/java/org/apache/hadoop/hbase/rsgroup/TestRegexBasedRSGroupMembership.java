@@ -98,6 +98,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     regexConfigKeysSet.clear();
     tearDownAfterMethod();
     RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
+    ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).setFallbackEnabledForTest(false);
   }
 
   // ============================== helpers ==============================
@@ -781,7 +782,9 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     // RSGroupBasedLoadBalancer#roundRobinAssignment still confines the
     // crashed regex member's regions to the *other* online members of its own group -- never to
     // default or an unrelated group -- rather than trusting the RSGroup-partitioning logic to
-    // "just work".
+    // "just work". It also asserts, via the test-only call-tracking flags, exactly which
+    // assignment methods actually ran for each step: randomAssignment + retainAssignment during
+    // moveTables, and roundRobinAssignment (not retainAssignment) during crash recovery.
     String groupName = getGroupName("crashroundrobin");
     rsGroupAdmin.addRSGroup(groupName);
     // "127.0.0.1" and "localhost" are the only two distinct, real, independently-reachable
@@ -867,6 +870,88 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       clearRegex(groupName);
       removeGroup(groupName);
       removeGroup(otherGroupName);
+    }
+  }
+
+  @Test
+  public void testFallbackWhenAllRegexMembersCrash() throws Exception {
+    // RSGroupBasedLoadBalancer#generateGroupAssignments only ever looks at a group's currently
+    // online configured servers, regardless of how they became members -- regex-driven or
+    // admin-driven membership is indistinguishable to it. This confirms the
+    // hbase.rsgroup.fallback.enable=true fallback-to-default path works the same way when the
+    // group that loses every one of its servers is regex-governed.
+    String groupName = getGroupName("fallbackregex");
+    rsGroupAdmin.addRSGroup(groupName);
+    // "127.0.0.1" and "localhost" are the only two distinct, real, independently-reachable
+    // identities startFakeHostnameRS supports (its RPC bind address is always "localhost"
+    // regardless of advertised hostname).
+    setRegex(groupName, "127\\.0\\.0\\.1|localhost");
+    RSGroupBasedLoadBalancer balancer = (RSGroupBasedLoadBalancer) master.getLoadBalancer();
+    balancer.setFallbackEnabledForTest(true);
+    try {
+      JVMClusterUtil.RegionServerThread rst1 = startFakeHostnameRS("127.0.0.1");
+      Address addr1 = addressOf(rst1);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr1));
+      ServerName sn1 = getServerName(addr1);
+
+      JVMClusterUtil.RegionServerThread rst2 = startFakeHostnameRS("localhost");
+      Address addr2 = addressOf(rst2);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr2));
+      ServerName sn2 = getServerName(addr2);
+
+      TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      // moveTables synchronously relocates every region of a table with no RSGroup-scoped
+      // descriptor yet onto the target group's servers (moveTableRegionsToGroup blocks on the
+      // move futures before returning), so confinement to {sn1, sn2} is already guaranteed once
+      // this call returns.
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
+
+      // Both regex members must be hosting regions of the table before either is killed.
+      Map<ServerName, List<String>> perServerBeforeCrash = getTableServerRegionMap().get(tableName);
+      int totalBeforeCrash = 0;
+      for (ServerName member : new ServerName[] { sn1, sn2 }) {
+        List<String> regionsOnMember = perServerBeforeCrash.get(member);
+        assertFalse(regionsOnMember == null || regionsOnMember.isEmpty());
+        totalBeforeCrash += regionsOnMember.size();
+      }
+      assertEquals(6, totalBeforeCrash);
+
+      // Kill both regex members -- the group is left with zero online servers. Unlike the base
+      // cluster's servers (which remain in default throughout this test), these two fake RS were
+      // never part of default, so default keeps its original online servers and the fallback
+      // path lands there directly, with no need for a second-level fallback.
+      killFakeRegionServer(rst1);
+      killFakeRegionServer(rst2);
+
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
+        Map<ServerName, List<String>> perServer = getTableServerRegionMap().get(tableName);
+        if (perServer == null) {
+          return false;
+        }
+        RSGroupInfo defaultGroup;
+        try {
+          defaultGroup = rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP);
+        } catch (IOException e) {
+          return false;
+        }
+        int total = 0;
+        for (Map.Entry<ServerName, List<String>> entry : perServer.entrySet()) {
+          // Every region must have landed on a server that is currently in default -- never left
+          // stranded on the now-dead sn1/sn2, and never on any unrelated group.
+          if (!defaultGroup.getServers().contains(entry.getKey().getAddress())) {
+            return false;
+          }
+          total += entry.getValue().size();
+        }
+        return total == 6;
+      });
+    } finally {
+      balancer.setFallbackEnabledForTest(false);
+      clearRegex(groupName);
+      removeGroup(groupName);
     }
   }
 }

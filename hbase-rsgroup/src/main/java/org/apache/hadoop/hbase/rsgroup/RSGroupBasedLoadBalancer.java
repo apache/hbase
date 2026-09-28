@@ -78,6 +78,12 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   private volatile boolean fallbackEnabled = false;
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setFallbackEnabledForTest(boolean enabled) {
+    this.fallbackEnabled = enabled;
+  }
+
   // Test-only call-tracking flags, set true whenever the corresponding assignment method below is
   // invoked. Reset via resetAssignmentCallFlagsForTest() before the operation under test.
   public static volatile boolean isRoundRobinAssignmentInvoked = false;
