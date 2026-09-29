@@ -140,13 +140,53 @@ two tables need to be backed up and be recoverable as a group.
 
 ![Tables Composing The Backup Set](/docs-images/backup-app-components.png)
 
-The following workflow outlines the steps to back up and recover the _green_ application data. All
-commands are run as the HBase superuser. Configure S3 authentication using the Hadoop filesystem
-configuration appropriate for your environment (for example, instance profiles, access keys, or tokens).
+The admin team wants daily backups stored on Amazon S3. All commands below are run as the HBase
+superuser. Configure S3 authentication using the Hadoop filesystem configuration appropriate for
+your environment (for example, instance profiles, access keys, or tokens). Backup and WAL paths in
+the examples use the `s3a://` prefix, for example `s3a://prodhbasebackups/backups`.
 
-**Step 1: Configure the WAL directory**
+### Standard backup and restore (without continuous backup)
 
-Add the WAL directory to `hbase-site.xml` and restart HBase:
+This workflow restores data to the state captured at a specific backup ID.
+
+1. Create a backup set for the _green_ tables:
+
+```bash
+$ hbase backup set add green_set transactions
+$ hbase backup set add green_set customer
+```
+
+2. Run the first full backup:
+
+```bash
+$ hbase backup create full s3a://prodhbasebackups/backups -s green_set
+```
+
+3. Schedule daily incremental backups (for example in `/etc/crontab`):
+
+```bash
+@daily hbase backup create incremental s3a://prodhbasebackups/backups -s green_set
+```
+
+4. After a failure, identify the backup ID closest to the recovery objective. If backup metadata is
+   not readily available, list backup directories:
+
+```bash
+$ hdfs dfs -ls -t s3a://prodhbasebackups/backups
+```
+
+5. Restore using the backup ID. The `-o` flag overwrites existing data in the destination tables:
+
+```bash
+$ hbase restore s3a://prodhbasebackups/backups backup_1467823988425 -s green_set -o
+```
+
+### Extended workflow: continuous backup and PITR
+
+Use this workflow when you need recovery to an arbitrary timestamp within the PITR window, not only
+to the nearest scheduled backup.
+
+1. Configure the WAL directory in `hbase-site.xml` and restart HBase:
 
 ```xml
 <property>
@@ -155,53 +195,35 @@ Add the WAL directory to `hbase-site.xml` and restart HBase:
 </property>
 ```
 
-**Step 2: Create a backup set**
+2. Create the same `green_set` backup set (if not already created).
 
-```bash
-$ hbase backup set add green_set transactions
-$ hbase backup set add green_set customer
-```
-
-**Step 3: Create the first full backup with continuous backup**
+3. Run the first full backup with continuous backup enabled:
 
 ```bash
 $ hbase backup create full s3a://prodhbasebackups/backups -s green_set --continuous-backup-enabled
 ```
 
-**Step 4: Schedule incremental backups**
+4. Continue scheduling daily incremental backups (same cron as above). Incrementals still matter
+   here: they convert accumulated WALs into HFiles and reduce PITR recovery time.
 
-Add a daily cron job to run incremental backups:
-
-```bash
-@daily hbase backup create incremental s3a://prodhbasebackups/backups -s green_set
-```
-
-**Step 5: Incident occurs**
-
-A catastrophic IT incident disables the production cluster that the green application uses.
-
-**Step 6: Determine the recovery timestamp**
-
-The administrator identifies the Unix timestamp corresponding to the desired recovery point in time.
-
-**Step 7: Run PITR**
-
-Because continuous backup is enabled, the admin restores to the specific point in time rather than
-being limited to the nearest scheduled backup:
+5. After a failure, determine the Unix timestamp for the desired recovery point and run PITR:
 
 ```bash
 $ hbase pitr -s green_set --to-datetime 1467823988425 -o
 ```
 
 PITR selects the most recent valid backup before the target time, restores it, and replays WALs from
-the WAL directory to bring the tables to the requested timestamp. The `-o` flag overwrites existing
-data in the destination tables because the current data is corrupted.
+the WAL directory to bring the tables to the requested timestamp.
 
-If recovery to a specific backup ID is sufficient, the standard restore command can be used instead:
+### How the two workflows differ
 
-```bash
-$ hbase restore s3a://prodhbasebackups/backups backup_1467823988425 -s green_set -o
-```
+- **Recovery granularity**: Standard restore recovers to a **backup ID**. PITR recovers to a
+  **timestamp** within the configured PITR window.
+- **Configuration**: PITR requires `hbase.backup.continuous.wal.dir` and an initial full backup with
+  `--continuous-backup-enabled`.
+- **Incremental backup input**: Without continuous backup, incrementals read WALs from the **source
+  cluster**. With continuous backup, incrementals read WALs from the **WAL directory**.
+- **Commands**: Standard recovery uses `hbase restore`. Point-in-time recovery uses `hbase pitr`.
 
 ## Security of Backup Data
 
@@ -271,11 +293,13 @@ files and replication lag.
 ### Incremental backups with continuous backup
 
 When incremental backups are run for tables that have continuous backup enabled, the backup process
-reads WALs from the WAL directory instead of collecting them from the source cluster. This eliminates
-the need to retain WALs on the source cluster between incremental backup runs and reduces pressure on
-the source cluster's log management. The incremental backup command itself is unchanged; the system
-detects whether tables are under continuous backup and selects the appropriate WAL source
-automatically.
+reads WALs from the WAL directory instead of collecting them from the source cluster. Backup capture
+is no longer tied to the incremental schedule in the same way as classic incremental backup: WAL
+entries are streamed to the WAL directory continuously via replication, so you do not need to hold
+source WALs on the cluster **until the next incremental job runs** solely so that job can copy them.
+The incremental backup command itself is unchanged; the system detects whether tables are under
+continuous backup and selects the appropriate WAL source automatically. Scheduled incrementals still
+reduce PITR recovery time by building HFile checkpoints.
 
 ### Point-in-Time Recovery process
 
@@ -296,20 +320,32 @@ point are known to have been persisted to the continuous backup WAL directory.
 
 ## A Warning on File System Growth
 
-As a reminder, incremental backups are implemented via retaining the write-ahead logs which HBase primarily uses for data durability.
-Thus, to ensure that all data needing to be included in a backup is still available in the system, the HBase backup and restore feature
-retains all write-ahead logs since the last backup until the next incremental backup is executed. With continuous backup enabled,
-WALs are additionally replicated to the WAL directory.
+Like HBase Snapshots, backup and restore can have a large impact on filesystem usage for high-volume
+tables. Take care when enabling the feature, and remove backup sessions that are no longer needed.
+
+### Classic incremental backup (without continuous backup)
+
+Incremental backups capture changes from write-ahead logs on the **source cluster**. To ensure data
+is available for the next incremental, the backup feature retains source WALs from the last backup
+until the next incremental backup runs. More frequent incrementals generally mean less WAL retention
+on the source cluster between backup jobs.
+
+The only automated upper bound on retained source WALs for this model is based on the TTL of the
+`hbase:backup` system table (see below).
+
+### Continuous backup and PITR
+
+With continuous backup enabled, WAL entries are replicated to the external **WAL directory**. You are
+not depending on the incremental schedule to copy WALs off the source cluster for backup capture.
+Source WAL files still exist for normal HBase durability and are retained until the continuous backup
+replication peer has shipped them, like any replication workload.
 
 WALs in the continuous backup directory must be retained as long as they are required to support the
 configured PITR window and the available backup chain. Backup deletion performs validation to prevent
 deletion of a backup that would leave a table without a valid PITR recovery path, and removes WALs
-that are no longer required.
-
-Like HBase Snapshots, this can have an expectedly large impact on the HDFS usage of HBase for high volume tables. Take care in enabling
-and using the backup and restore feature, specifically with a mind to removing backup sessions when they are not actively being used.
-Running incremental backups on a regular schedule reduces WAL retention on the source cluster for tables under continuous backup,
-because WALs are read from the WAL directory rather than from the source cluster.
+that are no longer required. Running incremental backups on a schedule still helps **PITR recovery
+time** by converting WALs into HFiles; it is not the primary mechanism that moves WAL data off the
+source cluster when continuous backup is enabled.
 
 The only automated, upper-bound on retained write-ahead logs for backup and restore is based on the TTL of the `hbase:backup` system table which,
 as of the time this document is written, is infinite (backup table entries are never automatically deleted). This requires that administrators
