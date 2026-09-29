@@ -21,7 +21,7 @@
 # Inner test runner executed INSIDE the Docker container built from
 # hbase/dev-support/docker/Dockerfile. In a typical test run, this
 # script is invoked by hbase_nightly_read_replica_test.sh. It can be
-# run on its own as well as long as it is done within a the container
+# run on its own as well as long as it is done within the container
 # mentioned above.
 #
 # What it does:

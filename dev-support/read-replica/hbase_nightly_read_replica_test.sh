@@ -43,6 +43,7 @@ DEV_IMAGE_NAME="hbase-dev-support:${BUILD_NUMBER:-local}"
 PYTEST_K_VALUE=""
 JAVA_VERSION=""
 M2_DIR="${HOME}"
+EFFECTIVE_OUTPUT_DIR="${OUTPUT_DIR:-${REPLICA_DIR}/output}"
 DEV_MODE=false
 
 print_usage() {
@@ -131,6 +132,7 @@ echo "HBase Root: ${HBASE_ROOT}"
 echo "Replica Dir: ${REPLICA_DIR}"
 echo "Dev Container Image: ${DEV_IMAGE_NAME}"
 echo "M2 Dir: ${M2_DIR}/.m2"
+echo "Output Dir: ${EFFECTIVE_OUTPUT_DIR}"
 
 # Build the dev-support container image using HBASE_ROOT as the build context
 echo "Building dev-support Docker image..."
@@ -153,6 +155,7 @@ trap cleanup_host EXIT
 
 # Ensure host .m2 directory exists for caching
 mkdir -p "${M2_DIR}/.m2"
+mkdir -p "${EFFECTIVE_OUTPUT_DIR}"
 
 if [ "${DEV_MODE}" = "true" ]; then
   # Start a detached dev container for interactive exploration
@@ -161,8 +164,9 @@ if [ "${DEV_MODE}" = "true" ]; then
     --platform linux/amd64 \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "${HBASE_ROOT}:${HBASE_ROOT}" \
+    -v "${EFFECTIVE_OUTPUT_DIR}:${EFFECTIVE_OUTPUT_DIR}" \
     -v "${M2_DIR}/.m2:/root/.m2" \
-    -e OUTPUT_DIR="${OUTPUT_DIR}" \
+    -e OUTPUT_DIR="${EFFECTIVE_OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
@@ -198,8 +202,9 @@ else
     --platform linux/amd64 \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "${HBASE_ROOT}:${HBASE_ROOT}" \
+    -v "${EFFECTIVE_OUTPUT_DIR}:${EFFECTIVE_OUTPUT_DIR}" \
     -v "${M2_DIR}/.m2:/root/.m2" \
-    -e OUTPUT_DIR="${OUTPUT_DIR}" \
+    -e OUTPUT_DIR="${EFFECTIVE_OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
