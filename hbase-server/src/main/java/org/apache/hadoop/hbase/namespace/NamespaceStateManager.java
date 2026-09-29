@@ -137,6 +137,19 @@ class NamespaceStateManager {
     }
   }
 
+  /** Set the cached count after an operation has replaced a table's regions. */
+  synchronized void setRegionCountOfTable(TableName name, int regionCount) throws IOException {
+    if (name.isSystemTable()) {
+      return;
+    }
+    NamespaceTableAndRegionInfo currentStatus = getState(name.getNamespaceAsString());
+    if (currentStatus == null) {
+      throw new IOException(
+        "Namespace quota information not found for namespace : " + name.getNamespaceAsString());
+    }
+    currentStatus.setRegionCountForTable(name, regionCount);
+  }
+
   private NamespaceDescriptor getNamespaceDescriptor(String namespaceAsString) {
     try {
       return this.master.getClusterSchema().getNamespace(namespaceAsString);

@@ -523,6 +523,13 @@ public class MasterQuotaManager implements RegionStateListener {
     }
   }
 
+  /** Reconcile the namespace quota cache after replacing a table's regions. */
+  public void setRegionCountOfTable(TableName tName, int regions) throws IOException {
+    if (initialized) {
+      namespaceQuotaManager.setRegionCountOfTable(tName, regions);
+    }
+  }
+
   /** Returns cached region count, or -1 if quota manager is disabled or table status not found */
   public int getRegionCountOfTable(TableName tName) throws IOException {
     if (initialized) {

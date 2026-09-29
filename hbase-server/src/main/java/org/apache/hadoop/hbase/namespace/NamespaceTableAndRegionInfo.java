@@ -93,6 +93,15 @@ class NamespaceTableAndRegionInfo {
     }
   }
 
+  synchronized void setRegionCountForTable(TableName tableName, int regionCount) {
+    AtomicInteger currentCount = tableAndRegionInfo.get(tableName);
+    if (currentCount != null) {
+      currentCount.set(regionCount);
+    } else {
+      addTable(tableName, regionCount);
+    }
+  }
+
   synchronized void removeTable(TableName tableName) {
     tableAndRegionInfo.remove(tableName);
   }

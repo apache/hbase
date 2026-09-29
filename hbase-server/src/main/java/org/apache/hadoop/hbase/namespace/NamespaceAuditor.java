@@ -84,6 +84,15 @@ public class NamespaceAuditor {
     }
   }
 
+  /** Update the cached region count after a table's regions have already been replaced. */
+  public void setRegionCountOfTable(TableName tName, int regions) throws IOException {
+    if (stateManager.isInitialized()) {
+      stateManager.setRegionCountOfTable(tName, regions);
+    } else {
+      checkTableTypeAndThrowException(tName);
+    }
+  }
+
   private void checkTableTypeAndThrowException(TableName name) throws IOException {
     if (name.isSystemTable()) {
       LOG.debug("Namespace auditor checks not performed for table " + name.getNameAsString());

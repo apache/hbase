@@ -151,6 +151,14 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
           setNextState(TruncateTableState.TRUNCATE_TABLE_ASSIGN_REGIONS);
           break;
         case TRUNCATE_TABLE_ASSIGN_REGIONS:
+          // The regions in META have been replaced. Reconcile the namespace quota cache before
+          // enabling the table. Setting the absolute count also makes this step safe to retry.
+          if (!getTableName().isSystemTable()) {
+            int primaryRegionCount =
+              (int) regions.stream().filter(RegionReplicaUtil::isDefaultReplica).count();
+            ProcedureSyncWait.getMasterQuotaManager(env).setRegionCountOfTable(getTableName(),
+              primaryRegionCount);
+          }
           CreateTableProcedure.setEnablingState(env, getTableName());
           addChildProcedure(env.getAssignmentManager().createRoundRobinAssignProcedures(regions));
           setNextState(TruncateTableState.TRUNCATE_TABLE_POST_OPERATION);
