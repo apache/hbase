@@ -21,7 +21,6 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.lang.invoke.MethodHandles;
 import java.security.KeyPair;
 import java.security.Security;
 import java.security.cert.CertificateFactory;
@@ -58,8 +57,7 @@ public class TestHBaseHostnameVerifier {
   public static void setupClass() throws Exception {
     Security.addProvider(new BouncyCastleProvider());
     X500NameBuilder caNameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
-    caNameBuilder.addRDN(BCStyle.CN,
-      MethodHandles.lookup().lookupClass().getCanonicalName() + " Root CA");
+    caNameBuilder.addRDN(BCStyle.CN, TestHBaseHostnameVerifier.class.getSimpleName() + " Root CA");
     KeyPair keyPair = X509TestHelpers.generateKeyPair(X509KeyType.EC);
     X509Certificate caCert = X509TestHelpers.newSelfSignedCACert(caNameBuilder.build(), keyPair);
     certificateCreator = new CertificateCreator(keyPair, caCert);
