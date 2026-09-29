@@ -16,8 +16,23 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Inner test runner executed INSIDE the Docker container built
-# using hbase/dev-support/docker/Dockerfile
+# run_read_replica_integration_tests.sh
+#
+# Inner test runner executed INSIDE the Docker container built from
+# hbase/dev-support/docker/Dockerfile. In a typical test run, this
+# script is invoked by hbase_nightly_read_replica_test.sh. It can be
+# run on its own as well as long as it is done within a the container
+# mentioned above.
+#
+# What it does:
+#   1. Clones the HBase source tree into a local directory for Docker build context
+#   2. Copies and compiles the protobuf definitions needed by the Python tests
+#   3. Creates a Python virtual environment and installs dependencies
+#   4. Builds a Docker image for the active and replica clusters in a read-replica
+#      setup
+#   5. Runs the pytest read-replica integration suite using these clusters
+#
+# For usage information, run: ./run_read_replica_integration_tests.sh --help
 set -e
 
 REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -31,14 +46,46 @@ KEEP_IMAGE=false
 KEEP_CONTAINERS=false
 PYTEST_K_VALUE=""
 
+print_usage() {
+  SCRIPT=$(basename "${BASH_SOURCE}")
+
+  cat << __EOF
+
+run_read_replica_integration_tests.sh
+
+Inner test runner executed inside the Docker container built from
+hbase/dev-support/docker/Dockerfile. Clones the HBase source, builds Docker
+images for the active and read-replica clusters, and runs the pytest
+integration suite.
+
+This script is normally invoked by hbase_nightly_read_replica_test.sh, but
+it can also be run on its own within the container mentioned above.
+
+Usage: ${SCRIPT} [options]
+
+  -h | --help                  Show this help message and exit.
+  -j | --java-version <ver>    JVM version to use (default: 17). Sets JAVA_HOME
+                                to /usr/lib/jvm/java-<ver>.
+  -i | --keep-image             Do not remove the Docker image on exit.
+  -c | --keep-containers        Do not run 'docker compose down' on exit.
+  -k <expression>               Pytest -k filter expression for test selection.
+
+__EOF
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)
+      print_usage
+      exit 0
+      ;;
     -j|--java-version)
       if [[ -n "$2" && "$2" != -* ]]; then
         JAVA_VERSION="$2"
         shift 2
       else
-        echo "Error: Argument for $1 is missing"
+        echo "Error: Argument for $1 is missing" >&2
+        print_usage >&2
         exit 1
       fi
       ;;
@@ -55,13 +102,14 @@ while [[ $# -gt 0 ]]; do
         PYTEST_K_VALUE="$2"
         shift 2
       else
-        echo "Error: Argument for $1 is missing"
+        echo "Error: Argument for $1 is missing" >&2
+        print_usage >&2
         exit 1
       fi
       ;;
     *)
-      echo "Unknown option: $1"
-      echo "Usage: $0 [-j|--java-version <version>] [-i|--keep-image] [-c|--keep-containers] [-k <expression>]"
+      echo "Unknown option: $1" >&2
+      print_usage >&2
       exit 1
       ;;
   esac

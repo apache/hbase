@@ -16,7 +16,22 @@
 # specific language governing permissions and limitations
 # under the License.
 
-# Driver script: Builds dev-support environment container and runs read-replica tests within it.
+# hbase_nightly_read_replica_test.sh
+#
+# Outer driver script for the HBase read-replica integration test suite.
+# Builds a dev-support Docker container image (from
+# hbase/dev-support/docker/Dockerfile) using the HBase source tree as
+# build context, then either:
+#
+#   - Launches run_read_replica_integration_tests.sh inside that
+#     container to execute the full test suite (default), or
+#   - Starts a long-lived dev container for interactive exploration
+#     (-d/--dev mode).
+#
+# The container uses Docker-outside-of-Docker (DooD) by bind-mounting
+# the host's Docker socket, and mounts ~/.m2 for Maven cache reuse.
+#
+# For usage information, run: ./hbase_nightly_read_replica_test.sh --help
 set -e
 
 REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
@@ -28,8 +43,40 @@ PYTEST_K_VALUE=""
 JAVA_VERSION=""
 DEV_MODE=false
 
+print_usage() {
+  SCRIPT=$(basename "${BASH_SOURCE}")
+
+  cat << __EOF
+
+hbase_nightly_read_replica_test.sh
+
+Outer driver script for the HBase read-replica integration test suite. Builds a
+dev-support Docker container image and either runs the inner test script
+(run_read_replica_integration_tests.sh) inside it, or starts a long-lived dev
+container for interactive exploration.
+
+Usage: ${SCRIPT} [options]
+
+  -h | --help                  Show this help message and exit.
+  -d | --dev                   Start a detached dev container for interactive
+                                exploration instead of running the test suite.
+                                Prints the container ID and instructions for
+                                entering and stopping it.
+  -j | --java-version <ver>    JVM version forwarded to the inner test script
+                                (run_read_replica_integration_tests.sh), which
+                                uses it to set JAVA_HOME inside the container.
+  -k <expression>               Pytest -k filter expression forwarded to the
+                                inner test script for test selection.
+
+__EOF
+}
+
 while [[ $# -gt 0 ]]; do
   case "$1" in
+    -h|--help)
+      print_usage
+      exit 0
+      ;;
     -d|--dev)
       DEV_MODE=true
       shift
@@ -39,7 +86,8 @@ while [[ $# -gt 0 ]]; do
         JAVA_VERSION="$2"
         shift 2
       else
-        echo "Error: Argument for $1 is missing"
+        echo "Error: Argument for $1 is missing" >&2
+        print_usage >&2
         exit 1
       fi
       ;;
@@ -48,13 +96,14 @@ while [[ $# -gt 0 ]]; do
         PYTEST_K_VALUE="$2"
         shift 2
       else
-        echo "Error: Argument for $1 is missing"
+        echo "Error: Argument for $1 is missing" >&2
+        print_usage >&2
         exit 1
       fi
       ;;
     *)
-      echo "Unknown option: $1"
-      echo "Usage: $0 [-d|--dev] [-j|--java-version <version>] [-k <expression>]"
+      echo "Unknown option: $1" >&2
+      print_usage >&2
       exit 1
       ;;
   esac
