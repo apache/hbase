@@ -136,5 +136,5 @@ else
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
-    ./run-read-replica-integration-tests.sh "${JAVA_VERSION_ARGS[@]}" "${PYTEST_K_ARGS[@]}"
+    ./run_read_replica_integration_tests.sh "${JAVA_VERSION_ARGS[@]}" "${PYTEST_K_ARGS[@]}"
 fi
