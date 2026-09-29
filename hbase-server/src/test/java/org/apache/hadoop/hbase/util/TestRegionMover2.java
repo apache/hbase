@@ -40,7 +40,6 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.master.assignment.TransitRegionStateProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
@@ -48,9 +47,6 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -345,14 +341,8 @@ public class TestRegionMover2 {
   }
 
   public ServerName findMetaRSLocation() throws Exception {
-    ZKWatcher zkWatcher = new ZKWatcher(TEST_UTIL.getConfiguration(), null, null);
-    List<HRegionLocation> result = new ArrayList<>();
-    for (String znode : zkWatcher.getMetaReplicaNodes()) {
-      String path = ZNodePaths.joinZNode(zkWatcher.getZNodePaths().baseZNode, znode);
-      int replicaId = zkWatcher.getZNodePaths().getMetaReplicaIdFromPath(path);
-      RegionState state = MetaTableLocator.getMetaRegionState(zkWatcher, replicaId);
-      result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
-    }
+    List<HRegionLocation> result =
+      TEST_UTIL.getConnection().getRegionLocator(TableName.META_TABLE_NAME).getAllRegionLocations();
     return result.get(0).getServerName();
   }
 
