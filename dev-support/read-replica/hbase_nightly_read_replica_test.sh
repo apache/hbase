@@ -26,10 +26,11 @@
 #   - Launches run_read_replica_integration_tests.sh inside that
 #     container to execute the full test suite (default), or
 #   - Starts a long-lived dev container for interactive exploration
-#     (-d/--dev mode).
+#     (-d|--dev mode).
 #
 # The container uses Docker-outside-of-Docker (DooD) by bind-mounting
-# the host's Docker socket, and mounts ~/.m2 for Maven cache reuse.
+# the host's Docker socket, and mounts .m2 for Maven cache reuse
+# (override the default $HOME location with -m|--m2).
 #
 # For usage information, run: ./hbase_nightly_read_replica_test.sh --help
 set -e
@@ -41,6 +42,7 @@ DEV_IMAGE_NAME="hbase-dev-support:${BUILD_NUMBER:-local}"
 
 PYTEST_K_VALUE=""
 JAVA_VERSION=""
+M2_DIR="${HOME}"
 DEV_MODE=false
 
 print_usage() {
@@ -65,8 +67,12 @@ Usage: ${SCRIPT} [options]
   -j | --java-version <ver>    JVM version forwarded to the inner test script
                                 (run_read_replica_integration_tests.sh), which
                                 uses it to set JAVA_HOME inside the container.
-  -k <expression>               Pytest -k filter expression forwarded to the
+  -k <expression>              Pytest -k filter expression forwarded to the
                                 inner test script for test selection.
+  -m | --m2 <path>             Parent directory of the .m2 Maven cache to
+                                bind-mount into the container. Defaults to
+                                \$HOME. The directory <path>/.m2 will be
+                                created if it does not exist.
 
 __EOF
 }
@@ -101,6 +107,16 @@ while [[ $# -gt 0 ]]; do
         exit 1
       fi
       ;;
+    -m|--m2)
+      if [[ -n "$2" && "$2" != -* ]]; then
+        M2_DIR="$2"
+        shift 2
+      else
+        echo "Error: Argument for $1 is missing" >&2
+        print_usage >&2
+        exit 1
+      fi
+      ;;
     *)
       echo "Unknown option: $1" >&2
       print_usage >&2
@@ -113,6 +129,7 @@ echo "=== HBase Read-Replica Integration Test Driver ==="
 echo "HBase Root: ${HBASE_ROOT}"
 echo "Replica Dir: ${REPLICA_DIR}"
 echo "Dev Container Image: ${DEV_IMAGE_NAME}"
+echo "M2 Dir: ${M2_DIR}/.m2"
 
 # Build the dev-support container image using HBASE_ROOT as the build context
 echo "Building dev-support Docker image..."
@@ -134,7 +151,7 @@ cleanup_host() {
 trap cleanup_host EXIT
 
 # Ensure host .m2 directory exists for caching
-mkdir -p "${HOME}/.m2"
+mkdir -p "${M2_DIR}/.m2"
 
 if [ "${DEV_MODE}" = "true" ]; then
   # Start a detached dev container for interactive exploration
@@ -143,7 +160,7 @@ if [ "${DEV_MODE}" = "true" ]; then
     --platform linux/amd64 \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "${HBASE_ROOT}:${HBASE_ROOT}" \
-    -v "${HOME}/.m2:/root/.m2" \
+    -v "${M2_DIR}/.m2:/root/.m2" \
     -e OUTPUT_DIR="${OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
     -w "${REPLICA_DIR}" \
@@ -180,7 +197,7 @@ else
     --platform linux/amd64 \
     -v /var/run/docker.sock:/var/run/docker.sock \
     -v "${HBASE_ROOT}:${HBASE_ROOT}" \
-    -v "${HOME}/.m2:/root/.m2" \
+    -v "${M2_DIR}/.m2:/root/.m2" \
     -e OUTPUT_DIR="${OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
     -w "${REPLICA_DIR}" \
