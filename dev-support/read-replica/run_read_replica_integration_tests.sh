@@ -206,7 +206,10 @@ if [[ -n "${PYTEST_K_VALUE}" ]]; then
 fi
 
 echo "Starting read-replica integration test suite via Pytest..."
-pytest --html="${OUTPUT_DIR}/read-replica-nightly-test-report.html" \
+pytest -o log_cli=true --log-cli-level=INFO \
+       --log-cli-format='%(asctime)s %(levelname)-5s %(module)s.%(funcName)s(%(lineno)d): %(message)s' \
+       --log-cli-date-format='%Y-%m-%d %H:%M:%S' \
+       --html="${OUTPUT_DIR}/read-replica-nightly-test-report.html" \
        --self-contained-html \
        --junitxml="${OUTPUT_DIR}/read-replica-nightly-test-results.xml" \
        python/test/test_read_replica_feature.py \
