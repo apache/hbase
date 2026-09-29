@@ -68,7 +68,8 @@ Usage: ${SCRIPT} [options]
                                 (run_read_replica_integration_tests.sh), which
                                 uses it to set JAVA_HOME inside the container.
   -k <expression>              Pytest -k filter expression forwarded to the
-                                inner test script for test selection.
+                                inner test script for test selection. (See
+                                Pytest documentation on -k for more info.)
   -m | --m2 <path>             Parent directory of the .m2 Maven cache to
                                 bind-mount into the container. Defaults to
                                 \$HOME. The directory <path>/.m2 will be

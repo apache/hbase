@@ -66,9 +66,10 @@ Usage: ${SCRIPT} [options]
   -h | --help                  Show this help message and exit.
   -j | --java-version <ver>    JVM version to use (default: 17). Sets JAVA_HOME
                                 to /usr/lib/jvm/java-<ver>.
-  -i | --keep-image             Do not remove the Docker image on exit.
-  -c | --keep-containers        Do not run 'docker compose down' on exit.
-  -k <expression>               Pytest -k filter expression for test selection.
+  -i | --keep-image            Do not remove the Docker image on exit.
+  -c | --keep-containers       Do not run 'docker compose down' on exit.
+  -k <expression>              Pytest -k filter expression for test selection.
+                                (See Pytest documentation on -k for more info.)
 
 __EOF
 }
