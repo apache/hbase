@@ -23,47 +23,62 @@ Integration test framework for HBase's Read-Replica feature, driven by Jenkins a
 ## Why Docker?
 
 HBase's `MiniHBaseCluster` cannot support multi-cluster Read-Replica testing because the
-`META_TABLE_NAME` static variable is shared across JVMs (see HBASE-29691). This framework
+static `META_TABLE_NAME` variable is shared across JVMs (see HBASE-29691). This framework
 sidesteps that limitation by running two fully isolated HBase clusters in Docker containers
 that share a filesystem-based `hbase.rootdir`.
 
 ## Architecture
 
 ```
-┌─────────────────────────────────────────────────────────┐
-│                     Jenkins Agent                       │
-│                                                         │
-│  ┌──────────────────┐         ┌──────────────────┐      │
-│  │  hbase-docker    │         │  hbase-docker-2  │      │
-│  │  (Active Cluster)│         │ (Replica Cluster)│      │
-│  │                  │         │                  │      │
-│  │  ZooKeeper       │         │  ZooKeeper       │      │
-│  │  HMaster         │         │  HMaster         │      │
-│  │  RegionServer    │         │  RegionServer    │      │
-│  │                  │         │                  │      │
-│  │  read-only=false │         │  read-only=true  │      │
-│  │  suffix=(empty)  │         │  suffix=replica1 │      │
-│  └────────┬─────────┘         └────────┬─────────┘      │
-│           │                            │                │
-│           └────────────┬───────────────┘                │
-│                        │                                │
-│              ┌─────────▼───────────┐                    │
-│              │  Shared Data Store  │                    │
-│              │  (hbase.rootdir)    │                    │
-│              │                     │                    │
-│              │  /data-store/hbase  │                    │
-│              └─────────────────────┘                    │
-│                                                         │
-│  ┌──────────────────────────────────────────────────┐   │
-│  │           Python Test Scripts                    │   │
-│  │  (communicate via `docker exec` + HBase Shell)   │   │
-│  └──────────────────────────────────────────────────┘   │
-└─────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────────────┐
+│                   Host (Jenkins Agent or Local)                      │
+│                                                                      │
+│  ┌────────────────────────────────────────────────────────────────┐  │
+│  │         Test Environment Container (dev-support image)         │  │
+│  │   Built from: dev-support/docker/Dockerfile                    │  │
+│  │   Contains: JDK, Maven, Python, Docker CLI                     │  │
+│  │   Entry: run_read_replica_integration_tests.sh                 │  │
+│  │                                                                │  │
+│  │   ┌──────────────────┐         ┌──────────────────┐            │  │
+│  │   │  hbase-docker    │         │  hbase-docker-2  │            │  │
+│  │   │  (Active Cluster)│         │ (Replica Cluster)│            │  │
+│  │   │                  │         │                  │            │  │
+│  │   │  ZooKeeper       │         │  ZooKeeper       │            │  │
+│  │   │  HMaster         │         │  HMaster         │            │  │
+│  │   │  RegionServer    │         │  RegionServer    │            │  │
+│  │   │                  │         │                  │            │  │
+│  │   │  read-only=false │         │  read-only=true  │            │  │
+│  │   │  suffix=(empty)  │         │  suffix=replica1 │            │  │
+│  │   └────────┬─────────┘         └────────┬─────────┘            │  │
+│  │            │                            │                      │  │
+│  │            └────────────┬───────────────┘                      │  │
+│  │                         │                                      │  │
+│  │               ┌─────────▼───────────┐                          │  │
+│  │               │  Shared Data Store  │                          │  │
+│  │               │  (hbase.rootdir)    │                          │  │
+│  │               │                     │                          │  │
+│  │               │  /data-store/hbase  │                          │  │
+│  │               └─────────────────────┘                          │  │
+│  │                                                                │  │
+│  │   ┌──────────────────────────────────────────────────────┐     │  │
+│  │   │           Python Test Scripts                        │     │  │
+│  │   │  (communicate via `docker exec` + HBase Shell)       │     │  │
+│  │   └──────────────────────────────────────────────────────┘     │  │
+│  └────────────────────────────────────────────────────────────────┘  │
+│                                                                      │
+│  Docker socket bind-mounted into the test environment container      │
+│  (Docker-outside-of-Docker / DooD)                                   │
+└──────────────────────────────────────────────────────────────────────┘
 ```
 
-Both clusters mount the same `data-store/hbase` directory as their `hbase.rootdir`. The active
-cluster writes data and the replica cluster reads it after explicit `refresh_meta` /
-`refresh_hfiles` calls. Each cluster has its own ZooKeeper instance and distinct
+The test environment container is built from `dev-support/docker/Dockerfile` and provides
+JDK, Maven, Python, and the Docker CLI. It uses Docker-outside-of-Docker (DooD) by
+bind-mounting the host's Docker socket, so the HBase cluster containers run as siblings on
+the host's Docker daemon.
+
+Both HBase clusters mount the same `data-store/hbase` directory as their `hbase.rootdir`.
+The active cluster writes data and the replica cluster reads it after explicit `refresh_meta`
+/ `refresh_hfiles` calls. Each cluster has its own ZooKeeper instance and distinct
 `hbase.meta.table.suffix` to avoid meta table collisions.
 
 ## Directory Structure
@@ -75,6 +90,8 @@ read-replica/
 ├── build-images.sh             # Builds the Docker image from the local HBase checkout
 ├── docker-compose.yml          # Defines the two container services
 ├── requirements.txt            # Python dependencies
+├── hbase_nightly_read_replica_test.sh   # Outer driver script (runs on host)
+├── run_read_replica_integration_tests.sh # Inner test runner (runs inside container)
 ├── cluster1/                   # Active cluster configuration
 │   └── conf/
 │       ├── hbase-site.xml      #   hbase.global.readonly.enabled=false
@@ -88,7 +105,7 @@ read-replica/
 ├── python/
 │   ├── proto/
 │   │   ├── ActiveClusterSuffix.proto    # Automatically copied to this location by
-│   │   │                                # hbase_nightly_read_replica_test.sh
+│   │   │                                # run_read_replica_integration_tests.sh
 │   │   └── proto_compiler.py            # Compiles .proto files into python/proto/generated/
 │   ├── scripts/
 │   │   └── verify_hbase_start.py    # Standalone startup verification (not part of pytest suite)
@@ -110,31 +127,64 @@ read-replica/
     └── tsv_generator.py        # Generates random TSV data for bulkloading
 ```
 
+## Scripts
+
+The test framework uses two scripts in a layered architecture:
+
+### `hbase_nightly_read_replica_test.sh` (Outer Driver)
+
+Runs on the host (Jenkins agent or local machine). It builds a test environment Docker image
+from `dev-support/docker/Dockerfile`, starts a container, and either runs the inner test
+script automatically or drops into an interactive shell for development.
+
+| Step | Description |
+|------|-------------|
+| 1 | Build the test environment Docker image (`hbase-dev-support:<build-number>`) |
+| 2 | Start a container from that image, mounting the HBase repo, Docker socket, and `.m2` cache |
+| 3 | Run `run_read_replica_integration_tests.sh` inside the container (or start an interactive shell in dev mode) |
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-d` / `--dev` | Start a detached dev container for interactive exploration instead of running the test suite. See [Dev Mode](#dev-mode). |
+| `-k <expression>` | Pytest `-k` filter expression forwarded to the inner test script for test selection. See [Running Specific Tests](#running-specific-tests). |
+| `-m` / `--m2 <path>` | Parent directory of the `.m2` Maven cache to bind-mount into the container. Defaults to `$HOME`. The directory `<path>/.m2` will be created if it does not exist. |
+| `-j` / `--java-version <ver>` | JVM version forwarded to the inner test script, which uses it to set `JAVA_HOME` inside the container. |
+
+### `run_read_replica_integration_tests.sh` (Inner Test Runner)
+
+Runs inside the test environment container. Normally invoked by the outer driver, but can
+also be run directly when using dev mode.
+
+| Step | Description |
+|------|-------------|
+| 1 | Clone the HBase source tree for the Docker build context (`git clone --local`) |
+| 2 | Copy and compile the `ActiveClusterSuffix.proto` protobuf definition |
+| 3 | Create a Python virtual environment and install dependencies |
+| 4 | Build the `hbase-read-replica` Docker image for the active and replica clusters |
+| 5 | Run the pytest integration suite |
+
+**Options:**
+
+| Flag | Description |
+|------|-------------|
+| `-i` / `--keep-image` | Do not remove the `hbase-read-replica` Docker image on exit. Useful for re-running tests without rebuilding. |
+| `-c` / `--keep-containers` | Do not run `docker compose down` on exit. Lets you inspect container state after tests. |
+| `-k <expression>` | Pytest `-k` filter expression for test selection. |
+| `-j` / `--java-version <ver>` | JVM version to use (default: 17). Sets `JAVA_HOME` to `/usr/lib/jvm/java-<ver>`. |
+
 ## CI: Jenkins Nightly Pipeline
 
 **Files:**
 - `dev-support/read-replica/Jenkinsfile` — pipeline definition (`hbase read-replica feature checks`)
-- `dev-support/read-replica/hbase_nightly_read_replica_test.sh` — test driver script
+- `dev-support/read-replica/hbase_nightly_read_replica_test.sh` — outer driver script
+- `dev-support/read-replica/run_read_replica_integration_tests.sh` — inner test runner
 
 ### When It Runs
 
 The read-replica tests run as their own standalone nightly pipeline on the `master` and `branch-3`
 branches, separate from the main HBase nightly build.
-
-### What the Test Driver Does
-
-`hbase_nightly_read_replica_test.sh` is invoked by the Jenkins stage and performs these steps:
-
-| # | Step | Description |
-|---|------|-------------|
-| 1 | Clone HBase source | `git clone --local` into `read-replica/hbase/` for the Docker build context (Docker COPY can't follow symlinks) |
-| 2 | Source `.env` | Loads environment variables |
-| 3 | Register cleanup trap | On exit: runs `docker compose down` (unless `--keep-containers`), removes the Docker image (unless `--keep-image`), and deletes the cloned source |
-| 4 | Copy Protobuf | Copies the latest `ActiveClusterSuffix.proto` from the source tree into `python/proto/` |
-| 5 | Set up Python environment | Creates a venv, installs dependencies from `requirements.txt` |
-| 6 | Compile Protobuf | Runs `python/proto/proto_compiler.py` |
-| 7 | Build Docker image | Runs `build-images.sh` (Maven build + Docker multi-stage build) |
-| 8 | Run test suite | Runs `pytest` on `python/test/test_read_replica_feature.py`, producing an HTML report and JUnit XML results (see [Test Suite](#test-suite) below) |
 
 ### On Failure
 
@@ -157,12 +207,6 @@ so any failing test is automatically retried up to 2 times before being marked a
 | `test_read_only_flag_flipping` | Clusters can swap roles (15 iterations); `active.cluster.suffix.id` protobuf file stays consistent |
 | `test_cannot_promote_second_active_cluster` | Disabling read-only on the replica raises `ReadOnlyTransitionException` while an active cluster exists |
 | `test_bulkloaded_data_and_region_splits` | `ImportTsv` + `completebulkload` works on active, is rejected on replica; region splits propagate |
-
-To run a specific test:
-
-```bash
-pytest python/test/test_read_replica_feature.py::TestReadReplica::test_create_drop_behavior
-```
 
 ### Test Results
 
@@ -198,67 +242,92 @@ Defines environment variables consumed by Docker Compose, the build script, and 
 The `ActiveClusterSuffix.proto` message defines the format of the `active.cluster.suffix.id`
 file written to the shared data store. Tests compile this proto and deserialize the file to
 verify that the recorded active cluster matches the expected configuration after role swaps.
+The `ActiveClusterSuffix.proto` file is copied directly from the HBase repo during runtime
+of `run_read_replica_integration_tests.sh`.
 
 ## Running Locally
 
-The easiest way to run the tests locally is with `hbase_nightly_read_replica_test.sh`, which
-handles environment setup, Docker image builds, and pytest execution automatically. This is also
-useful for reproducing test failures seen in CI.
+The same script used by Jenkins works locally. The only prerequisite is Docker — the test
+environment container provides JDK, Maven, Python, and everything else needed to build and
+test.
+
+### Running the Full Suite
+
+From the repo root:
 
 ```bash
-# From the repo root — run the full suite
-dev-support/read-replica/hbase_nightly_read_replica_test.sh
+bash dev-support/read-replica/hbase_nightly_read_replica_test.sh
 ```
 
-The script accepts two flags for local debugging:
+When run locally (no `BUILD_NUMBER` environment variable), the test environment image is
+preserved so subsequent runs skip the image build. In Jenkins, the image is cleaned up
+automatically.
 
-| Flag | Description |
-|------|-------------|
-| `-i` / `--keep-image` | Preserves the Docker image after tests finish. This lets you spin up fresh containers with `docker compose up` from the `dev-support/read-replica/` directory without rebuilding the image. |
-| `-c` / `--keep-containers` | Preserves the running containers after tests finish. This lets you `docker exec` into the containers to inspect state, logs, and HBase Shell. |
+### Running Specific Tests
+
+Use `-k` to pass a pytest `-k` filter expression that selects tests by name
+(see [pytest docs](https://docs.pytest.org/en/stable/example/markers.html#using-k-expr-to-select-tests-based-on-their-name) for details):
 
 ```bash
-# Keep the image and containers for debugging
-dev-support/read-replica/hbase_nightly_read_replica_test.sh --keep-image --keep-containers
+# Run two specific tests
+bash dev-support/read-replica/hbase_nightly_read_replica_test.sh \
+  -k "test_create_drop_behavior or test_put_get_delete_behavior"
+
+# Run a single test
+bash dev-support/read-replica/hbase_nightly_read_replica_test.sh \
+  -k "test_put_get_delete_behavior"
 ```
 
-### Running Manually
+### Dev Mode
 
-If you prefer to run the setup steps yourself (e.g. to skip the Docker image rebuild after the
-first run):
+Dev mode (`-d` / `--dev`) builds and starts the test environment container but does **not**
+run the test suite. This gives you an interactive environment where you can run the inner
+test script as many times as you need — useful for reproducing bugs and iterating on test
+development.
+
+**1. Start the dev container:**
 
 ```bash
-cd dev-support/read-replica
+bash dev-support/read-replica/hbase_nightly_read_replica_test.sh -d
+```
 
-# Override CI-specific paths
-export HBASE_ROOT="$(cd ../.. && pwd)"
+The script prints the container ID and instructions for entering it.
 
-# Load remaining variables
-set -a && source .env && set +a
+**2. Enter the container:**
 
-# Set Python path
-export PYTHONPATH="$(pwd)"
+```bash
+docker exec -it <container-id> bash
+```
 
-# Install Python dependencies
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+**3. Run the tests inside the container:**
 
-# Compile protobuf
-cp "${HBASE_ROOT}/hbase-protocol-shaded/src/main/protobuf/server/ActiveClusterSuffix.proto" python/proto/
-python3 python/proto/proto_compiler.py
+```bash
+# Run the full suite
+bash run_read_replica_integration_tests.sh
 
-# Build Docker image (requires Maven + Docker — skip if reusing a previous image)
-./build-images.sh
+# Run specific tests
+bash run_read_replica_integration_tests.sh \
+  -k "test_create_drop_behavior or test_put_get_delete_behavior"
+```
 
-# Run the full test suite
-pytest python/test/test_read_replica_feature.py
+**4. Speed up re-runs with `--keep-image`:**
 
-# Or run a single test
-pytest python/test/test_read_replica_feature.py::TestReadReplica::test_create_drop_behavior
+By default, the inner script removes the `hbase-read-replica` cluster Docker image on exit.
+Pass `--keep-image` to preserve it, so subsequent runs skip the Maven build and image
+creation — saving significant time during development:
 
-# Clean up
-docker compose -f docker-compose.yml down
+```bash
+bash run_read_replica_integration_tests.sh --keep-image
+
+# Combine with -k to iterate on a specific test
+bash run_read_replica_integration_tests.sh --keep-image \
+  -k "test_create_drop_behavior"
+```
+
+**5. Stop and remove the dev container when done:**
+
+```bash
+docker stop <container-id> && docker rm <container-id>
 ```
 
 ### Mounted Volumes
@@ -271,7 +340,7 @@ a clean state:
 rm -rf tmp-read-replica-data
 ```
 
-**Prerequisites:** Docker, Docker Compose, Python 3, Maven, JDK 17.
+**Prerequisites:** Docker.
 
 ## Related
 
