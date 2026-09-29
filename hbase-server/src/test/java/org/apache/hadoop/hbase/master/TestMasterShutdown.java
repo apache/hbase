@@ -55,8 +55,8 @@ public class TestMasterShutdown {
   @BeforeEach
   public void shutdownCluster() throws IOException {
     if (htu != null) {
-      // an extra check in case the test cluster was not terminated after HBaseClassTestRule's
-      // Timeout interrupted the test thread.
+      // an extra check in case the test cluster was not terminated after HBaseJupiterExtension's
+      // timeout interrupted the test thread.
       LOG.warn("found non-null TestingUtility -- previous test did not terminate cleanly.");
       htu.shutdownMiniCluster();
     }
