@@ -25,7 +25,7 @@
 # mentioned above.
 #
 # What it does:
-#   1. Clones the HBase source tree into a local directory for Docker build context
+#   1. Rsyncs a trimmed HBase tree into ${REPLICA_DIR}/hbase for Docker build context
 #   2. Copies and compiles the protobuf definitions needed by the Python tests
 #   3. Creates a Python virtual environment and installs dependencies
 #   4. Builds a Docker image for the active and replica clusters in a read-replica
@@ -35,11 +35,72 @@
 # For usage information, run: ./run_read_replica_integration_tests.sh --help
 set -e
 
+format_duration_hms() {
+  local total_sec=$1
+  printf '%d:%02d:%02d' $((total_sec / 3600)) $(((total_sec % 3600) / 60)) $((total_sec % 60))
+}
+
+print_timing_summary() {
+  if [ "${TIMING_SUMMARY_PRINTED}" = true ]; then
+    return
+  fi
+  TIMING_SUMMARY_PRINTED=true
+
+  local total_sec=$((SECONDS - OVERALL_START_SEC))
+  local rsync_sec="${RSYNC_SEC:--}"
+  local mvn_clean_sec="${MVN_CLEAN_SEC:--}"
+  local docker_build_sec="${DOCKER_BUILD_SEC:--}"
+  local build_images_sec="${BUILD_IMAGES_SEC:--}"
+  local pytest_sec="${PYTEST_SEC:--}"
+
+  echo ""
+  echo "=== Read-replica run timing summary ==="
+  if [ "${rsync_sec}" != "-" ]; then
+    printf "  1. Rsync source staging (read-replica/hbase): %6ss (%s)\n" \
+      "${rsync_sec}" "$(format_duration_hms "${rsync_sec}")"
+  else
+    echo "  1. Rsync source staging:                         (not run)"
+  fi
+  if [ "${mvn_clean_sec}" != "-" ]; then
+    printf "  2. Maven clean (pre-Docker):                  %6ss (%s)\n" \
+      "${mvn_clean_sec}" "$(format_duration_hms "${mvn_clean_sec}")"
+  else
+    echo "  2. Maven clean (pre-Docker):                     (not run)"
+  fi
+  if [ "${docker_build_sec}" != "-" ]; then
+    printf "  3. Docker image build (incl. Maven in image): %6ss (%s)\n" \
+      "${docker_build_sec}" "$(format_duration_hms "${docker_build_sec}")"
+  else
+    echo "  3. Docker image build:                           (not run)"
+  fi
+  if [ "${build_images_sec}" != "-" ]; then
+    printf "     build-images.sh total (2+3):              %6ss (%s)\n" \
+      "${build_images_sec}" "$(format_duration_hms "${build_images_sec}")"
+  fi
+  if [ "${pytest_sec}" != "-" ]; then
+    printf "  4. Pytest integration suite:                %6ss (%s)\n" \
+      "${pytest_sec}" "$(format_duration_hms "${pytest_sec}")"
+  else
+    echo "  4. Pytest integration suite:                     (not run)"
+  fi
+  printf "  5. Total wall time (this script):             %6ss (%s)\n" \
+    "${total_sec}" "$(format_duration_hms "${total_sec}")"
+  echo "========================================"
+}
+
 REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 OUTPUT_DIR="${OUTPUT_DIR:-${REPLICA_DIR}/output}"
 export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 
 export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
+
+OVERALL_START_SEC=${SECONDS}
+TIMING_SUMMARY_PRINTED=false
+RSYNC_SEC=""
+MVN_CLEAN_SEC=""
+DOCKER_BUILD_SEC=""
+BUILD_IMAGES_SEC=""
+PYTEST_SEC=""
 
 JAVA_VERSION=17
 KEEP_IMAGE=false
@@ -54,7 +115,7 @@ print_usage() {
 run_read_replica_integration_tests.sh
 
 Inner test runner executed inside the Docker container built from
-hbase/dev-support/docker/Dockerfile. Clones the HBase source, builds Docker
+hbase/dev-support/docker/Dockerfile. Copies the HBase source, builds Docker
 images for the active and read-replica clusters, and runs the pytest
 integration suite.
 
@@ -143,14 +204,26 @@ echo "DOCKER_COMPOSE_FILE=${DOCKER_COMPOSE_FILE}"
 echo "HBASE_DATA_STORE_ROOT=${HBASE_DATA_STORE_ROOT}"
 echo "realpath of HBASE_DATA_STORE_ROOT=$(realpath ${HBASE_DATA_STORE_ROOT})"
 
-# Clone HBase source for Docker build context (Docker COPY doesn't follow symlinks)
-echo "Cloning HBase source into ${REPLICA_DIR}/hbase for Docker build context..."
-rm -rf "${REPLICA_DIR}/hbase"
-git clone --local "${HBASE_ROOT}" "${REPLICA_DIR}/hbase"
-rm -rf "${REPLICA_DIR}/hbase/.git"
+# Docker COPY does not follow symlinks; stage a trimmed tree for the build context.
+# Excludes match .dockerignore at repo root (target/, nested read-replica/hbase, etc.).
+echo "Syncing trimmed HBase tree into ${REPLICA_DIR}/hbase for Docker build context..."
+mkdir -p "${REPLICA_DIR}/hbase"
+RSYNC_START=${SECONDS}
+rsync -a --delete \
+  --exclude .git \
+  --exclude target \
+  --exclude dev-support/read-replica/hbase \
+  --exclude dev-support/read-replica/tmp-read-replica-data \
+  --exclude node_modules \
+  --exclude .venv \
+  "${HBASE_ROOT}/" "${REPLICA_DIR}/hbase/"
+RSYNC_SEC=$((SECONDS - RSYNC_START))
+echo "Rsync completed (${RSYNC_SEC}s, $(format_duration_hms "${RSYNC_SEC}"))."
+export HBASE_SOURCE_DIR="${REPLICA_DIR}/hbase"
 
 cleanup() {
   local exit_code=$?
+  print_timing_summary
   if [ ${exit_code} -ne 0 ]; then
     echo "=== FAILURE ==="
     echo "An error occurred during this stage of the run."
@@ -167,7 +240,7 @@ cleanup() {
   else
     echo "=== Cleanup: Keeping Docker image: ${HBASE_IMAGE} (--keep-image) ==="
   fi
-  echo "=== Cleanup: Deleting cloned HBase directory: ${REPLICA_DIR}/hbase ==="
+  echo "=== Cleanup: Deleting copied HBase directory: ${REPLICA_DIR}/hbase ==="
   rm -rf "${REPLICA_DIR}/hbase"
   exit "${exit_code}"
 }
@@ -197,7 +270,16 @@ python3 python/proto/proto_compiler.py
 
 # Build Docker images
 echo "Building hbase-docker image"
+export READ_REPLICA_TIMING_FILE="${OUTPUT_DIR}/read-replica-timing.env"
+rm -f "${READ_REPLICA_TIMING_FILE}"
+BUILD_IMAGES_START=${SECONDS}
 ./build-images.sh
+BUILD_IMAGES_WALL_SEC=$((SECONDS - BUILD_IMAGES_START))
+if [ -f "${READ_REPLICA_TIMING_FILE}" ]; then
+  # shellcheck disable=SC1090
+  source "${READ_REPLICA_TIMING_FILE}"
+fi
+echo "build-images.sh wall time: ${BUILD_IMAGES_WALL_SEC}s ($(format_duration_hms "${BUILD_IMAGES_WALL_SEC}"))"
 
 # Run read-replica integration test suite
 PYTEST_K_ARGS=()
@@ -206,6 +288,7 @@ if [[ -n "${PYTEST_K_VALUE}" ]]; then
 fi
 
 echo "Starting read-replica integration test suite via Pytest..."
+PYTEST_START=${SECONDS}
 pytest -o log_cli=true --log-cli-level=INFO \
        --log-cli-format='%(asctime)s %(levelname)-5s %(module)s.%(funcName)s(%(lineno)d): %(message)s' \
        --log-cli-date-format='%Y-%m-%d %H:%M:%S' \
@@ -214,5 +297,8 @@ pytest -o log_cli=true --log-cli-level=INFO \
        --junitxml="${OUTPUT_DIR}/read-replica-nightly-test-results.xml" \
        python/test/test_read_replica_feature.py \
        "${PYTEST_K_ARGS[@]}"
+PYTEST_SEC=$((SECONDS - PYTEST_START))
+echo "Pytest wall time: ${PYTEST_SEC}s ($(format_duration_hms "${PYTEST_SEC}"))"
 
+print_timing_summary
 echo "=== Success: All read-replica integration tests passed. ==="

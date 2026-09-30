@@ -35,6 +35,11 @@
 # For usage information, run: ./hbase_nightly_read_replica_test.sh --help
 set -e
 
+format_duration_hms() {
+  local total_sec=$1
+  printf '%d:%02d:%02d' $((total_sec / 3600)) $(((total_sec % 3600) / 60)) $((total_sec % 60))
+}
+
 REPLICA_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 
@@ -134,13 +139,6 @@ echo "Dev Container Image: ${DEV_IMAGE_NAME}"
 echo "M2 Dir: ${M2_DIR}/.m2"
 echo "Output Dir: ${EFFECTIVE_OUTPUT_DIR}"
 
-# Build the dev-support container image using HBASE_ROOT as the build context
-echo "Building dev-support Docker image..."
-docker build --platform linux/amd64 \
-  -t "${DEV_IMAGE_NAME}" \
-  -f "${HBASE_ROOT}/dev-support/docker/Dockerfile" \
-  "${HBASE_ROOT}"
-
 cleanup_host() {
   local exit_code=$?
   if [ -z "${BUILD_NUMBER}" ]; then
@@ -152,6 +150,16 @@ cleanup_host() {
   exit "${exit_code}"
 }
 trap cleanup_host EXIT
+
+# Build the dev-support container image using HBASE_ROOT as the build context
+echo "Building dev-support Docker image..."
+DEV_SUPPORT_IMAGE_BUILD_START=${SECONDS}
+docker build --platform linux/amd64 \
+  -t "${DEV_IMAGE_NAME}" \
+  -f "${HBASE_ROOT}/dev-support/docker/Dockerfile" \
+  "${HBASE_ROOT}"
+DEV_SUPPORT_IMAGE_BUILD_SEC=$((SECONDS - DEV_SUPPORT_IMAGE_BUILD_START))
+echo "Dev-support Docker image built (${DEV_SUPPORT_IMAGE_BUILD_SEC}s, $(format_duration_hms "${DEV_SUPPORT_IMAGE_BUILD_SEC}"))."
 
 # Ensure host .m2 directory exists for caching
 mkdir -p "${M2_DIR}/.m2"
