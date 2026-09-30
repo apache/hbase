@@ -22,14 +22,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.hbase.HBaseConfiguration;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.util.Tool;
@@ -62,12 +60,7 @@ public class ExpiredMobFileCleaner extends Configured implements Tool {
     String tableName = htd.getTableName().getNameAsString();
     FileSystem fs = FileSystem.get(conf);
     LOG.info("Cleaning the expired MOB files of " + family.getNameAsString() + " in " + tableName);
-    // disable the block cache.
-    Configuration copyOfConf = new Configuration(conf);
-    copyOfConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0f);
-    CacheConfig cacheConfig = new CacheConfig(copyOfConf);
-    MobUtils.cleanExpiredMobFiles(fs, conf, htd, family, cacheConfig,
-      EnvironmentEdgeManager.currentTime());
+    MobUtils.cleanExpiredMobFiles(fs, conf, htd, family, EnvironmentEdgeManager.currentTime());
   }
 
   public static void main(String[] args) throws Exception {
