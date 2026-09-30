@@ -205,7 +205,7 @@ echo "HBASE_DATA_STORE_ROOT=${HBASE_DATA_STORE_ROOT}"
 echo "realpath of HBASE_DATA_STORE_ROOT=$(realpath ${HBASE_DATA_STORE_ROOT})"
 
 # Docker COPY does not follow symlinks; stage a trimmed tree for the build context.
-# Excludes match .dockerignore at repo root (target/, nested read-replica/hbase, etc.).
+# Excludes build artifacts and the nested read-replica staging tree.
 echo "Syncing trimmed HBase tree into ${REPLICA_DIR}/hbase for Docker build context..."
 mkdir -p "${REPLICA_DIR}/hbase"
 RSYNC_START=${SECONDS}
@@ -214,6 +214,7 @@ rsync -a --delete \
   --exclude target \
   --exclude dev-support/read-replica/hbase \
   --exclude dev-support/read-replica/tmp-read-replica-data \
+  --exclude dev-support/read-replica/output \
   --exclude node_modules \
   --exclude .venv \
   "${HBASE_ROOT}/" "${REPLICA_DIR}/hbase/"
