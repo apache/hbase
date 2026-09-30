@@ -29,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.Collections;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
@@ -503,6 +504,38 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       assertThrows(IllegalArgumentException.class, () -> X509Util.createSslContextForClient(conf));
     assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION),
       ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testValidateConfigPrefixConsistencyRejectsMixedPrefixes() {
+    Configuration c = new Configuration(false);
+    c.set("p.role.keystore.location", "/new.p12");
+    c.set("p.keystore.password", "legacy-pw");
+    c.set("p.keystore.keypassword", "legacy-keypw");
+    IllegalArgumentException ex =
+      assertThrows(IllegalArgumentException.class, () -> X509Util.validateConfigPrefixConsistency(c,
+        "p.role.", "p.", "keystore.location", "keystore.password", "keystore.keypassword"));
+    // Both offending keys must be named, so the operator knows what conflicts with what.
+    assertTrue(ex.getMessage().contains("p.role.keystore.location"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("p.keystore.password"), ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testValidateConfigPrefixConsistencyAllowsSinglePrefix() {
+    Configuration role = new Configuration(false);
+    role.set("p.role.keystore.location", "/new.p12");
+    role.set("p.role.keystore.password", "pw");
+    // keystore.type is set under neither prefix: an unset key must not count as a legacy
+    // contribution, or every partially-specified store would be rejected.
+    X509Util.validateConfigPrefixConsistency(role, "p.role.", "p.", "keystore.location",
+      "keystore.password", "keystore.type");
+
+    // The backward-compatible case every existing deployment relies on.
+    Configuration legacy = new Configuration(false);
+    legacy.set("p.keystore.location", "/old.jks");
+    legacy.set("p.keystore.password", "pw");
+    X509Util.validateConfigPrefixConsistency(legacy, "p.role.", "p.", "keystore.location",
+      "keystore.password", "keystore.type");
   }
 
 }
