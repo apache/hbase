@@ -45,7 +45,8 @@ import org.junit.jupiter.api.Test;
  * and servers are moved between groups via the real {@code moveServersToRSGroup} admin call -- no
  * test constructs an {@link RSGroupInfo} by hand. Every {@code RSGroupInfo} used here is read back
  * from the master via {@code admin.getRSGroup(...)}, which computes "default" membership as "online
- * servers minus servers claimed by other groups" (see RSGroupInfoManagerImpl#getDefaultServers), so
+ * servers minus servers claimed by other groups" (see
+ * RSGroupInfoManagerImpl#computeAutoManagedRSGroupServers), so
  * its membership shrinks on its own once a move happens instead of being asserted into existence by
  * the test.
  */
