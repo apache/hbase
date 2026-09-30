@@ -168,16 +168,16 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
   }
 
   /**
-   * Server-membership recompute happens on the background {@code ServerEventsListenerThread},
-   * woken via {@code notify()} from the {@code serverAdded}/{@code serverRemoved} callback -- it
-   * is only ever triggered by an actual server add/remove event, a bare config mutation is not
-   * enough. Forces such an event (add+remove a bystander RS) so a config change just made takes
-   * effect without requiring an explicit RSGroup admin RPC. Only used by tests that *want* the
-   * automatic reconciliation to run and correct things; the trigger RS's own transient membership
-   * doesn't affect assertions elsewhere since those only check for specific other servers'
-   * addresses. Because the recompute runs asynchronously on that thread, callers still need to
-   * poll (e.g. via {@code TEST_UTIL.waitFor}) for its actual effect rather than assuming it has
-   * landed the instant this method returns.
+   * Server-membership recompute happens on the background {@code ServerEventsListenerThread}, woken
+   * via {@code notify()} from the {@code serverAdded}/{@code serverRemoved} callback -- it is only
+   * ever triggered by an actual server add/remove event, a bare config mutation is not enough.
+   * Forces such an event (add+remove a bystander RS) so a config change just made takes effect
+   * without requiring an explicit RSGroup admin RPC. Only used by tests that *want* the automatic
+   * reconciliation to run and correct things; the trigger RS's own transient membership doesn't
+   * affect assertions elsewhere since those only check for specific other servers' addresses.
+   * Because the recompute runs asynchronously on that thread, callers still need to poll (e.g. via
+   * {@code TEST_UTIL.waitFor}) for its actual effect rather than assuming it has landed the instant
+   * this method returns.
    */
   private void triggerListenerCycle() throws Exception {
     JVMClusterUtil.RegionServerThread trigger = startFakeHostnameRS("127.0.0.1");
@@ -441,8 +441,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       // Fix the overlap
       setRegex(groupOne, "10\\.0\\.0\\..*");
       triggerListenerCycle();
-      TEST_UTIL.waitFor(WAIT_TIMEOUT,
-        () -> ADMIN.getRSGroup(groupTwo).getServers().contains(addr));
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> ADMIN.getRSGroup(groupTwo).getServers().contains(addr));
     } finally {
       capturer.stopCapturing();
       clearRegex(groupOne);

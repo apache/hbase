@@ -312,10 +312,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   /**
    * Returns a copy of {@code src}, safe to mutate without affecting the live {@code
-   * holder.groupName2Group} entry -- callers must not mutate the object returned by {@link
-   * #getRSGroupInfo} or {@link #getRSGroupOfServer} in place, since a subsequent {@link
-   * #flushConfig(Map)} can still reject the change and the live state must stay untouched until
-   * the change is actually persisted.
+   * holder.groupName2Group} entry -- callers must not mutate the object returned by
+   * {@link #getRSGroupInfo} or {@link #getRSGroupOfServer} in place, since a subsequent
+   * {@link #flushConfig(Map)} can still reject the change and the live state must stay untouched
+   * until the change is actually persisted.
    */
   private static RSGroupInfo copyOf(RSGroupInfo src) {
     RSGroupInfo copy = new RSGroupInfo(src);
@@ -649,10 +649,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   /**
-   * @param isAutoRegexUpdate {@code true} when called from {@link
-   *          #updateAutoManagedRSGroupServers()} to persist a regex-driven recompute -- relaxes
-   *          the offline-mode check (see {@link #checkOnlyServerSetsDifferForAutoUpdate}) to allow
-   *          any regex-governed group's servers to change, not just 'default''s.
+   * @param isAutoRegexUpdate {@code true} when called from
+   *                          {@link #updateAutoManagedRSGroupServers()} to persist a regex-driven
+   *                          recompute -- relaxes the offline-mode check (see
+   *                          {@link #checkOnlyServerSetsDifferForAutoUpdate}) to allow any
+   *                          regex-governed group's servers to change, not just 'default''s.
    */
   private synchronized void flushConfig(Map<String, RSGroupInfo> newGroupMap,
     boolean isAutoRegexUpdate) throws IOException {
@@ -827,10 +828,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   /**
-   * Resolves every server in {@code onlineServers} whose hostname unambiguously matches exactly
-   * one entry of {@code rsGroupNameToPatternMap} naming a group in {@code existingGroupNames}. A
-   * server matching multiple regexes, or matching a regex for a group that does not (yet) exist,
-   * is omitted (warn-only) rather than resolved.
+   * Resolves every server in {@code onlineServers} whose hostname unambiguously matches exactly one
+   * entry of {@code rsGroupNameToPatternMap} naming a group in {@code existingGroupNames}. A server
+   * matching multiple regexes, or matching a regex for a group that does not (yet) exist, is
+   * omitted (warn-only) rather than resolved.
    */
   static Map<Address, String> resolveServerAddrToRSGroupName(Set<Address> onlineServers,
     Map<String, Pattern> rsGroupNameToPatternMap, Set<String> existingGroupNames) {
@@ -917,8 +918,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       wouldEmptyDefault ? Collections.emptyMap() : regexMatchedServers, wouldEmptyDefault);
   }
 
-  private Map<String, SortedSet<Address>> computeAutoManagedRSGroupServers(
-    Collection<RSGroupInfo> existingGroups) {
+  private Map<String, SortedSet<Address>>
+    computeAutoManagedRSGroupServers(Collection<RSGroupInfo> existingGroups) {
     Set<Address> onlineServers = getOnlineServers();
     Map<String, Pattern> rsGroupNameToPatternMap =
       getRegexGroupMap(masterServices.getConfiguration());
@@ -1001,11 +1002,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             expectedGroupName != null && !expectedGroupName.equals(group.getName())
               && holder.groupName2Group.containsKey(expectedGroupName)
           ) {
-            throw new DoNotRetryIOException("Server " + server + " hostname matches configured "
-              + "regex " + RS_GROUP_REGEX_PREFIX + expectedGroupName
-              + " and must belong to RSGroup '" + expectedGroupName + "' but would be placed in "
-              + "RSGroup '" + group.getName() + "'. Fix/remove the " + RS_GROUP_REGEX_PREFIX
-              + expectedGroupName + " config.");
+            throw new DoNotRetryIOException(
+              "Server " + server + " hostname matches configured " + "regex "
+                + RS_GROUP_REGEX_PREFIX + expectedGroupName + " and must belong to RSGroup '"
+                + expectedGroupName + "' but would be placed in " + "RSGroup '" + group.getName()
+                + "'. Fix/remove the " + RS_GROUP_REGEX_PREFIX + expectedGroupName + " config.");
           }
         }
       }
