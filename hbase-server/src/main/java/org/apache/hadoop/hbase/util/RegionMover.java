@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RSGroupTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
@@ -66,13 +67,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.master.RackManager;
-import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.AssignmentManager;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfo;
-import org.apache.hadoop.hbase.zookeeper.MetaTableLocator;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
-import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -554,14 +551,8 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         }
         // If hbase:meta region was isolated, then it needs to be part of isolateRegionInfoList.
         if (isMetaIsolated) {
-          ZKWatcher zkWatcher = new ZKWatcher(conf, null, null);
-          List<HRegionLocation> result = new ArrayList<>();
-          for (String znode : zkWatcher.getMetaReplicaNodes()) {
-            String path = ZNodePaths.joinZNode(zkWatcher.getZNodePaths().baseZNode, znode);
-            int replicaId = zkWatcher.getZNodePaths().getMetaReplicaIdFromPath(path);
-            RegionState state = MetaTableLocator.getMetaRegionState(zkWatcher, replicaId);
-            result.add(new HRegionLocation(state.getRegion(), state.getServerName()));
-          }
+          List<HRegionLocation> result =
+            conn.getRegionLocator(TableName.META_TABLE_NAME).getAllRegionLocations();
           ServerName metaSeverName = result.get(0).getServerName();
           // For isolating hbase:meta, it should move explicitly in Ack mode,
           // hence the forceMoveRegionByAck = true.
