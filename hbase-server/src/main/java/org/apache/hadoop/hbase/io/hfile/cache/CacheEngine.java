@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
@@ -65,7 +66,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </ul>
  */
 @InterfaceAudience.Private
-public interface CacheEngine {
+public interface CacheEngine extends ConfigurationObserver {
 
   /**
    * Returns a human-readable name for this cache engine instance.
@@ -309,14 +310,15 @@ public interface CacheEngine {
   }
 
   /**
-   * Refreshes this engine's configuration.
+   * Handles a runtime configuration change.
    * <p>
-   * The default implementation is a no-op.
+   * The default implementation is a no-op. Cache engines that support dynamic reconfiguration may
+   * override this method.
    * </p>
-   * @param config new configuration
+   * @param conf updated configuration
    */
-  default void onConfigurationChange(Configuration config) {
-    // noop
+  @Override
+  default void onConfigurationChange(Configuration conf) {
   }
 
   /**
@@ -368,4 +370,5 @@ public interface CacheEngine {
   default void setEvictionListener(CacheEvictionListener listener) {
     // noop
   }
+
 }
