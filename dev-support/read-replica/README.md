@@ -159,7 +159,7 @@ also be run directly when using dev mode.
 
 | Step | Description |
 |------|-------------|
-| 1 | Clone the HBase source tree for the Docker build context (`git clone --local`) |
+| 1 | Rsync a trimmed HBase tree into `read-replica/hbase/` for the Docker build context (excludes `.git`, `target/`, nested `read-replica/hbase`, etc.) |
 | 2 | Copy and compile the `ActiveClusterSuffix.proto` protobuf definition |
 | 3 | Create a Python virtual environment and install dependencies |
 | 4 | Build the `hbase-read-replica` Docker image for the active and replica clusters |
