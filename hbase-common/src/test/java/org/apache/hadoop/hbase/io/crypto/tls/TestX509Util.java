@@ -497,8 +497,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
 
   @TestTemplate
   public void testCreateSSLContextForClientRejectsMixedConfigPrefixes() {
-    // setUp() populated the legacy keystore keys; adding only the role-scoped location would
-    // otherwise pair the new file with the legacy password and type.
+    // setUp() set the legacy keystore keys, so a lone role-scoped location mixes the two prefixes.
     conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, "/nonexistent/client.p12");
     IllegalArgumentException ex =
       assertThrows(IllegalArgumentException.class, () -> X509Util.createSslContextForClient(conf));
@@ -515,7 +514,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     IllegalArgumentException ex =
       assertThrows(IllegalArgumentException.class, () -> X509Util.validateConfigPrefixConsistency(c,
         "p.role.", "p.", "keystore.location", "keystore.password", "keystore.keypassword"));
-    // Both offending keys must be named, so the operator knows what conflicts with what.
+    // Both offending keys must be named so the operator knows what conflicts with what.
     assertTrue(ex.getMessage().contains("p.role.keystore.location"), ex.getMessage());
     assertTrue(ex.getMessage().contains("p.keystore.password"), ex.getMessage());
   }
@@ -525,8 +524,7 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     Configuration role = new Configuration(false);
     role.set("p.role.keystore.location", "/new.p12");
     role.set("p.role.keystore.password", "pw");
-    // keystore.type is set under neither prefix: an unset key must not count as a legacy
-    // contribution, or every partially-specified store would be rejected.
+    // keystore.type is unset under both prefixes, which must not count as a legacy contribution.
     X509Util.validateConfigPrefixConsistency(role, "p.role.", "p.", "keystore.location",
       "keystore.password", "keystore.type");
 
@@ -538,4 +536,37 @@ public class TestX509Util extends AbstractTestX509Parameterized {
       "keystore.password", "keystore.type");
   }
 
+  // Migration path: every key resolves to the role prefix, so the stale legacy keys are not a mix.
+  @TestTemplate
+  public void testValidateConfigPrefixConsistencyAllowsRoleShadowingCompleteLegacy() {
+    Configuration c = new Configuration(false);
+    c.set("p.role.keystore.location", "/new.p12");
+    c.set("p.role.keystore.password", "pw2");
+    c.set("p.role.keystore.type", "PKCS12");
+    c.set("p.keystore.location", "/old.jks");
+    c.set("p.keystore.password", "pw");
+    c.set("p.keystore.type", "JKS");
+    X509Util.validateConfigPrefixConsistency(c, "p.role.", "p.", "keystore.location",
+      "keystore.password", "keystore.type");
+  }
+
+  // An empty <value></value> counts as set, matching resolveConfig; it does not fall through.
+  @TestTemplate
+  public void testValidateConfigPrefixConsistencyRejectsBlankRoleValueOverLegacy() {
+    Configuration empty = new Configuration(false);
+    empty.set("p.role.keystore.location", "");
+    empty.set("p.keystore.location", "/old.jks");
+    empty.set("p.keystore.password", "pw");
+    assertThrows(IllegalArgumentException.class,
+      () -> X509Util.validateConfigPrefixConsistency(empty, "p.role.", "p.", "keystore.location",
+        "keystore.password", "keystore.type"));
+
+    Configuration whitespace = new Configuration(false);
+    whitespace.set("p.role.keystore.location", "   ");
+    whitespace.set("p.keystore.location", "/old.jks");
+    whitespace.set("p.keystore.password", "pw");
+    assertThrows(IllegalArgumentException.class,
+      () -> X509Util.validateConfigPrefixConsistency(whitespace, "p.role.", "p.",
+        "keystore.location", "keystore.password", "keystore.type"));
+  }
 }
