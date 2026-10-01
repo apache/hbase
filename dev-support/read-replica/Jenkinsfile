@@ -91,7 +91,7 @@ pipeline {
                 echo '(x) {color:red}-1 read-replica checks{color}' > "${OUTPUT_DIR}/commentfile"
                 status=1
               fi
-              echo "-- For more information [see read-replica test report|${BUILD_URL}Read_20Replica_20Nightly_20Test_20Report/]" >> "${OUTPUT_DIR}/commentfile"
+              echo "-- For more information [see read-replica test report|${BUILD_URL}Read_20Replica_20Console_20Report/]" >> "${OUTPUT_DIR}/commentfile"
               exit "${status}"
             '''
           )
@@ -110,8 +110,8 @@ pipeline {
             keepAll              : true,
             alwaysLinkToLastBuild: true,
             reportDir            : "${env.OUTPUT_DIR_RELATIVE}",
-            reportFiles          : 'read-replica-nightly-test-report.html',
-            reportName           : 'Read Replica Nightly Test Report'
+            reportFiles          : 'read-replica-console-report.html',
+            reportName           : 'Read Replica Console Report'
           ]
 
           stash name: 'read-replica-result', includes: "${OUTPUT_DIR_RELATIVE}/commentfile"

@@ -46,7 +46,8 @@ print_timing_summary() {
   fi
   TIMING_SUMMARY_PRINTED=true
 
-  local total_sec=$((SECONDS - OVERALL_START_SEC))
+  local total_sec=$(( SECONDS - OVERALL_START_SEC + ${DEV_SUPPORT_IMAGE_BUILD_SEC:-0} ))
+  local dev_image_sec="${DEV_SUPPORT_IMAGE_BUILD_SEC}"
   local rsync_sec="${RSYNC_SEC:--}"
   local mvn_clean_sec="${MVN_CLEAN_SEC:--}"
   local docker_build_sec="${DOCKER_BUILD_SEC:--}"
@@ -55,35 +56,41 @@ print_timing_summary() {
 
   echo ""
   echo "=== Read-replica run timing summary ==="
+  if [ -n "${dev_image_sec}" ]; then
+    printf "  1. Test-env image build (host):               %6ss (%s)\n" \
+      "${dev_image_sec}" "$(format_duration_hms "${dev_image_sec}")"
+  else
+    echo "  1. Test-env image build (host):                  N/A (dev mode)"
+  fi
   if [ "${rsync_sec}" != "-" ]; then
-    printf "  1. Rsync source staging (read-replica/hbase): %6ss (%s)\n" \
+    printf "  2. Rsync source staging (read-replica/hbase): %6ss (%s)\n" \
       "${rsync_sec}" "$(format_duration_hms "${rsync_sec}")"
   else
-    echo "  1. Rsync source staging:                         (not run)"
+    echo "  2. Rsync source staging:                         (not run)"
   fi
   if [ "${mvn_clean_sec}" != "-" ]; then
-    printf "  2. Maven clean (pre-Docker):                  %6ss (%s)\n" \
+    printf "  3. Maven clean (pre-Docker):                  %6ss (%s)\n" \
       "${mvn_clean_sec}" "$(format_duration_hms "${mvn_clean_sec}")"
   else
-    echo "  2. Maven clean (pre-Docker):                     (not run)"
+    echo "  3. Maven clean (pre-Docker):                     (not run)"
   fi
   if [ "${docker_build_sec}" != "-" ]; then
-    printf "  3. Docker image build (incl. Maven in image): %6ss (%s)\n" \
+    printf "  4. Docker image build (incl. Maven in image): %6ss (%s)\n" \
       "${docker_build_sec}" "$(format_duration_hms "${docker_build_sec}")"
   else
-    echo "  3. Docker image build:                           (not run)"
+    echo "  4. Docker image build:                           (not run)"
   fi
   if [ "${build_images_sec}" != "-" ]; then
-    printf "     build-images.sh total (2+3):              %6ss (%s)\n" \
+    printf "     build-images.sh total (3+4):              %6ss (%s)\n" \
       "${build_images_sec}" "$(format_duration_hms "${build_images_sec}")"
   fi
   if [ "${pytest_sec}" != "-" ]; then
-    printf "  4. Pytest integration suite:                %6ss (%s)\n" \
+    printf "  5. Pytest integration suite:                 %6ss (%s)\n" \
       "${pytest_sec}" "$(format_duration_hms "${pytest_sec}")"
   else
-    echo "  4. Pytest integration suite:                     (not run)"
+    echo "  5. Pytest integration suite:                     (not run)"
   fi
-  printf "  5. Total wall time (this script):             %6ss (%s)\n" \
+  printf "  6. Total wall time:                           %6ss (%s)\n" \
     "${total_sec}" "$(format_duration_hms "${total_sec}")"
   echo "========================================"
 }
@@ -96,6 +103,8 @@ export HBASE_IMAGE="hbase-read-replica:${BUILD_NUMBER:-local}"
 
 OVERALL_START_SEC=${SECONDS}
 TIMING_SUMMARY_PRINTED=false
+CLEANUP_RAN=false
+DEV_SUPPORT_IMAGE_BUILD_SEC="${DEV_SUPPORT_IMAGE_BUILD_SEC:-}"
 RSYNC_SEC=""
 MVN_CLEAN_SEC=""
 DOCKER_BUILD_SEC=""
@@ -223,7 +232,12 @@ echo "Rsync completed (${RSYNC_SEC}s, $(format_duration_hms "${RSYNC_SEC}"))."
 export HBASE_SOURCE_DIR="${REPLICA_DIR}/hbase"
 
 cleanup() {
-  local exit_code=$?
+  local exit_code=${1:-$?}
+  set +e
+  if [ "${CLEANUP_RAN}" = true ]; then
+    exit "${exit_code}"
+  fi
+  CLEANUP_RAN=true
   print_timing_summary
   if [ ${exit_code} -ne 0 ]; then
     echo "=== FAILURE ==="
@@ -290,16 +304,43 @@ fi
 
 echo "Starting read-replica integration test suite via Pytest..."
 PYTEST_START=${SECONDS}
+PYTEST_EXIT_CODE=0
 pytest -o log_cli=true --log-cli-level=INFO \
        --log-cli-format='%(asctime)s %(levelname)-5s %(module)s.%(funcName)s(%(lineno)d): %(message)s' \
        --log-cli-date-format='%Y-%m-%d %H:%M:%S' \
-       --html="${OUTPUT_DIR}/read-replica-nightly-test-report.html" \
-       --self-contained-html \
        --junitxml="${OUTPUT_DIR}/read-replica-nightly-test-results.xml" \
        python/test/test_read_replica_feature.py \
-       "${PYTEST_K_ARGS[@]}"
+       "${PYTEST_K_ARGS[@]}" || PYTEST_EXIT_CODE=$?
 PYTEST_SEC=$((SECONDS - PYTEST_START))
 echo "Pytest wall time: ${PYTEST_SEC}s ($(format_duration_hms "${PYTEST_SEC}"))"
 
+# Write comprehensive timing file for the console report generator.
+TOTAL_SEC=$(( SECONDS - OVERALL_START_SEC + ${DEV_SUPPORT_IMAGE_BUILD_SEC:-0} ))
+cat > "${OUTPUT_DIR}/read-replica-all-timing.env" <<EOF
+DEV_SUPPORT_IMAGE_BUILD_SEC=${DEV_SUPPORT_IMAGE_BUILD_SEC}
+RSYNC_SEC=${RSYNC_SEC}
+MVN_CLEAN_SEC=${MVN_CLEAN_SEC}
+DOCKER_BUILD_SEC=${DOCKER_BUILD_SEC}
+PYTEST_SEC=${PYTEST_SEC}
+TOTAL_SEC=${TOTAL_SEC}
+EOF
+
+# Generate Yetus-style console report with per-stage vote/runtime/status.
+echo "Generating console report..."
+LOGS_URL_ARGS=()
+if [[ -n "${LOGS_URL}" ]]; then
+  LOGS_URL_ARGS=(--logs-url "${LOGS_URL}")
+fi
+python3 python/scripts/render_console_report.py \
+  --timing "${OUTPUT_DIR}/read-replica-all-timing.env" \
+  --junit "${OUTPUT_DIR}/read-replica-nightly-test-results.xml" \
+  --output "${OUTPUT_DIR}/read-replica-console-report.html" \
+  "${LOGS_URL_ARGS[@]}"
+
 print_timing_summary
+
+if [ ${PYTEST_EXIT_CODE} -ne 0 ]; then
+  echo "=== FAILURE: One or more read-replica integration tests failed. ==="
+  cleanup "${PYTEST_EXIT_CODE}"
+fi
 echo "=== Success: All read-replica integration tests passed. ==="

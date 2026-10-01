@@ -141,6 +141,7 @@ echo "Output Dir: ${EFFECTIVE_OUTPUT_DIR}"
 
 cleanup_host() {
   local exit_code=$?
+  set +e
   if [ -z "${BUILD_NUMBER}" ]; then
     echo "Local execution complete. Preserving local container image ${DEV_IMAGE_NAME}."
   else
@@ -165,6 +166,15 @@ echo "Dev-support Docker image built (${DEV_SUPPORT_IMAGE_BUILD_SEC}s, $(format_
 mkdir -p "${M2_DIR}/.m2"
 mkdir -p "${EFFECTIVE_OUTPUT_DIR}"
 
+# Construct the base URL for per-test log directory links in the console
+# report.  On Jenkins, links resolve to archived artifact directories;
+# locally the variable stays empty and the report falls back to relative links.
+if [[ -n "${BUILD_URL}" && -n "${OUTPUT_DIR_RELATIVE}" ]]; then
+  LOGS_URL="${BUILD_URL}artifact/${OUTPUT_DIR_RELATIVE}"
+else
+  LOGS_URL=""
+fi
+
 if [ "${DEV_MODE}" = "true" ]; then
   # Start a detached dev container for interactive exploration
   echo "Starting dev container in background..."
@@ -176,6 +186,7 @@ if [ "${DEV_MODE}" = "true" ]; then
     -v "${M2_DIR}/.m2:/root/.m2" \
     -e OUTPUT_DIR="${EFFECTIVE_OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
+    -e LOGS_URL="${LOGS_URL}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
     sleep infinity)
@@ -214,6 +225,8 @@ else
     -v "${M2_DIR}/.m2:/root/.m2" \
     -e OUTPUT_DIR="${EFFECTIVE_OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
+    -e DEV_SUPPORT_IMAGE_BUILD_SEC="${DEV_SUPPORT_IMAGE_BUILD_SEC}" \
+    -e LOGS_URL="${LOGS_URL}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
     ./run_read_replica_integration_tests.sh "${JAVA_VERSION_ARGS[@]}" "${PYTEST_K_ARGS[@]}"
