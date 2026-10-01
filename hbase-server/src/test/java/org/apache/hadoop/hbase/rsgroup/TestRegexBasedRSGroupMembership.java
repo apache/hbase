@@ -95,19 +95,11 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     }
     // The MASTER/ADMIN Configuration objects are shared across every test method in this class;
     // undo any regex config this test added to both so it can't leak into the next method.
-    boolean hadLeftoverRegex = !regexConfigKeysSet.isEmpty();
     for (String key : regexConfigKeysSet) {
       MASTER.getConfiguration().unset(key);
       ADMIN.getConfiguration().unset(key);
     }
     regexConfigKeysSet.clear();
-    if (hadLeftoverRegex) {
-      // See #clearRegex -- a server this now-cleared regex had auto-claimed stays put in the
-      // live view until a serverAdded/serverRemoved event fires. Force one so
-      // tearDownAfterMethod's group cleanup (-> VerifyingRSGroupAdmin#verify) doesn't see a
-      // stale claim.
-      triggerListenerCycle();
-    }
     tearDownAfterMethod();
     RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
     ((RSGroupBasedLoadBalancer) MASTER.getLoadBalancer()).setFallbackEnabledForTest(false);
@@ -194,18 +186,11 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     regexConfigKeysSet.add(key);
   }
 
-  private void clearRegex(String groupName) throws Exception {
+  private void clearRegex(String groupName) {
     String key = REGEX_PREFIX + groupName;
     MASTER.getConfiguration().unset(key);
     ADMIN.getConfiguration().unset(key);
     regexConfigKeysSet.remove(key);
-    // Same story as #triggerListenerCycle's javadoc: recompute only runs on a serverAdded/
-    // serverRemoved event, so a server this regex had auto-claimed stays put in the live view
-    // until one fires. Force one now so cleanup (removeGroup -> VerifyingRSGroupAdmin#verify)
-    // doesn't see a stale claim this now-cleared regex can no longer justify -- regex-governed
-    // membership is persisted exactly like any other group's, so verify's plain persisted-vs-live
-    // comparison would otherwise report the leftover member as a real discrepancy.
-    triggerListenerCycle();
   }
 
   private Address addressOf(JVMClusterUtil.RegionServerThread rst) {
@@ -406,7 +391,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> capturer.getOutput()
         .contains("RSGroup '" + groupName + "' does not exist -- create it with addRSGroup"));
 
-      // Now create the group; on the next cycle the server should migrate in, no restart needed.
+      // Now create the group; on the next cycle the server should migrate in.
       ADMIN.addRSGroup(groupName);
       triggerListenerCycle();
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
@@ -453,9 +438,10 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
 
   @Test
   public void testEmptyDefaultGroupGuardTripsAndClears() throws Exception {
-    // Explicit moveServersToRSGroup can never empty default in one call (a longstanding,
-    // unrelated RSGroupAdminServer guard always keeps >=1 server there), so parking every base RS
-    // in an admin-managed group first (as an earlier version of this test tried) is a non-starter.
+    // Explicit moveServersToRSGroup can never empty default in one call (a longstanding, unrelated
+    // RSGroupInfoManagerImpl#moveServers guard always keeps >=1 server there), so parking every
+    // base RS in an admin-managed group first (as an earlier version of this test tried) is a
+    // non-starter.
     // The automatic regex-reconciliation path bypasses that admin-level guard entirely, so instead
     // we drive the empty-default scenario purely through it: a catch-all regex matches every
     // online server at once (all base RS share one real hostname), with no explicit move at all.
@@ -583,8 +569,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       Address addr = addressOf(rst);
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
         () -> ADMIN.getRSGroup(groupName).getServers().contains(addr));
-      // Purely automatic, event-driven reassignment must not go through the RSGroupAdminServer
-      // RPC surface, so the moveServers coprocessor hooks must not fire.
+      // Purely automatic, event-driven reassignment must not go through the MasterRpcServices
+      // moveServers RPC path, so the moveServers coprocessor hooks must not fire.
       assertFalse(OBSERVER.preMoveServersCalled);
       assertFalse(OBSERVER.postMoveServersCalled);
 
@@ -672,9 +658,9 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     // A new RS auto-joins an already-regex-governed group while the group's sole existing
     // member holds every region of a table bound to that group; running the balancer must then
     // hand some of those regions to the newly-joined RS too. The first-member baseline is
-    // established by setRSGroup itself: RSGroupAdminServer#setRSGroup synchronously relocates
+    // established by setRSGroup itself: RSGroupInfoManagerImpl#setRSGroup synchronously relocates
     // every region of a table with no RSGroup-scoped descriptor yet onto the target group's
-    // servers (see moveTableRegionsToGroup, which blocks on the move futures before returning),
+    // servers (see moveTablesAndWait, which blocks on each ModifyTableProcedure before returning),
     // so with sn1 as the sole group member at that point all regions are already there once
     // setRSGroup returns -- no separate balance step is needed for that part. Only the
     // second-member handoff genuinely needs an explicit balance: adding a group member does not
@@ -769,8 +755,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       // setRSGroup synchronously relocates every region of a table with no RSGroup-scoped
-      // descriptor yet onto one of the target group's servers (moveTableRegionsToGroup blocks on
-      // the move futures before returning), so confinement to {sn1, sn2} is already guaranteed
+      // descriptor yet onto one of the target group's servers (moveTablesAndWait blocks on each
+      // ModifyTableProcedure before returning), so confinement to {sn1, sn2} is already guaranteed
       // once this call returns -- no separate balance step is needed.
       ADMIN.setRSGroup(Sets.newHashSet(tableName), groupName);
       Map<ServerName, List<String>> perServerAfterMove = getTableServerRegionMap().get(tableName);
@@ -805,7 +791,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     // crashed regex member's regions to the *other* online members of its own group -- never to
     // default or an unrelated group -- rather than trusting the RSGroup-partitioning logic to
     // "just work". It also asserts, via the test-only call-tracking flags, exactly which
-    // assignment methods actually ran for each step: randomAssignment + retainAssignment during
+    // assignment methods actually ran for each step: retainAssignment during
     // setRSGroup, and roundRobinAssignment (not retainAssignment) during crash recovery.
     String groupName = getGroupName("crashroundrobin");
     ADMIN.addRSGroup(groupName);
@@ -927,9 +913,9 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 6);
       TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
       // setRSGroup synchronously relocates every region of a table with no RSGroup-scoped
-      // descriptor yet onto the target group's servers (moveTableRegionsToGroup blocks on the
-      // move futures before returning), so confinement to {sn1, sn2} is already guaranteed once
-      // this call returns.
+      // descriptor yet onto the target group's servers (moveTablesAndWait blocks on each
+      // ModifyTableProcedure before returning), so confinement to {sn1, sn2} is already guaranteed
+      // once this call returns.
       ADMIN.setRSGroup(Sets.newHashSet(tableName), groupName);
 
       // Both regex members must be hosting regions of the table before either is killed.
@@ -975,6 +961,121 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       balancer.setFallbackEnabledForTest(false);
       clearRegex(groupName);
       removeGroup(groupName);
+    }
+  }
+
+  @Test
+  public void testExplicitMoveFromDefaultToAdminGroupTriggersRandomAssignmentBackToDefault()
+    throws Exception {
+    // Three concurrently active RSGroups -- default, a regex-governed group, and an
+    // admin-managed group -- each with at least one member. Explicitly moving a server out of
+    // default into the admin-managed group (RSGroupInfoManagerImpl#moveServers) leaves that
+    // server still hosting regions of a table that belongs to default; moveServerRegionsFromGroup
+    // detects the mismatch and relocates those orphaned regions back onto default's *remaining*
+    // members via LoadBalancer#randomAssignment, then actually executes each relocation through
+    // AssignmentManager#moveAsync -- which, because the destination is already decided, creates a
+    // MOVE-type TransitRegionStateProcedure whose queueAssign sets a non-null region location, so
+    // AssignmentManager#processAssignQueue routes it into retainMap and retainAssignment also
+    // fires. roundRobinAssignment never fires, since no region in this flow is ever left with a
+    // null location. This test confirms that exact combination of calls, plus the final,
+    // fully-partitioned region placement across all three groups.
+    String regexGroupName = getGroupName("regex3way");
+    String adminGroupName = getGroupName("admin3way");
+    ADMIN.addRSGroup(regexGroupName);
+    // "127.0.0.1" is the only fake identity needed here; it is never a member of default, so it
+    // cannot interfere with the base cluster's servers used below.
+    setRegex(regexGroupName, "127\\.0\\.0\\.1");
+    try {
+      JVMClusterUtil.RegionServerThread regexRst = startFakeHostnameRS("127.0.0.1");
+      Address regexAddr = addressOf(regexRst);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> ADMIN.getRSGroup(regexGroupName).getServers().contains(regexAddr));
+
+      // Admin-managed group starts with one server borrowed from default -- NUM_SLAVES_BASE(4)
+      // - 1 = 3 remain in default, enough that moving one more away below still satisfies
+      // moveServers' KEEP_ONE_SERVER_IN_DEFAULT_ERROR_MESSAGE constraint (default must always
+      // retain more servers than are being moved out of it).
+      RSGroupInfo adminGroupInfo = addGroup(adminGroupName, 1);
+      Address adminServerInitialAddr = adminGroupInfo.getServers().iterator().next();
+
+      // A table with no explicit RSGroup is implicitly confined to default's current members --
+      // here, the 3 servers remaining in default after the admin group's initial carve-out.
+      TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 9);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+
+      // Pick a default-group server that is actually hosting some of this table's regions -- the
+      // server we are about to move, so the orphaned-region relocation has something to do.
+      RSGroupInfo defaultGroupBeforeMove = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+      Map<ServerName, List<String>> perServerBeforeMove = getTableServerRegionMap().get(tableName);
+      int totalRegionsBeforeMove = 0;
+      ServerName movingServer = null;
+      for (Map.Entry<ServerName, List<String>> entry : perServerBeforeMove.entrySet()) {
+        assertTrue(defaultGroupBeforeMove.getServers().contains(entry.getKey().getAddress()));
+        totalRegionsBeforeMove += entry.getValue().size();
+        if (movingServer == null && !entry.getValue().isEmpty()) {
+          movingServer = entry.getKey();
+        }
+      }
+      assertEquals(9, totalRegionsBeforeMove);
+      Address movingAddr = movingServer.getAddress();
+      Set<Address> defaultServersBeforeMove = new HashSet<>(defaultGroupBeforeMove.getServers());
+
+      // The action under test: explicitly move that one server out of default into the
+      // admin-managed group.
+      RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
+      ADMIN.moveServersToRSGroup(Sets.newHashSet(movingAddr), adminGroupName);
+
+      // See the method comment above for why both randomAssignment (picking the relocation plan)
+      // and retainAssignment (executing it via moveAsync) fire, while roundRobinAssignment never
+      // does.
+      assertTrue(RSGroupBasedLoadBalancer.isRandomAssignmentInvoked);
+      assertTrue(RSGroupBasedLoadBalancer.isRetainAssignmentInvoked);
+      assertFalse(RSGroupBasedLoadBalancer.isRoundRobinAssignmentInvoked);
+
+      // Membership: the moved server now belongs to the admin-managed group, not default; the
+      // regex group and the rest of default are untouched by this move.
+      Set<Address> expectedDefaultServersAfterMove = new HashSet<>(defaultServersBeforeMove);
+      expectedDefaultServersAfterMove.remove(movingAddr);
+      assertEquals(expectedDefaultServersAfterMove,
+        ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers());
+      assertEquals(Sets.newHashSet(adminServerInitialAddr, movingAddr),
+        ADMIN.getRSGroup(adminGroupName).getServers());
+      assertEquals(Sets.newHashSet(regexAddr), ADMIN.getRSGroup(regexGroupName).getServers());
+
+      // Regions: every one of the table's 9 regions must have moved off the relocated server,
+      // landing only on default's remaining members -- never on the admin-managed or
+      // regex-governed group's servers. moveServers blocks until this relocation completes, but
+      // poll defensively rather than asserting immediately.
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
+        Map<ServerName, List<String>> perServer = getTableServerRegionMap().get(tableName);
+        if (perServer == null) {
+          return false;
+        }
+        int total = 0;
+        for (Map.Entry<ServerName, List<String>> entry : perServer.entrySet()) {
+          if (!expectedDefaultServersAfterMove.contains(entry.getKey().getAddress())) {
+            return false;
+          }
+          total += entry.getValue().size();
+        }
+        return total == 9;
+      });
+
+      // Bidirectional isolation, now that the move has settled: neither the admin-managed group's
+      // servers (the original member and the one just moved in) nor the regex group's server host
+      // any region of this default-group table.
+      for (Address addr : ADMIN.getRSGroup(adminGroupName).getServers()) {
+        for (RegionInfo region : ADMIN.getRegions(getServerName(addr))) {
+          assertFalse(region.getTable().equals(tableName));
+        }
+      }
+      for (RegionInfo region : ADMIN.getRegions(getServerName(regexAddr))) {
+        assertFalse(region.getTable().equals(tableName));
+      }
+    } finally {
+      clearRegex(regexGroupName);
+      removeGroup(regexGroupName);
+      removeGroup(adminGroupName);
     }
   }
 }

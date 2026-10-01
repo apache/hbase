@@ -263,6 +263,42 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     LOG.info("Updated auto-managed RSGroup servers.");
   }
 
+  /**
+   * Called synchronously from {@code ServerListener#serverAdded}/{@code #serverRemoved}. If the
+   * recompute only affects 'default' membership, applies it immediately in-memory instead of waking
+   * the background thread. Only when a regex-governed group's membership would also change -- which
+   * needs to be persisted to {@code hbase:rsgroup}/ZK -- does it hand off to the background thread,
+   * so this callback is never blocked on that I/O.
+   */
+  private synchronized void handleServerEvent() {
+    Map<String, RSGroupInfo> currentGroups = holder.groupName2Group;
+    Map<String, SortedSet<Address>> newRSGroupToServers =
+      computeAutoManagedRSGroupServers(currentGroups.values());
+    for (Map.Entry<String, SortedSet<Address>> entry : newRSGroupToServers.entrySet()) {
+      if (RSGroupInfo.DEFAULT_GROUP.equals(entry.getKey())) {
+        continue;
+      }
+      if (!entry.getValue().equals(currentGroups.get(entry.getKey()).getServers())) {
+        serverEventsListenerThread.serverChanged();
+        return;
+      }
+    }
+    SortedSet<Address> newDefaultServers = newRSGroupToServers.get(RSGroupInfo.DEFAULT_GROUP);
+    if (!newDefaultServers.equals(currentGroups.get(RSGroupInfo.DEFAULT_GROUP).getServers())) {
+      updateDefaultServersOnly(newDefaultServers);
+    }
+  }
+
+  private synchronized void updateDefaultServersOnly(SortedSet<Address> newDefaultServers) {
+    LOG.info("Updating default servers.");
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
+    applyAutoManagedRSGroupServers(newGroupMap,
+      Collections.singletonMap(RSGroupInfo.DEFAULT_GROUP, newDefaultServers));
+    // do not need to persist, as we do not persist default group.
+    resetRSGroupMap(newGroupMap);
+    LOG.info("Updated default servers, {} servers", newDefaultServers.size());
+  }
+
   private synchronized void init() throws IOException {
     refresh(false);
     serverEventsListenerThread.start();
@@ -1023,12 +1059,12 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     @Override
     public void serverAdded(ServerName serverName) {
-      serverChanged();
+      RSGroupInfoManagerImpl.this.handleServerEvent();
     }
 
     @Override
     public void serverRemoved(ServerName serverName) {
-      serverChanged();
+      RSGroupInfoManagerImpl.this.handleServerEvent();
     }
 
     private synchronized void serverChanged() {
@@ -1041,6 +1077,17 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       setName(ServerEventsListenerThread.class.getName() + "-" + masterServices.getServerName());
       while (isMasterRunning(masterServices)) {
         try {
+          synchronized (this) {
+            while (!changed) {
+              wait();
+            }
+            changed = false;
+          }
+        } catch (InterruptedException e) {
+          LOG.warn("Interrupted", e);
+          continue;
+        }
+        try {
           Map<String, RSGroupInfo> currentGroups = holder.groupName2Group;
           Map<String, SortedSet<Address>> newRSGroupToServers =
             computeAutoManagedRSGroupServers(currentGroups.values());
@@ -1052,16 +1099,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
             updateAutoManagedRSGroupServers(newRSGroupToServers);
           } else {
             LOG.info("No changes in auto-managed RSGroup server membership.");
-          }
-          try {
-            synchronized (this) {
-              while (!changed) {
-                wait();
-              }
-              changed = false;
-            }
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted", e);
           }
         } catch (IOException e) {
           LOG.warn("Failed to update auto-managed RSGroup servers", e);
