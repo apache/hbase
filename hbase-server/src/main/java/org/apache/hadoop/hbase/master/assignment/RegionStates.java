@@ -575,7 +575,7 @@ public class RegionStates {
     }
     // Add online servers with no assignment for the table.
     for (Map<ServerName, List<RegionInfo>> table : result.values()) {
-      for (ServerName serverName : serverMap.keySet()) {
+      for (ServerName serverName : onlineServers) {
         table.computeIfAbsent(serverName, key -> new ArrayList<>());
       }
     }
