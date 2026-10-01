@@ -254,14 +254,24 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     this.script = new RSGroupMappingScript(masterServices.getConfiguration());
   }
 
-  private synchronized void updateAutoManagedRSGroupServers(
-    Map<String, SortedSet<Address>> assignments) throws IOException {
+  private synchronized void updateAutoManagedRSGroupServers() throws IOException {
     LOG.info("Updating auto-managed RSGroup servers.");
-    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
-    applyAutoManagedRSGroupServers(newGroupMap, assignments);
+    Map<String, RSGroupInfo> currentGroups = holder.groupName2Group;
+    Map<String, SortedSet<Address>> newRSGroupToServers =
+      computeAutoManagedRSGroupServers(currentGroups.values());
+    Map<String, Set<Address>> currentRSGroupToServers = new HashMap<>();
+    for (String groupName : newRSGroupToServers.keySet()) {
+      currentRSGroupToServers.put(groupName, currentGroups.get(groupName).getServers());
+    }
+    if (newRSGroupToServers.equals(currentRSGroupToServers)) {
+      LOG.info("No changes in auto-managed RSGroup server membership.");
+      return;
+    }
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(currentGroups);
+    applyAutoManagedRSGroupServers(newGroupMap, newRSGroupToServers);
     flushConfig(newGroupMap, true);
     LOG.info("Updated auto-managed RSGroup servers, {} servers",
-      assignments.values().stream().mapToInt(SortedSet::size).sum());
+      newRSGroupToServers.values().stream().mapToInt(SortedSet::size).sum());
   }
 
   /**
@@ -1069,7 +1079,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private class ServerEventsListenerThread extends Thread implements ServerListener {
     private final Logger LOG = LoggerFactory.getLogger(ServerEventsListenerThread.class);
-    private boolean changed = false;
+    private volatile int eventCount = 0;
 
     ServerEventsListenerThread() {
       setDaemon(true);
@@ -1077,16 +1087,18 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     @Override
     public void serverAdded(ServerName serverName) {
+      LOG.info("Server added: {}", serverName);
       RSGroupInfoManagerImpl.this.handleServerEvent();
     }
 
     @Override
     public void serverRemoved(ServerName serverName) {
+      LOG.info("Server removed: {}", serverName);
       RSGroupInfoManagerImpl.this.handleServerEvent();
     }
 
     private synchronized void serverChanged() {
-      changed = true;
+      eventCount++;
       this.notify();
     }
 
@@ -1095,28 +1107,19 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       setName(ServerEventsListenerThread.class.getName() + "-" + masterServices.getServerName());
       while (isMasterRunning(masterServices)) {
         try {
-          synchronized (this) {
-            while (!changed) {
-              wait();
+          try {
+            synchronized (this) {
+              while (eventCount <= 0) {
+                wait();
+              }
             }
-            changed = false;
+          } catch (InterruptedException e) {
+            LOG.warn("Interrupted", e);
+            continue;
           }
-        } catch (InterruptedException e) {
-          LOG.warn("Interrupted", e);
-          continue;
-        }
-        try {
-          Map<String, RSGroupInfo> currentGroups = holder.groupName2Group;
-          Map<String, SortedSet<Address>> newRSGroupToServers =
-            computeAutoManagedRSGroupServers(currentGroups.values());
-          Map<String, Set<Address>> currentRSGroupToServers = new HashMap<>();
-          for (String groupName : newRSGroupToServers.keySet()) {
-            currentRSGroupToServers.put(groupName, currentGroups.get(groupName).getServers());
-          }
-          if (!newRSGroupToServers.equals(currentRSGroupToServers)) {
-            updateAutoManagedRSGroupServers(newRSGroupToServers);
-          } else {
-            LOG.info("No changes in auto-managed RSGroup server membership.");
+          updateAutoManagedRSGroupServers();
+          synchronized (this) {
+            eventCount--;
           }
         } catch (IOException e) {
           LOG.warn("Failed to update auto-managed RSGroup servers", e);
