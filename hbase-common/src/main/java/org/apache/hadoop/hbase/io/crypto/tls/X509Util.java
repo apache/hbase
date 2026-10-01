@@ -279,30 +279,6 @@ public final class X509Util {
     return value;
   }
 
-  // resolveConfig falls back per key, so a store whose location comes from one prefix and whose
-  // password/type come from the other would open the wrong file, or the right file with the wrong
-  // credentials. A store is a unit: reject configs that straddle both prefixes.
-  public static void validateConfigPrefixConsistency(Configuration config, String rolePrefix,
-    String legacyPrefix, String... keyPostfixes) {
-    String roleKey = null;
-    String legacyKey = null;
-    for (String postfix : keyPostfixes) {
-      if (config.get(rolePrefix + postfix) != null) {
-        roleKey = roleKey != null ? roleKey : rolePrefix + postfix;
-      } else if (config.get(legacyPrefix + postfix) != null) {
-        legacyKey = legacyKey != null ? legacyKey : legacyPrefix + postfix;
-      }
-      // absent under both prefixes: nothing is mixed, the caller's default applies
-    }
-    if (roleKey == null || legacyKey == null) {
-      return;
-    }
-    throw new IllegalArgumentException(roleKey + " is set, so " + legacyKey
-      + " would be silently ignored: a store's location, password, and type must come from the same"
-      + " prefix. Set all of " + rolePrefix + "{" + String.join(", ", keyPostfixes)
-      + "} that your store needs, or none of them to use " + legacyPrefix + " throughout.");
-  }
-
   // Jetty never leaves the peer-certificate trust anchors empty: with no truststore configured it
   // falls back to the keystore, or to the JVM cacerts when no keystore is set either. WANT/NEED
   // would then appear to work while trusting issuers the operator never configured, so fail fast.
@@ -327,14 +303,11 @@ public final class X509Util {
     SslContextBuilder sslContextBuilder = SslContextBuilder.forClient();
 
     configureOpenSslIfAvailable(sslContextBuilder, config);
-    validateConfigPrefixConsistency(config, CLIENT_CONFIG_PREFIX, CONFIG_PREFIX,
-      "keystore.location", "keystore.password", "keystore.type");
-    String keyStoreLocation =
-      resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, TLS_CONFIG_KEYSTORE_LOCATION, "");
-    char[] keyStorePassword =
-      resolvePassword(config, TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD, TLS_CONFIG_KEYSTORE_PASSWORD);
-    String keyStoreType =
-      resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_TYPE, TLS_CONFIG_KEYSTORE_TYPE, "");
+    TLSStore keyStore =
+      TLSStore.resolve(config, CLIENT_CONFIG_PREFIX, CONFIG_PREFIX, TLSStore.Keys.RPC_KEYSTORE);
+    String keyStoreLocation = keyStore.getLocation();
+    char[] keyStorePassword = keyStore.getPasswordChars();
+    String keyStoreType = keyStore.getType();
 
     if (keyStoreLocation.isEmpty()) {
       LOG.warn("Neither {} nor {} specified", TLS_CONFIG_CLIENT_KEYSTORE_LOCATION,
@@ -344,14 +317,11 @@ public final class X509Util {
         .keyManager(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
     }
 
-    validateConfigPrefixConsistency(config, CLIENT_CONFIG_PREFIX, CONFIG_PREFIX,
-      "truststore.location", "truststore.password", "truststore.type");
-    String trustStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION,
-      TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    char[] trustStorePassword = resolvePassword(config, TLS_CONFIG_CLIENT_TRUSTSTORE_PASSWORD,
-      TLS_CONFIG_TRUSTSTORE_PASSWORD);
-    String trustStoreType =
-      resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_TYPE, TLS_CONFIG_TRUSTSTORE_TYPE, "");
+    TLSStore trustStore =
+      TLSStore.resolve(config, CLIENT_CONFIG_PREFIX, CONFIG_PREFIX, TLSStore.Keys.RPC_TRUSTSTORE);
+    String trustStoreLocation = trustStore.getLocation();
+    char[] trustStorePassword = trustStore.getPasswordChars();
+    String trustStoreType = trustStore.getType();
 
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);
@@ -413,14 +383,11 @@ public final class X509Util {
 
   public static SslContext createSslContextForServer(Configuration config)
     throws X509Exception, IOException {
-    validateConfigPrefixConsistency(config, SERVER_CONFIG_PREFIX, CONFIG_PREFIX,
-      "keystore.location", "keystore.password", "keystore.type");
-    String keyStoreLocation =
-      resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_LOCATION, TLS_CONFIG_KEYSTORE_LOCATION, "");
-    char[] keyStorePassword =
-      resolvePassword(config, TLS_CONFIG_SERVER_KEYSTORE_PASSWORD, TLS_CONFIG_KEYSTORE_PASSWORD);
-    String keyStoreType =
-      resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_TYPE, TLS_CONFIG_KEYSTORE_TYPE, "");
+    TLSStore keyStore =
+      TLSStore.resolve(config, SERVER_CONFIG_PREFIX, CONFIG_PREFIX, TLSStore.Keys.RPC_KEYSTORE);
+    String keyStoreLocation = keyStore.getLocation();
+    char[] keyStorePassword = keyStore.getPasswordChars();
+    String keyStoreType = keyStore.getType();
 
     if (keyStoreLocation.isEmpty()) {
       throw new SSLContextException("Keystore is required for SSL server: set either "
@@ -432,14 +399,11 @@ public final class X509Util {
       .forServer(createKeyManager(keyStoreLocation, keyStorePassword, keyStoreType));
 
     configureOpenSslIfAvailable(sslContextBuilder, config);
-    validateConfigPrefixConsistency(config, SERVER_CONFIG_PREFIX, CONFIG_PREFIX,
-      "truststore.location", "truststore.password", "truststore.type");
-    String trustStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION,
-      TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    char[] trustStorePassword = resolvePassword(config, TLS_CONFIG_SERVER_TRUSTSTORE_PASSWORD,
-      TLS_CONFIG_TRUSTSTORE_PASSWORD);
-    String trustStoreType =
-      resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_TYPE, TLS_CONFIG_TRUSTSTORE_TYPE, "");
+    TLSStore trustStore =
+      TLSStore.resolve(config, SERVER_CONFIG_PREFIX, CONFIG_PREFIX, TLSStore.Keys.RPC_TRUSTSTORE);
+    String trustStoreLocation = trustStore.getLocation();
+    char[] trustStorePassword = trustStore.getPasswordChars();
+    String trustStoreType = trustStore.getType();
 
     boolean sslCrlEnabled = config.getBoolean(TLS_CONFIG_CLR, false);
     boolean sslOcspEnabled = config.getBoolean(TLS_CONFIG_OCSP, false);

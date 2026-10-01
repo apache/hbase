@@ -69,15 +69,7 @@ import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_CIPHER
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_EXCLUDE_PROTOCOLS_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_INCLUDE_CIPHER_SUITES_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_INCLUDE_PROTOCOLS_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_PASSWORD_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_STORE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_TYPE_DEFAULT;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_KEYSTORE_TYPE_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_KEYPASSWORD_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_PASSWORD_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_KEYSTORE_TYPE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_TRUSTSTORE_PASSWORD_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_TRUSTSTORE_STORE_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_SSL_SERVER_TRUSTSTORE_TYPE_KEY;
@@ -109,6 +101,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.filter.ParseFilter;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.tls.TLSStore;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.security.SaslUtil;
@@ -424,26 +417,16 @@ public class ThriftServer extends Configured implements Tool {
 
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
       // Prefer the role-scoped hbase.thrift.ssl.server.* keys, falling back to the historical
-      // unscoped hbase.thrift.ssl.* keys for backward compatibility with existing deployments.
-      // The fallback is per key, so reject configs that would mix the two prefixes within one
-      // store and pair, say, a new keystore file with the old keystore's password.
-      X509Util.validateConfigPrefixConsistency(conf, "hbase.thrift.ssl.server.",
-        "hbase.thrift.ssl.", "keystore.store", "keystore.password", "keystore.keypassword",
-        "keystore.type");
-      String keystore = X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_STORE_KEY,
-        THRIFT_SSL_KEYSTORE_STORE_KEY, null);
-      String password =
-        HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_KEYSTORE_PASSWORD_KEY,
-          HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_PASSWORD_KEY, null));
-      String keyPassword =
-        HBaseConfiguration.getPassword(conf, THRIFT_SSL_SERVER_KEYSTORE_KEYPASSWORD_KEY,
-          HBaseConfiguration.getPassword(conf, THRIFT_SSL_KEYSTORE_KEYPASSWORD_KEY, password));
-      sslCtxFactory.setKeyStorePath(keystore);
-      sslCtxFactory.setKeyStorePassword(password);
-      sslCtxFactory.setKeyManagerPassword(keyPassword);
-      sslCtxFactory
-        .setKeyStoreType(X509Util.resolveConfig(conf, THRIFT_SSL_SERVER_KEYSTORE_TYPE_KEY,
-          THRIFT_SSL_KEYSTORE_TYPE_KEY, THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
+      // unscoped hbase.thrift.ssl.* keys for backward compatibility with existing deployments. A
+      // store resolves entirely from one prefix, so a role-scoped keystore is never paired with the
+      // legacy keystore's password or type.
+      TLSStore keyStore = TLSStore.resolve(conf, "hbase.thrift.ssl.server.", "hbase.thrift.ssl.",
+        TLSStore.Keys.SERVLET_KEYSTORE);
+      sslCtxFactory.setKeyStorePath(keyStore.getLocation());
+      sslCtxFactory.setKeyStorePassword(keyStore.getPassword());
+      sslCtxFactory.setKeyManagerPassword(keyStore.getKeyPassword());
+      sslCtxFactory.setKeyStoreType(
+        StringUtils.defaultIfBlank(keyStore.getType(), THRIFT_SSL_KEYSTORE_TYPE_DEFAULT));
 
       // Truststore is entirely new for Thrift — no legacy fallback because there is no historical
       // hbase.thrift.ssl.truststore.* configuration. Leaving it unset is only valid when client

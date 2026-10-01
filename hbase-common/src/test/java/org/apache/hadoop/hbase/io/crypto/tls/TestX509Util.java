@@ -495,78 +495,60 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     X509Util.validateClientAuthTrustStore(X509Util.ClientAuth.NONE, null, "mode.key", "ts.key");
   }
 
+  // A role-scoped password with no role-scoped location would be applied to the legacy keystore.
   @TestTemplate
-  public void testCreateSSLContextForClientRejectsMixedConfigPrefixes() {
-    // setUp() set the legacy keystore keys, so a lone role-scoped location mixes the two prefixes.
-    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, "/nonexistent/client.p12");
+  public void testCreateSSLContextForClientRejectsRoleKeyWithoutRoleLocation() {
+    // The base conf carries a complete legacy keystore, so only the role-scoped location is
+    // missing.
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD, "orphan-pw");
     IllegalArgumentException ex =
       assertThrows(IllegalArgumentException.class, () -> X509Util.createSslContextForClient(conf));
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD),
+      ex.getMessage());
     assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION),
       ex.getMessage());
   }
 
   @TestTemplate
-  public void testValidateConfigPrefixConsistencyRejectsMixedPrefixes() {
+  public void testResolveStoreRejectsRoleKeyWithoutRoleLocation() {
     Configuration c = new Configuration(false);
-    c.set("p.role.keystore.location", "/new.p12");
-    c.set("p.keystore.password", "legacy-pw");
-    c.set("p.keystore.keypassword", "legacy-keypw");
-    IllegalArgumentException ex =
-      assertThrows(IllegalArgumentException.class, () -> X509Util.validateConfigPrefixConsistency(c,
-        "p.role.", "p.", "keystore.location", "keystore.password", "keystore.keypassword"));
-    // Both offending keys must be named so the operator knows what conflicts with what.
-    assertTrue(ex.getMessage().contains("p.role.keystore.location"), ex.getMessage());
-    assertTrue(ex.getMessage().contains("p.keystore.password"), ex.getMessage());
-  }
-
-  @TestTemplate
-  public void testValidateConfigPrefixConsistencyAllowsSinglePrefix() {
-    Configuration role = new Configuration(false);
-    role.set("p.role.keystore.location", "/new.p12");
-    role.set("p.role.keystore.password", "pw");
-    // keystore.type is unset under both prefixes, which must not count as a legacy contribution.
-    X509Util.validateConfigPrefixConsistency(role, "p.role.", "p.", "keystore.location",
-      "keystore.password", "keystore.type");
-
-    // The backward-compatible case every existing deployment relies on.
-    Configuration legacy = new Configuration(false);
-    legacy.set("p.keystore.location", "/old.jks");
-    legacy.set("p.keystore.password", "pw");
-    X509Util.validateConfigPrefixConsistency(legacy, "p.role.", "p.", "keystore.location",
-      "keystore.password", "keystore.type");
-  }
-
-  // Migration path: every key resolves to the role prefix, so the stale legacy keys are not a mix.
-  @TestTemplate
-  public void testValidateConfigPrefixConsistencyAllowsRoleShadowingCompleteLegacy() {
-    Configuration c = new Configuration(false);
-    c.set("p.role.keystore.location", "/new.p12");
     c.set("p.role.keystore.password", "pw2");
-    c.set("p.role.keystore.type", "PKCS12");
+    c.set("p.keystore.location", "/old.jks");
+    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+      () -> TLSStore.resolve(c, "p.role.", "p.", TLSStore.Keys.RPC_KEYSTORE));
+    assertTrue(ex.getMessage().contains("p.role.keystore.password"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("p.role.keystore.location"), ex.getMessage());
+  }
+
+  /**
+   * A store is a unit: the prefix that supplies the location supplies every other attribute too.
+   * Resolving per key would open the role-scoped file with the legacy password and type.
+   */
+  @TestTemplate
+  public void testResolveStoreNeverMixesPrefixes() throws Exception {
+    Configuration c = new Configuration(false);
+    c.set("p.role.keystore.location", "/new.p12");
+    c.set("p.keystore.location", "/old.jks");
+    c.set("p.keystore.password", "legacy-pw");
+    c.set("p.keystore.type", "JKS");
+
+    TLSStore store = TLSStore.resolve(c, "p.role.", "p.", TLSStore.Keys.RPC_KEYSTORE);
+    assertEquals("/new.p12", store.getLocation());
+    assertNull(store.getPassword(), "password must not be taken from the legacy prefix");
+    assertEquals("", store.getType(), "type must not be taken from the legacy prefix");
+  }
+
+  // Deployments that never adopt the role-scoped prefix keep resolving from the legacy keys.
+  @TestTemplate
+  public void testResolveStoreFallsBackToLegacyPrefix() throws Exception {
+    Configuration c = new Configuration(false);
     c.set("p.keystore.location", "/old.jks");
     c.set("p.keystore.password", "pw");
     c.set("p.keystore.type", "JKS");
-    X509Util.validateConfigPrefixConsistency(c, "p.role.", "p.", "keystore.location",
-      "keystore.password", "keystore.type");
-  }
 
-  // An empty <value></value> counts as set, matching resolveConfig; it does not fall through.
-  @TestTemplate
-  public void testValidateConfigPrefixConsistencyRejectsBlankRoleValueOverLegacy() {
-    Configuration empty = new Configuration(false);
-    empty.set("p.role.keystore.location", "");
-    empty.set("p.keystore.location", "/old.jks");
-    empty.set("p.keystore.password", "pw");
-    assertThrows(IllegalArgumentException.class,
-      () -> X509Util.validateConfigPrefixConsistency(empty, "p.role.", "p.", "keystore.location",
-        "keystore.password", "keystore.type"));
-
-    Configuration whitespace = new Configuration(false);
-    whitespace.set("p.role.keystore.location", "   ");
-    whitespace.set("p.keystore.location", "/old.jks");
-    whitespace.set("p.keystore.password", "pw");
-    assertThrows(IllegalArgumentException.class,
-      () -> X509Util.validateConfigPrefixConsistency(whitespace, "p.role.", "p.",
-        "keystore.location", "keystore.password", "keystore.type"));
+    TLSStore store = TLSStore.resolve(c, "p.role.", "p.", TLSStore.Keys.RPC_KEYSTORE);
+    assertEquals("/old.jks", store.getLocation());
+    assertEquals("pw", store.getPassword());
+    assertEquals("JKS", store.getType());
   }
 }

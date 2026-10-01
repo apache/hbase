@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.tls.TLSStore;
 import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
@@ -307,20 +308,15 @@ public class RESTServer implements Constants {
 
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
       // Prefer the role-scoped hbase.rest.ssl.server.* keys, falling back to the historical
-      // unscoped hbase.rest.ssl.* keys for backward compatibility with existing deployments.
-      // The fallback is per key, so reject configs that would mix the two prefixes within one
-      // store and pair, say, a new keystore file with the old keystore's password.
-      X509Util.validateConfigPrefixConsistency(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
-        "keystore.store", "keystore.password", "keystore.keypassword", "keystore.type");
-      String keystore =
-        X509Util.resolveConfig(conf, REST_SSL_SERVER_KEYSTORE_STORE, REST_SSL_KEYSTORE_STORE, null);
-      String keystoreType =
-        X509Util.resolveConfig(conf, REST_SSL_SERVER_KEYSTORE_TYPE, REST_SSL_KEYSTORE_TYPE, null);
-      String password = HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_PASSWORD,
-        HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_PASSWORD, null));
-      String keyPassword =
-        HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_KEYSTORE_KEYPASSWORD,
-          HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password));
+      // unscoped hbase.rest.ssl.* keys for backward compatibility with existing deployments. A
+      // store resolves entirely from one prefix, so a role-scoped keystore is never paired with the
+      // legacy keystore's password or type.
+      TLSStore keyStore = TLSStore.resolve(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
+        TLSStore.Keys.SERVLET_KEYSTORE);
+      String keystore = keyStore.getLocation();
+      String keystoreType = keyStore.getType();
+      String password = keyStore.getPassword();
+      String keyPassword = keyStore.getKeyPassword();
       sslCtxFactory.setKeyStorePath(keystore);
       if (StringUtils.isNotBlank(keystoreType)) {
         sslCtxFactory.setKeyStoreType(keystoreType);
@@ -328,21 +324,17 @@ public class RESTServer implements Constants {
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
 
-      X509Util.validateConfigPrefixConsistency(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
-        "truststore.store", "truststore.password", "truststore.type");
-      String trustStore = X509Util.resolveConfig(conf, REST_SSL_SERVER_TRUSTSTORE_STORE,
-        REST_SSL_TRUSTSTORE_STORE, null);
+      TLSStore trust = TLSStore.resolve(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
+        TLSStore.Keys.SERVLET_TRUSTSTORE);
+      String trustStore = trust.getLocation();
       if (StringUtils.isNotBlank(trustStore)) {
         sslCtxFactory.setTrustStorePath(trustStore);
       }
-      String trustStorePassword =
-        HBaseConfiguration.getPassword(conf, REST_SSL_SERVER_TRUSTSTORE_PASSWORD,
-          HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null));
+      String trustStorePassword = trust.getPassword();
       if (StringUtils.isNotBlank(trustStorePassword)) {
         sslCtxFactory.setTrustStorePassword(trustStorePassword);
       }
-      String trustStoreType = X509Util.resolveConfig(conf, REST_SSL_SERVER_TRUSTSTORE_TYPE,
-        REST_SSL_TRUSTSTORE_TYPE, null);
+      String trustStoreType = trust.getType();
       if (StringUtils.isNotBlank(trustStoreType)) {
         sslCtxFactory.setTrustStoreType(trustStoreType);
       }
