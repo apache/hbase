@@ -1,0 +1,10 @@
+# Trim Docker build contexts that use the repository root (e.g. dev-support image).
+
+.git
+**/.git
+**/target
+**/__pycache__
+**/.venv
+**/node_modules
+dev-support/read-replica/hbase
+dev-support/read-replica/tmp-read-replica-data

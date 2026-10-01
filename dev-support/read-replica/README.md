@@ -212,8 +212,10 @@ so any failing test is automatically retried up to 2 times before being marked a
 
 Pytest produces two output files in the `output/` directory:
 
-- **HTML report** (`read-replica-nightly-test-report.html`) — a self-contained HTML report
-  published via `publishHTML` in the Jenkinsfile, viewable from the Jenkins build page
+- **HTML report** (`read-replica-nightly-test-report.html`) — a self-contained pytest-html
+  report. After pytest, `python/render_pytest_html_csp_safe.py` injects static table rows so
+  the report renders on Jenkins (strict CSP blocks pytest-html’s inline JavaScript). Published
+  via `publishHTML` in the Jenkinsfile.
 - **JUnit XML** (`read-replica-nightly-test-results.xml`) — parsed by Jenkins to display
   individual test results in the build UI
 
