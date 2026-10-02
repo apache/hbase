@@ -1119,7 +1119,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           }
           updateAutoManagedRSGroupServers();
           synchronized (this) {
-            eventCount--;
+            if (eventCount > 0) {
+              eventCount--;
+            }
           }
         } catch (IOException e) {
           LOG.warn("Failed to update auto-managed RSGroup servers", e);
