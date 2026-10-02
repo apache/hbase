@@ -128,7 +128,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
       // #3 - incremental backup for multiple tables
       tables = Lists.newArrayList(table1, table2);
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      String backupIdIncMultiple = client.backupTables(request);
+      String backupIdIncMultiple = client.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple));
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple);
@@ -159,7 +159,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
 
       // #4 - additional incremental backup for multiple tables
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      String backupIdIncMultiple2 = client.backupTables(request);
+      String backupIdIncMultiple2 = client.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(backupIdIncMultiple2));
       validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdIncMultiple2);
 
