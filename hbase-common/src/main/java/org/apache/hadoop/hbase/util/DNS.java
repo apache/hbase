@@ -38,6 +38,8 @@ public final class DNS {
   public static final String UNSAFE_RS_HOSTNAME_KEY = "hbase.unsafe.regionserver.hostname";
   @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
   public static final String MASTER_HOSTNAME_KEY = "hbase.master.hostname";
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.CONFIG)
+  public static final String UNSAFE_THRIFT_HOSTNAME_KEY = "hbase.unsafe.thrift.hostname";
 
   private static boolean HAS_NEW_DNS_GET_DEFAULT_HOST_API;
   private static Method GET_DEFAULT_HOST_METHOD;
@@ -64,7 +66,8 @@ public final class DNS {
 
   public enum ServerType {
     MASTER("master"),
-    REGIONSERVER("regionserver");
+    REGIONSERVER("regionserver"),
+    THRIFT("thrift");
 
     private final String name;
 
@@ -118,6 +121,9 @@ public final class DNS {
         break;
       case REGIONSERVER:
         hostname = conf.get(UNSAFE_RS_HOSTNAME_KEY);
+        break;
+      case THRIFT:
+        hostname = conf.get(UNSAFE_THRIFT_HOSTNAME_KEY);
         break;
       default:
         hostname = null;
