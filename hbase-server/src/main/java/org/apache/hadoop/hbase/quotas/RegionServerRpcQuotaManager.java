@@ -137,7 +137,7 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager, Configurati
    */
   public OperationQuota getQuota(final UserGroupInformation ugi, final TableName table,
     final int blockSizeBytes) {
-    if (isQuotaEnabled() && !table.isSystemTable() && isRpcThrottleEnabled()) {
+    if (isQuotaEnabled() && !QuotaUtil.isThrottleExempt(table) && isRpcThrottleEnabled()) {
       UserQuotaState userQuotaState = quotaCache.getUserQuotaState(ugi);
       QuotaLimiter userLimiter = userQuotaState.getTableLimiter(table);
 
