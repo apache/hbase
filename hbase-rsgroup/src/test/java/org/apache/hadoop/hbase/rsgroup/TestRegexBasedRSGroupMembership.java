@@ -832,9 +832,19 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       }
       assertEquals(6, totalBeforeCrash);
 
-      // Simulate an ungraceful crash of sn1
+      // retainAssignment's random fallback (BaseLoadBalancer#randomAssignment) places each of
+      // these regions independently, so it is possible -- roughly 3% of runs -- for all 6 to land
+      // on one of the two servers alone. Crash whichever server actually has regions, so
+      // ServerCrashProcedure always has at least one region to reassign and roundRobinAssignment
+      // is guaranteed to fire; default to the usual sn1-crashes/sn2-survives case otherwise.
+      boolean sn1HasNoRegions =
+        !perServerBeforeCrash.containsKey(sn1) || perServerBeforeCrash.get(sn1).isEmpty();
+      JVMClusterUtil.RegionServerThread rstToCrash = sn1HasNoRegions ? rst2 : rst1;
+      ServerName survivor = sn1HasNoRegions ? sn1 : sn2;
+
+      // Simulate an ungraceful crash
       RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
-      killFakeRegionServer(rst1);
+      killFakeRegionServer(rstToCrash);
 
       TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
         Map<ServerName, List<String>> perServer = getTableServerRegionMap().get(tableName);
@@ -844,8 +854,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         int total = 0;
         for (Map.Entry<ServerName, List<String>> entry : perServer.entrySet()) {
           // Every region must have landed on the group's sole remaining member -- never on
-          // default or any other group, and never back on the now-dead sn1.
-          if (!entry.getKey().equals(sn2)) {
+          // default or any other group, and never back on the now-dead server.
+          if (!entry.getKey().equals(survivor)) {
             return false;
           }
           total += entry.getValue().size();
@@ -858,11 +868,11 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       assertFalse(RSGroupBasedLoadBalancer.isRetainAssignmentInvoked);
 
       // The surviving group member must host nothing but this table's regions.
-      for (RegionInfo region : admin.getRegions(sn2)) {
+      for (RegionInfo region : admin.getRegions(survivor)) {
         assertEquals(tableName, region.getTable());
       }
       // The unrelated group's own member must not have received any of the crashed member's
-      // regions either -- recovery must stay confined to sn1's own group.
+      // regions either -- recovery must stay confined to the crashed server's own group.
       for (RegionInfo region : admin.getRegions(otherGroupServer)) {
         assertFalse(region.getTable().equals(tableName));
       }

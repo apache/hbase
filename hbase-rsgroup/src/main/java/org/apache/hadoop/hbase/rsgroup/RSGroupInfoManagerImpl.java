@@ -1033,11 +1033,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           RSGroupInfoManagerImpl.this.updateAutoManagedRSGroupServers();
           try {
             synchronized (this) {
-              if (eventCount > 0) {
-                eventCount--;
-              }
               while (eventCount <= 0) {
                 wait();
+              }
+              if (eventCount > 0) {
+                eventCount--;
               }
             }
           } catch (InterruptedException e) {
