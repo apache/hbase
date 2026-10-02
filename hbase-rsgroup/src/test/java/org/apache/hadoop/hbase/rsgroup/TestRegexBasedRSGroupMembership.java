@@ -97,8 +97,9 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     }
     regexConfigKeysSet.clear();
     tearDownAfterMethod();
-    RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
-    ((RSGroupBasedLoadBalancer) master.getLoadBalancer()).setFallbackEnabledForTest(false);
+    RSGroupBasedLoadBalancer balancer = (RSGroupBasedLoadBalancer) master.getLoadBalancer();
+    balancer.resetAssignmentCallFlagsForTest();
+    balancer.setFallbackEnabledForTest(false);
   }
 
   // ============================== helpers ==============================
@@ -796,6 +797,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     String otherGroupName = getGroupName("crashroundrobinother");
     RSGroupInfo otherGroupInfo = addGroup(otherGroupName, 1);
     ServerName otherGroupServer = getServerName(otherGroupInfo.getServers().iterator().next());
+    RSGroupBasedLoadBalancer balancer = (RSGroupBasedLoadBalancer) master.getLoadBalancer();
     try {
       JVMClusterUtil.RegionServerThread rst1 = startFakeHostnameRS("127.0.0.1");
       Address addr1 = addressOf(rst1);
@@ -815,15 +817,15 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       // descriptor yet onto the target group's servers (moveTableRegionsToGroup blocks on the
       // move futures before returning), so confinement to {sn1, sn2} is already guaranteed once
       // this call returns.
-      RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
+      balancer.resetAssignmentCallFlagsForTest();
       rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
       // moveTableRegionsToGroup picks each region's destination via randomAssignment, then moves
       // it there via a TRSP with a non-null target (forceNewPlan=false), which the
       // AssignmentManager
       // queue routes through retainAssignment to commit.
-      assertTrue(RSGroupBasedLoadBalancer.isRandomAssignmentInvoked);
-      assertTrue(RSGroupBasedLoadBalancer.isRetainAssignmentInvoked);
-      assertFalse(RSGroupBasedLoadBalancer.isRoundRobinAssignmentInvoked);
+      assertTrue(balancer.isRandomAssignmentInvoked());
+      assertTrue(balancer.isRetainAssignmentInvoked());
+      assertFalse(balancer.isRoundRobinAssignmentInvoked());
       Map<ServerName, List<String>> perServerBeforeCrash = getTableServerRegionMap().get(tableName);
       int totalBeforeCrash = 0;
       for (Map.Entry<ServerName, List<String>> entry : perServerBeforeCrash.entrySet()) {
@@ -843,7 +845,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       ServerName survivor = sn1HasNoRegions ? sn1 : sn2;
 
       // Simulate an ungraceful crash
-      RSGroupBasedLoadBalancer.resetAssignmentCallFlagsForTest();
+      balancer.resetAssignmentCallFlagsForTest();
       killFakeRegionServer(rstToCrash);
 
       TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
@@ -864,8 +866,8 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       });
       // Confirms the crash-recovery ASSIGN TRSPs went through roundRobinAssignment, not
       // retainAssignment -- expected since hbase.master.scp.retain.assignment defaults to false.
-      assertTrue(RSGroupBasedLoadBalancer.isRoundRobinAssignmentInvoked);
-      assertFalse(RSGroupBasedLoadBalancer.isRetainAssignmentInvoked);
+      assertTrue(balancer.isRoundRobinAssignmentInvoked());
+      assertFalse(balancer.isRetainAssignmentInvoked());
 
       // The surviving group member must host nothing but this table's regions.
       for (RegionInfo region : admin.getRegions(survivor)) {

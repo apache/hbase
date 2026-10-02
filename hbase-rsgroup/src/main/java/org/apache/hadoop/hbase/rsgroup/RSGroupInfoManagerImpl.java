@@ -894,9 +894,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     if (!this.rsGroupMap.keySet().equals(newGroupMap.keySet())) {
       throw new IOException("Automatic regex-based RSGroup update must not add/remove RSGroups");
     }
-    for (String groupName : newGroupMap.keySet()) {
+    for (Map.Entry<String, RSGroupInfo> entry : newGroupMap.entrySet()) {
+      String groupName = entry.getKey();
       RSGroupInfo oldInfo = this.rsGroupMap.get(groupName);
-      RSGroupInfo newInfo = newGroupMap.get(groupName);
+      RSGroupInfo newInfo = entry.getValue();
       if (
         !oldInfo.getTables().equals(newInfo.getTables())
           || !oldInfo.getConfiguration().equals(newInfo.getConfiguration())
@@ -1002,7 +1003,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    */
   private class ServerEventsListenerThread extends Thread implements ServerListener {
     private final Logger LOG = LoggerFactory.getLogger(ServerEventsListenerThread.class);
-    private volatile int eventCount = 0;
+    private int eventCount = 0;
 
     ServerEventsListenerThread() {
       setDaemon(true);
