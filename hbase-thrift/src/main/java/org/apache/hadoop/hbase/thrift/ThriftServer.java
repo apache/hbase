@@ -46,8 +46,6 @@ import static org.apache.hadoop.hbase.thrift.Constants.PORT_CONF_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.PORT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.READ_TIMEOUT_OPTION;
 import static org.apache.hadoop.hbase.thrift.Constants.SELECTOR_NUM_OPTION;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_DNS_INTERFACE_KEY;
-import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_DNS_NAMESERVER_KEY;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_FILTERS;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_HTTP_ALLOW_OPTIONS_METHOD;
 import static org.apache.hadoop.hbase.thrift.Constants.THRIFT_HTTP_ALLOW_OPTIONS_METHOD_DEFAULT;
@@ -108,7 +106,6 @@ import org.apache.hadoop.hbase.thrift.generated.Hbase;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.JvmPauseMonitor;
-import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.security.SaslRpcServer;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -207,9 +204,7 @@ public class ThriftServer extends Configured implements Tool {
     securityEnabled =
       userProvider.isHadoopSecurityEnabled() && userProvider.isHBaseSecurityEnabled();
     if (securityEnabled) {
-      host = Strings.domainNamePointerToHostName(
-        DNS.getDefaultHost(conf.get(THRIFT_DNS_INTERFACE_KEY, "default"),
-          conf.get(THRIFT_DNS_NAMESERVER_KEY, "default")));
+      host = DNS.getHostname(conf, DNS.ServerType.THRIFT);
       userProvider.login(THRIFT_KEYTAB_FILE_KEY, THRIFT_KERBEROS_PRINCIPAL_KEY, host);
 
       // Setup the SPNEGO user for HTTP if configured
