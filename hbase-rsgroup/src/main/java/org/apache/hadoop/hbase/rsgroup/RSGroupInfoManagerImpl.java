@@ -1030,19 +1030,21 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       setName(ServerEventsListenerThread.class.getName() + "-" + masterServices.getServerName());
       while (isMasterRunning(masterServices)) {
         try {
-          RSGroupInfoManagerImpl.this.updateAutoManagedRSGroupServers();
           try {
             synchronized (this) {
               while (eventCount <= 0) {
                 wait();
               }
-              if (eventCount > 0) {
-                eventCount--;
-              }
             }
           } catch (InterruptedException e) {
             LOG.warn("Interrupted", e);
             continue;
+          }
+          RSGroupInfoManagerImpl.this.updateAutoManagedRSGroupServers();
+          synchronized (this) {
+            if (eventCount > 0) {
+              eventCount--;
+            }
           }
         } catch (IOException e) {
           LOG.warn("Failed to update auto-managed RSGroup servers", e);
