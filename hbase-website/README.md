@@ -421,7 +421,7 @@ If you need the CI flow without unit/e2e test suites, use:
 npm run ci-skip-tests
 ```
 
-This runs extraction, docs initialization, Playwright browser installation, PDF export, and the production build (without lint/typecheck and without unit/e2e test suites).
+This runs extraction, docs initialization, lint, Playwright browser installation, PDF export, and the production build (without typecheck and without unit/e2e test suites).
 
 Generated files are located under the `build/` directory.
 
@@ -486,6 +486,7 @@ When you run `mvn site`, the website module automatically:
    - `npm run extract-developers` - Extract developers from parent pom.xml
    - `npm run extract-hbase-config` - Extract data from `hbase-default.xml` to `app/pages/_docs/docs/_mdx/(multi-page)/configuration/hbase-default.md`
    - `npm run extract-hbase-version` - Extract version from root `pom.xml` to `app/lib/export-pdf/hbase-version.json`
+   - `npm run lint` - ESLint code quality checks
    - `npm run build` - Production build
    - `npm run generate-sitemap` - Generates `public/sitemap.xml` and `build/client/sitemap.xml`
    - `npx playwright install` - Installs Playwright browsers
