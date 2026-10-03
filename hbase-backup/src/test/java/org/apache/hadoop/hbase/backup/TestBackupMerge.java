@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.File;
 import java.util.List;
+import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -30,7 +33,9 @@ import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -95,10 +100,22 @@ public class TestBackupMerge extends TestBackupBase {
     String backupIdIncMultiple2 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple2));
 
+    // Older incremental backups contain region info files that merge does not need to retain.
+    RegionInfo region = admin.getRegions(table1).get(0);
+    Path tableBackupPath =
+      HBackupFileSystem.getTableBackupPath(table1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple2);
+    Path regionInfoFile = new Path(new Path(tableBackupPath, region.getEncodedName()),
+      HRegionFileSystem.REGION_INFO_FILE);
+    FileSystem fs = regionInfoFile.getFileSystem(conf1);
+    try (FSDataOutputStream out = fs.create(regionInfoFile, true)) {
+      out.write(RegionInfo.toDelimitedByteArray(region));
+    }
+
     try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
       String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
       bAdmin.mergeBackups(backups);
     }
+    assertFalse(fs.exists(regionInfoFile));
 
     // #6 - restore incremental backup for multiple tables, with overwrite
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1, table2 };
