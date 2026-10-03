@@ -77,7 +77,7 @@ class SimpleServerRpcConnection extends ServerRpcConnection {
 
   final ConcurrentLinkedDeque<RpcResponse> responseQueue = new ConcurrentLinkedDeque<>();
   final Lock responseWriteLock = new ReentrantLock();
-  long lastSentTime = -1L;
+  volatile long lastSentTime = -1L;
 
   public SimpleServerRpcConnection(SimpleRpcServer rpcServer, SocketChannel channel,
     long lastContact) {
