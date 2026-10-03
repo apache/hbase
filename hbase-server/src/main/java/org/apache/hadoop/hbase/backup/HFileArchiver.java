@@ -359,28 +359,29 @@ public class HFileArchiver {
       return;
     }
 
+    StoreToFile getStorePath = new StoreToFile(fs);
+    Collection<File> storeFiles =
+      compactedFiles.stream().map(getStorePath).collect(Collectors.toList());
+    archiveFiles(conf, fs, regionInfo, family, storeFiles, storeArchiveDir);
+  }
+
+  private static void archiveFiles(Configuration conf, FileSystem fs, RegionInfo regionInfo,
+    byte[] family, Collection<File> storeFiles, Path storeArchiveDir) throws IOException {
     // short circuit if we don't have any files to delete
-    if (compactedFiles.isEmpty()) {
+    if (storeFiles.isEmpty()) {
       LOG.debug("No files to dispose of, done!");
       return;
     }
 
     // build the archive path
-    if (regionInfo == null || family == null)
+    if (regionInfo == null || family == null) {
       throw new IOException("Need to have a region and a family to archive from.");
+    }
     // make sure we don't archive if we can't and that the archive dir exists
     if (!fs.mkdirs(storeArchiveDir)) {
       throw new IOException("Could not make archive directory (" + storeArchiveDir + ") for store:"
         + Bytes.toString(family) + ", deleting compacted files instead.");
     }
-
-    // otherwise we attempt to archive the store files
-    LOG.debug("Archiving compacted files.");
-
-    // Wrap the storefile into a File
-    StoreToFile getStorePath = new StoreToFile(fs);
-    Collection<File> storeFiles =
-      compactedFiles.stream().map(getStorePath).collect(Collectors.toList());
 
     // do the actual archive
     List<File> failedArchive = resolveAndArchive(conf, fs, storeArchiveDir, storeFiles,
@@ -393,6 +394,38 @@ public class HFileArchiver {
           + " into " + storeArchiveDir + ". Something is probably awry on the filesystem.",
         failedArchive.stream().map(FUNC_FILE_TO_PATH).collect(Collectors.toList()));
     }
+  }
+
+  /**
+   * Archive files using their existing statuses, without constructing or closing {@link HStoreFile}
+   * objects. This avoids fetching source file metadata again just to construct store files or
+   * determine their type. Archive conflict detection may still fetch metadata.
+   * @param conf         {@link Configuration} to examine to determine the archive directory
+   * @param fs           the filesystem where the store files live; must be non-null
+   * @param regionInfo   {@link RegionInfo} of the region hosting the store files
+   * @param family       the family hosting the store files
+   * @param fileStatuses the files to be archived; directories are not supported
+   * @throws IOException if an input is not a file or the files could not be archived
+   */
+  public static void archiveStoreFileStatuses(Configuration conf, FileSystem fs,
+    RegionInfo regionInfo, byte[] family, Collection<FileStatus> fileStatuses) throws IOException {
+    // short circuit if we don't have any files to delete
+    if (fileStatuses.isEmpty()) {
+      LOG.debug("No files to dispose of, done!");
+      return;
+    }
+    if (regionInfo == null || family == null) {
+      throw new IOException("Need to have a region and a family to archive from.");
+    }
+    Collection<File> filesToArchive = new ArrayList<>(fileStatuses.size());
+    for (FileStatus status : fileStatuses) {
+      if (!status.isFile()) {
+        throw new IOException("Not a file: " + status.getPath());
+      }
+      filesToArchive.add(new FileableRegularFile(fs, status.getPath()));
+    }
+    Path storeArchiveDir = HFileArchiveUtil.getStoreArchivePath(conf, regionInfo, family);
+    archiveFiles(conf, fs, regionInfo, family, filesToArchive, storeArchiveDir);
   }
 
   /**
@@ -810,12 +843,10 @@ public class HFileArchiver {
    */
   private static class FileablePath extends File {
     private final Path file;
-    private final FileStatusConverter getAsFile;
 
     public FileablePath(FileSystem fs, Path file) {
       super(fs);
       this.file = file;
-      this.getAsFile = new FileStatusConverter(fs);
     }
 
     @Override
@@ -833,7 +864,8 @@ public class HFileArchiver {
       if (fs.isFile(file)) {
         return Collections.emptyList();
       }
-      return Stream.of(fs.listStatus(file)).map(getAsFile).collect(Collectors.toList());
+      return Stream.of(fs.listStatus(file)).map(new FileStatusConverter(fs))
+        .collect(Collectors.toList());
     }
 
     @Override
@@ -892,6 +924,20 @@ public class HFileArchiver {
     @Override
     Path getPath() {
       return file.getPath();
+    }
+  }
+
+  /**
+   * A path already validated as a regular file by the caller.
+   */
+  private static class FileableRegularFile extends FileablePath {
+    public FileableRegularFile(FileSystem fs, Path path) {
+      super(fs, path);
+    }
+
+    @Override
+    public boolean isFile() {
+      return true;
     }
   }
 }
