@@ -18,51 +18,45 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.exceptions.DeserializationException;
+import org.apache.hadoop.hbase.master.BooleanStateStore;
+import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.hadoop.hbase.zookeeper.ZNodePaths;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.KeeperException;
 
 /**
- * ZK based rpc throttle storage.
+ * Store whether rpc throttle is enabled.
+ * <p>
+ * Notice that, this is stored in master local region so only master can read it. For region
+ * servers, we will publish the change through
+ * {@link org.apache.hadoop.hbase.master.procedure.SwitchRpcThrottleProcedure} and region servers
+ * can also query the flag through rpc request to master.
  */
 @InterfaceAudience.Private
-public class RpcThrottleStorage {
+public class RpcThrottleStateStore extends BooleanStateStore {
+
   public static final String RPC_THROTTLE_ZNODE = "zookeeper.znode.quota.rpc.throttle";
   public static final String RPC_THROTTLE_ZNODE_DEFAULT = "rpc-throttle";
 
-  private final ZKWatcher zookeeper;
-  private final String rpcThrottleZNode;
+  public static final String STATE_NAME = "rpc-throttle";
 
-  public RpcThrottleStorage(ZKWatcher zookeeper, Configuration conf) {
-    this.zookeeper = zookeeper;
-    this.rpcThrottleZNode = ZNodePaths.joinZNode(zookeeper.getZNodePaths().baseZNode,
-      conf.get(RPC_THROTTLE_ZNODE, RPC_THROTTLE_ZNODE_DEFAULT));
+  public RpcThrottleStateStore(MasterRegion masterRegion, ZKWatcher watcher, String zkPath)
+    throws IOException, KeeperException, DeserializationException {
+    super(masterRegion, STATE_NAME, watcher,
+      ZNodePaths.joinZNode(watcher.getZNodePaths().baseZNode, zkPath));
   }
 
-  public boolean isRpcThrottleEnabled() throws IOException {
-    try {
-      byte[] upData = ZKUtil.getData(zookeeper, rpcThrottleZNode);
-      return upData == null || Bytes.toBoolean(upData);
-    } catch (KeeperException | InterruptedException e) {
-      throw new IOException("Failed to get rpc throttle", e);
-    }
+  @Override
+  protected byte[] toByteArray(boolean on) {
+    return Bytes.toBytes(on);
   }
 
-  /**
-   * Store the rpc throttle value.
-   * @param enable Set to <code>true</code> to enable, <code>false</code> to disable.
-   * @throws IOException if an unexpected io exception occurs
-   */
-  public void switchRpcThrottle(boolean enable) throws IOException {
-    try {
-      byte[] upData = Bytes.toBytes(enable);
-      ZKUtil.createSetData(zookeeper, rpcThrottleZNode, upData);
-    } catch (KeeperException e) {
-      throw new IOException("Failed to store rpc throttle", e);
-    }
+  @Override
+  protected boolean parseFrom(byte[] bytes) throws DeserializationException {
+    return Bytes.toBoolean(bytes);
   }
+
 }

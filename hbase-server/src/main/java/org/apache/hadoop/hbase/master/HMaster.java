@@ -220,6 +220,7 @@ import org.apache.hadoop.hbase.quotas.MasterQuotasObserver;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
+import org.apache.hadoop.hbase.quotas.RpcThrottleStateStore;
 import org.apache.hadoop.hbase.quotas.SnapshotQuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
@@ -467,6 +468,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
+  private RpcThrottleStateStore rpcThrottleStateStore;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
@@ -889,6 +891,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
+
+    String rpcThrottleZNode = conf.get(RpcThrottleStateStore.RPC_THROTTLE_ZNODE,
+      RpcThrottleStateStore.RPC_THROTTLE_ZNODE_DEFAULT);
+    this.rpcThrottleStateStore =
+      new RpcThrottleStateStore(masterRegion, zooKeeper, rpcThrottleZNode);
   }
 
   // Will be overriden in test to inject customized AssignmentManager
@@ -4807,5 +4814,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           return "RefreshHfilesProcedure for all tables";
         }
       });
+  }
+
+  @Override
+  public RpcThrottleStateStore getRpcThrottleStateStore() {
+    return rpcThrottleStateStore;
   }
 }
