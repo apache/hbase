@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.cache.Cache;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
@@ -45,6 +47,8 @@ import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 @InterfaceAudience.Private
 public final class SyncFutureCache {
 
+  private static final Logger LOG = LoggerFactory.getLogger(SyncFutureCache.class);
+
   private static final long SYNC_FUTURE_INVALIDATION_TIMEOUT_MINS = 2;
 
   private final Cache<Thread, SyncFuture> syncFutureCache;
@@ -57,9 +61,15 @@ public final class SyncFutureCache {
   }
 
   public SyncFuture getIfPresentOrNew() {
-    // Invalidate the entry if a mapping exists. We do not want it to be reused at the same time.
-    SyncFuture future = syncFutureCache.asMap().remove(Thread.currentThread());
-    return (future == null) ? new SyncFuture() : future;
+    // The cache is only an allocation optimisation; never let it fail a write.
+    try {
+      // Invalidate the entry if a mapping exists. We do not want it to be reused at the same time.
+      SyncFuture future = syncFutureCache.asMap().remove(Thread.currentThread());
+      return (future == null) ? new SyncFuture() : future;
+    } catch (RuntimeException e) {
+      LOG.warn("SyncFutureCache lookup failed; falling back to a new SyncFuture", e);
+      return new SyncFuture();
+    }
   }
 
   /**
