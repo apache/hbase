@@ -53,6 +53,7 @@ import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.http.conf.ConfServlet;
 import org.apache.hadoop.hbase.http.log.LogLevel;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
 import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.AuthenticationFilterInitializer;
@@ -227,6 +228,7 @@ public class HttpServer implements FilterContainer {
     private String usernameConfKey;
     private String keytabConfKey;
     private boolean needsClientAuth;
+    private boolean wantsClientAuth;
     private String includeCiphers;
     private String excludeCiphers;
     private String includeProtocols;
@@ -311,10 +313,24 @@ public class HttpServer implements FilterContainer {
     }
 
     /**
-     * Specify whether the server should authorize the client in SSL connections.
+     * Specify whether the server should require a client certificate during the SSL handshake
+     * (mTLS). When true, clients that do not present a valid certificate are rejected.
+     * <p>
+     * Takes precedence over {@link #wantsClientAuth(boolean)} in Jetty when both are set.
      */
     public Builder needsClientAuth(boolean value) {
       this.needsClientAuth = value;
+      return this;
+    }
+
+    /**
+     * Specify whether the server should request a client certificate during the SSL handshake but
+     * still accept clients that do not present one. Weaker than {@link #needsClientAuth(boolean)}:
+     * use this to signal "opportunistic mTLS" where a client cert is validated when supplied but
+     * its absence is tolerated.
+     */
+    public Builder wantsClientAuth(boolean value) {
+      this.wantsClientAuth = value;
       return this;
     }
 
@@ -475,7 +491,18 @@ public class HttpServer implements FilterContainer {
           HttpConfiguration httpsConfig = new HttpConfiguration(httpConfig);
           httpsConfig.addCustomizer(new SecureRequestCustomizer());
           SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
+          // Requesting a client certificate without an explicit truststore would leave Jetty
+          // falling back to the keystore (or the JVM cacerts) as the client-cert trust anchor,
+          // silently trusting issuers the operator never configured. Fail fast instead.
+          X509Util.validateClientAuthTrustStore(
+            needsClientAuth
+              ? X509Util.ClientAuth.NEED
+              : (wantsClientAuth ? X509Util.ClientAuth.WANT : X509Util.ClientAuth.NONE),
+            trustStore, InfoServer.HBASE_UI_SSL_CLIENT_AUTH_MODE,
+            "hbase.ui.ssl.server.truststore.location", "hbase.ui.ssl.truststore.location",
+            "ssl.server.truststore.location");
           sslCtxFactory.setNeedClientAuth(needsClientAuth);
+          sslCtxFactory.setWantClientAuth(wantsClientAuth);
           sslCtxFactory.setKeyManagerPassword(keyPassword);
 
           if (keyStore != null) {

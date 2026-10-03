@@ -37,6 +37,8 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.http.HttpServerUtil;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.crypto.tls.TLSStore;
+import org.apache.hadoop.hbase.io.crypto.tls.X509Util;
 import org.apache.hadoop.hbase.log.HBaseMarkers;
 import org.apache.hadoop.hbase.rest.filter.AuthFilter;
 import org.apache.hadoop.hbase.rest.filter.GzipFilter;
@@ -305,11 +307,16 @@ public class RESTServer implements Constants {
       httpsConfig.addCustomizer(new SecureRequestCustomizer());
 
       SslContextFactory.Server sslCtxFactory = new SslContextFactory.Server();
-      String keystore = conf.get(REST_SSL_KEYSTORE_STORE);
-      String keystoreType = conf.get(REST_SSL_KEYSTORE_TYPE);
-      String password = HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_PASSWORD, null);
-      String keyPassword =
-        HBaseConfiguration.getPassword(conf, REST_SSL_KEYSTORE_KEYPASSWORD, password);
+      // Prefer the role-scoped hbase.rest.ssl.server.* keys, falling back to the historical
+      // unscoped hbase.rest.ssl.* keys for backward compatibility with existing deployments. A
+      // store resolves entirely from one prefix, so a role-scoped keystore is never paired with the
+      // legacy keystore's password or type.
+      TLSStore keyStore = TLSStore.resolve(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
+        TLSStore.Keys.SERVLET_KEYSTORE);
+      String keystore = keyStore.getLocation();
+      String keystoreType = keyStore.getType();
+      String password = keyStore.getPassword();
+      String keyPassword = keyStore.getKeyPassword();
       sslCtxFactory.setKeyStorePath(keystore);
       if (StringUtils.isNotBlank(keystoreType)) {
         sslCtxFactory.setKeyStoreType(keystoreType);
@@ -317,18 +324,42 @@ public class RESTServer implements Constants {
       sslCtxFactory.setKeyStorePassword(password);
       sslCtxFactory.setKeyManagerPassword(keyPassword);
 
-      String trustStore = conf.get(REST_SSL_TRUSTSTORE_STORE);
+      TLSStore trust = TLSStore.resolve(conf, "hbase.rest.ssl.server.", "hbase.rest.ssl.",
+        TLSStore.Keys.SERVLET_TRUSTSTORE);
+      String trustStore = trust.getLocation();
       if (StringUtils.isNotBlank(trustStore)) {
         sslCtxFactory.setTrustStorePath(trustStore);
       }
-      String trustStorePassword =
-        HBaseConfiguration.getPassword(conf, REST_SSL_TRUSTSTORE_PASSWORD, null);
+      String trustStorePassword = trust.getPassword();
       if (StringUtils.isNotBlank(trustStorePassword)) {
         sslCtxFactory.setTrustStorePassword(trustStorePassword);
       }
-      String trustStoreType = conf.get(REST_SSL_TRUSTSTORE_TYPE);
+      String trustStoreType = trust.getType();
       if (StringUtils.isNotBlank(trustStoreType)) {
         sslCtxFactory.setTrustStoreType(trustStoreType);
+      }
+
+      // Activate mTLS if configured. Default is NONE, which preserves today's behavior of never
+      // requesting a client certificate — even when a truststore is configured. Set
+      // hbase.rest.ssl.server.client.auth.mode to WANT or NEED to opt in.
+      // getTrimmed + defaultIfBlank so that an empty or whitespace-only <value></value> in
+      // hbase-site.xml behaves like an absent key. A bare fromPropertyValue("") would return NEED.
+      X509Util.ClientAuth clientAuth =
+        X509Util.ClientAuth.fromPropertyValue(StringUtils.defaultIfBlank(
+          conf.getTrimmed(REST_SSL_CLIENT_AUTH_MODE), X509Util.ClientAuth.NONE.name()));
+      X509Util.validateClientAuthTrustStore(clientAuth, trustStore, REST_SSL_CLIENT_AUTH_MODE,
+        REST_SSL_SERVER_TRUSTSTORE_STORE, REST_SSL_TRUSTSTORE_STORE);
+      switch (clientAuth) {
+        case NEED:
+          sslCtxFactory.setNeedClientAuth(true);
+          break;
+        case WANT:
+          sslCtxFactory.setWantClientAuth(true);
+          break;
+        case NONE:
+        default:
+          // no-op; both flags default to false on SslContextFactory.Server
+          break;
       }
 
       String[] excludeCiphers = servlet.getConfiguration()
