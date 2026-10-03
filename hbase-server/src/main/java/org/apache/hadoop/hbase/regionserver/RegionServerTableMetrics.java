@@ -105,4 +105,15 @@ public class RegionServerTableMetrics {
       queryMeter.updateTableWriteQueryMeter(table);
     }
   }
+
+  /**
+   * Clean up all per-table metrics of the given table. Should be called when the table leaves the
+   * RegionServer (dropped, moved, or all its regions closed) so that the underlying
+   * {@link MetricsTableLatencies} / {@link MetricsTableQueryMeter} do not keep growing forever
+   * (see HBASE-27486 / HBASE-27681).
+   */
+  public void deleteTable(TableName table) {
+    latencies.deleteTable(table.getNameAsString());
+    queryMeter.deleteTable(table);
+  }
 }
