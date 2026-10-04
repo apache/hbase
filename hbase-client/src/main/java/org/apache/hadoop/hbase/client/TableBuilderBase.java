@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.client;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -39,7 +36,9 @@ abstract class TableBuilderBase implements TableBuilder {
 
   protected int writeRpcTimeout;
 
-  protected Map<String, byte[]> requestAttributes = Collections.emptyMap();
+  protected FixedRequestAttributesFactory.Builder fixedRequestAttributesFactoryBuilder = null;
+
+  protected RequestAttributesFactory requestAttributesFactory = null;
 
   TableBuilderBase(TableName tableName, ConnectionConfiguration connConf) {
     if (tableName == null) {
@@ -81,10 +80,27 @@ abstract class TableBuilderBase implements TableBuilder {
 
   @Override
   public TableBuilderBase setRequestAttribute(String key, byte[] value) {
-    if (this.requestAttributes.isEmpty()) {
-      this.requestAttributes = new HashMap<>();
+    if (fixedRequestAttributesFactoryBuilder == null) {
+      fixedRequestAttributesFactoryBuilder = FixedRequestAttributesFactory.newBuilder();
     }
-    this.requestAttributes.put(key, value);
+    fixedRequestAttributesFactoryBuilder.setAttribute(key, value);
     return this;
+  }
+
+  @Override
+  public TableBuilderBase
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    this.requestAttributesFactory = requestAttributesFactory;
+    return this;
+  }
+
+  RequestAttributesFactory getRequestAttributesFactory() {
+    if (requestAttributesFactory != null) {
+      return requestAttributesFactory;
+    } else if (fixedRequestAttributesFactoryBuilder != null) {
+      return fixedRequestAttributesFactoryBuilder.build();
+    } else {
+      return FixedRequestAttributesFactory.EMPTY;
+    }
   }
 }
