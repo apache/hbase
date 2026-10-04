@@ -433,7 +433,7 @@ public class ReplicationSourceShipper extends Thread {
         }
       } catch (InterruptedException e) {
         LOG.warn("{} Interrupted while waiting {} to stop on clearWALEntryBatch. "
-          + "Not cleaning buffer usage: {}", this.source.getPeerId(), this.getName(), e);
+          + "Not cleaning buffer usage:", this.source.getPeerId(), this.getName(), e);
         return;
       }
     }
