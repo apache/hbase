@@ -65,6 +65,9 @@ public class CompactionConfiguration {
     ConfigKey.LONG("hbase.hstore.compaction.max.size");
   public static final String HBASE_HSTORE_COMPACTION_MAX_SIZE_OFFPEAK_KEY =
     ConfigKey.LONG("hbase.hstore.compaction.max.size.offpeak");
+  public static final String HBASE_HSTORE_OFFPEAK_COMPACTION_CONCURRENCY_KEY =
+    ConfigKey.INT("hbase.hstore.offpeak.compaction.concurrency");
+  public static final int DEFAULT_OFFPEAK_COMPACTION_CONCURRENCY = 1;
   public static final String HBASE_HSTORE_OFFPEAK_END_HOUR =
     ConfigKey.INT("hbase.offpeak.end.hour");
   public static final String HBASE_HSTORE_OFFPEAK_START_HOUR =
