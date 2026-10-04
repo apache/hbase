@@ -97,6 +97,42 @@ public class MetricsHBaseServer {
     source.queuedAndProcessedCall(totalTime);
   }
 
+  void dequeuedReadCall(int qTime) {
+    source.dequeuedReadCall(qTime);
+  }
+
+  void processReadCall(int processingTime) {
+    source.processReadCall(processingTime);
+  }
+
+  void totalReadCall(int totalTime) {
+    source.queuedAndProcessedReadCall(totalTime);
+  }
+
+  void dequeuedWriteCall(int qTime) {
+    source.dequeuedWriteCall(qTime);
+  }
+
+  void processWriteCall(int processingTime) {
+    source.processWriteCall(processingTime);
+  }
+
+  void totalWriteCall(int totalTime) {
+    source.queuedAndProcessedWriteCall(totalTime);
+  }
+
+  void dequeuedScanCall(int qTime) {
+    source.dequeuedScanCall(qTime);
+  }
+
+  void processScanCall(int processingTime) {
+    source.processScanCall(processingTime);
+  }
+
+  void totalScanCall(int totalTime) {
+    source.queuedAndProcessedScanCall(totalTime);
+  }
+
   void unwritableTime(long unwritableTime) {
     source.unwritableTime(unwritableTime);
   }
