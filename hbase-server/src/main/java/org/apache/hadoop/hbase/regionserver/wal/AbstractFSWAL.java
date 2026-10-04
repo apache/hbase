@@ -963,6 +963,11 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
         i.preLogArchive(p, newPath);
       }
     }
+    if (!fs.exists(this.walArchiveDir)) {
+      if (!fs.mkdirs(this.walArchiveDir)) {
+        throw new IOException("Unable to mkdir " + this.walArchiveDir);
+      }
+    }
     LOG.info("Archiving " + p + " to " + newPath);
     if (!CommonFSUtils.renameAndSetModifyTime(this.fs, p, newPath)) {
       throw new IOException("Unable to rename " + p + " to " + newPath);
