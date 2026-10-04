@@ -37,7 +37,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ClusterStatusProtos.Opt
 import org.apache.hadoop.hbase.shaded.protobuf.generated.FSProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 
-@InterfaceAudience.Private
+@InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.COPROC)
 public final class ClusterMetricsBuilder {
 
   public static ClusterStatusProtos.ClusterStatus toClusterStatus(ClusterMetrics metrics) {
@@ -105,7 +105,7 @@ public final class ClusterMetricsBuilder {
         .collect(Collectors.toList()))
       .setUnknownServerNames(proto.getUnknownServersList().stream().map(ProtobufUtil::toServerName)
         .collect(Collectors.toList()))
-      .setBackerMasterNames(proto.getBackupMastersList().stream().map(ProtobufUtil::toServerName)
+      .setBackupMasterNames(proto.getBackupMastersList().stream().map(ProtobufUtil::toServerName)
         .collect(Collectors.toList()))
       .setRegionsInTransition(proto.getRegionsInTransitionList().stream()
         .map(ClusterStatusProtos.RegionInTransition::getRegionState).map(RegionState::convert)
@@ -256,7 +256,7 @@ public final class ClusterMetricsBuilder {
   private String hbaseVersion;
   private List<ServerName> deadServerNames = Collections.emptyList();
   private List<ServerName> unknownServerNames = Collections.emptyList();
-  private Map<ServerName, ServerMetrics> liveServerMetrics = new TreeMap<>();
+  private Map<ServerName, ServerMetrics> liveServerMetrics = Collections.emptyMap();
   @Nullable
   private ServerName masterName;
   private List<ServerName> backupMasterNames = Collections.emptyList();
@@ -292,7 +292,7 @@ public final class ClusterMetricsBuilder {
   }
 
   public ClusterMetricsBuilder setLiveServerMetrics(Map<ServerName, ServerMetrics> value) {
-    liveServerMetrics.putAll(value);
+    this.liveServerMetrics = new TreeMap<>(value);
     return this;
   }
 
@@ -301,7 +301,7 @@ public final class ClusterMetricsBuilder {
     return this;
   }
 
-  public ClusterMetricsBuilder setBackerMasterNames(List<ServerName> value) {
+  public ClusterMetricsBuilder setBackupMasterNames(List<ServerName> value) {
     this.backupMasterNames = value;
     return this;
   }
