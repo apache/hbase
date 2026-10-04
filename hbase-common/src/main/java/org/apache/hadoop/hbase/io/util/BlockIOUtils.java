@@ -19,7 +19,6 @@ package org.apache.hadoop.hbase.io.util;
 
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.DIRECT_BYTES_READ_KEY;
 import static org.apache.hadoop.hbase.trace.HBaseSemanticAttributes.HEAP_BYTES_READ_KEY;
-
 import io.opentelemetry.api.common.Attributes;
 import io.opentelemetry.api.common.AttributesBuilder;
 import io.opentelemetry.api.trace.Span;
@@ -125,6 +124,28 @@ public final class BlockIOUtils {
     } finally {
       span.addEvent("BlockIOUtils.readFully",
         getDirectAndHeapBytesReadAttributes(span, directBytesRead, heapBytesRead));
+    }
+  }
+
+  /**
+   * Reads fully into the destination and advances the destination position by length.
+   * @param in the input stream to read from
+   * @param out the destination {@link ByteBuff}
+   * @param length bytes to read
+   * @throws IOException if any IO error is encountered
+   */
+  public static void readFully(InputStream in, ByteBuff out, int length) throws IOException {
+    if (length < 0) {
+      throw new IllegalArgumentException("Length must not be negative: " + length);
+    }
+    if (out.hasArray()) {
+      int position = out.position();
+      Span span = Span.current();
+      IOUtils.readFully(in, out.array(), out.arrayOffset() + position, length);
+      span.addEvent("BlockIOUtils.readFully", getHeapBytesReadAttributes(span, length));
+      out.position(position + length);
+    } else {
+      readFullyWithHeapBuffer(in, out, length);
     }
   }
 
