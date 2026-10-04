@@ -176,4 +176,13 @@ public class SplitWALManager {
   public void addUsedSplitWALWorker(ServerName worker) {
     splitWorkerAssigner.addUsedWorker(worker);
   }
+
+  /**
+   * Stop the SplitWALManager and unregister the WorkerAssigner from ServerManager. This should be
+   * called during shutdown to prevent NPE when serverAdded() is triggered after procedureExecutor
+   * is set to null.
+   */
+  public void stop() {
+    splitWorkerAssigner.stop();
+  }
 }
