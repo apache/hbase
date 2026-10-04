@@ -457,11 +457,11 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
     String familyName = ctx.getFamily().getNameAsString();
     Path storeDir = hfs.getStoreDir(familyName);
     for (Path file : files) {
+      Path committedPath = null;
       try {
         if (validate) {
           validateStoreFile(file, isCompaction);
         }
-        Path committedPath;
         // As we want to support writing to data directory directly, here we need to check whether
         // the store file is already in the right place
         if (file.getParent() != null && file.getParent().equals(storeDir)) {
@@ -486,6 +486,14 @@ public abstract class StoreEngine<SF extends StoreFlusher, CP extends Compaction
           } catch (IOException deleteEx) {
             LOG.warn(HBaseMarkers.FATAL, "Failed to delete committed store file {}", pathToDelete,
               deleteEx);
+          }
+        }
+        if (committedPath != null) {
+          try {
+            hfs.deleteDir(committedPath);
+          } catch (IOException deleteEx) {
+            LOG.warn(HBaseMarkers.FATAL, "Failed to delete committedPath {}", committedPath,
+                deleteEx);
           }
         }
         throw new IOException("Failed to commit the flush", e);
