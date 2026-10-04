@@ -78,18 +78,21 @@ public class TestRegionNormalizerManagerConfigurationObserver {
   public void test() {
     assertTrue(normalizer.isMergeEnabled());
     assertEquals(3, normalizer.getMergeMinRegionCount());
+    assertTrue(normalizer.isSkipBrokenChain());
     assertEquals(1_000_000L, parseConfiguredRateLimit(worker.getRateLimiter()));
 
     final Configuration newConf = new Configuration(conf);
     // configs on SimpleRegionNormalizer
     newConf.setBoolean("hbase.normalizer.merge.enabled", false);
     newConf.setInt("hbase.normalizer.merge.min.region.count", 100);
+    newConf.setBoolean("hbase.normalizer.skip.broken.chain", false);
     // config on RegionNormalizerWorker
     newConf.set("hbase.normalizer.throughput.max_bytes_per_sec", "12g");
 
     configurationManager.notifyAllObservers(newConf);
     assertFalse(normalizer.isMergeEnabled());
     assertEquals(100, normalizer.getMergeMinRegionCount());
+    assertFalse(normalizer.isSkipBrokenChain());
     assertEquals(12_884L, parseConfiguredRateLimit(worker.getRateLimiter()));
   }
 
