@@ -119,6 +119,25 @@ public class RSGroupAdminClient {
   }
 
   /**
+   * Move all servers from source to target RegionServer group.
+   */
+  public void moveAllServers(String sourceGroup, String targetGroup) throws IOException {
+    Set<HBaseProtos.ServerName> hostPorts = Sets.newHashSet();
+    Set<Address> servers = getRSGroupInfo(sourceGroup).getServers();
+    for (Address el : servers) {
+      hostPorts.add(HBaseProtos.ServerName.newBuilder().setHostName(el.getHostname())
+        .setPort(el.getPort()).build());
+    }
+    MoveServersRequest request =
+      MoveServersRequest.newBuilder().setTargetGroup(targetGroup).addAllServers(hostPorts).build();
+    try {
+      stub.moveServers(null, request);
+    } catch (ServiceException e) {
+      throw ProtobufUtil.handleRemoteException(e);
+    }
+  }
+
+  /**
    * Move given set of tables to the specified target RegionServer group. This will unassign all of
    * a table's region so it can be reassigned to the correct group.
    */

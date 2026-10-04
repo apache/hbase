@@ -76,7 +76,11 @@ module Hbase
       end
       @admin.moveServersToRSGroup(servers, dest)
     end
-
+    #--------------------------------------------------------------------------
+    # move all servers from source to target group
+    def move_all_servers(dest, src)
+      @admin.moveAllServersFromOneRSGroupToOther(src, dest)
+    end
     #--------------------------------------------------------------------------
     # move tables to a group
     def move_tables(dest, *args)
