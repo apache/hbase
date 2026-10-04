@@ -1241,7 +1241,11 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       }
     }
     StreamUtils.writeInt(out, 0); // DUMMY length. This will be updated in endBlockEncoding()
-    blkEncodingCtx.setEncodingState(new EncodingState());
+    blkEncodingCtx.setEncodingState(createEncodingState());
+  }
+
+  protected EncodingState createEncodingState() {
+    return new EncodingState();
   }
 
   @Override
