@@ -179,10 +179,8 @@ class SimpleRpcServerResponder extends Thread {
         if (connection == null) {
           throw new IllegalStateException("Coding error: SelectionKey key without attachment.");
         }
-        if (
-          connection.lastSentTime > 0
-            && now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout
-        ) {
+        if (!connection.responseQueue.isEmpty() && connection.lastSentTime > 0 &&
+            now > connection.lastSentTime + this.simpleRpcServer.purgeTimeout) {
           conWithOldCalls.add(connection);
         }
       }
@@ -254,9 +252,10 @@ class SimpleRpcServerResponder extends Thread {
     if (conn.useWrap) {
       buf = wrapWithSasl(conn.saslServer, buf);
     }
+    long numBytes;
     try {
       // Send as much data as we can in the non-blocking fashion
-      long numBytes = this.simpleRpcServer.channelWrite(conn.channel, buf);
+      numBytes = this.simpleRpcServer.channelWrite(conn.channel, buf);
       if (numBytes < 0) {
         throw new HBaseIOException("Error writing on the socket " + conn);
       }
@@ -272,13 +271,13 @@ class SimpleRpcServerResponder extends Thread {
     }
 
     if (!buf.hasRemaining()) {
+      conn.lastSentTime = -1L;
       resp.done();
       return true;
-    } else {
-      // set the serve time when the response has to be sent later
+    } else if (conn.lastSentTime <= 0 || numBytes > 0) {
       conn.lastSentTime = EnvironmentEdgeManager.currentTime();
-      return false; // Socket can't take more, we will have to come back.
     }
+    return false; // Socket can't take more, we will have to come back.
   }
 
   /**
