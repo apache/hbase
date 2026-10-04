@@ -22,6 +22,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import org.apache.hadoop.hbase.testclassification.ReplicationTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.ManualEnvironmentEdge;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
@@ -111,6 +113,35 @@ public class TestReplicationThrottler {
     }
     if (ticks2 != 500 && ticks2 != 499) {
       assertTrue(ticks1 >= 375 && ticks1 <= 500);
+    }
+  }
+
+  /**
+   * HBASE-30234: a batch whose size exceeds Integer.MAX_VALUE (~2GB) must be treated as a large
+   * positive size instead of being silently truncated to a negative int. With truncation, the
+   * "delay to next cycle" branch would compare a negative sum against the bandwidth and wrongly
+   * return 0 (no throttling); with the fix it correctly delays the push to the next cycle.
+   */
+  @Test
+  public void testLargeSizeDoesNotOverflow() {
+    LOG.info("testLargeSizeDoesNotOverflow");
+    // Freeze the clock so the assertion is deterministic (no cycle boundary is crossed).
+    ManualEnvironmentEdge edge = new ManualEnvironmentEdge();
+    edge.setValue(1000);
+    EnvironmentEdgeManager.injectEdge(edge);
+    try {
+      // bandwidth of 1 byte/cycle so any positive push exceeds it
+      ReplicationThrottler throttler = new ReplicationThrottler(1);
+      // prime the current cycle so cyclePushSize > 0 (enables the "delay to next cycle" branch)
+      throttler.addPushSize(1);
+      // a size larger than Integer.MAX_VALUE; as an int this would wrap to a negative value
+      long hugeSize = (long) Integer.MAX_VALUE + 1L;
+      long ticks = throttler.getNextSleepInterval(hugeSize);
+      // delayed to next cycle: cycleStartTick(1000) + one cycle(100) - now(1000) == 100ms.
+      // A truncated (negative) size would fail the bandwidth check and wrongly return 0.
+      assertEquals(100, ticks);
+    } finally {
+      EnvironmentEdgeManager.reset();
     }
   }
 }

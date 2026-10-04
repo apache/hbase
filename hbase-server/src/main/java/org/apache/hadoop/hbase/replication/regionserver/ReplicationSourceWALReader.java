@@ -362,14 +362,17 @@ class ReplicationSourceWALReader extends Thread {
     return result;
   }
 
+  // Package-private static (a pure function of the edit) so it can be unit tested directly; see
+  // TestReplicationSizeOverflow. Uses long throughout to avoid overflow when the bulk load store
+  // files sum exceeds Integer.MAX_VALUE (~2GB).
   /**
    * Calculate the total size of all the store files
    * @param edit edit to count row keys from
    * @return the total size of the store files
    */
-  private int sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
+  static long sizeOfStoreFilesIncludeBulkLoad(WALEdit edit) {
     List<Cell> cells = edit.getCells();
-    int totalStoreFilesSize = 0;
+    long totalStoreFilesSize = 0;
 
     int totalCells = edit.size();
     for (int i = 0; i < totalCells; i++) {
@@ -379,8 +382,7 @@ class ReplicationSourceWALReader extends Thread {
           List<StoreDescriptor> stores = bld.getStoresList();
           int totalStores = stores.size();
           for (int j = 0; j < totalStores; j++) {
-            totalStoreFilesSize =
-              (int) (totalStoreFilesSize + stores.get(j).getStoreFileSizeBytes());
+            totalStoreFilesSize += stores.get(j).getStoreFileSizeBytes();
           }
         } catch (IOException e) {
           LOG.error("Failed to deserialize bulk load entry from wal edit. "
