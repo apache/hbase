@@ -79,7 +79,21 @@ public class HFileLinkCleaner extends BaseHFileCleanerDelegate {
           }
           hfilePath =
             HFileLink.getHFileFromBackReference(CommonFSUtils.getRootDir(getConf()), filePath);
-          return !fs.exists(hfilePath);
+          if (fs.exists(hfilePath)) {
+            return false;
+          }
+          // Also protect HFileLink Reference files created by
+          // RestoreSnapshotHelper.restoreReferenceFile(). When this method clones a snapshot 
+          // that contains a merged region, it creates a special file named 
+          // <hfileLinkName>.<encodedRegion> — a Reference file that points through an 
+          // HFileLink. This is a two-level indirection: Reference → HFileLink → actual HFile.
+          // These references live in the same directory as the zero-byte HFileLink.
+          // In this case, since the zero-byte HFileLink is never created (only the Reference
+          // file of the form <hfileLinkName>.<encodedRegion> exists), so the fs.exists() 
+          // check above is insufficient.
+          FileStatus[] refFiles =
+            fs.globStatus(new Path(hfilePath.getParent(), hfilePath.getName() + ".*"));
+          return refFiles == null || refFiles.length == 0;
         } catch (IOException e) {
           if (LOG.isDebugEnabled()) {
             LOG.debug("Couldn't verify if the referenced file still exists, keep it just in case: "
