@@ -439,6 +439,10 @@ goto :eof
   set CLASS=org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileListFilePrettyPrinter
   goto :eof
 
+:sftrecover
+  set CLASS=org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileListRecoverTool
+  goto :eof
+
 :zkcli
   set CLASS=org.apache.hadoop.hbase.zookeeper.ZKMainServer
   set CLASSPATH=!CLASSPATH!;%HBASE_HOME%\lib\zkcli\*
@@ -473,6 +477,7 @@ goto :eof
   echo   wal             Write-ahead-log analyzer
   echo   hfile           Store file analyzer
   echo   sft             Store file tracker viewer
+  echo   sftrecover      Offline store file tracker (FILE) manifest recover tool
   echo   zkcli           Run the ZooKeeper shell
   echo   master          Run an HBase HMaster node
   echo   regionserver    Run an HBase HRegionServer node
