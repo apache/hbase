@@ -252,7 +252,12 @@ public class SequenceIdAccounting {
   private static long getLowestSequenceId(Map<?, Long> sequenceids) {
     long lowest = HConstants.NO_SEQNUM;
     for (Map.Entry<?, Long> entry : sequenceids.entrySet()) {
-      if (entry.getKey().toString().equals("METAFAMILY")) {
+      Object key = entry.getKey();
+      String keyVal = key.toString();
+      if(key instanceof ImmutableByteArray){
+        keyVal = ((ImmutableByteArray)key).toStringUtf8();
+      }
+      if ("METAFAMILY".equals(keyVal)){
         continue;
       }
       Long sid = entry.getValue();
