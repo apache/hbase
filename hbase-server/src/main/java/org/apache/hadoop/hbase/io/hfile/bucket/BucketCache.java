@@ -779,10 +779,13 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean evictedByEvictionProcess) {
     bucketEntry.markAsEvicted();
     blocksByHFile.remove(cacheKey);
+    // putIntoBackingMap accounts every entry added to the backingMap, regardless of the IOEngine,
+    // so every entry removed from it must be decremented as well.
+    updateRegionCachedSize(cacheKey, (bucketEntry.getLength() * -1));
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fileNotFullyCached(cacheKey, bucketEntry);
+        fileNotFullyCached(cacheKey.getHfileName());
       }
     }
     if (evictedByEvictionProcess) {
@@ -793,11 +796,8 @@ public class BucketCache implements BlockCache, HeapSize {
     }
   }
 
-  private void fileNotFullyCached(BlockCacheKey key, BucketEntry entry) {
-    // Update the updateRegionCachedSize before removing the file from fullyCachedFiles.
-    // This computation should happen even if the file is not in fullyCachedFiles map.
-    updateRegionCachedSize(key, (entry.getLength() * -1));
-    fullyCachedFiles.remove(key.getHfileName());
+  private void fileNotFullyCached(String hfileName) {
+    fullyCachedFiles.remove(hfileName);
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
@@ -1743,7 +1743,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
             evictBlock(keyEntry.getKey());
-            fileNotFullyCached(keyEntry.getKey(), keyEntry.getValue());
+            fileNotFullyCached(keyEntry.getKey().getHfileName());
           }
         }
         backingMapValidated.set(true);
