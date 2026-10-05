@@ -17,12 +17,6 @@
  */
 package org.apache.hadoop.hbase.master;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.allOf;
-import static org.hamcrest.Matchers.emptyIterable;
-import static org.hamcrest.Matchers.equalTo;
-import static org.hamcrest.Matchers.hasEntry;
-import static org.hamcrest.Matchers.notNullValue;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -94,7 +88,6 @@ public class TestBalancer {
     assignments.forEach((k, v) -> LOG.debug("{}: {}", k, v));
     assertFalse(assignments.containsKey(disableTableName));
     assertTrue(assignments.containsKey(tableName));
-    assertThat(assignments.get(tableName),
-      allOf(notNullValue(), hasEntry(equalTo(sn1), emptyIterable())));
+    assertFalse(assignments.get(tableName).containsKey(sn1));
   }
 }
