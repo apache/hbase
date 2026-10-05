@@ -38,8 +38,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
 public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggregate, Closeable {
-  private static final Logger LOG =
-    LoggerFactory.getLogger(MetricsTableWrapperAggregateImpl.class);
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsTableWrapperAggregateImpl.class);
   private final HRegionServer regionServer;
   private ScheduledExecutorService executor;
   private Runnable runnable;
