@@ -270,117 +270,127 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
 
     @Override
     public void run() {
-      long tempNumStoreFiles = 0;
-      int tempStoreRefCount = 0;
-      int tempMaxCompactedStoreFileRefCount = 0;
-      long tempMemstoreSize = 0;
-      long tempMemstoreHeapSize = 0;
-      long tempMemstoreOffHeapSize = 0;
-      long tempStoreFileSize = 0;
-      long tempMaxStoreFileAge = 0;
-      long tempMinStoreFileAge = Long.MAX_VALUE;
-      long tempNumReferenceFiles = 0;
-      long tempMaxCompactionQueueSize = 0;
-      long tempMaxFlushQueueSize = 0;
-      long avgAgeNumerator = 0;
-      long numHFiles = 0;
-      if (region.stores != null) {
-        for (HStore store : region.stores.values()) {
-          tempNumStoreFiles += store.getStorefilesCount();
-          int currentStoreRefCount = store.getStoreRefCount();
-          tempStoreRefCount += currentStoreRefCount;
-          int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
-          tempMaxCompactedStoreFileRefCount =
-            Math.max(tempMaxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
-          final MemStoreSize memStore = store.getMemStoreSize();
-          tempMemstoreSize += memStore.getDataSize();
-          tempMemstoreHeapSize += memStore.getHeapSize();
-          tempMemstoreOffHeapSize += memStore.getOffHeapSize();
-          tempStoreFileSize += store.getStorefilesSize();
-          OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
-          if (
-            storeMaxStoreFileAge.isPresent()
-              && storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge
-          ) {
-            tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
-          }
+      // The executor only reschedules this task (scheduleWithFixedDelay) if run() returns
+      // normally. Any Throwable that escapes here (e.g. an NPE from a region closing mid-scan)
+      // is swallowed by the underlying ScheduledFutureTask with no log output anywhere, and this
+      // task permanently stops running. Catch everything so a failure is visible AND the next
+      // scheduled run still happens.
+      try {
+        long tempNumStoreFiles = 0;
+        int tempStoreRefCount = 0;
+        int tempMaxCompactedStoreFileRefCount = 0;
+        long tempMemstoreSize = 0;
+        long tempMemstoreHeapSize = 0;
+        long tempMemstoreOffHeapSize = 0;
+        long tempStoreFileSize = 0;
+        long tempMaxStoreFileAge = 0;
+        long tempMinStoreFileAge = Long.MAX_VALUE;
+        long tempNumReferenceFiles = 0;
+        long tempMaxCompactionQueueSize = 0;
+        long tempMaxFlushQueueSize = 0;
+        long avgAgeNumerator = 0;
+        long numHFiles = 0;
+        if (region.stores != null) {
+          for (HStore store : region.stores.values()) {
+            tempNumStoreFiles += store.getStorefilesCount();
+            int currentStoreRefCount = store.getStoreRefCount();
+            tempStoreRefCount += currentStoreRefCount;
+            int currentMaxCompactedStoreFileRefCount = store.getMaxCompactedStoreFileRefCount();
+            tempMaxCompactedStoreFileRefCount =
+              Math.max(tempMaxCompactedStoreFileRefCount, currentMaxCompactedStoreFileRefCount);
+            final MemStoreSize memStore = store.getMemStoreSize();
+            tempMemstoreSize += memStore.getDataSize();
+            tempMemstoreHeapSize += memStore.getHeapSize();
+            tempMemstoreOffHeapSize += memStore.getOffHeapSize();
+            tempStoreFileSize += store.getStorefilesSize();
+            OptionalLong storeMaxStoreFileAge = store.getMaxStoreFileAge();
+            if (
+              storeMaxStoreFileAge.isPresent()
+                && storeMaxStoreFileAge.getAsLong() > tempMaxStoreFileAge
+            ) {
+              tempMaxStoreFileAge = storeMaxStoreFileAge.getAsLong();
+            }
 
-          OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
-          if (
-            storeMinStoreFileAge.isPresent()
-              && storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge
-          ) {
-            tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
-          }
+            OptionalLong storeMinStoreFileAge = store.getMinStoreFileAge();
+            if (
+              storeMinStoreFileAge.isPresent()
+                && storeMinStoreFileAge.getAsLong() < tempMinStoreFileAge
+            ) {
+              tempMinStoreFileAge = storeMinStoreFileAge.getAsLong();
+            }
 
-          long storeHFiles = store.getNumHFiles();
-          numHFiles += storeHFiles;
-          tempNumReferenceFiles += store.getNumReferenceFiles();
+            long storeHFiles = store.getNumHFiles();
+            numHFiles += storeHFiles;
+            tempNumReferenceFiles += store.getNumReferenceFiles();
 
-          OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
-          if (storeAvgStoreFileAge.isPresent()) {
-            avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
+            OptionalDouble storeAvgStoreFileAge = store.getAvgStoreFileAge();
+            if (storeAvgStoreFileAge.isPresent()) {
+              avgAgeNumerator += (long) storeAvgStoreFileAge.getAsDouble() * storeHFiles;
+            }
+            if (mixedReadsOnStore == null) {
+              mixedReadsOnStore = new HashMap<String, Long>();
+            }
+            Long tempVal = mixedReadsOnStore.get(store.getColumnFamilyName());
+            if (tempVal == null) {
+              tempVal = 0L;
+            } else {
+              tempVal += store.getMixedRowReadsCount();
+            }
+            mixedReadsOnStore.put(store.getColumnFamilyName(), tempVal);
+            if (readsOnlyFromMemstore == null) {
+              readsOnlyFromMemstore = new HashMap<String, Long>();
+            }
+            tempVal = readsOnlyFromMemstore.get(store.getColumnFamilyName());
+            if (tempVal == null) {
+              tempVal = 0L;
+            } else {
+              tempVal += store.getMemstoreOnlyRowReadsCount();
+            }
+            readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
           }
-          if (mixedReadsOnStore == null) {
-            mixedReadsOnStore = new HashMap<String, Long>();
-          }
-          Long tempVal = mixedReadsOnStore.get(store.getColumnFamilyName());
-          if (tempVal == null) {
-            tempVal = 0L;
-          } else {
-            tempVal += store.getMixedRowReadsCount();
-          }
-          mixedReadsOnStore.put(store.getColumnFamilyName(), tempVal);
-          if (readsOnlyFromMemstore == null) {
-            readsOnlyFromMemstore = new HashMap<String, Long>();
-          }
-          tempVal = readsOnlyFromMemstore.get(store.getColumnFamilyName());
-          if (tempVal == null) {
-            tempVal = 0L;
-          } else {
-            tempVal += store.getMemstoreOnlyRowReadsCount();
-          }
-          readsOnlyFromMemstore.put(store.getColumnFamilyName(), tempVal);
         }
-      }
-      MutableLong regionCachedAmount = new MutableLong(0);
-      region.getBlockCache().getRegionCachedInfo().ifPresent(regionCacheRatio -> regionCachedAmount
-        .addAndGet(regionCacheRatio.getOrDefault(region.getRegionInfo().getEncodedName(), 0L)));
-      if (tempStoreFileSize > 0) {
-        LOG.debug("Region {}, had cached {} bytes from a total of {}",
-          region.getRegionInfo().getEncodedName(), regionCachedAmount.getValue(),
-          tempStoreFileSize);
-        currentRegionCacheRatio = regionCachedAmount.floatValue() / tempStoreFileSize;
-        if (DataTieringManager.getInstance() != null) {
-          currentRegionColdDataRatio = DataTieringManager.getInstance().getRegionColdDataSize()
-            .getOrDefault(region.getRegionInfo().getEncodedName(), new Pair<>(null, 0L)).getSecond()
-            / (float) tempStoreFileSize;
+        MutableLong regionCachedAmount = new MutableLong(0);
+        region.getBlockCache().getRegionCachedInfo()
+          .ifPresent(regionCacheRatio -> regionCachedAmount
+            .addAndGet(regionCacheRatio.getOrDefault(region.getRegionInfo().getEncodedName(), 0L)));
+        if (tempStoreFileSize > 0) {
+          LOG.debug("Region {}, had cached {} bytes from a total of {}",
+            region.getRegionInfo().getEncodedName(), regionCachedAmount.getValue(),
+            tempStoreFileSize);
+          currentRegionCacheRatio = regionCachedAmount.floatValue() / tempStoreFileSize;
+          if (DataTieringManager.getInstance() != null) {
+            currentRegionColdDataRatio = DataTieringManager.getInstance().getRegionColdDataSize()
+              .getOrDefault(region.getRegionInfo().getEncodedName(), new Pair<>(null, 0L))
+              .getSecond() / (float) tempStoreFileSize;
+          }
         }
-      }
-      numStoreFiles = tempNumStoreFiles;
-      storeRefCount = tempStoreRefCount;
-      maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;
-      memstoreSize = tempMemstoreSize;
-      memstoreHeapSize = tempMemstoreHeapSize;
-      memstoreOffHeapSize = tempMemstoreOffHeapSize;
-      storeFileSize = tempStoreFileSize;
-      maxStoreFileAge = tempMaxStoreFileAge;
-      if (tempMinStoreFileAge != Long.MAX_VALUE) {
-        minStoreFileAge = tempMinStoreFileAge;
-      }
+        numStoreFiles = tempNumStoreFiles;
+        storeRefCount = tempStoreRefCount;
+        maxCompactedStoreFileRefCount = tempMaxCompactedStoreFileRefCount;
+        memstoreSize = tempMemstoreSize;
+        memstoreHeapSize = tempMemstoreHeapSize;
+        memstoreOffHeapSize = tempMemstoreOffHeapSize;
+        storeFileSize = tempStoreFileSize;
+        maxStoreFileAge = tempMaxStoreFileAge;
+        if (tempMinStoreFileAge != Long.MAX_VALUE) {
+          minStoreFileAge = tempMinStoreFileAge;
+        }
 
-      if (numHFiles != 0) {
-        avgStoreFileAge = avgAgeNumerator / numHFiles;
-      }
+        if (numHFiles != 0) {
+          avgStoreFileAge = avgAgeNumerator / numHFiles;
+        }
 
-      numReferenceFiles = tempNumReferenceFiles;
-      tempMaxCompactionQueueSize = getNumCompactionsQueued();
-      tempMaxFlushQueueSize = getNumFlushesQueued();
-      if (tempMaxCompactionQueueSize > maxCompactionQueueSize) {
-        maxCompactionQueueSize = tempMaxCompactionQueueSize;
-      }
-      if (tempMaxFlushQueueSize > maxFlushQueueSize) {
-        maxFlushQueueSize = tempMaxFlushQueueSize;
+        numReferenceFiles = tempNumReferenceFiles;
+        tempMaxCompactionQueueSize = getNumCompactionsQueued();
+        tempMaxFlushQueueSize = getNumFlushesQueued();
+        if (tempMaxCompactionQueueSize > maxCompactionQueueSize) {
+          maxCompactionQueueSize = tempMaxCompactionQueueSize;
+        }
+        if (tempMaxFlushQueueSize > maxFlushQueueSize) {
+          maxFlushQueueSize = tempMaxFlushQueueSize;
+        }
+      } catch (Throwable t) {
+        LOG.error("Failed to compute per-region metrics; will retry on next scheduled run", t);
       }
     }
   }
