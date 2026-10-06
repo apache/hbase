@@ -39,10 +39,10 @@ public interface BackupAdmin extends Closeable {
    * Backup given list of tables fully. This is a synchronous operation. It returns backup id on
    * success or throw exception on failure.
    * @param userRequest BackupRequest instance
-   * @return the backup Id
+   * @return backup info
    */
 
-  String backupTables(final BackupRequest userRequest) throws IOException;
+  BackupInfo backupTables(final BackupRequest userRequest) throws IOException;
 
   /**
    * Restore backup

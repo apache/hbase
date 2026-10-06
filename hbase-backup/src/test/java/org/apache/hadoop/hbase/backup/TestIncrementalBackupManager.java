@@ -70,8 +70,8 @@ public class TestIncrementalBackupManager extends TestBackupBase {
     List<TableName> tables = List.of(table1);
     try (Connection conn = ConnectionFactory.createConnection(testConf);
       BackupAdminImpl backupAdmin = new BackupAdminImpl(conn)) {
-      String fullBackupId =
-        backupAdmin.backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR));
+      String fullBackupId = backupAdmin
+        .backupTables(createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR)).getBackupId();
       assertTrue(checkSucceeded(fullBackupId));
 
       try (IncrementalBackupManager manager = new IncrementalBackupManager(conn, testConf)) {

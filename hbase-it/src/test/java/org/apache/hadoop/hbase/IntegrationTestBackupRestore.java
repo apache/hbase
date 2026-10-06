@@ -268,7 +268,7 @@ public class IntegrationTestBackupRestore extends IntegrationTestBase {
   }
 
   private String backup(BackupRequest request, BackupAdmin client) throws IOException {
-    return client.backupTables(request);
+    return client.backupTables(request).getBackupId();
   }
 
   private void restore(RestoreRequest request, BackupAdmin client) throws IOException {
