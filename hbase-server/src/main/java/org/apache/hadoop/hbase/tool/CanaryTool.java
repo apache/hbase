@@ -762,9 +762,8 @@ public class CanaryTool implements Tool, Canary {
         LOG.error("Table may be deleted", tnfe);
         // This is ignored because it doesn't imply that the regionserver is dead
       } catch (TableNotEnabledException tnee) {
-        // This is considered a success since we got a response.
-        successes.incrementAndGet();
-        LOG.debug("The targeted table was disabled.  Assuming success.");
+        // Inconclusive as we may not reach the regionserver under test
+        LOG.debug("The targeted table is disabled");
       } catch (DoNotRetryIOException dnrioe) {
         sink.publishReadFailure(tableName.getNameAsString(), serverName);
         LOG.error(dnrioe.toString(), dnrioe);
@@ -1953,8 +1952,19 @@ public class CanaryTool implements Tool, Canary {
         List<TableDescriptor> tableDescs = this.admin.listTableDescriptors();
         List<RegionInfo> regions = null;
         for (TableDescriptor tableDesc : tableDescs) {
+          TableName tableName = tableDesc.getTableName();
+          try {
+            if (!this.admin.isTableEnabled(tableName)) {
+              // don't include regions of disabled table
+              LOG.debug("Skipping disabled table {}", tableName);
+              continue;
+            }
+          } catch (TableNotFoundException e) {
+            LOG.debug("Skipping table {} as it no longer exists", tableName);
+            continue;
+          }
           try (RegionLocator regionLocator =
-            this.admin.getConnection().getRegionLocator(tableDesc.getTableName())) {
+            this.admin.getConnection().getRegionLocator(tableName)) {
             for (HRegionLocation location : regionLocator.getAllRegionLocations()) {
               if (location == null) {
                 LOG.warn("Null location for table {}", tableDesc.getTableName());
