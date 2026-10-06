@@ -136,28 +136,39 @@ public class SyncReplicationTestBaseNoBeforeAll {
   }
 
   private static void shutdown(HBaseTestingUtil util) throws Exception {
-    if (util.getHBaseCluster() == null) {
-      return;
-    }
-    Admin admin = util.getAdmin();
-    if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
-      if (
-        admin.getReplicationPeerSyncReplicationState(PEER_ID)
-            != SyncReplicationState.DOWNGRADE_ACTIVE
-      ) {
-        admin.transitReplicationPeerSyncReplicationState(PEER_ID,
-          SyncReplicationState.DOWNGRADE_ACTIVE);
+    try {
+      if (util.getHBaseCluster() == null) {
+        return;
       }
-      admin.removeReplicationPeer(PEER_ID);
+      Admin admin = util.getAdmin();
+      if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
+        if (
+          admin.getReplicationPeerSyncReplicationState(PEER_ID)
+              != SyncReplicationState.DOWNGRADE_ACTIVE
+        ) {
+          admin.transitReplicationPeerSyncReplicationState(PEER_ID,
+            SyncReplicationState.DOWNGRADE_ACTIVE);
+        }
+        admin.removeReplicationPeer(PEER_ID);
+      }
+    } finally {
+      // Always, even if the HBase part never came up: a failed startMiniCluster leaves DFS running
+      // and the util marked as running, so a surefire rerun in this JVM would fail to start.
+      util.shutdownMiniCluster();
     }
-    util.shutdownMiniCluster();
   }
 
   @AfterAll
   public static void tearDown() throws Exception {
-    shutdown(UTIL1);
-    shutdown(UTIL2);
-    ZK_UTIL.shutdownMiniZKCluster();
+    try {
+      shutdown(UTIL1);
+    } finally {
+      try {
+        shutdown(UTIL2);
+      } finally {
+        ZK_UTIL.shutdownMiniZKCluster();
+      }
+    }
   }
 
   protected final void write(HBaseTestingUtil util, int start, int end) throws IOException {

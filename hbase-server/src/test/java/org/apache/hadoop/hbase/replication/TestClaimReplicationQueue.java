@@ -109,8 +109,13 @@ public class TestClaimReplicationQueue extends TestReplicationBaseNoBeforeAll {
 
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
-    Closeables.close(table3, true);
-    Closeables.close(table4, true);
+    try {
+      Closeables.close(table3, true);
+      Closeables.close(table4, true);
+    } finally {
+      // this method hides the base one, so call it to shut down the mini clusters
+      TestReplicationBaseNoBeforeAll.tearDownAfterClass();
+    }
   }
 
   @BeforeEach
