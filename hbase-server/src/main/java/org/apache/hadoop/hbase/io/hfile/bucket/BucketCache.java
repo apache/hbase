@@ -785,7 +785,7 @@ public class BucketCache implements BlockCache, HeapSize {
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fileNotFullyCached(cacheKey.getHfileName());
+        fullyCachedFiles.remove(cacheKey.getHfileName());
       }
     }
     if (evictedByEvictionProcess) {
@@ -794,10 +794,6 @@ public class BucketCache implements BlockCache, HeapSize {
     if (ioEngine.isPersistent()) {
       setCacheInconsistent(true);
     }
-  }
-
-  private void fileNotFullyCached(String hfileName) {
-    fullyCachedFiles.remove(hfileName);
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
@@ -1743,7 +1739,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
             evictBlock(keyEntry.getKey());
-            fileNotFullyCached(keyEntry.getKey().getHfileName());
+            fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
           }
         }
         backingMapValidated.set(true);
