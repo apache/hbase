@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -35,6 +36,8 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.cache.persistence.CachePersistenceCoordinator;
+import org.apache.hadoop.hbase.io.hfile.cache.persistence.CachePersistenceStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -61,6 +64,7 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
   private final CacheTopology topology;
   private final CachePlacementAdmissionPolicy policy;
   private final CacheTopologyView topologyView;
+  private final CachePersistenceCoordinator persistenceCoordinator;
 
   /**
    * Creates a topology-backed cache access service.
@@ -77,6 +81,7 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
       topology.getEngine(tier)
         .ifPresent(engine -> engine.setEvictionListener(this::handleEngineEviction));
     }
+    this.persistenceCoordinator = new CachePersistenceCoordinator(topology, policy);
   }
 
   /**
@@ -743,7 +748,6 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
         return currentIterator.next();
       }
     };
-
     return Optional.of(cachedBlocks);
   }
 
@@ -762,4 +766,25 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     Cacheable block) {
     topology.handleEviction(cacheKey, block, sourceEngine);
   }
+
+  /**
+   * Saves persistent state for cache components managed by this service.
+   * @param storage storage used to persist cache component state
+   * @throws IOException if persistent state cannot be saved
+   */
+  @Override
+  public void savePersistentState(CachePersistenceStorage storage) throws IOException {
+    persistenceCoordinator.save(storage);
+  }
+
+  /**
+   * Restores persistent state into cache components managed by this service.
+   * @param storage storage from which cache component state is restored
+   * @throws IOException if persistent state cannot be restored
+   */
+  @Override
+  public void restorePersistentState(CachePersistenceStorage storage) throws IOException {
+    persistenceCoordinator.restore(storage);
+  }
+
 }
