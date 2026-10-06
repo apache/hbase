@@ -1063,10 +1063,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // it out).
     // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
+    // The procedure store may hold more than one SCP for the same server; keep the earliest
+    // submit time as the crash time, matching DeadServer#putIfAbsent.
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-        .map(p -> (ServerCrashProcedure) p).collect(
-          Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
+        .map(p -> (ServerCrashProcedure) p)
+        .collect(Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime,
+          Math::min)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
     // This manager must be accessed AFTER hbase:meta is confirmed on line..
