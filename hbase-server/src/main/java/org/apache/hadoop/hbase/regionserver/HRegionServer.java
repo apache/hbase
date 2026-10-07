@@ -492,7 +492,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private Timer abortMonitor;
   // Set once run() has finished; the abort timer must not be armed after that.
   private boolean abortMonitorCancelled;
-  private final Object abortMonitorLock = new Object();
+  // Guards abortMonitor and abortMonitorCancelled. Static because abort() can run from the
+  // HBaseServerBase constructor, before instance fields are initialized; not this, because
+  // createRegionServerStatusStub holds this until a master is found or the server is stopped.
+  private static final Object ABORT_MONITOR_LOCK = new Object();
 
   private RegionReplicationBufferManager regionReplicationBufferManager;
 
@@ -2532,7 +2535,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   // Limits the time spent in the shutdown process.
   private void scheduleAbortTimer() {
-    synchronized (abortMonitorLock) {
+    synchronized (ABORT_MONITOR_LOCK) {
       if (this.abortMonitor != null || this.abortMonitorCancelled) {
         return;
       }
@@ -2556,7 +2559,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   // The shutdown process has completed, so there is nothing left for the abort timer to limit.
   // Cancel it, or it would halt a JVM that outlives this region server, e.g. a mini cluster.
   private void cancelAbortTimer() {
-    synchronized (abortMonitorLock) {
+    synchronized (ABORT_MONITOR_LOCK) {
       this.abortMonitorCancelled = true;
       if (this.abortMonitor != null) {
         this.abortMonitor.cancel();
