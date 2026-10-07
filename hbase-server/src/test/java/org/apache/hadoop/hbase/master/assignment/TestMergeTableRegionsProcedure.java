@@ -345,7 +345,10 @@ public class TestMergeTableRegionsProcedure {
     Path recoveredEditsDir = WALSplitUtil.getRegionDirRecoveredEditsDir(regionDir);
     FileSystem fs = CommonFSUtils.getRootDirFileSystem(conf);
     fs.mkdirs(recoveredEditsDir);
-    Path staleFile = new Path(recoveredEditsDir, "0000000000000000001");
+    // Use a seqid above any watermark the master can hold: since HBASE-30335 the master seeds
+    // flushedSequenceIdByRegion with openSeqNum, so a low-seqid file would be dropped as stale by
+    // HBASE-30352 and CHECK_CLOSED_REGIONS would no longer fail.
+    Path staleFile = new Path(recoveredEditsDir, String.valueOf(Long.MAX_VALUE));
     fs.createNewFile(staleFile);
     assertTrue(WALSplitUtil.hasRecoveredEdits(conf, regionsToMerge[0]),
       "stale recovered.edits file must be visible");
