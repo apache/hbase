@@ -102,12 +102,15 @@ public class BucketEntry implements HBaseReferenceCounted {
    */
   BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter,
     boolean inMemory, Function<BucketEntry, Recycler> createRecycler, ByteBuffAllocator allocator) {
-    this(offset, length, onDiskSizeWithHeader, accessCounter, System.nanoTime(), inMemory,
-      createRecycler, allocator);
+    this(offset, length, onDiskSizeWithHeader, accessCounter, System.nanoTime(),
+      inMemory ? BlockPriority.MEMORY : BlockPriority.SINGLE, createRecycler, allocator);
   }
 
+  /**
+   * @param priority the priority of the entry, e.g. the one recovered from a persisted backing map
+   */
   BucketEntry(long offset, int length, int onDiskSizeWithHeader, long accessCounter,
-    long cachedTime, boolean inMemory, Function<BucketEntry, Recycler> createRecycler,
+    long cachedTime, BlockPriority priority, Function<BucketEntry, Recycler> createRecycler,
     ByteBuffAllocator allocator) {
     if (createRecycler == null) {
       throw new IllegalArgumentException("createRecycler could not be null!");
@@ -117,7 +120,7 @@ public class BucketEntry implements HBaseReferenceCounted {
     this.onDiskSizeWithHeader = onDiskSizeWithHeader;
     this.accessCounter = accessCounter;
     this.cachedTime = cachedTime;
-    this.priority = inMemory ? BlockPriority.MEMORY : BlockPriority.SINGLE;
+    this.priority = priority;
     this.refCnt = RefCnt.create(createRecycler.apply(this));
     this.markedAsEvicted = new AtomicBoolean(false);
     this.allocator = allocator;
