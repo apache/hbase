@@ -203,8 +203,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   private final AsyncClusterConnection conn;
   private final ZKWatcher watcher;
   private final RSGroupStartupWorker rsGroupStartupWorker;
-  private final ServerEventsListenerThread serverEventsListenerThread =
-    new ServerEventsListenerThread();
+  private final ServerEventsListener serverEventsListener = new ServerEventsListener();
   // contains list of groups that were last flushed to persistent store
   private Set<String> prevRSGroups = new HashSet<>();
 
@@ -254,66 +253,32 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     this.script = new RSGroupMappingScript(masterServices.getConfiguration());
   }
 
-  private synchronized void updateAutoManagedRSGroupServers() throws IOException {
-    LOG.info("Updating auto-managed RSGroup servers.");
-    Map<String, RSGroupInfo> currentGroups = holder.groupName2Group;
-    Map<String, SortedSet<Address>> newRSGroupToServers =
-      computeAutoManagedRSGroupServers(currentGroups.values());
-    Map<String, Set<Address>> currentRSGroupToServers = new HashMap<>();
-    for (String groupName : newRSGroupToServers.keySet()) {
-      currentRSGroupToServers.put(groupName, currentGroups.get(groupName).getServers());
-    }
-    if (newRSGroupToServers.equals(currentRSGroupToServers)) {
-      LOG.info("No changes in auto-managed RSGroup server membership.");
-      return;
-    }
-    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(currentGroups);
-    applyAutoManagedRSGroupServers(newGroupMap, newRSGroupToServers);
-    flushConfig(newGroupMap, true);
-    LOG.info("Updated auto-managed RSGroup servers, {} servers",
-      newRSGroupToServers.values().stream().mapToInt(SortedSet::size).sum());
-  }
-
   /**
-   * Called synchronously from {@code ServerListener#serverAdded}/{@code #serverRemoved}. If the
-   * recompute only affects 'default' membership, applies it immediately in-memory instead of waking
-   * the background thread. Only when a regex-governed group's membership would also change -- which
-   * needs to be persisted to {@code hbase:rsgroup}/ZK -- does it hand off to the background thread,
-   * so this callback is never blocked on that I/O.
+   * Called synchronously from {@code ServerListener#serverAdded}/{@code #serverRemoved}. Server
+   * membership of 'default' and of every regex-governed group is never persisted, so it is
+   * recomputed from the live servers and applied in memory only -- no {@code hbase:rsgroup}/ZK I/O.
    */
   private synchronized void handleServerEvent() {
     Map<String, RSGroupInfo> currentGroups = holder.groupName2Group;
-    Map<String, SortedSet<Address>> newRSGroupToServers =
+    Map<String, SortedSet<Address>> autoManagedServers =
       computeAutoManagedRSGroupServers(currentGroups.values());
-    for (Map.Entry<String, SortedSet<Address>> entry : newRSGroupToServers.entrySet()) {
-      if (RSGroupInfo.DEFAULT_GROUP.equals(entry.getKey())) {
-        continue;
-      }
-      if (!entry.getValue().equals(currentGroups.get(entry.getKey()).getServers())) {
-        serverEventsListenerThread.serverChanged();
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(currentGroups);
+    applyAutoManagedRSGroupServers(newGroupMap, autoManagedServers);
+    dropRegexGovernedServersFromOtherGroups(newGroupMap, autoManagedServers);
+    for (Map.Entry<String, RSGroupInfo> entry : newGroupMap.entrySet()) {
+      if (!entry.getValue().getServers().equals(currentGroups.get(entry.getKey()).getServers())) {
+        resetRSGroupMap(newGroupMap);
+        LOG.info("Updated auto-managed RSGroup servers, {} servers",
+          autoManagedServers.values().stream().mapToInt(SortedSet::size).sum());
         return;
       }
     }
-    SortedSet<Address> newDefaultServers = newRSGroupToServers.get(RSGroupInfo.DEFAULT_GROUP);
-    if (!newDefaultServers.equals(currentGroups.get(RSGroupInfo.DEFAULT_GROUP).getServers())) {
-      updateDefaultServersOnly(newDefaultServers);
-    }
-  }
-
-  private synchronized void updateDefaultServersOnly(SortedSet<Address> newDefaultServers) {
-    LOG.info("Updating default servers.");
-    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
-    applyAutoManagedRSGroupServers(newGroupMap,
-      Collections.singletonMap(RSGroupInfo.DEFAULT_GROUP, newDefaultServers));
-    // do not need to persist, as we do not persist default group.
-    resetRSGroupMap(newGroupMap);
-    LOG.info("Updated default servers, {} servers", newDefaultServers.size());
+    LOG.info("No changes in auto-managed RSGroup server membership.");
   }
 
   private synchronized void init() throws IOException {
     refresh(false);
-    serverEventsListenerThread.start();
-    masterServices.getServerManager().registerListener(serverEventsListenerThread);
+    masterServices.getServerManager().registerListener(serverEventsListener);
   }
 
   static RSGroupInfoManager getInstance(MasterServices masterServices) throws IOException {
@@ -394,11 +359,41 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       dst.addServer(el);
       movedServers.add(el);
     }
+    checkMoveAgreesWithRegex(movedServers, dst.getName());
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
     newGroupMap.put(src.getName(), src);
     newGroupMap.put(dst.getName(), dst);
     flushConfig(newGroupMap);
     return movedServers;
+  }
+
+  /**
+   * Regex-based membership always wins: the next server event or refresh puts a server back where
+   * its hostname says, so an explicit move that disagrees would only make regions flap. Such a move
+   * is rejected. A server whose hostname matches no regex (or an ambiguous or dangling one, which
+   * fall back to ordinary placement) may go anywhere except into a regex-governed group.
+   */
+  private void checkMoveAgreesWithRegex(Set<Address> movedServers, String dstGroup)
+    throws ConstraintException {
+    Map<String, Pattern> regexGroupMap = getRegexGroupMap(masterServices.getConfiguration());
+    if (regexGroupMap.isEmpty() || movedServers.isEmpty()) {
+      return;
+    }
+    Map<Address, String> expectedGroups =
+      resolveServerAddrToRSGroupName(movedServers, regexGroupMap, holder.groupName2Group.keySet());
+    for (Address server : movedServers) {
+      String expectedGroup = expectedGroups.get(server);
+      boolean isWrongMove = expectedGroup != null
+        ? !expectedGroup.equals(dstGroup)
+        : regexGroupMap.containsKey(dstGroup);
+      if (isWrongMove) {
+        throw new ConstraintException("Server " + server + " cannot be moved to RSGroup '"
+          + dstGroup + "': its membership is decided by " + RS_GROUP_REGEX_PREFIX + expectedGroup
+          + ", under which its hostname "
+          + (expectedGroup != null ? "belongs in '" + expectedGroup + "'" : "does not match")
+          + ". Change that config instead.");
+      }
+    }
   }
 
   @Override
@@ -657,8 +652,20 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       newGroupMap.put(group.getName(), group);
     }
     // Server membership for 'default' and for every regex-governed group is always recomputed
-    // on the fly -- never trusted from storage -- exactly like 'default' membership already was.
-    applyAutoManagedRSGroupServers(newGroupMap, computeAutoManagedRSGroupServers(groupList));
+    // on the fly -- never persisted nor trusted from storage.
+    Map<String, SortedSet<Address>> autoManagedServers =
+      computeAutoManagedRSGroupServers(groupList);
+    for (Map.Entry<String, SortedSet<Address>> entry : autoManagedServers.entrySet()) {
+      RSGroupInfo stored = newGroupMap.get(entry.getKey());
+      if (!RSGroupInfo.DEFAULT_GROUP.equals(entry.getKey()) && !stored.getServers().isEmpty()) {
+        LOG.info(
+          "Ignoring servers {} stored for regex-governed RSGroup '{}'; its membership is "
+            + "computed on the fly and the stored copy is cleared on the next flush",
+          stored.getServers(), entry.getKey());
+      }
+    }
+    applyAutoManagedRSGroupServers(newGroupMap, autoManagedServers);
+    dropRegexGovernedServersFromOtherGroups(newGroupMap, autoManagedServers);
     resetRSGroupMap(newGroupMap);
     updateCacheOfRSGroups(newGroupMap.keySet());
     LOG.info("Refresh completed successfully");
@@ -695,20 +702,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   private synchronized void flushConfig(Map<String, RSGroupInfo> newGroupMap) throws IOException {
-    flushConfig(newGroupMap, false);
-  }
-
-  /**
-   * @param isAutoRegexUpdate {@code true} when called from
-   *                          {@link #updateAutoManagedRSGroupServers()} to persist a regex-driven
-   *                          recompute -- relaxes the offline-mode check (see
-   *                          {@link #checkOnlyServerSetsDifferForAutoUpdate}) to allow any
-   *                          regex-governed group's servers to change, not just 'default''s.
-   */
-  private synchronized void flushConfig(Map<String, RSGroupInfo> newGroupMap,
-    boolean isAutoRegexUpdate) throws IOException {
-    checkRegexBasedRSGroupMembership(newGroupMap);
-
     // For offline mode persistence is still unavailable
     // We're refreshing in-memory state but only for servers in default group
     if (!isOnline()) {
@@ -720,24 +713,23 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
       LOG.debug("Offline mode, cannot persist to {}", RSGROUP_TABLE_NAME);
 
-      if (isAutoRegexUpdate) {
-        checkOnlyServerSetsDifferForAutoUpdate(newGroupMap);
-      } else {
-        Map<String, RSGroupInfo> oldGroupMap = Maps.newHashMap(holder.groupName2Group);
-        RSGroupInfo oldDefaultGroup = oldGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
-        RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
-        if (
-          !oldGroupMap.equals(newGroupMap)
-            /* compare both tables and servers in other groups */ || !oldDefaultGroup.getTables()
-              .equals(newDefaultGroup.getTables())
-          /* compare tables in default group */
-        ) {
-          throw new IOException("Only servers in default group can be updated during offline mode");
-        }
-
-        // Restore newGroupMap by putting its default group back
-        newGroupMap.put(RSGroupInfo.DEFAULT_GROUP, newDefaultGroup);
+      Map<String, RSGroupInfo> oldGroupMap = Maps.newHashMap(holder.groupName2Group);
+      RSGroupInfo oldDefaultGroup = oldGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
+      RSGroupInfo newDefaultGroup = newGroupMap.remove(RSGroupInfo.DEFAULT_GROUP);
+      // Servers of regex-governed groups are computed on the fly and never persisted, so their
+      // changes are allowed here too.
+      if (
+        !withoutRegexGovernedServers(oldGroupMap).equals(withoutRegexGovernedServers(newGroupMap))
+          /* compare both tables and servers in other groups */ || !oldDefaultGroup.getTables()
+            .equals(newDefaultGroup.getTables())
+        /* compare tables in default group */
+      ) {
+        throw new IOException("Only servers in the default group and in regex-governed groups can "
+          + "be updated during offline mode");
       }
+
+      // Restore newGroupMap by putting its default group back
+      newGroupMap.put(RSGroupInfo.DEFAULT_GROUP, newDefaultGroup);
 
       // Refresh rsGroupMap
       // according to the inputted newGroupMap (an updated copy of rsGroupMap)
@@ -746,43 +738,43 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       LOG.debug("New RSGroup map: {}", newGroupMap);
 
       // Do not need to update tableMap
-      // because only server-set updates are allowed above,
-      // or an IOException will be thrown
+      // because only the update on servers in default group is allowed above,
+      // or IOException will be thrown
       return;
     }
 
     /* For online mode, persist to hbase:rsgroup and Zookeeper */
     LOG.debug("Online mode, persisting to {} and ZK", RSGROUP_TABLE_NAME);
-    flushConfigTable(newGroupMap);
+    // Servers of regex-governed groups are computed on the fly and never persisted
+    Map<String, RSGroupInfo> persistedGroupMap = withoutRegexGovernedServers(newGroupMap);
+    flushConfigTable(persistedGroupMap);
 
     // Make changes visible after having been persisted to the source of truth
     resetRSGroupMap(newGroupMap);
-    saveRSGroupMapToZK(newGroupMap);
+    saveRSGroupMapToZK(persistedGroupMap);
     updateCacheOfRSGroups(newGroupMap.keySet());
     LOG.info("Flush config done, new RSGroup map: {}", newGroupMap);
   }
 
   /**
-   * Guards the offline-mode path of {@link #flushConfig(Map, boolean)} for a regex-driven
-   * auto-update: such an update must never add/remove RSGroups nor change any group's tables or
-   * configuration -- only server sets may differ from what is currently held in-memory.
+   * Returns a copy of {@code groupMap} where every regex-governed group has an empty server set.
+   * Their membership is recomputed from the live servers (see {@link #refresh}), so persisting it
+   * would only add I/O and leave stale data behind.
    */
-  private void checkOnlyServerSetsDifferForAutoUpdate(Map<String, RSGroupInfo> newGroupMap)
-    throws IOException {
-    if (!holder.groupName2Group.keySet().equals(newGroupMap.keySet())) {
-      throw new IOException("Automatic regex-based RSGroup update must not add/remove RSGroups");
-    }
-    for (String groupName : newGroupMap.keySet()) {
-      RSGroupInfo oldInfo = holder.groupName2Group.get(groupName);
-      RSGroupInfo newInfo = newGroupMap.get(groupName);
-      if (
-        !oldInfo.getTables().equals(newInfo.getTables())
-          || !oldInfo.getConfiguration().equals(newInfo.getConfiguration())
-      ) {
-        throw new IOException("Automatic regex-based RSGroup update must not change tables or "
-          + "configuration (RSGroup '" + groupName + "')");
+  private Map<String, RSGroupInfo> withoutRegexGovernedServers(Map<String, RSGroupInfo> groupMap) {
+    Set<String> regexGovernedGroups = getRegexGroupMap(masterServices.getConfiguration()).keySet();
+    Map<String, RSGroupInfo> result = Maps.newHashMap(groupMap);
+    for (String groupName : regexGovernedGroups) {
+      RSGroupInfo info = groupMap.get(groupName);
+      if (info == null || info.getServers().isEmpty()) {
+        continue;
       }
+      RSGroupInfo stripped = new RSGroupInfo(groupName);
+      stripped.addAllTables(info.getTables());
+      info.getConfiguration().forEach(stripped::setConfiguration);
+      result.put(groupName, stripped);
     }
+    return result;
   }
 
   private void saveRSGroupMapToZK(Map<String, RSGroupInfo> newGroupMap) throws IOException {
@@ -933,13 +925,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   static final class RegexBasedRSGroupMembershipResolution {
     final Set<Address> adminManagedServers;
     final Map<Address, String> regexMatchedServers;
-    final boolean wouldEmptyDefaultGroup;
 
     RegexBasedRSGroupMembershipResolution(Set<Address> adminManagedServers,
-      Map<Address, String> regexMatchedServers, boolean wouldEmptyDefaultGroup) {
+      Map<Address, String> regexMatchedServers) {
       this.adminManagedServers = adminManagedServers;
       this.regexMatchedServers = regexMatchedServers;
-      this.wouldEmptyDefaultGroup = wouldEmptyDefaultGroup;
     }
   }
 
@@ -959,23 +949,25 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
     Map<Address, String> regexMatchedServers =
       resolveServerAddrToRSGroupName(onlineServers, rsGroupNameToPatternMap, existingGroupNames);
-    boolean wouldEmptyDefault =
-      wouldEmptyDefaultGroup(onlineServers, adminManagedServers, regexMatchedServers.keySet());
-    if (wouldEmptyDefault) {
+    // A server stored in an admin-managed group that a regex now claims belongs to the regex group.
+    adminManagedServers.removeAll(regexMatchedServers.keySet());
+    if (wouldEmptyDefaultGroup(onlineServers, adminManagedServers, regexMatchedServers.keySet())) {
+      // Regex placement is still applied: every server lands in its correct group. Operators are
+      // expected to configure regexes carefully, so this is a warning, not an error.
       LOG.warn(
-        "Regex-based RSGroup membership would leave RSGroup '{}' with no online servers -- every "
-          + "online server is either admin-managed or matches a {}* entry; skipping automatic "
-          + "regex-based enforcement until this no longer covers every online server",
-        RSGroupInfo.DEFAULT_GROUP, RS_GROUP_REGEX_PREFIX);
+        "Regex-based RSGroup membership leaves RSGroup '{}' with no online servers -- every "
+          + "online server is either admin-managed or matches a {}* entry. Tables in RSGroup '{}' "
+          + "(including system tables, unless they are in another RSGroup) have no server of "
+          + "their own to be assigned to; set {} to let them fall back to servers of other "
+          + "RSGroups",
+        RSGroupInfo.DEFAULT_GROUP, RS_GROUP_REGEX_PREFIX, RSGroupInfo.DEFAULT_GROUP,
+        RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY);
     }
-    Map<Address, String> finalRegexMatchedServers =
-      wouldEmptyDefault ? Collections.emptyMap() : regexMatchedServers;
     LOG.info(
-      "Regex-based RSGroup membership resolution: onlineServers={}, adminManagedServers={}, "
-        + "regexMatchedServers={}, wouldEmptyDefaultGroup={}",
-      onlineServers, adminManagedServers, finalRegexMatchedServers, wouldEmptyDefault);
-    return new RegexBasedRSGroupMembershipResolution(adminManagedServers, finalRegexMatchedServers,
-      wouldEmptyDefault);
+      "Regex-based RSGroup membership resolution: onlineServers={}, "
+        + "adminManagedServers={}, regexMatchedServers={}",
+      onlineServers, adminManagedServers, regexMatchedServers);
+    return new RegexBasedRSGroupMembershipResolution(adminManagedServers, regexMatchedServers);
   }
 
   private Map<String, SortedSet<Address>>
@@ -1008,6 +1000,14 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
       result.get(RSGroupInfo.DEFAULT_GROUP).add(server);
     }
+    for (Map.Entry<String, SortedSet<Address>> entry : result.entrySet()) {
+      if (entry.getValue().isEmpty() && !RSGroupInfo.DEFAULT_GROUP.equals(entry.getKey())) {
+        LOG.warn(
+          "Regex-governed RSGroup '{}' has no online servers; any table assigned to it has "
+            + "nowhere to go (check {}{} and the online servers' hostnames)",
+          entry.getKey(), RS_GROUP_REGEX_PREFIX, entry.getKey());
+      }
+    }
     LOG.info("Computed auto-managed RSGroup server membership: {}", result);
     return result;
   }
@@ -1026,64 +1026,54 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     }
   }
 
-  private void checkRegexBasedRSGroupMembership(Map<String, RSGroupInfo> newGroupMap)
-    throws IOException {
-    LOG.info("Validating regex-based RSGroup membership");
-    Map<String, Pattern> rsGroupNameToPatternMap =
-      getRegexGroupMap(masterServices.getConfiguration());
-    if (rsGroupNameToPatternMap.isEmpty()) {
-      LOG.info("No regex-based RSGroup membership config found");
-      return;
-    }
-    Set<Address> onlineServers = getOnlineServers();
-    RegexBasedRSGroupMembershipResolution resolution = resolveRegexBasedRSGroupMembership(
-      rsGroupNameToPatternMap, onlineServers, newGroupMap.values());
-    if (resolution.wouldEmptyDefaultGroup) {
-      return;
-    }
-
-    for (RSGroupInfo group : newGroupMap.values()) {
-      Pattern ownPattern = rsGroupNameToPatternMap.get(group.getName());
-      for (Address server : group.getServers()) {
-        if (!onlineServers.contains(server)) {
-          continue;
-        }
-        if (ownPattern != null) {
-          // Regex-governed group: every online server in it must match its own pattern.
-          if (!ownPattern.matcher(server.getHostName()).matches()) {
-            throw new DoNotRetryIOException("Server " + server + " is in regex-governed RSGroup '"
-              + group.getName() + "' but its hostname does not match " + RS_GROUP_REGEX_PREFIX
-              + group.getName() + "; a regex-governed RSGroup may only contain servers matching "
-              + "its own regex. Fix/remove the " + RS_GROUP_REGEX_PREFIX + group.getName()
-              + " config.");
-          }
-        } else {
-          // 'default' or an admin-managed group: must not contain a server that unambiguously
-          // matches an existing regex-governed group -- it should be placed there instead.
-          String expectedGroupName = resolution.regexMatchedServers.get(server);
-          if (
-            expectedGroupName != null && !expectedGroupName.equals(group.getName())
-              && holder.groupName2Group.containsKey(expectedGroupName)
-          ) {
-            throw new DoNotRetryIOException(
-              "Server " + server + " hostname matches configured " + "regex "
-                + RS_GROUP_REGEX_PREFIX + expectedGroupName + " and must belong to RSGroup '"
-                + expectedGroupName + "' but would be placed in " + "RSGroup '" + group.getName()
-                + "'. Fix/remove the " + RS_GROUP_REGEX_PREFIX + expectedGroupName + " config.");
-          }
-        }
+  /**
+   * Stored membership of admin-managed groups is not recomputed on refresh, so a server that was
+   * placed in one of them before a regex claimed it would end up in two groups. Unlike the runtime
+   * paths, refresh cannot reject this: it runs in the startup worker, which retries forever on
+   * failure and would keep the manager offline. Instead, resolve it the way
+   * {@link #computeAutoManagedRSGroupServers} already does -- the regex wins -- in memory only;
+   * storage is corrected by the next flush.
+   */
+  private static void dropRegexGovernedServersFromOtherGroups(Map<String, RSGroupInfo> groupMap,
+    Map<String, SortedSet<Address>> autoManagedServers) {
+    Map<Address, String> regexGovernedServers = new HashMap<>();
+    for (Map.Entry<String, SortedSet<Address>> entry : autoManagedServers.entrySet()) {
+      if (!RSGroupInfo.DEFAULT_GROUP.equals(entry.getKey())) {
+        entry.getValue().forEach(server -> regexGovernedServers.put(server, entry.getKey()));
       }
     }
-    LOG.info("Regex-based RSGroup membership validation completed successfully");
+    if (regexGovernedServers.isEmpty()) {
+      return;
+    }
+    for (Map.Entry<String, RSGroupInfo> entry : groupMap.entrySet()) {
+      RSGroupInfo info = entry.getValue();
+      if (autoManagedServers.containsKey(info.getName())) {
+        continue;
+      }
+      Set<Address> overlap = new TreeSet<>();
+      for (Address server : info.getServers()) {
+        if (regexGovernedServers.containsKey(server)) {
+          overlap.add(server);
+        }
+      }
+      if (overlap.isEmpty()) {
+        continue;
+      }
+      LOG.warn(
+        "Servers {} are stored in RSGroup '{}' but match a {}* entry; placing them in the "
+          + "regex-governed RSGroup instead. Move them to the '{}' RSGroup to make this explicit",
+        overlap, info.getName(), RS_GROUP_REGEX_PREFIX, RSGroupInfo.DEFAULT_GROUP);
+      SortedSet<Address> kept = new TreeSet<>(info.getServers());
+      kept.removeAll(overlap);
+      RSGroupInfo newInfo = new RSGroupInfo(info.getName(), kept);
+      newInfo.addAllTables(info.getTables());
+      info.getConfiguration().forEach(newInfo::setConfiguration);
+      entry.setValue(newInfo);
+    }
   }
 
-  private class ServerEventsListenerThread extends Thread implements ServerListener {
-    private final Logger LOG = LoggerFactory.getLogger(ServerEventsListenerThread.class);
-    private volatile int eventCount = 0;
-
-    ServerEventsListenerThread() {
-      setDaemon(true);
-    }
+  private class ServerEventsListener implements ServerListener {
+    private final Logger LOG = LoggerFactory.getLogger(ServerEventsListener.class);
 
     @Override
     public void serverAdded(ServerName serverName) {
@@ -1095,38 +1085,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     public void serverRemoved(ServerName serverName) {
       LOG.info("Server removed: {}", serverName);
       RSGroupInfoManagerImpl.this.handleServerEvent();
-    }
-
-    private synchronized void serverChanged() {
-      eventCount++;
-      this.notify();
-    }
-
-    @Override
-    public void run() {
-      setName(ServerEventsListenerThread.class.getName() + "-" + masterServices.getServerName());
-      while (isMasterRunning(masterServices)) {
-        try {
-          try {
-            synchronized (this) {
-              while (eventCount <= 0) {
-                wait();
-              }
-            }
-          } catch (InterruptedException e) {
-            LOG.warn("Interrupted", e);
-            continue;
-          }
-          updateAutoManagedRSGroupServers();
-          synchronized (this) {
-            if (eventCount > 0) {
-              eventCount--;
-            }
-          }
-        } catch (IOException e) {
-          LOG.warn("Failed to update auto-managed RSGroup servers", e);
-        }
-      }
     }
   }
 
@@ -1724,9 +1682,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       throw new ConstraintException(
         "configuration of " + RSGroupInfo.DEFAULT_GROUP + " can't be stored persistently");
     }
-    RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
-    rsGroupInfo.getConfiguration().forEach((k, v) -> rsGroupInfo.removeConfiguration(k));
+    RSGroupInfo rsGroupInfo = copyOf(getRSGroupInfo(groupName));
+    rsGroupInfo.getConfiguration().keySet().forEach(rsGroupInfo::removeConfiguration);
     configuration.forEach((k, v) -> rsGroupInfo.setConfiguration(k, v));
-    flushConfig();
+    Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
+    newGroupMap.put(groupName, rsGroupInfo);
+    flushConfig(newGroupMap);
   }
 }
