@@ -28,6 +28,8 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * {@link CachePersistenceStorage} implementation backed by a Hadoop {@link FileSystem}.
@@ -57,9 +59,10 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage {
 
+  private static final Logger LOG = LoggerFactory.getLogger(HadoopFsCachePersistenceStorage.class);
   private static final String STATE_FILE_SUFFIX = ".state";
   private static final String TEMP_FILE_MARKER = ".tmp-";
-  private static final String BACKUP_FILE_MARKER = ".backup-";
+  private static final String BACKUP_FILE_SUFFIX = ".backup";
 
   private final FileSystem fileSystem;
   private final Path rootPath;
@@ -96,6 +99,8 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
   @Override
   public Optional<InputStream> open(String key) throws IOException {
     Path path = getStatePath(key);
+    recoverCommittedState(path);
+
     if (!fileSystem.exists(path)) {
       return Optional.empty();
     }
@@ -117,6 +122,7 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
     Path targetPath = getStatePath(key);
     Path parent = targetPath.getParent();
     ensureDirectory(parent);
+    recoverCommittedState(targetPath);
 
     Path temporaryPath = createTemporaryPath(targetPath);
     FSDataOutputStream output = fileSystem.create(temporaryPath, false);
@@ -188,7 +194,10 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
     if (key.isEmpty()) {
       throw new IllegalArgumentException("key must not be empty");
     }
-    if (key.startsWith("/") || key.endsWith("/") || key.indexOf('\\') >= 0 || key.contains("://")) {
+    if (
+      key.startsWith("/") || key.endsWith("/") || key.indexOf('\\') >= 0 || key.contains("://")
+        || new Path(key + STATE_FILE_SUFFIX).toUri().getScheme() != null
+    ) {
       throw new IllegalArgumentException("Invalid persistence key: " + key);
     }
 
@@ -198,6 +207,42 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
         throw new IllegalArgumentException("Invalid persistence key: " + key);
       }
     }
+  }
+
+  /**
+   * Recovers previously committed state when publication was interrupted after the committed state
+   * was moved to its backup location.
+   * <p>
+   * If the normal state file exists, no recovery is required. If it is absent and a backup exists,
+   * the backup represents the last successfully committed state and is restored to the normal state
+   * path.
+   * </p>
+   * @param targetPath committed persistence state path
+   * @throws IOException if previously committed state cannot be recovered
+   */
+  private void recoverCommittedState(Path targetPath) throws IOException {
+    if (fileSystem.exists(targetPath)) {
+      return;
+    }
+
+    Path backupPath = getBackupPath(targetPath);
+    if (!fileSystem.exists(backupPath)) {
+      return;
+    }
+
+    if (!fileSystem.rename(backupPath, targetPath)) {
+      throw new IOException(
+        "Failed to recover committed cache persistence state " + backupPath + " to " + targetPath);
+    }
+  }
+
+  /**
+   * Returns the backup path used while replacing committed persistence state.
+   * @param targetPath committed persistence state path
+   * @return backup path for the committed state
+   */
+  private static Path getBackupPath(Path targetPath) {
+    return new Path(targetPath.toString() + BACKUP_FILE_SUFFIX);
   }
 
   /**
@@ -257,12 +302,15 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
 
       closeOutput();
 
-      Path backupPath = null;
+      Path backupPath = getBackupPath(targetPath);
       boolean previousStateMoved = false;
 
       try {
         if (fileSystem.exists(targetPath)) {
-          backupPath = createBackupPath(targetPath);
+          if (fileSystem.exists(backupPath) && !fileSystem.delete(backupPath, false)) {
+            throw new IOException("Failed to delete stale cache persistence backup " + backupPath);
+          }
+
           if (!fileSystem.rename(targetPath, backupPath)) {
             throw new IOException(
               "Failed to preserve existing cache persistence state " + targetPath);
@@ -277,18 +325,34 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
 
         committed = true;
 
-        if (
-          previousStateMoved && fileSystem.exists(backupPath)
-            && !fileSystem.delete(backupPath, false)
-        ) {
-          throw new IOException(
-            "Persisted cache state was committed, but failed to delete backup " + backupPath);
+        if (previousStateMoved) {
+          deleteBackupAfterCommit(backupPath);
         }
+
       } catch (IOException error) {
         if (!committed && previousStateMoved) {
           restorePreviousState(backupPath, error);
         }
         throw error;
+      }
+    }
+
+    /**
+     * Removes the previous committed-state backup after a new state has been successfully
+     * published.
+     * <p>
+     * Backup cleanup is best-effort. Once the new state has been published, failure to remove the
+     * obsolete backup must not cause the persistence operation to be reported as failed.
+     * </p>
+     * @param backupPath backup containing the previously committed state
+     */
+    private void deleteBackupAfterCommit(Path backupPath) {
+      try {
+        if (fileSystem.exists(backupPath) && !fileSystem.delete(backupPath, false)) {
+          LOG.warn("Failed to delete obsolete cache persistence backup {}", backupPath);
+        }
+      } catch (IOException error) {
+        LOG.warn("Failed to delete obsolete cache persistence backup {}", backupPath, error);
       }
     }
 
@@ -405,15 +469,6 @@ public class HadoopFsCachePersistenceStorage implements CachePersistenceStorage 
       } catch (IOException rollbackFailure) {
         originalFailure.addSuppressed(rollbackFailure);
       }
-    }
-
-    /**
-     * Creates a unique backup path adjacent to the committed state file.
-     * @param targetPath committed persistence state path
-     * @return unique backup path
-     */
-    private Path createBackupPath(Path targetPath) {
-      return new Path(targetPath.toString() + BACKUP_FILE_MARKER + UUID.randomUUID());
     }
   }
 }

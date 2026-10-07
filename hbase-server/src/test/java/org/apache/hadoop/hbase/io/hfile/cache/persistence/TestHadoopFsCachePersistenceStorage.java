@@ -18,13 +18,16 @@
 package org.apache.hadoop.hbase.io.hfile.cache.persistence;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.withSettings;
 
@@ -36,6 +39,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -255,6 +259,104 @@ public class TestHadoopFsCachePersistenceStorage {
 
     assertArrayEquals(original, readState(KEY));
     assertOnlyCommittedStateFile(KEY);
+  }
+
+  /**
+   * Verifies that previously committed state is recovered when publication is interrupted after the
+   * committed state is moved to its backup location.
+   * @throws IOException if persistence or recovery fails
+   */
+  @Test
+  public void testRecoversStateAfterInterruptedReplacement() throws IOException {
+    byte[] original = "original-state".getBytes(StandardCharsets.UTF_8);
+    writeState(KEY, original);
+
+    Path targetPath = new Path(rootPath, KEY + ".state");
+    Path backupPath = new Path(targetPath.toString() + ".backup");
+
+    assertTrue(fileSystem.rename(targetPath, backupPath));
+    assertFalse(fileSystem.exists(targetPath));
+    assertTrue(fileSystem.exists(backupPath));
+
+    assertArrayEquals(original, readState(KEY));
+
+    assertTrue(fileSystem.exists(targetPath));
+    assertFalse(fileSystem.exists(backupPath));
+  }
+
+  /**
+   * Verifies that failure to delete an obsolete backup after publication does not fail the commit.
+   * @throws IOException if persistence unexpectedly fails
+   */
+  @Test
+  public void testBackupDeleteFalseAfterCommitIsNonFatal() throws IOException {
+    FileSystem fileSystem = mock(FileSystem.class);
+    FSDataOutputStream outputStream = mock(FSDataOutputStream.class);
+    Path rootPath = new Path("/cache");
+    Path targetPath = new Path(rootPath, KEY + ".state");
+    Path backupPath = new Path(targetPath.toString() + ".backup");
+
+    configureSuccessfulReplacement(fileSystem, outputStream, rootPath, targetPath, backupPath);
+
+    when(fileSystem.delete(backupPath, false)).thenReturn(false);
+
+    HadoopFsCachePersistenceStorage testStorage =
+      new HadoopFsCachePersistenceStorage(fileSystem, rootPath);
+
+    try (CachePersistenceOutput output = testStorage.create(KEY)) {
+      assertDoesNotThrow(output::commit);
+    }
+
+    verify(fileSystem).delete(backupPath, false);
+  }
+
+  /**
+   * Verifies that an exception while deleting an obsolete backup after publication does not fail
+   * the commit.
+   * @throws IOException if persistence setup unexpectedly fails
+   */
+  @Test
+  public void testBackupDeleteExceptionAfterCommitIsNonFatal() throws IOException {
+    FileSystem fileSystem = mock(FileSystem.class);
+    FSDataOutputStream outputStream = mock(FSDataOutputStream.class);
+    Path rootPath = new Path("/cache");
+    Path targetPath = new Path(rootPath, KEY + ".state");
+    Path backupPath = new Path(targetPath.toString() + ".backup");
+
+    configureSuccessfulReplacement(fileSystem, outputStream, rootPath, targetPath, backupPath);
+
+    when(fileSystem.delete(backupPath, false))
+      .thenThrow(new IOException("Expected cleanup failure"));
+
+    HadoopFsCachePersistenceStorage testStorage =
+      new HadoopFsCachePersistenceStorage(fileSystem, rootPath);
+
+    try (CachePersistenceOutput output = testStorage.create(KEY)) {
+      assertDoesNotThrow(output::commit);
+    }
+
+    verify(fileSystem).delete(backupPath, false);
+  }
+
+  /**
+   * Creates persistence storage backed by a mocked filesystem and configures a replacement commit
+   * through the point where backup cleanup is attempted.
+   * @param fileSystem mocked filesystem
+   * @param output     temporary persistence output stream
+   * @param rootPath   persistence root path
+   * @param targetPath committed state path
+   * @param backupPath backup state path
+   * @throws IOException if mock setup fails
+   */
+  private void configureSuccessfulReplacement(FileSystem fileSystem, FSDataOutputStream output,
+    Path rootPath, Path targetPath, Path backupPath) throws IOException {
+    Path parent = targetPath.getParent();
+
+    when(fileSystem.exists(parent)).thenReturn(true);
+    when(fileSystem.exists(targetPath)).thenReturn(true);
+    when(fileSystem.exists(backupPath)).thenReturn(false, true);
+    when(fileSystem.create(any(Path.class), eq(false))).thenReturn(output);
+    when(fileSystem.rename(any(Path.class), any(Path.class))).thenReturn(true);
   }
 
   /**
