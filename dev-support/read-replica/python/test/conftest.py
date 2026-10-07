@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -61,8 +63,11 @@ def per_test_log_file(request):
     active_logs_dir = os.environ.get('ACTIVE_CLUSTER_LOGS_DIR')
     replica_logs_dir = os.environ.get('REPLICA_CLUSTER_LOGS_DIR')
 
-    _clear_directory(active_logs_dir)
-    _clear_directory(replica_logs_dir)
+    for logs_dir in (active_logs_dir, replica_logs_dir):
+        if logs_dir:
+            os.makedirs(logs_dir, mode=0o777, exist_ok=True)
+            os.chmod(logs_dir, 0o777)
+            _clear_directory(logs_dir)
 
     handler = logging.FileHandler(log_path, mode='w')
     handler.setFormatter(logging.Formatter(LOG_FORMAT))

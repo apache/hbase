@@ -148,7 +148,8 @@ def _pytest_rows(test_results: list[TestResult], timing: dict[str, int],
     failed_count = sum(1 for t in test_results if not t.passed)
     total_reruns = sum(t.rerun_count for t in test_results)
 
-    all_passed = failed_count == 0
+    # At least one test ran and there were no failures
+    all_passed = bool(test_results) and failed_count == 0
 
     if all_passed:
         vote, color = "+1", "green"
@@ -167,10 +168,11 @@ def _pytest_rows(test_results: list[TestResult], timing: dict[str, int],
             log = _log_link(t.name, "red", logs_url, output_dir)
             rows.append(_detail_row("red", log, f"failed {t.name}"))
 
-    for t in test_results:
-        if t.passed and t.rerun_count > 0:
-            log = _log_link(t.name, "yellow", logs_url, output_dir)
-            rows.append(_detail_row("yellow", log, f"rerun {t.name}"))
+    if all_passed:
+        for t in test_results:
+            if t.rerun_count > 0:
+                log = _log_link(t.name, "yellow", logs_url, output_dir)
+                rows.append(_detail_row("yellow", log, f"rerun {t.name}"))
 
     return rows
 
