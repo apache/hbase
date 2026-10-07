@@ -36,7 +36,6 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
-import org.apache.hadoop.hbase.master.procedure.ServerCrashProcedure;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -125,6 +124,12 @@ public class TestProcDispatcher {
     assertEquals(0, hbckReport.getOrphanRegionsOnRS().size());
 
     HRegion region0 = hRegionServer0.getRegions().get(0);
+    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
+    // Count SCP submissions with the master metric rather than by scanning
+    // getProcedures(): an SCP does not wait for a client ack, so once finished it is evicted by
+    // the next CompletedProcedureCleaner run (every 30s), which can happen while the moves below
+    // are still retrying, before the first waitFor poll.
+    long scpsBefore = getSubmittedScpCount(master);
     // Fail the next two open/close-region requests for this table so the moves trigger SCP(s).
     RSProcDispatcher.injectErrorsForNextRequests(tableName, 2);
     // move all regions from server1 to server0
@@ -132,7 +137,6 @@ public class TestProcDispatcher {
       TEST_UTIL.getAdmin().move(region.getRegionInfo().getEncodedNameAsBytes(), rs0);
     }
     TEST_UTIL.getAdmin().move(region0.getRegionInfo().getEncodedNameAsBytes());
-    HMaster master = TEST_UTIL.getHBaseCluster().getMaster();
 
     // Ensure, after the injected connection errors:
     // 1. the total number of regions is unchanged before and after the SCP(s)
@@ -151,8 +155,7 @@ public class TestProcDispatcher {
               == ProcedureProtos.ProcedureState.SUCCESS)
           .count(),
         master.getMasterProcedureExecutor().getProcedures().size());
-      LOG.info("Num of SCPs: {}", master.getMasterProcedureExecutor().getProcedures().stream()
-        .filter(proc -> proc instanceof ServerCrashProcedure).count());
+      LOG.info("Num of SCPs submitted: {}", getSubmittedScpCount(master) - scpsBefore);
       return (numRegions0 + numRegions1 + numRegions2)
           == (cluster.getRegionServer(0).getNumberOfOnlineRegions()
             + cluster.getRegionServer(1).getNumberOfOnlineRegions()
@@ -161,8 +164,7 @@ public class TestProcDispatcher {
           .filter(masterProcedureEnvProcedure -> masterProcedureEnvProcedure.getState()
               == ProcedureProtos.ProcedureState.SUCCESS)
           .count() == master.getMasterProcedureExecutor().getProcedures().size()
-        && master.getMasterProcedureExecutor().getProcedures().stream()
-          .anyMatch(proc -> proc instanceof ServerCrashProcedure);
+        && getSubmittedScpCount(master) > scpsBefore;
     });
 
     // Ensure we have no inconsistent regions
@@ -172,5 +174,9 @@ public class TestProcDispatcher {
       return report.getInconsistentRegions().isEmpty() && report.getOrphanRegionsOnFS().isEmpty()
         && report.getOrphanRegionsOnRS().isEmpty();
     });
+  }
+
+  private static long getSubmittedScpCount(HMaster master) {
+    return master.getMasterMetrics().getServerCrashProcMetrics().getSubmittedCounter().getCount();
   }
 }
