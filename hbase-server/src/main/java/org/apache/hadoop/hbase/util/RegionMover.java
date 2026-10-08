@@ -572,18 +572,19 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         }
         // If hbase:meta region was isolated, then it needs to be part of isolateRegionInfoList.
         if (isMetaIsolated) {
+          TableName metaTableName = conn.getMetaTableName();
           List<HRegionLocation> result =
-            conn.getRegionLocator(TableName.META_TABLE_NAME).getAllRegionLocations();
+            conn.getRegionLocator(metaTableName).getAllRegionLocations();
           ServerName metaSeverName = result.get(0).getServerName();
           // For isolating hbase:meta, it should move explicitly in Ack mode,
           // hence the forceMoveRegionByAck = true.
           if (!metaSeverName.equals(server)) {
-            LOG.info("Region of {} {} is on server {} moving to {}", TableName.META_TABLE_NAME,
+            LOG.info("Region of {} {} is on server {} moving to {}", metaTableName,
               metaRegionInfo.getEncodedName(), metaSeverName, server);
             submitRegionMovesWhileUnloading(metaSeverName, Collections.singletonList(server),
               movedRegions, Collections.singletonList(metaRegionInfo), true);
           } else {
-            LOG.info("Region of {} {} already exists on server: {}", TableName.META_TABLE_NAME,
+            LOG.info("Region of {} {} already exists on server: {}", metaTableName,
               metaRegionInfo.getEncodedName(), server);
           }
           isolateRegionInfoList.add(RegionInfoBuilder.FIRST_META_REGIONINFO);
