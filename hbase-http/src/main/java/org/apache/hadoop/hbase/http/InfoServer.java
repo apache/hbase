@@ -50,6 +50,7 @@ public class InfoServer {
   // HBASE_WEB_TLS_CONFIG_PREFIX and HADOOP_WEB_TLS_CONFIG_PREFIX. The UI process only ever plays
   // the TLS-server role, so no parallel .client. prefix is defined.
   private static final String HBASE_WEB_TLS_SERVER_CONFIG_PREFIX = "hbase.ui.ssl.server.";
+  private static final String TRUSTSTORE_LOCATION = "truststore.location";
   /**
    * Config key controlling whether the UI's TLS connector requests or requires a client
    * certificate. Valid values: {@code NONE} (default), {@code WANT}, {@code NEED}.
@@ -85,11 +86,13 @@ public class InfoServer {
       // We are using the Hadoop HTTP server config properties.
       // This makes it easy to keep in sync with Hadoop's UI servers, but hard to set this
       // separately for HBase.
+      String trustStoreLocation = getTLSProperty(c, TRUSTSTORE_LOCATION);
+
       builder.keyPassword(getTLSPassword(c, "keystore.keypassword"))
         .keyStore(getTLSProperty(c, "keystore.location"), getTLSPassword(c, "keystore.password"),
           getTLSProperty(c, "keystore.type", "jks"))
-        .trustStore(getTLSProperty(c, "truststore.location"),
-          getTLSPassword(c, "truststore.password"), getTLSProperty(c, "truststore.type", "jks"))
+        .trustStore(trustStoreLocation, getTLSPassword(c, "truststore.password"),
+          getTLSProperty(c, "truststore.type", "jks"))
         // The ssl.server.*.protocols properties do not exist in Hadoop at the time of writing.
         .setIncludeProtocols(getTLSProperty(c, "include.protocols"))
         .setExcludeProtocols(getTLSProperty(c, "exclude.protocols"))
@@ -106,6 +109,10 @@ public class InfoServer {
       X509Util.ClientAuth clientAuth =
         X509Util.ClientAuth.fromPropertyValue(StringUtils.defaultIfBlank(
           c.getTrimmed(HBASE_UI_SSL_CLIENT_AUTH_MODE), X509Util.ClientAuth.NONE.name()));
+      X509Util.validateClientAuthTrustStore(clientAuth, trustStoreLocation,
+        HBASE_UI_SSL_CLIENT_AUTH_MODE, HBASE_WEB_TLS_SERVER_CONFIG_PREFIX + TRUSTSTORE_LOCATION,
+        HBASE_WEB_TLS_CONFIG_PREFIX + TRUSTSTORE_LOCATION,
+        HADOOP_WEB_TLS_CONFIG_PREFIX + TRUSTSTORE_LOCATION);
       builder.needsClientAuth(clientAuth == X509Util.ClientAuth.NEED)
         .wantsClientAuth(clientAuth == X509Util.ClientAuth.WANT);
     }
