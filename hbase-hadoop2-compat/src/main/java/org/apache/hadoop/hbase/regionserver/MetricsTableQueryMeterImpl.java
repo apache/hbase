@@ -96,4 +96,15 @@ public class MetricsTableQueryMeterImpl implements MetricsTableQueryMeter {
   public void updateTableWriteQueryMeter(TableName tableName) {
     getOrCreateTableMeter(tableName).updateTableWriteQueryMeter();
   }
+
+  @Override
+  public void deleteTable(TableName tableName) {
+    TableMeters removed = metersByTable.remove(tableName);
+    if (removed == null) {
+      return;
+    }
+    // Also remove the meters from the underlying MetricRegistry so they no longer show up in JMX.
+    metricRegistry.remove(qualifyMetricsName(tableName, TABLE_READ_QUERY_PER_SECOND));
+    metricRegistry.remove(qualifyMetricsName(tableName, TABLE_WRITE_QUERY_PER_SECOND));
+  }
 }

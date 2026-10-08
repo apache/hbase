@@ -17,7 +17,7 @@
  */
 package org.apache.hadoop.hbase.regionserver;
 
-import java.util.HashMap;
+import java.util.concurrent.ConcurrentHashMap;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
@@ -33,7 +33,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class MetricsTableLatenciesImpl extends BaseSourceImpl implements MetricsTableLatencies {
 
-  private final HashMap<TableName, TableHistograms> histogramsByTable = new HashMap<>();
+  private final ConcurrentHashMap<TableName, TableHistograms> histogramsByTable =
+      new ConcurrentHashMap<>();
 
   public static class TableHistograms {
     final MetricHistogram getTimeHisto;
@@ -124,14 +125,48 @@ public class MetricsTableLatenciesImpl extends BaseSourceImpl implements Metrics
   }
 
   public TableHistograms getOrCreateTableHistogram(String tableName) {
-    // TODO Java8's ConcurrentHashMap#computeIfAbsent would be stellar instead
     final TableName tn = TableName.valueOf(tableName);
-    TableHistograms latency = histogramsByTable.get(tn);
-    if (latency == null) {
-      latency = new TableHistograms(getMetricsRegistry(), tn);
-      histogramsByTable.put(tn, latency);
+    return histogramsByTable.computeIfAbsent(tn,
+        t -> new TableHistograms(getMetricsRegistry(), t));
+  }
+
+  /**
+   * Remove all latency histograms of the given table from both {@link #histogramsByTable} and the
+   * underlying {@link DynamicMetricsRegistry}. This should be called when the table is no longer
+   * online on this RegionServer to avoid unbounded growth (see HBASE-27486 / HBASE-27681).
+   *
+   * <p>Note: this only removes the histograms registered by {@link TableHistograms}. Other
+   * per-table metrics registered by different components (e.g.
+   * {@link MetricsTableQueryMeterImpl}) are cleaned up separately.</p>
+   *
+   * <p>Implementation detail: each {@code MutableHistogram} is registered in the underlying
+   * {@link DynamicMetricsRegistry#metricsMap} under its base name (e.g.
+   * {@code Namespace_default_table_foo_metric_getTime}); the {@code _num_ops / _min / _max /
+   * _mean / *_percentile} suffixes are produced dynamically at snapshot time and are NOT stored
+   * as separate map entries. Therefore we must call {@link DynamicMetricsRegistry#removeMetric}
+   * on the base name to actually stop them from showing up in JMX; calling
+   * {@code removeHistogramMetrics} alone is a no-op for this scenario.</p>
+   */
+  @Override
+  public void deleteTable(String tableName) {
+    final TableName tn = TableName.valueOf(tableName);
+    TableHistograms removed = histogramsByTable.remove(tn);
+    if (removed == null) {
+      return;
     }
-    return latency;
+    DynamicMetricsRegistry reg = getMetricsRegistry();
+    reg.removeMetric(qualifyMetricsName(tn, GET_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, INCREMENT_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, APPEND_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, PUT_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, PUT_BATCH_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, DELETE_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, DELETE_BATCH_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, SCAN_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, SCAN_SIZE));
+    reg.removeMetric(qualifyMetricsName(tn, CHECK_AND_DELETE_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, CHECK_AND_PUT_TIME));
+    reg.removeMetric(qualifyMetricsName(tn, CHECK_AND_MUTATE_TIME));
   }
 
   public MetricsTableLatenciesImpl() {
