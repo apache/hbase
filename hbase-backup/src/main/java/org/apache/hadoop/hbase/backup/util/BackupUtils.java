@@ -44,17 +44,14 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
-import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.HConstants;
-import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -67,7 +64,6 @@ import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationException;
@@ -79,7 +75,6 @@ import org.apache.hadoop.hbase.tool.BulkLoadHFiles;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
-import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -118,20 +113,17 @@ public final class BackupUtils {
   }
 
   /**
-   * copy out Table RegionInfo into incremental backup image need to consider move this logic into
-   * HBackupFileSystem
+   * Copy table descriptors into the incremental backup image for use during restore.
    * @param conn       connection
    * @param backupInfo backup info
    * @param conf       configuration
    * @throws IOException exception
    */
-  public static void copyTableRegionInfo(Connection conn, BackupInfo backupInfo, Configuration conf)
-    throws IOException {
+  public static void copyTableDescriptors(Connection conn, BackupInfo backupInfo,
+    Configuration conf) throws IOException {
     Path rootDir = CommonFSUtils.getRootDir(conf);
     FileSystem fs = rootDir.getFileSystem(conf);
 
-    // for each table in the table set, copy out the table info and region
-    // info files in the correct directory structure
     try (Admin admin = conn.getAdmin()) {
       for (TableName table : backupInfo.getTables()) {
         if (!admin.tableExists(table)) {
@@ -150,35 +142,7 @@ public final class BackupUtils {
         LOG.debug("Attempting to copy table info for:" + table + " target: " + target
           + " descriptor: " + orig);
         LOG.debug("Finished copying tableinfo.");
-        List<RegionInfo> regions = MetaTableAccessor.getTableRegions(conn, table);
-        // For each region, write the region info to disk
-        LOG.debug("Starting to write region info for table " + table);
-        for (RegionInfo regionInfo : regions) {
-          Path regionDir = FSUtils
-            .getRegionDirFromTableDir(new Path(backupInfo.getTableBackupDir(table)), regionInfo);
-          regionDir = new Path(backupInfo.getTableBackupDir(table), regionDir.getName());
-          writeRegioninfoOnFilesystem(conf, targetFs, regionDir, regionInfo);
-        }
-        LOG.debug("Finished writing region info for table " + table);
       }
-    }
-  }
-
-  /**
-   * Write the .regioninfo file on-disk.
-   */
-  public static void writeRegioninfoOnFilesystem(final Configuration conf, final FileSystem fs,
-    final Path regionInfoDir, RegionInfo regionInfo) throws IOException {
-    final byte[] content = RegionInfo.toDelimitedByteArray(regionInfo);
-    Path regionInfoFile = new Path(regionInfoDir, "." + HConstants.REGIONINFO_QUALIFIER_STR);
-    // First check to get the permissions
-    FsPermission perms = CommonFSUtils.getFilePermissions(fs, conf, HConstants.DATA_FILE_UMASK_KEY);
-    // Write the RegionInfo file content
-    FSDataOutputStream out = FSUtils.create(conf, fs, regionInfoFile, perms, null);
-    try {
-      out.write(content);
-    } finally {
-      out.close();
     }
   }
 
