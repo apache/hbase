@@ -181,6 +181,12 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager, Configurati
     final ClientProtos.ScanRequest scanRequest, long maxScannerResultSize,
     long maxBlockBytesScanned, long prevBlockBytesScannedDifference)
     throws IOException, RpcThrottlingException {
+    if (
+      scanRequest.hasScannerId() && scanRequest.getCloseScanner()
+        && scanRequest.getNumberOfRows() == 0 && !scanRequest.getRenew()
+    ) {
+      return NoopOperationQuota.get();
+    }
     Optional<User> user = RpcServer.getRequestUser();
     UserGroupInformation ugi;
     if (user.isPresent()) {
