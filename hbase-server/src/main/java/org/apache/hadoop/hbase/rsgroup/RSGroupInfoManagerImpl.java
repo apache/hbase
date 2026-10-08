@@ -387,11 +387,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         ? !expectedGroup.equals(dstGroup)
         : regexGroupMap.containsKey(dstGroup);
       if (isWrongMove) {
+        String reason = expectedGroup != null
+          ? "its membership is decided by " + RS_GROUP_REGEX_PREFIX + expectedGroup
+            + ", under which its hostname belongs in '" + expectedGroup + "'"
+          : "its hostname does not match " + RS_GROUP_REGEX_PREFIX + dstGroup
+            + ", which decides the membership of that RSGroup";
         throw new ConstraintException("Server " + server + " cannot be moved to RSGroup '"
-          + dstGroup + "': its membership is decided by " + RS_GROUP_REGEX_PREFIX + expectedGroup
-          + ", under which its hostname "
-          + (expectedGroup != null ? "belongs in '" + expectedGroup + "'" : "does not match")
-          + ". Change that config instead.");
+          + dstGroup + "': " + reason + ". Change that config instead.");
       }
     }
   }
@@ -838,6 +840,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     Map<String, String> rsGroupNameToRegexMap = conf.getPropsWithPrefix(RS_GROUP_REGEX_PREFIX);
     Map<String, Pattern> rsGroupNameToPatternMap = new HashMap<>();
     for (Map.Entry<String, String> e : rsGroupNameToRegexMap.entrySet()) {
+      if (e.getValue() == null) {
+        // getPropsWithPrefix reads names and values separately, so an entry removed by a concurrent
+        // configuration reload can show up here with a null value. Treat it as unset.
+        continue;
+      }
       if (!GROUP_NAME_PATTERN.matcher(e.getKey()).matches()) {
         LOG.warn("Ignoring {}{} -- '{}' is not a valid RSGroup name (only alphanumeric characters "
           + "and underscore allowed)", RS_GROUP_REGEX_PREFIX, e.getKey(), e.getKey());
@@ -888,7 +895,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       List<String> matchingRSGroupNames =
         getMatchingRSGroupNames(server.getHostName(), rsGroupNameToPatternMap);
       if (matchingRSGroupNames.isEmpty()) {
-        LOG.info("Server {} hostname does not match any regex-based RSGroup names", server);
         continue;
       }
       if (matchingRSGroupNames.size() > 1) {
@@ -1061,8 +1067,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
       LOG.warn(
         "Servers {} are stored in RSGroup '{}' but match a {}* entry; placing them in the "
-          + "regex-governed RSGroup instead. Move them to the '{}' RSGroup to make this explicit",
-        overlap, info.getName(), RS_GROUP_REGEX_PREFIX, RSGroupInfo.DEFAULT_GROUP);
+          + "regex-governed RSGroup instead and dropping the stored copy",
+        overlap, info.getName(), RS_GROUP_REGEX_PREFIX);
       SortedSet<Address> kept = new TreeSet<>(info.getServers());
       kept.removeAll(overlap);
       RSGroupInfo newInfo = new RSGroupInfo(info.getName(), kept);
@@ -1683,7 +1689,9 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         "configuration of " + RSGroupInfo.DEFAULT_GROUP + " can't be stored persistently");
     }
     RSGroupInfo rsGroupInfo = copyOf(getRSGroupInfo(groupName));
-    rsGroupInfo.getConfiguration().keySet().forEach(rsGroupInfo::removeConfiguration);
+    // Iterate over a snapshot of the keys, as removeConfiguration modifies the backing map.
+    new ArrayList<>(rsGroupInfo.getConfiguration().keySet())
+      .forEach(rsGroupInfo::removeConfiguration);
     configuration.forEach((k, v) -> rsGroupInfo.setConfiguration(k, v));
     Map<String, RSGroupInfo> newGroupMap = Maps.newHashMap(holder.groupName2Group);
     newGroupMap.put(groupName, rsGroupInfo);

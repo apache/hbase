@@ -192,7 +192,7 @@ Servers come and go over the lifetime of a Cluster. Currently, you must manually
 
 Please use `Admin.removeServersFromRSGroup` or shell command _remove_servers_rsgroup_ to remove decommission servers from rsgroup.
 
-The `default` group is not like other rsgroups in that it is dynamic. Its server list mirrors the current state of the cluster; i.e. if you shutdown a server that was part of the `default` rsgroup, and then do a _get_rsgroup_ `default` to list its content in the shell, the server will no longer be listed. For non-default groups, though a mode may be offline, it will persist in the non-default group's list of servers. But if you move the offline server from the non-default rsgroup to default, it will not show in the `default` list. It will just be dropped.
+The `default` group, and every regex-governed group (see [Regex-Based Membership](#regex-based-membership)), are dynamic. Their server lists mirror the current state of the cluster; i.e. if you shutdown a server that was part of one of them, and then do a _get_rsgroup_ on it to list its content in the shell, the server will no longer be listed. For other non-default rsgroups, though a node may be offline, it will persist in the group's list of servers. But if you move the offline server from the non-default rsgroup to default, it will not show in the `default` list. It will just be dropped.
 
 ### Regex-Based Membership
 
@@ -206,20 +206,22 @@ Instead of moving each server into a group by hand, a non-default rsgroup can be
 ```
 
 - The regex is matched against the server's hostname only (not the port), and must match the whole hostname.
+- Regexes are evaluated by the master on every regionserver join and leave, with no timeout. Like the rest of `hbase-site.xml`, they are trusted configuration, so keep them simple: a pattern prone to catastrophic backtracking (for example nested quantifiers such as `(a+)+`) can stall regionserver registration and expiry.
 - The group must already exist (`add_rsgroup`); the `default` group cannot be regex-governed.
 - A hostname that matches the regexes of more than one group is treated as unmatched and stays in `default` until the overlap is fixed. Invalid regexes and invalid group names are ignored with a warning in the master log.
-- Membership of a regex-governed group follows the live servers and is recomputed whenever a server joins or leaves, like the `default` group. It is never stored in `hbase:rsgroup` or ZooKeeper: a regex-governed group is persisted with no servers, so a server event costs no extra I/O.
-- The regex always wins. A manual move that contradicts a regex is rejected, because the next server event or master restart would put the server back where its hostname says: a server matching a regex can only be moved to its regex-governed group, and a server that does not match cannot be moved into one. A regex-governed group cannot be removed while it has servers (remove the `hbase.rsgroup.regex.<group>` property first).
+- Membership of a regex-governed group follows the live servers and is recomputed whenever a server joins or leaves, or when the HMaster restarts, like the `default` group. It is never stored in `hbase:rsgroup` or ZooKeeper: a regex-governed group is persisted with no servers, so a server event costs no extra I/O.
+- The regex always wins. A manual move that contradicts a regex is rejected, because the next server event or master restart would put the server back where its hostname says: a server matching a regex can only be moved to its regex-governed group, and a server that does not match cannot be moved into one. A regex-governed group cannot be removed while it has servers: first remove the `hbase.rsgroup.regex.<group>` property from the configuration and reload it on the masters, then move the group's remaining servers out, and only then remove the group.
+- Set the same `hbase.rsgroup.regex.*` properties on every master, including backup masters. Membership is computed from the active master's configuration, so a master that takes over with different properties would regroup the servers.
 
 <Callout type="warn">
-  **Removing a regex, or breaking it (typo, invalid regex), empties the group.** Because its servers are not stored, a group that stops being regex-governed has no servers until you move some in with `move_servers_rsgroup`; its former servers return to `default`. Tables bound to the group then have no regionserver of their own (see `hbase.rsgroup.fallback.enable` below). Invalid regexes and a regex-governed group with no online servers are both logged at WARN in the master log.
+  **Removing a regex, or breaking it (typo, invalid regex), turns the group back into an ordinary admin-managed group.** Its servers are not stored, so the group has none after a master restart; until then, servers it already holds stay in it, and a server that joins later is placed in `default`. Restart the master to settle it. Tables bound to the group may then have no regionserver of their own (see `hbase.rsgroup.fallback.enable` below). Invalid regexes and a regex-governed group with no online servers are both logged at WARN in the master log.
 </Callout>
 
 <Callout type="warn" title="Strongly recommended: enable fallback">
   Set `hbase.rsgroup.fallback.enable` to `true` whenever you use regex-based membership, unless you have a very good reason not to. Membership follows the live servers, so a regex-governed group (or `default`) can lose all of its servers when pods go down, when a regex is mistyped or removed, or when the regexes cover every regionserver. Without fallback, regions of tables bound to that group stay unassigned until a matching server returns.
 </Callout>
 
-When you enable a regex for servers that were previously placed in groups by hand, no manual cleanup is needed: on the first master start after the change, the regex places each matching server in its group, any stale copy stored for it is cleared, and a server that no longer matches the regex of the group it was stored in returns to `default`.
+When you enable a regex for servers that were previously placed in groups by hand, no manual cleanup is needed: the regex places each matching server in its group at the next server event or master start, any stale copy stored for it is cleared on the next flush, and a server stored in a regex-governed group that no longer matches its regex returns to `default`. The master logs a WARN naming the group the stale copy was in.
 
 Regex placement is always applied, even if it leaves the `default` group without any online servers (for example, when the regexes cover every regionserver). The master logs a warning in that case. Tables in `default`, including system tables unless they live in another rsgroup, then have no regionserver of their own, so set `hbase.rsgroup.fallback.enable` to `true` to let their regions fall back to the servers of other groups. Without it, those regions stay unassigned until a server that matches no regex, and is in no other group, registers.
 
@@ -236,6 +238,8 @@ Either have a system rsgroup where all the system tables are or just leave the s
 Yahoo! Have found it useful at their scale to keep a special rsgroup of dead or questionable nodes; this is one means of keeping them out of the running until repair.
 
 Be careful replacing dead nodes in an rsgroup. Ensure there are enough live nodes before you start moving out the dead. Move in good live nodes first if you have to.
+
+Servers that match a `hbase.rsgroup.regex.<group>` entry cannot be moved into a dead-nodes group; the move is rejected because the regex decides their group. To park such a server, change the regex (for example, exclude it by hostname) and let the next server event move it (an HMaster restart also works).
 
 ### Troubleshooting [#region-and-capacity-troubleshooting]
 
@@ -262,6 +266,8 @@ But if you change the 'hbase.balancer.rsgroup.enabled' to true, the old rsgroup 
   #Reassigning table t1 from non default group - hbase shell
   hbase(main):005:0> move_tables_rsgroup 'default',['t1']
   ```
+
+- Remove every `hbase.rsgroup.regex.*` property from the configuration on **all masters**, and reload the configuration on them. Moves of servers that match a regex are rejected while the property is set.
 
 - Move all regionservers in non-default rsgroups to `default` regionserver group
 
