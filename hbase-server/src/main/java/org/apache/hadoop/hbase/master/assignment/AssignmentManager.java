@@ -1230,8 +1230,17 @@ public class AssignmentManager {
           final RegionInfo hri = ProtobufUtil.toRegionInfo(transition.getRegionInfo(0));
           long procId =
             transition.getProcIdCount() > 0 ? transition.getProcId(0) : Procedure.NO_PROC_ID;
-          updateRegionTransition(serverNode, transition.getTransitionCode(), hri,
-            transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM, procId);
+          long seqId =
+            transition.hasOpenSeqNum() ? transition.getOpenSeqNum() : HConstants.NO_SEQNUM;
+          // On CLOSE, seed the master's flushed-seqid watermark with the region's final flushed
+          // seqid (reported by the RS). This complements the OPEN-time seed (HBASE-30335) and
+          // narrows the graceful-close window where a WAL split of a crashed source RS could
+          // write orphaned recovered.edits for already-durable edits. Uses the same monotonic
+          // merge(Math::max) seed, so it never regresses a higher value.
+          if (transition.getTransitionCode() == TransitionCode.CLOSED && seqId >= 0) {
+            master.getServerManager().reportRegionOpen(hri, seqId);
+          }
+          updateRegionTransition(serverNode, transition.getTransitionCode(), hri, seqId, procId);
           break;
         case READY_TO_SPLIT:
         case SPLIT:

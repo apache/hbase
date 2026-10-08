@@ -2348,7 +2348,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     builder.setServer(ProtobufUtil.toServerName(serverName));
     RegionStateTransition.Builder transition = builder.addTransitionBuilder();
     transition.setTransitionCode(code);
-    if (code == TransitionCode.OPENED && openSeqNum >= 0) {
+    // Carry the seqid for OPENED (openSeqNum) and CLOSED (durable flushed seqid). The master uses
+    // both to seed its flushedSequenceIdByRegion watermark; see HBASE-30335 and the CLOSE-time
+    // follow-up.
+    if ((code == TransitionCode.OPENED || code == TransitionCode.CLOSED) && openSeqNum >= 0) {
       transition.setOpenSeqNum(openSeqNum);
     }
     for (RegionInfo hri : hris) {

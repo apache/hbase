@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.regionserver.handler;
 
 import java.io.IOException;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
@@ -110,8 +109,12 @@ public class CloseRegionHandler extends EventHandler {
       }
 
       this.rsServices.removeRegion(region, destination);
+      // Report the region's durable flushed seqid on CLOSE so the master can seed its
+      // flushedSequenceIdByRegion watermark. This complements the OPEN-time seed (HBASE-30335)
+      // and narrows the graceful-close window where a subsequent WAL split of a crashed source
+      // RS could otherwise write orphaned recovered.edits for already-durable edits.
       rsServices.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
-        HConstants.NO_SEQNUM, Procedure.NO_PROC_ID, -1, regionInfo, -1));
+        region.getMaxFlushedSeqId(), Procedure.NO_PROC_ID, -1, regionInfo, -1));
 
       // Done! Region is closed on this RS
       LOG.debug("Closed {}", region.getRegionInfo().getRegionNameAsString());
