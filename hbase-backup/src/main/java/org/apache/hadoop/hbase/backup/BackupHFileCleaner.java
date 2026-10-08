@@ -52,8 +52,35 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
   private boolean stopped = false;
   private boolean aborted = false;
   private Connection connection;
+  // null if the references could not be loaded; in that case no files are deletable
+  private volatile Set<String> hfileFilenames;
   // timestamp of most recent completed cleaning run
   private volatile long previousCleaningCompletionTimestamp = 0;
+
+  @Override
+  public void preClean() {
+    if (stopped) {
+      hfileFilenames = null;
+      return;
+    }
+
+    // We use filenames because the HFile will have been moved to the archive since it
+    // was registered.
+    Set<String> filenames = new HashSet<>();
+    try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
+      Set<TableName> tablesIncludedInBackups = fetchFullyBackedUpTables(tbl);
+      for (BulkLoad bulkLoad : tbl.readBulkloadRows(tablesIncludedInBackups)) {
+        filenames.add(new Path(bulkLoad.getHfilePath()).getName());
+      }
+      LOG.debug("Found {} unique HFile filenames registered as bulk loads.", filenames.size());
+      hfileFilenames = filenames;
+    } catch (IOException ioe) {
+      hfileFilenames = null;
+      LOG.error(
+        "Failed to read registered bulk load references from backup system table, marking all files as non-deletable.",
+        ioe);
+    }
+  }
 
   @Override
   public void postClean() {
@@ -62,23 +89,9 @@ public class BackupHFileCleaner extends BaseHFileCleanerDelegate implements Abor
 
   @Override
   public Iterable<FileStatus> getDeletableFiles(Iterable<FileStatus> files) {
-    if (stopped) {
-      return Collections.emptyList();
-    }
-
-    // We use filenames because the HFile will have been moved to the archive since it
-    // was registered.
-    final Set<String> hfileFilenames = new HashSet<>();
-    try (BackupSystemTable tbl = new BackupSystemTable(connection)) {
-      Set<TableName> tablesIncludedInBackups = fetchFullyBackedUpTables(tbl);
-      for (BulkLoad bulkLoad : tbl.readBulkloadRows(tablesIncludedInBackups)) {
-        hfileFilenames.add(new Path(bulkLoad.getHfilePath()).getName());
-      }
-      LOG.debug("Found {} unique HFile filenames registered as bulk loads.", hfileFilenames.size());
-    } catch (IOException ioe) {
-      LOG.error(
-        "Failed to read registered bulk load references from backup system table, marking all files as non-deletable.",
-        ioe);
+    // Pin the snapshot because the returned Iterable is evaluated lazily.
+    final Set<String> hfileFilenames = this.hfileFilenames;
+    if (stopped || hfileFilenames == null) {
       return Collections.emptyList();
     }
 
