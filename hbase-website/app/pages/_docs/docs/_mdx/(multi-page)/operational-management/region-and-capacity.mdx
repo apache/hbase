@@ -214,11 +214,20 @@ Instead of moving each server into a group by hand, a non-default rsgroup can be
 - Set the same `hbase.rsgroup.regex.*` properties on every master, including backup masters. Membership is computed from the active master's configuration, so a master that takes over with different properties would regroup the servers.
 
 <Callout type="warn">
-  **Removing a regex, or breaking it (typo, invalid regex), turns the group back into an ordinary admin-managed group.** Its servers are not stored, so the group has none after a master restart; until then, servers it already holds stay in it, and a server that joins later is placed in `default`. Restart the master to settle it. Tables bound to the group may then have no regionserver of their own (see `hbase.rsgroup.fallback.enable` below). Invalid regexes and a regex-governed group with no online servers are both logged at WARN in the master log.
+  **Removing a regex, or breaking it (typo, invalid regex), turns the group back into an ordinary
+  admin-managed group.** Its servers are not stored, so the group has none after a master restart;
+  until then, servers it already holds stay in it, and a server that joins later is placed in
+  `default`. Restart the master to settle it. Tables bound to the group may then have no
+  regionserver of their own (see `hbase.rsgroup.fallback.enable` below). Invalid regexes and a
+  regex-governed group with no online servers are both logged at WARN in the master log.
 </Callout>
 
 <Callout type="warn" title="Strongly recommended: enable fallback">
-  Set `hbase.rsgroup.fallback.enable` to `true` whenever you use regex-based membership, unless you have a very good reason not to. Membership follows the live servers, so a regex-governed group (or `default`) can lose all of its servers when pods go down, when a regex is mistyped or removed, or when the regexes cover every regionserver. Without fallback, regions of tables bound to that group stay unassigned until a matching server returns.
+  Set `hbase.rsgroup.fallback.enable` to `true` whenever you use regex-based membership, unless you
+  have a very good reason not to. Membership follows the live servers, so a regex-governed group (or
+  `default`) can lose all of its servers when pods go down, when a regex is mistyped or removed, or
+  when the regexes cover every regionserver. Without fallback, regions of tables bound to that group
+  stay unassigned until a matching server returns.
 </Callout>
 
 When you enable a regex for servers that were previously placed in groups by hand, no manual cleanup is needed: the regex places each matching server in its group at the next server event or master start, any stale copy stored for it is cleared on the next flush, and a server stored in a regex-governed group that no longer matches its regex returns to `default`. The master logs a WARN naming the group the stale copy was in.
