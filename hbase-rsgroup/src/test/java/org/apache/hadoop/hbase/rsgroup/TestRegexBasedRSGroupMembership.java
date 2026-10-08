@@ -30,10 +30,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.LocalHBaseCluster;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
+import org.apache.hadoop.hbase.RSGroupTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.net.Address;
@@ -94,6 +94,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
     // any regex config this test added so it can't leak into the next method.
     for (String key : regexConfigKeysSet) {
       master.getConfiguration().unset(key);
+      TEST_UTIL.getConfiguration().unset(key);
     }
     regexConfigKeysSet.clear();
     tearDownAfterMethod();
@@ -172,12 +173,68 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
   private void setRegex(String groupName, String regex) {
     String key = REGEX_PREFIX + groupName;
     master.getConfiguration().set(key, regex);
+    // The master's Configuration is a distinct object from TEST_UTIL's (the minicluster copies
+    // configuration per daemon), so mirror the change there too --
+    // VerifyingRSGroupAdminClient#verify
+    // reads it to know which servers' membership is regex-driven.
+    TEST_UTIL.getConfiguration().set(key, regex);
     regexConfigKeysSet.add(key);
+  }
+
+  /**
+   * Tears down a regex-governed group: the regex is first dropped on the master only -- TEST_UTIL's
+   * copy still tells VerifyingRSGroupAdminClient which servers' membership is regex-driven -- and
+   * then the group is emptied and removed.
+   */
+  private void removeRegexGroup(String groupName) throws Exception {
+    // Move the tables out while the regex is still active: the flush this triggers must keep not
+    // persisting the group's servers.
+    rsGroupAdmin.moveTables(rsGroupAdmin.getRSGroupInfo(groupName).getTables(),
+      RSGroupInfo.DEFAULT_GROUP);
+    String key = REGEX_PREFIX + groupName;
+    master.getConfiguration().unset(key);
+    try {
+      removeGroup(groupName);
+    } finally {
+      clearRegex(groupName);
+    }
+  }
+
+  /** Reads a group's servers the way RegionMover and the master web UI do. */
+  private Set<Address> rsGroupTableAccessorServers(String groupName) throws IOException {
+    RSGroupInfo info =
+      RSGroupTableAccessor.getRSGroupInfo(TEST_UTIL.getConnection(), Bytes.toBytes(groupName));
+    return info == null ? new HashSet<>() : new HashSet<>(info.getServers());
+  }
+
+  /**
+   * Fails over to a freshly started master (the minicluster's masters are threads): a backup is
+   * started, the active master is stopped, and the shared handles are re-pointed.
+   */
+  private void restartMaster() throws Exception {
+    MiniHBaseCluster miniCluster = TEST_UTIL.getMiniHBaseCluster();
+    int oldIndex = -1;
+    List<JVMClusterUtil.MasterThread> masters = miniCluster.getMasterThreads();
+    for (int i = 0; i < masters.size(); i++) {
+      if (masters.get(i).getMaster() == master) {
+        oldIndex = i;
+      }
+    }
+    miniCluster.startMaster();
+    miniCluster.stopMaster(oldIndex);
+    miniCluster.waitOnMaster(oldIndex);
+    assertTrue(miniCluster.waitForActiveAndReadyMaster(WAIT_TIMEOUT));
+    // Clients bootstrap from the configured master address, which is now the dead master's.
+    TEST_UTIL.getConfiguration().set(HConstants.MASTER_ADDRS_KEY,
+      miniCluster.getMaster().getServerName().getAddress().toString());
+    TEST_UTIL.closeConnection();
+    initialize();
   }
 
   private void clearRegex(String groupName) {
     String key = REGEX_PREFIX + groupName;
     master.getConfiguration().unset(key);
+    TEST_UTIL.getConfiguration().unset(key);
     regexConfigKeysSet.remove(key);
   }
 
@@ -240,8 +297,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       assertFalse(
         rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -261,8 +317,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       assertFalse(
         rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -282,8 +337,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
       assertFalse(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -319,8 +373,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         () -> capturer.getOutput().contains("Invalid regex '[' for RSGroup '" + groupName + "'"));
     } finally {
       capturer.stopCapturing();
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -362,8 +415,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
         () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(secondAddr));
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -388,8 +440,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
     } finally {
       capturer.stopCapturing();
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -420,76 +471,198 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         () -> rsGroupAdmin.getRSGroupInfo(groupTwo).getServers().contains(addr));
     } finally {
       capturer.stopCapturing();
-      clearRegex(groupOne);
-      clearRegex(groupTwo);
-      removeGroup(groupOne);
-      removeGroup(groupTwo);
+      removeRegexGroup(groupOne);
+      removeRegexGroup(groupTwo);
     }
   }
 
   @Test
-  public void testEmptyDefaultGroupGuardTripsAndClears() throws Exception {
-    // Explicit moveServers can never empty default in one call (a longstanding, unrelated
-    // RSGroupAdminServer guard always keeps >=1 server there), so parking every base RS in an
-    // admin-managed group first (as an earlier version of this test tried) is a non-starter. The
-    // automatic regex-reconciliation path bypasses that admin-level guard entirely, so instead we
-    // drive the empty-default scenario purely through it: a catch-all regex matches every online
-    // server at once (all base RS share one real hostname), with no explicit move at all.
-    String regexGroup = getGroupName("guardregex");
+  public void testRegexCoveringEveryServerEmptiesDefaultAndWarns() throws Exception {
+    // Regex placement is always applied: a catch-all regex matches every online server (all base
+    // RS share one real hostname), so they all move into the regex group and default is left
+    // empty. That is a warning about an unusual configuration, not an error.
+    // (Explicit moveServers can never empty default -- an unrelated, longstanding
+    // RSGroupInfoManagerImpl#moveServers guard keeps >=1 server there -- so the empty-default
+    // state is driven purely through the automatic regex-reconciliation path.)
+    String regexGroup = getGroupName("emptydefault");
     rsGroupAdmin.addRSGroup(regexGroup);
     LogCapturer capturer = captureRSGroupInfoManagerLog();
     try {
       setRegex(regexGroup, ".*");
       triggerListenerCycle();
 
-      // Every online server (all base RS) now matches the catch-all -- the guard must trip
-      // rather than emptying default: base servers stay exactly where they are.
-      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> capturer.getOutput()
-        .contains("would leave RSGroup 'default' with no online servers"));
-      assertEquals(NUM_SLAVES_BASE,
-        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
-      assertTrue(rsGroupAdmin.getRSGroupInfo(regexGroup).getServers().isEmpty());
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> capturer.getOutput().contains("leaves RSGroup 'default' with no online servers"));
+      assertTrue(capturer.getOutput().contains(RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY));
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(regexGroup).getServers().size() == NUM_SLAVES_BASE);
+      assertTrue(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().isEmpty());
 
       // Narrow the regex so it only targets a new server, not the base cluster's shared
-      // hostname -- the guard's precondition no longer covers every online server (the base
-      // servers are unmatched again), so it clears and the new server is free to join.
+      // hostname -- the base servers are unmatched again and return to default.
       setRegex(regexGroup, "127\\.0\\.0\\..*");
       JVMClusterUtil.RegionServerThread rst = startFakeHostnameRS("127.0.0.1");
       Address addr = addressOf(rst);
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
-        () -> rsGroupAdmin.getRSGroupInfo(regexGroup).getServers().contains(addr));
-      assertEquals(NUM_SLAVES_BASE,
-        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size());
+        () -> rsGroupAdmin.getRSGroupInfo(regexGroup).getServers().contains(addr)
+          && rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+              == NUM_SLAVES_BASE);
     } finally {
       capturer.stopCapturing();
-      clearRegex(regexGroup);
-      removeGroup(regexGroup);
+      removeRegexGroup(regexGroup);
     }
   }
 
   @Test
-  public void testExplicitMoveViolatingInvariantRejected() throws Exception {
-    String groupName = getGroupName("reject");
+  public void testCatchAllRegexMovesEveryServerAndGroupTablesStayAssigned() throws Exception {
+    // A regex group with a live member and a bound table is broadened to a catch-all. Every
+    // server is placed in its regex group (default is left empty), and the group's table stays
+    // fully assigned on its original member.
+    String groupName = getGroupName("catchall");
     rsGroupAdmin.addRSGroup(groupName);
-    setRegex(groupName, "127\\.0\\.0\\..*");
+    setRegex(groupName, "127\\.0\\.0\\.1");
+    RSGroupBasedLoadBalancer balancer = (RSGroupBasedLoadBalancer) master.getLoadBalancer();
+    balancer.setFallbackEnabledForTest(true);
     try {
-      // A server whose hostname does NOT match the regex may not be explicitly moved into a
-      // regex-governed group.
-      JVMClusterUtil.RegionServerThread rst = startFakeHostnameRS("localhost");
+      JVMClusterUtil.RegionServerThread rst = startFakeHostnameRS("127.0.0.1");
       Address addr = addressOf(rst);
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
-        () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
+      ServerName sn = getServerName(addr);
 
-      assertThrows(DoNotRetryIOException.class,
-        () -> rsGroupAdmin.moveServers(Sets.newHashSet(addr), groupName));
+      TEST_UTIL.createMultiRegionTable(tableName, Bytes.toBytes("f"), 5);
+      TEST_UTIL.waitUntilAllRegionsAssigned(tableName);
+      rsGroupAdmin.moveTables(Sets.newHashSet(tableName), groupName);
+      assertEquals(5, getTableServerRegionMap().get(tableName).get(sn).size());
 
-      // No partial mutation: server is still exactly where it started.
-      assertTrue(
-        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
-      assertFalse(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
+      setRegex(groupName, ".*");
+      triggerListenerCycle();
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> {
+        Set<Address> servers = rsGroupAdmin.getRSGroupInfo(groupName).getServers();
+        return servers.contains(addr) && servers.size() == NUM_SLAVES_BASE + 1
+          && rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().isEmpty();
+      });
+      assertEquals(5, getTableServerRegionMap().get(tableName).get(sn).size());
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      balancer.setFallbackEnabledForTest(false);
+      // moveTables requires the target group to have a server, and default was emptied above, so
+      // narrow the regex back first to let the base servers return to default.
+      setRegex(groupName, "127\\.0\\.0\\.1");
+      triggerListenerCycle();
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().size()
+            == NUM_SLAVES_BASE);
+      removeRegexGroup(groupName);
+    }
+  }
+
+  @Test
+  public void testStoredServersOfRegexGovernedGroupAreIgnoredOnRefresh() throws Exception {
+    String groupName = getGroupName("stale");
+    rsGroupAdmin.addRSGroup(groupName);
+    setRegex(groupName, "127\\.0\\.0\\.1");
+    try {
+      JVMClusterUtil.RegionServerThread ipRs = startFakeHostnameRS("127.0.0.1");
+      JVMClusterUtil.RegionServerThread nameRs = startFakeHostnameRS("localhost");
+      Address ipAddr = addressOf(ipRs);
+      Address nameAddr = addressOf(nameRs);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> rsGroupTableAccessorServers(groupName).contains(ipAddr)
+        && rsGroupTableAccessorServers(RSGroupInfo.DEFAULT_GROUP).contains(nameAddr));
+      assertFalse(rsGroupTableAccessorServers(groupName).contains(nameAddr));
+
+      // Point the regex at the other server and fail over. A new master copies the minicluster
+      // configuration, so set it there too. The table still stores the old membership, which
+      // refresh must ignore.
+      setRegex(groupName, "localhost");
+      TEST_UTIL.getMiniHBaseCluster().getConfiguration().set(REGEX_PREFIX + groupName, "localhost");
+      restartMaster();
+
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(nameAddr));
+      assertFalse(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(ipAddr));
+      // The startup flush rewrites the stored copy from the recomputed membership.
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupTableAccessorServers(groupName).contains(nameAddr)
+          && !rsGroupTableAccessorServers(groupName).contains(ipAddr)
+          && rsGroupTableAccessorServers(RSGroupInfo.DEFAULT_GROUP).contains(ipAddr));
+    } finally {
+      TEST_UTIL.getMiniHBaseCluster().getConfiguration().unset(REGEX_PREFIX + groupName);
+      removeRegexGroup(groupName);
+    }
+  }
+
+  @Test
+  public void testRegexGovernedGroupMembershipIsPersistedForTableReaders() throws Exception {
+    // Regex-governed membership is computed on the fly, so it is visible even while hbase:rsgroup
+    // is unavailable. Once the table is back, a flush stores it so that direct readers of the
+    // table (RSGroupTableAccessor) see it too.
+    String groupName = getGroupName("persist");
+    rsGroupAdmin.addRSGroup(groupName);
+    setRegex(groupName, "127\\.0\\.0\\.1");
+    boolean tableDisabled = false;
+    try {
+      TEST_UTIL.getAdmin().disableTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
+      tableDisabled = true;
+
+      JVMClusterUtil.RegionServerThread rst = startFakeHostnameRS("127.0.0.1");
+      Address addr = addressOf(rst);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
+
+      TEST_UTIL.getAdmin().enableTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
+      tableDisabled = false;
+      // Any group mutation flushes every group.
+      String flushGroup = getGroupName("persistflush");
+      rsGroupAdmin.addRSGroup(flushGroup);
+      removeGroup(flushGroup);
+
+      assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
+      assertTrue(rsGroupTableAccessorServers(groupName).contains(addr));
+    } finally {
+      if (tableDisabled) {
+        TEST_UTIL.getAdmin().enableTable(RSGroupInfoManagerImpl.RSGROUP_TABLE_NAME);
+      }
+      removeRegexGroup(groupName);
+    }
+  }
+
+  @Test
+  public void testMoveContradictingRegexIsRejected() throws Exception {
+    String groupName = getGroupName("reject");
+    String otherGroup = getGroupName("rejectother");
+    rsGroupAdmin.addRSGroup(groupName);
+    rsGroupAdmin.addRSGroup(otherGroup);
+    setRegex(groupName, "127\\.0\\.0\\..*");
+    try {
+      // A server whose hostname does not match the regex cannot be moved into the regex group ...
+      JVMClusterUtil.RegionServerThread nonMatching = startFakeHostnameRS("localhost");
+      Address nonMatchingAddr = addressOf(nonMatching);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP)
+        .getServers().contains(nonMatchingAddr));
+      assertThrows(IOException.class,
+        () -> rsGroupAdmin.moveServers(Sets.newHashSet(nonMatchingAddr), groupName));
+      assertTrue(rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers()
+        .contains(nonMatchingAddr));
+      assertFalse(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(nonMatchingAddr));
+
+      // ... but can still be placed in any other group.
+      rsGroupAdmin.moveServers(Sets.newHashSet(nonMatchingAddr), otherGroup);
+      assertTrue(rsGroupAdmin.getRSGroupInfo(otherGroup).getServers().contains(nonMatchingAddr));
+      rsGroupAdmin.moveServers(Sets.newHashSet(nonMatchingAddr), RSGroupInfo.DEFAULT_GROUP);
+
+      // A server the regex claims cannot be moved out of, or to any group other than, its group.
+      JVMClusterUtil.RegionServerThread matching = startFakeHostnameRS("127.0.0.1");
+      Address matchingAddr = addressOf(matching);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(matchingAddr));
+      assertThrows(IOException.class,
+        () -> rsGroupAdmin.moveServers(Sets.newHashSet(matchingAddr), RSGroupInfo.DEFAULT_GROUP));
+      assertThrows(IOException.class,
+        () -> rsGroupAdmin.moveServers(Sets.newHashSet(matchingAddr), otherGroup));
+      assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(matchingAddr));
+    } finally {
+      removeGroup(otherGroup);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -545,8 +718,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       assertTrue(rsGroupAdmin.getRSGroupInfo(regexGroup).getServers().contains(addr));
     } finally {
       TEST_UTIL.deleteTable(tableName);
-      clearRegex(regexGroup);
-      removeGroup(regexGroup);
+      removeRegexGroup(regexGroup);
     }
   }
 
@@ -581,68 +753,81 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       // The unrelated explicit move above must not have disturbed the regex-governed group.
       assertTrue(rsGroupAdmin.getRSGroupInfo(groupName).getServers().contains(addr));
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
   @Test
-  public void testDriftBlocksUnrelatedSubsequentFlushConfig() throws Exception {
-    // Once persisted state is made to violate the invariant, any subsequent unrelated
-    // flushConfig-triggering admin call also fails until the drift is fixed.
+  public void testRefreshRemovesRegexMatchedServerFromStoredAdminGroup() throws Exception {
+    // A server stored in an admin-managed group before a regex claimed it must not end up in two
+    // groups after a manager restart. refresh cannot reject (it would wedge startup), so the regex
+    // wins in memory and a WARN is logged.
+    String adminGroup = getGroupName("refreshadmin");
+    String regexGroup = getGroupName("refreshregex");
+    rsGroupAdmin.addRSGroup(adminGroup);
+    rsGroupAdmin.addRSGroup(regexGroup);
+    LogCapturer capturer = captureRSGroupInfoManagerLog();
+    try {
+      JVMClusterUtil.RegionServerThread rst = startFakeHostnameRS("127.0.0.1");
+      Address addr = addressOf(rst);
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
+      rsGroupAdmin.moveServers(Sets.newHashSet(addr), adminGroup);
+
+      // The regex arrives while the server is already stored in the admin group. A new master
+      // copies the minicluster configuration, so set it there too before the failover.
+      setRegex(regexGroup, "127\\.0\\.0\\..*");
+      TEST_UTIL.getMiniHBaseCluster().getConfiguration().set(REGEX_PREFIX + regexGroup,
+        "127\\.0\\.0\\..*");
+      restartMaster();
+      TEST_UTIL.waitFor(WAIT_TIMEOUT,
+        () -> rsGroupAdmin.getRSGroupInfo(regexGroup).getServers().contains(addr));
+      assertFalse(rsGroupAdmin.getRSGroupInfo(adminGroup).getServers().contains(addr));
+      assertFalse(
+        rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
+      assertTrue(capturer.getOutput().contains("are stored in RSGroup '" + adminGroup + "'"));
+
+      // The startup flush replaces the stale stored copy: the admin group no longer holds the
+      // server and the regex-governed group stores it.
+      TEST_UTIL.waitFor(WAIT_TIMEOUT, () -> !rsGroupTableAccessorServers(adminGroup).contains(addr)
+        && rsGroupTableAccessorServers(regexGroup).contains(addr));
+    } finally {
+      capturer.stopCapturing();
+      TEST_UTIL.getMiniHBaseCluster().getConfiguration().unset(REGEX_PREFIX + regexGroup);
+      removeRegexGroup(regexGroup);
+      removeGroup(adminGroup);
+    }
+  }
+
+  @Test
+  public void testRegexConfigDriftDoesNotBlockUnrelatedAdminOps() throws Exception {
+    // A regex that contradicts where a server was explicitly placed must not block any unrelated
+    // admin operation.
     String groupName = getGroupName("drift");
     String bystanderGroup = getGroupName("bystander");
     rsGroupAdmin.addRSGroup(groupName);
     rsGroupAdmin.addRSGroup(bystanderGroup);
+    String renamedBystander = bystanderGroup + "_renamed";
     try {
       JVMClusterUtil.RegionServerThread rst = startFakeHostnameRS("127.0.0.1");
       Address addr = addressOf(rst);
       TEST_UTIL.waitFor(WAIT_TIMEOUT,
         () -> rsGroupAdmin.getRSGroupInfo(RSGroupInfo.DEFAULT_GROUP).getServers().contains(addr));
 
-      // Manually place the server into groupName via an explicit move while no regex governs
-      // groupName yet -- this is legal at the time it happens.
+      // Legal at the time: no regex governs groupName yet.
       rsGroupAdmin.moveServers(Sets.newHashSet(addr), groupName);
 
-      // Now introduce a regex for groupName that does NOT match the server already placed
-      // there -- this creates drift between persisted state and the (now live) invariant.
-      // Deliberately do NOT trigger a listener cycle here: any server add/remove event would
-      // make the automatic reconciliation recompute a fresh, self-consistent assignment from the
-      // current regex (moving the server back out of groupName), healing the drift before we get
-      // a chance to observe it. The drift must persist purely from the un-reconciled config
-      // change until an unrelated admin RPC's flushConfig call trips over it.
+      // Now introduce a regex for groupName that does NOT match the server already placed there.
+      // No listener cycle runs, so the contradiction stays un-reconciled.
       setRegex(groupName, "10\\.0\\.0\\..*");
 
-      // Any subsequent, otherwise-unrelated admin call that triggers flushConfig must now fail.
-      assertThrows(IOException.class,
-        () -> rsGroupAdmin.renameRSGroup(bystanderGroup, bystanderGroup + "_renamed"));
-
-      // The rejected rename must not have partially applied: the old name still exists, and
-      // no group under the new name was created.
+      rsGroupAdmin.renameRSGroup(bystanderGroup, renamedBystander);
       assertTrue(
-        rsGroupAdmin.listRSGroups().stream().anyMatch(g -> g.getName().equals(bystanderGroup)));
-      assertFalse(rsGroupAdmin.listRSGroups().stream()
-        .anyMatch(g -> g.getName().equals(bystanderGroup + "_renamed")));
-
-      // Fixing the regex so it matches the server already placed in groupName resolves the
-      // drift; flushConfig re-reads the config live, so the very same, previously-rejected
-      // admin call now succeeds without needing a listener cycle or a restart.
-      setRegex(groupName, "127\\.0\\.0\\..*");
-      rsGroupAdmin.renameRSGroup(bystanderGroup, bystanderGroup + "_renamed");
-      assertTrue(rsGroupAdmin.listRSGroups().stream()
-        .anyMatch(g -> g.getName().equals(bystanderGroup + "_renamed")));
+        rsGroupAdmin.listRSGroups().stream().anyMatch(g -> g.getName().equals(renamedBystander)));
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
-      RSGroupInfo bystander = rsGroupAdmin.getRSGroupInfo(bystanderGroup);
-      if (bystander == null) {
-        bystander = rsGroupAdmin.getRSGroupInfo(bystanderGroup + "_renamed");
-        if (bystander != null) {
-          removeGroup(bystander.getName());
-        }
-      } else {
-        removeGroup(bystanderGroup);
-      }
+      removeRegexGroup(groupName);
+      removeGroup(
+        rsGroupAdmin.getRSGroupInfo(bystanderGroup) != null ? bystanderGroup : renamedBystander);
     }
   }
 
@@ -704,8 +889,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         admin.balancerSwitch(false, true);
       }
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -768,8 +952,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         assertEquals(tableName, region.getTable());
       }
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 
@@ -879,8 +1062,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
         assertFalse(region.getTable().equals(tableName));
       }
     } finally {
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
       removeGroup(otherGroupName);
     }
   }
@@ -962,8 +1144,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
       });
     } finally {
       balancer.setFallbackEnabledForTest(false);
-      clearRegex(groupName);
-      removeGroup(groupName);
+      removeRegexGroup(groupName);
     }
   }
 }
