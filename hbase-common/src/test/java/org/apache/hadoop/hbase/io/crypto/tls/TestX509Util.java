@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.io.crypto.tls;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
@@ -28,6 +29,7 @@ import static org.mockito.Mockito.mock;
 import java.security.Security;
 import java.util.Arrays;
 import java.util.Collections;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.exceptions.KeyManagerException;
 import org.apache.hadoop.hbase.exceptions.SSLContextException;
@@ -375,4 +377,178 @@ public class TestX509Util extends AbstractTestX509Parameterized {
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Role-scoped configuration resolution (single-EKU certificate support)
+  // ---------------------------------------------------------------------------
+
+  @TestTemplate
+  public void testResolveConfigPrefersRoleScopedOverLegacy() {
+    conf.set("test.role", "role-value");
+    conf.set("test.legacy", "legacy-value");
+    assertEquals("role-value",
+      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
+  }
+
+  @TestTemplate
+  public void testResolveConfigFallsBackToLegacyWhenRoleUnset() {
+    conf.unset("test.role");
+    conf.set("test.legacy", "legacy-value");
+    assertEquals("legacy-value",
+      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
+  }
+
+  @TestTemplate
+  public void testResolveConfigReturnsDefaultWhenBothUnset() {
+    conf.unset("test.role");
+    conf.unset("test.legacy");
+    assertEquals("default-value",
+      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
+  }
+
+  @TestTemplate
+  public void testResolvePasswordPrefersRoleScopedOverLegacy() throws Exception {
+    conf.set("test.role.password", "role-pw");
+    conf.set("test.legacy.password", "legacy-pw");
+    assertArrayEquals("role-pw".toCharArray(),
+      X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
+  }
+
+  @TestTemplate
+  public void testResolvePasswordFallsBackToLegacyWhenRoleUnset() throws Exception {
+    conf.unset("test.role.password");
+    conf.set("test.legacy.password", "legacy-pw");
+    assertArrayEquals("legacy-pw".toCharArray(),
+      X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
+  }
+
+  @TestTemplate
+  public void testResolvePasswordReturnsNullWhenBothUnset() throws Exception {
+    conf.unset("test.role.password");
+    conf.unset("test.legacy.password");
+    assertNull(X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForClientUsesRoleScopedKeystoreWhenSet() throws Exception {
+    // Move the legacy keystore values to the client-scoped keys and clear the legacy keys, so
+    // that a successful context build proves the client-scoped keys were consulted.
+    String location = conf.get(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    String password = conf.get(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    String type = conf.get(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION, location);
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD, password);
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_TYPE, type);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+
+    SslContext sslContext = X509Util.createSslContextForClient(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    // Handshake would fail if the key manager weren't wired; smoke-test that engine creation works.
+    assertTrue(
+      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForServerUsesRoleScopedKeystoreWhenSet() throws Exception {
+    String location = conf.get(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    String password = conf.get(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    String type = conf.get(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+    conf.set(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION, location);
+    conf.set(X509Util.TLS_CONFIG_SERVER_KEYSTORE_PASSWORD, password);
+    conf.set(X509Util.TLS_CONFIG_SERVER_KEYSTORE_TYPE, type);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_PASSWORD);
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_TYPE);
+
+    SslContext sslContext = X509Util.createSslContextForServer(conf);
+    ByteBufAllocator byteBufAllocatorMock = mock(ByteBufAllocator.class);
+    assertTrue(
+      sslContext.newEngine(byteBufAllocatorMock).getSSLParameters().getProtocols().length > 0);
+  }
+
+  @TestTemplate
+  public void testCreateSSLContextForServerThrowsWhenNeitherKeystoreSet() {
+    conf.unset(X509Util.TLS_CONFIG_KEYSTORE_LOCATION);
+    conf.unset(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION);
+    SSLContextException ex =
+      assertThrows(SSLContextException.class, () -> X509Util.createSslContextForServer(conf));
+    // The error should name both keys so the operator knows what to set.
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_SERVER_KEYSTORE_LOCATION),
+      "message should mention role-scoped key, got: " + ex.getMessage());
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_KEYSTORE_LOCATION),
+      "message should mention legacy key, got: " + ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testValidateClientAuthTrustStoreRejectsNeedWithoutTrustStore() {
+    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+      () -> X509Util.validateClientAuthTrustStore(X509Util.ClientAuth.NEED, null, "the.mode.key",
+        "the.truststore.key"));
+    assertTrue(ex.getMessage().contains("the.mode.key"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("the.truststore.key"), ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testValidateClientAuthTrustStoreAllowsNoneWithoutTrustStore() {
+    // NONE never requests a peer certificate, so a missing truststore is not a misconfiguration.
+    X509Util.validateClientAuthTrustStore(X509Util.ClientAuth.NONE, null, "mode.key", "ts.key");
+  }
+
+  // A role-scoped password with no role-scoped location would be applied to the legacy keystore.
+  @TestTemplate
+  public void testCreateSSLContextForClientRejectsRoleKeyWithoutRoleLocation() {
+    // The base conf carries a complete legacy keystore, so only the role-scoped location is
+    // missing.
+    conf.set(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD, "orphan-pw");
+    IllegalArgumentException ex =
+      assertThrows(IllegalArgumentException.class, () -> X509Util.createSslContextForClient(conf));
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_PASSWORD),
+      ex.getMessage());
+    assertTrue(ex.getMessage().contains(X509Util.TLS_CONFIG_CLIENT_KEYSTORE_LOCATION),
+      ex.getMessage());
+  }
+
+  @TestTemplate
+  public void testResolveStoreRejectsRoleKeyWithoutRoleLocation() {
+    Configuration c = new Configuration(false);
+    c.set("p.role.keystore.password", "pw2");
+    c.set("p.keystore.location", "/old.jks");
+    IllegalArgumentException ex = assertThrows(IllegalArgumentException.class,
+      () -> TLSStore.resolve(c, "p.role.", "p.", TLSStore.Keys.RPC_KEYSTORE));
+    assertTrue(ex.getMessage().contains("p.role.keystore.password"), ex.getMessage());
+    assertTrue(ex.getMessage().contains("p.role.keystore.location"), ex.getMessage());
+  }
+
+  /**
+   * A store is a unit: the prefix that supplies the location supplies every other attribute too.
+   * Resolving per key would open the role-scoped file with the legacy password and type.
+   */
+  @TestTemplate
+  public void testResolveStoreNeverMixesPrefixes() throws Exception {
+    Configuration c = new Configuration(false);
+    c.set("p.role.keystore.location", "/new.p12");
+    c.set("p.keystore.location", "/old.jks");
+    c.set("p.keystore.password", "legacy-pw");
+    c.set("p.keystore.type", "JKS");
+
+    TLSStore store = TLSStore.resolve(c, "p.role.", "p.", TLSStore.Keys.RPC_KEYSTORE);
+    assertEquals("/new.p12", store.getLocation());
+    assertNull(store.getPassword(), "password must not be taken from the legacy prefix");
+    assertEquals("", store.getType(), "type must not be taken from the legacy prefix");
+  }
+
+  // Deployments that never adopt the role-scoped prefix keep resolving from the legacy keys.
+  @TestTemplate
+  public void testResolveStoreFallsBackToLegacyPrefix() throws Exception {
+    Configuration c = new Configuration(false);
+    c.set("p.keystore.location", "/old.jks");
+    c.set("p.keystore.password", "pw");
+    c.set("p.keystore.type", "JKS");
+
+    TLSStore store = TLSStore.resolve(c, "p.role.", "p.", TLSStore.Keys.RPC_KEYSTORE);
+    assertEquals("/old.jks", store.getLocation());
+    assertEquals("pw", store.getPassword());
+    assertEquals("JKS", store.getType());
+  }
 }
