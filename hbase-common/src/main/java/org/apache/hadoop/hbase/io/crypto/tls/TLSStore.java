@@ -18,8 +18,11 @@
 package org.apache.hadoop.hbase.io.crypto.tls;
 
 import java.io.IOException;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -41,10 +44,7 @@ public final class TLSStore {
 
   private static final Logger LOG = LoggerFactory.getLogger(TLSStore.class);
 
-  /**
-   * Tracks which prefixes have already been reported, so a JVM logs at most one line per store
-   * regardless of how many times a context is built.
-   */
+  /** Stores already checked for unused legacy keys, so the scan and the warning happen once. */
   private static final Set<String> LOGGED_STORES = ConcurrentHashMap.newKeySet();
 
   /**
@@ -131,15 +131,14 @@ public final class TLSStore {
 
   private static void logOnce(Configuration config, String rolePrefix, String legacyPrefix,
     Keys keys) {
-    StringBuilder unused = new StringBuilder();
-    for (String postfix : keys.all()) {
-      if (config.get(legacyPrefix + postfix) != null) {
-        unused.append(unused.length() == 0 ? "" : ", ").append(legacyPrefix).append(postfix);
-      }
+    if (!LOGGED_STORES.add(rolePrefix + keys.location)) {
+      return;
     }
-    if (unused.length() > 0 && LOGGED_STORES.add(rolePrefix + keys.location)) {
+    List<String> unused = Arrays.stream(keys.all()).map(postfix -> legacyPrefix + postfix)
+      .filter(key -> config.get(key) != null).collect(Collectors.toList());
+    if (!unused.isEmpty()) {
       LOG.warn("{} supplies this store, so these keys are unused: {}. Remove them once the"
-        + " migration is complete.", rolePrefix, unused);
+        + " migration is complete.", rolePrefix, String.join(", ", unused));
     }
   }
 
