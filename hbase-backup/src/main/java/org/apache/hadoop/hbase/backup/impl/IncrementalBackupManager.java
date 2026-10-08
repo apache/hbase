@@ -20,8 +20,10 @@ package org.apache.hadoop.hbase.backup.impl;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -54,12 +56,14 @@ public class IncrementalBackupManager extends BackupManager {
   /**
    * Obtain the list of logs that need to be copied out for this incremental backup. The list is set
    * in BackupInfo.
-   * @return The new HashMap of RS log time stamps after the log roll for this incremental backup.
+   * @return The new map of RS log time stamps for this incremental backup, as computed by
+   *         {@link BackupUtils#computeLogBoundaries}: the included logs are covered, the logs held
+   *         back for a later backup (for example, logs still being split) are pending, and a host
+   *         that still has logs keeps its previous boundary if this backup gives it no new one.
    * @throws IOException exception
    */
   public Map<String, Long> getIncrBackupLogFileMap() throws IOException {
     List<String> logList;
-    Map<String, Long> newTimestamps;
     Map<String, Long> previousTimestampMins =
       BackupUtils.getRSLogTimestampMins(readLogTimestampMap());
 
@@ -69,16 +73,26 @@ public class IncrementalBackupManager extends BackupManager {
         + "In order to create an incremental backup, at least one full backup is needed.");
     }
 
+    Map<String, Long> previousLogRollByHost = readRegionServerLastLogRollResult();
     LOG.info("Execute roll log procedure for incremental backup ...");
     BackupUtils.logRoll(conn, backupInfo.getBackupRootDir(), conf);
 
-    newTimestamps = readRegionServerLastLogRollResult();
+    Map<String, Long> rolledHosts =
+      BackupUtils.getRolledHosts(previousLogRollByHost, readRegionServerLastLogRollResult());
 
-    logList = getLogFilesForNewBackup(previousTimestampMins, newTimestamps, conf);
-    logList = excludeProcV2WALs(logList);
+    LogFileSelection selection = getLogFilesForNewBackup(previousTimestampMins, rolledHosts, conf);
+    logList = excludeProcV2WALs(selection.included());
     backupInfo.setIncrBackupFileList(logList);
 
+    Map<String, Long> newTimestamps = BackupUtils.computeLogBoundaries(rolledHosts,
+      previousTimestampMins, selection.hostsWithLogs(), logList, selection.heldBack());
+    LOG.debug("Log boundaries for incremental backup {}: {}", backupInfo.getBackupId(),
+      newTimestamps);
     return newTimestamps;
+  }
+
+  private record LogFileSelection(List<String> included, List<String> heldBack,
+    Set<String> hostsWithLogs) {
   }
 
   private List<String> excludeProcV2WALs(List<String> logList) {
@@ -97,15 +111,17 @@ public class IncrementalBackupManager extends BackupManager {
   }
 
   /**
-   * For each region server: get all log files newer than the last timestamps but not newer than the
-   * newest timestamps.
+   * Gather all log files that either: 1) are newer than the older timestamps, but not newer than
+   * the newest timestamps, or 2) are archived logs whose host name does not occur in the newest
+   * timestamps.
    * @param olderTimestamps  the timestamp for each region server of the last backup.
    * @param newestTimestamps the timestamp for each region server that the backup should lead to.
    * @param conf             the Hadoop and Hbase configuration
-   * @return a list of log files to be backed up
+   * @return the log files to be backed up, the log files held back for a later backup, and the
+   *         hosts that have any log files, including ones not backed up
    * @throws IOException exception
    */
-  private List<String> getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
+  private LogFileSelection getLogFilesForNewBackup(Map<String, Long> olderTimestamps,
     Map<String, Long> newestTimestamps, Configuration conf) throws IOException {
     LOG.debug("In getLogFilesForNewBackup()\n" + "olderTimestamps: " + olderTimestamps
       + "\n newestTimestamps: " + newestTimestamps);
@@ -119,6 +135,7 @@ public class IncrementalBackupManager extends BackupManager {
 
     List<String> resultLogFiles = new ArrayList<>();
     List<String> newestLogs = new ArrayList<>();
+    Set<String> hostsWithLogs = new HashSet<>();
 
     /*
      * The old region servers and timestamps info we kept in backup system table may be out of sync
@@ -143,6 +160,7 @@ public class IncrementalBackupManager extends BackupManager {
       if (host == null) {
         continue;
       }
+      hostsWithLogs.add(host);
       FileStatus[] logs;
       oldTimeStamp = olderTimestamps.get(host);
       // It is possible that there is no old timestamp in backup system table for this host if
@@ -198,6 +216,7 @@ public class IncrementalBackupManager extends BackupManager {
       if (host == null) {
         continue;
       }
+      hostsWithLogs.add(host);
       currentLogTS = BackupUtils.getCreationTime(p);
       oldTimeStamp = olderTimestamps.get(host);
       /*
@@ -217,18 +236,14 @@ public class IncrementalBackupManager extends BackupManager {
         resultLogFiles.add(currentLogFile);
       }
 
-      // It is possible that a host in .oldlogs is an obsolete region server
-      // so newestTimestamps.get(host) here can be null.
-      // Even if these logs belong to a obsolete region server, we still need
-      // to include they to avoid loss of edits for backup.
       Long newTimestamp = newestTimestamps.get(host);
-      if (newTimestamp == null || currentLogTS > newTimestamp) {
+      if (newTimestamp != null && currentLogTS > newTimestamp) {
         newestLogs.add(currentLogFile);
       }
     }
     // remove newest log per host because they are still in use
     resultLogFiles.removeAll(newestLogs);
-    return resultLogFiles;
+    return new LogFileSelection(resultLogFiles, newestLogs, hostsWithLogs);
   }
 
   static class NewestLogFilter implements PathFilter {
