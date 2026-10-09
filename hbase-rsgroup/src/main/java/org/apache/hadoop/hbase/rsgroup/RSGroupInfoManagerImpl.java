@@ -191,8 +191,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         continue;
       }
       if (!GROUP_NAME_PATTERN.matcher(e.getKey()).matches()) {
-        LOG.warn("Ignoring {}{} -- '{}' is not a valid RSGroup name (only alphanumeric characters "
-          + "and underscore allowed)", RS_GROUP_REGEX_PREFIX, e.getKey(), e.getKey());
+        LOG.warn("Ignoring {}{} -- '{}' is not a valid RSGroup name (it must match {})",
+          RS_GROUP_REGEX_PREFIX, e.getKey(), e.getKey(), GROUP_NAME_PATTERN.pattern());
         continue;
       }
       if (RSGroupInfo.DEFAULT_GROUP.equals(e.getKey())) {
@@ -207,7 +207,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           e.getKey(), RS_GROUP_REGEX_PREFIX, e.getKey());
       }
     }
-    LOG.info("Resolved regex-based RSGroup membership config: {}", rsGroupNameToPatternMap);
+    LOG.debug("Resolved regex-based RSGroup membership config: {}", rsGroupNameToPatternMap);
     return rsGroupNameToPatternMap;
   }
 
@@ -219,7 +219,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         rsGroupNames.add(e.getKey());
       }
     }
-    LOG.info("Hostname '{}' matches RSGroup name(s) {}", hostname, rsGroupNames);
     return rsGroupNames;
   }
 
@@ -252,7 +251,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           RS_GROUP_REGEX_PREFIX, rsGroupName, server, rsGroupName);
       }
     }
-    LOG.info("Resolved server address to RSGroup name map: {}", serverAddrToRSGroupName);
+    LOG.debug("Resolved server address to RSGroup name map: {}", serverAddrToRSGroupName);
     return serverAddrToRSGroupName;
   }
 
@@ -307,7 +306,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         RSGroupInfo.DEFAULT_GROUP, RS_GROUP_REGEX_PREFIX, RSGroupInfo.DEFAULT_GROUP,
         RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY);
     }
-    LOG.info(
+    LOG.debug(
       "Regex-based RSGroup membership resolution: onlineServers={}, "
         + "adminManagedServers={}, regexMatchedServers={}",
       onlineServers, adminManagedServers, regexMatchedServers);
@@ -709,7 +708,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * startup of the manager.
    */
   private synchronized void refresh(boolean forceOnline) throws IOException {
-    LOG.info("Refreshing RSGroup info from source of truth: forceOnline={}, isOnline={}",
+    LOG.debug("Refreshing RSGroup info from source of truth: forceOnline={}, isOnline={}",
       forceOnline, isOnline());
     List<RSGroupInfo> groupList = new LinkedList<>();
 
@@ -926,7 +925,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private Map<String, SortedSet<Address>>
     computeAutoManagedRSGroupServers(Collection<RSGroupInfo> existingGroups) {
-    LOG.info("Computing auto-managed RSGroup server membership.");
     Set<Address> onlineServers = getOnlineServers(masterServices);
     Map<String, Pattern> rsGroupNameToPatternMap =
       getRegexGroupMap(masterServices.getConfiguration());
@@ -962,7 +960,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           entry.getKey(), RS_GROUP_REGEX_PREFIX, entry.getKey());
       }
     }
-    LOG.info("Computed auto-managed RSGroup server membership: {}", result);
+    LOG.debug("Computed auto-managed RSGroup server membership: {}", result);
     return result;
   }
 
@@ -1029,11 +1027,10 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   /**
    * Recomputes server membership of 'default' and of every regex-governed group from the live
    * servers and flushes the result. If the flush fails (for example because {@code hbase:rsgroup}
-   * is disabled) a change that does not touch 'default' is still applied in memory, so regex
-   * membership stays visible; storage catches up on the next successful flush.
+   * is disabled) the new membership is still applied in memory, so membership stays visible, and
+   * the exception is rethrown. Storage catches up on the next successful flush.
    */
   private synchronized void updateAutoManagedRSGroupServers() throws IOException {
-    LOG.info("Updating auto-managed RSGroup servers.");
     Map<String, RSGroupInfo> currentGroups = rsGroupMap;
     Map<String, SortedSet<Address>> autoManagedServers =
       computeAutoManagedRSGroupServers(currentGroups.values());
@@ -1048,19 +1045,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
       }
     }
     if (!changed) {
-      LOG.info("No changes in auto-managed RSGroup server membership.");
       return;
     }
-    boolean defaultChanged = !newGroupMap.get(RSGroupInfo.DEFAULT_GROUP).getServers()
-      .equals(currentGroups.get(RSGroupInfo.DEFAULT_GROUP).getServers());
     try {
       flushConfig(newGroupMap);
     } catch (IOException e) {
-      if (defaultChanged) {
-        throw e;
-      }
-      LOG.warn("Failed to persist regex-governed RSGroup servers, applying them in memory only", e);
       resetRSGroupAndTableMaps(newGroupMap, tableMap);
+      throw e;
     }
     LOG.info("Updated auto-managed RSGroup servers, {} servers",
       autoManagedServers.values().stream().mapToInt(SortedSet::size).sum());
@@ -1082,13 +1073,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     @Override
     public void serverAdded(ServerName serverName) {
-      LOG.info("Server added: {}", serverName);
+      LOG.debug("Server added: {}", serverName);
       serverChanged();
     }
 
     @Override
     public void serverRemoved(ServerName serverName) {
-      LOG.info("Server removed: {}", serverName);
+      LOG.debug("Server removed: {}", serverName);
       serverChanged();
     }
 
@@ -1246,7 +1237,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private void checkGroupName(String groupName) throws ConstraintException {
     if (!GROUP_NAME_PATTERN.matcher(groupName).matches()) {
-      throw new ConstraintException("RSGroup name should only contain alphanumeric characters");
+      throw new ConstraintException(
+        "RSGroup name '" + groupName + "' must match " + GROUP_NAME_PATTERN.pattern());
     }
   }
 }
