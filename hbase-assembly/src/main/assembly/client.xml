@@ -35,6 +35,15 @@
     Unless differences are introduced on purpose, this should be kept in sync with
     hadoop-three-compat.xml -->
   </componentDescriptors>
+  <fileSets>
+    <fileSet>
+      <directory>${project.build.directory}/slf4j2</directory>
+      <outputDirectory>lib/slf4j2</outputDirectory>
+      <includes>
+        <include>*.jar</include>
+      </includes>
+    </fileSet>
+  </fileSets>
   <!-- Include the generated LICENSE and NOTICE files -->
   <files>
     <file>
@@ -141,6 +150,15 @@
         <include>org.apache.logging.log4j:*</include>
         <include>io.opentelemetry:*</include>
         <include>io.opentelemetry.semconv:*</include>
+      </includes>
+      <excludes>
+        <exclude>org.apache.logging.log4j:log4j-slf4j2-impl</exclude>
+      </excludes>
+    </dependencySet>
+    <dependencySet>
+      <outputDirectory>lib/slf4j2</outputDirectory>
+      <includes>
+        <include>org.apache.logging.log4j:log4j-slf4j2-impl</include>
       </includes>
     </dependencySet>
     <dependencySet>
