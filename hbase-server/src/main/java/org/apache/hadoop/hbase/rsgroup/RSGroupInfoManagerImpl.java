@@ -110,6 +110,24 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupProtos;
  * This is an implementation of {@link RSGroupInfoManager} which makes use of an HBase table as the
  * persistence store for the group information. It also makes use of zookeeper to store group
  * information needed for bootstrapping during offline mode.
+ * <h2>Admin-managed and auto-managed groups</h2> An <b>admin-managed</b> group is a non-default
+ * group that is not regex-governed (see {@code hbase.rsgroup.regex.<group>}). Its servers are set
+ * by an administrator and are stored in hbase:rsgroup and ZooKeeper. A group whose regex is invalid
+ * is admin-managed until the regex is fixed. In that time the servers that the group holds in
+ * memory count as admin-managed when the membership is computed
+ * ({@code resolveRegexBasedRSGroupMembership}). After a master restart the group holds only what
+ * was stored at the last flush.
+ * <p/>
+ * An <b>auto-managed</b> group is 'default' or a regex-governed group. Its servers are computed
+ * from the live servers and, while the regex is valid, are not stored in hbase:rsgroup and
+ * ZooKeeper.
+ * <p/>
+ * Auto-managed groups exist to make RSGroup work with auto-scaling when HBase runs in a cloud
+ * environment such as AWS or GCP. An admin-managed group does not give the elasticity that
+ * automatic upscaling and downscaling need: each new RegionServer must be moved into the group by
+ * hand. It fits a fixed number of RegionServers, for example to host internal system tables like
+ * hbase:meta and hbase:namespace. End user facing tables must be placed on an elastic group, so
+ * RegionServers join and leave it automatically. That is the need for auto-managed groups.
  * <h2>Concurrency</h2> RSGroup state is kept locally in Maps. There is a rsgroup name to cached
  * RSGroupInfo Map at {@link RSGroupInfoHolder#groupName2Group}. These Maps are persisted to the
  * hbase:rsgroup table (and cached in zk) on each modification.
