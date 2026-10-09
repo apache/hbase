@@ -376,6 +376,8 @@ public class RegionStateStore {
     Put putParent = MetaTableAccessor.makePutFromRegionInfo(
       RegionInfoBuilder.newBuilder(parent).setOffline(true).setSplit(true).build(), time);
     MetaTableAccessor.addDaughtersToPut(putParent, splitA, splitB);
+    MetaTableAccessor.addRegionStateToPut(putParent, RegionInfo.DEFAULT_REPLICA_ID,
+      RegionState.State.SPLIT);
 
     // Puts for daughters
     Put putA = MetaTableAccessor.makePutFromRegionInfo(splitA, time);
