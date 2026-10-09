@@ -1148,6 +1148,31 @@ public class TestBucketCache {
   }
 
   @TestTemplate
+  public void testRegionCachedSizeDecrementedOnEvictionForNonPersistentEngine() throws Exception {
+    assertFalse(cache.ioEngine.isPersistent());
+    String hfileName = "testRegionCachedSizeDecrementedOnEviction";
+    String regionName = "region";
+    HFileBlockPair[] blocks = CacheTestUtils.generateHFileBlocks(BLOCK_SIZE, 2);
+    BlockCacheKey key1 =
+      new BlockCacheKey(hfileName, "cf", regionName, 0, true, BlockType.DATA, false);
+    BlockCacheKey key2 =
+      new BlockCacheKey(hfileName, "cf", regionName, BLOCK_SIZE, true, BlockType.DATA, false);
+    cacheAndWaitUntilFlushedToBucket(cache, key1, blocks[0].getBlock(), true);
+    cacheAndWaitUntilFlushedToBucket(cache, key2, blocks[1].getBlock(), true);
+    long length1 = cache.backingMap.get(key1).getLength();
+    long length2 = cache.backingMap.get(key2).getLength();
+    assertEquals(length1 + length2, (long) cache.getRegionCachedInfo().get().get(regionName));
+
+    // Single block eviction
+    assertTrue(cache.evictBlock(key1));
+    assertEquals(length2, (long) cache.getRegionCachedInfo().get().get(regionName));
+
+    // Eviction by file, as done when a store file reader is closed
+    assertEquals(1, cache.evictBlocksByHfileName(hfileName));
+    assertFalse(cache.getRegionCachedInfo().get().containsKey(regionName));
+  }
+
+  @TestTemplate
   public void testIOTimePerHitReturnsZeroWhenNoHits()
     throws NoSuchFieldException, IllegalAccessException {
     CacheStats cacheStats = cache.getStats();
