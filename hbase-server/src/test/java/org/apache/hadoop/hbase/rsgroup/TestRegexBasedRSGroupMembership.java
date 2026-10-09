@@ -278,6 +278,7 @@ public class TestRegexBasedRSGroupMembership extends TestRSGroupsBase {
 
     void stopCapturing() {
       this.logger.removeAppender(this.appender);
+      this.appender.stop();
     }
   }
 

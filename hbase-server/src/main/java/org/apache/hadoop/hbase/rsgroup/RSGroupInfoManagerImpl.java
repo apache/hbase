@@ -273,7 +273,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         return;
       }
     }
-    LOG.info("No changes in auto-managed RSGroup server membership.");
   }
 
   private synchronized void init() throws IOException {
@@ -630,7 +629,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
    * startup of the manager.
    */
   private synchronized void refresh(boolean forceOnline) throws IOException {
-    LOG.info("Refreshing RSGroup info from source of truth: forceOnline={}, isOnline={}",
+    LOG.debug("Refreshing RSGroup info from source of truth: forceOnline={}, isOnline={}",
       forceOnline, isOnline());
     List<RSGroupInfo> groupList = new ArrayList<>();
 
@@ -846,8 +845,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         continue;
       }
       if (!GROUP_NAME_PATTERN.matcher(e.getKey()).matches()) {
-        LOG.warn("Ignoring {}{} -- '{}' is not a valid RSGroup name (only alphanumeric characters "
-          + "and underscore allowed)", RS_GROUP_REGEX_PREFIX, e.getKey(), e.getKey());
+        LOG.warn("Ignoring {}{} -- '{}' is not a valid RSGroup name (it must match {})",
+          RS_GROUP_REGEX_PREFIX, e.getKey(), e.getKey(), GROUP_NAME_PATTERN.pattern());
         continue;
       }
       if (RSGroupInfo.DEFAULT_GROUP.equals(e.getKey())) {
@@ -862,7 +861,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           e.getKey(), RS_GROUP_REGEX_PREFIX, e.getKey());
       }
     }
-    LOG.info("Resolved regex-based RSGroup membership config: {}", rsGroupNameToPatternMap);
+    LOG.debug("Resolved regex-based RSGroup membership config: {}", rsGroupNameToPatternMap);
     return rsGroupNameToPatternMap;
   }
 
@@ -874,7 +873,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         rsGroupNames.add(e.getKey());
       }
     }
-    LOG.info("Hostname '{}' matches RSGroup name(s) {}", hostname, rsGroupNames);
     return rsGroupNames;
   }
 
@@ -913,7 +911,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           RS_GROUP_REGEX_PREFIX, rsGroupName, server, rsGroupName);
       }
     }
-    LOG.info("Resolved server address to RSGroup name map: {}", serverAddrToRSGroupName);
+    LOG.debug("Resolved server address to RSGroup name map: {}", serverAddrToRSGroupName);
     return serverAddrToRSGroupName;
   }
 
@@ -969,7 +967,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
         RSGroupInfo.DEFAULT_GROUP, RS_GROUP_REGEX_PREFIX, RSGroupInfo.DEFAULT_GROUP,
         RSGroupBasedLoadBalancer.FALLBACK_GROUP_ENABLE_KEY);
     }
-    LOG.info(
+    LOG.debug(
       "Regex-based RSGroup membership resolution: onlineServers={}, "
         + "adminManagedServers={}, regexMatchedServers={}",
       onlineServers, adminManagedServers, regexMatchedServers);
@@ -978,7 +976,6 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private Map<String, SortedSet<Address>>
     computeAutoManagedRSGroupServers(Collection<RSGroupInfo> existingGroups) {
-    LOG.info("Computing auto-managed RSGroup server membership.");
     Set<Address> onlineServers = getOnlineServers();
     Map<String, Pattern> rsGroupNameToPatternMap =
       getRegexGroupMap(masterServices.getConfiguration());
@@ -1014,7 +1011,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           entry.getKey(), RS_GROUP_REGEX_PREFIX, entry.getKey());
       }
     }
-    LOG.info("Computed auto-managed RSGroup server membership: {}", result);
+    LOG.debug("Computed auto-managed RSGroup server membership: {}", result);
     return result;
   }
 
@@ -1083,13 +1080,13 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
     @Override
     public void serverAdded(ServerName serverName) {
-      LOG.info("Server added: {}", serverName);
+      LOG.debug("Server added: {}", serverName);
       RSGroupInfoManagerImpl.this.handleServerEvent();
     }
 
     @Override
     public void serverRemoved(ServerName serverName) {
-      LOG.info("Server removed: {}", serverName);
+      LOG.debug("Server removed: {}", serverName);
       RSGroupInfoManagerImpl.this.handleServerEvent();
     }
   }
@@ -1208,7 +1205,8 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
 
   private void checkGroupName(String groupName) throws ConstraintException {
     if (!GROUP_NAME_PATTERN.matcher(groupName).matches()) {
-      throw new ConstraintException("RSGroup name should only contain alphanumeric characters");
+      throw new ConstraintException(
+        "RSGroup name '" + groupName + "' must match " + GROUP_NAME_PATTERN.pattern());
     }
   }
 
