@@ -695,14 +695,14 @@ public class ConnectionImplementation implements ClusterConnection, Closeable {
 
   protected String clusterId = null;
 
-  protected void retrieveClusterId() {
+  protected void retrieveClusterId() throws IOException {
     if (clusterId != null) {
       return;
     }
     try {
       this.clusterId = this.registry.getClusterId().get();
     } catch (InterruptedException | ExecutionException e) {
-      LOG.warn("Retrieve cluster id failed", e);
+      throw new IOException("Retrieve cluster id failed", e);
     }
     if (clusterId == null) {
       clusterId = HConstants.CLUSTER_ID_DEFAULT;
