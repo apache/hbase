@@ -358,7 +358,7 @@ main() {
     case "$1" in
       --jdk)
         if [ $# -lt 2 ] || [ -z "$2" ]; then
-          echo "❌ ERROR: --jdk requires a value (supported: $SUPPORTED_JDKS)"
+          echo "ERROR: --jdk requires a value (supported: $SUPPORTED_JDKS)"
           exit 1
         fi
         JDK_VERSION="$2"
@@ -377,7 +377,7 @@ main() {
   set -- "${args[@]+"${args[@]}"}"
 
   if [[ " $SUPPORTED_JDKS " != *" $JDK_VERSION "* ]]; then
-    echo "❌ ERROR: Unsupported JDK version: $JDK_VERSION (supported: $SUPPORTED_JDKS)"
+    echo "ERROR: Unsupported JDK version: $JDK_VERSION (supported: $SUPPORTED_JDKS)"
     exit 1
   fi
 
