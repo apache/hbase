@@ -17,6 +17,10 @@
  */
 package org.apache.hadoop.hbase.quotas;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -31,7 +35,10 @@ import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Increment;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.RowMutations;
+import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.ipc.HBaseRpcControllerImpl;
+import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -43,6 +50,11 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
+
+import org.apache.hadoop.hbase.shaded.protobuf.RequestConverter;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos.ScanResponse;
 
 @Tag(RegionServerTests.TAG)
 @Tag(MediumTests.TAG)
@@ -69,6 +81,42 @@ public class TestAtomicReadQuota {
     TEST_UTIL.waitTableAvailable(QuotaTableUtil.QUOTA_TABLE_NAME);
     TEST_UTIL.createTable(TABLE_NAME, FAMILY);
     TEST_UTIL.waitTableAvailable(TABLE_NAME);
+  }
+
+  @Test
+  public void testCloseScannerWhenReadQuotaIsExhausted() throws Exception {
+    setupGenericQuota();
+    try {
+      RSRpcServices rpcServices = TEST_UTIL.getHBaseCluster().getRegionServer(0).getRSRpcServices();
+      int scannerCount = rpcServices.getScannersCount();
+      byte[] regionName = TEST_UTIL.getAdmin().getRegions(TABLE_NAME).get(0).getRegionName();
+      ScanResponse opened = rpcServices.scan(new HBaseRpcControllerImpl(),
+        RequestConverter.buildScanRequest(regionName, new Scan(), 0, false));
+      long scannerId = opened.getScannerId();
+      assertEquals(scannerCount + 1, rpcServices.getScannersCount());
+
+      ServiceException throttled =
+        assertThrows(ServiceException.class, () -> rpcServices.scan(new HBaseRpcControllerImpl(),
+          RequestConverter.buildScanRequest(scannerId, 1, true, false)));
+      assertInstanceOf(RpcThrottlingException.class, throttled.getCause());
+      assertEquals(scannerCount + 1, rpcServices.getScannersCount());
+
+      ServiceException renewThrottled =
+        assertThrows(ServiceException.class, () -> rpcServices.scan(new HBaseRpcControllerImpl(),
+          RequestConverter.buildScanRequest(scannerId, 0, true, 0, false, true, -1)));
+      assertInstanceOf(RpcThrottlingException.class, renewThrottled.getCause());
+
+      ServiceException openThrottled =
+        assertThrows(ServiceException.class, () -> rpcServices.scan(new HBaseRpcControllerImpl(),
+          RequestConverter.buildScanRequest(regionName, new Scan(), 0, true)));
+      assertInstanceOf(RpcThrottlingException.class, openThrottled.getCause());
+
+      rpcServices.scan(new HBaseRpcControllerImpl(),
+        RequestConverter.buildScanRequest(scannerId, 0, true, false));
+      assertEquals(scannerCount, rpcServices.getScannersCount());
+    } finally {
+      cleanupQuota();
+    }
   }
 
   @Test
