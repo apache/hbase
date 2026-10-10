@@ -136,28 +136,38 @@ public class SyncReplicationTestBaseNoBeforeAll {
   }
 
   private static void shutdown(HBaseTestingUtil util) throws Exception {
-    if (util.getHBaseCluster() == null) {
-      return;
-    }
-    Admin admin = util.getAdmin();
-    if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
-      if (
-        admin.getReplicationPeerSyncReplicationState(PEER_ID)
-            != SyncReplicationState.DOWNGRADE_ACTIVE
-      ) {
-        admin.transitReplicationPeerSyncReplicationState(PEER_ID,
-          SyncReplicationState.DOWNGRADE_ACTIVE);
+    try {
+      if (util.getHBaseCluster() != null) {
+        Admin admin = util.getAdmin();
+        if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
+          if (
+            admin.getReplicationPeerSyncReplicationState(PEER_ID)
+                != SyncReplicationState.DOWNGRADE_ACTIVE
+          ) {
+            admin.transitReplicationPeerSyncReplicationState(PEER_ID,
+              SyncReplicationState.DOWNGRADE_ACTIVE);
+          }
+          admin.removeReplicationPeer(PEER_ID);
+        }
       }
-      admin.removeReplicationPeer(PEER_ID);
+    } finally {
+      // Always, even if the cluster failed to start or the peer cleanup above failed on a broken
+      // cluster: otherwise DFS is left running and a surefire rerun in this JVM fails to start.
+      util.shutdownMiniCluster();
     }
-    util.shutdownMiniCluster();
   }
 
   @AfterAll
   public static void tearDown() throws Exception {
-    shutdown(UTIL1);
-    shutdown(UTIL2);
-    ZK_UTIL.shutdownMiniZKCluster();
+    try {
+      shutdown(UTIL1);
+    } finally {
+      try {
+        shutdown(UTIL2);
+      } finally {
+        ZK_UTIL.shutdownMiniZKCluster();
+      }
+    }
   }
 
   protected final void write(HBaseTestingUtil util, int start, int end) throws IOException {

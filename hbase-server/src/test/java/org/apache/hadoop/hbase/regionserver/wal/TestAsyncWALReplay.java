@@ -65,7 +65,7 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     if (GROUP != null) {
       GROUP.shutdownGracefully();
     }
