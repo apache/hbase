@@ -306,4 +306,6 @@ public interface RegionServerServices
 
   @Override
   List<HRegion> getRegions();
+
+  boolean isRpcThrottleEnabled() throws IOException;
 }
