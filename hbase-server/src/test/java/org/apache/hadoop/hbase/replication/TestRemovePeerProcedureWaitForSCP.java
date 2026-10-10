@@ -124,13 +124,8 @@ public class TestRemovePeerProcedureWaitForSCP extends TestReplicationBaseNoBefo
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    try {
-      Closeables.close(table3, true);
-    } finally {
-      // this method hides the base one, so call it to shut down the mini clusters
-      TestReplicationBaseNoBeforeAll.tearDownAfterClass();
-    }
+  public static void tearDownAfterAll() throws Exception {
+    Closeables.close(table3, true);
   }
 
   @Test

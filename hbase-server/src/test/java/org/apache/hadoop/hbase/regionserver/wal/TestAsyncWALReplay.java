@@ -65,14 +65,9 @@ public class TestAsyncWALReplay extends AbstractTestWALReplay {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
-    try {
-      if (GROUP != null) {
-        GROUP.shutdownGracefully();
-      }
-    } finally {
-      // this method hides the base one, so call it to shut down the mini cluster
-      AbstractTestWALReplay.tearDownAfterClass();
+  public static void tearDownAfterAll() throws Exception {
+    if (GROUP != null) {
+      GROUP.shutdownGracefully();
     }
   }
 

@@ -137,23 +137,22 @@ public class SyncReplicationTestBaseNoBeforeAll {
 
   private static void shutdown(HBaseTestingUtil util) throws Exception {
     try {
-      if (util.getHBaseCluster() == null) {
-        return;
-      }
-      Admin admin = util.getAdmin();
-      if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
-        if (
-          admin.getReplicationPeerSyncReplicationState(PEER_ID)
-              != SyncReplicationState.DOWNGRADE_ACTIVE
-        ) {
-          admin.transitReplicationPeerSyncReplicationState(PEER_ID,
-            SyncReplicationState.DOWNGRADE_ACTIVE);
+      if (util.getHBaseCluster() != null) {
+        Admin admin = util.getAdmin();
+        if (!admin.listReplicationPeers(Pattern.compile(PEER_ID)).isEmpty()) {
+          if (
+            admin.getReplicationPeerSyncReplicationState(PEER_ID)
+                != SyncReplicationState.DOWNGRADE_ACTIVE
+          ) {
+            admin.transitReplicationPeerSyncReplicationState(PEER_ID,
+              SyncReplicationState.DOWNGRADE_ACTIVE);
+          }
+          admin.removeReplicationPeer(PEER_ID);
         }
-        admin.removeReplicationPeer(PEER_ID);
       }
     } finally {
-      // Always, even if the HBase part never came up: a failed startMiniCluster leaves DFS running
-      // and the util marked as running, so a surefire rerun in this JVM would fail to start.
+      // Always, even if the cluster failed to start or the peer cleanup above failed on a broken
+      // cluster: otherwise DFS is left running and a surefire rerun in this JVM fails to start.
       util.shutdownMiniCluster();
     }
   }
