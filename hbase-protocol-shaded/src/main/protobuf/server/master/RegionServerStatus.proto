@@ -190,6 +190,13 @@ message GetLiveRegionServersResponse {
   required uint32 total = 2;
 }
 
+message GetThrottleStateRequest {
+}
+
+message GetThrottleStateResponse {
+  required bool rpc_throttle_enabled = 1;
+}
+
 service RegionServerStatusService {
   /** Called when a region server first starts. */
   rpc RegionServerStartup(RegionServerStartupRequest)
@@ -236,4 +243,10 @@ service RegionServerStatusService {
   /** Get some live region servers to be used as seed for bootstrap nodes */
   rpc GetLiveRegionServers(GetLiveRegionServersRequest)
     returns(GetLiveRegionServersResponse);
+
+  /**
+   * Get throttle state. Mainly used for checking whether rpc throttle is enabled.
+   */
+  rpc GetThrottleState(GetThrottleStateRequest)
+    returns(GetThrottleStateResponse);
 }

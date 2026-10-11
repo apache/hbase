@@ -386,4 +386,9 @@ public class MockRegionServerServices implements RegionServerServices {
   public RegionReplicationBufferManager getRegionReplicationBufferManager() {
     return null;
   }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return false;
+  }
 }

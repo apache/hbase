@@ -757,4 +757,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
     ReplicateWALEntryRequest request) throws ServiceException {
     return null;
   }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return false;
+  }
 }
