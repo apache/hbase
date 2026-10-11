@@ -288,4 +288,6 @@ public interface RegionServerServices extends Server, MutableOnlineRegions, Favo
    */
   boolean reportFileArchivalForQuotas(TableName tableName,
     Collection<Entry<String, Long>> archivedFiles);
+
+  boolean isRpcThrottleEnabled() throws IOException;
 }

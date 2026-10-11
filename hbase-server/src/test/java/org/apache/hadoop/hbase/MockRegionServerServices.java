@@ -374,4 +374,9 @@ public class MockRegionServerServices implements RegionServerServices {
     Collection<Entry<String, Long>> archivedFiles) {
     return true;
   }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return false;
+  }
 }
