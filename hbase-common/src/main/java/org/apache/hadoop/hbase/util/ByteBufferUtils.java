@@ -50,6 +50,7 @@ public final class ByteBufferUtils {
   public final static int NEXT_BIT_SHIFT = 7;
   public final static int NEXT_BIT_MASK = 1 << 7;
   final static boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
+  public final static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
 
   /*
    * The VarHandles below must be used directly, not via non-static aliases. Non-static usage of a
@@ -105,8 +106,8 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // big-endian fetches are faster than little-endian because the bytes don't need to get
-          // reversed
+          // Values are fetched as big-endian so that the numerical order matches the bytes'
+          // lexographical order
           long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + i);
           long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + i);
           if (lw != rw) {
@@ -132,8 +133,8 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // big-endian fetches are faster than little-endian because the bytes don't need to get
-          // reversed
+          // Values are fetched as big-endian so that the numerical order matches the bytes'
+          // lexographical order
           long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + i);
           long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + i);
           if (lw != rw) {
@@ -175,8 +176,8 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // big-endian fetches are faster than little-endian because the bytes don't need to get
-          // reversed
+          // Values are fetched as big-endian so that the numerical order matches the bytes'
+          // lexographical order
           long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
           long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
 
@@ -205,8 +206,8 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // big-endian fetches are faster than little-endian because the bytes don't need to get
-          // reversed
+          // Values are fetched as big-endian so that the numerical order matches the bytes'
+          // lexographical order
           long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
           long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
 
@@ -961,7 +962,7 @@ public final class ByteBufferUtils {
   }
 
   public static int putShort(ByteBuffer buffer, int index, short val) {
-    BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, index), val);
+    BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE.set(buffer, index, val);
     return index + Short.BYTES;
   }
 

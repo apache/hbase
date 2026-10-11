@@ -1229,8 +1229,8 @@ public class Bytes implements Comparable<Bytes> {
          * than 4 bytes even on 32-bit. On the other hand, it is substantially faster on 64-bit.
          */
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // big-endian fetches are faster than little-endian because the bytes don't need to get
-          // reversed
+          // Values are fetched as big-endian so that the numerical order matches the bytes'
+          // lexographical order
           long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer1, offset1 + i);
           long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer2, offset2 + i);
           if (lw != rw) {
