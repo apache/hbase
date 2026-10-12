@@ -49,6 +49,7 @@ import org.apache.hadoop.hbase.security.access.AclRefresher;
 import org.apache.hadoop.hbase.security.access.AclReloadChore;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.OOMEChecker;
 import org.apache.hadoop.hbase.util.ReservoirSample;
@@ -183,6 +184,10 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
     aclRefresher = new AclRefresher(getConfiguration(), accessChecker.getAuthManager());
+    if (getConfiguration().get("zookeeper.znode.acl.parent") != null) {
+      LOG.warn("zookeeper.znode.acl.parent is deprecated and ignored: "
+        + "ACLs are stored in the {} table only", PermissionStorage.ACL_TABLE_NAME);
+    }
     if (AccessChecker.isAuthorizationSupported(getConfiguration())) {
       // periodic full reload of the ACL cache, the fallback for lost updates and direct writes
       aclReloadChore = new AclReloadChore(aclRefresher, getConfiguration(), server);

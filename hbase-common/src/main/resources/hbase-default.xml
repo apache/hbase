@@ -399,11 +399,6 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
-    <name>zookeeper.znode.acl.parent</name>
-    <value>acl</value>
-    <description>Root ZNode for access control lists.</description>
-  </property>
-  <property>
     <name>hbase.zookeeper.dns.interface</name>
     <value>default</value>
     <description>The name of the Network Interface from which a ZooKeeper server
@@ -1741,6 +1736,17 @@ possible configurations would overwhelm and obscure the important.
       section of the HBase online manual. For more information on granting or
       revoking permissions using the AccessController, see the security
       section of the HBase online manual.
+    </description>
+  </property>
+  <property>
+    <name>hbase.security.acl.reload.period.msec</name>
+    <value>300000</value>
+    <description>
+      How often a master or region server reloads the full content of the
+      hbase:acl table into its local authorization cache. The reload is a
+      fallback for lost incremental updates and for changes written to the
+      table outside the master; it does not replace the incremental push from
+      the master.
     </description>
   </property>
   <property>
