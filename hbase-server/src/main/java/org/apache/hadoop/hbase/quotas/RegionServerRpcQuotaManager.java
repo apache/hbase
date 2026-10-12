@@ -56,14 +56,10 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager, Configurati
 
   private QuotaCache quotaCache = null;
   private volatile boolean rpcThrottleEnabled;
-  // Storage for quota rpc throttle
-  private RpcThrottleStorage rpcThrottleStorage;
   private final Supplier<Double> requestsPerSecondSupplier;
 
   public RegionServerRpcQuotaManager(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
-    rpcThrottleStorage =
-      new RpcThrottleStorage(rsServices.getZooKeeper(), rsServices.getConfiguration());
     this.requestsPerSecondSupplier = Suppliers.memoizeWithExpiration(
       () -> rsServices.getMetrics().getRegionServerWrapper().getRequestsPerSecond(), 1,
       TimeUnit.MINUTES);
@@ -80,7 +76,7 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager, Configurati
     // Initialize quota cache
     quotaCache = new QuotaCache(rsServices);
     quotaCache.start();
-    rpcThrottleEnabled = rpcThrottleStorage.isRpcThrottleEnabled();
+    rpcThrottleEnabled = rsServices.isRpcThrottleEnabled();
     LOG.info("Start rpc quota manager and rpc throttle enabled is {}", rpcThrottleEnabled);
   }
 
@@ -111,14 +107,14 @@ public class RegionServerRpcQuotaManager implements RpcQuotaManager, Configurati
 
   public void switchRpcThrottle(boolean enable) throws IOException {
     if (isQuotaEnabled()) {
-      if (rpcThrottleEnabled != enable) {
-        boolean previousEnabled = rpcThrottleEnabled;
-        rpcThrottleEnabled = rpcThrottleStorage.isRpcThrottleEnabled();
-        LOG.info("Switch rpc throttle from {} to {}", previousEnabled, rpcThrottleEnabled);
+      boolean previousEnabled = rpcThrottleEnabled;
+      if (previousEnabled != enable) {
+        rpcThrottleEnabled = enable;
+        LOG.info("Switch rpc throttle from {} to {}", previousEnabled, enable);
       } else {
         LOG.warn(
           "Skip switch rpc throttle because previous value {} is the same as current value {}",
-          rpcThrottleEnabled, enable);
+          previousEnabled, enable);
       }
     } else {
       LOG.warn("Skip switch rpc throttle to {} because rpc quota is disabled", enable);
