@@ -17,9 +17,6 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import java.io.ByteArrayInputStream;
-import java.io.DataInput;
-import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -54,7 +51,6 @@ import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.filter.QualifierFilter;
 import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -63,10 +59,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
-import org.apache.hadoop.io.Text;
-import org.apache.hadoop.io.Writable;
-import org.apache.hadoop.io.WritableFactories;
-import org.apache.hadoop.io.WritableUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -827,103 +819,6 @@ public final class PermissionStorage {
       }
     }
     return include;
-  }
-
-  /**
-   * Writes a set of permissions as {@link org.apache.hadoop.io.Writable} instances and returns the
-   * resulting byte array. Writes a set of permission [user: table permission]
-   */
-  public static byte[] writePermissionsAsBytes(ListMultimap<String, UserPermission> perms,
-    Configuration conf) {
-    return ProtobufUtil
-      .prependPBMagic(AccessControlUtil.toUserTablePermissions(perms).toByteArray());
-  }
-
-  // This is part of the old HbaseObjectWritableFor96Migration.
-  private static final int LIST_CODE = 61;
-
-  private static final int WRITABLE_CODE = 14;
-
-  private static final int WRITABLE_NOT_ENCODED = 0;
-
-  private static List<Permission> readWritableUserPermission(DataInput in, Configuration conf)
-    throws IOException, ClassNotFoundException {
-    assert WritableUtils.readVInt(in) == LIST_CODE;
-    int length = in.readInt();
-    List<Permission> list = new ArrayList<>(length);
-    for (int i = 0; i < length; i++) {
-      assert WritableUtils.readVInt(in) == WRITABLE_CODE;
-      assert WritableUtils.readVInt(in) == WRITABLE_NOT_ENCODED;
-      String className = Text.readString(in);
-      Class<? extends Writable> clazz = conf.getClassByName(className).asSubclass(Writable.class);
-      Writable instance = WritableFactories.newInstance(clazz, conf);
-      instance.readFields(in);
-      list.add((Permission) instance);
-    }
-    return list;
-  }
-
-  public static ListMultimap<String, UserPermission> readUserPermission(byte[] data,
-    Configuration conf) throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(data)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      try {
-        AccessControlProtos.UsersAndPermissions.Builder builder =
-          AccessControlProtos.UsersAndPermissions.newBuilder();
-        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
-        return AccessControlUtil.toUserPermission(builder.build());
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
-    } else {
-      // TODO: We have to re-write non-PB data as PB encoded. Otherwise we will carry old Writables
-      // forever (here and a couple of other places).
-      ListMultimap<String, UserPermission> userPermission = ArrayListMultimap.create();
-      try {
-        DataInput in = new DataInputStream(new ByteArrayInputStream(data));
-        int length = in.readInt();
-        for (int i = 0; i < length; i++) {
-          String user = Text.readString(in);
-          List<Permission> perms = readWritableUserPermission(in, conf);
-          for (Permission p : perms) {
-            userPermission.put(user, new UserPermission(user, p));
-          }
-        }
-      } catch (IOException | ClassNotFoundException e) {
-        throw new DeserializationException(e);
-      }
-      return userPermission;
-    }
-  }
-
-  public static ListMultimap<String, Permission> readPermissions(byte[] data, Configuration conf)
-    throws DeserializationException {
-    if (ProtobufUtil.isPBMagicPrefix(data)) {
-      int pblen = ProtobufUtil.lengthOfPBMagic();
-      try {
-        AccessControlProtos.UsersAndPermissions.Builder builder =
-          AccessControlProtos.UsersAndPermissions.newBuilder();
-        ProtobufUtil.mergeFrom(builder, data, pblen, data.length - pblen);
-        return AccessControlUtil.toPermission(builder.build());
-      } catch (IOException e) {
-        throw new DeserializationException(e);
-      }
-    } else {
-      // TODO: We have to re-write non-PB data as PB encoded. Otherwise we will carry old Writables
-      // forever (here and a couple of other places).
-      ListMultimap<String, Permission> perms = ArrayListMultimap.create();
-      try {
-        DataInput in = new DataInputStream(new ByteArrayInputStream(data));
-        int length = in.readInt();
-        for (int i = 0; i < length; i++) {
-          String user = Text.readString(in);
-          perms.putAll(user, readWritableUserPermission(in, conf));
-        }
-      } catch (IOException | ClassNotFoundException e) {
-        throw new DeserializationException(e);
-      }
-      return perms;
-    }
   }
 
   public static boolean isGlobalEntry(byte[] entryName) {

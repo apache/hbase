@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.TableName;
-import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -144,68 +143,17 @@ public final class AuthManager {
   }
 
   /**
-   * Update acl info for table.
-   * @param table name of table
-   * @param data  updated acl data
-   * @throws IOException exception when deserialize data
-   */
-  public void refreshTableCacheFromWritable(TableName table, byte[] data) throws IOException {
-    if (data != null && data.length > 0) {
-      try {
-        ListMultimap<String, Permission> perms = PermissionStorage.readPermissions(data, conf);
-        if (perms != null) {
-          if (Bytes.equals(table.getName(), PermissionStorage.ACL_GLOBAL_NAME)) {
-            updateGlobalCache(perms);
-          } else {
-            updateTableCache(table, perms);
-          }
-        }
-      } catch (DeserializationException e) {
-        throw new IOException(e);
-      }
-    } else {
-      LOG.info("Skipping permission cache refresh because writable data is empty");
-    }
-  }
-
-  /**
-   * Update acl info for namespace.
-   * @param namespace namespace
-   * @param data      updated acl data
-   * @throws IOException exception when deserialize data
-   */
-  public void refreshNamespaceCacheFromWritable(String namespace, byte[] data) throws IOException {
-    if (data != null && data.length > 0) {
-      try {
-        ListMultimap<String, Permission> perms = PermissionStorage.readPermissions(data, conf);
-        if (perms != null) {
-          updateNamespaceCache(namespace, perms);
-        }
-      } catch (DeserializationException e) {
-        throw new IOException(e);
-      }
-    } else {
-      LOG.debug("Skipping permission cache refresh because writable data is empty");
-    }
-  }
-
-  /**
    * Updates the internal global permissions cache.
    * @param globalPerms new global permissions
    */
   private void updateGlobalCache(ListMultimap<String, Permission> globalPerms) {
-    globalCache.clear();
+    Map<String, GlobalPermission> newGlobalCache = new ConcurrentHashMap<>();
     for (String name : globalPerms.keySet()) {
       for (Permission permission : globalPerms.get(name)) {
-        // Before 2.2, the global permission which storage in zk is not right. It was saved as a
-        // table permission. So here need to handle this for compatibility. See HBASE-22503.
-        if (permission instanceof TablePermission) {
-          globalCache.put(name, new GlobalPermission(permission.getActions()));
-        } else {
-          globalCache.put(name, (GlobalPermission) permission);
-        }
+        newGlobalCache.put(name, toGlobalPermission(permission));
       }
     }
+    globalCache = newGlobalCache;
     mtime.incrementAndGet();
   }
 
