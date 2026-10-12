@@ -49,13 +49,11 @@ import org.apache.hadoop.hbase.security.access.AclRefresher;
 import org.apache.hadoop.hbase.security.access.AclReloadChore;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.OOMEChecker;
 import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -113,8 +111,6 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   private AclRefresher aclRefresher;
 
   private AclReloadChore aclReloadChore;
-
-  private ZKPermissionWatcher zkPermissionWatcher;
 
   protected HBaseRpcServicesBase(S server, String processName) throws IOException {
     this.server = server;
@@ -192,13 +188,6 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       aclReloadChore = new AclReloadChore(aclRefresher, getConfiguration(), server);
       server.getChoreService().scheduleChore(aclReloadChore);
     }
-    zkPermissionWatcher =
-      new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
-    try {
-      zkPermissionWatcher.start();
-    } catch (KeeperException e) {
-      LOG.error("ZooKeeper permission watcher initialization failed", e);
-    }
     rpcServer.start();
   }
 
@@ -223,19 +212,12 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     return aclRefresher;
   }
 
-  public ZKPermissionWatcher getZkPermissionWatcher() {
-    return zkPermissionWatcher;
-  }
-
   protected final void internalStop() {
     if (aclReloadChore != null) {
       aclReloadChore.cancel(true);
     }
     if (aclRefresher != null) {
       aclRefresher.close();
-    }
-    if (zkPermissionWatcher != null) {
-      zkPermissionWatcher.close();
     }
     rpcServer.stop();
   }

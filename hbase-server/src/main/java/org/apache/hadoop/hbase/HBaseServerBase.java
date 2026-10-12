@@ -70,7 +70,6 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AclRefresher;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -576,10 +575,6 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   public void setAclLoaded(boolean aclLoaded) {
     this.aclLoaded = aclLoaded;
-  }
-
-  public ZKPermissionWatcher getZKPermissionWatcher() {
-    return rpcServices.getZkPermissionWatcher();
   }
 
   @Override
