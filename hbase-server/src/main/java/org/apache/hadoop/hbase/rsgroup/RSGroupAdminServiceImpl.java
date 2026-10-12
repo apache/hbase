@@ -59,6 +59,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetR
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.GetRSGroupInfoResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.ListRSGroupInfosResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveAllServersResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersAndTablesResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RSGroupAdminProtos.MoveServersRequest;
@@ -173,6 +175,26 @@ class RSGroupAdminServiceImpl extends RSGroupAdminProtos.RSGroupAdminService {
       rsGroupInfoManager.moveServers(hostPorts, request.getTargetGroup());
       if (master.getMasterCoprocessorHost() != null) {
         master.getMasterCoprocessorHost().postMoveServers(hostPorts, request.getTargetGroup());
+      }
+    } catch (IOException e) {
+      CoprocessorRpcUtils.setControllerException(controller, e);
+    }
+    done.run(builder.build());
+  }
+
+  @Override
+  public void moveAllServers(RpcController controller, MoveAllServersRequest request,
+    RpcCallback<MoveAllServersResponse> done) {
+    MoveAllServersResponse.Builder builder = MoveAllServersResponse.newBuilder();
+    try {
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().preMoveAllServers(request.getSourceGroup(),
+          request.getTargetGroup());
+      }
+      rsGroupInfoManager.moveAllServers(request.getSourceGroup(), request.getTargetGroup());
+      if (master.getMasterCoprocessorHost() != null) {
+        master.getMasterCoprocessorHost().postMoveAllServers(request.getSourceGroup(),
+          request.getTargetGroup());
       }
     } catch (IOException e) {
       CoprocessorRpcUtils.setControllerException(controller, e);
