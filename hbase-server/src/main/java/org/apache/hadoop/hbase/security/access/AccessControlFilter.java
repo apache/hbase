@@ -58,7 +58,8 @@ class AccessControlFilter extends FilterBase {
   private AuthManager authManager;
   private TableName table;
   private User user;
-  private boolean isSystemTable;
+  /** hbase:meta is world readable, other system tables go through the regular checks. */
+  private boolean isMeta;
   private Strategy strategy;
   private Map<ByteRange, Integer> cfVsMaxVersions;
   private int familyMaxVersions;
@@ -77,7 +78,7 @@ class AccessControlFilter extends FilterBase {
     authManager = mgr;
     table = tableName;
     user = ugi;
-    isSystemTable = tableName.isSystemTable();
+    isMeta = TableName.META_TABLE_NAME.equals(tableName);
     this.strategy = strategy;
     this.cfVsMaxVersions = cfVsMaxVersions;
     this.prevFam = new SimpleMutableByteRange();
@@ -92,7 +93,7 @@ class AccessControlFilter extends FilterBase {
 
   @Override
   public ReturnCode filterCell(final Cell cell) {
-    if (isSystemTable) {
+    if (isMeta) {
       return ReturnCode.INCLUDE;
     }
     if (

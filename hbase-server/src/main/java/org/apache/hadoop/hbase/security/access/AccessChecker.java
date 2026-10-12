@@ -542,13 +542,11 @@ public class AccessChecker {
    */
   public AuthResult permissionGranted(String request, User user, Action permRequest,
     TableName tableName, Map<byte[], ? extends Collection<?>> families) {
-    // 1. All users need read access to hbase:meta table.
-    // this is a very common operation, so deal with it quickly.
-    if (TableName.META_TABLE_NAME.equals(tableName)) {
-      if (permRequest == Action.READ) {
-        return AuthResult.allow(request, "All users allowed", user, permRequest, tableName,
-          families);
-      }
+    // 1. check for the table-level, if successful we can short-circuit
+    // (the fixed rules for hbase:meta / hbase:acl are evaluated inside AuthManager)
+    if (getAuthManager().authorizeUserTable(user, tableName, permRequest)) {
+      return AuthResult.allow(request, "Table permission granted", user, permRequest, tableName,
+        families);
     }
 
     if (user == null) {
@@ -556,13 +554,7 @@ public class AccessChecker {
         tableName, families);
     }
 
-    // 2. check for the table-level, if successful we can short-circuit
-    if (getAuthManager().authorizeUserTable(user, tableName, permRequest)) {
-      return AuthResult.allow(request, "Table permission granted", user, permRequest, tableName,
-        families);
-    }
-
-    // 3. check permissions against the requested families
+    // 2. check permissions against the requested families
     if (families != null && families.size() > 0) {
       // all families must pass
       for (Map.Entry<byte[], ? extends Collection<?>> family : families.entrySet()) {
@@ -609,7 +601,7 @@ public class AccessChecker {
         families);
     }
 
-    // 4. no families to check and table level access failed
+    // 3. no families to check and table level access failed
     return AuthResult.deny(request, "No families to check and table permission failed", user,
       permRequest, tableName, families);
   }
