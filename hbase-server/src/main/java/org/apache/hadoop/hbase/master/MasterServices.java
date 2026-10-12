@@ -57,6 +57,7 @@ import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
 import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
+import org.apache.hadoop.hbase.security.access.ACLManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -453,6 +454,9 @@ public interface MasterServices extends Server, KeyManagementService {
 
   /** Returns the {@link AccessChecker} */
   AccessChecker getAccessChecker();
+
+  /** Returns the {@link ACLManager} */
+  ACLManager getACLManager();
 
   /** Returns the {@link ZKPermissionWatcher} */
   ZKPermissionWatcher getZKPermissionWatcher();

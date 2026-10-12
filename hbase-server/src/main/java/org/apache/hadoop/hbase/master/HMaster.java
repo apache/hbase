@@ -252,6 +252,7 @@ import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.SecurityConstants;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
+import org.apache.hadoop.hbase.security.access.ACLManager;
 import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -469,6 +470,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
   private RpcThrottleStateStore rpcThrottleStateStore;
+  private ACLManager aclManager;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
@@ -1045,6 +1047,9 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ) {
       this.splitWALManager = new SplitWALManager(this);
     }
+
+    // must be created before loading procedures, RefreshAclProcedure consults it
+    this.aclManager = new ACLManager(conf, this, getAclRefresher());
 
     tryMigrateMetaLocationsFromZooKeeper();
 
@@ -4819,5 +4824,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public RpcThrottleStateStore getRpcThrottleStateStore() {
     return rpcThrottleStateStore;
+  }
+
+  @Override
+  public ACLManager getACLManager() {
+    return aclManager;
   }
 }
