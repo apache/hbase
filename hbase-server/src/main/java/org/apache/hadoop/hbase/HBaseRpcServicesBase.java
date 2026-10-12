@@ -46,6 +46,7 @@ import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.security.access.AclRefresher;
+import org.apache.hadoop.hbase.security.access.AclReloadChore;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -110,6 +111,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   private AccessChecker accessChecker;
 
   private AclRefresher aclRefresher;
+
+  private AclReloadChore aclReloadChore;
 
   private ZKPermissionWatcher zkPermissionWatcher;
 
@@ -184,6 +187,11 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
     aclRefresher = new AclRefresher(getConfiguration(), accessChecker.getAuthManager());
+    if (AccessChecker.isAuthorizationSupported(getConfiguration())) {
+      // periodic full reload of the ACL cache, the fallback for lost updates and direct writes
+      aclReloadChore = new AclReloadChore(aclRefresher, getConfiguration(), server);
+      server.getChoreService().scheduleChore(aclReloadChore);
+    }
     zkPermissionWatcher =
       new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
     try {
@@ -220,6 +228,9 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   }
 
   protected final void internalStop() {
+    if (aclReloadChore != null) {
+      aclReloadChore.cancel(true);
+    }
     if (aclRefresher != null) {
       aclRefresher.close();
     }

@@ -1265,6 +1265,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     getChoreService().scheduleChore(hbckChore);
     this.serverManager.startChore();
 
+    // Initialize the ACL pipeline: seed the write timestamps from the acl table content, load
+    // the master's own cache and push one full round to all registered servers
+    startupTaskGroup.addTask("Initializing ACL pipeline");
+    aclManager.initialize();
+
     // Only for rolling upgrade, where we need to migrate the data in namespace table to meta table.
     if (!waitForNamespaceOnline()) {
       return;
@@ -1833,6 +1838,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   protected void stopServiceThreads() {
+    if (aclManager != null) {
+      // stop announcing hbase:acl writes before the services below go away
+      aclManager.stop();
+    }
     if (masterJettyServer != null) {
       LOG.info("Stopping master jetty server");
       try {

@@ -158,6 +158,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
+import org.apache.hadoop.hbase.security.access.AccessChecker;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -864,6 +865,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
             }
           }
         }, "HRegionServer.registerWithMaster");
+      }
+
+      // Load the ACL cache right after registration; non superuser requests are held until done
+      if (!isStopped() && isHealthy()) {
+        loadAclCache();
       }
 
       if (!isStopped() && isHealthy()) {
@@ -2685,6 +2691,34 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    * @return A Map of key/value configurations we got from the Master else null if we failed to
    * register.
    */
+  /**
+   * Loads the full ACL content of {@code hbase:acl} into the local cache after registration,
+   * retrying until it succeeds. Until then non superuser requests are held in
+   * {@code RSRpcServices#checkOpen()}. A missing acl table (fresh cluster) counts as loaded with an
+   * empty cache.
+   */
+  private void loadAclCache() {
+    if (!AccessChecker.isAuthorizationSupported(conf)) {
+      setAclLoaded(true);
+      return;
+    }
+    RetryCounterFactory rcf =
+      new RetryCounterFactory(Integer.MAX_VALUE, this.sleeper.getPeriod(), 1000 * 60 * 5);
+    RetryCounter rc = rcf.create();
+    while (keepLooping()) {
+      try {
+        getAclRefresher().reloadFromTable();
+        setAclLoaded(true);
+        LOG.info("ACL cache loaded, applied timestamp {}", getAclRefresher().getAppliedTimestamp());
+        return;
+      } catch (IOException e) {
+        long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
+        LOG.warn("Failed to load ACL cache; sleeping {} ms and then retrying.", sleepTime, e);
+        this.sleeper.sleep(sleepTime);
+      }
+    }
+  }
+
   private RegionServerStartupResponse reportForDuty() throws IOException {
     if (this.masterless) {
       return RegionServerStartupResponse.getDefaultInstance();

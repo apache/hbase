@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.security.access;
 
 import java.io.Closeable;
 import java.io.IOException;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ExecutionException;
@@ -27,6 +28,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -108,11 +110,17 @@ public final class AclRefresher implements Closeable {
 
   /**
    * Reads the whole {@code hbase:acl} table and swaps it into the cache as one queue task, never
-   * losing a concurrent update and never moving the watermark backwards. Blocks until done.
+   * losing a concurrent update and never moving the watermark backwards. Blocks until done. A
+   * missing acl table (fresh cluster) is loaded as empty content.
    */
   public void reloadFromTable() throws IOException {
     Future<Void> future = executor.submit(() -> {
-      PermissionStorage.AclSnapshot snapshot = PermissionStorage.loadAllSnapshot(conf);
+      PermissionStorage.AclSnapshot snapshot;
+      try {
+        snapshot = PermissionStorage.loadAllSnapshot(conf);
+      } catch (TableNotFoundException e) {
+        snapshot = new PermissionStorage.AclSnapshot(Collections.emptyMap(), 0L);
+      }
       authManager.applyFullSnapshot(snapshot.getPermissions());
       appliedTs.accumulateAndGet(snapshot.getMaxTimestamp(), Math::max);
       return null;

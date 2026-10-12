@@ -109,6 +109,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   // of HRegionServer in isolation.
   protected volatile boolean stopped = false;
 
+  private volatile boolean aclLoaded = false;
+
   // Flag set when a read-only to read-write transition is blocked because another active cluster
   // exists
   protected final AtomicBoolean readOnlyTransitionBlocked;
@@ -562,6 +564,18 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   public AclRefresher getAclRefresher() {
     return rpcServices.getAclRefresher();
+  }
+
+  /**
+   * Whether the local ACL cache has finished its initial load. Region servers hold non superuser
+   * requests until this is true, see {@code RSRpcServices#checkOpen()}.
+   */
+  public boolean isAclLoaded() {
+    return aclLoaded;
+  }
+
+  public void setAclLoaded(boolean aclLoaded) {
+    this.aclLoaded = aclLoaded;
   }
 
   public ZKPermissionWatcher getZKPermissionWatcher() {

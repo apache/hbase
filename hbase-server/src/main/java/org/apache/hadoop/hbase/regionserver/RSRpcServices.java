@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.HBaseRpcServicesBase;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.MultiActionResultTooLarge;
 import org.apache.hadoop.hbase.NotServingRegionException;
+import org.apache.hadoop.hbase.PleaseHoldException;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.RegionTooBusyException;
 import org.apache.hadoop.hbase.Server;
@@ -133,6 +134,7 @@ import org.apache.hadoop.hbase.replication.ReplicationUtils;
 import org.apache.hadoop.hbase.replication.regionserver.RejectReplicationRequestStateChecker;
 import org.apache.hadoop.hbase.replication.regionserver.RejectRequestsFromClientStateChecker;
 import org.apache.hadoop.hbase.security.Superusers;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.DNS;
@@ -1487,6 +1489,15 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     if (!server.isOnline()) {
       throw new ServerNotRunningYetException(
         "Server " + server.getServerName() + " is not running yet");
+    }
+    // hold non superuser requests until the initial ACL cache load has completed, so that
+    // authorization fails closed instead of open while the cache is still empty
+    if (!server.isAclLoaded()) {
+      User user = RpcServer.getRequestUser().orElse(null);
+      if (user == null || !Superusers.isSuperUser(user)) {
+        throw new PleaseHoldException(
+          "ACL cache is not loaded yet on " + server.getServerName() + ", please retry later");
+      }
     }
   }
 

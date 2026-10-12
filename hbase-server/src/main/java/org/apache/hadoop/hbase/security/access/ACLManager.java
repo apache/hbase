@@ -25,6 +25,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.RefreshAclProcedure;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -117,7 +118,14 @@ public class ACLManager implements PermissionStorage.AclWriteHook {
    * and starts listening to {@code hbase:acl} writes. Called when this master becomes active.
    */
   public void initialize() throws IOException {
-    PermissionStorage.AclSnapshot snapshot = PermissionStorage.loadAllSnapshot(conf);
+    PermissionStorage.AclSnapshot snapshot;
+    try {
+      snapshot = PermissionStorage.loadAllSnapshot(conf);
+    } catch (TableNotFoundException e) {
+      // a fresh cluster: the acl table is created later by the AccessController postStartMaster
+      // hook
+      snapshot = new PermissionStorage.AclSnapshot(Collections.emptyMap(), 0L);
+    }
     long seed = Math.max(EnvironmentEdgeManager.currentTime(), snapshot.getMaxTimestamp() + 1);
     lastTs.set(seed);
     refresher.submitFullSnapshot(seed, snapshot.getPermissions());
