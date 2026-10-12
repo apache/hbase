@@ -108,6 +108,9 @@ public class TestSyncReplicationStandbyKillMaster extends SyncReplicationTestBas
     await().atMost(Duration.ofMinutes(3))
       .untilAsserted(() -> assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
         UTIL2.getAdmin().getReplicationPeerSyncReplicationState(PEER_ID)));
+    // The Master updates the peer state before the final RS refresh. If the transit call fails
+    // before returning a procedure id, the Admin check above may pass while the RS still caches
+    // STANDBY and rejects reads. Wait for the local peer state before verifying the data.
     await().atMost(Duration.ofMinutes(3))
       .untilAsserted(() -> assertEquals(SyncReplicationState.DOWNGRADE_ACTIVE,
         UTIL2.getRSForFirstRegionInTable(TABLE_NAME).getReplicationSourceService()
