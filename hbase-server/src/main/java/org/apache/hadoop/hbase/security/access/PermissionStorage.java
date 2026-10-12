@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -121,6 +122,52 @@ public final class PermissionStorage {
 
   private static final Logger LOG = LoggerFactory.getLogger(PermissionStorage.class);
 
+  /**
+   * Hooks for the master side ACL update pipeline. When installed, every write to the
+   * {@code hbase:acl} table is stamped with a monotonic timestamp assigned by the hook and the
+   * resulting state of the written entry is announced, so the change can be pushed to servers. When
+   * absent (e.g. direct table writes from tests), writes use the current time and are not
+   * announced.
+   */
+  public interface AclWriteHook {
+    /** Timestamp to stamp the next {@code hbase:acl} table write with. */
+    long nextTimestamp();
+
+    /** Called with the new state of the entry after it has been written. */
+    void onEntryUpdate(AuthManager.EntryUpdate update);
+  }
+
+  private static volatile AclWriteHook aclWriteHook;
+
+  /** Installs the master side write hook, see {@link AclWriteHook}. */
+  public static void setAclWriteHook(AclWriteHook hook) {
+    aclWriteHook = hook;
+  }
+
+  private static long nextWriteTimestamp() {
+    AclWriteHook hook = aclWriteHook;
+    return hook != null ? hook.nextTimestamp() : EnvironmentEdgeManager.currentTime();
+  }
+
+  /**
+   * Announces the resulting state of the given entry to the write hook. Called after each
+   * successful mutation of an entry, while the table instance is still open.
+   */
+  private static void notifyEntryWritten(Table t, byte[] entry) throws IOException {
+    AclWriteHook hook = aclWriteHook;
+    if (hook == null) {
+      return;
+    }
+    Result result = t.get(new Get(entry).addFamily(ACL_LIST_FAMILY));
+    ListMultimap<String,
+      UserPermission> perms = (result == null || result.isEmpty())
+        ? null
+        : parsePermissions(entry, result, null, null, null, false);
+    hook.onEntryUpdate((perms == null || perms.isEmpty())
+      ? AuthManager.EntryUpdate.deleted(entry)
+      : AuthManager.EntryUpdate.replace(entry, perms));
+  }
+
   private PermissionStorage() {
   }
 
@@ -136,7 +183,7 @@ public final class PermissionStorage {
     Permission permission = userPerm.getPermission();
     Permission.Action[] actions = permission.getActions();
     byte[] rowKey = userPermissionRowKey(permission);
-    Put p = new Put(rowKey);
+    Put p = new Put(rowKey, nextWriteTimestamp());
     byte[] key = userPermissionKey(userPerm);
 
     if ((actions == null) || (actions.length == 0)) {
@@ -179,6 +226,7 @@ public final class PermissionStorage {
     }
     try {
       t.put(p);
+      notifyEntryWritten(t, rowKey);
     } finally {
       t.close();
     }
@@ -240,10 +288,12 @@ public final class PermissionStorage {
 
   private static void removePermissionRecord(Configuration conf, UserPermission userPerm, Table t)
     throws IOException {
-    Delete d = new Delete(userPermissionRowKey(userPerm.getPermission()));
+    byte[] rowKey = userPermissionRowKey(userPerm.getPermission());
+    Delete d = new Delete(rowKey, nextWriteTimestamp());
     d.addColumns(ACL_LIST_FAMILY, userPermissionKey(userPerm));
     try {
       t.delete(d);
+      notifyEntryWritten(t, rowKey);
     } finally {
       t.close();
     }
@@ -254,7 +304,7 @@ public final class PermissionStorage {
    */
   static void removeTablePermissions(Configuration conf, TableName tableName, Table t)
     throws IOException {
-    Delete d = new Delete(tableName.getName());
+    Delete d = new Delete(tableName.getName(), nextWriteTimestamp());
     d.addFamily(ACL_LIST_FAMILY);
 
     if (LOG.isDebugEnabled()) {
@@ -262,6 +312,7 @@ public final class PermissionStorage {
     }
     try {
       t.delete(d);
+      notifyEntryWritten(t, tableName.getName());
     } finally {
       t.close();
     }
@@ -272,7 +323,8 @@ public final class PermissionStorage {
    */
   static void removeNamespacePermissions(Configuration conf, String namespace, Table t)
     throws IOException {
-    Delete d = new Delete(Bytes.toBytes(toNamespaceEntry(namespace)));
+    byte[] entry = Bytes.toBytes(toNamespaceEntry(namespace));
+    Delete d = new Delete(entry, nextWriteTimestamp());
     d.addFamily(ACL_LIST_FAMILY);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed namespace " + namespace);
@@ -280,6 +332,7 @@ public final class PermissionStorage {
 
     try {
       t.delete(d);
+      notifyEntryWritten(t, entry);
     } finally {
       t.close();
     }
@@ -306,11 +359,12 @@ public final class PermissionStorage {
       }
 
       if (qualifierSet.size() > 0) {
-        Delete d = new Delete(tableName.getName());
+        Delete d = new Delete(tableName.getName(), nextWriteTimestamp());
         for (byte[] qualifier : qualifierSet) {
           d.addColumns(ACL_LIST_FAMILY, qualifier);
         }
         table.delete(d);
+        notifyEntryWritten(table, tableName.getName());
       }
     } finally {
       if (scanner != null) {
