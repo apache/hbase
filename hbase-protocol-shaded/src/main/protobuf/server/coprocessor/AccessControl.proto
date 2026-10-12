@@ -73,7 +73,10 @@ message UserPermission {
 }
 
 /**
- * Content of the /hbase/acl/<table or namespace> znode.
+ * Permissions snapshot of a single ACL entry (table / @namespace / hbase:acl for
+ * global scope). Used as the entry payload in ACL refresh procedures, as the
+ * cell level ACL query attribute, and for serializing permissions in
+ * .snapshotinfo.
  */
 message UsersAndPermissions {
   message UserPermissions {
