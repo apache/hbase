@@ -899,6 +899,13 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
     return admin.getLogEntries(serverNames, logType, serverType, limit, filterParams);
   }
 
+  private static RSGroupInfo withoutServers(RSGroupInfo group, Set<Address> ignored) {
+    RSGroupInfo copy = new RSGroupInfo(group);
+    group.getConfiguration().forEach(copy::setConfiguration);
+    ignored.forEach(copy::removeServer);
+    return copy;
+  }
+
   private void verify() throws IOException {
     Map<String, RSGroupInfo> groupMap = Maps.newHashMap();
     Set<RSGroupInfo> zList = Sets.newHashSet();
@@ -938,9 +945,43 @@ public class VerifyingRSGroupAdmin implements Admin, Closeable {
       }
     }
 
+    // Servers of regex-governed groups are never persisted: storage and ZK must hold none.
+    Map<String, Pattern> regexGroupMap =
+      RSGroupInfoManagerImpl.getRegexGroupMap(admin.getConfiguration());
+    for (String regexGroup : regexGroupMap.keySet()) {
+      RSGroupInfo persisted = groupMap.get(regexGroup);
+      if (persisted != null) {
+        assertTrue(persisted.getServers().isEmpty(),
+          "regex-governed group " + regexGroup + " must persist no servers");
+      }
+    }
+
     groupMap.put(RSGroupInfo.DEFAULT_GROUP,
       new RSGroupInfo(RSGroupInfo.DEFAULT_GROUP, lives, tables));
-    assertEquals(Sets.newHashSet(groupMap.values()), Sets.newHashSet(admin.listRSGroups()));
+    // Regex-driven membership is never persisted and lags an explicit move or a config change until
+    // the next server event, so servers a regex matches, or that sit in a regex-governed group, are
+    // not compared.
+    List<RSGroupInfo> liveGroups = admin.listRSGroups();
+    Set<Address> ignored = Sets.newHashSet();
+    for (RSGroupInfo group : liveGroups) {
+      for (Address server : group.getServers()) {
+        if (
+          regexGroupMap.containsKey(group.getName()) || regexGroupMap.values().stream()
+            .anyMatch(p -> p.matcher(server.getHostName()).matches())
+        ) {
+          ignored.add(server);
+        }
+      }
+    }
+    Set<RSGroupInfo> expected = Sets.newHashSet();
+    for (RSGroupInfo group : groupMap.values()) {
+      expected.add(withoutServers(group, ignored));
+    }
+    Set<RSGroupInfo> actual = Sets.newHashSet();
+    for (RSGroupInfo group : liveGroups) {
+      actual.add(withoutServers(group, ignored));
+    }
+    assertEquals(expected, actual);
     try {
       String groupBasePath = ZNodePaths.joinZNode(zkw.getZNodePaths().baseZNode, "rsgroup");
       for (String znode : ZKUtil.listChildrenNoWatch(zkw, groupBasePath)) {
