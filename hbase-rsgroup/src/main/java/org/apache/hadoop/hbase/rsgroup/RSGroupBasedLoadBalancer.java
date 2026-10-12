@@ -78,6 +78,44 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
 
   private volatile boolean fallbackEnabled = false;
 
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void setFallbackEnabledForTest(boolean enabled) {
+    this.fallbackEnabled = enabled;
+  }
+
+  // Test-only call-tracking flags, set true whenever the corresponding assignment method below is
+  // invoked. Reset via resetAssignmentCallFlagsForTest() before the operation under test.
+  private volatile boolean roundRobinAssignmentInvoked = false;
+  private volatile boolean retainAssignmentInvoked = false;
+  private volatile boolean randomAssignmentInvoked = false;
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public boolean isRoundRobinAssignmentInvoked() {
+    return roundRobinAssignmentInvoked;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public boolean isRetainAssignmentInvoked() {
+    return retainAssignmentInvoked;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public boolean isRandomAssignmentInvoked() {
+    return randomAssignmentInvoked;
+  }
+
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public void resetAssignmentCallFlagsForTest() {
+    roundRobinAssignmentInvoked = false;
+    retainAssignmentInvoked = false;
+    randomAssignmentInvoked = false;
+  }
+
   /**
    * Used by reflection in {@link org.apache.hadoop.hbase.master.balancer.LoadBalancerFactory}.
    */
@@ -161,6 +199,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   @NonNull
   public Map<ServerName, List<RegionInfo>> roundRobinAssignment(List<RegionInfo> regions,
     List<ServerName> servers) throws HBaseIOException {
+    roundRobinAssignmentInvoked = true;
     Map<ServerName, List<RegionInfo>> assignments = Maps.newHashMap();
     List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
       generateGroupAssignments(regions, servers);
@@ -177,6 +216,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   @NonNull
   public Map<ServerName, List<RegionInfo>> retainAssignment(Map<RegionInfo, ServerName> regions,
     List<ServerName> servers) throws HBaseIOException {
+    retainAssignmentInvoked = true;
     try {
       Map<ServerName, List<RegionInfo>> assignments = new TreeMap<>();
       List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
@@ -199,6 +239,7 @@ public class RSGroupBasedLoadBalancer implements RSGroupableBalancer {
   @Override
   public ServerName randomAssignment(RegionInfo region, List<ServerName> servers)
     throws HBaseIOException {
+    randomAssignmentInvoked = true;
     List<Pair<List<RegionInfo>, List<ServerName>>> pairs =
       generateGroupAssignments(Lists.newArrayList(region), servers);
     List<ServerName> filteredServers = pairs.iterator().next().getSecond();
