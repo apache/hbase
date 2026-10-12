@@ -133,8 +133,8 @@ public final class PermissionStorage {
     /** Timestamp to stamp the next {@code hbase:acl} table write with. */
     long nextTimestamp();
 
-    /** Called with the new state of the entry after it has been written. */
-    void onEntryUpdate(AuthManager.EntryUpdate update);
+    /** Called with the timestamp of the write and the new state of the entry it produced. */
+    void onEntryUpdate(long ts, AuthManager.EntryUpdate update);
   }
 
   private static volatile AclWriteHook aclWriteHook;
@@ -153,7 +153,7 @@ public final class PermissionStorage {
    * Announces the resulting state of the given entry to the write hook. Called after each
    * successful mutation of an entry, while the table instance is still open.
    */
-  private static void notifyEntryWritten(Table t, byte[] entry) throws IOException {
+  private static void notifyEntryWritten(Table t, byte[] entry, long ts) throws IOException {
     AclWriteHook hook = aclWriteHook;
     if (hook == null) {
       return;
@@ -163,9 +163,10 @@ public final class PermissionStorage {
       UserPermission> perms = (result == null || result.isEmpty())
         ? null
         : parsePermissions(entry, result, null, null, null, false);
-    hook.onEntryUpdate((perms == null || perms.isEmpty())
-      ? AuthManager.EntryUpdate.deleted(entry)
-      : AuthManager.EntryUpdate.replace(entry, perms));
+    hook.onEntryUpdate(ts,
+      (perms == null || perms.isEmpty())
+        ? AuthManager.EntryUpdate.deleted(entry)
+        : AuthManager.EntryUpdate.replace(entry, perms));
   }
 
   private PermissionStorage() {
@@ -183,7 +184,8 @@ public final class PermissionStorage {
     Permission permission = userPerm.getPermission();
     Permission.Action[] actions = permission.getActions();
     byte[] rowKey = userPermissionRowKey(permission);
-    Put p = new Put(rowKey, nextWriteTimestamp());
+    long ts = nextWriteTimestamp();
+    Put p = new Put(rowKey, ts);
     byte[] key = userPermissionKey(userPerm);
 
     if ((actions == null) || (actions.length == 0)) {
@@ -226,7 +228,7 @@ public final class PermissionStorage {
     }
     try {
       t.put(p);
-      notifyEntryWritten(t, rowKey);
+      notifyEntryWritten(t, rowKey, ts);
     } finally {
       t.close();
     }
@@ -289,11 +291,12 @@ public final class PermissionStorage {
   private static void removePermissionRecord(Configuration conf, UserPermission userPerm, Table t)
     throws IOException {
     byte[] rowKey = userPermissionRowKey(userPerm.getPermission());
-    Delete d = new Delete(rowKey, nextWriteTimestamp());
+    long ts = nextWriteTimestamp();
+    Delete d = new Delete(rowKey, ts);
     d.addColumns(ACL_LIST_FAMILY, userPermissionKey(userPerm));
     try {
       t.delete(d);
-      notifyEntryWritten(t, rowKey);
+      notifyEntryWritten(t, rowKey, ts);
     } finally {
       t.close();
     }
@@ -304,7 +307,8 @@ public final class PermissionStorage {
    */
   static void removeTablePermissions(Configuration conf, TableName tableName, Table t)
     throws IOException {
-    Delete d = new Delete(tableName.getName(), nextWriteTimestamp());
+    long ts = nextWriteTimestamp();
+    Delete d = new Delete(tableName.getName(), ts);
     d.addFamily(ACL_LIST_FAMILY);
 
     if (LOG.isDebugEnabled()) {
@@ -312,7 +316,7 @@ public final class PermissionStorage {
     }
     try {
       t.delete(d);
-      notifyEntryWritten(t, tableName.getName());
+      notifyEntryWritten(t, tableName.getName(), ts);
     } finally {
       t.close();
     }
@@ -324,7 +328,8 @@ public final class PermissionStorage {
   static void removeNamespacePermissions(Configuration conf, String namespace, Table t)
     throws IOException {
     byte[] entry = Bytes.toBytes(toNamespaceEntry(namespace));
-    Delete d = new Delete(entry, nextWriteTimestamp());
+    long ts = nextWriteTimestamp();
+    Delete d = new Delete(entry, ts);
     d.addFamily(ACL_LIST_FAMILY);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed namespace " + namespace);
@@ -332,7 +337,7 @@ public final class PermissionStorage {
 
     try {
       t.delete(d);
-      notifyEntryWritten(t, entry);
+      notifyEntryWritten(t, entry, ts);
     } finally {
       t.close();
     }
@@ -359,12 +364,13 @@ public final class PermissionStorage {
       }
 
       if (qualifierSet.size() > 0) {
-        Delete d = new Delete(tableName.getName(), nextWriteTimestamp());
+        long ts = nextWriteTimestamp();
+        Delete d = new Delete(tableName.getName(), ts);
         for (byte[] qualifier : qualifierSet) {
           d.addColumns(ACL_LIST_FAMILY, qualifier);
         }
         table.delete(d);
-        notifyEntryWritten(table, tableName.getName());
+        notifyEntryWritten(table, tableName.getName(), ts);
       }
     } finally {
       if (scanner != null) {
@@ -504,8 +510,41 @@ public final class PermissionStorage {
    */
   static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Configuration conf)
     throws IOException {
+    return loadAllSnapshot(conf).getPermissions();
+  }
+
+  /**
+   * Content of the {@code hbase:acl} table together with the largest cell timestamp seen in it.
+   * Cell timestamps of acl writes are assigned by the master, so {@link #getMaxTimestamp()} is the
+   * newest write reflected in the snapshot and serves as its version watermark.
+   */
+  public static final class AclSnapshot {
+    private final Map<byte[], ListMultimap<String, UserPermission>> permissions;
+    private final long maxTimestamp;
+
+    AclSnapshot(Map<byte[], ListMultimap<String, UserPermission>> permissions, long maxTimestamp) {
+      this.permissions = permissions;
+      this.maxTimestamp = maxTimestamp;
+    }
+
+    public Map<byte[], ListMultimap<String, UserPermission>> getPermissions() {
+      return permissions;
+    }
+
+    /** The newest write timestamp reflected in this snapshot, 0 if it is empty. */
+    public long getMaxTimestamp() {
+      return maxTimestamp;
+    }
+  }
+
+  /**
+   * Load all permissions from {@code _acl_} along with the newest write timestamp seen, used as the
+   * version watermark of a full reload.
+   */
+  static AclSnapshot loadAllSnapshot(Configuration conf) throws IOException {
     Map<byte[], ListMultimap<String, UserPermission>> allPerms =
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
+    long maxTimestamp = 0L;
 
     // do a full scan of _acl_, filtering on only first table region rows
 
@@ -522,6 +561,9 @@ public final class PermissionStorage {
             ListMultimap<String, UserPermission> resultPerms =
               parsePermissions(row.getRow(), row, null, null, null, false);
             allPerms.put(row.getRow(), resultPerms);
+            for (Cell cell : row.rawCells()) {
+              maxTimestamp = Math.max(maxTimestamp, cell.getTimestamp());
+            }
           }
         } finally {
           if (scanner != null) {
@@ -531,7 +573,7 @@ public final class PermissionStorage {
       }
     }
 
-    return allPerms;
+    return new AclSnapshot(allPerms, maxTimestamp);
   }
 
   public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
