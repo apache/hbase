@@ -345,6 +345,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProto
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
@@ -3165,6 +3167,13 @@ public class MasterRpcServices extends RSRpcServices
     regionServers.stream().limit(request.getCount()).map(ProtobufUtil::toServerName)
       .forEach(builder::addServer);
     return builder.build();
+  }
+
+  @Override
+  public GetThrottleStateResponse getThrottleState(RpcController controller,
+    GetThrottleStateRequest request) throws ServiceException {
+    boolean on = master.getRpcThrottleStateStore().get();
+    return GetThrottleStateResponse.newBuilder().setRpcThrottleEnabled(on).build();
   }
 
   @Override

@@ -753,4 +753,9 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
     Collection<Entry<String, Long>> archivedFiles) {
     return false;
   }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    return false;
+  }
 }

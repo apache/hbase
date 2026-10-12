@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureEvent;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
+import org.apache.hadoop.hbase.quotas.RpcThrottleStateStore;
 import org.apache.hadoop.hbase.replication.ReplicationException;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
@@ -532,5 +533,10 @@ public class MockNoopMasterServices implements MasterServices {
   public long flushTable(TableName tableName, List<byte[]> columnFamilies, long nonceGroup,
     long nonce) throws IOException {
     return 0;
+  }
+
+  @Override
+  public RpcThrottleStateStore getRpcThrottleStateStore() {
+    return null;
   }
 }
