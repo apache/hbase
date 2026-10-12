@@ -164,4 +164,10 @@ public interface MetricsMasterWrapper {
    * Get the size of old WALs directory in bytes.
    */
   long getOldWALsDirSize();
+
+  /**
+   * Returns switch states (1 enabled, 0 disabled, -1 unknown), or an empty map unless this Master
+   * is active and initialized. Implementations must not perform remote reads.
+   */
+  Map<String, Integer> getSwitchStates();
 }

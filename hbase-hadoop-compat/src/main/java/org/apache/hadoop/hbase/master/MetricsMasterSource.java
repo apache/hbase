@@ -71,6 +71,16 @@ public interface MetricsMasterSource extends BaseSource {
   String CLUSTER_READ_REQUESTS_NAME = "clusterReadRequests";
   String CLUSTER_WRITE_REQUESTS_NAME = "clusterWriteRequests";
   String OLD_WAL_DIR_SIZE_NAME = "oldWALsDirSize";
+  String BALANCER_ENABLED_NAME = "balancerEnabled";
+  String NORMALIZER_ENABLED_NAME = "normalizerEnabled";
+  String SPLIT_ENABLED_NAME = "splitEnabled";
+  String MERGE_ENABLED_NAME = "mergeEnabled";
+  String CLEANER_CHORE_ENABLED_NAME = "cleanerChoreEnabled";
+  String CATALOG_JANITOR_ENABLED_NAME = "catalogJanitorEnabled";
+  String SNAPSHOT_CLEANUP_ENABLED_NAME = "snapshotCleanupEnabled";
+  String REPLICATION_PEER_MODIFICATION_ENABLED_NAME = "replicationPeerModificationEnabled";
+  String RPC_THROTTLE_ENABLED_NAME = "rpcThrottleEnabled";
+  String SWITCH_STATE_DESC = "Switch state: 1 enabled, 0 disabled, -1 unknown";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =

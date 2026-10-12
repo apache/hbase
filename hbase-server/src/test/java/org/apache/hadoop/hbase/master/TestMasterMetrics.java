@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionStatesCount;
 import org.apache.hadoop.hbase.client.TableDescriptor;
@@ -51,6 +52,7 @@ import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.FSTableDescriptors;
+import org.apache.hadoop.hbase.util.IOExceptionConsumer;
 import org.apache.zookeeper.KeeperException;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -145,6 +147,33 @@ public class TestMasterMetrics {
   public static void after() throws Exception {
     master.stopMaster();
     TEST_UTIL.shutdownMiniCluster();
+  }
+
+  @Test
+  public void testSwitchMetricsFollowAdminChanges() throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    MetricsMasterSource source = master.getMasterMetrics().getMetricsSource();
+    Map<String, IOExceptionConsumer<Boolean>> switches = new HashMap<>();
+    switches.put("balancerEnabled", enabled -> admin.balancerSwitch(enabled, false));
+    switches.put("normalizerEnabled", admin::normalizerSwitch);
+    switches.put("splitEnabled", enabled -> admin.splitSwitch(enabled, false));
+    switches.put("mergeEnabled", enabled -> admin.mergeSwitch(enabled, false));
+    switches.put("cleanerChoreEnabled", admin::cleanerChoreSwitch);
+    switches.put("catalogJanitorEnabled", admin::catalogJanitorSwitch);
+    switches.put("snapshotCleanupEnabled", enabled -> admin.snapshotCleanupSwitch(enabled, false));
+    switches.put("replicationPeerModificationEnabled", admin::replicationPeerModificationSwitch);
+    Map<String, Integer> initialStates = new MetricsMasterWrapperImpl(master).getSwitchStates();
+    for (Map.Entry<String, IOExceptionConsumer<Boolean>> entry : switches.entrySet()) {
+      try {
+        for (boolean enabled : new boolean[] { false, true }) {
+          entry.getValue().accept(enabled);
+          metricsHelper.assertGauge(entry.getKey(), enabled ? 1L : 0L, source);
+        }
+      } finally {
+        entry.getValue().accept(initialStates.get(entry.getKey()) == 1);
+      }
+    }
+    metricsHelper.assertGauge("rpcThrottleEnabled", 0L, source);
   }
 
   @Test
