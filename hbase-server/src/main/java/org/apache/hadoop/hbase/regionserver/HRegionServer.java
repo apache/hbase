@@ -1976,6 +1976,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     executorService.startExecutorService(
       executorService.new ExecutorConfig().setExecutorType(ExecutorType.RS_SWITCH_RPC_THROTTLE)
         .setCorePoolSize(switchRpcThrottleThreads));
+    final int refreshAclThreads = conf.getInt("hbase.regionserver.executor.refresh.acl.threads", 1);
+    executorService.startExecutorService(executorService.new ExecutorConfig()
+      .setExecutorType(ExecutorType.RS_REFRESH_ACL).setCorePoolSize(refreshAclThreads));
     final int claimReplicationQueueThreads =
       conf.getInt("hbase.regionserver.executor.claim.replication.queue.threads", 1);
     executorService.startExecutorService(

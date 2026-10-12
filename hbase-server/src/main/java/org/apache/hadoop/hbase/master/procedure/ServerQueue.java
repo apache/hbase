@@ -45,6 +45,7 @@ class ServerQueue extends Queue<ServerName> {
       case VERIFY_SNAPSHOT:
       case RELOAD_QUOTAS:
       case LOG_ROLL:
+      case REFRESH_ACL:
         return false;
       default:
         break;

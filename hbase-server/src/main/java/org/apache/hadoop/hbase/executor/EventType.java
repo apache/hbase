@@ -136,6 +136,12 @@ public enum EventType {
    * Master asking RS to switch rpc throttle state.
    */
   M_RS_SWITCH_RPC_THROTTLE(27, ExecutorType.RS_SWITCH_RPC_THROTTLE),
+  /**
+   * Messages originating from Master to RS.<br>
+   * M_RS_REFRESH_ACL<br>
+   * Master asking RS to apply an ACL change set.
+   */
+  M_RS_REFRESH_ACL(28, ExecutorType.RS_REFRESH_ACL),
 
   /**
    * Messages originating from Client to Master.<br>

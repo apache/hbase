@@ -69,6 +69,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.AclRefresher;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
@@ -557,6 +558,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   public AccessChecker getAccessChecker() {
     return rpcServices.getAccessChecker();
+  }
+
+  public AclRefresher getAclRefresher() {
+    return rpcServices.getAclRefresher();
   }
 
   public ZKPermissionWatcher getZKPermissionWatcher() {

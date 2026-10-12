@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.AclRefresher;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
@@ -107,6 +108,8 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
   private ClientMetaCoprocessorHost clientMetaCoprocessorHost;
 
   private AccessChecker accessChecker;
+
+  private AclRefresher aclRefresher;
 
   private ZKPermissionWatcher zkPermissionWatcher;
 
@@ -180,6 +183,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     } else {
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
+    aclRefresher = new AclRefresher(getConfiguration(), accessChecker.getAuthManager());
     zkPermissionWatcher =
       new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
     try {
@@ -207,11 +211,18 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     return accessChecker;
   }
 
+  public AclRefresher getAclRefresher() {
+    return aclRefresher;
+  }
+
   public ZKPermissionWatcher getZkPermissionWatcher() {
     return zkPermissionWatcher;
   }
 
   protected final void internalStop() {
+    if (aclRefresher != null) {
+      aclRefresher.close();
+    }
     if (zkPermissionWatcher != null) {
       zkPermissionWatcher.close();
     }
