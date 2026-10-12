@@ -247,15 +247,17 @@ public final class AuthManager {
         updateGlobalCache(toPermissions(perms));
       }
     } else if (PermissionStorage.isNamespaceEntry(entry)) {
+      String namespace = Bytes.toString(PermissionStorage.fromNamespaceEntry(entry));
       if (perms == null) {
-        removeNamespace(entry);
+        namespaceCache.remove(namespace);
+        mtime.incrementAndGet();
       } else {
-        updateNamespaceCache(Bytes.toString(PermissionStorage.fromNamespaceEntry(entry)),
-          toPermissions(perms));
+        updateNamespaceCache(namespace, toPermissions(perms));
       }
     } else {
       if (perms == null) {
-        removeTable(TableName.valueOf(entry));
+        tableCache.remove(TableName.valueOf(entry));
+        mtime.incrementAndGet();
       } else {
         updateTableCache(TableName.valueOf(entry), toPermissions(perms));
       }
@@ -579,22 +581,6 @@ public final class AuthManager {
       // to collect regardless
     }
     return false;
-  }
-
-  /**
-   * Remove given namespace from AuthManager's namespace cache.
-   * @param ns namespace
-   */
-  public void removeNamespace(byte[] ns) {
-    namespaceCache.remove(Bytes.toString(ns));
-  }
-
-  /**
-   * Remove given table from AuthManager's table cache.
-   * @param table table name
-   */
-  public void removeTable(TableName table) {
-    tableCache.remove(table);
   }
 
   /**
