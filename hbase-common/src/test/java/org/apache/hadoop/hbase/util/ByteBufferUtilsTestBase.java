@@ -893,13 +893,13 @@ public class ByteBufferUtilsTestBase {
       int newIndex = ByteBufferUtils.putShort(heap, 0, value);
       assertEquals(0 + Short.BYTES, newIndex);
       assertEquals(5, heap.position());
-      assertEquals(value, heap.getShort(5));
+      assertEquals(value, heap.getShort(0));
 
       direct.position(5);
       newIndex = ByteBufferUtils.putShort(direct, 0, value);
       assertEquals(0 + Short.BYTES, newIndex);
       assertEquals(5, direct.position());
-      assertEquals(value, direct.getShort(5));
+      assertEquals(value, direct.getShort(0));
     }
   }
 
@@ -953,13 +953,13 @@ public class ByteBufferUtilsTestBase {
       int newIndex = ByteBufferUtils.putInt(heap, 0, value);
       assertEquals(0 + Integer.BYTES, newIndex);
       assertEquals(5, heap.position());
-      assertEquals(value, heap.getInt(5));
+      assertEquals(value, heap.getInt(0));
 
       direct.position(5);
       newIndex = ByteBufferUtils.putInt(direct, 0, value);
       assertEquals(0 + Integer.BYTES, newIndex);
       assertEquals(5, direct.position());
-      assertEquals(value, direct.getInt(5));
+      assertEquals(value, direct.getInt(0));
     }
   }
 
@@ -1013,13 +1013,13 @@ public class ByteBufferUtilsTestBase {
       int newIndex = ByteBufferUtils.putLong(heap, 0, value);
       assertEquals(0 + Long.BYTES, newIndex);
       assertEquals(8, heap.position());
-      assertEquals(value, heap.getLong(8));
+      assertEquals(value, heap.getLong(0));
 
       direct.position(8);
       newIndex = ByteBufferUtils.putLong(direct, 0, value);
       assertEquals(0 + Long.BYTES, newIndex);
       assertEquals(8, direct.position());
-      assertEquals(value, direct.getLong(8));
+      assertEquals(value, direct.getLong(0));
     }
   }
 
