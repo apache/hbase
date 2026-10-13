@@ -83,21 +83,23 @@ public class TestMasterSwitchMetrics {
   @Test
   public void testEachSwitchChangesItsGauge() {
     Map<String, Consumer<Boolean>> switches = new HashMap<>();
-    switches.put("balancerEnabled", enabled -> when(master.isBalancerOn()).thenReturn(enabled));
-    switches.put("normalizerEnabled", enabled -> when(master.isNormalizerOn()).thenReturn(enabled));
-    switches.put("splitEnabled",
+    switches.put(MetricsMasterSource.BALANCER_ENABLED_NAME,
+      enabled -> when(master.isBalancerOn()).thenReturn(enabled));
+    switches.put(MetricsMasterSource.NORMALIZER_ENABLED_NAME,
+      enabled -> when(master.isNormalizerOn()).thenReturn(enabled));
+    switches.put(MetricsMasterSource.SPLIT_ENABLED_NAME,
       enabled -> when(master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT)).thenReturn(enabled));
-    switches.put("mergeEnabled",
+    switches.put(MetricsMasterSource.MERGE_ENABLED_NAME,
       enabled -> when(master.isSplitOrMergeEnabled(MasterSwitchType.MERGE)).thenReturn(enabled));
-    switches.put("cleanerChoreEnabled",
+    switches.put(MetricsMasterSource.CLEANER_CHORE_ENABLED_NAME,
       enabled -> when(master.isCleanerChoreEnabled()).thenReturn(enabled));
-    switches.put("catalogJanitorEnabled",
+    switches.put(MetricsMasterSource.CATALOG_JANITOR_ENABLED_NAME,
       enabled -> when(master.isCatalogJanitorEnabled()).thenReturn(enabled));
-    switches.put("snapshotCleanupEnabled",
+    switches.put(MetricsMasterSource.SNAPSHOT_CLEANUP_ENABLED_NAME,
       enabled -> when(master.snapshotCleanupStateStore.get()).thenReturn(enabled));
-    switches.put("replicationPeerModificationEnabled",
+    switches.put(MetricsMasterSource.REPLICATION_PEER_MODIFICATION_ENABLED_NAME,
       enabled -> when(master.isReplicationPeerModificationEnabled()).thenReturn(enabled));
-    switches.put("rpcThrottleEnabled",
+    switches.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME,
       enabled -> when(rpcThrottleStateStore.get()).thenReturn(enabled));
     Map<String, Integer> expected = new HashMap<>();
     switches.keySet().forEach(name -> expected.put(name, 0));
@@ -128,10 +130,10 @@ public class TestMasterSwitchMetrics {
   @Test
   public void testQuotaDisabledAndUnknownStates() {
     when(master.getMasterQuotaManager()).thenReturn(null);
-    assertEquals(-1, wrapper.getSwitchStates().get("rpcThrottleEnabled"));
+    assertEquals(-1, wrapper.getSwitchStates().get(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME));
 
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, false);
     when(rpcThrottleStateStore.get()).thenReturn(true);
-    assertEquals(0, wrapper.getSwitchStates().get("rpcThrottleEnabled"));
+    assertEquals(0, wrapper.getSwitchStates().get(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME));
   }
 }
