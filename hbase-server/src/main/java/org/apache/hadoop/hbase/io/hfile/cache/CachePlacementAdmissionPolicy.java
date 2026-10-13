@@ -85,4 +85,18 @@ public interface CachePlacementAdmissionPolicy {
    */
   PromotionDecision shouldPromote(BlockCacheKey cacheKey, Cacheable block, CacheTier sourceTier,
     CacheRequestContext context, CacheTopologyView topologyView);
+
+  /**
+   * Notifies this policy about cache pressure observed during an engine eviction pass.
+   * <p>
+   * Stateful admission and placement policies may use this feedback to adjust future admission or
+   * placement decisions. The default implementation does nothing.
+   * </p>
+   * @param sourceTier   tier whose engine experienced cache pressure
+   * @param bytesToFree  amount of cache pressure observed, in bytes
+   * @param topologyView read-only topology view
+   */
+  default void onEvictionPressure(CacheTier sourceTier, long bytesToFree,
+    CacheTopologyView topologyView) {
+  }
 }

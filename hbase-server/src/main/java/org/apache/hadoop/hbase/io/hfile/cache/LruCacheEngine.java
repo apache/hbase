@@ -801,14 +801,18 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    */
   void evict() {
     if (!evictionLock.tryLock()) {
+      notifyEvictionPressure(0L);
       return;
     }
+
+    long bytesToFree = 0L;
+    boolean evictionPassCompleted = false;
 
     try {
       evictionInProgress = true;
 
       long currentSize = size.get();
-      long bytesToFree = currentSize - minSize();
+      bytesToFree = currentSize - minSize();
 
       if (LOG.isTraceEnabled()) {
         LOG.trace("LRU cache eviction started; Attempting to free "
@@ -816,6 +820,7 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
       }
 
       if (bytesToFree <= 0) {
+        evictionPassCompleted = true;
         return;
       }
 
@@ -908,10 +913,27 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
           + StringUtils.byteDesc(single) + ", multi=" + StringUtils.byteDesc(multi) + ", memory="
           + StringUtils.byteDesc(memory));
       }
+
+      evictionPassCompleted = true;
     } finally {
       stats.evict();
       evictionInProgress = false;
       evictionLock.unlock();
+
+      if (evictionPassCompleted) {
+        notifyEvictionPressure(Math.max(bytesToFree, 0L));
+      }
+    }
+  }
+
+  /**
+   * Notifies the configured eviction listener about pressure observed during an eviction pass.
+   * @param bytesToFree amount of cache pressure observed, in bytes
+   */
+  private void notifyEvictionPressure(long bytesToFree) {
+    CacheEvictionListener listener = evictionListener;
+    if (listener != null) {
+      listener.onEvictionPressure(this, bytesToFree);
     }
   }
 

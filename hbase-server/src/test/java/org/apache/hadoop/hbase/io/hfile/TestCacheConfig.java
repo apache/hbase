@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.AdaptiveLruCachePlacementAdmissionPolicy;
 import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
@@ -498,5 +499,39 @@ public class TestCacheConfig {
     cacheConfig.deregisterChildren(manager);
 
     verify(manager).deregisterObserver(cacheAccessService);
+  }
+
+  /**
+   * Verifies that AdaptiveLRU uses the native LRU engine together with the adaptive placement and
+   * admission policy in the CacheAccessService construction path.
+   */
+  @Test
+  public void testAdaptiveLruCacheConfigUsesNativeEngineAndAdaptivePolicy() {
+    this.conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "AdaptiveLRU");
+
+    CacheAccessService service = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
+
+    assertInstanceOf(TopologyBackedCacheAccessService.class, service);
+
+    CacheEngine engine = CacheAccessServiceTestFactory.getCacheEngine(service, CacheTier.SINGLE);
+    assertInstanceOf(LruCacheEngine.class, engine);
+
+    TopologyBackedCacheAccessService topologyBackedService =
+      (TopologyBackedCacheAccessService) service;
+    assertInstanceOf(AdaptiveLruCachePlacementAdmissionPolicy.class,
+      topologyBackedService.getPolicy());
+  }
+
+  /**
+   * Verifies that the legacy BlockCache construction path continues to create
+   * LruAdaptiveBlockCache.
+   */
+  @Test
+  public void testLegacyAdaptiveLruBlockCacheConfigurationIsPreserved() {
+    this.conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "AdaptiveLRU");
+
+    BlockCache blockCache = BlockCacheFactory.createBlockCache(this.conf);
+
+    assertInstanceOf(LruAdaptiveBlockCache.class, blockCache);
   }
 }

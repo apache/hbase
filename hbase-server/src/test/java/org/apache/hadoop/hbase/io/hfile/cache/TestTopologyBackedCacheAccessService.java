@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.ArgumentCaptor;
 
 /**
  * Tests for {@link TopologyBackedCacheAccessService}.
@@ -627,6 +628,61 @@ public class TestTopologyBackedCacheAccessService {
 
     verify(persistentEngine).restore(input);
     verify(input).close();
+  }  
+  
+  /**
+   * Verifies that cache-pressure feedback from an engine is forwarded to the policy with the
+   * logical tier associated with that engine.
+   */
+  @Test
+  void testEvictionPressureIsForwardedToPolicyWithSourceTier() {
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getTiers()).thenReturn(List.of(CacheTier.L1, CacheTier.L2));
+    when(topology.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
+    when(topology.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
+
+    new TopologyBackedCacheAccessService(topology, policy);
+
+    ArgumentCaptor<CacheEvictionListener> listenerCaptor =
+      ArgumentCaptor.forClass(CacheEvictionListener.class);
+    verify(l1).setEvictionListener(listenerCaptor.capture());
+
+    listenerCaptor.getValue().onEvictionPressure(l1, 1234L);
+
+    verify(policy).onEvictionPressure(CacheTier.L1, 1234L, topologyView);
+  }
+
+  /**
+   * Verifies that concrete block eviction events continue to be handled by the topology.
+   */
+  @Test
+  void testBlockEvictionIsStillForwardedToTopology() {
+    BlockCacheKey cacheKey = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
+    Cacheable block = mock(Cacheable.class);
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getTiers()).thenReturn(List.of(CacheTier.L1));
+    when(topology.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
+
+    new TopologyBackedCacheAccessService(topology, policy);
+
+    ArgumentCaptor<CacheEvictionListener> listenerCaptor =
+      ArgumentCaptor.forClass(CacheEvictionListener.class);
+    verify(l1).setEvictionListener(listenerCaptor.capture());
+
+    listenerCaptor.getValue().onEviction(l1, cacheKey, block);
+
+    verify(topology).handleEviction(cacheKey, block, l1);
   }
 
   private static CacheRequestContext requestContext() {
