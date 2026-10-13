@@ -23,6 +23,7 @@ import java.util.Map;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
+import org.apache.hadoop.hbase.ClusterMetricsBuilder;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.MetaMutationAnnotation;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -1672,7 +1673,15 @@ public interface MasterObserver {
    * Called after get cluster status.
    */
   default void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
-    ClusterMetrics status) throws IOException {
+    ClusterMetrics metrics) throws IOException {
+  }
+
+  /**
+   * Called after get cluster status.
+   */
+  default void postGetClusterMetrics(ObserverContext<MasterCoprocessorEnvironment> ctx,
+    ClusterMetricsBuilder metricsBuilder) throws IOException {
+    postGetClusterMetrics(ctx, metricsBuilder.build());
   }
 
   /**
