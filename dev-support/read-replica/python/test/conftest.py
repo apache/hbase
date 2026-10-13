@@ -38,6 +38,13 @@ def pytest_runtest_makereport(item, call):
     setattr(item, f"rep_{report.when}", report)
 
 
+def _chmod_recursive(path, mode=0o777):
+    for dirpath, dirnames, filenames in os.walk(path):
+        os.chmod(dirpath, mode)
+        for filename in filenames:
+            os.chmod(os.path.join(dirpath, filename), mode)
+
+
 def _clear_directory(path):
     if not os.path.isdir(path):
         return
@@ -55,8 +62,10 @@ def per_test_log_file(request):
     test_name = request.node.name
     execution_count = getattr(request.node, 'execution_count', 1)
 
-    run_dir = os.path.join(output_dir, test_name, f"run{execution_count}")
-    os.makedirs(run_dir, exist_ok=True)
+    test_dir = os.path.join(output_dir, test_name)
+    run_dir = os.path.join(test_dir, f"run{execution_count}")
+    os.makedirs(run_dir, mode=0o777, exist_ok=True)
+    _chmod_recursive(test_dir)
 
     log_path = os.path.join(run_dir, f"{test_name}.run{execution_count}.log")
 
@@ -86,14 +95,17 @@ def per_test_log_file(request):
 
     root_logger.removeHandler(handler)
     handler.close()
+    os.chmod(log_path, 0o777)
 
     if active_logs_dir and os.path.isdir(active_logs_dir):
-        shutil.copytree(active_logs_dir,
-                        os.path.join(run_dir, f"hbase-cluster1-run{execution_count}-logs"),
+        dest = os.path.join(run_dir, f"hbase-cluster1-run{execution_count}-logs")
+        shutil.copytree(active_logs_dir, dest,
                         dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns('*.out'))
+        _chmod_recursive(dest)
     if replica_logs_dir and os.path.isdir(replica_logs_dir):
-        shutil.copytree(replica_logs_dir,
-                        os.path.join(run_dir, f"hbase-cluster2-run{execution_count}-logs"),
+        dest = os.path.join(run_dir, f"hbase-cluster2-run{execution_count}-logs")
+        shutil.copytree(replica_logs_dir, dest,
                         dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns('*.out'))
+        _chmod_recursive(dest)
