@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import java.io.IOException;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Optional;
@@ -30,6 +31,7 @@ import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.io.hfile.cache.persistence.CachePersistenceStorage;
 import org.apache.hadoop.hbase.util.Pair;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -554,4 +556,27 @@ public interface CacheAccessService extends ConfigurationObserver {
     return Optional.empty();
   }
 
+  /**
+   * Saves persistent state owned by cache components managed by this service.
+   * <p>
+   * The default implementation performs no persistence. Implementations which manage persistent
+   * cache components should override this method and coordinate their persistence.
+   * </p>
+   * @param storage storage used to persist cache component state
+   * @throws IOException if persistent state cannot be saved
+   */
+  default void savePersistentState(CachePersistenceStorage storage) throws IOException {
+  }
+
+  /**
+   * Restores persistent state into cache components managed by this service.
+   * <p>
+   * Components must already have been constructed and configured before this method is invoked. The
+   * default implementation performs no restoration.
+   * </p>
+   * @param storage storage from which cache component state is restored
+   * @throws IOException if persistent state cannot be restored
+   */
+  default void restorePersistentState(CachePersistenceStorage storage) throws IOException {
+  }
 }

@@ -26,7 +26,11 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.withSettings;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.util.List;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
@@ -35,6 +39,8 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
+import org.apache.hadoop.hbase.io.hfile.cache.persistence.CachePersistenceOutput;
+import org.apache.hadoop.hbase.io.hfile.cache.persistence.CachePersistenceStorage;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
@@ -554,6 +560,73 @@ public class TestTopologyBackedCacheAccessService {
 
     verify(l1).onConfigurationChange(conf);
     verify(l2).onConfigurationChange(conf);
+  }
+
+  /**
+   * Verifies that saving persistent state through the cache access service delegates persistence to
+   * the persistent cache components managed by the service.
+   * @throws IOException if persistence fails
+   */
+  @Test
+  public void testSavePersistentState() throws IOException {
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView view = mock(CacheTopologyView.class);
+    when(topology.getView()).thenReturn(view);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine engine =
+      mock(CacheEngine.class, withSettings().extraInterfaces(PersistentCacheComponent.class));
+    PersistentCacheComponent persistentEngine = (PersistentCacheComponent) engine;
+
+    CachePersistenceStorage storage = mock(CachePersistenceStorage.class);
+    CachePersistenceOutput persistenceOutput = mock(CachePersistenceOutput.class);
+    OutputStream output = mock(OutputStream.class);
+
+    when(persistentEngine.getPersistenceId()).thenReturn("test-engine");
+    when(topology.getTiers()).thenReturn(List.of(CacheTier.SINGLE));
+    when(topology.getEngine(CacheTier.SINGLE)).thenReturn(Optional.of(engine));
+    when(storage.create("engine/single/test-engine")).thenReturn(persistenceOutput);
+    when(persistenceOutput.getOutputStream()).thenReturn(output);
+
+    TopologyBackedCacheAccessService service =
+      new TopologyBackedCacheAccessService(topology, policy);
+
+    service.savePersistentState(storage);
+
+    verify(persistentEngine).save(output);
+    verify(persistenceOutput).commit();
+    verify(persistenceOutput).close();
+  }
+
+  /**
+   * Verifies that restoring persistent state through the cache access service delegates restoration
+   * to the persistent cache components managed by the service.
+   * @throws IOException if persistence fails
+   */
+  @Test
+  public void testRestorePersistentState() throws IOException {
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView view = mock(CacheTopologyView.class);
+    when(topology.getView()).thenReturn(view);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine engine =
+      mock(CacheEngine.class, withSettings().extraInterfaces(PersistentCacheComponent.class));
+    PersistentCacheComponent persistentEngine = (PersistentCacheComponent) engine;
+
+    CachePersistenceStorage storage = mock(CachePersistenceStorage.class);
+    InputStream input = mock(InputStream.class);
+
+    when(persistentEngine.getPersistenceId()).thenReturn("test-engine");
+    when(topology.getTiers()).thenReturn(List.of(CacheTier.SINGLE));
+    when(topology.getEngine(CacheTier.SINGLE)).thenReturn(Optional.of(engine));
+    when(storage.open("engine/single/test-engine")).thenReturn(Optional.of(input));
+
+    TopologyBackedCacheAccessService service =
+      new TopologyBackedCacheAccessService(topology, policy);
+
+    service.restorePersistentState(storage);
+
+    verify(persistentEngine).restore(input);
+    verify(input).close();
   }
 
   private static CacheRequestContext requestContext() {
