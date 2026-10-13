@@ -275,25 +275,27 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
     if (!master.isActiveMaster() || !master.isInitialized()) {
       return Collections.emptyMap();
     }
-    int rpcThrottleEnabled = 0;
-    if (QuotaUtil.isQuotaEnabled(master.getConfiguration())) {
-      rpcThrottleEnabled = -1;
-      if (master.getMasterQuotaManager() != null) {
-        rpcThrottleEnabled = master.getRpcThrottleStateStore().get() ? 1 : 0;
-      }
+    Map<String, Integer> states = new HashMap<>();
+    states.put(MetricsMasterSource.BALANCER_ENABLED_NAME, master.isBalancerOn() ? 1 : 0);
+    states.put(MetricsMasterSource.NORMALIZER_ENABLED_NAME, master.isNormalizerOn() ? 1 : 0);
+    states.put(MetricsMasterSource.SPLIT_ENABLED_NAME,
+      master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT) ? 1 : 0);
+    states.put(MetricsMasterSource.MERGE_ENABLED_NAME,
+      master.isSplitOrMergeEnabled(MasterSwitchType.MERGE) ? 1 : 0);
+    states.put(MetricsMasterSource.CLEANER_CHORE_ENABLED_NAME,
+      master.isCleanerChoreEnabled() ? 1 : 0);
+    states.put(MetricsMasterSource.CATALOG_JANITOR_ENABLED_NAME,
+      master.isCatalogJanitorEnabled() ? 1 : 0);
+    states.put(MetricsMasterSource.SNAPSHOT_CLEANUP_ENABLED_NAME,
+      master.snapshotCleanupStateStore.get() ? 1 : 0);
+    states.put(MetricsMasterSource.REPLICATION_PEER_MODIFICATION_ENABLED_NAME,
+      master.isReplicationPeerModificationEnabled() ? 1 : 0);
+    if (!QuotaUtil.isQuotaEnabled(master.getConfiguration())) {
+      states.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0);
+    } else if (master.getMasterQuotaManager() != null) {
+      states.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME,
+        master.getRpcThrottleStateStore().get() ? 1 : 0);
     }
-    return Map.of(MetricsMasterSource.BALANCER_ENABLED_NAME, master.isBalancerOn() ? 1 : 0,
-      MetricsMasterSource.NORMALIZER_ENABLED_NAME, master.isNormalizerOn() ? 1 : 0,
-      MetricsMasterSource.SPLIT_ENABLED_NAME,
-      master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT) ? 1 : 0,
-      MetricsMasterSource.MERGE_ENABLED_NAME,
-      master.isSplitOrMergeEnabled(MasterSwitchType.MERGE) ? 1 : 0,
-      MetricsMasterSource.CLEANER_CHORE_ENABLED_NAME, master.isCleanerChoreEnabled() ? 1 : 0,
-      MetricsMasterSource.CATALOG_JANITOR_ENABLED_NAME, master.isCatalogJanitorEnabled() ? 1 : 0,
-      MetricsMasterSource.SNAPSHOT_CLEANUP_ENABLED_NAME,
-      master.snapshotCleanupStateStore.get() ? 1 : 0,
-      MetricsMasterSource.REPLICATION_PEER_MODIFICATION_ENABLED_NAME,
-      master.isReplicationPeerModificationEnabled() ? 1 : 0,
-      MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, rpcThrottleEnabled);
+    return states;
   }
 }

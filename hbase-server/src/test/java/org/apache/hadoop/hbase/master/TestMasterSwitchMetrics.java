@@ -128,12 +128,30 @@ public class TestMasterSwitchMetrics {
   }
 
   @Test
-  public void testQuotaDisabledAndUnknownStates() {
+  public void testRpcThrottleOmittedUntilQuotaManagerReady() {
+    MasterQuotaManager quotaManager = master.getMasterQuotaManager();
+    Map<String, Integer> expected = new HashMap<>(wrapper.getSwitchStates());
+    expected.remove(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME);
     when(master.getMasterQuotaManager()).thenReturn(null);
-    assertEquals(-1, wrapper.getSwitchStates().get(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME));
+    assertEquals(expected, wrapper.getSwitchStates());
+    assertFalse(
+      METRICS_HELPER.checkGaugeExists(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, source));
+    expected.forEach((name, state) -> METRICS_HELPER.assertGauge(name, state.longValue(), source));
 
+    when(master.getMasterQuotaManager()).thenReturn(quotaManager);
+    when(rpcThrottleStateStore.get()).thenReturn(true);
+    expected.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 1);
+    assertEquals(expected, wrapper.getSwitchStates());
+    METRICS_HELPER.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 1L, source);
+  }
+
+  @Test
+  public void testRpcThrottleDisabledWithoutQuotaSupport() {
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, false);
+    when(master.getMasterQuotaManager()).thenReturn(null);
     when(rpcThrottleStateStore.get()).thenReturn(true);
     assertEquals(0, wrapper.getSwitchStates().get(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME));
+    METRICS_HELPER.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0L, source);
+    verifyNoInteractions(rpcThrottleStateStore);
   }
 }

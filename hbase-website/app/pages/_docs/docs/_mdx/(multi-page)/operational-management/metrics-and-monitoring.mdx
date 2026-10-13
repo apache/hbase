@@ -137,8 +137,8 @@ The age of the longest region in transition, in milliseconds
 
 The active, initialized Master exposes numeric switch-state gauges under
 `Hadoop:service=HBase,name=Master,sub=Server`. A value of `1` means enabled and
-`0` means disabled. A value of `-1` means the state is unknown. The gauges are
-absent on backup Masters and before the Master is initialized.
+`0` means disabled. The gauges are absent on backup Masters and before the Master
+is initialized.
 Enabled states indicate that an operation is permitted, rather than that it is
 currently running.
 
@@ -162,7 +162,8 @@ cleaner and the WAL cleaner. The existing `tag.isBalancerActive` tag under
 
 All switch states are read from memory during metrics collection.
 When quota support is disabled, `rpcThrottleEnabled` is `0`. With quota support
-enabled, it is `-1` until the quota manager is ready.
+enabled, it is omitted while the quota manager is unavailable, including in
+Master maintenance mode.
 
 ### Most Important RegionServer Metrics
 
