@@ -173,6 +173,7 @@ public class TestMasterMetrics {
         entry.getValue().accept(initialStates.get(entry.getKey()) == 1);
       }
     }
+    // Quota support is disabled by default.
     metricsHelper.assertGauge("rpcThrottleEnabled", 0L, source);
   }
 
