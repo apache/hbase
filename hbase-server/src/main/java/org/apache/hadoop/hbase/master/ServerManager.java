@@ -252,7 +252,7 @@ public class ServerManager implements ConfigurationObserver {
     for (Entry<byte[], RegionMetrics> entry : hsl.getRegionMetrics().entrySet()) {
       byte[] encodedRegionName = Bytes.toBytes(RegionInfo.encodeRegionName(entry.getKey()));
       final long completedSeqId = entry.getValue().getCompletedSequenceId();
-      // Atomic read-modify-write so a concurrent reportRegionOpen seed (which uses
+      // Atomic read-modify-write so a concurrent advanceRegionFlushedSeq seed (which uses
       // merge(Math::max)) cannot be clobbered by a stale in-flight heartbeat carrying a
       // lower completedSequenceId. Don't let smaller sequence ids override greater ones.
       flushedSequenceIdByRegion.compute(encodedRegionName, (k, existingValue) -> {
@@ -1077,21 +1077,22 @@ public class ServerManager implements ConfigurationObserver {
   }
 
   /**
-   * Called on region OPEN to seed {@link #flushedSequenceIdByRegion} with the region's
-   * {@code openSeqNum}. Without this, the entry stays absent until the hosting server's next
-   * heartbeat, so {@link #getLastFlushedSequenceId} returns {@link HConstants#NO_SEQNUM} and
-   * WALSplitter conservatively treats already-durable edits as unflushed - producing orphaned
-   * recovered.edits when the source server crashes soon after a drain-move. Uses {@code merge} with
-   * {@link Math#max} so a heartbeat-supplied value (which may reflect flushes after open) is never
-   * regressed - and, unlike {@code putIfAbsent}, a stale-low prior value is lifted to
-   * {@code openSeqNum}. Safe because at OPEN a region cannot have flushed past its own
-   * {@code openSeqNum}. See HBASE-30335.
+   * Advances {@link #flushedSequenceIdByRegion} for the region to at least {@code flushedSeqId}.
+   * Called on region OPEN with the region's {@code openSeqNum} (HBASE-30335) and on region CLOSE
+   * with the region's final durable flushed seqid (HBASE-30433). Without this, the entry stays
+   * absent or stale until the hosting server's next heartbeat, so {@link #getLastFlushedSequenceId}
+   * may return {@link HConstants#NO_SEQNUM} or a too-low value and WALSplitter conservatively
+   * treats already-durable edits as unflushed - producing orphaned recovered.edits when the source
+   * server crashes soon after a drain-move or close. Uses {@code merge} with {@link Math#max} so a
+   * heartbeat-supplied value is never regressed - and, unlike {@code putIfAbsent}, a stale-low
+   * prior value is lifted to {@code flushedSeqId}. Safe because both callers pass a seqid at or
+   * below what the region has actually made durable.
    */
-  public void reportRegionOpen(final RegionInfo regionInfo, final long openSeqNum) {
-    if (openSeqNum < 0) { // NO_SEQNUM == -1
+  public void advanceRegionFlushedSeq(final RegionInfo regionInfo, final long flushedSeqId) {
+    if (flushedSeqId < 0) { // NO_SEQNUM == -1
       return;
     }
-    flushedSequenceIdByRegion.merge(regionInfo.getEncodedNameAsBytes(), openSeqNum, Math::max);
+    flushedSequenceIdByRegion.merge(regionInfo.getEncodedNameAsBytes(), flushedSeqId, Math::max);
   }
 
   public boolean isRegionInServerManagerStates(final RegionInfo hri) {
