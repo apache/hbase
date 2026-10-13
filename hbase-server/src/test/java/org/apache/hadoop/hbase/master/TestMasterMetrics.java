@@ -154,14 +154,19 @@ public class TestMasterMetrics {
     Admin admin = TEST_UTIL.getAdmin();
     MetricsMasterSource source = master.getMasterMetrics().getMetricsSource();
     Map<String, IOExceptionConsumer<Boolean>> switches = new HashMap<>();
-    switches.put("balancerEnabled", enabled -> admin.balancerSwitch(enabled, false));
-    switches.put("normalizerEnabled", admin::normalizerSwitch);
-    switches.put("splitEnabled", enabled -> admin.splitSwitch(enabled, false));
-    switches.put("mergeEnabled", enabled -> admin.mergeSwitch(enabled, false));
-    switches.put("cleanerChoreEnabled", admin::cleanerChoreSwitch);
-    switches.put("catalogJanitorEnabled", admin::catalogJanitorSwitch);
-    switches.put("snapshotCleanupEnabled", enabled -> admin.snapshotCleanupSwitch(enabled, false));
-    switches.put("replicationPeerModificationEnabled", admin::replicationPeerModificationSwitch);
+    switches.put(MetricsMasterSource.BALANCER_ENABLED_NAME,
+      enabled -> admin.balancerSwitch(enabled, false));
+    switches.put(MetricsMasterSource.NORMALIZER_ENABLED_NAME, admin::normalizerSwitch);
+    switches.put(MetricsMasterSource.SPLIT_ENABLED_NAME,
+      enabled -> admin.splitSwitch(enabled, false));
+    switches.put(MetricsMasterSource.MERGE_ENABLED_NAME,
+      enabled -> admin.mergeSwitch(enabled, false));
+    switches.put(MetricsMasterSource.CLEANER_CHORE_ENABLED_NAME, admin::cleanerChoreSwitch);
+    switches.put(MetricsMasterSource.CATALOG_JANITOR_ENABLED_NAME, admin::catalogJanitorSwitch);
+    switches.put(MetricsMasterSource.SNAPSHOT_CLEANUP_ENABLED_NAME,
+      enabled -> admin.snapshotCleanupSwitch(enabled, false));
+    switches.put(MetricsMasterSource.REPLICATION_PEER_MODIFICATION_ENABLED_NAME,
+      admin::replicationPeerModificationSwitch);
     Map<String, Integer> initialStates = new MetricsMasterWrapperImpl(master).getSwitchStates();
     for (Map.Entry<String, IOExceptionConsumer<Boolean>> entry : switches.entrySet()) {
       try {
@@ -174,7 +179,7 @@ public class TestMasterMetrics {
       }
     }
     // Quota support is disabled by default.
-    metricsHelper.assertGauge("rpcThrottleEnabled", 0L, source);
+    metricsHelper.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0L, source);
   }
 
   @Test
