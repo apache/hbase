@@ -158,10 +158,12 @@ public class TestSnapshotProcedureConcurrently extends TestSnapshotProcedure {
     long snapshotProcId = executor.submitProcedure(snapshotProc);
     TEST_UTIL.waitTableEnabled(TABLE_NAME);
     // Wait for procedure to run and finish
-    TEST_UTIL.waitFor(60000, () -> executor.getProcedure(snapshotProcId) != null);
-    TEST_UTIL.waitFor(60000, () -> executor.getProcedure(snapshotProcId) == null);
+    ProcedureTestingUtility.waitProcedure(executor, snapshotProcId);
+    ProcedureTestingUtility.waitProcedure(executor, enableProcId);
 
-    SnapshotTestingUtils.confirmSnapshotValid(TEST_UTIL, snapshotProto, TABLE_NAME, CF);
+    ProcedureTestingUtility.assertProcFailed(executor, snapshotProcId);
+    ProcedureTestingUtility.assertProcNotFailed(executor, enableProcId);
+    assertEquals(0, master.getSnapshotManager().getCompletedSnapshots().size());
   }
 
   // Needs to be publicly accessible for Procedure validation
