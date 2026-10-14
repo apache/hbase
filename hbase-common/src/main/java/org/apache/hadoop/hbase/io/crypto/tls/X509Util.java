@@ -28,8 +28,6 @@ import java.security.cert.X509CertSelector;
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.Objects;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicReference;
 import javax.net.ssl.CertPathTrustManagerParameters;
 import javax.net.ssl.KeyManager;
@@ -203,80 +201,6 @@ public final class X509Util {
     public org.apache.hbase.thirdparty.io.netty.handler.ssl.ClientAuth toNettyClientAuth() {
       return nettyAuth;
     }
-  }
-
-  /**
-   * Identifies which side of a TLS connection is being configured. Used by role-aware helpers to
-   * pick the correct role-scoped configuration key for keystore/truststore material.
-   */
-  enum Role {
-    CLIENT,
-    SERVER
-  }
-
-  /**
-   * Tracks which configuration keys have already been logged as the effective source of a piece of
-   * TLS material, so {@link #resolveConfig} / {@link #resolvePassword} emit at most one INFO line
-   * per key per JVM. Keys are unique full property names (role-scoped or legacy).
-   */
-  private static final Set<String> LOGGED_RESOLVED_KEYS = ConcurrentHashMap.newKeySet();
-
-  private static void logResolvedKeyOnce(String key) {
-    if (LOGGED_RESOLVED_KEYS.add(key)) {
-      LOG.info("Using configuration key '{}' for TLS material", key);
-    }
-  }
-
-  /**
-   * Returns the value of a role-scoped TLS configuration key, falling back to the unscoped legacy
-   * key if the role-scoped key is unset, and finally to {@code defaultValue} if both are unset.
-   * Logs (once per JVM at INFO) which key supplied the effective value, to aid diagnosing which
-   * keystore/truststore is actually in use on each side of a TLS handshake.
-   * @param config       the configuration to read from
-   * @param roleKey      the role-scoped key name (e.g.
-   *                     {@code hbase.rpc.tls.client.keystore.location})
-   * @param legacyKey    the unscoped fallback key name (e.g.
-   *                     {@code hbase.rpc.tls.keystore.location})
-   * @param defaultValue value to return when neither key is set; may be {@code null}
-   * @return the resolved value, or {@code defaultValue} if neither key is set
-   */
-  public static String resolveConfig(Configuration config, String roleKey, String legacyKey,
-    String defaultValue) {
-    String value = config.get(roleKey);
-    if (value != null) {
-      logResolvedKeyOnce(roleKey);
-      return value;
-    }
-    value = config.get(legacyKey);
-    if (value != null) {
-      logResolvedKeyOnce(legacyKey);
-      return value;
-    }
-    return defaultValue;
-  }
-
-  /**
-   * Password-flavored counterpart to {@link #resolveConfig}. Uses
-   * {@link Configuration#getPassword(String)} so that credential providers configured via
-   * {@code hadoop.security.credential.provider.path} are honored. Returns {@code null} if neither
-   * the role-scoped nor the legacy key resolves to a value.
-   * @param config    the configuration to read from
-   * @param roleKey   the role-scoped password key name
-   * @param legacyKey the unscoped fallback password key name
-   * @return the resolved password as a char array, or {@code null} if neither key is set
-   */
-  public static char[] resolvePassword(Configuration config, String roleKey, String legacyKey)
-    throws IOException {
-    char[] value = config.getPassword(roleKey);
-    if (value != null) {
-      logResolvedKeyOnce(roleKey);
-      return value;
-    }
-    value = config.getPassword(legacyKey);
-    if (value != null) {
-      logResolvedKeyOnce(legacyKey);
-    }
-    return value;
   }
 
   // Jetty never leaves the peer-certificate trust anchors empty: with no truststore configured it
@@ -562,9 +486,9 @@ public final class X509Util {
 
   /**
    * Enable certificate file reloading for the RPC <em>client</em> side by creating FileWatchers for
-   * the keystore and truststore whose paths are resolved by {@link Role#CLIENT} (role-scoped keys
-   * first, legacy keys as fallback). AtomicReferences will be set with the new instances.
-   * {@code resetContext} - if not null - will be called when the file has been modified.
+   * the keystore and truststore whose paths are resolved under {@link #CLIENT_CONFIG_PREFIX}
+   * (role-scoped keys first, legacy keys as fallback). AtomicReferences will be set with the new
+   * instances. {@code resetContext} - if not null - will be called when the file has been modified.
    * @param keystoreWatcher   Reference to keystoreFileWatcher.
    * @param trustStoreWatcher Reference to truststoreFileWatcher.
    * @param resetContext      Callback for file changes.
@@ -573,39 +497,34 @@ public final class X509Util {
     AtomicReference<FileChangeWatcher> keystoreWatcher,
     AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
     throws IOException {
-    enableCertFileReloading(config, Role.CLIENT, keystoreWatcher, trustStoreWatcher, resetContext);
+    enableCertFileReloading(config, CLIENT_CONFIG_PREFIX, keystoreWatcher, trustStoreWatcher,
+      resetContext);
   }
 
   /**
    * Enable certificate file reloading for the RPC <em>server</em> side. See
    * {@link #enableCertFileReloadingForClient} for parameter semantics; the only difference is that
-   * paths are resolved via the {@link Role#SERVER} role-scoped keys, falling back to the legacy
-   * unscoped keys when unset.
+   * paths are resolved under {@link #SERVER_CONFIG_PREFIX}, falling back to the legacy unscoped
+   * keys when unset.
    */
   public static void enableCertFileReloadingForServer(Configuration config,
     AtomicReference<FileChangeWatcher> keystoreWatcher,
     AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
     throws IOException {
-    enableCertFileReloading(config, Role.SERVER, keystoreWatcher, trustStoreWatcher, resetContext);
+    enableCertFileReloading(config, SERVER_CONFIG_PREFIX, keystoreWatcher, trustStoreWatcher,
+      resetContext);
   }
 
-  private static void enableCertFileReloading(Configuration config, Role role,
+  private static void enableCertFileReloading(Configuration config, String rolePrefix,
     AtomicReference<FileChangeWatcher> keystoreWatcher,
     AtomicReference<FileChangeWatcher> trustStoreWatcher, Runnable resetContext)
     throws IOException {
-    String keyStoreLocation;
-    String trustStoreLocation;
-    if (role == Role.CLIENT) {
-      keyStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_KEYSTORE_LOCATION,
-        TLS_CONFIG_KEYSTORE_LOCATION, "");
-      trustStoreLocation = resolveConfig(config, TLS_CONFIG_CLIENT_TRUSTSTORE_LOCATION,
-        TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    } else {
-      keyStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_KEYSTORE_LOCATION,
-        TLS_CONFIG_KEYSTORE_LOCATION, "");
-      trustStoreLocation = resolveConfig(config, TLS_CONFIG_SERVER_TRUSTSTORE_LOCATION,
-        TLS_CONFIG_TRUSTSTORE_LOCATION, "");
-    }
+    // Resolve the watched paths through TLSStore so the file we watch is always the one the
+    // SslContext loaded: the prefix (role-scoped or legacy) is chosen once, from the location.
+    String keyStoreLocation =
+      TLSStore.resolve(config, rolePrefix, CONFIG_PREFIX, TLSStore.Keys.RPC_KEYSTORE).getLocation();
+    String trustStoreLocation = TLSStore
+      .resolve(config, rolePrefix, CONFIG_PREFIX, TLSStore.Keys.RPC_TRUSTSTORE).getLocation();
     keystoreWatcher.set(newFileChangeWatcher(config, keyStoreLocation, resetContext));
     // we are using the same callback for both. there's no reason to kick off two
     // threads if keystore/truststore are both at the same location

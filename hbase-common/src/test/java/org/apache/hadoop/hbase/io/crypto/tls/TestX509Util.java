@@ -382,53 +382,6 @@ public class TestX509Util extends AbstractTestX509Parameterized {
   // ---------------------------------------------------------------------------
 
   @TestTemplate
-  public void testResolveConfigPrefersRoleScopedOverLegacy() {
-    conf.set("test.role", "role-value");
-    conf.set("test.legacy", "legacy-value");
-    assertEquals("role-value",
-      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
-  }
-
-  @TestTemplate
-  public void testResolveConfigFallsBackToLegacyWhenRoleUnset() {
-    conf.unset("test.role");
-    conf.set("test.legacy", "legacy-value");
-    assertEquals("legacy-value",
-      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
-  }
-
-  @TestTemplate
-  public void testResolveConfigReturnsDefaultWhenBothUnset() {
-    conf.unset("test.role");
-    conf.unset("test.legacy");
-    assertEquals("default-value",
-      X509Util.resolveConfig(conf, "test.role", "test.legacy", "default-value"));
-  }
-
-  @TestTemplate
-  public void testResolvePasswordPrefersRoleScopedOverLegacy() throws Exception {
-    conf.set("test.role.password", "role-pw");
-    conf.set("test.legacy.password", "legacy-pw");
-    assertArrayEquals("role-pw".toCharArray(),
-      X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
-  }
-
-  @TestTemplate
-  public void testResolvePasswordFallsBackToLegacyWhenRoleUnset() throws Exception {
-    conf.unset("test.role.password");
-    conf.set("test.legacy.password", "legacy-pw");
-    assertArrayEquals("legacy-pw".toCharArray(),
-      X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
-  }
-
-  @TestTemplate
-  public void testResolvePasswordReturnsNullWhenBothUnset() throws Exception {
-    conf.unset("test.role.password");
-    conf.unset("test.legacy.password");
-    assertNull(X509Util.resolvePassword(conf, "test.role.password", "test.legacy.password"));
-  }
-
-  @TestTemplate
   public void testCreateSSLContextForClientUsesRoleScopedKeystoreWhenSet() throws Exception {
     // Move the legacy keystore values to the client-scoped keys and clear the legacy keys, so
     // that a successful context build proves the client-scoped keys were consulted.
