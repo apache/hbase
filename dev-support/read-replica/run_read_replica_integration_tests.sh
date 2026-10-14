@@ -259,6 +259,18 @@ cleanup() {
   fi
   echo "=== Cleanup: Deleting copied HBase directory: ${REPLICA_DIR}/hbase ==="
   rm -rf "${REPLICA_DIR}/hbase"
+  echo "=== Cleanup: Deleting artifacts that would be owned by root on the CI host ==="
+  rm -rf "${REPLICA_DIR}/.venv"
+  rm -rf "${REPLICA_DIR}/.pytest_cache"
+  rm -rf "${REPLICA_DIR}/python/test/.pytest_cache"
+  rm -rf "${REPLICA_DIR}/python/__pycache__"
+  rm -rf "${REPLICA_DIR}/python/test/__pycache__"
+  rm -rf "${REPLICA_DIR}/python/src/__pycache__"
+  rm -rf "${REPLICA_DIR}/python/proto/generated"
+  rm -rf "${REPLICA_DIR}/python/proto/ActiveClusterSuffix.proto"
+  rm -rf "${REPLICA_DIR}/tmp-read-replica-data"
+  rm -rf "${REPLICA_DIR}/cluster1/logs"
+  rm -rf "${REPLICA_DIR}/cluster2/logs"
   exit "${exit_code}"
 }
 trap cleanup EXIT
