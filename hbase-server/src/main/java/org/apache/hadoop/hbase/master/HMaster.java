@@ -1265,11 +1265,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     getChoreService().scheduleChore(hbckChore);
     this.serverManager.startChore();
 
-    // Initialize the ACL pipeline: seed the write timestamps from the acl table content, load
-    // the master's own cache and push one full round to all registered servers
-    startupTaskGroup.addTask("Initializing ACL pipeline");
-    aclManager.initialize();
-
     // Only for rolling upgrade, where we need to migrate the data in namespace table to meta table.
     if (!waitForNamespaceOnline()) {
       return;
@@ -1316,6 +1311,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // Set master as 'initialized'.
     setInitialized(true);
     startupTaskGroup.markComplete("Initialization successful");
+
+    // Initialize the ACL pipeline: seed the write timestamps from the acl table content, load
+    // the master's own cache and push one full round to all registered servers. Must run after
+    // the master is initialized: the acl table scan below needs the master registry to serve.
+    aclManager.initialize();
     MonitoredTask status =
       TaskMonitor.get().createStatus("Progress after master initialized", false, true);
 

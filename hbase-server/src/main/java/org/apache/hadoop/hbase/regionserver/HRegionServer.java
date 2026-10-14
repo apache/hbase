@@ -867,9 +867,13 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         }, "HRegionServer.registerWithMaster");
       }
 
-      // Load the ACL cache right after registration; non superuser requests are held until done
+      // Load the ACL cache right after registration; non superuser requests are held until done.
+      // This must not block the run loop below: the periodic regionServerReport starts there and
+      // the master only assigns regions to servers that have reported at least once.
       if (!isStopped() && isHealthy()) {
-        loadAclCache();
+        Thread aclLoader = new Thread(this::loadAclCache, "AclCacheLoader");
+        aclLoader.setDaemon(true);
+        aclLoader.start();
       }
 
       if (!isStopped() && isHealthy()) {

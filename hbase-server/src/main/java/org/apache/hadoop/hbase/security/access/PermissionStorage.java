@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -557,6 +558,9 @@ public final class PermissionStorage {
               maxTimestamp = Math.max(maxTimestamp, cell.getTimestamp());
             }
           }
+        } catch (UncheckedIOException e) {
+          // unwrap so callers see the real cause, e.g. a TableNotFoundException
+          throw e.getCause();
         } finally {
           if (scanner != null) {
             scanner.close();

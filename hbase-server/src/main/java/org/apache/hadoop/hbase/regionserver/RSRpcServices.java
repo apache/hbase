@@ -1490,11 +1490,12 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
       throw new ServerNotRunningYetException(
         "Server " + server.getServerName() + " is not running yet");
     }
-    // hold non superuser requests until the initial ACL cache load has completed, so that
-    // authorization fails closed instead of open while the cache is still empty
+    // hold non superuser client requests until the initial ACL cache load has completed, so that
+    // authorization fails closed instead of open while the cache is still empty. Calls without a
+    // request user are in-process internal paths (e.g. region open deploy tasks) and are not held.
     if (!server.isAclLoaded()) {
       User user = RpcServer.getRequestUser().orElse(null);
-      if (user == null || !Superusers.isSuperUser(user)) {
+      if (user != null && !Superusers.isSuperUser(user)) {
         throw new PleaseHoldException(
           "ACL cache is not loaded yet on " + server.getServerName() + ", please retry later");
       }
