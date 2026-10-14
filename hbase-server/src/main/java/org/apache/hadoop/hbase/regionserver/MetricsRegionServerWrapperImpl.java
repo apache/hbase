@@ -534,6 +534,20 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   @Override
+  public long getStoreFileUncompressedSize() {
+    return aggregate.storeFileUncompressedSize;
+  }
+
+  @Override
+  public double getStoreFileCompressionRatio() {
+    long uncompressed = aggregate.storeFileUncompressedSize;
+    if (uncompressed == 0) {
+      return 0.0;
+    }
+    return (double) uncompressed / aggregate.storeFileSize;
+  }
+
+  @Override
   public double getStoreFileSizeGrowthRate() {
     return aggregate.storeFileSizeGrowthRate;
   }
@@ -783,6 +797,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     private long onHeapMemstoreSize = 0;
     private long offHeapMemstoreSize = 0;
     private long storeFileSize = 0;
+    private long storeFileUncompressedSize = 0;
     private double storeFileSizeGrowthRate = 0;
     private long maxStoreFileCount = 0;
     private long maxStoreFileAge = 0;
@@ -979,6 +994,7 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
         onHeapMemstoreSize += store.getMemStoreSize().getHeapSize();
         offHeapMemstoreSize += store.getMemStoreSize().getOffHeapSize();
         storeFileSize += store.getStorefilesSize();
+        storeFileUncompressedSize += store.getStoreSizeUncompressed();
         maxStoreFileCount = Math.max(maxStoreFileCount, store.getStorefilesCount());
 
         maxStoreFileAge =
