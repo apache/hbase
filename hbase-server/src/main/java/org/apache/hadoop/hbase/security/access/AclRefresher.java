@@ -149,6 +149,18 @@ public final class AclRefresher implements Closeable {
     return true;
   }
 
+  /** Waits until all queued updates have been applied. Visible for testing. */
+  void flush() throws IOException {
+    try {
+      executor.submit(() -> null).get();
+    } catch (InterruptedException e) {
+      Thread.currentThread().interrupt();
+      throw new IOException("Interrupted while waiting for pending ACL updates", e);
+    } catch (ExecutionException e) {
+      throw new IOException("Failed waiting for pending ACL updates", e.getCause());
+    }
+  }
+
   @Override
   public void close() {
     executor.shutdownNow();

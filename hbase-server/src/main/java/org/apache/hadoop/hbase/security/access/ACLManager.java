@@ -199,13 +199,17 @@ public class ACLManager implements PermissionStorage.AclWriteHook {
       return;
     }
     pushInFlight = true;
-    masterServices.getMasterProcedureExecutor().submitProcedure(new RefreshAclProcedure());
+    submitPushProcedure(new RefreshAclProcedure());
   }
 
   private synchronized void submitFullPush(List<AclEntryUpdate> updates, long ts) {
     pushInFlight = true;
-    masterServices.getMasterProcedureExecutor()
-      .submitProcedure(new RefreshAclProcedure(updates, true, ts));
+    submitPushProcedure(new RefreshAclProcedure(updates, true, ts));
+  }
+
+  /** Visible for testing: hands the push procedure over to the procedure executor. */
+  void submitPushProcedure(RefreshAclProcedure procedure) {
+    masterServices.getMasterProcedureExecutor().submitProcedure(procedure);
   }
 
   private static List<AclEntryUpdate>
