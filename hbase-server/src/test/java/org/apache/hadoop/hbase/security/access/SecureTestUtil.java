@@ -25,12 +25,10 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.security.PrivilegedActionException;
 import java.security.PrivilegedExceptionAction;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -55,7 +53,6 @@ import org.apache.hadoop.hbase.coprocessor.ObserverContext;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.ipc.RemoteWithExtrasException;
 import org.apache.hadoop.hbase.master.HMaster;
-import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.User;
@@ -65,7 +62,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
-import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
 import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 
 /**
@@ -286,54 +282,26 @@ public class SecureTestUtil {
     }
   }
 
-  private static List<AccessController> getAccessControllers(SingleProcessHBaseCluster cluster) {
-    List<AccessController> result = Lists.newArrayList();
-    for (RegionServerThread t : cluster.getLiveRegionServerThreads()) {
-      for (HRegion region : t.getRegionServer().getOnlineRegionsLocalContext()) {
-        Coprocessor cp = region.getCoprocessorHost().findCoprocessor(AccessController.class);
-        if (cp != null) {
-          result.add((AccessController) cp);
-        }
-      }
-    }
-    return result;
-  }
-
-  private static Map<AccessController, Long>
-    getAuthManagerMTimes(SingleProcessHBaseCluster cluster) {
-    Map<AccessController, Long> result = Maps.newHashMap();
-    for (AccessController ac : getAccessControllers(cluster)) {
-      result.put(ac, ac.getAuthManager().getMTime());
-    }
-    return result;
-  }
-
   @SuppressWarnings("rawtypes")
   private static void updateACLs(final HBaseTestingUtil util, Callable c) throws Exception {
-    // Get the current mtimes for all access controllers
-    final Map<AccessController, Long> oldMTimes = getAuthManagerMTimes(util.getHBaseCluster());
-
     // Run the update action
     c.call();
 
-    // Wait until mtimes for all access controllers have incremented
+    // Every acl write is stamped with a master assigned timestamp and pushed to the servers in
+    // that order, so once a server has applied a timestamp, every write up to it is reflected in
+    // its cache. Waiting for the timestamp of this call to be applied is therefore exact, unlike
+    // polling for cache modification times, which cannot tell this update from concurrent ones
+    // (e.g. the owner grants of table creations or the cleanup of the previous test).
+    final SingleProcessHBaseCluster cluster = util.getHBaseCluster();
+    final long expectedTs = cluster.getMaster().getACLManager().getLastTimestamp();
     util.waitFor(WAIT_TIME, 100, new Predicate<IOException>() {
       @Override
       public boolean evaluate() throws IOException {
-        Map<AccessController, Long> mtimes = getAuthManagerMTimes(util.getHBaseCluster());
-        for (Map.Entry<AccessController, Long> e : mtimes.entrySet()) {
-          if (!oldMTimes.containsKey(e.getKey())) {
-            LOG.error("Snapshot of AccessController state does not include instance on region "
-              + e.getKey().getRegion().getRegionInfo().getRegionNameAsString());
-            // Error out the predicate, we will try again
-            return false;
-          }
-          long old = oldMTimes.get(e.getKey());
-          long now = e.getValue();
-          if (now <= old) {
-            LOG.info("AccessController on region "
-              + e.getKey().getRegion().getRegionInfo().getRegionNameAsString()
-              + " has not updated: mtime=" + now);
+        for (RegionServerThread t : cluster.getLiveRegionServerThreads()) {
+          long appliedTs = t.getRegionServer().getAclRefresher().getAppliedTimestamp();
+          if (appliedTs < expectedTs) {
+            LOG.info("RegionServer {} has not applied ACL updates up to {} yet: applied={}",
+              t.getRegionServer().getServerName(), expectedTs, appliedTs);
             return false;
           }
         }

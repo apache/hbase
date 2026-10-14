@@ -44,13 +44,16 @@ public class RefreshAclRemoteCallable extends BaseRSProcedureCallable {
   private long ts;
 
   @Override
-  protected byte[] doCall() {
+  protected byte[] doCall() throws Exception {
     AclRefresher refresher = rs.getAclRefresher();
     if (full) {
       refresher.submitFullSnapshot(ts, toSnapshot(updates));
     } else {
       refresher.submitUpdates(ts, updates);
     }
+    // only report completion after the change has been applied to the cache, so the master side
+    // procedure completion is a reliable "applied" signal
+    refresher.flush();
     return null;
   }
 
