@@ -77,6 +77,7 @@
                   <!-- The rest of these should be kept in sync with the parent pom -->
                   <exclude>org.apache.hbase:hbase-resource-bundle</exclude>
                   <exclude>org.slf4j:*</exclude>
+                  <exclude>com.google.errorprone:error_prone_annotations</exclude>
                   <exclude>com.google.code.findbugs:*</exclude>
                   <exclude>com.github.stephenc.findbugs:*</exclude>
                   <exclude>com.github.spotbugs:*</exclude>
