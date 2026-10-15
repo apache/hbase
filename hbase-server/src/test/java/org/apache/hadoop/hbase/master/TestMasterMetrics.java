@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.util.HashMap;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.ServerMetricsBuilder;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.YouAreDeadException;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.regionserver.RSRpcServices;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
@@ -119,6 +121,44 @@ public class TestMasterMetrics {
     if (TEST_UTIL != null) {
       TEST_UTIL.shutdownMiniCluster();
     }
+  }
+
+  @FunctionalInterface
+  private interface SwitchSetter {
+    void accept(boolean enabled) throws IOException;
+  }
+
+  @Test
+  public void testSwitchMetricsFollowAdminChanges() throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    MetricsMasterSource source = master.getMasterMetrics().getMetricsSource();
+    Map<String, SwitchSetter> switches = new HashMap<>();
+    switches.put(MetricsMasterSource.BALANCER_ENABLED_NAME,
+      enabled -> admin.balancerSwitch(enabled, false));
+    switches.put(MetricsMasterSource.NORMALIZER_ENABLED_NAME, admin::normalizerSwitch);
+    switches.put(MetricsMasterSource.SPLIT_ENABLED_NAME,
+      enabled -> admin.splitSwitch(enabled, false));
+    switches.put(MetricsMasterSource.MERGE_ENABLED_NAME,
+      enabled -> admin.mergeSwitch(enabled, false));
+    switches.put(MetricsMasterSource.CLEANER_CHORE_ENABLED_NAME, admin::cleanerChoreSwitch);
+    switches.put(MetricsMasterSource.CATALOG_JANITOR_ENABLED_NAME, admin::catalogJanitorSwitch);
+    switches.put(MetricsMasterSource.SNAPSHOT_CLEANUP_ENABLED_NAME,
+      enabled -> admin.snapshotCleanupSwitch(enabled, false));
+    switches.put(MetricsMasterSource.REPLICATION_PEER_MODIFICATION_ENABLED_NAME,
+      admin::replicationPeerModificationSwitch);
+    Map<String, Integer> initialStates = new MetricsMasterWrapperImpl(master).getSwitchStates();
+    for (Map.Entry<String, SwitchSetter> entry : switches.entrySet()) {
+      try {
+        for (boolean enabled : new boolean[] { false, true }) {
+          entry.getValue().accept(enabled);
+          metricsHelper.assertGauge(entry.getKey(), enabled ? 1L : 0L, source);
+        }
+      } finally {
+        entry.getValue().accept(initialStates.get(entry.getKey()) == 1);
+      }
+    }
+    // Quota support is disabled by default.
+    metricsHelper.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0L, source);
   }
 
   @Test
