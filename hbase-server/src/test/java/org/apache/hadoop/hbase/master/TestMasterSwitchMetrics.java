@@ -24,12 +24,17 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.io.OutputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.TableDescriptors;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.master.snapshot.SnapshotCleanupStateStore;
 import org.apache.hadoop.hbase.metrics.MetricRegistries;
@@ -44,6 +49,9 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 @Tag(MasterTests.TAG)
 @Tag(SmallTests.TAG)
@@ -58,7 +66,7 @@ public class TestMasterSwitchMetrics {
   private MetricsMasterSourceImpl source;
 
   @BeforeEach
-  public void setUp() {
+  public void setUp() throws IOException {
     master = mock(HMaster.class);
     conf = new Configuration(false);
     conf.setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
@@ -66,7 +74,13 @@ public class TestMasterSwitchMetrics {
     when(master.isActiveMaster()).thenReturn(true);
     when(master.isInitialized()).thenReturn(true);
     when(master.getMasterWalManager()).thenReturn(mock(MasterWalManager.class));
-    when(master.getMasterQuotaManager()).thenReturn(mock(MasterQuotaManager.class));
+    TableDescriptors tableDescriptors = mock(TableDescriptors.class);
+    when(tableDescriptors.exists(QuotaUtil.QUOTA_TABLE_NAME)).thenReturn(true);
+    when(master.getTableDescriptors()).thenReturn(tableDescriptors);
+    when(master.getClusterSchema()).thenReturn(mock(ClusterSchema.class));
+    MasterQuotaManager quotaManager = new MasterQuotaManager(master);
+    quotaManager.start();
+    when(master.getMasterQuotaManager()).thenReturn(quotaManager);
     master.snapshotCleanupStateStore = mock(SnapshotCleanupStateStore.class);
     rpcThrottleStateStore = mock(RpcThrottleStateStore.class);
     when(master.getRpcThrottleStateStore()).thenReturn(rpcThrottleStateStore);
@@ -112,7 +126,6 @@ public class TestMasterSwitchMetrics {
           .forEach((name, state) -> METRICS_HELPER.assertGauge(name, state.longValue(), source));
       }
     }
-    verifyNoInteractions(master.getMasterQuotaManager());
   }
 
   @Test
@@ -153,5 +166,37 @@ public class TestMasterSwitchMetrics {
     assertEquals(0, wrapper.getSwitchStates().get(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME));
     METRICS_HELPER.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0L, source);
     verifyNoInteractions(rpcThrottleStateStore);
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = { false, true })
+  public void testRpcThrottleUnaffectedByConfigurationReload(boolean quotaEnabled,
+    @TempDir Path tempDir) throws IOException {
+    Path site = tempDir.resolve("hbase-site.xml");
+    writeQuotaConfiguration(site, quotaEnabled);
+    conf = new Configuration(false);
+    conf.addResource(new org.apache.hadoop.fs.Path(site.toUri()));
+    when(master.getConfiguration()).thenReturn(conf);
+    MasterQuotaManager quotaManager = new MasterQuotaManager(master);
+    quotaManager.start();
+    when(master.getMasterQuotaManager()).thenReturn(quotaManager);
+    when(rpcThrottleStateStore.get()).thenReturn(true);
+    long expected = quotaEnabled ? 1L : 0L;
+    assertEquals(quotaEnabled, quotaManager.isRpcThrottleEnabled());
+    METRICS_HELPER.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, expected, source);
+
+    writeQuotaConfiguration(site, !quotaEnabled);
+    conf.reloadConfiguration();
+    assertEquals(!quotaEnabled, QuotaUtil.isQuotaEnabled(conf));
+    assertEquals(quotaEnabled, quotaManager.isRpcThrottleEnabled());
+    METRICS_HELPER.assertGauge(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, expected, source);
+  }
+
+  private static void writeQuotaConfiguration(Path path, boolean quotaEnabled) throws IOException {
+    Configuration config = new Configuration(false);
+    config.setBoolean(QuotaUtil.QUOTA_CONF_KEY, quotaEnabled);
+    try (OutputStream out = Files.newOutputStream(path)) {
+      config.writeXml(out);
+    }
   }
 }

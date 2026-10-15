@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
+import org.apache.hadoop.hbase.quotas.MasterQuotaManager;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
@@ -290,11 +291,12 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
       master.snapshotCleanupStateStore.get() ? 1 : 0);
     states.put(MetricsMasterSource.REPLICATION_PEER_MODIFICATION_ENABLED_NAME,
       master.isReplicationPeerModificationEnabled() ? 1 : 0);
-    if (!QuotaUtil.isQuotaEnabled(master.getConfiguration())) {
-      states.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0);
-    } else if (master.getMasterQuotaManager() != null) {
+    MasterQuotaManager quotaManager = master.getMasterQuotaManager();
+    if (quotaManager != null) {
       states.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME,
-        master.getRpcThrottleStateStore().get() ? 1 : 0);
+        quotaManager.isRpcThrottleEnabled() ? 1 : 0);
+    } else if (!QuotaUtil.isQuotaEnabled(master.getConfiguration())) {
+      states.put(MetricsMasterSource.RPC_THROTTLE_ENABLED_NAME, 0);
     }
     return states;
   }
