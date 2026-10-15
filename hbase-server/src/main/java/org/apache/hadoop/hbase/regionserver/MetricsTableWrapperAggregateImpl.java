@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -43,6 +44,16 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
   private ScheduledFuture<?> tableMetricsUpdateTask;
   private ConcurrentHashMap<TableName, MetricsTableValues> metricsTableMap =
     new ConcurrentHashMap<>();
+  /**
+   * Tables that were seen online in the previous scheduled run. Used to detect tables that
+   * have left this RegionServer so that their per-table latency histograms and query meters
+   * can be cleaned up (HBASE-27486). Per-table latencies and query meters are controlled by
+   * their own switches (hbase.regionserver.enable.table.latencies /
+   * hbase.regionserver.enable.table.queryMeter); this cleanup path runs unconditionally so
+   * that users who enabled either of those switches still get their per-table metrics
+   * released when a table leaves the RegionServer.
+   */
+  private final Set<TableName> lastSeenTables = ConcurrentHashMap.newKeySet();
 
   public MetricsTableWrapperAggregateImpl(final HRegionServer regionServer) {
     this.regionServer = regionServer;
@@ -58,6 +69,30 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
     @Override
     public void run() {
+      // Collect currently online tables first so that the per-table latency / query meter
+      // cleanup path can run before the aggregate metrics collection below.
+      Set<TableName> onlineTables = new HashSet<>();
+      for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+        onlineTables.add(r.getTableDescriptor().getTableName());
+      }
+
+      // ---- Cleanup path for per-table latency histograms & query meters (HBASE-27486) ----
+      // Tables that were seen last round but are no longer online must have their per-table
+      // metrics removed to avoid unbounded growth for short-lived tables.
+      RegionServerTableMetrics rsTableMetrics = regionServer.getMetrics() != null
+        ? regionServer.getMetrics().getRegionServerTableMetrics()
+        : null;
+      if (rsTableMetrics != null) {
+        Set<TableName> goneTables = Sets.newHashSet(lastSeenTables);
+        goneTables.removeAll(onlineTables);
+        for (TableName gone : goneTables) {
+          rsTableMetrics.deleteTable(gone);
+        }
+      }
+      // Refresh lastSeenTables snapshot for next round.
+      lastSeenTables.clear();
+      lastSeenTables.addAll(onlineTables);
+
       Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
       for (Region r : regionServer.getOnlineRegionsLocalContext()) {
         TableName tbl = r.getTableDescriptor().getTableName();
