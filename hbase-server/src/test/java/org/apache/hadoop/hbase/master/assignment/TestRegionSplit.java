@@ -32,6 +32,7 @@ import org.apache.hadoop.hbase.StartTestingClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -211,6 +212,8 @@ public class TestRegionSplit {
       UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
     assertTrue(UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
       .getOrCreateRegionStateNode(regions[0]).isSplit());
+    assertEquals(RegionState.State.SPLIT, UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+      .getRegionStates().getOrCreateRegionStateNode(regions[0]).getState());
   }
 
   @Test
