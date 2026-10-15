@@ -23,6 +23,8 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.security.PrivilegedAction;
+import java.util.List;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -40,6 +42,10 @@ import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
 
 @Tag(SmallTests.TAG)
 public class TestBackupUtils {
@@ -113,5 +119,89 @@ public class TestBackupUtils {
         BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
     }
 
+  }
+
+  @Test
+  public void testGetRolledHostsKeepsOnlyHostsWhoseRollResultChanged() {
+    Map<String, Long> previousLogRolls =
+      ImmutableMap.of("rolled:16020", 100L, "offline:16020", 200L, "removed:16020", 300L);
+    Map<String, Long> latestLogRolls =
+      ImmutableMap.of("rolled:16020", 150L, "offline:16020", 200L, "new:16020", 400L);
+
+    assertEquals(ImmutableMap.of("rolled:16020", 150L, "new:16020", 400L),
+      BackupUtils.getRolledHosts(previousLogRolls, latestLogRolls));
+  }
+
+  @Test
+  public void testComputeLogBoundariesUsesRollResultForRolledHosts() throws IOException {
+    Map<String, Long> rolledHosts = ImmutableMap.of("rolled:16020", 100L);
+    List<String> coveredLogs = ImmutableList.of("/hbase/oldWALs/rolled%2C16020%2C1.500");
+    List<String> pendingLogs = ImmutableList.of("/hbase/WALs/rolled,16020,1/rolled%2C16020%2C1.50");
+
+    assertEquals(ImmutableMap.of("rolled:16020", 100L),
+      BackupUtils.computeLogBoundaries(rolledHosts, coveredLogs, pendingLogs));
+  }
+
+  @Test
+  public void testComputeLogBoundariesUsesNewestCoveredLogForOtherHosts() throws IOException {
+    List<String> coveredLogs = ImmutableList.of("/hbase/oldWALs/offline%2C16020%2C1.200",
+      "/hbase/oldWALs/offline%2C16020%2C1.300",
+      "/hbase/WALs/offline,16020,1/offline%2C16020%2C1.250");
+
+    assertEquals(ImmutableMap.of("offline:16020", 300L),
+      BackupUtils.computeLogBoundaries(ImmutableMap.of(), coveredLogs, ImmutableList.of()));
+  }
+
+  @Test
+  public void testComputeLogBoundariesCapsBelowOldestPendingLog() throws IOException {
+    List<String> coveredLogs = ImmutableList.of("/hbase/oldWALs/splitting%2C16020%2C1.400");
+    List<String> pendingLogs =
+      ImmutableList.of("/hbase/WALs/splitting,16020,1-splitting/splitting%2C16020%2C1.350",
+        "/hbase/WALs/splitting,16020,1-splitting/splitting%2C16020%2C1.370");
+
+    assertEquals(ImmutableMap.of("splitting:16020", 349L),
+      BackupUtils.computeLogBoundaries(ImmutableMap.of(), coveredLogs, pendingLogs));
+  }
+
+  @Test
+  public void testComputeLogBoundariesKeepsHostWithOnlyPendingLogs() throws IOException {
+    List<String> pendingLogs =
+      ImmutableList.of("/hbase/WALs/joined,16020,1/joined%2C16020%2C1.500");
+
+    assertEquals(ImmutableMap.of("joined:16020", 499L),
+      BackupUtils.computeLogBoundaries(ImmutableMap.of(), ImmutableList.of(), pendingLogs));
+  }
+
+  @Test
+  public void testComputeLogBoundariesSkipsUnparseableLogs() throws IOException {
+    List<String> coveredLogs = ImmutableList.of("/hbase/oldWALs/not-a-wal");
+
+    assertEquals(ImmutableMap.of("rolled:16020", 100L), BackupUtils.computeLogBoundaries(
+      ImmutableMap.of("rolled:16020", 100L), coveredLogs, ImmutableList.of()));
+  }
+
+  @Test
+  public void testComputeLogBoundariesKeepsPreviousBoundaryWhileHostHasLogs() throws IOException {
+    Map<String, Long> previousBoundaries =
+      ImmutableMap.of("stuck:16020", 1200L, "gone:16020", 800L);
+
+    assertEquals(ImmutableMap.of("stuck:16020", 1200L),
+      BackupUtils.computeLogBoundaries(ImmutableMap.of(), previousBoundaries,
+        ImmutableSet.of("stuck:16020"), ImmutableList.of(), ImmutableList.of()));
+  }
+
+  @Test
+  public void testComputeLogBoundariesPrefersNewBoundaryOverPreviousOne() throws IOException {
+    Map<String, Long> previousBoundaries =
+      ImmutableMap.of("rolled:16020", 100L, "offline:16020", 200L, "pending:16020", 300L);
+    List<String> coveredLogs = ImmutableList.of("/hbase/oldWALs/offline%2C16020%2C1.250");
+    List<String> pendingLogs =
+      ImmutableList.of("/hbase/WALs/pending,16020,1/pending%2C16020%2C1.400");
+
+    assertEquals(
+      ImmutableMap.of("rolled:16020", 150L, "offline:16020", 250L, "pending:16020", 399L),
+      BackupUtils.computeLogBoundaries(ImmutableMap.of("rolled:16020", 150L), previousBoundaries,
+        ImmutableSet.of("rolled:16020", "offline:16020", "pending:16020"), coveredLogs,
+        pendingLogs));
   }
 }
