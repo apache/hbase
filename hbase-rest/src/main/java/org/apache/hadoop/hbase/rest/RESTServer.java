@@ -26,6 +26,7 @@ import java.util.EnumSet;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Properties;
 import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import javax.servlet.DispatcherType;
@@ -57,6 +58,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.CommandLine;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.DefaultParser;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.HelpFormatter;
+import org.apache.hbase.thirdparty.org.apache.commons.cli.Option;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.Options;
 import org.apache.hbase.thirdparty.org.apache.commons.cli.ParseException;
 import org.apache.hbase.thirdparty.org.eclipse.jetty.ee8.servlet.FilterHolder;
@@ -83,6 +85,7 @@ import org.apache.hbase.thirdparty.org.glassfish.jersey.servlet.ServletContainer
  * <ul>
  * <li>-p --port : service port</li>
  * <li>-ro --readonly : server mode</li>
+ * <li>-Dproperty=value : configuration override</li>
  * </ul>
  */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
@@ -172,12 +175,15 @@ public class RESTServer implements Constants {
     return new Pair<>(null, containerClass);
   }
 
-  private static void parseCommandLine(String[] args, Configuration conf) {
+  @InterfaceAudience.Private
+  static void parseCommandLine(String[] args, Configuration conf) {
     Options options = new Options();
     options.addOption("p", "port", true, "Port to bind to [default: " + DEFAULT_LISTEN_PORT + "]");
     options.addOption("ro", "readonly", false,
       "Respond only to GET HTTP " + "method requests [default: false]");
     options.addOption("i", "infoport", true, "Port for WEB UI");
+    options.addOption(Option.builder("D").argName("property=value").numberOfArgs(2).valueSeparator()
+      .desc("Use value for the given configuration property").build());
 
     CommandLine commandLine = null;
     try {
@@ -185,6 +191,13 @@ public class RESTServer implements Constants {
     } catch (ParseException e) {
       LOG.error("Could not parse: ", e);
       printUsageAndExit(options, -1);
+    }
+
+    if (commandLine != null) {
+      Properties properties = commandLine.getOptionProperties("D");
+      for (String key : properties.stringPropertyNames()) {
+        conf.set(key, properties.getProperty(key));
+      }
     }
 
     // check for user-defined port setting, if so override the conf
