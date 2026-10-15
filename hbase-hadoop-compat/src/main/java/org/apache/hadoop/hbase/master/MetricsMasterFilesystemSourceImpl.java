@@ -21,6 +21,13 @@ import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *             distributed WAL splitter; see SplitWALManager. Implementation of the deprecated
+ *             {@link MetricsMasterFileSystemSource}, whose metrics are only emitted by the
+ *             ZK-coordinated WAL split path.
+ */
+@Deprecated
 @InterfaceAudience.Private
 public class MetricsMasterFilesystemSourceImpl extends BaseSourceImpl
   implements MetricsMasterFileSystemSource {

@@ -39,6 +39,7 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
   private MutableFastCounter clusterWriteRequestsCounter;
 
   private OperationMetrics serverCrashMetrics;
+  private OperationMetrics splitWALMetrics;
 
   public MetricsMasterSourceImpl(MetricsMasterWrapper masterWrapper) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, masterWrapper);
@@ -64,6 +65,7 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
      * BaseSourceImpl#registry} to register the new metrics.
      */
     serverCrashMetrics = new OperationMetrics(registry, SERVER_CRASH_METRIC_PREFIX);
+    splitWALMetrics = new OperationMetrics(registry, SPLIT_WAL_METRIC_PREFIX);
   }
 
   @Override
@@ -143,5 +145,10 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
   @Override
   public OperationMetrics getServerCrashMetrics() {
     return serverCrashMetrics;
+  }
+
+  @Override
+  public OperationMetrics getSplitWALMetrics() {
+    return splitWALMetrics;
   }
 }
