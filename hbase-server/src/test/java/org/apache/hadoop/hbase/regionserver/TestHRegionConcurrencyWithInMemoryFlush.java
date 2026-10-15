@@ -32,4 +32,14 @@ public class TestHRegionConcurrencyWithInMemoryFlush extends TestHRegionConcurre
   protected boolean isInMemory() {
     return true;
   }
+
+  @Override
+  protected int getTestCountForTestWritesWhileScanning() {
+    return 10;
+  }
+
+  @Override
+  protected int getNumQualifiersForTestWritesWhileScanning() {
+    return 10;
+  }
 }

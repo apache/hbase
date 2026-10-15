@@ -249,7 +249,6 @@ public class TestHRegion {
   protected final MetricsAssertHelper metricsAssertHelper =
     CompatibilitySingletonFactory.getInstance(MetricsAssertHelper.class);
 
-
   @BeforeEach
   public void setup(TestInfo testInfo) throws IOException {
     this.name = testInfo.getTestMethod().get().getName();
@@ -1309,7 +1308,6 @@ public class TestHRegion {
     }
     region = null;
   }
-
 
   /*
    * An involved filter test. Has multiple column families and deletes in mix.
@@ -4417,8 +4415,6 @@ public class TestHRegion {
     assertFalse(fs.exists(store2ArchiveDir));
   }
 
-
-
   @Test
   public void testHolesInMeta() throws Exception {
     byte[] family = Bytes.toBytes("family");
@@ -4766,7 +4762,6 @@ public class TestHRegion {
 
     region = null;
   }
-
 
   /**
    * Test case to check put function with memstore flushing for same row, same ts
@@ -6766,7 +6761,6 @@ public class TestHRegion {
     assertEquals(6L, Bytes.toLong(result.getValue(fam1, q3)));
     assertEquals("ab", Bytes.toString(result.getValue(fam1, q4)));
   }
-
 
   @Test
   public void testMutateRow_WriteRequestCount() throws Exception {

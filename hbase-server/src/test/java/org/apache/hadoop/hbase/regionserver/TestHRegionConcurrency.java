@@ -218,16 +218,16 @@ public class TestHRegionConcurrency {
     GetTillDoneOrException[] threads = new GetTillDoneOrException[10];
     try {
       for (int i = 0; i < threads.length / 2; i++) {
-        threads[i] = new GetTillDoneOrException(region, i, Bytes.toBytes("" + startRow), done,
-          initialGets);
+        threads[i] =
+          new GetTillDoneOrException(region, i, Bytes.toBytes("" + startRow), done, initialGets);
         threads[i].start();
       }
       assertTrue(initialGets.await(30, TimeUnit.SECONDS), "Initial getters did not read");
       // Force the closing state while readers are still active.
       region.closing.set(true);
       for (int i = threads.length / 2; i < threads.length; i++) {
-        threads[i] = new GetTillDoneOrException(region, i, Bytes.toBytes("" + startRow), done,
-          initialGets);
+        threads[i] =
+          new GetTillDoneOrException(region, i, Bytes.toBytes("" + startRow), done, initialGets);
         threads[i].start();
       }
       joinThreads(threads);
@@ -273,7 +273,6 @@ public class TestHRegionConcurrency {
       }
     }
   }
-
 
   /**
    * Flushes the cache in a thread while scanning. The tests verify that the scan is coherent - e.g.
@@ -409,15 +408,29 @@ public class TestHRegionConcurrency {
   }
 
   /**
+   * So can be overridden in subclasses.
+   */
+  protected int getNumQualifiersForTestWritesWhileScanning() {
+    return 100;
+  }
+
+  /**
+   * So can be overridden in subclasses.
+   */
+  protected int getTestCountForTestWritesWhileScanning() {
+    return 100;
+  }
+
+  /**
    * Writes very wide records and scans for the latest every time.. Flushes and compacts the region
    * every now and then to keep things realistic. by flush / scan / compaction when joining threads
    */
   @Test
   public void testWritesWhileScanning() throws IOException, InterruptedException {
-    int testCount = isInMemory() ? 10 : 100;
+    int testCount = getTestCountForTestWritesWhileScanning();
     int numRows = 1;
     int numFamilies = 10;
-    int numQualifiers = isInMemory() ? 10 : 100;
+    int numQualifiers = getNumQualifiersForTestWritesWhileScanning();
     int flushInterval = 7;
     int compactInterval = 5 * flushInterval;
     byte[][] families = new byte[numFamilies][];
@@ -501,7 +514,7 @@ public class TestHRegionConcurrency {
     }
   }
 
-  private class PutThread extends Thread {
+  private final class PutThread extends Thread {
     private volatile boolean done;
     private volatile int numPutsFinished = 0;
 
@@ -927,10 +940,8 @@ public class TestHRegionConcurrency {
       for (int i = 0; i < numReaderThreads; i++) {
         Thread readerThread = new Thread(() -> {
           try {
-            for (int j = 0;
-              j < 10000 && assertionError.get() == null
-                && !Thread.currentThread().isInterrupted();
-              j++) {
+            for (int j = 0; j < 10000 && assertionError.get() == null
+              && !Thread.currentThread().isInterrupted(); j++) {
               // Verify the values
               Result result = region.get(new Get(row));
 
