@@ -427,7 +427,7 @@ public class MasterQuotaManager implements RegionStateListener {
     }
   }
 
-  public boolean isRpcThrottleEnabled() throws IOException {
+  public boolean isRpcThrottleEnabled() {
     return initialized && masterServices.getRpcThrottleStateStore().get();
   }
 
