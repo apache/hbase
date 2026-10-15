@@ -21,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -63,6 +64,7 @@ public class TestQuotaCache {
     final Admin admin = TEST_UTIL.getAdmin();
     admin.setQuota(QuotaSettingsFactory.throttleUser("my_user", ThrottleType.READ_NUMBER, 3737,
       TimeUnit.MINUTES));
+    awaitInitialLoad(quotaCache);
 
     // Setting a quota and then looking it up from the cache should work, even if the cache has not
     // refreshed
@@ -93,6 +95,7 @@ public class TestQuotaCache {
     final Admin admin = TEST_UTIL.getAdmin();
     admin.setQuota(QuotaSettingsFactory.throttleTable(TableName.valueOf("my_table"),
       ThrottleType.READ_NUMBER, 3737, TimeUnit.MINUTES));
+    awaitInitialLoad(quotaCache);
 
     // Setting a quota and then looking it up from the cache should work, even if the cache has not
     // refreshed
@@ -119,6 +122,7 @@ public class TestQuotaCache {
     final Admin admin = TEST_UTIL.getAdmin();
     admin.setQuota(QuotaSettingsFactory.throttleNamespace("my_namespace", ThrottleType.READ_NUMBER,
       3737, TimeUnit.MINUTES));
+    awaitInitialLoad(quotaCache);
 
     // Setting a quota and then looking it up from the cache should work, even if the cache has not
     // refreshed
@@ -145,6 +149,7 @@ public class TestQuotaCache {
     final Admin admin = TEST_UTIL.getAdmin();
     admin.setQuota(QuotaSettingsFactory.throttleRegionServer("my_region_server",
       ThrottleType.READ_NUMBER, 3737, TimeUnit.MINUTES));
+    awaitInitialLoad(quotaCache);
 
     // Setting a quota and then looking it up from the cache should work, even if the cache has not
     // refreshed
@@ -162,5 +167,12 @@ public class TestQuotaCache {
 
     quotaLimiter = quotaCache.getRegionServerQuotaLimiter("my_region_server2");
     assertEquals(Long.MAX_VALUE, quotaLimiter.getReadNumLimit());
+  }
+
+  private static void awaitInitialLoad(QuotaCache quotaCache) {
+    TEST_UTIL.waitFor(30_000, () -> {
+      quotaCache.getNamespaceLimiter(NamespaceDescriptor.DEFAULT_NAMESPACE_NAME_STR);
+      return quotaCache.isInitialized();
+    });
   }
 }
