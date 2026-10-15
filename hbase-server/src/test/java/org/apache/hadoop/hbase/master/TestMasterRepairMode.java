@@ -17,15 +17,19 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
+import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Stream;
 import java.util.stream.StreamSupport;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.StartMiniClusterOption;
@@ -39,6 +43,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.quotas.QuotaUtil;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,6 +102,30 @@ public class TestMasterRepairMode {
       ResultScanner scanner = table.getScanner(new Scan())) {
       assertNotNull(scanner.next(), "Could not read meta.");
     }
+  }
+
+  @Test
+  public void testSwitchMetricsWithQuotasEnabled() throws Exception {
+    enableMaintenanceMode();
+    TEST_UTIL.getConfiguration().setBoolean(QuotaUtil.QUOTA_CONF_KEY, true);
+    TEST_UTIL.startMiniCluster(
+      StartMiniClusterOption.builder().numRegionServers(0).numDataNodes(1).build());
+
+    HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
+    assertTrue(master.isInMaintenanceMode());
+    assertNull(master.getMasterQuotaManager());
+    MetricsMasterSource source = master.getMasterMetrics().getMetricsSource();
+    MetricsAssertHelper metricsHelper = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+    Map<String, Integer> states = new MetricsMasterWrapperImpl(master).getSwitchStates();
+    assertEquals(7, states.size());
+    states.forEach((name, state) -> {
+      assertTrue(state == 0 || state == 1);
+      metricsHelper.assertGauge(name, state.longValue(), source);
+    });
+    metricsHelper.assertGauge(MetricsMasterSource.BALANCER_ENABLED_NAME, 0L, source);
+    metricsHelper.assertGauge(MetricsMasterSource.NORMALIZER_ENABLED_NAME, 0L, source);
+    metricsHelper.assertGauge(MetricsMasterSource.SPLIT_ENABLED_NAME, 0L, source);
+    metricsHelper.assertGauge(MetricsMasterSource.MERGE_ENABLED_NAME, 0L, source);
   }
 
   @Test

@@ -25,6 +25,7 @@ import java.util.Map.Entry;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -229,5 +230,26 @@ public class MetricsMasterWrapperImpl implements MetricsMasterWrapper {
 
   Entry<Long, Long> convertSnapshot(SpaceQuotaSnapshot snapshot) {
     return new SimpleImmutableEntry<Long, Long>(snapshot.getUsage(), snapshot.getLimit());
+  }
+
+  @Override
+  public Map<String, Integer> getSwitchStates() {
+    if (!master.isActiveMaster() || !master.isInitialized()) {
+      return Collections.emptyMap();
+    }
+    Map<String, Integer> states = new HashMap<>();
+    states.put(MetricsMasterSource.BALANCER_ENABLED_NAME, master.isBalancerOn() ? 1 : 0);
+    states.put(MetricsMasterSource.NORMALIZER_ENABLED_NAME, master.isNormalizerOn() ? 1 : 0);
+    states.put(MetricsMasterSource.SPLIT_ENABLED_NAME,
+      master.isSplitOrMergeEnabled(MasterSwitchType.SPLIT) ? 1 : 0);
+    states.put(MetricsMasterSource.MERGE_ENABLED_NAME,
+      master.isSplitOrMergeEnabled(MasterSwitchType.MERGE) ? 1 : 0);
+    states.put(MetricsMasterSource.CLEANER_CHORE_ENABLED_NAME,
+      master.isCleanerChoreEnabled() ? 1 : 0);
+    states.put(MetricsMasterSource.CATALOG_JANITOR_ENABLED_NAME,
+      master.isCatalogJanitorEnabled() ? 1 : 0);
+    states.put(MetricsMasterSource.SNAPSHOT_CLEANUP_ENABLED_NAME,
+      master.snapshotCleanupTracker.isSnapshotCleanupEnabled() ? 1 : 0);
+    return states;
   }
 }
