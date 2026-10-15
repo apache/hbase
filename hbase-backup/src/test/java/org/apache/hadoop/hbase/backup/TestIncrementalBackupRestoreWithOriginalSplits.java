@@ -56,7 +56,7 @@ public class TestIncrementalBackupRestoreWithOriginalSplits
     try (Connection conn = TEST_UTIL.getConnection();
       BackupAdminImpl backupAdmin = new BackupAdminImpl(conn); Admin admin = conn.getAdmin()) {
       BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-      String fullBackupId = backupAdmin.backupTables(request);
+      String fullBackupId = backupAdmin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(fullBackupId));
 
       TableName[] fromTables = new TableName[] { table1 };
@@ -87,7 +87,7 @@ public class TestIncrementalBackupRestoreWithOriginalSplits
       assertNotEquals(currentRegions, TEST_UTIL.getHBaseCluster().getRegions(table1));
 
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      String incrementalBackupId = backupAdmin.backupTables(request);
+      String incrementalBackupId = backupAdmin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
       preRestoreBackupFiles = getBackupFiles();
       backupAdmin.restore(BackupUtils.createRestoreRequest(BACKUP_ROOT_DIR, incrementalBackupId,
@@ -119,7 +119,7 @@ public class TestIncrementalBackupRestoreWithOriginalSplits
       }
 
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-      incrementalBackupId = backupAdmin.backupTables(request);
+      incrementalBackupId = backupAdmin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
 
       preRestoreBackupFiles = getBackupFiles();

@@ -102,6 +102,10 @@ public abstract class TableBackupClient {
     backupManager.startBackupSession();
   }
 
+  public BackupInfo getBackupInfo() {
+    return backupInfo;
+  }
+
   /**
    * Begin the overall backup.
    * @param backupInfo backup info

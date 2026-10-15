@@ -56,7 +56,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     Admin admin = conn.getAdmin();
     BackupAdmin client = new BackupAdminImpl(conn);
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull = client.backupTables(request);
+    String backupIdFull = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdFull));
     // #2 - insert some data to table table1
     Table t1 = conn.getTable(table1);
@@ -71,7 +71,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     // #3 - incremental backup for table1
     tables = Lists.newArrayList(table1);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdInc1 = client.backupTables(request);
+    String backupIdInc1 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdInc1));
     // #4 - insert some data to table table2
     Table t2 = conn.getTable(table2);
@@ -84,7 +84,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     // #5 - incremental backup for table1, table2
     tables = Lists.newArrayList(table1, table2);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdInc2 = client.backupTables(request);
+    String backupIdInc2 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdInc2));
     // #6 - insert some data to table table1
     t1 = conn.getTable(table1);
@@ -96,7 +96,7 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     // #7 - incremental backup for table1
     tables = Lists.newArrayList(table1);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdInc3 = client.backupTables(request);
+    String backupIdInc3 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdInc3));
     // #8 - insert some data to table table2
     t2 = conn.getTable(table2);
@@ -108,17 +108,17 @@ public class TestBackupMultipleDeletes extends TestBackupBase {
     // #9 - incremental backup for table1, table2
     tables = Lists.newArrayList(table1, table2);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdInc4 = client.backupTables(request);
+    String backupIdInc4 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdInc4));
     // #10 full backup for table3
     tables = Lists.newArrayList(table3);
     request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String backupIdFull2 = client.backupTables(request);
+    String backupIdFull2 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdFull2));
     // #11 - incremental backup for table3
     tables = Lists.newArrayList(table3);
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
-    String backupIdInc5 = client.backupTables(request);
+    String backupIdInc5 = client.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(backupIdInc5));
     LOG.error("Delete backupIdInc2");
     client.deleteBackups(new String[] { backupIdInc2 });

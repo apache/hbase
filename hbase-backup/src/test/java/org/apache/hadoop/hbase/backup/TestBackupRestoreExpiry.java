@@ -127,7 +127,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     Connection conn = TEST_UTIL.getConnection();
     BackupAdminImpl backupAdmin = new BackupAdminImpl(conn);
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String fullBackupId = backupAdmin.backupTables(request);
+    String fullBackupId = backupAdmin.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(fullBackupId));
 
     TableName[] fromTables = new TableName[] { table1 };
@@ -162,7 +162,7 @@ public class TestBackupRestoreExpiry extends TestBackupBase {
     Connection conn = TEST_UTIL.getConnection();
     BackupAdminImpl backupAdmin = new BackupAdminImpl(conn);
     BackupRequest request = createBackupRequest(BackupType.FULL, tables, BACKUP_ROOT_DIR);
-    String fullBackupId = backupAdmin.backupTables(request);
+    String fullBackupId = backupAdmin.backupTables(request).getBackupId();
     assertTrue(checkSucceeded(fullBackupId));
 
     TableName[] fromTables = new TableName[] { table1 };

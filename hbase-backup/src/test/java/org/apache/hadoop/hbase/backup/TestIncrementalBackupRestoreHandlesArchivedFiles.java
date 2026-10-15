@@ -100,7 +100,7 @@ public class TestIncrementalBackupRestoreHandlesArchivedFiles
 
       BackupRequest request =
         createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR, true);
-      String incrementalBackupId = admin.backupTables(request);
+      String incrementalBackupId = admin.backupTables(request).getBackupId();
       assertTrue(checkSucceeded(incrementalBackupId));
 
       TableName[] fromTable = new TableName[] { table1 };
