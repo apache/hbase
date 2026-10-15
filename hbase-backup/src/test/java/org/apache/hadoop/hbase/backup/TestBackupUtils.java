@@ -28,6 +28,8 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.TimeZone;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -182,6 +184,84 @@ public class TestBackupUtils {
     long startAndEndTime = Instant.parse("2026-01-23T23:59:59.999Z").toEpochMilli();
 
     testGetValidWalDirs(startAndEndTime, startAndEndTime, walDir, walDateDirs, 1, walDateDirs);
+  }
+
+  @Test
+  public void testGetRolledHostsKeepsOnlyHostsWhoseRollResultChanged() {
+    Map<String, Long> previousLogRolls =
+      Map.of("rolled:16020", 100L, "offline:16020", 200L, "removed:16020", 300L);
+    Map<String, Long> latestLogRolls =
+      Map.of("rolled:16020", 150L, "offline:16020", 200L, "new:16020", 400L);
+
+    assertEquals(Map.of("rolled:16020", 150L, "new:16020", 400L),
+      BackupUtils.getRolledHosts(previousLogRolls, latestLogRolls));
+  }
+
+  @Test
+  public void testComputeLogBoundariesUsesRollResultForRolledHosts() throws IOException {
+    Map<String, Long> rolledHosts = Map.of("rolled:16020", 100L);
+    List<String> coveredLogs = List.of("/hbase/oldWALs/rolled%2C16020%2C1.500");
+    List<String> pendingLogs = List.of("/hbase/WALs/rolled,16020,1/rolled%2C16020%2C1.50");
+
+    assertEquals(Map.of("rolled:16020", 100L),
+      BackupUtils.computeLogBoundaries(rolledHosts, coveredLogs, pendingLogs));
+  }
+
+  @Test
+  public void testComputeLogBoundariesUsesNewestCoveredLogForOtherHosts() throws IOException {
+    List<String> coveredLogs =
+      List.of("/hbase/oldWALs/offline%2C16020%2C1.200", "/hbase/oldWALs/offline%2C16020%2C1.300",
+        "/hbase/WALs/offline,16020,1/offline%2C16020%2C1.250");
+
+    assertEquals(Map.of("offline:16020", 300L),
+      BackupUtils.computeLogBoundaries(Map.of(), coveredLogs, List.of()));
+  }
+
+  @Test
+  public void testComputeLogBoundariesCapsBelowOldestPendingLog() throws IOException {
+    List<String> coveredLogs = List.of("/hbase/oldWALs/splitting%2C16020%2C1.400");
+    List<String> pendingLogs =
+      List.of("/hbase/WALs/splitting,16020,1-splitting/splitting%2C16020%2C1.350",
+        "/hbase/WALs/splitting,16020,1-splitting/splitting%2C16020%2C1.370");
+
+    assertEquals(Map.of("splitting:16020", 349L),
+      BackupUtils.computeLogBoundaries(Map.of(), coveredLogs, pendingLogs));
+  }
+
+  @Test
+  public void testComputeLogBoundariesKeepsHostWithOnlyPendingLogs() throws IOException {
+    List<String> pendingLogs = List.of("/hbase/WALs/joined,16020,1/joined%2C16020%2C1.500");
+
+    assertEquals(Map.of("joined:16020", 499L),
+      BackupUtils.computeLogBoundaries(Map.of(), List.of(), pendingLogs));
+  }
+
+  @Test
+  public void testComputeLogBoundariesSkipsUnparseableLogs() throws IOException {
+    List<String> coveredLogs = List.of("/hbase/oldWALs/not-a-wal");
+
+    assertEquals(Map.of("rolled:16020", 100L),
+      BackupUtils.computeLogBoundaries(Map.of("rolled:16020", 100L), coveredLogs, List.of()));
+  }
+
+  @Test
+  public void testComputeLogBoundariesKeepsPreviousBoundaryWhileHostHasLogs() throws IOException {
+    Map<String, Long> previousBoundaries = Map.of("stuck:16020", 1200L, "gone:16020", 800L);
+
+    assertEquals(Map.of("stuck:16020", 1200L), BackupUtils.computeLogBoundaries(Map.of(),
+      previousBoundaries, Set.of("stuck:16020"), List.of(), List.of()));
+  }
+
+  @Test
+  public void testComputeLogBoundariesPrefersNewBoundaryOverPreviousOne() throws IOException {
+    Map<String, Long> previousBoundaries =
+      Map.of("rolled:16020", 100L, "offline:16020", 200L, "pending:16020", 300L);
+    List<String> coveredLogs = List.of("/hbase/oldWALs/offline%2C16020%2C1.250");
+    List<String> pendingLogs = List.of("/hbase/WALs/pending,16020,1/pending%2C16020%2C1.400");
+
+    assertEquals(Map.of("rolled:16020", 150L, "offline:16020", 250L, "pending:16020", 399L),
+      BackupUtils.computeLogBoundaries(Map.of("rolled:16020", 150L), previousBoundaries,
+        Set.of("rolled:16020", "offline:16020", "pending:16020"), coveredLogs, pendingLogs));
   }
 
   protected void testGetValidWalDirs(long startTime, long endTime, Path walDir,

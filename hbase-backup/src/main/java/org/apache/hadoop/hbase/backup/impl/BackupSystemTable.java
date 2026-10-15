@@ -662,8 +662,9 @@ public final class BackupSystemTable implements Closeable {
 
   /**
    * Write the current timestamps for each regionserver to backup system table after a successful
-   * full or incremental backup. The saved timestamp is of the last log file that was backed up
-   * already.
+   * full or incremental backup. For a region server that took part in the backup's log roll, the
+   * saved timestamp is the result of that roll. For a region server that did not (offline or
+   * decommissioned), it is the creation time of the newest of its log files that was backed up.
    * @param tables        tables
    * @param newTimestamps timestamps
    * @param backupRoot    root directory path to backup
