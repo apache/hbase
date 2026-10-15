@@ -101,11 +101,11 @@ def per_test_log_file(request):
         dest = os.path.join(run_dir, f"hbase-cluster1-run{execution_count}-logs")
         shutil.copytree(active_logs_dir, dest,
                         dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('*.out'))
+                        ignore=shutil.ignore_patterns('*.out', '*.out.*'))
         _chmod_recursive(dest)
     if replica_logs_dir and os.path.isdir(replica_logs_dir):
         dest = os.path.join(run_dir, f"hbase-cluster2-run{execution_count}-logs")
         shutil.copytree(replica_logs_dir, dest,
                         dirs_exist_ok=True,
-                        ignore=shutil.ignore_patterns('*.out'))
+                        ignore=shutil.ignore_patterns('*.out', '*.out.*'))
         _chmod_recursive(dest)
