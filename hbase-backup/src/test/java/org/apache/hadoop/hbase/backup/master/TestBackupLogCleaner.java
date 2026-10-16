@@ -314,6 +314,22 @@ public class TestBackupLogCleaner extends TestBackupBase {
   }
 
   @Test
+  public void testMixedCaseHostUsesHostBoundary() {
+    BackupInfo backup = new BackupInfo();
+    backup.setState(BackupInfo.BackupState.COMPLETE);
+    backup.setTableSetTimestampMap(
+      Map.of(TableName.valueOf("table1"), Map.of("Server1:60020", 1000000L)));
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(List.of(backup), 1000L);
+
+    // WAL names contain the lowercased hostname. This WAL is older than the host boundary, but
+    // newer than the default boundary, so it is only deletable if the host boundary is found.
+    Path wal = new Path("/hbase/oldWALs/server1%2C60020%2C12345.999500");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, wal),
+      "WAL older than the boundary of its host should be deletable");
+  }
+
+  @Test
   public void testFirstBackupProtectsFiles() {
     BackupInfo backup = new BackupInfo();
     backup.setBackupId("backup_1");
