@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.master.LogRollMasterProcedureManager;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.errorhandling.ForeignException;
 import org.apache.hadoop.hbase.errorhandling.ForeignExceptionDispatcher;
@@ -107,8 +108,8 @@ public class LogRollBackupSubprocedure extends Subprocedure {
           table.readRegionServerLastLogRollResult(backupRoot);
         String host = rss.getServerName().getHostname();
         int port = rss.getServerName().getPort();
-        String server = host + ":" + port;
-        Long sts = serverTimestampMap.get(host);
+        String server = BackupUtils.toHostKey(host + ":" + port);
+        Long sts = serverTimestampMap.get(server);
         if (sts != null && sts > highest) {
           LOG
             .warn("Won't update server's last roll log result: current=" + sts + " new=" + highest);
