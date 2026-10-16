@@ -174,7 +174,8 @@ public class TestBufferedMutatorParams {
       clone.getWriteBufferPeriodicFlushTimerTickMs());
     assertEquals(some.getMaxKeyValueSize(), clone.getMaxKeyValueSize());
     assertTrue(some.getMaxMutations() == clone.getMaxMutations());
-    assertEquals(some.requestAttributes, clone.requestAttributes);
+    assertEquals(some.getRequestAttributesFactory().create(),
+      clone.getRequestAttributesFactory().create());
     assertTrue(some.getListener() == clone.getListener());
     assertTrue(some.getPool() == clone.getPool());
     assertEquals(some.getImplementationClassName(), clone.getImplementationClassName());
