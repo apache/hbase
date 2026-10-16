@@ -22,14 +22,16 @@ import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Listener for cache-engine eviction events.
+ * Listener for capacity-driven cache-engine eviction events.
  * <p>
- * The listener is intended for topology-level handling of capacity-driven evictions. In particular,
- * an exclusive tiered topology may use an eviction from L1 as a request to demote the block to L2.
+ * Per-block eviction events may be used by a cache topology for operations such as L1-to-L2
+ * demotion. Eviction-pressure events may be used by placement/admission policies to adjust future
+ * cache decisions.
  * </p>
  * <p>
- * The supplied block remains valid for the duration of the callback. An implementation that needs
- * to retain the block after the callback returns must establish its own reference.
+ * A block supplied to {@link #onEviction(CacheEngine, BlockCacheKey, Cacheable)} remains valid for
+ * the duration of the callback. An implementation that needs to retain the block after the callback
+ * returns must establish its own reference.
  * </p>
  */
 @InterfaceAudience.Private
@@ -42,4 +44,19 @@ public interface CacheEvictionListener {
    * @param block        evicted block
    */
   void onEviction(CacheEngine sourceEngine, BlockCacheKey cacheKey, Cacheable block);
+
+  /**
+   * Handles cache pressure observed during a capacity-driven eviction pass.
+   * <p>
+   * {@code bytesToFree} is the amount of space the engine determined should be freed to reach its
+   * target size. It does not necessarily equal the exact number of bytes actually evicted.
+   * </p>
+   * <p>
+   * The default implementation does nothing.
+   * </p>
+   * @param sourceEngine engine that performed the eviction pass
+   * @param bytesToFree  amount of cache pressure observed, in bytes
+   */
+  default void onEvictionPressure(CacheEngine sourceEngine, long bytesToFree) {
+  }
 }

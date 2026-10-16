@@ -108,7 +108,7 @@ public final class CacheAccessServices {
       return disabled();
     }
 
-    CachePlacementAdmissionPolicy policy = DefaultHBaseCachePlacementAdmissionPolicy.INSTANCE;
+    CachePlacementAdmissionPolicy policy = createPlacementAdmissionPolicy(conf);
 
     boolean useExternal = conf.getBoolean(BlockCacheFactory.EXTERNAL_BLOCKCACHE_KEY,
       BlockCacheFactory.EXTERNAL_BLOCKCACHE_DEFAULT);
@@ -182,5 +182,23 @@ public final class CacheAccessServices {
       return ((TopologyBackedCacheAccessService) service).asCachedBlockIterable();
     }
     return Optional.empty();
+  }
+
+  /**
+   * Creates the placement/admission policy associated with the configured first-level cache.
+   * @param conf cache configuration
+   * @return configured cache placement/admission policy
+   */
+  private static CachePlacementAdmissionPolicy createPlacementAdmissionPolicy(Configuration conf) {
+    Objects.requireNonNull(conf, "conf must not be null");
+
+    String blockCachePolicy = conf.get(BlockCacheFactory.BLOCKCACHE_POLICY_KEY,
+      BlockCacheFactory.BLOCKCACHE_POLICY_DEFAULT);
+
+    if (blockCachePolicy.equalsIgnoreCase("AdaptiveLRU")) {
+      return new AdaptiveLruCachePlacementAdmissionPolicy(conf);
+    }
+
+    return DefaultHBaseCachePlacementAdmissionPolicy.INSTANCE;
   }
 }

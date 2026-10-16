@@ -79,9 +79,46 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
       Objects.requireNonNull(topology.getView(), "topology view must not be null");
     for (CacheTier tier : topology.getTiers()) {
       topology.getEngine(tier)
-        .ifPresent(engine -> engine.setEvictionListener(this::handleEngineEviction));
+        .ifPresent(engine -> engine.setEvictionListener(createEvictionListener(tier)));
     }
     this.persistenceCoordinator = new CachePersistenceCoordinator(topology, policy);
+  }
+
+  /**
+   * Creates an eviction listener associated with the specified cache tier.
+   * <p>
+   * Per-block eviction events are forwarded to the topology for topology-specific handling.
+   * Eviction-pressure events are forwarded to the placement/admission policy.
+   * </p>
+   * @param tier tier associated with the cache engine
+   * @return eviction listener for the tier
+   */
+  private CacheEvictionListener createEvictionListener(CacheTier tier) {
+    Objects.requireNonNull(tier, "tier must not be null");
+
+    return new CacheEvictionListener() {
+
+      /**
+       * Handles a capacity-driven block eviction.
+       * @param sourceEngine engine that evicted the block
+       * @param cacheKey     key identifying the evicted block
+       * @param block        evicted block
+       */
+      @Override
+      public void onEviction(CacheEngine sourceEngine, BlockCacheKey cacheKey, Cacheable block) {
+        handleEngineEviction(sourceEngine, cacheKey, block);
+      }
+
+      /**
+       * Handles cache pressure reported by an eviction pass.
+       * @param sourceEngine engine that performed the eviction pass
+       * @param bytesToFree  amount of cache pressure observed, in bytes
+       */
+      @Override
+      public void onEvictionPressure(CacheEngine sourceEngine, long bytesToFree) {
+        policy.onEvictionPressure(tier, bytesToFree, topologyView);
+      }
+    };
   }
 
   /**
