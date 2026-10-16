@@ -107,6 +107,9 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
         .tag(Interns.info(CLUSTER_ID_NAME, CLUSTER_ID_DESC), masterWrapper.getClusterId())
         .tag(Interns.info(IS_ACTIVE_MASTER_NAME, IS_ACTIVE_MASTER_DESC),
           String.valueOf(masterWrapper.getIsActiveMaster()));
+
+      masterWrapper.getSwitchStates().forEach((name, state) -> metricsRecordBuilder
+        .addGauge(Interns.info(name, SWITCH_STATE_DESC), state));
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

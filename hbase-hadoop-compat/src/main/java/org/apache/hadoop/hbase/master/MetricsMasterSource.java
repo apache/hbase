@@ -66,6 +66,14 @@ public interface MetricsMasterSource extends BaseSource {
   String MERGE_PLAN_COUNT_NAME = "mergePlanCount";
 
   String CLUSTER_REQUESTS_NAME = "clusterRequests";
+  String BALANCER_ENABLED_NAME = "balancerEnabled";
+  String NORMALIZER_ENABLED_NAME = "normalizerEnabled";
+  String SPLIT_ENABLED_NAME = "splitEnabled";
+  String MERGE_ENABLED_NAME = "mergeEnabled";
+  String CLEANER_CHORE_ENABLED_NAME = "cleanerChoreEnabled";
+  String CATALOG_JANITOR_ENABLED_NAME = "catalogJanitorEnabled";
+  String SNAPSHOT_CLEANUP_ENABLED_NAME = "snapshotCleanupEnabled";
+  String SWITCH_STATE_DESC = "Switch state: 1 enabled, 0 disabled";
   String MASTER_ACTIVE_TIME_DESC = "Master Active Time";
   String MASTER_START_TIME_DESC = "Master Start Time";
   String MASTER_FINISHED_INITIALIZATION_TIME_DESC =

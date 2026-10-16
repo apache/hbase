@@ -152,4 +152,11 @@ public interface MetricsMasterWrapper {
    * Get the time in Millis when the master finished initializing/becoming the active master
    */
   long getMasterInitializationTime();
+
+  /**
+   * Returns known switch states (1 enabled, 0 disabled), or an empty map unless this Master is
+   * active and initialized. Unavailable states are omitted. Implementations must not perform remote
+   * reads.
+   */
+  Map<String, Integer> getSwitchStates();
 }
