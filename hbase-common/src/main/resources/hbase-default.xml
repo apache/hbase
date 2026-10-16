@@ -1867,6 +1867,79 @@ possible configurations would overwhelm and obscure the important.
         default of 10 will rarely need to be changed.
     </description>
   </property>
+  <property>
+    <name>hbase.replication.bulkload.copy.bandwidth.mb</name>
+    <value>0</value>
+    <description>
+      The maximum aggregate bandwidth, in megabytes per second, that a sink RegionServer uses while
+      copying HFiles from the source cluster for replicated bulk loads. 0 means no limit. This value
+      can be changed dynamically through configuration reload on the sink. If this is set too low,
+      the HFile copy can exceed the replication RPC timeout and cause the source to retry the same
+      batch.
+    </description>
+  </property>
+  <property>
+    <name>hbase.replication.bulkload.event.tracker.znode</name>
+    <value>bulkload-events</value>
+    <description>
+      The ZooKeeper znode name under the HBase replication znode used to coordinate replicated
+      bulk load events in the sink cluster. RegionServers create short-lived in-progress markers
+      and completed-event markers under this znode so that retries of the same replicated bulk
+      load WAL event are not executed more than once across different target RegionServers.
+    </description>
+  </property>
+  <property>
+    <name>hbase.replication.bulkload.event.bucket.width.ms</name>
+    <value>3600000</value>
+    <description>
+      The time width, in milliseconds, of each bucket used when storing replicated bulk load event
+      markers. The event write time is divided by this value to choose a bucket. Larger values
+      reduce the number of ZooKeeper bucket znodes but make each bucket contain more completed
+      event markers for the cleaner to scan. Smaller values create more bucket znodes but make
+      each bucket smaller.
+    </description>
+  </property>
+  <property>
+    <name>hbase.replication.bulkload.event.wait.timeout.ms</name>
+    <value>60000</value>
+    <description>
+      The maximum time, in milliseconds, that a sink RegionServer waits while another RegionServer
+      is processing the same replicated bulk load event. If the event is marked done before this
+      timeout, the retry is treated as already completed and skipped. If the timeout expires while
+      the in-progress marker still exists, replication fails the batch so the source can retry
+      later.
+    </description>
+  </property>
+  <property>
+    <name>hbase.replication.bulkload.event.wait.interval.ms</name>
+    <value>1000</value>
+    <description>
+      The sleep interval, in milliseconds, between checks while waiting for another sink
+      RegionServer to finish the same replicated bulk load event. Smaller values detect completion
+      sooner but issue more ZooKeeper checks. Larger values reduce ZooKeeper polling at the cost
+      of slower retry progress.
+    </description>
+  </property>
+  <property>
+    <name>hbase.master.cleaner.replication.bulkload.event.period.ms</name>
+    <value>600000</value>
+    <description>
+      The period, in milliseconds, at which the HBase Master runs the replicated bulk load event
+      marker cleaner. The cleaner removes expired completed-event markers after they are older
+      than hbase.replication.bulkload.event.done.ttl.ms and are no longer protected by a matching
+      in-progress marker.
+    </description>
+  </property>
+  <property>
+    <name>hbase.replication.bulkload.event.done.ttl.ms</name>
+    <value>86400000</value>
+    <description>
+      The minimum age, in milliseconds, before a completed replicated bulk load event marker can be
+      removed by the Master cleaner. This value should be long enough to cover expected replication
+      retry delays; if it is too small, a late retry may not find the completed marker and can
+      execute the same bulk load again. Larger values retain more ZooKeeper marker znodes.
+    </description>
+  </property>
   <!-- Static Web User Filter properties. -->
   <property>
     <name>hbase.http.staticuser.user</name>
