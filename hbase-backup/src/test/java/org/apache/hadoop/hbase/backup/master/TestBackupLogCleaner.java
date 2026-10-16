@@ -55,6 +55,9 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableList;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+
 @Tag(LargeTests.TAG)
 public class TestBackupLogCleaner extends TestBackupBase {
 
@@ -318,6 +321,22 @@ public class TestBackupLogCleaner extends TestBackupBase {
     Path newServerWAL = new Path("/hbase/oldWALs/newserver%2C60020%2C99999.1500000");
     assertFalse(BackupLogCleaner.canDeleteFile(boundaries, newServerWAL),
       "WAL from new server (after backup) should NOT be deletable");
+  }
+
+  @Test
+  public void testMixedCaseHostUsesHostBoundary() {
+    BackupInfo backup = new BackupInfo();
+    backup.setState(BackupInfo.BackupState.COMPLETE);
+    backup.setTableSetTimestampMap(
+      ImmutableMap.of(TableName.valueOf("table1"), ImmutableMap.of("Server1:60020", 1000000L)));
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(ImmutableList.of(backup), 1000L);
+
+    // WAL names contain the lowercased hostname. This WAL is older than the host boundary, but
+    // newer than the default boundary, so it is only deletable if the host boundary is found.
+    Path wal = new Path("/hbase/oldWALs/server1%2C60020%2C12345.999500");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, wal),
+      "WAL older than the boundary of its host should be deletable");
   }
 
   @Test

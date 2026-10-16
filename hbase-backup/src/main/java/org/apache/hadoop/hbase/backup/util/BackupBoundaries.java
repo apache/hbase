@@ -134,7 +134,8 @@ public class BackupBoundaries {
           for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
             for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
               .entrySet()) {
-              Address regionServerAddress = Address.fromString(entry.getKey());
+              Address regionServerAddress =
+                Address.fromString(BackupUtils.toHostKey(entry.getKey()));
               Long logRollTs = entry.getValue();
 
               Long storedTs = boundaries.get(regionServerAddress);
