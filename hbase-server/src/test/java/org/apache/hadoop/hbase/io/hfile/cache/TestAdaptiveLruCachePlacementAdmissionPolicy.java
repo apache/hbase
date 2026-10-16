@@ -234,6 +234,30 @@ public class TestAdaptiveLruCachePlacementAdmissionPolicy {
   }
 
   /**
+   * Verifies that AdaptiveLRU returns no placement when the default placement contains only L1 and
+   * the data block is rejected from the first-level cache.
+   */
+  @Test
+  void testAdaptiveRejectionReturnsNoTierWhenOnlyL1IsAvailable() {
+    AdaptiveLruCachePlacementAdmissionPolicy policy = createPolicy(0, 200L, 0.01f);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CacheEngineView l1 = mock(CacheEngineView.class);
+    Cacheable dataBlock = block(BlockType.DATA);
+    CacheWriteContext context = mock(CacheWriteContext.class);
+
+    when(topologyView.getType()).thenReturn(CacheTopologyType.TIERED_EXCLUSIVE);
+    when(topologyView.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
+    when(topologyView.getEngine(CacheTier.L2)).thenReturn(Optional.empty());
+
+    applyPressure(policy, CacheTier.L1, topologyView, 3_200L);
+
+    TierDecision decision =
+      policy.selectTier(new BlockCacheKey("file", 99L), dataBlock, context, topologyView);
+
+    assertTrue(decision.isEmpty());
+  }
+
+  /**
    * Creates an AdaptiveLRU policy with explicitly controlled adaptation parameters.
    * @param heavyEvictionCountLimit          number of heavy periods tolerated before adaptation
    * @param heavyEvictionMbSizeLimit         target eviction volume in megabytes

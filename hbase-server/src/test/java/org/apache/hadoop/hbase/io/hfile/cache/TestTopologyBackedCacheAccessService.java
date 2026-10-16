@@ -628,8 +628,8 @@ public class TestTopologyBackedCacheAccessService {
 
     verify(persistentEngine).restore(input);
     verify(input).close();
-  }  
-  
+  }
+
   /**
    * Verifies that cache-pressure feedback from an engine is forwarded to the policy with the
    * logical tier associated with that engine.

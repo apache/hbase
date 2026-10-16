@@ -182,7 +182,9 @@ public final class AdaptiveLruCachePlacementAdmissionPolicy
         tiers.add(tier);
       }
     }
-
+    if (tiers.isEmpty()) {
+      return TierDecision.none();
+    }
     return TierDecision.multiple(tiers);
   }
 

@@ -801,7 +801,6 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    */
   void evict() {
     if (!evictionLock.tryLock()) {
-      notifyEvictionPressure(0L);
       return;
     }
 

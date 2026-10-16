@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 
@@ -70,6 +71,9 @@ public class TestLruCacheEngine {
       long currentSize = engine.getCurrentSize();
       long newMaxSize = Math.max(1L, currentSize / 2L);
       long expectedBytesToFree = currentSize - (long) Math.floor(newMaxSize * 0.5f);
+
+      assertTrue(currentSize > 0);
+      assertTrue(expectedBytesToFree > 0);
 
       engine.setEvictionListener(listener);
       engine.setMaxSize(newMaxSize);
