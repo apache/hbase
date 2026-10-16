@@ -99,6 +99,7 @@ public class TestHRegionConcurrency {
   private static final Logger LOG = LoggerFactory.getLogger(TestHRegionConcurrency.class);
   private static final EventLoopGroup GROUP = new NioEventLoopGroup();
   private static final long THREAD_JOIN_TIMEOUT_NS = TimeUnit.SECONDS.toNanos(30);
+  private static final int MAX_STORE_FILES = 10;
 
   private HBaseTestingUtil testUtil;
   private Configuration conf;
@@ -721,10 +722,10 @@ public class TestHRegionConcurrency {
       public void run() {
         while (!incrementDone.get() && !Thread.currentThread().isInterrupted()) {
           try {
-            region.flush(true);
+            flushAndCompact(region, family);
           } catch (Exception e) {
             if (!incrementDone.get()) {
-              LOG.warn("Failed to flush region", e);
+              LOG.warn("Failed to flush or compact region", e);
             }
           }
         }
@@ -751,6 +752,7 @@ public class TestHRegionConcurrency {
 
       incrementDone.set(true);
       joinThreads(flushThread);
+      assertTrue(region.getStore(family).getStorefilesCount() < MAX_STORE_FILES);
 
       Get get = new Get(Incrementer.incRow);
       get.addColumn(Incrementer.family, Incrementer.qualifier);
@@ -816,10 +818,10 @@ public class TestHRegionConcurrency {
       public void run() {
         while (!appendDone.get() && !Thread.currentThread().isInterrupted()) {
           try {
-            region.flush(true);
+            flushAndCompact(region, family);
           } catch (Exception e) {
             if (!appendDone.get()) {
-              LOG.warn("Failed to flush region", e);
+              LOG.warn("Failed to flush or compact region", e);
             }
           }
         }
@@ -850,6 +852,7 @@ public class TestHRegionConcurrency {
 
       appendDone.set(true);
       joinThreads(flushThread);
+      assertTrue(region.getStore(family).getStorefilesCount() < MAX_STORE_FILES);
 
       Get get = new Get(Appender.appendRow);
       get.addColumn(Appender.family, Appender.qualifier);
@@ -868,6 +871,34 @@ public class TestHRegionConcurrency {
       appendDone.set(true);
       appenders.add(flushThread);
       interruptAndJoinThreads(appenders.toArray(new Thread[0]));
+    }
+  }
+
+  private static void flushAndCompact(HRegion region, byte[] family) throws IOException {
+    region.flush(true);
+    HStore store = region.getStore(family);
+    // Standalone regions have no background compaction or compacted-file discharger.
+    if (store.getStorefilesCount() >= MAX_STORE_FILES) {
+      region.compact(true);
+      store.closeAndArchiveCompactedFiles();
+    }
+  }
+
+  @Test
+  public void testFlusherCompactsStoreFiles() throws IOException {
+    region = initHRegion(conf, fam1);
+    HStore store = region.getStore(fam1);
+    for (int i = 0; i < MAX_STORE_FILES * 2; i++) {
+      region.put(new Put(Bytes.toBytes(i)).addColumn(fam1, qual1, Bytes.toBytes(i)));
+      flushAndCompact(region, fam1);
+      int storeFiles = store.getStorefilesCount();
+      assertTrue(storeFiles > 0 && storeFiles < MAX_STORE_FILES,
+        "Unexpected store file count after flush " + i + ": " + storeFiles);
+    }
+    assertEquals(0, store.getCompactedFilesCount());
+    for (int i = 0; i < MAX_STORE_FILES * 2; i++) {
+      Result result = region.get(new Get(Bytes.toBytes(i)));
+      assertEquals(i, Bytes.toInt(result.getValue(fam1, qual1)));
     }
   }
 
