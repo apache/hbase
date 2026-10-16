@@ -312,8 +312,8 @@ public class FullTableBackupClient extends TableBackupClient {
     // was listed is found. If the live servers do not include every host that took part in the
     // roll, the master's server list is incomplete, or a host stopped after the roll.
     Set<ServerName> live = new HashSet<>(admin.getRegionServers());
-    Set<String> liveAddresses =
-      live.stream().map(sn -> sn.getAddress().toString()).collect(Collectors.toSet());
+    Set<String> liveAddresses = live.stream()
+      .map(sn -> BackupUtils.toHostKey(sn.getAddress().toString())).collect(Collectors.toSet());
     if (!liveAddresses.containsAll(rolledHosts.keySet())) {
       throw new IOException("Live region servers " + live + " do not include every host that took"
         + " part in this backup's log roll " + rolledHosts.keySet() + ". The master's server list"

@@ -37,6 +37,7 @@ import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -105,6 +106,18 @@ public final class BackupUtils {
 
   private BackupUtils() {
     throw new AssertionError("Instantiating utility class...");
+  }
+
+  /**
+   * Returns the key under which the backup code tracks a region server. The key is the server's
+   * host:port with the hostname lowercased. WAL file names contain the lowercased hostname (see
+   * {@link ServerName#toString()}), while {@link ServerName#getAddress()} keeps the hostname's
+   * original case, so both spellings must map to the same key.
+   * @param hostAndPort host:port of a region server, in any case
+   * @return the lowercased host:port
+   */
+  public static String toHostKey(String hostAndPort) {
+    return hostAndPort.toLowerCase(Locale.ROOT);
   }
 
   /**
@@ -196,7 +209,7 @@ public final class BackupUtils {
       } else {
         ServerName sname = AbstractFSWALProvider.getServerNameFromWALDirectoryName(p);
         if (sname != null) {
-          return sname.getAddress().toString();
+          return toHostKey(sname.getAddress().toString());
         } else {
           LOG.error("Skip log file (can't parse): " + p);
           return null;
@@ -452,14 +465,14 @@ public final class BackupUtils {
     }
     Path parent = p.getParent();
     if (parent != null && ServerName.isFullServerName(parent.getName())) {
-      return ServerName.valueOf(parent.getName()).getAddress().toString();
+      return toHostKey(ServerName.valueOf(parent.getName()).getAddress().toString());
     }
     try {
       String urlDecodedName = URLDecoder.decode(p.getName(), "UTF8");
       Iterable<String> nameSplitsOnComma = Splitter.on(",").split(urlDecodedName);
       String host = Iterables.get(nameSplitsOnComma, 0);
       String port = Iterables.get(nameSplitsOnComma, 1);
-      return host + ":" + port;
+      return toHostKey(host + ":" + port);
     } catch (Exception e) {
       LOG.warn("Skip log file (can't parse): {}", p);
       return null;
@@ -858,7 +871,7 @@ public final class BackupUtils {
         ServerName serverName = entry.getKey();
         long newHighestWALFilenum = entry.getValue();
 
-        String address = serverName.getAddress().toString();
+        String address = toHostKey(serverName.getAddress().toString());
         Long lastHighestWALFilenum = lastLogRollResult.get(address);
         if (lastHighestWALFilenum != null && lastHighestWALFilenum > newHighestWALFilenum) {
           LOG.warn("Won't update last roll log result for server {}: current = {}, new = {}",
