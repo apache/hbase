@@ -51,6 +51,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableMap;
+import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
+
 /**
  * Test cases for backup system table API
  */
@@ -195,6 +198,22 @@ public class TestBackupSystemTable {
       Long ts2 = result.get(keysAsArray[i]);
       assertEquals(ts1, ts2);
     }
+
+    cleanBackupTable();
+  }
+
+  @Test
+  public void testMixedCaseHostKeysAreReadLowercase() throws IOException {
+    table.writeRegionServerLastLogRollResult("Host-A:1", 102L, "root");
+    table.writeRegionServerLastLogRollResult("host-a:1", 100L, "root");
+    assertEquals(ImmutableMap.of("host-a:1", 102L),
+      table.readRegionServerLastLogRollResult("root"));
+
+    TableName t1 = TableName.valueOf("t1");
+    table.writeRegionServerLogTimestamp(ImmutableSet.of(t1), ImmutableMap.of("Host-A:1", 100L),
+      "root");
+    assertEquals(ImmutableMap.of(t1, ImmutableMap.of("host-a:1", 100L)),
+      table.readLogTimestampMap("root"));
 
     cleanBackupTable();
   }
