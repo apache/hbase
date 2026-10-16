@@ -28,6 +28,7 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.TimeZone;
@@ -104,20 +105,28 @@ public class TestBackupUtils {
 
   @Test
   public void testFilesystemWalHostNameParsing() throws IOException {
-    String[] hosts =
-      new String[] { "10.20.30.40", "127.0.0.1", "localhost", "a-region-server.domain.com" };
+    String[] hosts = new String[] { "10.20.30.40", "127.0.0.1", "localhost",
+      "a-region-server.domain.com", "Other-Region-Server.Domain.com" };
 
     Path walRootDir = CommonFSUtils.getWALRootDir(conf);
+    Path logDir = new Path(walRootDir, HConstants.HREGION_LOGDIR_NAME);
     Path oldLogDir = new Path(walRootDir, HConstants.HREGION_OLDLOGDIR_NAME);
 
     int port = 60030;
     for (String host : hosts) {
+      // ServerName interning makes parsing the server's directory name return this instance, which
+      // keeps the hostname's case. The parsed key must be lowercase anyway.
       ServerName serverName = ServerName.valueOf(host, port, 1234);
+      String expectedKey =
+        host.toLowerCase(Locale.ROOT) + Addressing.HOSTNAME_PORT_SEPARATOR + port;
+
+      Path testWalPath = new Path(new Path(logDir, serverName.toString()),
+        "wal" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
+      assertEquals(expectedKey, BackupUtils.parseHostNameFromLogFile(testWalPath));
 
       Path testOldWalPath = new Path(oldLogDir,
         serverName + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
-      assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
-        BackupUtils.parseHostFromOldLog(testOldWalPath));
+      assertEquals(expectedKey, BackupUtils.parseHostFromOldLog(testOldWalPath));
 
       Path testMasterWalPath =
         new Path(oldLogDir, testOldWalPath.getName() + MasterRegionFactory.ARCHIVED_WAL_SUFFIX);
@@ -127,13 +136,11 @@ public class TestBackupUtils {
       Path testOldWalWithRegionGroupingPath = new Path(oldLogDir,
         serverName + BackupUtils.LOGNAME_SEPARATOR + serverName + BackupUtils.LOGNAME_SEPARATOR
           + "regiongroup-0" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
-      assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
-        BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
+      assertEquals(expectedKey, BackupUtils.parseHostFromOldLog(testOldWalWithRegionGroupingPath));
 
       Path testOldWalInServerDirPath = new Path(new Path(oldLogDir, serverName.toString()),
         "wal" + BackupUtils.LOGNAME_SEPARATOR + EnvironmentEdgeManager.currentTime());
-      assertEquals(host + Addressing.HOSTNAME_PORT_SEPARATOR + port,
-        BackupUtils.parseHostFromOldLog(testOldWalInServerDirPath));
+      assertEquals(expectedKey, BackupUtils.parseHostFromOldLog(testOldWalInServerDirPath));
     }
   }
 

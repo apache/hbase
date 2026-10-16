@@ -54,6 +54,7 @@ import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.DNS;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -81,6 +82,9 @@ public class TestBackupOfflineRS extends TestBackupBase {
     conf1 = TEST_UTIL.getConfiguration();
     conf1.setInt("hbase.regionserver.info.port", -1);
     conf1.setInt(HMaster.HBASE_MASTER_CLEANER_INTERVAL, Integer.MAX_VALUE);
+    // Forces a hostname with a capital letter. This effectively repurposes the test to also
+    // verify that the backup system is not affected by case sensitivity issues in hostnames.
+    conf1.set(DNS.UNSAFE_RS_HOSTNAME_KEY, "LocalHost");
     autoRestoreOnFailure = true;
     useSecondCluster = false;
     setUpHelper();
@@ -172,7 +176,7 @@ public class TestBackupOfflineRS extends TestBackupBase {
     }
 
     String offlineHost =
-      rsBeforeStop.getServerName().getHostname() + ":" + rsBeforeStop.getServerName().getPort();
+      BackupUtils.toHostKey(rsBeforeStop.getServerName().getAddress().toString());
     LOG.info("Stopping RS: {}", offlineHost);
 
     stopRegionServerAndWait(rsBeforeStop.getServerName());
@@ -229,7 +233,7 @@ public class TestBackupOfflineRS extends TestBackupBase {
     rsBeforeStop.getWalRoller().requestRollAll();
     rsBeforeStop.getWalRoller().waitUntilWalRollFinished();
     String offlineHost =
-      rsBeforeStop.getServerName().getHostname() + ":" + rsBeforeStop.getServerName().getPort();
+      BackupUtils.toHostKey(rsBeforeStop.getServerName().getAddress().toString());
 
     stopRegionServerAndWait(rsBeforeStop.getServerName());
 
@@ -291,7 +295,7 @@ public class TestBackupOfflineRS extends TestBackupBase {
     transientRS.getWalRoller().requestRollAll();
     transientRS.getWalRoller().waitUntilWalRollFinished();
     String transientHost =
-      transientRS.getServerName().getHostname() + ":" + transientRS.getServerName().getPort();
+      BackupUtils.toHostKey(transientRS.getServerName().getAddress().toString());
 
     stopRegionServerAndWait(transientRS.getServerName());
 
@@ -337,7 +341,7 @@ public class TestBackupOfflineRS extends TestBackupBase {
     transientRS.getWalRoller().requestRollAll();
     transientRS.getWalRoller().waitUntilWalRollFinished();
     String transientHost =
-      transientRS.getServerName().getHostname() + ":" + transientRS.getServerName().getPort();
+      BackupUtils.toHostKey(transientRS.getServerName().getAddress().toString());
 
     stopRegionServerAndWait(transientRS.getServerName());
 
