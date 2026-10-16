@@ -85,7 +85,8 @@ public class TestIncrementalBackupManager extends TestBackupBase {
         Map<String, Long> previousTimestamps =
           BackupUtils.getRSLogTimestampMins(manager.readLogTimestampMap());
         ServerName serverName = TEST_UTIL.getMiniHBaseCluster().getRegionServer(0).getServerName();
-        Long previousTimestamp = previousTimestamps.get(serverName.getAddress().toString());
+        Long previousTimestamp =
+          previousTimestamps.get(BackupUtils.toHostKey(serverName.getAddress().toString()));
         assertNotNull(previousTimestamp);
 
         TEST_UTIL.waitFor(30_000,
