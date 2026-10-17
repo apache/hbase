@@ -52,7 +52,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.A
  * </p>
  */
 @InterfaceAudience.Private
-public class ACLManager implements PermissionStorage.AclWriteHook {
+public class ACLManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(ACLManager.class);
 
@@ -132,26 +132,23 @@ public class ACLManager implements PermissionStorage.AclWriteHook {
     // the push timestamp is above every write the snapshot contains, so the push is never
     // dropped as stale by an RS; later writes get higher timestamps and apply on top of it
     submitFullPush(toProto(snapshot.getPermissions()), nextTimestamp());
-    // start listening only after the full push is in flight, so writes cannot race ahead of it
-    PermissionStorage.setAclWriteHook(this);
     LOG.info("ACLManager initialized, timestamps start at {}", seed);
   }
 
-  /** Unhooks from the write path. */
-  public void stop() {
-    PermissionStorage.setAclWriteHook(null);
-  }
-
-  @Override
+  /**
+   * Next timestamp for an {@code hbase:acl} write, to be stamped into the cells of the write so the
+   * cell timestamps carry the master assigned write order.
+   */
   public long nextTimestamp() {
     long now = EnvironmentEdgeManager.currentTime();
     return lastTs.updateAndGet(prev -> Math.max(now, prev + 1));
   }
 
-  @Override
+  /**
+   * Queues an updated entry for broadcast to all servers. Callers apply the update to their local
+   * cache themselves, see {@code AclTableManager}.
+   */
   public void onEntryUpdate(long ts, AuthManager.EntryUpdate update) {
-    // apply to the local cache right away, do not wait for the broadcast
-    refresher.submitUpdates(ts, Collections.singletonList(update));
     synchronized (this) {
       pending.put(update.getEntry(), new PendingUpdate(ts, update));
       maybeSubmitPush();

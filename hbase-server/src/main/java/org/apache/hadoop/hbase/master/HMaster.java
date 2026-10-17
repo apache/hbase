@@ -254,6 +254,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.ACLManager;
 import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
+import org.apache.hadoop.hbase.security.access.AclTableManager;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Addressing;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -471,6 +472,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private volatile MasterQuotaManager quotaManager;
   private RpcThrottleStateStore rpcThrottleStateStore;
   private ACLManager aclManager;
+  private AclTableManager aclTableManager;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
@@ -1050,6 +1052,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
 
     // must be created before loading procedures, RefreshAclProcedure consults it
     this.aclManager = new ACLManager(conf, this, getAclRefresher());
+    this.aclTableManager =
+      new AclTableManager(conf, getConnection(), aclManager, getAclRefresher(), getAccessChecker());
 
     tryMigrateMetaLocationsFromZooKeeper();
 
@@ -1838,10 +1842,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   }
 
   protected void stopServiceThreads() {
-    if (aclManager != null) {
-      // stop announcing hbase:acl writes before the services below go away
-      aclManager.stop();
-    }
     if (masterJettyServer != null) {
       LOG.info("Stopping master jetty server");
       try {
@@ -4838,5 +4838,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public ACLManager getACLManager() {
     return aclManager;
+  }
+
+  @Override
+  public AclTableManager getAclTableManager() {
+    return aclTableManager;
   }
 }
