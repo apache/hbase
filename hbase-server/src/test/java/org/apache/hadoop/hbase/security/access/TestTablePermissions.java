@@ -407,7 +407,7 @@ public class TestTablePermissions {
      * test a race condition causing AuthManager to sometimes fail global permissions checks when
      * the global cache is being updated
      */
-    AuthManager authManager = new AuthManager(conf);
+    AuthManager authManager = new AuthManager(new AclSnapshot());
     // currently running user is the system user and should have global admin perms
     User currentUser = User.getCurrent();
     assertTrue(authManager.authorizeUserGlobal(currentUser, Permission.Action.ADMIN));

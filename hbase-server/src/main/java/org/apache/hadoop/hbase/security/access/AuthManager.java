@@ -18,26 +18,17 @@
 package org.apache.hadoop.hbase.security.access;
 
 import java.io.IOException;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicLong;
-import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
-import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
  * Performs authorization checks for a given user's assigned permissions.
@@ -52,232 +43,18 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
  * <p>
  * For each scope, not only user but also groups he belongs to will be checked.
  * </p>
+ * The granted permissions are read from the process side ACL snapshot through {@link AclView}; this
+ * class only makes decisions and never mutates the snapshot.
  */
 @InterfaceAudience.Private
 public final class AuthManager {
 
-  /**
-   * Cache of permissions, it is thread safe.
-   * @param <T> T extends Permission
-   */
-  private static class PermissionCache<T extends Permission> {
-    private final Object mutex = new Object();
-    private Map<String, Set<T>> cache = new HashMap<>();
-
-    void put(String name, T perm) {
-      synchronized (mutex) {
-        Set<T> perms = cache.getOrDefault(name, ConcurrentHashMap.newKeySet());
-        perms.add(perm);
-        cache.put(name, perms);
-      }
-    }
-
-    Set<T> get(String name) {
-      synchronized (mutex) {
-        return cache.get(name);
-      }
-    }
-  }
-
-  /**
-   * Replacement of a single ACL entry, or its deletion. The entry name encoding is the row key of
-   * {@code hbase:acl}: table name bytes, {@code @} prefixed namespace name, or
-   * {@link PermissionStorage#ACL_GLOBAL_NAME} for global scope.
-   */
-  public static final class EntryUpdate {
-    private final byte[] entry;
-    private final ListMultimap<String, UserPermission> perms;
-    private final boolean deleted;
-
-    private EntryUpdate(byte[] entry, ListMultimap<String, UserPermission> perms, boolean deleted) {
-      this.entry = entry;
-      this.perms = perms;
-      this.deleted = deleted;
-    }
-
-    /** Replaces the whole permission set of the entry. */
-    public static EntryUpdate replace(byte[] entry, ListMultimap<String, UserPermission> perms) {
-      return new EntryUpdate(entry, perms, false);
-    }
-
-    /** Marks the entry as removed. */
-    public static EntryUpdate deleted(byte[] entry) {
-      return new EntryUpdate(entry, null, true);
-    }
-
-    public byte[] getEntry() {
-      return entry;
-    }
-
-    public ListMultimap<String, UserPermission> getPermissions() {
-      return perms;
-    }
-
-    public boolean isDeleted() {
-      return deleted;
-    }
-  }
-
-  PermissionCache<NamespacePermission> NS_NO_PERMISSION = new PermissionCache<>();
-  PermissionCache<TablePermission> TBL_NO_PERMISSION = new PermissionCache<>();
-
-  /**
-   * Cache for global permission excluding superuser and supergroup. Since every user/group can only
-   * have one global permission, no need to use PermissionCache.
-   */
-  private volatile Map<String, GlobalPermission> globalCache = new ConcurrentHashMap<>();
-  /** Cache for namespace permission. */
-  private volatile ConcurrentHashMap<String, PermissionCache<NamespacePermission>> namespaceCache =
-    new ConcurrentHashMap<>();
-  /** Cache for table permission. */
-  private volatile ConcurrentHashMap<TableName, PermissionCache<TablePermission>> tableCache =
-    new ConcurrentHashMap<>();
-
   private static final Logger LOG = LoggerFactory.getLogger(AuthManager.class);
 
-  private Configuration conf;
-  private final AtomicLong mtime = new AtomicLong(0L);
+  private final AclView acls;
 
-  AuthManager(Configuration conf) {
-    this.conf = conf;
-  }
-
-  /**
-   * Updates the internal global permissions cache.
-   * @param globalPerms new global permissions
-   */
-  private void updateGlobalCache(ListMultimap<String, Permission> globalPerms) {
-    Map<String, GlobalPermission> newGlobalCache = new ConcurrentHashMap<>();
-    for (String name : globalPerms.keySet()) {
-      for (Permission permission : globalPerms.get(name)) {
-        newGlobalCache.put(name, toGlobalPermission(permission));
-      }
-    }
-    globalCache = newGlobalCache;
-    mtime.incrementAndGet();
-  }
-
-  /**
-   * Updates the internal table permissions cache for specified table.
-   * @param table      updated table name
-   * @param tablePerms new table permissions
-   */
-  private void updateTableCache(TableName table, ListMultimap<String, Permission> tablePerms) {
-    PermissionCache<TablePermission> cacheToUpdate = new PermissionCache<>();
-    updateCache(tablePerms, cacheToUpdate);
-    tableCache.put(table, cacheToUpdate);
-    mtime.incrementAndGet();
-  }
-
-  /**
-   * Updates the internal namespace permissions cache for specified namespace.
-   * @param namespace updated namespace
-   * @param nsPerms   new namespace permissions
-   */
-  private void updateNamespaceCache(String namespace, ListMultimap<String, Permission> nsPerms) {
-    PermissionCache<NamespacePermission> cacheToUpdate = new PermissionCache<>();
-    updateCache(nsPerms, cacheToUpdate);
-    namespaceCache.put(namespace, cacheToUpdate);
-    mtime.incrementAndGet();
-  }
-
-  @SuppressWarnings("unchecked")
-  private void updateCache(ListMultimap<String, ? extends Permission> newPermissions,
-    PermissionCache cacheToUpdate) {
-    for (String name : newPermissions.keySet()) {
-      for (Permission permission : newPermissions.get(name)) {
-        cacheToUpdate.put(name, permission);
-      }
-    }
-  }
-
-  /**
-   * Applies incremental ACL entry updates, each update replaces the whole entry in the cache, or
-   * removes the entry when it is marked as deleted.
-   */
-  public void applyUpdates(List<EntryUpdate> updates) {
-    for (EntryUpdate update : updates) {
-      applyEntry(update.getEntry(), update.isDeleted() ? null : update.getPermissions());
-    }
-  }
-
-  /**
-   * Replaces the whole cache with the given snapshot. Callers build the snapshot aside first, so
-   * readers never observe a partially loaded cache.
-   * @param snapshot entry name to its permissions, see {@link PermissionStorage#loadAll}
-   */
-  public void applyFullSnapshot(Map<byte[], ListMultimap<String, UserPermission>> snapshot) {
-    Map<String, GlobalPermission> newGlobalCache = new ConcurrentHashMap<>();
-    ConcurrentHashMap<String, PermissionCache<NamespacePermission>> newNamespaceCache =
-      new ConcurrentHashMap<>();
-    ConcurrentHashMap<TableName, PermissionCache<TablePermission>> newTableCache =
-      new ConcurrentHashMap<>();
-    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> e : snapshot.entrySet()) {
-      byte[] entry = e.getKey();
-      ListMultimap<String, Permission> perms = toPermissions(e.getValue());
-      if (PermissionStorage.isGlobalEntry(entry)) {
-        for (String name : perms.keySet()) {
-          for (Permission permission : perms.get(name)) {
-            newGlobalCache.put(name, toGlobalPermission(permission));
-          }
-        }
-      } else if (PermissionStorage.isNamespaceEntry(entry)) {
-        PermissionCache<NamespacePermission> cacheToUpdate = new PermissionCache<>();
-        updateCache(perms, cacheToUpdate);
-        newNamespaceCache.put(Bytes.toString(PermissionStorage.fromNamespaceEntry(entry)),
-          cacheToUpdate);
-      } else {
-        PermissionCache<TablePermission> cacheToUpdate = new PermissionCache<>();
-        updateCache(perms, cacheToUpdate);
-        newTableCache.put(TableName.valueOf(entry), cacheToUpdate);
-      }
-    }
-    globalCache = newGlobalCache;
-    namespaceCache = newNamespaceCache;
-    tableCache = newTableCache;
-    mtime.incrementAndGet();
-  }
-
-  private void applyEntry(byte[] entry, ListMultimap<String, UserPermission> perms) {
-    if (PermissionStorage.isGlobalEntry(entry)) {
-      if (perms == null) {
-        globalCache.clear();
-        mtime.incrementAndGet();
-      } else {
-        updateGlobalCache(toPermissions(perms));
-      }
-    } else if (PermissionStorage.isNamespaceEntry(entry)) {
-      String namespace = Bytes.toString(PermissionStorage.fromNamespaceEntry(entry));
-      if (perms == null) {
-        namespaceCache.remove(namespace);
-        mtime.incrementAndGet();
-      } else {
-        updateNamespaceCache(namespace, toPermissions(perms));
-      }
-    } else {
-      if (perms == null) {
-        tableCache.remove(TableName.valueOf(entry));
-        mtime.incrementAndGet();
-      } else {
-        updateTableCache(TableName.valueOf(entry), toPermissions(perms));
-      }
-    }
-  }
-
-  private static ListMultimap<String, Permission>
-    toPermissions(ListMultimap<String, UserPermission> userPerms) {
-    ListMultimap<String, Permission> perms = ArrayListMultimap.create();
-    for (Map.Entry<String, UserPermission> e : userPerms.entries()) {
-      perms.put(e.getKey(), e.getValue().getPermission());
-    }
-    return perms;
-  }
-
-  private static GlobalPermission toGlobalPermission(Permission permission) {
-    if (permission instanceof GlobalPermission) {
-      return (GlobalPermission) permission;
-    }
-    return new GlobalPermission(permission.getActions());
+  AuthManager(AclView acls) {
+    this.acls = acls;
   }
 
   /**
@@ -293,11 +70,11 @@ public final class AuthManager {
     if (Superusers.isSuperUser(user)) {
       return true;
     }
-    if (authorizeGlobal(globalCache.get(user.getShortName()), action)) {
+    if (authorizeGlobal(acls.getGlobalPermission(user.getShortName()), action)) {
       return true;
     }
     for (String group : user.getGroupNames()) {
-      if (authorizeGlobal(globalCache.get(AuthUtil.toGroupEntry(group)), action)) {
+      if (authorizeGlobal(acls.getGlobalPermission(AuthUtil.toGroupEntry(group)), action)) {
         return true;
       }
     }
@@ -322,13 +99,17 @@ public final class AuthManager {
     if (authorizeUserGlobal(user, action)) {
       return true;
     }
-    PermissionCache<NamespacePermission> nsPermissions =
-      namespaceCache.getOrDefault(namespace, NS_NO_PERMISSION);
-    if (authorizeNamespace(nsPermissions.get(user.getShortName()), namespace, action)) {
+    if (
+      authorizeNamespace(acls.getNamespacePermissions(namespace, user.getShortName()), namespace,
+        action)
+    ) {
       return true;
     }
     for (String group : user.getGroupNames()) {
-      if (authorizeNamespace(nsPermissions.get(AuthUtil.toGroupEntry(group)), namespace, action)) {
+      if (
+        authorizeNamespace(acls.getNamespacePermissions(namespace, AuthUtil.toGroupEntry(group)),
+          namespace, action)
+      ) {
         return true;
       }
     }
@@ -337,9 +118,6 @@ public final class AuthManager {
 
   private boolean authorizeNamespace(Set<NamespacePermission> permissions, String namespace,
     Permission.Action action) {
-    if (permissions == null) {
-      return false;
-    }
     for (NamespacePermission permission : permissions) {
       if (permission.implies(namespace, action)) {
         return true;
@@ -400,13 +178,11 @@ public final class AuthManager {
     if (authorizeUserNamespace(user, table.getNamespaceAsString(), action)) {
       return true;
     }
-    PermissionCache<TablePermission> tblPermissions =
-      tableCache.getOrDefault(table, TBL_NO_PERMISSION);
-    if (hasAccessTable(tblPermissions.get(user.getShortName()), action)) {
+    if (hasAccessTable(acls.getTablePermissions(table, user.getShortName()), action)) {
       return true;
     }
     for (String group : user.getGroupNames()) {
-      if (hasAccessTable(tblPermissions.get(AuthUtil.toGroupEntry(group)), action)) {
+      if (hasAccessTable(acls.getTablePermissions(table, AuthUtil.toGroupEntry(group)), action)) {
         return true;
       }
     }
@@ -414,9 +190,6 @@ public final class AuthManager {
   }
 
   private boolean hasAccessTable(Set<TablePermission> permissions, Permission.Action action) {
-    if (permissions == null) {
-      return false;
-    }
     for (TablePermission permission : permissions) {
       if (permission.implies(action)) {
         return true;
@@ -473,15 +246,16 @@ public final class AuthManager {
     if (authorizeUserNamespace(user, table.getNamespaceAsString(), action)) {
       return true;
     }
-    PermissionCache<TablePermission> tblPermissions =
-      tableCache.getOrDefault(table, TBL_NO_PERMISSION);
-    if (authorizeTable(tblPermissions.get(user.getShortName()), table, family, qualifier, action)) {
+    if (
+      authorizeTable(acls.getTablePermissions(table, user.getShortName()), table, family, qualifier,
+        action)
+    ) {
       return true;
     }
     for (String group : user.getGroupNames()) {
       if (
-        authorizeTable(tblPermissions.get(AuthUtil.toGroupEntry(group)), table, family, qualifier,
-          action)
+        authorizeTable(acls.getTablePermissions(table, AuthUtil.toGroupEntry(group)), table, family,
+          qualifier, action)
       ) {
         return true;
       }
@@ -491,9 +265,6 @@ public final class AuthManager {
 
   private boolean authorizeTable(Set<TablePermission> permissions, TableName table, byte[] family,
     byte[] qualifier, Permission.Action action) {
-    if (permissions == null) {
-      return false;
-    }
     for (TablePermission permission : permissions) {
       if (permission.implies(table, family, qualifier, action)) {
         return true;
@@ -517,14 +288,15 @@ public final class AuthManager {
     if (fixed != null) {
       return fixed;
     }
-    PermissionCache<TablePermission> tblPermissions =
-      tableCache.getOrDefault(table, TBL_NO_PERMISSION);
-    if (authorizeFamily(tblPermissions.get(user.getShortName()), table, family, action)) {
+    if (
+      authorizeFamily(acls.getTablePermissions(table, user.getShortName()), table, family, action)
+    ) {
       return true;
     }
     for (String group : user.getGroupNames()) {
       if (
-        authorizeFamily(tblPermissions.get(AuthUtil.toGroupEntry(group)), table, family, action)
+        authorizeFamily(acls.getTablePermissions(table, AuthUtil.toGroupEntry(group)), table,
+          family, action)
       ) {
         return true;
       }
@@ -534,9 +306,6 @@ public final class AuthManager {
 
   private boolean authorizeFamily(Set<TablePermission> permissions, TableName table, byte[] family,
     Permission.Action action) {
-    if (permissions == null) {
-      return false;
-    }
     for (TablePermission permission : permissions) {
       if (permission.implies(table, family, action)) {
         return true;
@@ -581,12 +350,5 @@ public final class AuthManager {
       // to collect regardless
     }
     return false;
-  }
-
-  /**
-   * Last modification logical time
-   */
-  public long getMTime() {
-    return mtime.get();
   }
 }

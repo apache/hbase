@@ -60,8 +60,8 @@ public class TestACLManager {
     Configuration conf = HBaseConfiguration.create();
     conf.set(Superusers.SUPERUSER_CONF_KEY, "admin");
     Superusers.initialize(conf);
-    AuthManager authManager = new AuthManager(conf);
-    AclRefresher refresher = new AclRefresher(conf, authManager);
+    AclSnapshot aclSnapshot = new AclSnapshot();
+    AclRefresher refresher = new AclRefresher(conf, aclSnapshot);
     aclManager = new ACLManager(conf, new MockNoopMasterServices(conf), refresher) {
       @Override
       void submitPushProcedure(RefreshAclProcedure procedure) {
@@ -129,7 +129,7 @@ public class TestACLManager {
   @Test
   public void testDeletedUpdateQueued() {
     aclManager.onEntryUpdate(100, replace(TEST_TABLE, "george", Permission.Action.READ));
-    aclManager.onEntryUpdate(150, AuthManager.EntryUpdate.deleted(TEST_TABLE.getName()));
+    aclManager.onEntryUpdate(150, AclSnapshot.EntryUpdate.deleted(TEST_TABLE.getName()));
     ACLManager.ChangeSet changeSet = aclManager.drainPending();
     assertNotNull(changeSet);
     assertEquals(1, changeSet.getUpdates().size());
@@ -137,10 +137,10 @@ public class TestACLManager {
     assertEquals(150, changeSet.getTs());
   }
 
-  private AuthManager.EntryUpdate replace(TableName table, String user, Permission.Action action) {
+  private AclSnapshot.EntryUpdate replace(TableName table, String user, Permission.Action action) {
     ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
     perms.put(user,
       new UserPermission(user, Permission.newBuilder(table).withActions(action).build()));
-    return AuthManager.EntryUpdate.replace(table.getName(), perms);
+    return AclSnapshot.EntryUpdate.replace(table.getName(), perms);
   }
 }

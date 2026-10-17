@@ -50,6 +50,7 @@ public class TestAuthManager {
   private static final TableName NS_TABLE = TableName.valueOf(TEST_NAMESPACE, "t");
 
   private Configuration conf;
+  private AclSnapshot aclSnapshot;
   private AuthManager authManager;
   private User george;
 
@@ -58,7 +59,8 @@ public class TestAuthManager {
     conf = HBaseConfiguration.create();
     conf.set(Superusers.SUPERUSER_CONF_KEY, "admin");
     Superusers.initialize(conf);
-    authManager = new AuthManager(conf);
+    aclSnapshot = new AclSnapshot();
+    authManager = new AuthManager(aclSnapshot);
     george = User.createUserForTesting(conf, "george", new String[0]);
   }
 
@@ -78,7 +80,7 @@ public class TestAuthManager {
       Permission.Action.WRITE));
 
     // global, namespace and table level grants must not penetrate
-    authManager.applyFullSnapshot(
+    aclSnapshot.applyFullSnapshot(
       snapshot(globalEntry(), userPerms("george", globalPerm(Permission.Action.WRITE)),
         namespaceEntry("hbase"), userPerms("george", nsPerm("hbase", Permission.Action.WRITE)),
         TableName.META_TABLE_NAME.getName(),
@@ -94,7 +96,7 @@ public class TestAuthManager {
   @Test
   public void testAclFixedRules() throws Exception {
     // grants of every scope must not give access to hbase:acl
-    authManager.applyFullSnapshot(
+    aclSnapshot.applyFullSnapshot(
       snapshot(globalEntry(), userPerms("george", globalPerm(Permission.Action.READ)),
         namespaceEntry("hbase"), userPerms("george", nsPerm("hbase", Permission.Action.READ)),
         PermissionStorage.ACL_TABLE_NAME.getName(),
@@ -116,7 +118,7 @@ public class TestAuthManager {
   public void testNullTableKeepsGlobalScopeSemantics() throws Exception {
     // table == null is the historical "global scope" call, it must not hit the acl fixed rules
     assertFalse(authManager.authorizeUserTable(george, null, Permission.Action.READ));
-    authManager.applyFullSnapshot(
+    aclSnapshot.applyFullSnapshot(
       snapshot(globalEntry(), userPerms("george", globalPerm(Permission.Action.READ))));
     assertTrue(authManager.authorizeUserTable(george, null, Permission.Action.READ));
     assertTrue(authManager.accessUserTable(george, null, Permission.Action.READ));
@@ -126,45 +128,45 @@ public class TestAuthManager {
   public void testApplyUpdates() throws Exception {
     ListMultimap<String, UserPermission> readPerms =
       userPerms("george", tablePerm(TEST_TABLE, Permission.Action.READ));
-    authManager.applyUpdates(
-      Collections.singletonList(AuthManager.EntryUpdate.replace(TEST_TABLE.getName(), readPerms)));
+    aclSnapshot.applyUpdates(
+      Collections.singletonList(AclSnapshot.EntryUpdate.replace(TEST_TABLE.getName(), readPerms)));
     assertTrue(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
     assertFalse(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));
 
     // the update replaces the whole entry, it does not merge into it
-    authManager
-      .applyUpdates(Collections.singletonList(AuthManager.EntryUpdate.replace(TEST_TABLE.getName(),
+    aclSnapshot
+      .applyUpdates(Collections.singletonList(AclSnapshot.EntryUpdate.replace(TEST_TABLE.getName(),
         userPerms("george", tablePerm(TEST_TABLE, Permission.Action.WRITE)))));
     assertFalse(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
     assertTrue(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));
 
-    authManager.applyUpdates(
-      Collections.singletonList(AuthManager.EntryUpdate.deleted(TEST_TABLE.getName())));
+    aclSnapshot.applyUpdates(
+      Collections.singletonList(AclSnapshot.EntryUpdate.deleted(TEST_TABLE.getName())));
     assertFalse(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.WRITE));
 
     // namespace and global entries
-    authManager.applyUpdates(Arrays.asList(
-      AuthManager.EntryUpdate.replace(namespaceEntry(TEST_NAMESPACE),
+    aclSnapshot.applyUpdates(Arrays.asList(
+      AclSnapshot.EntryUpdate.replace(namespaceEntry(TEST_NAMESPACE),
         userPerms("george", nsPerm(TEST_NAMESPACE, Permission.Action.READ))),
-      AuthManager.EntryUpdate.replace(globalEntry(),
+      AclSnapshot.EntryUpdate.replace(globalEntry(),
         userPerms("george", globalPerm(Permission.Action.ADMIN)))));
     assertTrue(authManager.authorizeUserTable(george, NS_TABLE, Permission.Action.READ));
     assertTrue(authManager.authorizeUserGlobal(george, Permission.Action.ADMIN));
 
-    authManager
-      .applyUpdates(Arrays.asList(AuthManager.EntryUpdate.deleted(namespaceEntry(TEST_NAMESPACE)),
-        AuthManager.EntryUpdate.deleted(globalEntry())));
+    aclSnapshot
+      .applyUpdates(Arrays.asList(AclSnapshot.EntryUpdate.deleted(namespaceEntry(TEST_NAMESPACE)),
+        AclSnapshot.EntryUpdate.deleted(globalEntry())));
     assertFalse(authManager.authorizeUserTable(george, NS_TABLE, Permission.Action.READ));
     assertFalse(authManager.authorizeUserGlobal(george, Permission.Action.ADMIN));
   }
 
   @Test
   public void testApplyFullSnapshotSwaps() throws Exception {
-    authManager.applyFullSnapshot(snapshot(TEST_TABLE.getName(),
+    aclSnapshot.applyFullSnapshot(snapshot(TEST_TABLE.getName(),
       userPerms("george", tablePerm(TEST_TABLE, Permission.Action.READ))));
     assertTrue(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));
 
-    authManager.applyFullSnapshot(snapshot(NS_TABLE.getName(),
+    aclSnapshot.applyFullSnapshot(snapshot(NS_TABLE.getName(),
       userPerms("george", tablePerm(NS_TABLE, Permission.Action.WRITE))));
     // the previous entry is gone after the swap
     assertFalse(authManager.authorizeUserTable(george, TEST_TABLE, Permission.Action.READ));

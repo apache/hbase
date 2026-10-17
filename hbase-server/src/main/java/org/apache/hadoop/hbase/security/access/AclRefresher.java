@@ -57,22 +57,18 @@ public final class AclRefresher implements Closeable {
   private static final Logger LOG = LoggerFactory.getLogger(AclRefresher.class);
 
   private final Configuration conf;
-  private final AuthManager authManager;
+  private final AclSnapshot snapshot;
   private final ExecutorService executor;
   private final AtomicLong appliedTs = new AtomicLong(0L);
 
-  public AclRefresher(Configuration conf, AuthManager authManager) {
+  public AclRefresher(Configuration conf, AclSnapshot snapshot) {
     this.conf = conf;
-    this.authManager = authManager;
+    this.snapshot = snapshot;
     this.executor = Executors.newSingleThreadExecutor(r -> {
       Thread t = new Thread(r, "AclRefresher");
       t.setDaemon(true);
       return t;
     });
-  }
-
-  public AuthManager getAuthManager() {
-    return authManager;
   }
 
   /** Highest update timestamp applied so far. */
@@ -84,12 +80,12 @@ public final class AclRefresher implements Closeable {
    * Enqueues a batch of incremental entry updates, e.g. from a RefreshAcl remote procedure or from
    * a local {@code hbase:acl} write. Dropped when not newer than the last applied update.
    */
-  public void submitUpdates(long ts, List<AuthManager.EntryUpdate> updates) {
+  public void submitUpdates(long ts, List<AclSnapshot.EntryUpdate> updates) {
     executor.execute(() -> {
       if (!isCurrent(ts, "update batch")) {
         return;
       }
-      authManager.applyUpdates(updates);
+      snapshot.applyUpdates(updates);
       appliedTs.set(ts);
     });
   }
@@ -103,7 +99,7 @@ public final class AclRefresher implements Closeable {
       if (!isCurrent(ts, "full snapshot")) {
         return;
       }
-      authManager.applyFullSnapshot(perms);
+      snapshot.applyFullSnapshot(perms);
       appliedTs.set(ts);
     });
   }
@@ -115,14 +111,14 @@ public final class AclRefresher implements Closeable {
    */
   public void reloadFromTable() throws IOException {
     Future<Void> future = executor.submit(() -> {
-      PermissionStorage.AclSnapshot snapshot;
+      PermissionStorage.AclTableContent content;
       try {
-        snapshot = PermissionStorage.loadAllSnapshot(conf);
+        content = PermissionStorage.loadAllSnapshot(conf);
       } catch (TableNotFoundException e) {
-        snapshot = new PermissionStorage.AclSnapshot(Collections.emptyMap(), 0L);
+        content = new PermissionStorage.AclTableContent(Collections.emptyMap(), 0L);
       }
-      authManager.applyFullSnapshot(snapshot.getPermissions());
-      appliedTs.accumulateAndGet(snapshot.getMaxTimestamp(), Math::max);
+      snapshot.applyFullSnapshot(content.getPermissions());
+      appliedTs.accumulateAndGet(content.getMaxTimestamp(), Math::max);
       return null;
     });
     try {

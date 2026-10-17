@@ -183,7 +183,7 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     } else {
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
-    aclRefresher = new AclRefresher(getConfiguration(), accessChecker.getAuthManager());
+    aclRefresher = new AclRefresher(getConfiguration(), accessChecker.getAclSnapshot());
     if (getConfiguration().get("zookeeper.znode.acl.parent") != null) {
       LOG.warn("zookeeper.znode.acl.parent is deprecated and ignored: "
         + "ACLs are stored in the {} table only", PermissionStorage.ACL_TABLE_NAME);

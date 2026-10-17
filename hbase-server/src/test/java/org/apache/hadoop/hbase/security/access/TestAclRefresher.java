@@ -50,6 +50,7 @@ public class TestAclRefresher {
   private static final TableName TEST_TABLE = TableName.valueOf("aclRefresherTable");
 
   private AuthManager authManager;
+  private AclSnapshot aclSnapshot;
   private AclRefresher refresher;
   private User george;
 
@@ -58,8 +59,9 @@ public class TestAclRefresher {
     Configuration conf = HBaseConfiguration.create();
     conf.set(Superusers.SUPERUSER_CONF_KEY, "admin");
     Superusers.initialize(conf);
-    authManager = new AuthManager(conf);
-    refresher = new AclRefresher(conf, authManager);
+    aclSnapshot = new AclSnapshot();
+    authManager = new AuthManager(aclSnapshot);
+    refresher = new AclRefresher(conf, aclSnapshot);
     george = User.createUserForTesting(conf, "george", new String[0]);
   }
 
@@ -92,7 +94,7 @@ public class TestAclRefresher {
   public void testDeletedEntriesNotResurrectedByStaleUpdates() throws IOException {
     refresher.submitUpdates(100, Collections.singletonList(replace(Permission.Action.READ)));
     refresher.submitUpdates(200,
-      Collections.singletonList(AuthManager.EntryUpdate.deleted(TEST_TABLE.getName())));
+      Collections.singletonList(AclSnapshot.EntryUpdate.deleted(TEST_TABLE.getName())));
     refresher.flush();
     assertFalse(canRead());
 
@@ -136,14 +138,14 @@ public class TestAclRefresher {
     assertFalse(canRead());
   }
 
-  private AuthManager.EntryUpdate replace(Permission.Action action) {
+  private AclSnapshot.EntryUpdate replace(Permission.Action action) {
     ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
     perms.put("george",
       new UserPermission("george", Permission.newBuilder(TEST_TABLE).withActions(action).build()));
-    return AuthManager.EntryUpdate.replace(TEST_TABLE.getName(), perms);
+    return AclSnapshot.EntryUpdate.replace(TEST_TABLE.getName(), perms);
   }
 
-  private Map<byte[], ListMultimap<String, UserPermission>> snapshot(AuthManager.EntryUpdate e) {
+  private Map<byte[], ListMultimap<String, UserPermission>> snapshot(AclSnapshot.EntryUpdate e) {
     Map<byte[], ListMultimap<String, UserPermission>> map =
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
     map.put(e.getEntry(), e.getPermissions());

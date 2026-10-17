@@ -151,9 +151,9 @@ public class AclTableManager {
   private void announce(Table t, byte[] entry, long ts) throws IOException {
     ListMultimap<String, UserPermission> perms =
       PermissionStorage.getPermissions(conf, entry, t, null, null, null, false);
-    AuthManager.EntryUpdate update = perms.isEmpty()
-      ? AuthManager.EntryUpdate.deleted(entry)
-      : AuthManager.EntryUpdate.replace(entry, perms);
+    AclSnapshot.EntryUpdate update = perms.isEmpty()
+      ? AclSnapshot.EntryUpdate.deleted(entry)
+      : AclSnapshot.EntryUpdate.replace(entry, perms);
     if (LOG.isDebugEnabled()) {
       LOG.debug("Announcing acl entry {} update at ts {}, deleted={}", Bytes.toStringBinary(entry),
         ts, update.isDeleted());

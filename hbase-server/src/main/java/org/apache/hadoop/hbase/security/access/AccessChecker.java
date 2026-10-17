@@ -59,6 +59,7 @@ public class AccessChecker {
   private static final Logger LOG = LoggerFactory.getLogger(AccessChecker.class);
   private static final Logger AUDITLOG =
     LoggerFactory.getLogger("SecurityLogger." + AccessChecker.class.getName());
+  private final AclSnapshot aclSnapshot;
   private final AuthManager authManager;
 
   /** Group service to retrieve the user group information */
@@ -73,12 +74,22 @@ public class AccessChecker {
    * @param conf Existing configuration to use
    */
   public AccessChecker(final Configuration conf) {
-    this.authManager = new AuthManager(conf);
+    this.aclSnapshot = new AclSnapshot();
+    this.authManager = new AuthManager(aclSnapshot);
     initGroupService(conf);
   }
 
   public AuthManager getAuthManager() {
     return authManager;
+  }
+
+  /**
+   * The in-memory ACL snapshot holding the granted permissions this checker makes decisions
+   * against. The snapshot is owned and driven by the process side ACL holder ({@code ACLManager} on
+   * the master, {@code AclStore} on a region server).
+   */
+  public AclSnapshot getAclSnapshot() {
+    return aclSnapshot;
   }
 
   /**

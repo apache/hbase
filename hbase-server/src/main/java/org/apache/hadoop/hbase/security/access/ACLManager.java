@@ -74,9 +74,9 @@ public class ACLManager {
 
   private static final class PendingUpdate {
     private final long ts;
-    private final AuthManager.EntryUpdate update;
+    private final AclSnapshot.EntryUpdate update;
 
-    PendingUpdate(long ts, AuthManager.EntryUpdate update) {
+    PendingUpdate(long ts, AclSnapshot.EntryUpdate update) {
       this.ts = ts;
       this.update = update;
     }
@@ -118,13 +118,13 @@ public class ACLManager {
    * and starts listening to {@code hbase:acl} writes. Called when this master becomes active.
    */
   public void initialize() throws IOException {
-    PermissionStorage.AclSnapshot snapshot;
+    PermissionStorage.AclTableContent snapshot;
     try {
       snapshot = PermissionStorage.loadAllSnapshot(conf);
     } catch (TableNotFoundException e) {
       // a fresh cluster: the acl table is created later by the AccessController postStartMaster
       // hook
-      snapshot = new PermissionStorage.AclSnapshot(Collections.emptyMap(), 0L);
+      snapshot = new PermissionStorage.AclTableContent(Collections.emptyMap(), 0L);
     }
     long seed = Math.max(EnvironmentEdgeManager.currentTime(), snapshot.getMaxTimestamp() + 1);
     lastTs.set(seed);
@@ -148,7 +148,7 @@ public class ACLManager {
    * Queues an updated entry for broadcast to all servers. Callers apply the update to their local
    * cache themselves, see {@code AclTableManager}.
    */
-  public void onEntryUpdate(long ts, AuthManager.EntryUpdate update) {
+  public void onEntryUpdate(long ts, AclSnapshot.EntryUpdate update) {
     synchronized (this) {
       pending.put(update.getEntry(), new PendingUpdate(ts, update));
       maybeSubmitPush();
@@ -219,7 +219,7 @@ public class ACLManager {
     return updates;
   }
 
-  private static AclEntryUpdate toProto(AuthManager.EntryUpdate update) {
+  private static AclEntryUpdate toProto(AclSnapshot.EntryUpdate update) {
     AclEntryUpdate.Builder builder = AclEntryUpdate.newBuilder()
       .setEntry(ByteString.copyFrom(update.getEntry())).setDeleted(update.isDeleted());
     if (!update.isDeleted()) {

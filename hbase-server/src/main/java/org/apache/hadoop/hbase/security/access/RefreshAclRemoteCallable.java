@@ -39,7 +39,7 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.R
 @InterfaceAudience.Private
 public class RefreshAclRemoteCallable extends BaseRSProcedureCallable {
 
-  private List<AuthManager.EntryUpdate> updates;
+  private List<AclSnapshot.EntryUpdate> updates;
   private boolean full;
   private long ts;
 
@@ -66,8 +66,8 @@ public class RefreshAclRemoteCallable extends BaseRSProcedureCallable {
     for (AclEntryUpdate update : data.getUpdatesList()) {
       byte[] entry = update.getEntry().toByteArray();
       updates.add(update.getDeleted()
-        ? AuthManager.EntryUpdate.deleted(entry)
-        : AuthManager.EntryUpdate.replace(entry,
+        ? AclSnapshot.EntryUpdate.deleted(entry)
+        : AclSnapshot.EntryUpdate.replace(entry,
           AccessControlUtil.toUserPermission(update.getPerms())));
     }
   }
@@ -78,10 +78,10 @@ public class RefreshAclRemoteCallable extends BaseRSProcedureCallable {
   }
 
   private static Map<byte[], ListMultimap<String, UserPermission>>
-    toSnapshot(List<AuthManager.EntryUpdate> entryUpdates) {
+    toSnapshot(List<AclSnapshot.EntryUpdate> entryUpdates) {
     Map<byte[], ListMultimap<String, UserPermission>> snapshot =
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
-    for (AuthManager.EntryUpdate update : entryUpdates) {
+    for (AclSnapshot.EntryUpdate update : entryUpdates) {
       if (!update.isDeleted()) {
         snapshot.put(update.getEntry(), update.getPermissions());
       }

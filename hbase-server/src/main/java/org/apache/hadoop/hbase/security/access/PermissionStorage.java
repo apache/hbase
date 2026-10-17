@@ -481,11 +481,12 @@ public final class PermissionStorage {
    * Cell timestamps of acl writes are assigned by the master, so {@link #getMaxTimestamp()} is the
    * newest write reflected in the snapshot and serves as its version watermark.
    */
-  public static final class AclSnapshot {
+  public static final class AclTableContent {
     private final Map<byte[], ListMultimap<String, UserPermission>> permissions;
     private final long maxTimestamp;
 
-    AclSnapshot(Map<byte[], ListMultimap<String, UserPermission>> permissions, long maxTimestamp) {
+    AclTableContent(Map<byte[], ListMultimap<String, UserPermission>> permissions,
+      long maxTimestamp) {
       this.permissions = permissions;
       this.maxTimestamp = maxTimestamp;
     }
@@ -504,7 +505,7 @@ public final class PermissionStorage {
    * Load all permissions from {@code _acl_} along with the newest write timestamp seen, used as the
    * version watermark of a full reload.
    */
-  static AclSnapshot loadAllSnapshot(Configuration conf) throws IOException {
+  static AclTableContent loadAllSnapshot(Configuration conf) throws IOException {
     Map<byte[], ListMultimap<String, UserPermission>> allPerms =
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
     long maxTimestamp = 0L;
@@ -539,7 +540,7 @@ public final class PermissionStorage {
       }
     }
 
-    return new AclSnapshot(allPerms, maxTimestamp);
+    return new AclTableContent(allPerms, maxTimestamp);
   }
 
   public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
