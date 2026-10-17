@@ -1087,7 +1087,7 @@ public abstract class AbstractFSWAL<W extends WriterBase> implements WAL {
     sequenceIdAccounting.updateStore(encodedRegionName, familyName, sequenceid, onlyIfGreater);
   }
 
-  protected final SyncFuture getSyncFuture(long sequence, boolean forceSync) {
+  protected SyncFuture getSyncFuture(long sequence, boolean forceSync) {
     return syncFutureCache.getIfPresentOrNew().reset(sequence, forceSync);
   }
 
