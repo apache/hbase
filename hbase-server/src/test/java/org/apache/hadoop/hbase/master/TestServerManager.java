@@ -82,35 +82,35 @@ public class TestServerManager {
   }
 
   @Test
-  public void testReportRegionOpenSeedsFlushedSequenceId() {
+  public void testAdvanceRegionFlushedSeqSeedsFlushedSequenceId() {
     assertEquals(HConstants.NO_SEQNUM, lastFlushed(region));
-    sm.reportRegionOpen(region, 42L);
+    sm.advanceRegionFlushedSeq(region, 42L);
     assertEquals(42L, lastFlushed(region));
   }
 
   @Test
-  public void testReportRegionOpenDoesNotRegressExistingValue() {
-    sm.reportRegionOpen(region, 100L);
+  public void testAdvanceRegionFlushedSeqDoesNotRegressExistingValue() {
+    sm.advanceRegionFlushedSeq(region, 100L);
     // A later OPEN carrying a smaller openSeqNum (e.g. after a restart replayed less) must not
     // clobber a higher watermark already seeded here or supplied by a heartbeat.
-    sm.reportRegionOpen(region, 50L);
+    sm.advanceRegionFlushedSeq(region, 50L);
     assertEquals(100L, lastFlushed(region));
   }
 
   @Test
-  public void testReportRegionOpenIgnoresNoSeqNum() {
-    sm.reportRegionOpen(region, HConstants.NO_SEQNUM);
+  public void testAdvanceRegionFlushedSeqIgnoresNoSeqNum() {
+    sm.advanceRegionFlushedSeq(region, HConstants.NO_SEQNUM);
     assertEquals(HConstants.NO_SEQNUM, lastFlushed(region));
   }
 
   @Test
-  public void testReportRegionOpenIgnoresNegativeSeqNum() {
-    sm.reportRegionOpen(region, -5L);
+  public void testAdvanceRegionFlushedSeqIgnoresNegativeSeqNum() {
+    sm.advanceRegionFlushedSeq(region, -5L);
     assertEquals(HConstants.NO_SEQNUM, lastFlushed(region));
   }
 
   /**
-   * HBASE-30335: the OPEN-time seed ({@link ServerManager#reportRegionOpen}, which uses
+   * HBASE-30335: the OPEN-time seed ({@link ServerManager#advanceRegionFlushedSeq}, which uses
    * {@code merge(Math::max)}) and the heartbeat handler ({@link ServerManager#regionServerReport})
    * both write {@code flushedSequenceIdByRegion}. A stale in-flight heartbeat from the
    * soon-to-be-dead source RS carries a lower {@code completedSequenceId}. Whatever the
@@ -142,7 +142,7 @@ public class TestServerManager {
         final CyclicBarrier barrier = new CyclicBarrier(2);
         Future<?> seedTask = pool.submit(() -> {
           await(barrier);
-          sm.reportRegionOpen(ri, seedSeqId);
+          sm.advanceRegionFlushedSeq(ri, seedSeqId);
         });
         Future<?> heartbeatTask = pool.submit(() -> {
           await(barrier);
