@@ -25,9 +25,13 @@ import java.util.Map;
 import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.procedure.RefreshAclProcedure;
+import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -40,16 +44,29 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.AclEntryUpdate;
 
 /**
- * Master side ACL update pipeline. The {@code hbase:acl} table is the authoritative store; this
- * class assigns the monotonic timestamps of its writes, tracks the pending entry updates and pushes
- * change sets to all registered region servers through a single in-flight
+ * Master side ACL holder: the {@code hbase:acl} table is the authoritative store, this class owns
+ * the master's {@link AclSnapshot} of it and drives everything around it:
+ * <ul>
+ * <li>performs permission updates and queries on {@code hbase:acl} (all writes go through this
+ * class);</li>
+ * <li>assigns the monotonic timestamps of its writes;</li>
+ * <li>keeps its snapshot in step with every write (the entry state is applied synchronously, so the
+ * master never lags behind its own writes and needs no periodic reload);</li>
+ * <li>pushes the changes to all region servers through a single in-flight
  * {@link RefreshAclProcedure}: updates arriving while a push is running are merged into the next
- * one, so at most one broadcast is in flight and pushes are naturally coalesced.
+ * one, so at most one broadcast is in flight and pushes are naturally coalesced.</li>
+ * </ul>
+ * The refresh procedure only updates the region servers; the master applies each change to its own
+ * snapshot at write time and is reloaded from the table when it becomes active.
  * <p>
- * The local {@link AuthManager} cache is updated as soon as the write lands in the table, without
- * waiting for the broadcast. Servers that miss a push (crash, abandonment) converge through their
- * startup load and the periodic reload.
+ * The whole write path (timestamp assignment, table write, entry read back, local apply, queueing
+ * for broadcast) is serialized, so writes apply locally in their timestamp order and a concurrent
+ * write can never overwrite a newer state with an older one. The lock is held across the table
+ * write; ACL changes are rare admin operations, this does not hurt.
  * </p>
+ * Servers that miss a push (crash, abandonment) converge through their startup load and the
+ * periodic reload. Direct writes to {@code hbase:acl} that bypass this class are only picked up by
+ * that periodic reload.
  */
 @InterfaceAudience.Private
 public class ACLManager {
@@ -58,12 +75,17 @@ public class ACLManager {
 
   private final Configuration conf;
   private final MasterServices masterServices;
-  private final AclRefresher refresher;
+  private final Connection connection;
+  private final AclSnapshot snapshot;
+  private final AccessChecker accessChecker;
+
+  /** Guards the write path; see the class javadoc. */
+  private final Object writeLock = new Object();
 
   /**
    * Timestamps assigned to acl table writes. Seeded from the acl table content and the wall clock
    * at activation, so they never move backwards across restarts or master failovers and the RS side
-   * watermark of {@link AclRefresher} stays meaningful.
+   * watermark of {@code AclStore} stays meaningful.
    */
   private final AtomicLong lastTs = new AtomicLong(0L);
 
@@ -107,31 +129,39 @@ public class ACLManager {
     }
   }
 
-  public ACLManager(Configuration conf, MasterServices masterServices, AclRefresher refresher) {
+  public ACLManager(Configuration conf, MasterServices masterServices, Connection connection,
+    AclSnapshot snapshot, AccessChecker accessChecker) {
     this.conf = conf;
     this.masterServices = masterServices;
-    this.refresher = refresher;
+    this.connection = connection;
+    this.snapshot = snapshot;
+    this.accessChecker = accessChecker;
   }
 
   /**
-   * Seeds the timestamp clock, loads the master's own cache, pushes one full round to all servers
-   * and starts listening to {@code hbase:acl} writes. Called when this master becomes active.
+   * Seeds the timestamp clock, loads the master's snapshot from {@code hbase:acl} and pushes one
+   * full round to all region servers. Called when this master becomes active.
    */
   public void initialize() throws IOException {
-    PermissionStorage.AclTableContent snapshot;
-    try {
-      snapshot = PermissionStorage.loadAllSnapshot(conf);
-    } catch (TableNotFoundException e) {
-      // a fresh cluster: the acl table is created later by the AccessController postStartMaster
-      // hook
-      snapshot = new PermissionStorage.AclTableContent(Collections.emptyMap(), 0L);
+    PermissionStorage.AclTableContent content;
+    long seed;
+    synchronized (writeLock) {
+      try {
+        content = PermissionStorage.loadAllSnapshot(conf);
+      } catch (TableNotFoundException e) {
+        // a fresh cluster: the acl table is created later by the AccessController postStartMaster
+        // hook
+        content = new PermissionStorage.AclTableContent(Collections.emptyMap(), 0L);
+      }
+      seed = Math.max(EnvironmentEdgeManager.currentTime(), content.getMaxTimestamp() + 1);
+      lastTs.set(seed);
+      // serialized with the write path, so a write either lands before the scan (and is part of
+      // the snapshot) or applies its entry update after the swap
+      snapshot.applyFullSnapshot(content.getPermissions());
     }
-    long seed = Math.max(EnvironmentEdgeManager.currentTime(), snapshot.getMaxTimestamp() + 1);
-    lastTs.set(seed);
-    refresher.submitFullSnapshot(seed, snapshot.getPermissions());
     // the push timestamp is above every write the snapshot contains, so the push is never
     // dropped as stale by an RS; later writes get higher timestamps and apply on top of it
-    submitFullPush(toProto(snapshot.getPermissions()), nextTimestamp());
+    submitFullPush(toProto(content.getPermissions()), nextTimestamp());
     LOG.info("ACLManager initialized, timestamps start at {}", seed);
   }
 
@@ -144,9 +174,117 @@ public class ACLManager {
     return lastTs.updateAndGet(prev -> Math.max(now, prev + 1));
   }
 
+  /** Grants the given permission, optionally merging it into the existing actions. */
+  public void grant(UserPermission userPermission, boolean mergeExistingPermissions)
+    throws IOException {
+    synchronized (writeLock) {
+      byte[] entry = PermissionStorage.userPermissionRowKey(userPermission.getPermission());
+      long ts = nextTimestamp();
+      try (Table t = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        PermissionStorage.addUserPermission(conf, userPermission, t, mergeExistingPermissions, ts);
+        announce(t, entry, ts);
+      }
+    }
+  }
+
+  /** Revokes the given permission. */
+  public void revoke(UserPermission userPermission) throws IOException {
+    synchronized (writeLock) {
+      byte[] entry = PermissionStorage.userPermissionRowKey(userPermission.getPermission());
+      long ts = nextTimestamp();
+      try (Table t = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        PermissionStorage.removeUserPermission(conf, userPermission, t, ts);
+        announce(t, entry, ts);
+      }
+    }
+  }
+
+  /** Drops all permissions of a removed table. */
+  public void removeTablePermissions(TableName tableName) throws IOException {
+    synchronized (writeLock) {
+      long ts = nextTimestamp();
+      try (Table t = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        PermissionStorage.removeTablePermissions(conf, tableName, t, ts);
+        announce(t, tableName.getName(), ts);
+      }
+    }
+  }
+
+  /** Drops all permissions of a removed namespace. */
+  public void removeNamespacePermissions(String namespace) throws IOException {
+    synchronized (writeLock) {
+      byte[] entry = Bytes.toBytes(PermissionStorage.toNamespaceEntry(namespace));
+      long ts = nextTimestamp();
+      try (Table t = connection.getTable(PermissionStorage.ACL_TABLE_NAME)) {
+        PermissionStorage.removeNamespacePermissions(conf, namespace, t, ts);
+        announce(t, entry, ts);
+      }
+    }
+  }
+
+  public List<UserPermission> getUserTablePermissions(TableName table, byte[] cf, byte[] cq,
+    String userName, boolean filter) throws IOException {
+    return PermissionStorage.getUserTablePermissions(conf, table, cf, cq, userName, filter);
+  }
+
+  public List<UserPermission> getUserNamespacePermissions(String namespace, String userName,
+    boolean filter) throws IOException {
+    return PermissionStorage.getUserNamespacePermissions(conf, namespace, userName, filter);
+  }
+
+  public List<UserPermission> getUserPermissions(String userName, boolean filter)
+    throws IOException {
+    return PermissionStorage.getUserPermissions(conf, null, null, null, userName, filter);
+  }
+
   /**
-   * Queues an updated entry for broadcast to all servers. Callers apply the update to their local
-   * cache themselves, see {@code AclTableManager}.
+   * Checks the given permissions of the given user against the authorization cache.
+   * @param caller   the request user
+   * @param userName the user to check, when different from the caller the caller needs the
+   *                 permission to check another user
+   */
+  public List<Boolean> hasUserPermissions(User caller, String userName,
+    List<Permission> permissions) throws IOException {
+    if (!caller.getShortName().equals(userName)) {
+      List<String> groups = AccessChecker.getUserGroups(userName);
+      caller = new AccessChecker.InputUser(userName, groups.toArray(new String[groups.size()]));
+    }
+    List<Boolean> results = new ArrayList<>(permissions.size());
+    if (accessChecker != null) {
+      for (Permission permission : permissions) {
+        results.add(accessChecker.hasUserPermission(caller, "hasUserPermissions", permission));
+      }
+    } else {
+      for (int i = 0; i < permissions.size(); i++) {
+        results.add(true);
+      }
+    }
+    return results;
+  }
+
+  /**
+   * Reads the entry state back after the write landed, applies it to the local snapshot and queues
+   * it for broadcast to the region servers.
+   */
+  private void announce(Table t, byte[] entry, long ts) throws IOException {
+    ListMultimap<String, UserPermission> perms =
+      PermissionStorage.getPermissions(conf, entry, t, null, null, null, false);
+    AclSnapshot.EntryUpdate update = perms.isEmpty()
+      ? AclSnapshot.EntryUpdate.deleted(entry)
+      : AclSnapshot.EntryUpdate.replace(entry, perms);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Announcing acl entry {} update at ts {}, deleted={}", Bytes.toStringBinary(entry),
+        ts, update.isDeleted());
+    }
+    // the write is done and the write path is serialized, the state read back is the current one:
+    // apply it right away so the master's snapshot never lags behind its own writes
+    snapshot.applyUpdates(Collections.singletonList(update));
+    onEntryUpdate(ts, update);
+  }
+
+  /**
+   * Queues an updated entry for broadcast to all region servers. Called by the write path after it
+   * applied the update locally.
    */
   public void onEntryUpdate(long ts, AclSnapshot.EntryUpdate update) {
     synchronized (this) {
@@ -181,10 +319,6 @@ public class ACLManager {
   public synchronized void onPushComplete() {
     pushInFlight = false;
     maybeSubmitPush();
-  }
-
-  public synchronized boolean isPushInFlight() {
-    return pushInFlight;
   }
 
   public long getLastTimestamp() {

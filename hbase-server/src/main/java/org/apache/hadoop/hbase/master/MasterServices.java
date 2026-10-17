@@ -59,7 +59,6 @@ import org.apache.hadoop.hbase.replication.master.ReplicationLogCleanerBarrier;
 import org.apache.hadoop.hbase.rsgroup.RSGroupInfoManager;
 import org.apache.hadoop.hbase.security.access.ACLManager;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.AclTableManager;
 import org.apache.yetus.audience.InterfaceAudience;
 
 import org.apache.hbase.thirdparty.com.google.protobuf.Service;
@@ -457,9 +456,6 @@ public interface MasterServices extends Server, KeyManagementService {
 
   /** Returns the {@link ACLManager} */
   ACLManager getACLManager();
-
-  /** Returns the {@link AclTableManager} */
-  AclTableManager getAclTableManager();
 
   /**
    * Execute region plans with throttling

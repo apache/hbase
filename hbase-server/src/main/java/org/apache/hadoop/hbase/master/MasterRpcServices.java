@@ -2944,7 +2944,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
           ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         boolean mergeExistingPermissions = request.getMergeExistingPermissions();
         server.cpHost.preGrant(perm, mergeExistingPermissions);
-        server.getAclTableManager().grant(perm, mergeExistingPermissions);
+        server.getACLManager().grant(perm, mergeExistingPermissions);
         server.cpHost.postGrant(perm, mergeExistingPermissions);
         return GrantResponse.getDefaultInstance();
       } else {
@@ -2965,7 +2965,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         final UserPermission userPermission =
           ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         server.cpHost.preRevoke(userPermission);
-        server.getAclTableManager().revoke(userPermission);
+        server.getACLManager().revoke(userPermission);
         server.cpHost.postRevoke(userPermission);
         return RevokeResponse.getDefaultInstance();
       } else {
@@ -3000,14 +3000,13 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         List<UserPermission> perms = null;
         if (permissionType == Type.Table) {
           boolean filter = (cf != null || userName != null) ? true : false;
-          perms =
-            server.getAclTableManager().getUserTablePermissions(table, cf, cq, userName, filter);
+          perms = server.getACLManager().getUserTablePermissions(table, cf, cq, userName, filter);
         } else if (permissionType == Type.Namespace) {
-          perms = server.getAclTableManager().getUserNamespacePermissions(namespace, userName,
+          perms = server.getACLManager().getUserNamespacePermissions(namespace, userName,
             userName != null ? true : false);
         } else {
-          perms = server.getAclTableManager().getUserPermissions(userName,
-            userName != null ? true : false);
+          perms =
+            server.getACLManager().getUserPermissions(userName, userName != null ? true : false);
           // Skip super users when filter user is specified
           if (userName == null) {
             // Adding superusers explicitly to the result set as PermissionStorage do not store
@@ -3049,7 +3048,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         }
         server.getMasterCoprocessorHost().preHasUserPermissions(userName, permissions);
         List<Boolean> hasUserPermissions =
-          server.getAclTableManager().hasUserPermissions(caller, userName, permissions);
+          server.getACLManager().hasUserPermissions(caller, userName, permissions);
         server.getMasterCoprocessorHost().postHasUserPermissions(userName, permissions);
         HasUserPermissionsResponse.Builder builder =
           HasUserPermissionsResponse.newBuilder().addAllHasUserPermission(hasUserPermissions);

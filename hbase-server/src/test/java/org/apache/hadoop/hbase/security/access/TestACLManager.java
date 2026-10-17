@@ -61,8 +61,8 @@ public class TestACLManager {
     conf.set(Superusers.SUPERUSER_CONF_KEY, "admin");
     Superusers.initialize(conf);
     AclSnapshot aclSnapshot = new AclSnapshot();
-    AclRefresher refresher = new AclRefresher(conf, aclSnapshot);
-    aclManager = new ACLManager(conf, new MockNoopMasterServices(conf), refresher) {
+    // this test only exercises the push pipeline: no acl table access, no permission checks
+    aclManager = new ACLManager(conf, new MockNoopMasterServices(conf), null, aclSnapshot, null) {
       @Override
       void submitPushProcedure(RefreshAclProcedure procedure) {
         submitted.add(procedure);

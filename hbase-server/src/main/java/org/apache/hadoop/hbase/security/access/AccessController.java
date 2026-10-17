@@ -238,8 +238,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     return accessChecker.getAuthManager();
   }
 
-  private AclTableManager getAclTableManager(ObserverContext<MasterCoprocessorEnvironment> ctx) {
-    return ((HasMasterServices) ctx.getEnvironment()).getMasterServices().getAclTableManager();
+  private ACLManager getACLManager(ObserverContext<MasterCoprocessorEnvironment> ctx) {
+    return ((HasMasterServices) ctx.getEnvironment()).getMasterServices().getACLManager();
   }
 
   /**
@@ -738,7 +738,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         String owner = getActiveUser(c).getShortName();
         UserPermission userPermission = new UserPermission(owner,
           Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
-        getAclTableManager(c).grant(userPermission, false);
+        getACLManager(c).grant(userPermission, false);
       }
     }
   }
@@ -752,7 +752,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
     final TableName tableName) throws IOException {
-    getAclTableManager(c).removeTablePermissions(tableName);
+    getACLManager(c).removeTablePermissions(tableName);
   }
 
   @Override
@@ -780,7 +780,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     List<UserPermission> perms = tableAcls.get(tableName);
     if (perms != null) {
       for (UserPermission perm : perms) {
-        getAclTableManager(ctx).grant(perm, false);
+        getACLManager(ctx).grant(perm, false);
       }
     }
     tableAcls.remove(tableName);
@@ -825,7 +825,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     String owner = getActiveUser(c).getShortName();
     UserPermission userperm = new UserPermission(owner,
       Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
-    getAclTableManager(c).grant(userperm, false);
+    getACLManager(c).grant(userperm, false);
   }
 
   @Override
@@ -1037,7 +1037,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
     final String namespace) throws IOException {
-    getAclTableManager(ctx).removeNamespacePermissions(namespace);
+    getACLManager(ctx).removeNamespacePermissions(namespace);
     LOG.info(namespace + " entry deleted in " + PermissionStorage.ACL_TABLE_NAME + " table.");
   }
 
