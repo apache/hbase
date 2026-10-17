@@ -127,7 +127,12 @@ public class OpenRegionProcedure extends RegionRemoteProcedureBase {
 
   @Override
   protected void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode,
-    long openSeqNum) throws IOException {
+    TransitionCode transitionCode, long openSeqNum) throws IOException {
+    if (transitionCode == TransitionCode.FAILED_OPEN) {
+      // will not persist to meta if giveUp is false, matches the live reportTransition path
+      am.regionFailedOpen(regionNode, false);
+      return;
+    }
     if (regionNode.getState() == State.OPEN) {
       // should have already been persisted, ignore
       return;
