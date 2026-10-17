@@ -159,6 +159,7 @@ import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AbstractReadOnlyController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.AclStore;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CompressionTest;
@@ -399,6 +400,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   private BlockCache blockCache;
   // The cache for mob files
   private MobFileCache mobFileCache;
+  private AclStore aclStore;
 
   /** The health check chore. */
   private HealthCheckChore healthCheckChore;
@@ -559,6 +561,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
         masterAddressTracker = null;
       }
       this.rpcServices.start(zooKeeper);
+      // created before registering with the master, so a push dispatched right after
+      // registration cannot land before this server has an AclStore
+      this.aclStore = new AclStore(conf, getAccessChecker().getAclSnapshot(), this);
       span.setStatus(StatusCode.OK);
     } catch (Throwable t) {
       // Make sure we log the exception. HRegionServer is often started via reflection and the
@@ -2051,6 +2056,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     if (this.brokenStoreFileCleaner != null) {
       choreService.scheduleChore(brokenStoreFileCleaner);
     }
+    // periodic full reload of the ACL snapshot, the fallback for lost pushes and direct writes
+    aclStore.start(choreService);
     if (this.rsMobFileCleanerChore != null) {
       choreService.scheduleChore(rsMobFileCleanerChore);
     }
@@ -2701,6 +2708,11 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
    * {@code RSRpcServices#checkOpen()}. A missing acl table (fresh cluster) counts as loaded with an
    * empty cache.
    */
+  /** The region server side holder of the current ACL snapshot. */
+  public AclStore getAclStore() {
+    return aclStore;
+  }
+
   private void loadAclCache() {
     if (!AccessChecker.isAuthorizationSupported(conf)) {
       setAclLoaded(true);
@@ -2711,9 +2723,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     RetryCounter rc = rcf.create();
     while (keepLooping()) {
       try {
-        getAclRefresher().reloadFromTable();
+        getAclStore().reloadFromTable();
         setAclLoaded(true);
-        LOG.info("ACL cache loaded, applied timestamp {}", getAclRefresher().getAppliedTimestamp());
+        LOG.info("ACL cache loaded, applied timestamp {}", getAclStore().getAppliedTimestamp());
         return;
       } catch (IOException e) {
         long sleepTime = rc.getBackoffTimeAndIncrementAttempts();
@@ -3844,6 +3856,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     shutdownChore(brokenStoreFileCleaner);
     shutdownChore(rsMobFileCleanerChore);
     shutdownChore(replicationMarkerChore);
+    aclStore.close();
   }
 
   @Override

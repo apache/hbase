@@ -27,6 +27,7 @@ import java.util.Map;
 import java.util.TreeMap;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
@@ -45,13 +46,13 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 @InterfaceAudience.Private
 @Tag(SecurityTests.TAG)
 @Tag(SmallTests.TAG)
-public class TestAclRefresher {
+public class TestAclStore {
 
-  private static final TableName TEST_TABLE = TableName.valueOf("aclRefresherTable");
+  private static final TableName TEST_TABLE = TableName.valueOf("aclStoreTable");
 
   private AuthManager authManager;
   private AclSnapshot aclSnapshot;
-  private AclRefresher refresher;
+  private AclStore store;
   private User george;
 
   @BeforeEach
@@ -61,79 +62,78 @@ public class TestAclRefresher {
     Superusers.initialize(conf);
     aclSnapshot = new AclSnapshot();
     authManager = new AuthManager(aclSnapshot);
-    refresher = new AclRefresher(conf, aclSnapshot);
+    store = new AclStore(conf, aclSnapshot, new Stoppable() {
+      @Override
+      public void stop(String why) {
+      }
+
+      @Override
+      public boolean isStopped() {
+        return false;
+      }
+    });
     george = User.createUserForTesting(conf, "george", new String[0]);
   }
 
   @AfterEach
   public void tearDown() {
-    refresher.close();
+    store.close();
   }
 
   @Test
   public void testUpdatesApplyInTimestampOrder() throws IOException {
-    refresher.submitUpdates(100, Collections.singletonList(replace(Permission.Action.READ)));
-    refresher.flush();
+    store.applyUpdates(100, Collections.singletonList(replace(Permission.Action.READ)));
     assertTrue(canRead());
-    assertEquals(100, refresher.getAppliedTimestamp());
+    assertEquals(100, store.getAppliedTimestamp());
 
     // not newer than the applied one: dropped, the cache does not regress
-    refresher.submitUpdates(50, Collections.singletonList(replace(Permission.Action.WRITE)));
-    refresher.flush();
+    store.applyUpdates(50, Collections.singletonList(replace(Permission.Action.WRITE)));
     assertTrue(canRead());
     assertFalse(canWrite());
-    assertEquals(100, refresher.getAppliedTimestamp());
+    assertEquals(100, store.getAppliedTimestamp());
 
-    refresher.submitUpdates(150, Collections.singletonList(replace(Permission.Action.WRITE)));
-    refresher.flush();
+    store.applyUpdates(150, Collections.singletonList(replace(Permission.Action.WRITE)));
     assertTrue(canWrite());
-    assertEquals(150, refresher.getAppliedTimestamp());
+    assertEquals(150, store.getAppliedTimestamp());
   }
 
   @Test
   public void testDeletedEntriesNotResurrectedByStaleUpdates() throws IOException {
-    refresher.submitUpdates(100, Collections.singletonList(replace(Permission.Action.READ)));
-    refresher.submitUpdates(200,
+    store.applyUpdates(100, Collections.singletonList(replace(Permission.Action.READ)));
+    store.applyUpdates(200,
       Collections.singletonList(AclSnapshot.EntryUpdate.deleted(TEST_TABLE.getName())));
-    refresher.flush();
     assertFalse(canRead());
 
     // a stale update from before the delete must not bring the entry back
-    refresher.submitUpdates(150, Collections.singletonList(replace(Permission.Action.READ)));
-    refresher.flush();
+    store.applyUpdates(150, Collections.singletonList(replace(Permission.Action.READ)));
     assertFalse(canRead());
-    assertEquals(200, refresher.getAppliedTimestamp());
+    assertEquals(200, store.getAppliedTimestamp());
   }
 
   @Test
   public void testFullSnapshotAdvancesWatermark() throws IOException {
-    refresher.submitFullSnapshot(200, snapshot(replace(Permission.Action.READ)));
-    refresher.flush();
+    store.applyFullSnapshot(200, snapshot(replace(Permission.Action.READ)));
     assertTrue(canRead());
-    assertEquals(200, refresher.getAppliedTimestamp());
+    assertEquals(200, store.getAppliedTimestamp());
 
     // older than the snapshot content: dropped
-    refresher.submitUpdates(150, Collections.singletonList(replace(Permission.Action.WRITE)));
-    refresher.flush();
+    store.applyUpdates(150, Collections.singletonList(replace(Permission.Action.WRITE)));
     assertTrue(canRead());
     assertFalse(canWrite());
 
     // newer than the snapshot: applied on top of it
-    refresher.submitUpdates(250, Collections.singletonList(replace(Permission.Action.WRITE)));
-    refresher.flush();
+    store.applyUpdates(250, Collections.singletonList(replace(Permission.Action.WRITE)));
     assertTrue(canWrite());
-    assertEquals(250, refresher.getAppliedTimestamp());
+    assertEquals(250, store.getAppliedTimestamp());
   }
 
   @Test
   public void testStaleFullSnapshotIsDropped() throws IOException {
-    refresher.submitUpdates(300, Collections.singletonList(replace(Permission.Action.WRITE)));
-    refresher.flush();
+    store.applyUpdates(300, Collections.singletonList(replace(Permission.Action.WRITE)));
     assertTrue(canWrite());
 
     // an older full snapshot (e.g. a replayed procedure after a master failover) is dropped
-    refresher.submitFullSnapshot(200, snapshot(replace(Permission.Action.READ)));
-    refresher.flush();
+    store.applyFullSnapshot(200, snapshot(replace(Permission.Action.READ)));
     assertTrue(canWrite());
     assertFalse(canRead());
   }

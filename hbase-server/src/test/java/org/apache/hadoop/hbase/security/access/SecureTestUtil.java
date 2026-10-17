@@ -298,7 +298,7 @@ public class SecureTestUtil {
       @Override
       public boolean evaluate() throws IOException {
         for (RegionServerThread t : cluster.getLiveRegionServerThreads()) {
-          long appliedTs = t.getRegionServer().getAclRefresher().getAppliedTimestamp();
+          long appliedTs = t.getRegionServer().getAclStore().getAppliedTimestamp();
           if (appliedTs < expectedTs) {
             LOG.info("RegionServer {} has not applied ACL updates up to {} yet: applied={}",
               t.getRegionServer().getServerName(), expectedTs, appliedTs);

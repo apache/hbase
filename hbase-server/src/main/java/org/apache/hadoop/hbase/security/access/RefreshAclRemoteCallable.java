@@ -33,8 +33,9 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.A
 import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos.RefreshAclRemoteStateData;
 
 /**
- * Applies one ACL change set pushed by the master to the local {@link AuthManager} cache, via
- * {@link AclRefresher} (serial queue, timestamp watermark).
+ * Applies one ACL change set pushed by the master to the local {@link AclStore} (timestamp
+ * watermark). The apply is synchronous: when this callable reports completion, the change is
+ * already visible to the authorization checks of this region server.
  */
 @InterfaceAudience.Private
 public class RefreshAclRemoteCallable extends BaseRSProcedureCallable {
@@ -45,15 +46,12 @@ public class RefreshAclRemoteCallable extends BaseRSProcedureCallable {
 
   @Override
   protected byte[] doCall() throws Exception {
-    AclRefresher refresher = rs.getAclRefresher();
+    AclStore store = rs.getAclStore();
     if (full) {
-      refresher.submitFullSnapshot(ts, toSnapshot(updates));
+      store.applyFullSnapshot(ts, toSnapshot(updates));
     } else {
-      refresher.submitUpdates(ts, updates);
+      store.applyUpdates(ts, updates);
     }
-    // only report completion after the change has been applied to the cache, so the master side
-    // procedure completion is a reliable "applied" signal
-    refresher.flush();
     return null;
   }
 
