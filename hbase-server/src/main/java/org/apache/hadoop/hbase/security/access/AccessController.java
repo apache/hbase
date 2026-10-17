@@ -30,7 +30,6 @@ import java.util.Map.Entry;
 import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
-import java.util.TreeSet;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ArrayBackedTag;
@@ -68,7 +67,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
@@ -130,7 +128,6 @@ import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 import org.apache.hbase.thirdparty.com.google.common.collect.ImmutableSet;
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.MapMaker;
 import org.apache.hbase.thirdparty.com.google.common.collect.Maps;
@@ -187,7 +184,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   private static final byte[] TRUE = Bytes.toBytes(true);
 
   private AccessChecker accessChecker;
-  private ZKPermissionWatcher zkPermissionWatcher;
 
   /** flags if we are running on a region of the _acl_ table */
   private boolean aclRegion = false;
@@ -242,56 +238,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     return accessChecker.getAuthManager();
   }
 
-  private void initialize(RegionCoprocessorEnvironment e) throws IOException {
-    final Region region = e.getRegion();
-    Configuration conf = e.getConfiguration();
-    Map<byte[], ListMultimap<String, UserPermission>> tables = PermissionStorage.loadAll(region);
-    // For each table, write out the table's permissions to the respective
-    // znode for that table.
-    for (Map.Entry<byte[], ListMultimap<String, UserPermission>> t : tables.entrySet()) {
-      byte[] entry = t.getKey();
-      ListMultimap<String, UserPermission> perms = t.getValue();
-      byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
-      zkPermissionWatcher.writeToZookeeper(entry, serialized);
-    }
-    initialized = true;
-  }
-
-  /**
-   * Writes all table ACLs for the tables in the given Map up into ZooKeeper znodes. This is called
-   * to synchronize ACL changes following {@code _acl_} table updates.
-   */
-  private void updateACL(RegionCoprocessorEnvironment e, final Map<byte[], List<Cell>> familyMap) {
-    Set<byte[]> entries = new TreeSet<>(Bytes.BYTES_RAWCOMPARATOR);
-    for (Map.Entry<byte[], List<Cell>> f : familyMap.entrySet()) {
-      List<Cell> cells = f.getValue();
-      for (Cell cell : cells) {
-        if (CellUtil.matchingFamily(cell, PermissionStorage.ACL_LIST_FAMILY)) {
-          entries.add(CellUtil.cloneRow(cell));
-        }
-      }
-    }
-    Configuration conf = regionEnv.getConfiguration();
-    byte[] currentEntry = null;
-    // TODO: Here we are already on the ACL region. (And it is single
-    // region) We can even just get the region from the env and do get
-    // directly. The short circuit connection would avoid the RPC overhead
-    // so no socket communication, req write/read .. But we have the PB
-    // to and fro conversion overhead. get req is converted to PB req
-    // and results are converted to PB results 1st and then to POJOs
-    // again. We could have avoided such at least in ACL table context..
-    try (Table t = e.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-      for (byte[] entry : entries) {
-        currentEntry = entry;
-        ListMultimap<String, UserPermission> perms =
-          PermissionStorage.getPermissions(conf, entry, t, null, null, null, false);
-        byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
-        zkPermissionWatcher.writeToZookeeper(entry, serialized);
-      }
-    } catch (IOException ex) {
-      LOG.error("Failed updating permissions mirror for '"
-        + (currentEntry == null ? "null" : Bytes.toString(currentEntry)) + "'", ex);
-    }
+  private AclTableManager getAclTableManager(ObserverContext<MasterCoprocessorEnvironment> ctx) {
+    return ((HasMasterServices) ctx.getEnvironment()).getMasterServices().getAclTableManager();
   }
 
   /**
@@ -682,7 +630,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       MasterCoprocessorEnvironment mEnv = (MasterCoprocessorEnvironment) env;
       if (mEnv instanceof HasMasterServices) {
         MasterServices masterServices = ((HasMasterServices) mEnv).getMasterServices();
-        zkPermissionWatcher = masterServices.getZKPermissionWatcher();
         accessChecker = masterServices.getAccessChecker();
       }
     } else if (env instanceof RegionServerCoprocessorEnvironment) {
@@ -690,7 +637,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       if (rsEnv instanceof HasRegionServerServices) {
         RegionServerServices rsServices =
           ((HasRegionServerServices) rsEnv).getRegionServerServices();
-        zkPermissionWatcher = rsServices.getZKPermissionWatcher();
         accessChecker = rsServices.getAccessChecker();
       }
     } else if (env instanceof RegionCoprocessorEnvironment) {
@@ -702,12 +648,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       if (regionEnv instanceof HasRegionServerServices) {
         RegionServerServices rsServices =
           ((HasRegionServerServices) regionEnv).getRegionServerServices();
-        zkPermissionWatcher = rsServices.getZKPermissionWatcher();
         accessChecker = rsServices.getAccessChecker();
       }
     }
 
-    Preconditions.checkState(zkPermissionWatcher != null, "ZKPermissionWatcher is null");
     Preconditions.checkState(accessChecker != null, "AccessChecker is null");
 
     // set the user-provider.
@@ -792,20 +736,9 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
           + " should be configured as the first Coprocessor");
       } else {
         String owner = getActiveUser(c).getShortName();
-        final UserPermission userPermission = new UserPermission(owner,
+        UserPermission userPermission = new UserPermission(owner,
           Permission.newBuilder(desc.getTableName()).withActions(Action.values()).build());
-        // switch to the real hbase master user for doing the RPC on the ACL table
-        User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-          @Override
-          public Void run() throws Exception {
-            try (Table table =
-              c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-              PermissionStorage.addUserPermission(c.getEnvironment().getConfiguration(),
-                userPermission, table);
-            }
-            return null;
-          }
-        });
+        getAclTableManager(c).grant(userPermission, false);
       }
     }
   }
@@ -819,18 +752,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
     final TableName tableName) throws IOException {
-    final Configuration conf = c.getEnvironment().getConfiguration();
-    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        try (Table table =
-          c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.removeTablePermissions(conf, tableName, table);
-        }
-        return null;
-      }
-    });
-    zkPermissionWatcher.deleteTableACLNode(tableName);
+    getAclTableManager(c).removeTablePermissions(tableName);
   }
 
   @Override
@@ -855,23 +777,13 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
     final TableName tableName) throws IOException {
-    final Configuration conf = ctx.getEnvironment().getConfiguration();
-    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        List<UserPermission> perms = tableAcls.get(tableName);
-        if (perms != null) {
-          for (UserPermission perm : perms) {
-            try (Table table =
-              ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-              PermissionStorage.addUserPermission(conf, perm, table);
-            }
-          }
-        }
-        tableAcls.remove(tableName);
-        return null;
+    List<UserPermission> perms = tableAcls.get(tableName);
+    if (perms != null) {
+      for (UserPermission perm : perms) {
+        getAclTableManager(ctx).grant(perm, false);
       }
-    });
+    }
+    tableAcls.remove(tableName);
   }
 
   @Override
@@ -909,21 +821,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
     TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
-    final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
-    final String owner = getActiveUser(c).getShortName();
-    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        UserPermission userperm = new UserPermission(owner,
-          Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
-        try (Table table =
-          c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.addUserPermission(conf, userperm, table);
-        }
-        return null;
-      }
-    });
+    String owner = getActiveUser(c).getShortName();
+    UserPermission userperm = new UserPermission(owner,
+      Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
+    getAclTableManager(c).grant(userperm, false);
   }
 
   @Override
@@ -1135,18 +1037,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
     final String namespace) throws IOException {
-    final Configuration conf = ctx.getEnvironment().getConfiguration();
-    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        try (Table table =
-          ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.removeNamespacePermissions(conf, namespace, table);
-        }
-        return null;
-      }
-    });
-    zkPermissionWatcher.deleteNamespaceACLNode(namespace);
+    getAclTableManager(ctx).removeNamespacePermissions(namespace);
     LOG.info(namespace + " entry deleted in " + PermissionStorage.ACL_TABLE_NAME + " table.");
   }
 
@@ -1255,16 +1146,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     }
     if (PermissionStorage.isAclRegion(region)) {
       aclRegion = true;
-      try {
-        initialize(env);
-      } catch (IOException ex) {
-        // if we can't obtain permissions, it's better to fail
-        // than perform checks incorrectly
-        throw new RuntimeException("Failed to initialize permissions cache", ex);
-      }
-    } else {
-      initialized = true;
     }
+    initialized = true;
   }
 
   @Override
@@ -1436,7 +1319,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void postPut(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final Put put, final WALEdit edit, final Durability durability) {
     if (aclRegion) {
-      updateACL(c.getEnvironment(), put.getFamilyCellMap());
     }
   }
 
@@ -1521,7 +1403,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void postDelete(final ObserverContext<? extends RegionCoprocessorEnvironment> c,
     final Delete delete, final WALEdit edit, final Durability durability) throws IOException {
     if (aclRegion) {
-      updateACL(c.getEnvironment(), delete.getFamilyCellMap());
     }
   }
 
@@ -2416,8 +2297,17 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         break;
       case TABLE:
         TablePermission tablePerm = (TablePermission) userPermission.getPermission();
-        accessChecker.requirePermission(caller, request, tablePerm.getTableName(),
-          tablePerm.getFamily(), tablePerm.getQualifier(), null, Action.ADMIN);
+        TableName targetTable = tablePerm.getTableName();
+        if (
+          TableName.META_TABLE_NAME.equals(targetTable)
+            || PermissionStorage.ACL_TABLE_NAME.equals(targetTable)
+        ) {
+          // fixed rules govern hbase:meta / hbase:acl, stored grants would never take effect
+          throw new AccessDeniedException("Permissions on " + targetTable
+            + " are not stored, access to it is governed by fixed rules");
+        }
+        accessChecker.requirePermission(caller, request, targetTable, tablePerm.getFamily(),
+          tablePerm.getQualifier(), null, Action.ADMIN);
         break;
       default:
     }

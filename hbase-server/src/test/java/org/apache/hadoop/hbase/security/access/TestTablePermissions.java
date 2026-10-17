@@ -270,18 +270,6 @@ public class TestTablePermissions {
     checkMultimapEqual(preperms, postperms);
   }
 
-  @Test
-  public void testSerialization() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    ListMultimap<String, UserPermission> permissions = createPermissions();
-    byte[] permsData = PermissionStorage.writePermissionsAsBytes(permissions, conf);
-
-    ListMultimap<String, UserPermission> copy =
-      PermissionStorage.readUserPermission(permsData, conf);
-
-    checkMultimapEqual(permissions, copy);
-  }
-
   private ListMultimap<String, UserPermission> createPermissions() {
     ListMultimap<String, UserPermission> permissions = ArrayListMultimap.create();
     permissions.put("george", new UserPermission("george",

@@ -69,7 +69,7 @@ import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.UserProvider;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.AclRefresher;
 import org.apache.hadoop.hbase.trace.TraceUtil;
 import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.Addressing;
@@ -107,6 +107,8 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
   // shut down. Also set by call to stop when debugging or running unit tests
   // of HRegionServer in isolation.
   protected volatile boolean stopped = false;
+
+  private volatile boolean aclLoaded = false;
 
   // Flag set when a read-only to read-write transition is blocked because another active cluster
   // exists
@@ -559,8 +561,20 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     return rpcServices.getAccessChecker();
   }
 
-  public ZKPermissionWatcher getZKPermissionWatcher() {
-    return rpcServices.getZkPermissionWatcher();
+  public AclRefresher getAclRefresher() {
+    return rpcServices.getAclRefresher();
+  }
+
+  /**
+   * Whether the local ACL cache has finished its initial load. Region servers hold non superuser
+   * requests until this is true, see {@code RSRpcServices#checkOpen()}.
+   */
+  public boolean isAclLoaded() {
+    return aclLoaded;
+  }
+
+  public void setAclLoaded(boolean aclLoaded) {
+    this.aclLoaded = aclLoaded;
   }
 
   @Override

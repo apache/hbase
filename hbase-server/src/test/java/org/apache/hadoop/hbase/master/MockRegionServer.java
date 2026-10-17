@@ -74,7 +74,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
@@ -774,11 +773,6 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
 
   @Override
   public AccessChecker getAccessChecker() {
-    return null;
-  }
-
-  @Override
-  public ZKPermissionWatcher getZKPermissionWatcher() {
     return null;
   }
 

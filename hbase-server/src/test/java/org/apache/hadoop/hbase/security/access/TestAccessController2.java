@@ -53,8 +53,6 @@ import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.SecurityTests;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.zookeeper.ZKUtil;
-import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeAll;
@@ -301,12 +299,15 @@ public class TestAccessController2 extends SecureTestUtil {
         }
       };
 
-      // All writes to ACL table denied except for GLOBAL WRITE permission and superuser
+      // The ACL table is governed by fixed rules: only the superuser can write it, stored
+      // grants of any scope never take effect on it
 
-      verifyDenied(writeAction, globalAdmin, globalCreate, globalRead, TESTGROUP2_USER1);
+      verifyDenied(writeAction, globalAdmin, globalCreate, globalRead, globalWrite,
+        TESTGROUP2_USER1);
       verifyDenied(writeAction, nsAdmin, nsCreate, nsRead, nsWrite);
       verifyDenied(writeAction, tableAdmin, tableCreate, tableRead, tableWrite);
-      verifyAllowed(writeAction, superUser, globalWrite, TESTGROUP1_USER1);
+      verifyDenied(writeAction, TESTGROUP1_USER1);
+      verifyAllowed(writeAction, superUser);
     } finally {
       revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.WRITE);
     }
@@ -333,12 +334,15 @@ public class TestAccessController2 extends SecureTestUtil {
         }
       };
 
-      // All reads from ACL table denied except for GLOBAL READ and superuser
+      // The ACL table is governed by fixed rules: only the superuser can read it, stored
+      // grants of any scope never take effect on it
 
-      verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite, TESTGROUP2_USER1);
+      verifyDenied(scanAction, globalAdmin, globalCreate, globalWrite, globalRead,
+        TESTGROUP2_USER1);
       verifyDenied(scanAction, nsCreate, nsAdmin, nsRead, nsWrite);
       verifyDenied(scanAction, tableCreate, tableAdmin, tableRead, tableWrite);
-      verifyAllowed(scanAction, superUser, globalRead, TESTGROUP1_USER1);
+      verifyDenied(scanAction, TESTGROUP1_USER1);
+      verifyAllowed(scanAction, superUser);
     } finally {
       revokeGlobal(TEST_UTIL, TESTGROUP_1_NAME, Action.READ);
     }
@@ -501,34 +505,4 @@ public class TestAccessController2 extends SecureTestUtil {
       rsHost.createEnvironment(ACCESS_CONTROLLER, Coprocessor.PRIORITY_HIGHEST, 1, conf);
   }
 
-  @Test
-  public void testACLZNodeDeletion() throws Exception {
-    String baseAclZNode = "/hbase/acl/";
-    String ns = "testACLZNodeDeletionNamespace";
-    NamespaceDescriptor desc = NamespaceDescriptor.create(ns).build();
-    createNamespace(TEST_UTIL, desc);
-
-    final TableName table = TableName.valueOf(ns, "testACLZNodeDeletionTable");
-    final byte[] family = Bytes.toBytes("f1");
-    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(table)
-      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family)).build();
-    createTable(TEST_UTIL, tableDescriptor);
-
-    // Namespace needs this, as they follow the lazy creation of ACL znode.
-    grantOnNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
-    ZKWatcher zkw = TEST_UTIL.getMiniHBaseCluster().getMaster().getZooKeeper();
-    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) != -1,
-      "The acl znode for table should exist");
-    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) != -1,
-      "The acl znode for namespace should exist");
-
-    revokeFromNamespace(TEST_UTIL, TESTGROUP1_USER1.getShortName(), ns, Action.ADMIN);
-    deleteTable(TEST_UTIL, table);
-    deleteNamespace(TEST_UTIL, ns);
-
-    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + table.getNameAsString()) == -1,
-      "The acl znode for table should have been deleted");
-    assertTrue(ZKUtil.checkExists(zkw, baseAclZNode + convertToNamespace(ns)) == -1,
-      "The acl znode for namespace should have been deleted");
-  }
 }

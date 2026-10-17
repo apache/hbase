@@ -224,11 +224,14 @@ public class TestRpcAccessChecks {
   }
 
   @Test
-  public void testExecProcedure() throws Exception {
+  public void testExecProcedure(TestInfo testInfo) throws Exception {
+    // hbase:meta is off limits for non superusers (fixed rules), use a user table for the check
+    TableName tn = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    TableDescriptor desc = TableDescriptorBuilder.newBuilder(tn)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of("f1")).build();
+    verifyAllowed(USER_ADMIN, (admin) -> admin.createTable(desc));
     verifyAdminCheckForAction((admin) -> {
-      // Using existing table instead of creating a new one.
-      admin.execProcedure("flush-table-proc", TableName.META_TABLE_NAME.getNameAsString(),
-        new HashMap<>());
+      admin.execProcedure("flush-table-proc", tn.getNameAsString(), new HashMap<>());
     });
   }
 

@@ -27,6 +27,7 @@ option optimize_for = SPEED;
 import "HBase.proto";
 import "rpc/RPC.proto";
 import "server/Snapshot.proto";
+import "server/coprocessor/AccessControl.proto";
 import "server/master/Replication.proto";
 import "server/master/RegionServerStatus.proto";
 import "server/ErrorHandling.proto";
@@ -711,6 +712,37 @@ message SwitchRpcThrottleRemoteStateData {
   required bool rpc_throttle_enabled = 2;
   optional ServerRemoteProcedureState state = 3;
   optional ForeignExceptionMessage error = 4;
+}
+
+enum RefreshAclState {
+  REFRESH_ACL_DRAIN_PENDING = 1;
+  REFRESH_ACL_DISPATCH = 2;
+  REFRESH_ACL_WAIT = 3;
+}
+
+message AclEntryUpdate {
+  // entry name: table name bytes / @namespace / hbase:acl (global scope)
+  required bytes entry = 1;
+  // permissions snapshot for the entry; absent when deleted = true
+  optional UsersAndPermissions perms = 2;
+  optional bool deleted = 3 [default = false];
+}
+
+message RefreshAclStateData {
+  repeated AclEntryUpdate updates = 1;
+  // true = full snapshot (swap on RS), false = incremental (apply on RS)
+  optional bool full = 2 [default = false];
+  // master assigned timestamp, used by the RS side watermark filter
+  optional uint64 ts = 3 [default = 0];
+}
+
+message RefreshAclRemoteStateData {
+  required ServerName target_server = 1;
+  repeated AclEntryUpdate updates = 2;
+  optional bool full = 3 [default = false];
+  optional uint64 ts = 4 [default = 0];
+  optional ServerRemoteProcedureState state = 5;
+  optional ForeignExceptionMessage error = 6;
 }
 
 message SplitWALParameter {

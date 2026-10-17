@@ -41,7 +41,6 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequester;
 import org.apache.hadoop.hbase.regionserver.regionreplication.RegionReplicationBufferManager;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
 import org.apache.hadoop.hbase.wal.WAL;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -292,9 +291,6 @@ public interface RegionServerServices
 
   /** Returns the {@link AccessChecker} */
   AccessChecker getAccessChecker();
-
-  /** Returns {@link ZKPermissionWatcher} */
-  ZKPermissionWatcher getZKPermissionWatcher();
 
   RegionReplicationBufferManager getRegionReplicationBufferManager();
 

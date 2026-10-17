@@ -45,15 +45,16 @@ import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.regionserver.RpcSchedulerFactory;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
+import org.apache.hadoop.hbase.security.access.AclRefresher;
+import org.apache.hadoop.hbase.security.access.AclReloadChore;
 import org.apache.hadoop.hbase.security.access.NoopAccessChecker;
 import org.apache.hadoop.hbase.security.access.Permission;
-import org.apache.hadoop.hbase.security.access.ZKPermissionWatcher;
+import org.apache.hadoop.hbase.security.access.PermissionStorage;
 import org.apache.hadoop.hbase.util.DNS;
 import org.apache.hadoop.hbase.util.OOMEChecker;
 import org.apache.hadoop.hbase.util.ReservoirSample;
 import org.apache.hadoop.hbase.zookeeper.ZKWatcher;
 import org.apache.yetus.audience.InterfaceAudience;
-import org.apache.zookeeper.KeeperException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -108,7 +109,9 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
 
   private AccessChecker accessChecker;
 
-  private ZKPermissionWatcher zkPermissionWatcher;
+  private AclRefresher aclRefresher;
+
+  private AclReloadChore aclReloadChore;
 
   protected HBaseRpcServicesBase(S server, String processName) throws IOException {
     this.server = server;
@@ -180,12 +183,15 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     } else {
       accessChecker = new NoopAccessChecker(getConfiguration());
     }
-    zkPermissionWatcher =
-      new ZKPermissionWatcher(zkWatcher, accessChecker.getAuthManager(), getConfiguration());
-    try {
-      zkPermissionWatcher.start();
-    } catch (KeeperException e) {
-      LOG.error("ZooKeeper permission watcher initialization failed", e);
+    aclRefresher = new AclRefresher(getConfiguration(), accessChecker.getAuthManager());
+    if (getConfiguration().get("zookeeper.znode.acl.parent") != null) {
+      LOG.warn("zookeeper.znode.acl.parent is deprecated and ignored: "
+        + "ACLs are stored in the {} table only", PermissionStorage.ACL_TABLE_NAME);
+    }
+    if (AccessChecker.isAuthorizationSupported(getConfiguration())) {
+      // periodic full reload of the ACL cache, the fallback for lost updates and direct writes
+      aclReloadChore = new AclReloadChore(aclRefresher, getConfiguration(), server);
+      server.getChoreService().scheduleChore(aclReloadChore);
     }
     rpcServer.start();
   }
@@ -207,13 +213,16 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
     return accessChecker;
   }
 
-  public ZKPermissionWatcher getZkPermissionWatcher() {
-    return zkPermissionWatcher;
+  public AclRefresher getAclRefresher() {
+    return aclRefresher;
   }
 
   protected final void internalStop() {
-    if (zkPermissionWatcher != null) {
-      zkPermissionWatcher.close();
+    if (aclReloadChore != null) {
+      aclReloadChore.cancel(true);
+    }
+    if (aclRefresher != null) {
+      aclRefresher.close();
     }
     rpcServer.stop();
   }

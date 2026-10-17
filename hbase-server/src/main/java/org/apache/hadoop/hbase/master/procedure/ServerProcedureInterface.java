@@ -66,7 +66,12 @@ public interface ServerProcedureInterface {
     /**
      * send roll log request to region server and handle the response
      */
-    LOG_ROLL
+    LOG_ROLL,
+
+    /**
+     * send an ACL change set to region server and handle the response
+     */
+    REFRESH_ACL
   }
 
   /** Returns Name of this server instance. */
