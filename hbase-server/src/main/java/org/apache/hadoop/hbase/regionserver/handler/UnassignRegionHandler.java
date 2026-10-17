@@ -20,7 +20,6 @@ package org.apache.hadoop.hbase.regionserver.handler;
 import edu.umd.cs.findbugs.annotations.Nullable;
 import java.io.IOException;
 import java.util.concurrent.TimeUnit;
-import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.executor.EventHandler;
@@ -149,9 +148,14 @@ public class UnassignRegionHandler extends EventHandler {
           .removeCatalogReplicationSource(region.getRegionInfo());
       }
     }
+    // Report the region's durable flushed seqid on CLOSE so the master can seed its
+    // flushedSequenceIdByRegion watermark. This complements the OPEN-time seed (HBASE-30335)
+    // and narrows the graceful-close window where a subsequent WAL split of a crashed source
+    // RS could otherwise write orphaned recovered.edits for already-durable edits.
     if (
-      !rs.reportRegionStateTransition(new RegionStateTransitionContext(TransitionCode.CLOSED,
-        HConstants.NO_SEQNUM, closeProcId, -1, region.getRegionInfo(), initiatingMasterActiveTime))
+      !rs.reportRegionStateTransition(
+        new RegionStateTransitionContext(TransitionCode.CLOSED, region.getMaxFlushedSeqId(),
+          closeProcId, -1, region.getRegionInfo(), initiatingMasterActiveTime))
     ) {
       throw new IOException("Failed to report close to master: " + regionName);
     }
