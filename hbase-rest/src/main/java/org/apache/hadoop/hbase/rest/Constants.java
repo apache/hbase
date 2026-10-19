@@ -60,6 +60,31 @@ public interface Constants {
   String REST_SSL_EXCLUDE_PROTOCOLS = "hbase.rest.ssl.exclude.protocols";
   String REST_SSL_INCLUDE_PROTOCOLS = "hbase.rest.ssl.include.protocols";
 
+  // ---------------------------------------------------------------------------
+  // Role-scoped SSL configuration for single-EKU certificate support.
+  //
+  // The server-scoped keys are what RESTServer.java actually reads: hbase.rest.ssl.server.*
+  // takes precedence over the corresponding unscoped hbase.rest.ssl.* keys; when unset the
+  // unscoped keys are used as a fallback so existing deployments keep working. RESTServer
+  // only ever plays the TLS-server role on its port, so no parallel .client.* configuration
+  // is defined.
+  // ---------------------------------------------------------------------------
+  String REST_SSL_SERVER_KEYSTORE_STORE = "hbase.rest.ssl.server.keystore.store";
+  String REST_SSL_SERVER_KEYSTORE_PASSWORD = "hbase.rest.ssl.server.keystore.password";
+  String REST_SSL_SERVER_KEYSTORE_KEYPASSWORD = "hbase.rest.ssl.server.keystore.keypassword";
+  String REST_SSL_SERVER_KEYSTORE_TYPE = "hbase.rest.ssl.server.keystore.type";
+  String REST_SSL_SERVER_TRUSTSTORE_STORE = "hbase.rest.ssl.server.truststore.store";
+  String REST_SSL_SERVER_TRUSTSTORE_PASSWORD = "hbase.rest.ssl.server.truststore.password";
+  String REST_SSL_SERVER_TRUSTSTORE_TYPE = "hbase.rest.ssl.server.truststore.type";
+
+  /**
+   * Client-auth mode for the REST server's TLS connector. Valid values: {@code NONE}, {@code WANT},
+   * {@code NEED} (see {@code X509Util.ClientAuth}). Default is {@code NONE}, which preserves the
+   * historical behavior of never requesting client certificates. Set to {@code NEED} to enforce
+   * mTLS.
+   */
+  String REST_SSL_CLIENT_AUTH_MODE = "hbase.rest.ssl.server.client.auth.mode";
+
   String REST_THREAD_POOL_THREADS_MAX = "hbase.rest.threads.max";
   String REST_THREAD_POOL_THREADS_MIN = "hbase.rest.threads.min";
   String REST_THREAD_POOL_TASK_QUEUE_SIZE = "hbase.rest.task.queue.size";
