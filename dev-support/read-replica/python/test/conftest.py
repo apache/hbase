@@ -90,7 +90,7 @@ def per_test_log_file(request):
     rep_call = getattr(request.node, 'rep_call', None)
     if rep_call is not None and rep_call.failed and rep_call.longreprtext:
         logging.getLogger().error(
-            "TEST FAILED — pytest traceback:\n%s", rep_call.longreprtext
+            "TEST FAILED - pytest traceback:\n%s", rep_call.longreprtext
         )
 
     root_logger.removeHandler(handler)
