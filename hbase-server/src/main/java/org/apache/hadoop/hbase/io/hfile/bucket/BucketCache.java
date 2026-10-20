@@ -723,7 +723,7 @@ public class BucketCache implements BlockCache, HeapSize {
         // the cache map state might differ from the actual cache. If we reach this block,
         // we should remove the cache key entry from the backing map
         backingMap.remove(key);
-        fileNotFullyCached(key, bucketEntry);
+        updateRegionCachedSize(key, (bucketEntry.getLength() * -1));
         LOG.debug("Failed to fetch block for cache key: {}.", key, hioex);
       } catch (IOException ioex) {
         LOG.error("Failed reading block " + key + " from bucket cache", ioex);
@@ -745,10 +745,13 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean evictedByEvictionProcess) {
     bucketEntry.markAsEvicted();
     blocksByHFile.remove(cacheKey);
+    // putIntoBackingMap accounts every entry added to the backingMap, regardless of the IOEngine,
+    // so every entry removed from it must be decremented as well.
+    updateRegionCachedSize(cacheKey, (bucketEntry.getLength() * -1));
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fileNotFullyCached(cacheKey, bucketEntry);
+        fullyCachedFiles.remove(cacheKey.getHfileName());
       }
     }
     if (evictedByEvictionProcess) {
@@ -757,13 +760,6 @@ public class BucketCache implements BlockCache, HeapSize {
     if (ioEngine.isPersistent()) {
       setCacheInconsistent(true);
     }
-  }
-
-  private void fileNotFullyCached(BlockCacheKey key, BucketEntry entry) {
-    // Update the updateRegionCachedSize before removing the file from fullyCachedFiles.
-    // This computation should happen even if the file is not in fullyCachedFiles map.
-    updateRegionCachedSize(key, (entry.getLength() * -1));
-    fullyCachedFiles.remove(key.getHfileName());
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
@@ -1698,7 +1694,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
             evictBlock(keyEntry.getKey());
-            fileNotFullyCached(keyEntry.getKey(), keyEntry.getValue());
+            fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
           }
         }
         backingMapValidated.set(true);
