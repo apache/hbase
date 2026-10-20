@@ -1001,6 +1001,36 @@ public class BytesTestBase {
   }
 
   /**
+   * For every segment length up to three longs and every pair of positions, places two differences
+   * that order the segments in opposite directions. Only the first difference in memory order may
+   * decide the result, regardless of where the positions fall within a word or the sub-long tail.
+   */
+  @Test
+  public void testCompareAndCommonPrefixFirstDifferenceWins() {
+    for (int len = 1; len <= 24; len++) {
+      for (int p = 0; p < len; p++) {
+        for (int q = p; q < len; q++) {
+          byte[] x = new byte[3 + len];
+          byte[] y = new byte[5 + len];
+          Arrays.fill(x, (byte) 0x80);
+          Arrays.fill(y, (byte) 0x80);
+          x[3 + p] = (byte) 0x7F;
+          y[5 + p] = (byte) 0xFF;
+          if (q != p) {
+            x[3 + q] = (byte) 0xFF;
+            y[5 + q] = (byte) 0x00;
+          }
+          String msg = "len=" + len + " p=" + p + " q=" + q;
+          assertTrue(Bytes.compareTo(x, 3, len, y, 5, len) < 0, msg);
+          assertTrue(Bytes.compareTo(y, 5, len, x, 3, len) > 0, msg);
+          assertFalse(Bytes.equals(x, 3, len, y, 5, len), msg);
+          assertEquals(p, Bytes.findCommonPrefix(x, y, len, len, 3, 5), msg);
+        }
+      }
+    }
+  }
+
+  /**
    * Returns a copy of the segment placed at the given offset, with random bytes before it and
    * random trailing bytes after it.
    */

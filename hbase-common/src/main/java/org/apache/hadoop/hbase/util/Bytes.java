@@ -128,9 +128,10 @@ public class Bytes implements Comparable<Bytes> {
 
   /*
    * The VarHandles below must be used directly, not via non-static aliases. Non-static usage of a
-   * VarHandle is much slower than static usage. Native byte order access is used when we are
-   * getting longs for equality comparison and don't care about numeric value. Endian-specific is
-   * used when the numeric value matters.
+   * VarHandle is much slower than static usage. Big-endian access is used when the numeric value
+   * matters, because HBase's serialized format is big-endian. Native byte order access is used when
+   * words are only being compared byte-wise (comparison and common-prefix loops), since it avoids
+   * byte swapping on the hot path.
    */
   private static final VarHandle BYTE_ARRAY_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE =
     MethodHandles.byteArrayViewVarHandle(short[].class, ByteOrder.BIG_ENDIAN);
@@ -138,6 +139,35 @@ public class Bytes implements Comparable<Bytes> {
     MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.BIG_ENDIAN);
   private static final VarHandle BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE =
     MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.nativeOrder());
+
+  /** True when the platform's native byte order is little-endian. */
+  static final boolean NATIVE_LITTLE_ENDIAN = ByteOrder.nativeOrder() == ByteOrder.LITTLE_ENDIAN;
+
+  /**
+   * Orders two unequal words that were read in native byte order by the unsigned lexicographic
+   * order of their bytes in memory.
+   * @return a negative value if {@code lw} sorts first, a positive value otherwise
+   */
+  static int compareNativeOrderWords(long lw, long rw) {
+    if (NATIVE_LITTLE_ENDIAN) {
+      lw = Long.reverseBytes(lw);
+      rw = Long.reverseBytes(rw);
+    }
+    return Long.compareUnsigned(lw, rw) < 0 ? -1 : 1;
+  }
+
+  /**
+   * Counts how many bytes, in memory order, two words read in native byte order have in common
+   * before their first difference.
+   */
+  static int commonPrefixOfNativeOrderWords(long lw, long rw) {
+    long diff = lw ^ rw;
+    return (NATIVE_LITTLE_ENDIAN
+      ? Long.numberOfTrailingZeros(diff)
+      : Long.numberOfLeadingZeros(diff)) >>> 3;
+  }
 
   /**
    * Returns length of the byte array, returning 0 if the array is null. Useful for calculating
@@ -1229,24 +1259,24 @@ public class Bytes implements Comparable<Bytes> {
          * than 4 bytes even on 32-bit. On the other hand, it is substantially faster on 64-bit.
          */
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // Values are fetched as big-endian so that the numerical order matches the bytes'
-          // lexographical order
-          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer1, offset1 + i);
-          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer2, offset2 + i);
+          // Words are fetched in native order so the equality check needs no byte swapping; only
+          // a mismatch pays to put the bytes in lexicographic order.
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(buffer1, offset1 + i);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(buffer2, offset2 + i);
           if (lw != rw) {
-            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            return compareNativeOrderWords(lw, rw);
           }
         }
 
         if (minLength >= STRIDE) {
           // Compare the sub-long tail with one long read ending at the last byte of the segment.
-          // The bytes it shares with the previous long are already known to be equal, so an
-          // unsigned comparison of the two longs is decided by the tail bytes.
+          // The bytes it shares with the previous long are already known to be equal, so the
+          // comparison of the two longs is decided by the tail bytes.
           int tail = minLength - STRIDE;
-          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer1, offset1 + tail);
-          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer2, offset2 + tail);
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(buffer1, offset1 + tail);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(buffer2, offset2 + tail);
           if (lw != rw) {
-            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            return compareNativeOrderWords(lw, rw);
           }
           return length1 - length2;
         } else {
@@ -1284,12 +1314,11 @@ public class Bytes implements Comparable<Bytes> {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // big-endian fetches are faster than little-endian because the bytes don't need to get
-          // reversed
-          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
-          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
+          // Native-order fetches avoid byte swapping; only byte equality matters here
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(left, leftOffset + i);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(right, rightOffset + i);
           if (lw != rw) {
-            return i + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            return i + commonPrefixOfNativeOrderWords(lw, rw);
           }
         }
 
@@ -1298,11 +1327,10 @@ public class Bytes implements Comparable<Bytes> {
           // The bytes it shares with the previous long are already known to be equal, so the first
           // differing byte falls within the tail.
           int tail = minLength - STRIDE;
-          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + tail);
-          long rw =
-            (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + tail);
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(left, leftOffset + tail);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(right, rightOffset + tail);
           if (lw != rw) {
-            return tail + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            return tail + commonPrefixOfNativeOrderWords(lw, rw);
           }
           return minLength;
         } else {

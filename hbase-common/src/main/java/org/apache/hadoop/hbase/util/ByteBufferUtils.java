@@ -54,7 +54,9 @@ public final class ByteBufferUtils {
 
   /*
    * The VarHandles below must be used directly, not via non-static aliases. Non-static usage of a
-   * VarHandle is much slower than static usage.
+   * VarHandle is much slower than static usage. Big-endian access is used when the numeric value
+   * matters. Native byte order access is used when words are only being compared byte-wise, since
+   * it avoids byte swapping on the hot path.
    */
   private static final VarHandle BYTE_BUFFER_SHORT_VIEW_BIG_ENDIAN_VAR_HANDLE =
     MethodHandles.byteBufferViewVarHandle(short[].class, ByteOrder.BIG_ENDIAN);
@@ -62,8 +64,10 @@ public final class ByteBufferUtils {
     MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.BIG_ENDIAN);
   private static final VarHandle BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE =
     MethodHandles.byteBufferViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
-  private static final VarHandle BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE =
-    MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.BIG_ENDIAN);
+  private static final VarHandle BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE =
+    MethodHandles.byteBufferViewVarHandle(long[].class, ByteOrder.nativeOrder());
+  private static final VarHandle BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(long[].class, ByteOrder.nativeOrder());
 
   private ByteBufferUtils() {
   }
@@ -106,24 +110,24 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // Values are fetched as big-endian so that the numerical order matches the bytes'
-          // lexographical order
-          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + i);
-          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + i);
+          // Words are fetched in native order so the equality check needs no byte swapping; only
+          // a mismatch pays to put the bytes in lexicographic order.
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf1, o1 + i);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf2, o2 + i);
           if (lw != rw) {
-            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            return Bytes.compareNativeOrderWords(lw, rw);
           }
         }
 
         if (minLength >= STRIDE) {
           // Compare the sub-long tail with one long read ending at the last byte of the segment.
-          // The bytes it shares with the previous long are already known to be equal, so an
-          // unsigned comparison of the two longs is decided by the tail bytes.
+          // The bytes it shares with the previous long are already known to be equal, so the
+          // comparison of the two longs is decided by the tail bytes.
           int tail = minLength - STRIDE;
-          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + tail);
-          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + tail);
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf1, o1 + tail);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf2, o2 + tail);
           if (lw != rw) {
-            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            return Bytes.compareNativeOrderWords(lw, rw);
           }
           return l1 - l2;
         } else {
@@ -146,24 +150,24 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // Values are fetched as big-endian so that the numerical order matches the bytes'
-          // lexographical order
-          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + i);
-          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + i);
+          // Words are fetched in native order so the equality check needs no byte swapping; only
+          // a mismatch pays to put the bytes in lexicographic order.
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf1, o1 + i);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf2, o2 + i);
           if (lw != rw) {
-            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            return Bytes.compareNativeOrderWords(lw, rw);
           }
         }
 
         if (minLength >= STRIDE) {
           // Compare the sub-long tail with one long read ending at the last byte of the segment.
-          // The bytes it shares with the previous long are already known to be equal, so an
-          // unsigned comparison of the two longs is decided by the tail bytes.
+          // The bytes it shares with the previous long are already known to be equal, so the
+          // comparison of the two longs is decided by the tail bytes.
           int tail = minLength - STRIDE;
-          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + tail);
-          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + tail);
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf1, o1 + tail);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(buf2, o2 + tail);
           if (lw != rw) {
-            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
+            return Bytes.compareNativeOrderWords(lw, rw);
           }
           return l1 - l2;
         } else {
@@ -202,13 +206,12 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // Values are fetched as big-endian so that the numerical order matches the bytes'
-          // lexographical order
-          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
-          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
+          // Native-order fetches avoid byte swapping; only byte equality matters here
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(left, leftOffset + i);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(right, rightOffset + i);
 
           if (lw != rw) {
-            return i + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            return i + Bytes.commonPrefixOfNativeOrderWords(lw, rw);
           }
         }
 
@@ -217,11 +220,10 @@ public final class ByteBufferUtils {
           // bytes it shares with the previous long are already known to be equal, so the first
           // differing byte falls within the tail.
           int tail = minLength - STRIDE;
-          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + tail);
-          long rw =
-            (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + tail);
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(left, leftOffset + tail);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_NATIVE_VAR_HANDLE.get(right, rightOffset + tail);
           if (lw != rw) {
-            return tail + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            return tail + Bytes.commonPrefixOfNativeOrderWords(lw, rw);
           }
           return minLength;
         } else {
@@ -245,13 +247,12 @@ public final class ByteBufferUtils {
         int i;
 
         for (i = 0; i < strideLimit; i += STRIDE) {
-          // Values are fetched as big-endian so that the numerical order matches the bytes'
-          // lexographical order
-          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + i);
-          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + i);
+          // Native-order fetches avoid byte swapping; only byte equality matters here
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(left, leftOffset + i);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(right, rightOffset + i);
 
           if (lw != rw) {
-            return i + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            return i + Bytes.commonPrefixOfNativeOrderWords(lw, rw);
           }
         }
 
@@ -260,11 +261,10 @@ public final class ByteBufferUtils {
           // bytes it shares with the previous long are already known to be equal, so the first
           // differing byte falls within the tail.
           int tail = minLength - STRIDE;
-          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + tail);
-          long rw =
-            (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + tail);
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(left, leftOffset + tail);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_NATIVE_VAR_HANDLE.get(right, rightOffset + tail);
           if (lw != rw) {
-            return tail + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
+            return tail + Bytes.commonPrefixOfNativeOrderWords(lw, rw);
           }
           return minLength;
         } else {

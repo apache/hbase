@@ -1852,6 +1852,33 @@ public class ByteBufferUtilsTestBase {
     }
   }
 
+  /**
+   * For every segment length up to three longs and every pair of positions, places two differences
+   * that order the segments in opposite directions. Only the first difference in memory order may
+   * decide the result, regardless of where the positions fall within a word or the sub-long tail.
+   */
+  @Test
+  public void testCompareAndCommonPrefixFirstDifferenceWins() {
+    for (int len = 1; len <= 24; len++) {
+      for (int p = 0; p < len; p++) {
+        for (int q = p; q < len; q++) {
+          byte[] x = new byte[len];
+          byte[] y = new byte[len];
+          Arrays.fill(x, (byte) 0x80);
+          Arrays.fill(y, (byte) 0x80);
+          x[p] = (byte) 0x7F;
+          y[p] = (byte) 0xFF;
+          if (q != p) {
+            x[q] = (byte) 0xFF;
+            y[q] = (byte) 0x00;
+          }
+          assertCompareSign(x, y);
+          assertCommonPrefix(x, y);
+        }
+      }
+    }
+  }
+
   private static void testCompressedInt(int value) throws IOException {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     ByteBufferUtils.putCompressedInt(bos, value);
