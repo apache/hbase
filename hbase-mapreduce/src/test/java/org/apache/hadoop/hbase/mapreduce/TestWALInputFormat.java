@@ -23,7 +23,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
+import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocatedFileStatus;
@@ -33,6 +37,8 @@ import org.apache.hadoop.hbase.testclassification.MapReduceTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hdfs.DistributedFileSystem;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -86,6 +92,42 @@ public class TestWALInputFormat {
     Mockito.when(lfs.getPath()).thenReturn(new Path("/name." + now + ".meta"));
     WALInputFormat.addFile(lfss, fs, lfs, now, now);
     assertEquals(9, lfss.size());
+  }
+
+  @Test
+  public void testSkipsArchivedMasterLocalWALs() throws Exception {
+    Configuration conf = new Configuration(TEST_UTIL.getConfiguration());
+    conf.set(WALPlayer.INPUT_FILES_SEPARATOR_KEY, ",");
+    conf.setLong(WALInputFormat.START_TIME_KEY, 200);
+    conf.setLong(WALInputFormat.END_TIME_KEY, 300);
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    Path inputDir = TEST_UTIL.getDataTestDirOnTestFS("master-local-wals");
+    Path nonEmpty = new Path(inputDir, "master.250$masterlocalwal$");
+    Path empty = new Path(inputDir, "nested/master.251$masterlocalwal$");
+    List<String> expected =
+      Arrays.asList("0000000000000016310", "server.250", "server.250.meta", "server.250.syncrep");
+    try {
+      for (String name : expected) {
+        try (FSDataOutputStream out = fs.create(new Path(inputDir, "nested/" + name))) {
+          out.write(1);
+        }
+      }
+      try (FSDataOutputStream out = fs.create(nonEmpty)) {
+        out.write(1);
+      }
+      fs.create(empty).close();
+
+      conf.set(FileInputFormat.INPUT_DIR, inputDir.toString());
+      List<String> actual = new WALInputFormat().getSplits(Job.getInstance(conf)).stream()
+        .map(split -> new Path(((WALInputFormat.WALSplit) split).getLogFileName()).getName())
+        .sorted().collect(Collectors.toList());
+      assertEquals(expected, actual);
+
+      conf.set(FileInputFormat.INPUT_DIR, nonEmpty + "," + empty);
+      assertTrue(new WALInputFormat().getSplits(Job.getInstance(conf)).isEmpty());
+    } finally {
+      fs.delete(inputDir, true);
+    }
   }
 
   private static boolean isKept(FileSystem fs, long created, long mtime, long start, long end) {
