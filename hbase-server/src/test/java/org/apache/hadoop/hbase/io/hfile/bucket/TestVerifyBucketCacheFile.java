@@ -29,6 +29,7 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
+import java.io.RandomAccessFile;
 import java.nio.file.FileSystems;
 import java.nio.file.Files;
 import java.nio.file.attribute.FileTime;
@@ -41,6 +42,7 @@ import org.apache.hadoop.hbase.HBaseParameterizedTestTemplate;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
@@ -331,6 +333,82 @@ public class TestVerifyBucketCacheFile {
       waitPersistentCacheValidation(conf, bucketCache);
       assertEquals(usedSize, bucketCache.getAllocator().getUsedSize());
       assertEquals(blockCount, bucketCache.backingMap.size());
+    } finally {
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
+    }
+    TEST_UTIL.cleanupTestDir();
+  }
+
+  /**
+   * Test whether the region cached size is still correct after the cache validation thread evicts
+   * an invalid block. First start BucketCache and add three blocks for the same region, then
+   * shutdown BucketCache and persist cache to file. Then overwrite the cached time recorded in the
+   * first block and modify the cache file's last modified time, so that the checksum verification
+   * fails when restarting BucketCache. The validation thread then goes through all the cached
+   * blocks and evicts the first one, which should be discounted from the region cached size only
+   * once.
+   * @throws Exception the exception
+   */
+  @TestTemplate
+  public void testRegionCachedSizeAfterInvalidBlockEvictedOnValidation() throws Exception {
+    HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    Configuration conf = HBaseConfiguration.create();
+    // Disables the persister thread by setting its interval to MAX_VALUE
+    conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
+    String regionName = "region";
+    BucketCache bucketCache = null;
+    try {
+      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+
+      CacheTestUtils.HFileBlockPair[] blocks =
+        CacheTestUtils.generateHFileBlocks(constructedBlockSize, 3);
+      // Add three blocks, all belonging to the same region
+      BlockCacheKey[] keys = new BlockCacheKey[blocks.length];
+      for (int i = 0; i < blocks.length; i++) {
+        keys[i] = new BlockCacheKey("hfile", "cf", regionName, (long) i * constructedBlockSize,
+          true, BlockType.DATA, false);
+        cacheAndWaitUntilFlushedToBucket(bucketCache, keys[i], blocks[i].getBlock());
+      }
+      long firstBlockOffset = bucketCache.backingMap.get(keys[0]).offset();
+      // persist cache to file
+      bucketCache.shutdown();
+
+      // overwrite the cached time stored at the start of the first block
+      try (RandomAccessFile raf = new RandomAccessFile(testDir + "/bucket.cache", "rw")) {
+        raf.seek(firstBlockOffset);
+        raf.writeLong(-1L);
+      }
+      // modified bucket cache file LastModifiedTime, so the checksum verification fails
+      final java.nio.file.Path file =
+        FileSystems.getDefault().getPath(testDir.toString(), "bucket.cache");
+      Files.setLastModifiedTime(file, FileTime.from(Instant.now().plusMillis(1_000)));
+
+      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize,
+        constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+        testDir + "/bucket.persistence", DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      waitPersistentCacheValidation(conf, bucketCache);
+
+      // The region cached size should match the blocks still in the cache. We sum what is left
+      // instead of expecting two blocks, as the validation thread may not evict the first block
+      // if it checks it before the cache is enabled.
+      long remainingSize = 0;
+      for (BlockCacheKey key : keys) {
+        BucketEntry entry = bucketCache.backingMap.get(key);
+        if (entry != null) {
+          remainingSize += entry.getLength();
+        }
+      }
+      assertNotEquals(0, remainingSize);
+      assertEquals(remainingSize,
+        (long) bucketCache.getRegionCachedInfo().get().getOrDefault(regionName, 0L));
     } finally {
       if (bucketCache != null) {
         bucketCache.shutdown();
