@@ -115,15 +115,28 @@ public final class ByteBufferUtils {
           }
         }
 
-        // The epilogue to cover the last (minLength % stride) elements.
-        for (; i < minLength; i++) {
-          int il = buf1[o1 + i] & 0xFF;
-          int ir = buf2.get(o2 + i) & 0xFF;
-          if (il != ir) {
-            return il - ir;
+        if (minLength >= STRIDE) {
+          // Compare the sub-long tail with one long read ending at the last byte of the segment.
+          // The bytes it shares with the previous long are already known to be equal, so an
+          // unsigned comparison of the two longs is decided by the tail bytes.
+          int tail = minLength - STRIDE;
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + tail);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + tail);
+          if (lw != rw) {
+            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
           }
+          return l1 - l2;
+        } else {
+          // Segments shorter than one long are compared byte by byte
+          for (; i < minLength; i++) {
+            int il = buf1[o1 + i] & 0xFF;
+            int ir = buf2.get(o2 + i) & 0xFF;
+            if (il != ir) {
+              return il - ir;
+            }
+          }
+          return l1 - l2;
         }
-        return l1 - l2;
       }
 
       @Override
@@ -142,15 +155,28 @@ public final class ByteBufferUtils {
           }
         }
 
-        // The epilogue to cover the last (minLength % stride) elements.
-        for (; i < minLength; i++) {
-          int il = buf1.get(o1 + i) & 0xFF;
-          int ir = buf2.get(o2 + i) & 0xFF;
-          if (il != ir) {
-            return il - ir;
+        if (minLength >= STRIDE) {
+          // Compare the sub-long tail with one long read ending at the last byte of the segment.
+          // The bytes it shares with the previous long are already known to be equal, so an
+          // unsigned comparison of the two longs is decided by the tail bytes.
+          int tail = minLength - STRIDE;
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf1, o1 + tail);
+          long rw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buf2, o2 + tail);
+          if (lw != rw) {
+            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
           }
+          return l1 - l2;
+        } else {
+          // Segments shorter than one long are compared byte by byte
+          for (; i < minLength; i++) {
+            int il = buf1.get(o1 + i) & 0xFF;
+            int ir = buf2.get(o2 + i) & 0xFF;
+            if (il != ir) {
+              return il - ir;
+            }
+          }
+          return l1 - l2;
         }
-        return l1 - l2;
       }
     }
   }
@@ -186,16 +212,29 @@ public final class ByteBufferUtils {
           }
         }
 
-        // The epilogue to cover the last (minLength % stride) elements.
-        for (; i < minLength; i++) {
-          byte il = left.get(leftOffset + i);
-          byte ir = right[rightOffset + i];
-          if (il != ir) {
-            return i;
+        if (minLength >= STRIDE) {
+          // Check the sub-long tail with one long read ending at the last byte of the segment. The
+          // bytes it shares with the previous long are already known to be equal, so the first
+          // differing byte falls within the tail.
+          int tail = minLength - STRIDE;
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + tail);
+          long rw =
+            (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + tail);
+          if (lw != rw) {
+            return tail + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
           }
+          return minLength;
+        } else {
+          // Segments shorter than one long are compared byte by byte
+          for (; i < minLength; i++) {
+            byte il = left.get(leftOffset + i);
+            byte ir = right[rightOffset + i];
+            if (il != ir) {
+              return i;
+            }
+          }
+          return i;
         }
-
-        return i;
       }
 
       @Override
@@ -216,16 +255,29 @@ public final class ByteBufferUtils {
           }
         }
 
-        // The epilogue to cover the last (minLength % stride) elements.
-        for (; i < minLength; i++) {
-          byte il = left.get(leftOffset + i);
-          byte ir = right.get(rightOffset + i);
-          if (il != ir) {
-            return i;
+        if (minLength >= STRIDE) {
+          // Check the sub-long tail with one long read ending at the last byte of the segment. The
+          // bytes it shares with the previous long are already known to be equal, so the first
+          // differing byte falls within the tail.
+          int tail = minLength - STRIDE;
+          long lw = (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + tail);
+          long rw =
+            (long) BYTE_BUFFER_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + tail);
+          if (lw != rw) {
+            return tail + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
           }
+          return minLength;
+        } else {
+          // Segments shorter than one long are compared byte by byte
+          for (; i < minLength; i++) {
+            byte il = left.get(leftOffset + i);
+            byte ir = right.get(rightOffset + i);
+            if (il != ir) {
+              return i;
+            }
+          }
+          return i;
         }
-
-        return i;
       }
     }
   }

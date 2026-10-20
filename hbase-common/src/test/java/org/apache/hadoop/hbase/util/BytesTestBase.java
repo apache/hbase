@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -917,5 +918,190 @@ public class BytesTestBase {
     }
 
     assertEquals(32, Bytes.findCommonPrefix(array1, array2, 64, 64, 0, 0));
+  }
+
+  /**
+   * Comparisons whose offset/length extend past the end of an array must fail rather than read
+   * adjacent memory. Both the 8-byte stride loop and the single-byte epilogue are covered.
+   */
+  @Test
+  public void testCompareToOutOfBoundsThrows() {
+    byte[] a = new byte[20];
+    byte[] b = new byte[20];
+
+    // In range: succeeds
+    assertEquals(0, Bytes.compareTo(a, 4, 16, b, 4, 16));
+
+    // Overrun reached in the stride loop
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 8, 16, b, 0, 16));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 0, 16, b, 8, 16));
+    // Overrun reached in the epilogue
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 15, 6, b, 0, 6));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 0, 6, b, 15, 6));
+    // Negative offset
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, -1, 8, b, 0, 8));
+  }
+
+  /**
+   * Covers segments longer than one long whose length is not a multiple of eight, where the final
+   * partial long decides the result.
+   */
+  @Test
+  public void testCompareToSubLongTail() {
+    // Equal common prefix with differing lengths is ordered by length
+    byte[] a = Bytes.toBytes("aaaaaaaa");
+    byte[] b = Bytes.toBytes("aaaaaaaab");
+    assertTrue(Bytes.compareTo(a, b) < 0);
+    assertTrue(Bytes.compareTo(b, a) > 0);
+    byte[] c = Bytes.toBytes("aaaaaaaaaaa");
+    byte[] d = Bytes.toBytes("aaaaaaaaaaab");
+    assertTrue(Bytes.compareTo(c, d) < 0);
+    assertTrue(Bytes.compareTo(d, c) > 0);
+
+    // Multiple differing bytes in the tail: the first difference decides
+    byte[] e = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 2, 0 };
+    byte[] f = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 5 };
+    assertTrue(Bytes.compareTo(e, f) > 0);
+    assertTrue(Bytes.compareTo(f, e) < 0);
+
+    // Unsigned byte ordering in the tail
+    byte[] g = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0x80 };
+    byte[] h = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F };
+    assertTrue(Bytes.compareTo(g, h) > 0);
+    assertTrue(Bytes.compareTo(h, g) < 0);
+
+    // Exhaustive check against a byte-by-byte reference for small lengths
+    Random rand = new Random(42);
+    for (int iter = 0; iter < 20000; iter++) {
+      int len1 = rand.nextInt(24);
+      int len2 = rand.nextInt(24);
+      byte[] x = new byte[len1];
+      byte[] y = new byte[len2];
+      rand.nextBytes(x);
+      rand.nextBytes(y);
+      int common = Math.min(len1, len2);
+      System.arraycopy(x, 0, y, 0, common);
+      // Perturb up to two bytes so that differences land in the tail
+      for (int k = 0; k < 2 && common > 0; k++) {
+        if (rand.nextBoolean()) {
+          y[rand.nextInt(common)] = (byte) rand.nextInt(256);
+        }
+      }
+      String msg = "x=" + Bytes.toStringBinary(x) + " y=" + Bytes.toStringBinary(y);
+      int expected = Integer.signum(referenceCompare(x, y));
+      assertEquals(expected, Integer.signum(Bytes.compareTo(x, y)), msg);
+
+      // Same segments embedded at different non-zero offsets, surrounded by random bytes so that
+      // any read outside the segment can change the result
+      byte[] px = embedWithRandomPadding(rand, x, 3);
+      byte[] py = embedWithRandomPadding(rand, y, 5);
+      assertEquals(expected, Integer.signum(Bytes.compareTo(px, 3, len1, py, 5, len2)), msg);
+      assertEquals(-expected, Integer.signum(Bytes.compareTo(py, 5, len2, px, 3, len1)), msg);
+    }
+  }
+
+  /**
+   * Returns a copy of the segment placed at the given offset, with random bytes before it and
+   * random trailing bytes after it.
+   */
+  private static byte[] embedWithRandomPadding(Random rand, byte[] segment, int offset) {
+    byte[] padded = new byte[offset + segment.length + 1 + rand.nextInt(8)];
+    rand.nextBytes(padded);
+    System.arraycopy(segment, 0, padded, offset, segment.length);
+    return padded;
+  }
+
+  /**
+   * Covers segments longer than one long whose length is not a multiple of eight, where the final
+   * partial long decides the result.
+   */
+  @Test
+  public void testFindCommonPrefixSubLongTail() {
+    // Identical segments longer than one long
+    byte[] a = Bytes.toBytes("aaaaaaaaaaa");
+    byte[] b = Bytes.toBytes("aaaaaaaaaaab");
+    assertEquals(11, Bytes.findCommonPrefix(a, b, a.length, b.length, 0, 0));
+    // Multiple differing bytes in the tail: the first difference is reported
+    byte[] c = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0 };
+    byte[] d = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5 };
+    assertEquals(9, Bytes.findCommonPrefix(c, d, c.length, d.length, 0, 0));
+    // Difference in the last byte
+    byte[] e = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    byte[] f = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+    assertEquals(9, Bytes.findCommonPrefix(e, f, e.length, f.length, 0, 0));
+
+    // Randomized check against a byte-by-byte reference, at non-zero offsets
+    Random rand = new Random(42);
+    for (int iter = 0; iter < 20000; iter++) {
+      int len1 = rand.nextInt(24);
+      int len2 = rand.nextInt(24);
+      byte[] x = new byte[3 + len1];
+      byte[] y = new byte[5 + len2];
+      rand.nextBytes(x);
+      rand.nextBytes(y);
+      int common = Math.min(len1, len2);
+      System.arraycopy(x, 3, y, 5, common);
+      // Perturb up to two bytes so that differences land in the tail
+      for (int k = 0; k < 2 && common > 0; k++) {
+        if (rand.nextBoolean()) {
+          y[5 + rand.nextInt(common)] = (byte) rand.nextInt(256);
+        }
+      }
+      int expected = 0;
+      while (expected < common && x[3 + expected] == y[5 + expected]) {
+        expected++;
+      }
+      assertEquals(expected, Bytes.findCommonPrefix(x, y, len1, len2, 3, 5),
+        "x=" + Bytes.toStringBinary(x) + " y=" + Bytes.toStringBinary(y));
+    }
+  }
+
+  /**
+   * The read covering the sub-long tail of a segment must stay within the arrays.
+   */
+  @Test
+  public void testSubLongTailOutOfBoundsThrows() {
+    byte[] a = new byte[16];
+    byte[] b = new byte[16];
+
+    // Segments ending exactly at the end of the array succeed
+    assertEquals(0, Bytes.compareTo(a, 4, 12, b, 4, 12));
+    assertEquals(12, Bytes.findCommonPrefix(a, b, 12, 12, 4, 4));
+
+    // A 13-byte segment starting at 4 ends one byte past the array, inside the tail read
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 4, 13, b, 0, 13));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 0, 13, b, 4, 13));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 13, 13, 4, 0));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 13, 13, 0, 4));
+  }
+
+  private static int referenceCompare(byte[] x, byte[] y) {
+    int n = Math.min(x.length, y.length);
+    for (int i = 0; i < n; i++) {
+      int a = x[i] & 0xFF;
+      int b = y[i] & 0xFF;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return x.length - y.length;
+  }
+
+  @Test
+  public void testFindCommonPrefixOutOfBoundsThrows() {
+    byte[] a = new byte[20];
+    byte[] b = new byte[20];
+
+    // In range: succeeds
+    assertEquals(16, Bytes.findCommonPrefix(a, b, 16, 16, 4, 4));
+
+    // Overrun reached in the stride loop
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 16, 16, 8, 0));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 16, 16, 0, 8));
+    // Overrun reached in the epilogue
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 6, 6, 15, 0));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 6, 6, 0, 15));
+    // Negative offset
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 8, 8, -1, 0));
   }
 }

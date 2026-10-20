@@ -1238,15 +1238,28 @@ public class Bytes implements Comparable<Bytes> {
           }
         }
 
-        // The epilogue to cover the last (minLength % stride) elements.
-        for (; i < minLength; i++) {
-          int a = (buffer1[offset1 + i] & 0xFF);
-          int b = (buffer2[offset2 + i] & 0xFF);
-          if (a != b) {
-            return a - b;
+        if (minLength >= STRIDE) {
+          // Compare the sub-long tail with one long read ending at the last byte of the segment.
+          // The bytes it shares with the previous long are already known to be equal, so an
+          // unsigned comparison of the two longs is decided by the tail bytes.
+          int tail = minLength - STRIDE;
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer1, offset1 + tail);
+          long rw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(buffer2, offset2 + tail);
+          if (lw != rw) {
+            return ((lw + Long.MIN_VALUE) < (rw + Long.MIN_VALUE)) ? -1 : 1;
           }
+          return length1 - length2;
+        } else {
+          // Segments shorter than one long are compared byte by byte
+          for (; i < minLength; i++) {
+            int a = (buffer1[offset1 + i] & 0xFF);
+            int b = (buffer2[offset2 + i] & 0xFF);
+            if (a != b) {
+              return a - b;
+            }
+          }
+          return length1 - length2;
         }
-        return length1 - length2;
       }
     }
   }
@@ -1280,16 +1293,27 @@ public class Bytes implements Comparable<Bytes> {
           }
         }
 
-        // The epilogue to cover the last (minLength % stride) elements.
-        for (; i < minLength; i++) {
-          int il = (left[leftOffset + i]);
-          int ir = (right[rightOffset + i]);
-          if (il != ir) {
-            return i;
+        if (minLength >= STRIDE) {
+          // Check the sub-long tail with one long read ending at the last byte of the segment.
+          // The bytes it shares with the previous long are already known to be equal, so the first
+          // differing byte falls within the tail.
+          int tail = minLength - STRIDE;
+          long lw = (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(left, leftOffset + tail);
+          long rw =
+            (long) BYTE_ARRAY_LONG_VIEW_BIG_ENDIAN_VAR_HANDLE.get(right, rightOffset + tail);
+          if (lw != rw) {
+            return tail + (Long.numberOfLeadingZeros(lw ^ rw) / Bytes.SIZEOF_LONG);
           }
+          return minLength;
+        } else {
+          // Segments shorter than one long are compared byte by byte
+          for (; i < minLength; i++) {
+            if (left[leftOffset + i] != right[rightOffset + i]) {
+              return i;
+            }
+          }
+          return i;
         }
-
-        return i;
       }
     }
   }

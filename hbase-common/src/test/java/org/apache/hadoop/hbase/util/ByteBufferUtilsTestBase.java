@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.util;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -33,6 +34,7 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.Random;
 import java.util.Set;
 import java.util.SortedSet;
 import java.util.TreeSet;
@@ -1488,7 +1490,368 @@ public class ByteBufferUtilsTestBase {
     assertEquals(32, ByteBufferUtils.findCommonPrefix(direct, 0, 64, array2, 0, 64));
   }
 
+  /**
+   * Returns a heap and a direct buffer, each with 16 bytes of capacity and a limit of 8. Every byte
+   * is set to 0x5A so reads beyond the limit would return non-zero data if they were permitted.
+   */
+  private static List<ByteBuffer> buffersWithLimitBelowCapacity() {
+    List<ByteBuffer> buffers =
+      Arrays.asList(ByteBuffer.allocate(16), ByteBuffer.allocateDirect(16));
+    for (ByteBuffer buf : buffers) {
+      fillBB(buf, (byte) 0x5A);
+      buf.limit(8);
+    }
+    return buffers;
+  }
+
+  @Test
+  public void testAbsoluteReadsBeyondLimitThrow() {
+    for (ByteBuffer buf : buffersWithLimitBelowCapacity()) {
+      // Reads ending exactly at the limit succeed
+      assertEquals((byte) 0x5A, ByteBufferUtils.toByte(buf, 7));
+      assertEquals((short) 0x5A5A, ByteBufferUtils.toShort(buf, 6));
+      assertEquals(0x5A5A5A5A, ByteBufferUtils.toInt(buf, 4));
+      assertEquals(0x5A5A5A5A5A5A5A5AL, ByteBufferUtils.toLong(buf, 0));
+
+      // Reads that cross the limit fail, even though the bytes are within capacity
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toByte(buf, 8));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toShort(buf, 7));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toInt(buf, 5));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toLong(buf, 1));
+
+      // Negative indexes fail
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toByte(buf, -1));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toShort(buf, -1));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toInt(buf, -1));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toLong(buf, -1));
+    }
+  }
+
+  @Test
+  public void testRelativeReadBeyondLimitThrows() {
+    for (ByteBuffer buf : buffersWithLimitBelowCapacity()) {
+      buf.position(5);
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toInt(buf));
+      // A failed read leaves the position untouched
+      assertEquals(5, buf.position());
+
+      buf.position(4);
+      assertEquals(0x5A5A5A5A, ByteBufferUtils.toInt(buf));
+      assertEquals(8, buf.position());
+    }
+  }
+
+  @Test
+  public void testAbsoluteWritesBeyondLimitThrow() {
+    for (ByteBuffer buf : buffersWithLimitBelowCapacity()) {
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.putShort(buf, 7, (short) 0));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putInt(buf, 5, 0));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putLong(buf, 1, 0L));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putInt(buf, -1, 0));
+
+      // Nothing was written by the failed calls, including bytes past the limit
+      buf.limit(buf.capacity());
+      for (int i = 0; i < buf.capacity(); i++) {
+        assertEquals((byte) 0x5A, buf.get(i), "byte at index " + i);
+      }
+    }
+  }
+
+  @Test
+  public void testRelativeWritesBeyondLimitThrow() {
+    for (ByteBuffer buf : buffersWithLimitBelowCapacity()) {
+      buf.position(7);
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putShort(buf, (short) 0));
+      assertEquals(7, buf.position());
+
+      buf.position(5);
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putInt(buf, 0));
+      assertEquals(5, buf.position());
+
+      buf.position(1);
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putLong(buf, 0L));
+      assertEquals(1, buf.position());
+    }
+  }
+
+  /**
+   * A slice exposes a window into a larger region of memory. Accesses must be bounded by the slice
+   * itself, not by the parent buffer, and index 0 must map to the start of the slice.
+   */
+  @Test
+  public void testSliceAccessIsBoundedBySlice() {
+    for (ByteBuffer parent : Arrays.asList(ByteBuffer.allocate(24),
+      ByteBuffer.allocateDirect(24))) {
+      for (int i = 0; i < parent.capacity(); i++) {
+        parent.put(i, (byte) i);
+      }
+      parent.position(4).limit(12);
+      ByteBuffer slice = parent.slice();
+      assertEquals(8, slice.capacity());
+
+      assertEquals(0x0405060708090A0BL, ByteBufferUtils.toLong(slice, 0));
+      assertEquals(0x08090A0B, ByteBufferUtils.toInt(slice, 4));
+      assertEquals((short) 0x0A0B, ByteBufferUtils.toShort(slice, 6));
+      assertEquals((byte) 0x0B, ByteBufferUtils.toByte(slice, 7));
+
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toLong(slice, 1));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toInt(slice, 5));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toShort(slice, 7));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.toByte(slice, 8));
+      assertThrows(IndexOutOfBoundsException.class, () -> ByteBufferUtils.putLong(slice, 1, 0L));
+    }
+  }
+
+  @Test
+  public void testCompareToBeyondLimitThrows() {
+    for (ByteBuffer left : buffersWithLimitBelowCapacity()) {
+      for (ByteBuffer right : buffersWithLimitBelowCapacity()) {
+        byte[] array = new byte[16];
+        Arrays.fill(array, (byte) 0x5A);
+
+        assertEquals(0, ByteBufferUtils.compareTo(left, 0, 8, right, 0, 8));
+        assertEquals(0, ByteBufferUtils.compareTo(left, 0, 8, array, 0, 8));
+        assertEquals(0, ByteBufferUtils.compareTo(array, 0, 8, right, 0, 8));
+
+        // Overrun reached in the stride loop
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.compareTo(left, 0, 16, right, 0, 16));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.compareTo(left, 1, 8, array, 0, 8));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.compareTo(array, 0, 8, right, 1, 8));
+        // Overrun reached in the epilogue
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.compareTo(left, 4, 5, right, 0, 5));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.compareTo(left, 4, 5, array, 0, 5));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.compareTo(array, 0, 5, right, 4, 5));
+      }
+    }
+  }
+
+  @Test
+  public void testEqualsBeyondLimitThrows() {
+    for (ByteBuffer left : buffersWithLimitBelowCapacity()) {
+      for (ByteBuffer right : buffersWithLimitBelowCapacity()) {
+        byte[] array = new byte[16];
+        Arrays.fill(array, (byte) 0x5A);
+
+        assertTrue(ByteBufferUtils.equals(left, 0, 8, right, 0, 8));
+        assertTrue(ByteBufferUtils.equals(left, 0, 8, array, 0, 8));
+
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.equals(left, 0, 16, right, 0, 16));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.equals(left, 0, 16, array, 0, 16));
+      }
+    }
+  }
+
+  @Test
+  public void testFindCommonPrefixBeyondLimitThrows() {
+    for (ByteBuffer left : buffersWithLimitBelowCapacity()) {
+      for (ByteBuffer right : buffersWithLimitBelowCapacity()) {
+        byte[] array = new byte[16];
+        Arrays.fill(array, (byte) 0x5A);
+
+        assertEquals(8, ByteBufferUtils.findCommonPrefix(left, 0, 8, right, 0, 8));
+        assertEquals(8, ByteBufferUtils.findCommonPrefix(left, 0, 8, array, 0, 8));
+
+        // Overrun reached in the stride loop
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.findCommonPrefix(left, 0, 16, right, 0, 16));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.findCommonPrefix(left, 1, 8, array, 0, 8));
+        // Overrun reached in the epilogue
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.findCommonPrefix(left, 4, 5, right, 0, 5));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.findCommonPrefix(left, 0, 5, right, 4, 5));
+        assertThrows(IndexOutOfBoundsException.class,
+          () -> ByteBufferUtils.findCommonPrefix(left, 4, 5, array, 0, 5));
+      }
+    }
+  }
+
+  /**
+   * Covers segments longer than one long whose length is not a multiple of eight, where the final
+   * partial long decides the result.
+   */
+  @Test
+  public void testCompareToSubLongTail() {
+    // Equal common prefix with differing lengths is ordered by length
+    assertCompareSign(Bytes.toBytes("aaaaaaaa"), Bytes.toBytes("aaaaaaaab"));
+    assertCompareSign(Bytes.toBytes("aaaaaaaaaaa"), Bytes.toBytes("aaaaaaaaaaab"));
+    // Multiple differing bytes in the tail: the first difference decides
+    assertCompareSign(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 2, 0 },
+      new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 5 });
+    // Unsigned byte ordering in the tail
+    assertCompareSign(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0x80 },
+      new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F });
+
+    Random rand = new Random(42);
+    for (int iter = 0; iter < 20000; iter++) {
+      byte[][] pair = randomPairWithSharedPrefix(rand);
+      assertCompareSign(pair[0], pair[1]);
+    }
+  }
+
+  @Test
+  public void testFindCommonPrefixSubLongTail() {
+    // Identical segments longer than one long
+    assertCommonPrefix(Bytes.toBytes("aaaaaaaaaaa"), Bytes.toBytes("aaaaaaaaaaab"));
+    // Multiple differing bytes in the tail: the first difference is reported
+    assertCommonPrefix(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0 },
+      new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5 });
+    // Difference in the last byte
+    assertCommonPrefix(new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 },
+      new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 });
+
+    Random rand = new Random(42);
+    for (int iter = 0; iter < 20000; iter++) {
+      byte[][] pair = randomPairWithSharedPrefix(rand);
+      assertCommonPrefix(pair[0], pair[1]);
+    }
+  }
+
+  /**
+   * The read covering the sub-long tail of a segment must stay bounded by the buffer's limit.
+   */
+  @Test
+  public void testSubLongTailBeyondLimitThrows() {
+    for (boolean direct : new boolean[] { false, true }) {
+      ByteBuffer left = direct ? ByteBuffer.allocateDirect(24) : ByteBuffer.allocate(24);
+      ByteBuffer right = direct ? ByteBuffer.allocateDirect(24) : ByteBuffer.allocate(24);
+      fillBB(left, (byte) 0x5A);
+      fillBB(right, (byte) 0x5A);
+      left.limit(16);
+      right.limit(16);
+      byte[] array = new byte[24];
+      Arrays.fill(array, (byte) 0x5A);
+
+      // Segments ending exactly at the limit succeed
+      assertEquals(0, ByteBufferUtils.compareTo(left, 4, 12, right, 4, 12));
+      assertEquals(0, ByteBufferUtils.compareTo(array, 0, 12, right, 4, 12));
+      assertEquals(12, ByteBufferUtils.findCommonPrefix(left, 4, 12, right, 4, 12));
+      assertEquals(12, ByteBufferUtils.findCommonPrefix(left, 4, 12, array, 0, 12));
+
+      // A 13-byte segment starting at 4 ends one byte past the limit, inside the tail read
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.compareTo(left, 4, 13, right, 0, 13));
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.compareTo(left, 0, 13, right, 4, 13));
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.compareTo(array, 0, 13, right, 4, 13));
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.compareTo(left, 4, 13, array, 0, 13));
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.findCommonPrefix(left, 4, 13, right, 0, 13));
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.findCommonPrefix(left, 0, 13, right, 4, 13));
+      assertThrows(IndexOutOfBoundsException.class,
+        () -> ByteBufferUtils.findCommonPrefix(left, 4, 13, array, 0, 13));
+    }
+  }
+
   // Below are utility methods invoked from test methods
+
+  /**
+   * Returns two random arrays of length 0-23 that share a common prefix over their shorter length,
+   * with up to two bytes of the second array perturbed within that range.
+   */
+  private static byte[][] randomPairWithSharedPrefix(Random rand) {
+    byte[] x = new byte[rand.nextInt(24)];
+    byte[] y = new byte[rand.nextInt(24)];
+    rand.nextBytes(x);
+    rand.nextBytes(y);
+    int common = Math.min(x.length, y.length);
+    System.arraycopy(x, 0, y, 0, common);
+    for (int k = 0; k < 2 && common > 0; k++) {
+      if (rand.nextBoolean()) {
+        y[rand.nextInt(common)] = (byte) rand.nextInt(256);
+      }
+    }
+    return new byte[][] { x, y };
+  }
+
+  /**
+   * Copies the array into heap and direct buffers at a non-zero offset, so that the segment does
+   * not start at the beginning of the buffer.
+   */
+  private static List<ByteBuffer> wrapAtOffset(byte[] bytes, int offset) {
+    List<ByteBuffer> buffers = new ArrayList<>();
+    for (ByteBuffer buf : Arrays.asList(ByteBuffer.allocate(offset + bytes.length),
+      ByteBuffer.allocateDirect(offset + bytes.length))) {
+      for (int i = 0; i < bytes.length; i++) {
+        buf.put(offset + i, bytes[i]);
+      }
+      buffers.add(buf);
+    }
+    return buffers;
+  }
+
+  private static int referenceCompare(byte[] x, byte[] y) {
+    int n = Math.min(x.length, y.length);
+    for (int i = 0; i < n; i++) {
+      int a = x[i] & 0xFF;
+      int b = y[i] & 0xFF;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return x.length - y.length;
+  }
+
+  private static int referenceCommonPrefix(byte[] x, byte[] y) {
+    int n = Math.min(x.length, y.length);
+    int i = 0;
+    while (i < n && x[i] == y[i]) {
+      i++;
+    }
+    return i;
+  }
+
+  /**
+   * Checks every ByteBufferUtils compareTo overload, with heap and direct buffers, against a
+   * byte-by-byte reference.
+   */
+  private static void assertCompareSign(byte[] x, byte[] y) {
+    String msg = "x=" + Bytes.toStringBinary(x) + " y=" + Bytes.toStringBinary(y);
+    int expected = Integer.signum(referenceCompare(x, y));
+    for (ByteBuffer bx : wrapAtOffset(x, 3)) {
+      for (ByteBuffer by : wrapAtOffset(y, 5)) {
+        assertEquals(expected,
+          Integer.signum(ByteBufferUtils.compareTo(bx, 3, x.length, by, 5, y.length)), msg);
+        assertEquals(-expected,
+          Integer.signum(ByteBufferUtils.compareTo(by, 5, y.length, bx, 3, x.length)), msg);
+      }
+      assertEquals(expected,
+        Integer.signum(ByteBufferUtils.compareTo(bx, 3, x.length, y, 0, y.length)), msg);
+      assertEquals(-expected,
+        Integer.signum(ByteBufferUtils.compareTo(y, 0, y.length, bx, 3, x.length)), msg);
+    }
+  }
+
+  /**
+   * Checks every ByteBuffer findCommonPrefix overload, with heap and direct buffers, against a
+   * byte-by-byte reference.
+   */
+  private static void assertCommonPrefix(byte[] x, byte[] y) {
+    String msg = "x=" + Bytes.toStringBinary(x) + " y=" + Bytes.toStringBinary(y);
+    int expected = referenceCommonPrefix(x, y);
+    for (ByteBuffer bx : wrapAtOffset(x, 3)) {
+      for (ByteBuffer by : wrapAtOffset(y, 5)) {
+        assertEquals(expected, ByteBufferUtils.findCommonPrefix(bx, 3, x.length, by, 5, y.length),
+          msg);
+      }
+      assertEquals(expected, ByteBufferUtils.findCommonPrefix(bx, 3, x.length, y, 0, y.length),
+        msg);
+    }
+  }
+
   private static void testCompressedInt(int value) throws IOException {
     ByteArrayOutputStream bos = new ByteArrayOutputStream();
     ByteBufferUtils.putCompressedInt(bos, value);
