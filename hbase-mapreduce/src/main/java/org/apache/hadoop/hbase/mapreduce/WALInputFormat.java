@@ -33,6 +33,7 @@ import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.RemoteIterator;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.master.region.MasterRegionFactory;
 import org.apache.hadoop.hbase.regionserver.wal.WALHeaderEOFException;
 import org.apache.hadoop.hbase.util.LeaseNotRecoveredException;
 import org.apache.hadoop.hbase.wal.AbstractFSWALProvider;
@@ -420,6 +421,10 @@ public class WALInputFormat extends InputFormat<WALKey, WALEdit> {
 
   static void addFile(List<FileStatus> result, FileSystem fs, LocatedFileStatus lfs, long startTime,
     long endTime) {
+    if (lfs.getPath().getName().endsWith(MasterRegionFactory.ARCHIVED_WAL_SUFFIX)) {
+      LOG.debug("Skipped master-local WAL {}", lfs.getPath());
+      return;
+    }
     long timestamp = AbstractFSWALProvider.getTimestamp(lfs.getPath().getName());
     if (timestamp > 0) {
       // The name carries the WAL's creation time, which only bounds its entries from below. A WAL
