@@ -36,9 +36,9 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -93,14 +93,14 @@ public class TestBlocksScanned {
   }
 
   private void _testBlocksScanned(TableDescriptor td) throws Exception {
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
+    CacheAccessService cas = CacheAccessServices.fromConfiguration(conf);
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(td.getTableName()).setStartKey(START_KEY)
       .setEndKey(END_KEY).build();
-    HRegion r = HBaseTestingUtil.createRegionAndWAL(regionInfo, testDir, conf, td, blockCache);
+    HRegion r = HBaseTestingUtil.createRegionAndWAL(regionInfo, testDir, conf, td, cas);
     addContent(r, FAMILY, COL);
     r.flush(true);
 
-    CacheStats stats = blockCache.getStats();
+    CacheStats stats = cas.getStats();
     long before = stats.getHitCount() + stats.getMissCount();
     // Do simple test of getting one row only first.
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"))

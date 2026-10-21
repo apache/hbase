@@ -55,6 +55,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.NavigableMap;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.concurrent.Callable;
@@ -142,7 +143,16 @@ import org.apache.hadoop.hbase.filter.SingleColumnValueFilter;
 import org.apache.hadoop.hbase.filter.SubstringComparator;
 import org.apache.hadoop.hbase.filter.ValueFilter;
 import org.apache.hadoop.hbase.io.TimeRange;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTopology;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTopologyType;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
 import org.apache.hadoop.hbase.monitoring.MonitoredRPCHandler;
 import org.apache.hadoop.hbase.monitoring.MonitoredTask;
 import org.apache.hadoop.hbase.monitoring.TaskMonitor;
@@ -8005,5 +8015,59 @@ public class TestHRegion {
       }
       TEST_UTIL.cleanupTestDir();
     }
+  }
+
+  /**
+   * Verifies that a persistent BucketCache configured as L2 is detected for graceful region close.
+   */
+  @Test
+  public void testPersistentBucketCacheL2ForGracefulClose() {
+    TopologyBackedCacheAccessService service = mock(TopologyBackedCacheAccessService.class);
+    CacheTopology topology = mock(CacheTopology.class);
+    BlockCacheBackedCacheEngine l2 = mock(BlockCacheBackedCacheEngine.class);
+    BucketCache bucketCache = mock(BucketCache.class);
+
+    when(service.getTopology()).thenReturn(topology);
+    when(topology.getType()).thenReturn(CacheTopologyType.TIERED_EXCLUSIVE);
+    when(service.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
+    when(l2.getBlockCache()).thenReturn(bucketCache);
+    when(bucketCache.isCachePersistenceEnabled()).thenReturn(true);
+
+    assertTrue(HRegion.isPersistentBucketCacheL2(service));
+  }
+
+  /**
+   * Verifies that a non-persistent BucketCache configured as L2 does not disable eviction during a
+   * graceful region close.
+   */
+  @Test
+  public void testNonPersistentBucketCacheL2ForGracefulClose() {
+    TopologyBackedCacheAccessService service = mock(TopologyBackedCacheAccessService.class);
+    CacheTopology topology = mock(CacheTopology.class);
+    BlockCacheBackedCacheEngine l2 = mock(BlockCacheBackedCacheEngine.class);
+    BucketCache bucketCache = mock(BucketCache.class);
+
+    when(service.getTopology()).thenReturn(topology);
+    when(topology.getType()).thenReturn(CacheTopologyType.TIERED_EXCLUSIVE);
+    when(service.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
+    when(l2.getBlockCache()).thenReturn(bucketCache);
+    when(bucketCache.isCachePersistenceEnabled()).thenReturn(false);
+
+    assertFalse(HRegion.isPersistentBucketCacheL2(service));
+  }
+
+  /**
+   * Verifies that a single-tier LRU cache is not treated as a persistent BucketCache L2.
+   */
+  @Test
+  public void testPersistentBucketCacheL2ReturnsFalseForSingleTierLruCache() {
+    Configuration conf = HBaseConfiguration.create();
+    conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "LRU");
+    conf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.01f);
+    conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
+
+    CacheAccessService cacheAccessService = CacheAccessServices.fromConfiguration(conf);
+
+    assertFalse(HRegion.isPersistentBucketCacheL2(cacheAccessService));
   }
 }

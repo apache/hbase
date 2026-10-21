@@ -31,7 +31,6 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
-import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -100,14 +99,12 @@ public class TestForceCacheImportantBlocks {
     // Set index block size to be the same as normal block size.
     TEST_UTIL.getConfiguration().setInt(HFileBlockIndex.MAX_CHUNK_SIZE_KEY, BLOCK_SIZE);
 
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
-    CacheAccessService cache = CacheAccessServices.fromBlockCache(blockCache);
+    CacheAccessService cache = CacheAccessServices.fromConfiguration(TEST_UTIL.getConfiguration());
     ColumnFamilyDescriptor cfd =
       ColumnFamilyDescriptorBuilder.newBuilder(Bytes.toBytes(CF)).setMaxVersions(MAX_VERSIONS)
         .setCompressionType(COMPRESSION_ALGORITHM).setBloomFilterType(BLOOM_TYPE)
         .setBlocksize(BLOCK_SIZE).setBlockCacheEnabled(cfCacheEnabled).build();
-    HRegion region =
-      TEST_UTIL.createTestRegion(TABLE, cfd, CacheAccessServiceTestFactory.blockCache(cache));
+    HRegion region = TEST_UTIL.createTestRegion(TABLE, cfd, cache);
     CacheStats stats = cache.getStats();
     writeTestData(region);
     assertEquals(0, stats.getHitCount());

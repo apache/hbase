@@ -36,7 +36,8 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdmin;
@@ -377,8 +378,8 @@ public class MockRegionServerServices implements RegionServerServices {
   }
 
   @Override
-  public Optional<BlockCache> getBlockCache() {
-    return Optional.empty();
+  public CacheAccessService getCacheAccessService() {
+    return new NoOpCacheAccessService();
   }
 
   @Override

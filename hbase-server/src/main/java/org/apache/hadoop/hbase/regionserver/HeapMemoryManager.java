@@ -25,15 +25,16 @@ import static org.apache.hadoop.hbase.io.util.MemorySizeUtil.MEMSTORE_SIZE_KEY;
 import java.lang.management.MemoryUsage;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ScheduledChore;
 import org.apache.hadoop.hbase.Server;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
-import org.apache.hadoop.hbase.io.hfile.ResizableBlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.ResizableCacheEngine;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -74,7 +75,7 @@ public class HeapMemoryManager {
 
   private float heapOccupancyPercent;
 
-  private final ResizableBlockCache blockCache;
+  private final ResizableCacheEngine cacheEngine;
   // TODO : remove this and mark regionServerAccounting as the observer directly
   private final FlushRequester memStoreFlusher;
   private final Server server;
@@ -104,10 +105,10 @@ public class HeapMemoryManager {
 
   private List<HeapMemoryTuneObserver> tuneObservers = new ArrayList<>();
 
-  HeapMemoryManager(BlockCache blockCache, FlushRequester memStoreFlusher, Server server,
-    RegionServerAccounting regionServerAccounting) {
+  HeapMemoryManager(CacheAccessService cacheAccessService, FlushRequester memStoreFlusher,
+    Server server, RegionServerAccounting regionServerAccounting) {
     Configuration conf = server.getConfiguration();
-    this.blockCache = toResizableBlockCache(blockCache);
+    this.cacheEngine = toResizableCacheEngine(cacheAccessService);
     this.memStoreFlusher = memStoreFlusher;
     this.server = server;
     this.regionServerAccounting = regionServerAccounting;
@@ -120,12 +121,23 @@ public class HeapMemoryManager {
     metricsHeapMemoryManager = new MetricsHeapMemoryManager();
   }
 
-  private ResizableBlockCache toResizableBlockCache(BlockCache blockCache) {
-    if (blockCache instanceof CombinedBlockCache) {
-      return ((CombinedBlockCache) blockCache).getFirstLevelCache();
-    } else {
-      return (ResizableBlockCache) blockCache;
+  /**
+   * Returns the resizable cache engine managed by this heap memory manager.
+   * @param cacheAccessService cache access service
+   * @return resizable cache engine
+   */
+  private ResizableCacheEngine toResizableCacheEngine(CacheAccessService cacheAccessService) {
+    Objects.requireNonNull(cacheAccessService, "cacheAccessService must not be null");
+
+    CacheEngine engine = cacheAccessService.getFirstLevelEngine()
+      .orElseThrow(() -> new IllegalStateException("No first-level cache engine"));
+
+    if (!(engine instanceof ResizableCacheEngine)) {
+      throw new IllegalStateException(
+        "First-level cache engine is not resizable: " + engine.getClass().getName());
     }
+
+    return (ResizableCacheEngine) engine;
   }
 
   private boolean doInit(Configuration conf) {
@@ -323,10 +335,10 @@ public class HeapMemoryManager {
       long curCacheMisCount;
       long blockedFlushCnt;
       long unblockedFlushCnt;
-      curEvictCount = blockCache.getStats().getEvictedCount();
+      curEvictCount = cacheEngine.getStats().getEvictedCount();
       tunerContext.setEvictCount(curEvictCount - evictCount);
       evictCount = curEvictCount;
-      curCacheMisCount = blockCache.getStats().getMissCachingCount();
+      curCacheMisCount = cacheEngine.getStats().getMissCachingCount();
       tunerContext.setCacheMissCount(curCacheMisCount - cacheMissCount);
       cacheMissCount = curCacheMisCount;
       blockedFlushCnt = blockedFlushCount.getAndSet(0);
@@ -335,8 +347,8 @@ public class HeapMemoryManager {
       unblockedFlushCnt = unblockedFlushCount.getAndSet(0);
       tunerContext.setUnblockedFlushCount(unblockedFlushCnt);
       metricsHeapMemoryManager.updateUnblockedFlushCount(unblockedFlushCnt);
-      tunerContext.setCurBlockCacheUsed((float) blockCache.getCurrentSize() / maxHeapSize);
-      metricsHeapMemoryManager.setCurBlockCacheSizeGauge(blockCache.getCurrentSize());
+      tunerContext.setCurBlockCacheUsed((float) cacheEngine.getCurrentSize() / maxHeapSize);
+      metricsHeapMemoryManager.setCurBlockCacheSizeGauge(cacheEngine.getCurrentSize());
       long globalMemstoreDataSize = regionServerAccounting.getGlobalMemStoreDataSize();
       long globalMemstoreHeapSize = regionServerAccounting.getGlobalMemStoreHeapSize();
       long globalMemStoreOffHeapSize = regionServerAccounting.getGlobalMemStoreOffHeapSize();
@@ -401,7 +413,7 @@ public class HeapMemoryManager {
           LOG.info("Setting block cache heap size to " + newBlockCacheSize
             + " and memstore heap size to " + newMemstoreSize);
           blockCachePercent = blockCacheSize;
-          blockCache.setMaxSize(newBlockCacheSize);
+          cacheEngine.setMaxSize(newBlockCacheSize);
           globalMemStorePercent = memstoreSize;
           // Internally sets it to RegionServerAccounting
           // TODO : Set directly on RSAccounting??

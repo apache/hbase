@@ -30,7 +30,7 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
 import org.apache.hadoop.hbase.mob.MobFileCache;
@@ -284,8 +284,11 @@ public interface RegionServerServices
   /** Returns Return table descriptors implementation. */
   TableDescriptors getTableDescriptors();
 
-  /** Returns The block cache instance. */
-  Optional<BlockCache> getBlockCache();
+  /**
+   * Returns the cache access service owned by this region server.
+   * @return cache access service
+   */
+  CacheAccessService getCacheAccessService();
 
   /** Returns The cache for mob files. */
   Optional<MobFileCache> getMobFileCache();

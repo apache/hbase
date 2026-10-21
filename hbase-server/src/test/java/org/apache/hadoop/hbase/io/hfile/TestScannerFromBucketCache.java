@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -303,6 +304,6 @@ public class TestScannerFromBucketCache {
         ColumnFamilyDescriptorBuilder.newBuilder(family).setMaxVersions(Integer.MAX_VALUE).build());
     }
     return HBaseTestingUtil.createRegionAndWAL(regionInfo, testUtil.getDataTestDir(callingMethod),
-      conf, builder.build(), BlockCacheFactory.createBlockCache(conf));
+      conf, builder.build(), CacheAccessServices.fromConfiguration(conf));
   }
 }

@@ -47,7 +47,7 @@ import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.util.BloomFilterUtil;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.TestTemplate;
@@ -147,7 +147,7 @@ public abstract class TestMultiColumnScanner {
       ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES).setCompressionType(comprAlgo)
         .setBloomFilterType(bloomType).setMaxVersions(MAX_VERSIONS)
         .setDataBlockEncoding(dataBlockEncoding).build(),
-      BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration()));
+      CacheAccessServices.fromConfiguration(TEST_UTIL.getConfiguration()));
     List<String> rows = sequentialStrings("row", NUM_ROWS);
     List<String> qualifiers = sequentialStrings("qual", NUM_COLUMNS);
     List<KeyValue> kvs = new ArrayList<>();

@@ -50,8 +50,10 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -184,7 +186,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -207,12 +209,11 @@ public class TestBlockEvictionFromClient {
         thread.join();
       }
       // CustomInnerRegionObserver.sleepTime.set(0);
-      Iterator<CachedBlock> iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+
+      iterateBlockCache(cache);
       // read the data and expect same blocks, one new hit, no misses
       assertTrue(Bytes.equals(table.get(new Get(ROW)).value(), data));
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       // Check how this miss is happening
       // insert a second column, read the row, no new blocks, 3 new hits
       byte[] QUALIFIER2 = Bytes.add(QUALIFIER, QUALIFIER);
@@ -223,13 +224,11 @@ public class TestBlockEvictionFromClient {
       Result r = table.get(new Get(ROW));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       // flush, one new block
       LOG.info("Flushing cache");
       region.flush(true);
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       // compact, net minus two blocks, two hits, no misses
       LOG.info("Compacting");
       assertEquals(2, store.getStorefilesCount());
@@ -237,15 +236,13 @@ public class TestBlockEvictionFromClient {
       region.compact(true);
       waitForStoreFileCount(store, 1, 10000); // wait 10 seconds max
       assertEquals(1, store.getStorefilesCount());
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       // read the row, this should be a cache miss because we don't cache data
       // blocks on compaction
       r = table.get(new Get(ROW));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
     } finally {
       if (table != null) {
         table.close();
@@ -273,7 +270,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       insertData(table);
       // flush the data
@@ -331,7 +328,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -388,7 +385,7 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      BlockCache cache = setCacheProperties(region);
+      CacheAccessService cache = setCacheProperties(region);
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
       table.put(put);
@@ -417,20 +414,17 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       GetThread[] getThreads = initiateGet(table, true, false);
       Thread.sleep(200);
-      Iterator<CachedBlock> iterator = cache.iterator();
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean usedBlocksFound = false;
       int refCount = 0;
       int noOfBlocksWithRef = 0;
+      BucketCache bucketCache = getBucketCache(cache);
+
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           LOG.info("The refCount is " + refCount);
@@ -480,7 +474,7 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      BlockCache cache = setCacheProperties(region);
+      CacheAccessService cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -511,20 +505,16 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       GetThread[] getThreads = initiateGet(table, true, true);
       Thread.sleep(200);
-      Iterator<CachedBlock> iterator = cache.iterator();
+      BucketCache bucketCache = getBucketCache(cache);
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean usedBlocksFound = false;
       int refCount = 0;
       int noOfBlocksWithRef = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           LOG.info("The refCount is " + refCount);
@@ -574,7 +564,7 @@ public class TestBlockEvictionFromClient {
       HStore store = region.getStores().iterator().next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -606,10 +596,9 @@ public class TestBlockEvictionFromClient {
         TEST_UTIL.waitFor(30000, () -> r.getCompactionState().equals(CompactionState.NONE));
       }
       LOG.info("Split finished, is region closed {} {}", region.isClosed(), cache);
-      Iterator<CachedBlock> iterator = cache.iterator();
       // Though the split had created the HalfStorefileReader - the firstkey and lastkey scanners
       // should be closed inorder to return those blocks
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
     } finally {
       if (table != null) {
         table.close();
@@ -637,7 +626,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -660,18 +649,14 @@ public class TestBlockEvictionFromClient {
       MultiGetThread[] getThreads = initiateMultiGet(table);
       Thread.sleep(200);
       int refCount;
-      Iterator<CachedBlock> iterator = cache.iterator();
+      BucketCache bucketCache = getBucketCache(cache);
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean foundNonZeroBlock = false;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           assertEquals(NO_OF_THREADS, refCount);
           foundNonZeroBlock = true;
@@ -686,7 +671,7 @@ public class TestBlockEvictionFromClient {
       // Verify whether the gets have returned the blocks that it had
       CustomInnerRegionObserver.waitForGets.set(true);
       // giving some time for the block to be decremented
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       getLatch.countDown();
       LOG.info("Gets should have returned the bloks");
     } finally {
@@ -716,7 +701,7 @@ public class TestBlockEvictionFromClient {
       RegionLocator locator = TEST_UTIL.getConnection().getRegionLocator(tableName);
       String regionName = locator.getAllRegionLocations().get(0).getRegion().getEncodedName();
       HRegion region = TEST_UTIL.getRSForFirstRegionInTable(tableName).getRegion(regionName);
-      BlockCache cache = setCacheProperties(region);
+      CacheAccessService cache = setCacheProperties(region);
 
       Put put = new Put(ROW);
       put.addColumn(FAMILY, QUALIFIER, data);
@@ -746,20 +731,16 @@ public class TestBlockEvictionFromClient {
       // Create three sets of gets
       ScanThread[] scanThreads = initiateScan(table, true);
       Thread.sleep(200);
-      Iterator<CachedBlock> iterator = cache.iterator();
+      BucketCache bucketCache = getBucketCache(cache);
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean usedBlocksFound = false;
       int refCount = 0;
       int noOfBlocksWithRef = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           LOG.info("The refCount is " + refCount);
@@ -784,16 +765,15 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-  private BlockCache setCacheProperties(HRegion region) {
+  private CacheAccessService setCacheProperties(HRegion region) {
     Iterator<HStore> strItr = region.getStores().iterator();
-    BlockCache cache = null;
+    CacheAccessService cache = null;
     while (strItr.hasNext()) {
       HStore store = strItr.next();
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      // Use the last one
-      cache = cacheConf.getBlockCache().get();
+      cache = cacheConf.getCacheAccessService();
     }
     return cache;
   }
@@ -819,8 +799,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
-
+      CacheAccessService cache = cacheConf.getCacheAccessService();
       // insert data. 2 Rows are added
       insertData(table);
       // flush the data
@@ -884,7 +863,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -908,23 +887,18 @@ public class TestBlockEvictionFromClient {
       // flush, one new block
       LOG.info("Flushing cache");
       region.flush(true);
-      Iterator<CachedBlock> iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       // Create three sets of scan
       ScanThread[] scanThreads = initiateScan(table, reversed);
       Thread.sleep(100);
-      iterator = cache.iterator();
+      BucketCache bucketCache = getBucketCache(cache);
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean usedBlocksFound = false;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           assertEquals(NO_OF_THREADS, refCount);
@@ -941,17 +915,11 @@ public class TestBlockEvictionFromClient {
       assertEquals(1, store.getStorefilesCount());
       // Even after compaction is done we will have some blocks that cannot
       // be evicted this is because the scan is still referencing them
-      iterator = cache.iterator();
+      iterator = CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3 as they are not yet cleared
           assertEquals(NO_OF_THREADS, refCount);
@@ -966,14 +934,12 @@ public class TestBlockEvictionFromClient {
         thread.join();
       }
       // by this time all blocks should have been evicted
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       Result r = table.get(new Get(ROW));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
       // The gets would be working on new blocks
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
     } finally {
       if (table != null) {
         table.close();
@@ -1001,7 +967,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
 
       // insert data. 2 Rows are added
       Put put = new Put(ROW);
@@ -1025,23 +991,18 @@ public class TestBlockEvictionFromClient {
       // flush, one new block
       LOG.info("Flushing cache");
       region.flush(true);
-      Iterator<CachedBlock> iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       // Create three sets of scan
       ScanThread[] scanThreads = initiateScan(table, false);
       Thread.sleep(100);
-      iterator = cache.iterator();
+      BucketCache bucketCache = getBucketCache(cache);
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean usedBlocksFound = false;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           assertEquals(NO_OF_THREADS, refCount);
@@ -1067,17 +1028,11 @@ public class TestBlockEvictionFromClient {
       assertEquals(1, store.getStorefilesCount());
       // Even after compaction is done we will have some blocks that cannot
       // be evicted this is because the scan is still referencing them
-      iterator = cache.iterator();
+      iterator = CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3 as they are not yet cleared
           assertEquals(NO_OF_THREADS, refCount);
@@ -1092,17 +1047,15 @@ public class TestBlockEvictionFromClient {
         thread.join();
       }
       // by this time all blocks should have been evicted
-      iterator = cache.iterator();
       // Since a flush and compaction happened after a scan started
       // we need to ensure that all the original blocks of the compacted file
       // is also removed.
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
       Result r = table.get(new Get(ROW));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER), data));
       assertTrue(Bytes.equals(r.getValue(FAMILY, QUALIFIER2), data2));
       // The gets would be working on new blocks
-      iterator = cache.iterator();
-      iterateBlockCache(cache, iterator);
+      iterateBlockCache(cache);
     } finally {
       if (table != null) {
         table.close();
@@ -1129,7 +1082,7 @@ public class TestBlockEvictionFromClient {
       CacheConfig cacheConf = store.getCacheConfig();
       cacheConf.setCacheDataOnWrite(true);
       cacheConf.setEvictOnClose(true);
-      BlockCache cache = cacheConf.getBlockCache().get();
+      CacheAccessService cache = cacheConf.getCacheAccessService();
       // insert data. 2 Rows are added
       insertData(table);
       // flush the data
@@ -1144,19 +1097,15 @@ public class TestBlockEvictionFromClient {
       // before even the postNext hook gets executed.
       // giving some time for the block to be decremented
       Thread.sleep(100);
-      Iterator<CachedBlock> iterator = cache.iterator();
+      BucketCache bucketCache = getBucketCache(cache);
+      Iterator<CachedBlock> iterator =
+        CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       boolean usedBlocksFound = false;
       int refCount = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           assertEquals(NO_OF_THREADS, refCount);
@@ -1170,19 +1119,13 @@ public class TestBlockEvictionFromClient {
       for (ScanThread thread : scanThreads) {
         thread.join();
       }
-      iterator = cache.iterator();
+      iterator = CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
       usedBlocksFound = false;
       refCount = 0;
       while (iterator.hasNext()) {
         CachedBlock next = iterator.next();
         BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-        if (cache instanceof BucketCache) {
-          refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        } else if (cache instanceof CombinedBlockCache) {
-          refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        } else {
-          continue;
-        }
+        refCount = bucketCache.getRpcRefCount(cacheKey);
         if (refCount != 0) {
           // Blocks will be with count 3
           assertEquals(NO_OF_THREADS, refCount);
@@ -1199,20 +1142,32 @@ public class TestBlockEvictionFromClient {
     }
   }
 
-  private void iterateBlockCache(BlockCache cache, Iterator<CachedBlock> iterator) {
-    int refCount;
+  /**
+   * Returns the BucketCache backing the L2 cache engine.
+   * @param cache cache access service
+   * @return L2 BucketCache
+   */
+  private BucketCache getBucketCache(CacheAccessService cache) {
+    BlockCache l2Cache = CacheAccessServiceTestFactory.getSecondLevelBlockCache(cache);
+    assertTrue(l2Cache instanceof BucketCache);
+    return (BucketCache) l2Cache;
+  }
+
+  /**
+   * Verifies that cached blocks have no outstanding RPC references.
+   * @param cache cache access service
+   */
+  private void iterateBlockCache(CacheAccessService cache) {
+    BucketCache bucketCache = getBucketCache(cache);
+    Iterator<CachedBlock> iterator =
+      CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
+
     while (iterator.hasNext()) {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-      if (cache instanceof BucketCache) {
-        refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-        LOG.info("BucketCache {} {}", cacheKey, refCount);
-      } else if (cache instanceof CombinedBlockCache) {
-        refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-        LOG.info("CombinedBlockCache {} {}", cacheKey, refCount);
-      } else {
-        continue;
-      }
+      int refCount = bucketCache.getRpcRefCount(cacheKey);
+
+      LOG.info("BucketCache {} {}", cacheKey, refCount);
       assertEquals(0, refCount);
     }
   }
@@ -1265,8 +1220,8 @@ public class TestBlockEvictionFromClient {
     return multiGetThreads;
   }
 
-  private void checkForBlockEviction(BlockCache cache, boolean getClosed, boolean expectOnlyZero)
-    throws InterruptedException {
+  private void checkForBlockEviction(CacheAccessService cache, boolean getClosed,
+    boolean expectOnlyZero) throws InterruptedException {
     int counter = NO_OF_THREADS;
     if (CustomInnerRegionObserver.waitForGets.get()) {
       // Because only one row is selected, it has only 2 blocks
@@ -1279,18 +1234,15 @@ public class TestBlockEvictionFromClient {
         Thread.sleep(100);
       }
     }
-    Iterator<CachedBlock> iterator = cache.iterator();
+    BucketCache bucketCache = getBucketCache(cache);
+    Iterator<CachedBlock> iterator =
+      CacheAccessServices.asCachedBlockIterable(cache).orElseThrow().iterator();
     int refCount = 0;
     while (iterator.hasNext()) {
       CachedBlock next = iterator.next();
       BlockCacheKey cacheKey = new BlockCacheKey(next.getFilename(), next.getOffset());
-      if (cache instanceof BucketCache) {
-        refCount = ((BucketCache) cache).getRpcRefCount(cacheKey);
-      } else if (cache instanceof CombinedBlockCache) {
-        refCount = ((CombinedBlockCache) cache).getRpcRefCount(cacheKey);
-      } else {
-        continue;
-      }
+      refCount = bucketCache.getRpcRefCount(cacheKey);
+
       LOG.info(" the refcount is " + refCount + " block is " + cacheKey);
       if (CustomInnerRegionObserver.waitForGets.get()) {
         if (expectOnlyZero) {

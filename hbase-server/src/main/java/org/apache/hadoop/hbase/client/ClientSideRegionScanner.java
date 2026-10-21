@@ -31,8 +31,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -52,7 +53,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
 
   private HRegion region;
   private MobFileCache mobFileCache;
-  private BlockCache blockCache;
+  private CacheAccessService cas;
   RegionScanner scanner;
   List<Cell> values;
   boolean hasMore = true;
@@ -77,8 +78,8 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       String.valueOf(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT));
     // don't allow L2 bucket cache for non RS process to avoid unexpected disk usage.
     conf.unset(HConstants.BUCKET_CACHE_IOENGINE_KEY);
-    blockCache = BlockCacheFactory.createBlockCache(conf);
-    region.setBlockCache(blockCache);
+    cas = CacheAccessServices.fromConfiguration(conf);
+    region.setCacheAccessService(cas);
     // we won't initialize the MobFileCache when not running in RS process. so provided an
     // initialized cache. Consider the case: an CF was set from an mob to non-mob. if we only
     // initialize cache for MOB region, NPE from HMobStore will still happen. So Initialize the
@@ -158,9 +159,9 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       mobFileCache = null;
     }
 
-    if (blockCache != null) {
-      blockCache.shutdown();
-      blockCache = null;
+    if (cas != null) {
+      cas.shutdown();
+      cas = null;
     }
   }
 
