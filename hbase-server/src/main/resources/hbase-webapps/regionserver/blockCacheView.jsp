@@ -17,46 +17,70 @@
  * limitations under the License.
  */
 --%>
-<%@ page contentType="text/html;charset=UTF-8"
-         import="java.util.*"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache"
-         import="org.apache.hadoop.conf.Configuration"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCacheUtil"
-         import="org.apache.hadoop.hbase.io.hfile.CachedBlock"
-         import="org.apache.hadoop.hbase.regionserver.http.RSStatusConstants" %><%
-  // This template is used to give views on an individual block cache as JSON.
+<%@ page contentType="application/json;charset=UTF-8"
+        import="java.util.*"
+        import="org.apache.hadoop.conf.Configuration"
+        import="org.apache.hadoop.hbase.io.hfile.BlockCacheUtil"
+        import="org.apache.hadoop.hbase.io.hfile.CachedBlock"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheEngine"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheTier"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheTopology"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheTopologyType"
+        import="org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService"
+        import="org.apache.hadoop.hbase.regionserver.http.RSStatusConstants" %><%
+  // This template is used to give views on an individual cache tier as JSON.
 
   Configuration conf = (Configuration) request.getAttribute("conf");
   String bcn = (String) request.getAttribute(RSStatusConstants.BLOCK_CACHE_NAME);
   String bcv = (String) request.getAttribute(RSStatusConstants.BLOCK_CACHE_V);
-  BlockCache bc = (BlockCache) request.getAttribute("blockCache");
+  CacheAccessService cacheAccessService =
+    (CacheAccessService) request.getAttribute("blockCache");
 
-  BlockCache [] bcs = bc == null ? null : bc.getBlockCaches();
-  if (bcn.equals(RSStatusConstants.BLOCK_CACHE_NAME_L1)) {
-    bc = bcs == null || bcs.length == 0? bc: bcs[0];
-  } else {
-    if (bcs == null || bcs.length < 2) {
-      System.out.println("There is no L2 block cache");
-      return;
-    }
-    bc = bcs[1];
-  }
-  if (bc == null) {
-    System.out.println("There is no block cache");
+  if (!(cacheAccessService instanceof TopologyBackedCacheAccessService)) {
+    out.print("[]");
     return;
   }
-  BlockCacheUtil.CachedBlocksByFile cbsbf = BlockCacheUtil.getLoadedCachedBlocksByFile(conf, bc);
-  if (bcv.equals(RSStatusConstants.BLOCK_CACHE_V_FILE)) {
-    boolean firstEntry = true; %>
-    [<% for (Map.Entry<String, NavigableSet<CachedBlock>> e: cbsbf.getCachedBlockStatsByFile().entrySet()) { %>
-    <% if (!firstEntry) { %>,<% } %><%= BlockCacheUtil.toJSON(e.getKey(), e.getValue()) %>
-    <%
-      if (firstEntry) {
-        firstEntry = false;
-      }
-    %>
-    <% } %>]
 
+  CacheTopology topology =
+    ((TopologyBackedCacheAccessService) cacheAccessService).getTopology();
+
+  CacheTier tier;
+  if (bcn.equals(RSStatusConstants.BLOCK_CACHE_NAME_L1)) {
+    tier = topology.getType() == CacheTopologyType.SINGLE_TIER
+      ? CacheTier.SINGLE
+      : CacheTier.L1;
+  } else {
+    tier = CacheTier.L2;
+  }
+
+  Optional<CacheEngine> engineOptional = topology.getEngine(tier);
+  if (engineOptional.isEmpty()) {
+    out.print("[]");
+    return;
+  }
+
+  CacheEngine cacheEngine = engineOptional.get();
+
+  BlockCacheUtil.CachedBlocksByFile cbsbf =
+    BlockCacheUtil.getLoadedCachedBlocksByFile(conf, cacheEngine);
+
+  if (bcv.equals(RSStatusConstants.BLOCK_CACHE_V_FILE)) {
+    boolean firstEntry = true;
+%>
+[
+<%
+  for (Map.Entry<String, NavigableSet<CachedBlock>> e
+      : cbsbf.getCachedBlockStatsByFile().entrySet()) {
+%>
+  <% if (!firstEntry) { %>,<% } %><%= BlockCacheUtil.toJSON(e.getKey(), e.getValue()) %>
+<%
+    if (firstEntry) {
+      firstEntry = false;
+    }
+  }
+%>
+]
 <% } else { %>
-[ <%= BlockCacheUtil.toJSON(bc) %>, <%= BlockCacheUtil.toJSON(cbsbf) %> ]
+[ <%= BlockCacheUtil.toJSON(cacheEngine) %>, <%= BlockCacheUtil.toJSON(cbsbf) %> ]
 <% } %>

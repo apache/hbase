@@ -107,9 +107,10 @@ import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.DecommissionedHostRejectedException;
@@ -388,8 +389,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   private NamedQueueServiceChore namedQueueServiceChore = null;
 
-  // Block cache
-  private BlockCache blockCache;
+  // Cache Access Service to access the cache topology and engines.
+  private CacheAccessService cacheAccessService;
   // The cache for mob files
   private MobFileCache mobFileCache;
 
@@ -532,7 +533,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
       regionServerAccounting = new RegionServerAccounting(conf);
 
-      blockCache = BlockCacheFactory.createBlockCache(conf);
+      cacheAccessService = CacheAccessServices.fromConfiguration(conf, onlineRegions);
       // The call below, instantiates the DataTieringManager only when
       // the configuration "hbase.regionserver.datatiering.enable" is set to true.
       DataTieringManager.instantiate(conf, onlineRegions);
@@ -935,8 +936,8 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
       stopInfoServer();
       // Send cache a shutdown.
-      if (blockCache != null) {
-        blockCache.shutdown();
+      if (cacheAccessService != null) {
+        cacheAccessService.shutdown();
       }
       if (mobFileCache != null) {
         mobFileCache.shutdown();
@@ -1240,13 +1241,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
     }
 
-    getBlockCache().ifPresent(cache -> {
-      cache.getRegionCachedInfo().ifPresent(regionCachedInfo -> {
-        regionCachedInfo.forEach((regionName, prefetchSize) -> {
-          serverLoad.putRegionCachedInfo(regionName, roundSize(prefetchSize, unitMB));
-        });
+    getCacheAccessService().getRegionCachedInfo().ifPresent(regionCachedInfo -> {
+      regionCachedInfo.forEach((regionName, prefetchSize) -> {
+        serverLoad.putRegionCachedInfo(regionName, roundSize(prefetchSize, unitMB));
       });
     });
+
     serverLoad.setCacheFreeSize(regionServerWrapper.getBlockCacheFreeSize());
     if (DataTieringManager.getInstance() != null) {
       DataTieringManager.getInstance().getRegionColdDataSize()
@@ -1514,9 +1514,9 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   private void startHeapMemoryManager() {
-    if (this.blockCache != null) {
-      this.hMemManager =
-        new HeapMemoryManager(this.blockCache, this.cacheFlusher, this, regionServerAccounting);
+    if (!(this.cacheAccessService instanceof NoOpCacheAccessService)) {
+      this.hMemManager = new HeapMemoryManager(this.cacheAccessService, this.cacheFlusher, this,
+        regionServerAccounting);
       this.hMemManager.start(getChoreService());
     }
   }
@@ -1608,14 +1608,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     int totalStaticBloomSizeKB = roundSize(totalStaticBloomSize, unitKB);
     int regionSizeMB = roundSize(totalRegionSize, unitMB);
     final MutableFloat currentRegionCachedRatio = new MutableFloat(0.0f);
-    getBlockCache().ifPresent(bc -> {
-      bc.getRegionCachedInfo().ifPresent(regionCachedInfo -> {
-        if (regionCachedInfo.containsKey(regionEncodedName)) {
-          currentRegionCachedRatio.setValue(regionSizeMB == 0
-            ? 0.0f
-            : (float) roundSize(regionCachedInfo.get(regionEncodedName), unitMB) / regionSizeMB);
-        }
-      });
+    getCacheAccessService().getRegionCachedInfo().ifPresent(regionCachedInfo -> {
+      Long cachedSize = regionCachedInfo.get(regionEncodedName);
+      if (cachedSize != null) {
+        currentRegionCachedRatio.setValue(
+          regionSizeMB == 0 ? 0.0f : (float) roundSize(cachedSize, unitMB) / regionSizeMB);
+      }
     });
     final MutableFloat currentRegionColdDataRatio = new MutableFloat(0.0f);
     if (DataTieringManager.getInstance() != null) {
@@ -2167,6 +2165,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     configurationManager.registerObserver(this.cacheFlusher);
     configurationManager.registerObserver(this.rpcServices);
     configurationManager.registerObserver(this.prefetchExecutorNotifier);
+    configurationManager.registerObserver(this.cacheAccessService);
     configurationManager.registerObserver(this);
   }
 
@@ -3408,12 +3407,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
   }
 
   /**
-   * May be null if this is a master which not carry table.
-   * @return The block cache instance used by the regionserver.
+   * May be NoOpCacheAccessService if this is a master which not carry table.
+   * @return The CacheAccessService instance used by the regionserver.
    */
   @Override
-  public Optional<BlockCache> getBlockCache() {
-    return Optional.ofNullable(this.blockCache);
+  public CacheAccessService getCacheAccessService() {
+    return cacheAccessService;
   }
 
   /**
@@ -3430,7 +3429,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
     for (Store store : region.getStores()) {
       for (StoreFile hFile : store.getStorefiles()) {
-        evictedBlocks += blockCache.evictBlocksByHfileName(hFile.getPath().getName());
+        evictedBlocks += cacheAccessService.evictBlocksByHfileName(hFile.getPath().getName());
       }
     }
 

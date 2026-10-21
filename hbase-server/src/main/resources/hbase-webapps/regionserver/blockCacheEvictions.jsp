@@ -18,24 +18,32 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache"
-         import="org.apache.hadoop.hbase.io.hfile.AgeSnapshot" %>
-
+        import="org.apache.hadoop.hbase.io.hfile.CacheStats"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheEngine"
+        import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService"
+        import="org.apache.hadoop.hbase.io.hfile.AgeSnapshot" %>
 <%
-  BlockCache bc = (BlockCache) request.getAttribute("bc");
-
-  AgeSnapshot ageAtEvictionSnapshot = bc.getStats().getAgeAtEvictionSnapshot();
+  CacheStats stats;
+  Object obj = request.getAttribute("bc");
+  if( obj instanceof CacheEngine) {
+    CacheEngine eng = (CacheEngine) obj;
+    stats = eng.getStats();
+  } else {
+    CacheAccessService cas = (CacheAccessService) obj;
+    stats = cas.getStats();
+  }
+  AgeSnapshot ageAtEvictionSnapshot = stats.getAgeAtEvictionSnapshot();
   // Only show if non-zero mean and stddev as is the case in combinedblockcache
 %>
 
 <tr>
   <td>Evicted</td>
-  <td><%= String.format("%,d", bc.getStats().getEvictedCount()) %></td>
+  <td><%= String.format("%,d", stats.getEvictedCount()) %></td>
   <td>The total number of blocks evicted</td>
 </tr>
 <tr>
   <td>Evictions</td>
-  <td><%= String.format("%,d", bc.getStats().getEvictionCount()) %></td>
+  <td><%= String.format("%,d", stats.getEvictionCount()) %></td>
   <td>The total number of times an eviction has occurred</td>
 </tr>
 <tr>

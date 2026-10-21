@@ -18,10 +18,10 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache" %>
+         import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService" %>
 
 <%
-  BlockCache bc = (BlockCache) request.getAttribute("bc");
+  CacheAccessService bc = (CacheAccessService) request.getAttribute("bc");
 
   String bcUrl = bc == null ? null : "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
   String bcName = bc == null ? null : bc.getClass().getSimpleName();
@@ -36,7 +36,7 @@
   <tr>
     <td>Implementation</td>
     <td><a href="<%= bcUrl %>"><%= bcName %></a></td>
-    <td>Block cache implementing class</td>
+    <td>Cache Access Service implementing class</td>
   </tr>
 </table>
-<p>See <a href="https://hbase.apache.org/docs/architecture/regionserver#architecture-regionserver-block-cache">block cache</a> in the HBase Reference Guide for help.</p>
+<p>See <a href="https://hbase.apache.org/docs/architecture/regionserver#architecture-regionserver-block-cache">Cache Access Service</a> in the HBase Reference Guide for help.</p>
