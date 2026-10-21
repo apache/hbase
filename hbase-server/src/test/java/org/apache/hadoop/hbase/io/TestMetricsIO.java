@@ -17,7 +17,12 @@
  */
 package org.apache.hadoop.hbase.io;
 
+import java.lang.management.ManagementFactory;
+import javax.management.AttributeNotFoundException;
+import javax.management.MBeanServer;
+import javax.management.ObjectName;
 import org.apache.hadoop.hbase.CompatibilityFactory;
+import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
@@ -31,7 +36,7 @@ public class TestMetricsIO {
   public MetricsAssertHelper HELPER = CompatibilityFactory.getInstance(MetricsAssertHelper.class);
 
   @Test
-  public void testMetrics() {
+  public void testMetrics() throws Exception {
     MetricsIO metrics = new MetricsIO(new MetricsIOWrapper() {
       @Override
       public long getChecksumFailures() {
@@ -48,10 +53,35 @@ public class TestMetricsIO {
     metrics.updateFsWriteTime(500);
     metrics.updateFsWriteTime(600);
 
+    long reads = HELPER.getCounter(MetricsIOSource.STORE_FILE_TRACKER_FILE_READ_ATTEMPTS_KEY,
+      metrics.getMetricsSource());
+    long writes = HELPER.getCounter(MetricsIOSource.STORE_FILE_TRACKER_FILE_WRITE_ATTEMPTS_KEY,
+      metrics.getMetricsSource());
+    metrics.incrStoreFileTrackerFileReadAttempts();
+    metrics.incrStoreFileTrackerFileReadAttempts();
+    metrics.incrStoreFileTrackerFileWriteAttempts();
+    HELPER.assertCounter(MetricsIOSource.STORE_FILE_TRACKER_FILE_READ_ATTEMPTS_KEY, reads + 2,
+      metrics.getMetricsSource());
+    HELPER.assertCounter(MetricsIOSource.STORE_FILE_TRACKER_FILE_WRITE_ATTEMPTS_KEY, writes + 1,
+      metrics.getMetricsSource());
+
     HELPER.assertCounter("fsChecksumFailureCount", 40, metrics.getMetricsSource());
 
     HELPER.assertCounter("fsReadTime_numOps", 2, metrics.getMetricsSource());
     HELPER.assertCounter("fsPReadTime_numOps", 1, metrics.getMetricsSource());
     HELPER.assertCounter("fsWriteTime_numOps", 3, metrics.getMetricsSource());
+
+    MBeanServer server = ManagementFactory.getPlatformMBeanServer();
+    ObjectName name =
+      new ObjectName("Hadoop:service=HBase,name=" + MetricsIOSource.METRICS_JMX_CONTEXT);
+    // JMX can cache the snapshot taken while the source is being registered.
+    new HBaseCommonTestingUtil().waitFor(15000, () -> {
+      try {
+        return (long) server.getAttribute(name, "StoreFileTrackerFileReadAttempts") == reads + 2
+          && (long) server.getAttribute(name, "StoreFileTrackerFileWriteAttempts") == writes + 1;
+      } catch (AttributeNotFoundException e) {
+        return false;
+      }
+    });
   }
 }
