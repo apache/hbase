@@ -18,12 +18,13 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache"
+         import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService"
+         import="org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService"         
          import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix" %>
 
 <%
-  BlockCache bc = (BlockCache) request.getAttribute("bc");
-if (bc == null) { %>
+  CacheAccessService bc = (CacheAccessService) request.getAttribute("bc");
+if (bc instanceof NoOpCacheAccessService) { %>
   <p>BlockCache is null</p>
 <% } else { %>
 <table class="table table-striped">

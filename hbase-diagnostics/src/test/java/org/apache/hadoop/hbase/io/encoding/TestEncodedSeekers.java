@@ -37,9 +37,12 @@ import org.apache.hadoop.hbase.client.Durability;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.Region;
@@ -106,8 +109,7 @@ public class TestEncodedSeekers {
       testUtil.getConfiguration().setInt(HFile.FORMAT_VERSION_KEY, 3);
     }
 
-    LruBlockCache cache =
-      (LruBlockCache) BlockCacheFactory.createBlockCache(testUtil.getConfiguration());
+    CacheAccessService cache = CacheAccessServices.fromConfiguration(testUtil.getConfiguration());
     // Need to disable default row bloom filter for this test to pass.
     ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(CF_BYTES)
       .setMaxVersions(MAX_VERSIONS).setDataBlockEncoding(encoding).setBlocksize(BLOCK_SIZE)
@@ -123,9 +125,9 @@ public class TestEncodedSeekers {
     // verify correctness again after compacting
     region.compact(false);
     doGets(region);
-
-    Map<DataBlockEncoding, Integer> encodingCounts = cache.getEncodingCountsForTest();
-
+    LruCacheEngine lruEngine =
+      (LruCacheEngine) CacheAccessServiceTestFactory.getCacheEngine(cache, CacheTier.SINGLE);
+    Map<DataBlockEncoding, Integer> encodingCounts = lruEngine.getEncodingCountsForTest();
     // Ensure that compactions don't pollute the cache with unencoded blocks
     // in case of in-cache-only encoding.
     System.err.println("encodingCounts=" + encodingCounts);

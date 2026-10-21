@@ -739,6 +739,17 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
   }
 
   /**
+   * Returns region-level cache information from the cache tier that tracks it.
+   * @return region-level cache information when supported
+   */
+  @Override
+  public Optional<Map<String, Long>> getRegionCachedInfo() {
+    CacheTier tier =
+      topology.getType() == CacheTopologyType.SINGLE_TIER ? CacheTier.SINGLE : CacheTier.L2;
+    return topology.getEngine(tier).flatMap(CacheEngine::getRegionCachedInfo);
+  }
+
+  /**
    * Returns an iterable view over cached blocks exposed by the cache engines in this topology.
    * <p>
    * The returned iterable aggregates cached-block iterables from all engines that support this

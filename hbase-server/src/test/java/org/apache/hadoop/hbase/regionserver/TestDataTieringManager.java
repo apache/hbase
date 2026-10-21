@@ -33,7 +33,6 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import org.apache.hadoop.conf.Configuration;
@@ -52,8 +51,6 @@ import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
@@ -63,6 +60,8 @@ import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
@@ -104,7 +103,7 @@ public class TestDataTieringManager {
   private static final long DAY = 24 * 60 * 60 * 1000;
   private static Configuration defaultConf;
   private static FileSystem fs;
-  private static BlockCache blockCache;
+  private static CacheAccessService cas;
   private static CacheConfig cacheConf;
   private static Path testDir;
   private static final Map<String, HRegion> testOnlineRegions = new HashMap<>();
@@ -232,10 +231,12 @@ public class TestDataTieringManager {
     }
 
     // Since we have one cold file among four files, only three should get prefetched.
-    Optional<Map<String, Pair<String, Long>>> fullyCachedFiles = blockCache.getFullyCachedFiles();
-    assertTrue(fullyCachedFiles.isPresent(), "We should get the fully cached files from the cache");
-    Waiter.waitFor(defaultConf, 10000, () -> fullyCachedFiles.get().size() == 3);
-    assertEquals(3, fullyCachedFiles.get().size(), "Number of fully cached files are incorrect");
+    assertTrue(cas.getFullyCachedFiles().isPresent(),
+      "We should get the fully cached files from the cache");
+    Waiter.waitFor(defaultConf, 10000,
+      () -> cas.getFullyCachedFiles().map(files -> files.size() == 3).orElse(false));
+    assertEquals(3, cas.getFullyCachedFiles().orElseThrow().size(),
+      "Number of fully cached files are incorrect");
   }
 
   private void setPrefetchBlocksOnOpen() {
@@ -312,14 +313,14 @@ public class TestDataTieringManager {
     testOnlineRegions.put(region.getRegionInfo().getEncodedName(), region);
 
     long initialStoreFilesCount = hStore.getStorefilesCount();
-    long initialCacheDataBlockCount = blockCache.getDataBlockCount();
+    long initialCacheDataBlockCount = cas.getDataBlockCount();
     assertEquals(3, initialStoreFilesCount);
     assertEquals(0, initialCacheDataBlockCount);
 
     region.compact(true);
 
     long compactedStoreFilesCount = hStore.getStorefilesCount();
-    long compactedCacheDataBlockCount = blockCache.getDataBlockCount();
+    long compactedCacheDataBlockCount = cas.getDataBlockCount();
     assertEquals(1, compactedStoreFilesCount);
     assertEquals(expectDataBlocksCached, compactedCacheDataBlockCount > 0);
   }
@@ -760,7 +761,7 @@ public class TestDataTieringManager {
     hStoreFile.getReader().getHFileReader().readBlock(key.getOffset(), onDiskBlockSize, true, false,
       false, false, key.getBlockType(), DataBlockEncoding.NONE);
     // Validate that the hot block gets cached and cold block is not cached.
-    HFileBlock block = (HFileBlock) blockCache.getBlock(key, false, false, false, BlockType.DATA);
+    HFileBlock block = (HFileBlock) cas.getBlock(key, false, false, false, BlockType.DATA);
     if (expectedCached) {
       assertNotNull(block);
     } else {
@@ -816,8 +817,8 @@ public class TestDataTieringManager {
 
   private static void setupFileSystemAndCache() throws IOException {
     fs = HFileSystem.get(defaultConf);
-    blockCache = BlockCacheFactory.createBlockCache(defaultConf);
-    cacheConf = new CacheConfig(defaultConf, blockCache);
+    cas = CacheAccessServices.fromConfiguration(defaultConf);
+    cacheConf = new CacheConfig(defaultConf, cas);
   }
 
   private static void setupOnlineRegions() throws IOException {
@@ -888,7 +889,7 @@ public class TestDataTieringManager {
     // Manually sets the BlockCache for the HRegion instance.
     // This is necessary because the region server is not started within this method,
     // and therefore the BlockCache needs to be explicitly configured.
-    region.setBlockCache(blockCache);
+    region.setCacheAccessService(cas);
     return region;
   }
 

@@ -1602,7 +1602,7 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * </p>
    * @return sorted set of cached HFile names
    */
-  SortedSet<String> getCachedFileNamesForTest() {
+  public SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<>();
 
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -1638,7 +1638,7 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * </p>
    * @return internal cached-block map
    */
-  Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
+  public Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
     return map;
   }
 

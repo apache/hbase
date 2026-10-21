@@ -30,12 +30,14 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.function.BiConsumer;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -162,14 +164,15 @@ public class TestCacheEviction {
 
   private void checkCacheForBlocks(TableName tableName, Collection<HStoreFile> files,
     BiConsumer<String, Map<String, Pair<String, Long>>> checker) {
-    files.forEach(f -> {
-      UTIL.getMiniHBaseCluster().getRegionServer(0).getBlockCache().ifPresent(cache -> {
-        cache.getFullyCachedFiles().ifPresent(m -> {
-          checker.accept(f.getPath().getName(), m);
-        });
-        assertTrue(cache.getFullyCachedFiles().isPresent());
-      });
-    });
+    CacheAccessService cacheAccessService =
+      UTIL.getMiniHBaseCluster().getRegionServer(0).getCacheAccessService();
+
+    Optional<Map<String, Pair<String, Long>>> fullyCachedFiles =
+      cacheAccessService.getFullyCachedFiles();
+
+    assertTrue(fullyCachedFiles.isPresent());
+
+    files.forEach(file -> checker.accept(file.getPath().getName(), fullyCachedFiles.get()));
   }
 
   @Test

@@ -18,23 +18,38 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache"
-         import="org.apache.hadoop.hbase.regionserver.HRegionServer" %>
+	import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService" %>	
+<%@ page import="org.apache.hadoop.hbase.io.hfile.cache.CacheEngine" %>
+<%@ page import="org.apache.hadoop.hbase.io.hfile.cache.CacheTier" %>
+<%@ page import="org.apache.hadoop.hbase.io.hfile.cache.CacheTopology" %>
+<%@ page import="org.apache.hadoop.hbase.io.hfile.cache.CacheTopologyType" %>
+<%@ page import="org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService" %>         
+<%@ page import="org.apache.hadoop.hbase.regionserver.HRegionServer" %>
 <%@ page import="org.apache.hadoop.hbase.io.hfile.CacheConfig" %>
 
 <%-- Template for rendering Block Cache tabs in RegionServer Status page. --%>
 
 <%
-  HRegionServer regionServer =
-    (HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
+HRegionServer regionServer =
+(HRegionServer) getServletContext().getAttribute(HRegionServer.REGIONSERVER);
 
-  CacheConfig cacheConfig = new CacheConfig(regionServer.getConfiguration());
+CacheConfig cacheConfig = new CacheConfig(regionServer.getConfiguration());
+CacheAccessService cas = regionServer.getCacheAccessService();
 
-  BlockCache bc = regionServer.getBlockCache().orElse(null);
+CacheEngine l1 = null;
+CacheEngine l2 = null;
 
-  BlockCache[] bcs = bc == null ? null : bc.getBlockCaches();
-  BlockCache l1 = bcs == null ? bc : bcs[0];
-  BlockCache l2 = bcs == null ? null : bcs.length <= 1 ? null : bcs[1];
+if (cas instanceof TopologyBackedCacheAccessService) {
+	CacheTopology topology =
+  		((TopologyBackedCacheAccessService) cas).getTopology();
+
+	CacheTier l1Tier = topology.getType() == CacheTopologyType.SINGLE_TIER
+  		? CacheTier.SINGLE
+  		: CacheTier.L1;
+
+	l1 = topology.getEngine(l1Tier).orElse(null);
+	l2 = topology.getEngine(CacheTier.L2).orElse(null);
+}
 %>
 
 <div class="tabbable">
@@ -47,7 +62,7 @@
   </ul>
   <div class="tab-content">
     <div class="tab-pane active" id="tab_bc_baseInfo" role="tabpanel">
-      <% request.setAttribute("bc", bc); %>
+      <% request.setAttribute("bc", cas); %>
       <jsp:include page="blockCacheBaseInfo.jsp"/>
     </div>
     <div class="tab-pane" id="tab_bc_config" role="tabpanel">
@@ -55,7 +70,7 @@
       <jsp:include page="blockCacheConfig.jsp"/>
     </div>
     <div class="tab-pane" id="tab_bc_stats" role="tabpanel">
-      <% request.setAttribute("bc", bc); %>
+      <% request.setAttribute("bc", cas); %>
       <jsp:include page="blockCacheStats.jsp"/>
     </div>
     <div class="tab-pane" id="tab_bc_l1" role="tabpanel">

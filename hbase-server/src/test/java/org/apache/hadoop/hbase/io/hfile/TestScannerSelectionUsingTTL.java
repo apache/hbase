@@ -22,7 +22,6 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.stream.Stream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Cell;
@@ -36,6 +35,11 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -90,7 +94,7 @@ public class TestScannerSelectionUsingTTL {
   public void testScannerSelection() throws IOException {
     Configuration conf = TEST_UTIL.getConfiguration();
     conf.setBoolean("hbase.store.delete.expired.storefile", false);
-    LruBlockCache cache = (LruBlockCache) BlockCacheFactory.createBlockCache(conf);
+    CacheAccessService cas = CacheAccessServices.fromConfiguration(conf);
 
     TableDescriptor td = TableDescriptorBuilder.newBuilder(TABLE)
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(FAMILY_BYTES)
@@ -98,7 +102,7 @@ public class TestScannerSelectionUsingTTL {
       .build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
     HRegion region = HBaseTestingUtil.createRegionAndWAL(info,
-      TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, td, cache);
+      TEST_UTIL.getDataTestDir(info.getEncodedName()), conf, td, cas);
 
     long ts = EnvironmentEdgeManager.currentTime();
     long version = 0; // make sure each new set of Put's have a new ts
@@ -121,7 +125,9 @@ public class TestScannerSelectionUsingTTL {
     }
 
     Scan scan = new Scan().readVersions(Integer.MAX_VALUE);
-    cache.clearCache();
+    LruCacheEngine lruEngine =
+      (LruCacheEngine) CacheAccessServiceTestFactory.getCacheEngine(cas, CacheTier.SINGLE);
+    lruEngine.clearCache();
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     final int expectedKVsPerRow = numFreshFiles * NUM_COLS_PER_ROW;
@@ -133,11 +139,7 @@ public class TestScannerSelectionUsingTTL {
       results.clear();
     }
     assertEquals(NUM_ROWS, numReturnedRows);
-    Set<String> accessedFiles = cache.getCachedFileNamesForTest();
-    LOG.debug("Files accessed during scan: " + accessedFiles);
-
     region.compact(false);
-
     HBaseTestingUtil.closeRegionAndWAL(region);
   }
 }
