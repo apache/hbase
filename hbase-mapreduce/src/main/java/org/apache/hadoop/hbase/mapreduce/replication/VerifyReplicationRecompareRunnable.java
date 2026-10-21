@@ -109,7 +109,7 @@ public class VerifyReplicationRecompareRunnable implements Runnable {
         }
       }
 
-      sleepMs = sleepMs * (2 ^ reCompareBackoffExponent);
+      sleepMs = (int) (sleepMs * Math.pow(2, reCompareBackoffExponent));
     }
 
     LOG.error("{}, rowkey={}{}{}", originalCounter, delimiter, Bytes.toStringBinary(row),
