@@ -557,6 +557,15 @@ public interface CacheAccessService extends ConfigurationObserver {
   }
 
   /**
+   * Returns region-level cache information when supported by the cache implementation.
+   * @return an {@link Optional} containing cached-size information by region when supported;
+   *         otherwise {@link Optional#empty()}
+   */
+  default Optional<Map<String, Long>> getRegionCachedInfo() {
+    return Optional.empty();
+  }
+
+  /**
    * Saves persistent state owned by cache components managed by this service.
    * <p>
    * The default implementation performs no persistence. Implementations which manage persistent

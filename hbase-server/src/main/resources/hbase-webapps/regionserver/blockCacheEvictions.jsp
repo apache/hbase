@@ -18,11 +18,11 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache"
+         import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService"
          import="org.apache.hadoop.hbase.io.hfile.AgeSnapshot" %>
 
 <%
-  BlockCache bc = (BlockCache) request.getAttribute("bc");
+  CacheAccessService bc = (CacheAccessService) request.getAttribute("bc");
 
   AgeSnapshot ageAtEvictionSnapshot = bc.getStats().getAgeAtEvictionSnapshot();
   // Only show if non-zero mean and stddev as is the case in combinedblockcache

@@ -22,6 +22,7 @@ import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
@@ -48,6 +49,9 @@ import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -103,7 +107,8 @@ public class TestClientSideRegionScanner {
     Configuration copyConf = new Configuration(conf);
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
-      BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
+      CacheAccessService cas = clientSideRegionScanner.getRegion().getCacheAccessService();
+      BlockCache blockCache = CacheAccessServiceTestFactory.blockCache(cas);
       assertNotNull(blockCache);
       assertThat(blockCache, instanceOf(IndexOnlyLruBlockCache.class));
       assertEquals(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT,
@@ -119,7 +124,8 @@ public class TestClientSideRegionScanner {
     copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
-      BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
+      CacheAccessService cas = clientSideRegionScanner.getRegion().getCacheAccessService();
+      BlockCache blockCache = CacheAccessServiceTestFactory.blockCache(cas);
       assertNotNull(blockCache);
       assertThat(blockCache, instanceOf(IndexOnlyLruBlockCache.class));
       assertEquals(blockCacheFixedSize, blockCache.getMaxSize());
@@ -132,8 +138,8 @@ public class TestClientSideRegionScanner {
     copyConf.setFloat(HConstants.HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
-      BlockCache blockCache = clientSideRegionScanner.getRegion().getBlockCache();
-      assertNull(blockCache);
+      CacheAccessService cas = clientSideRegionScanner.getRegion().getCacheAccessService();
+      assertInstanceOf(NoOpCacheAccessService.class, cas);
     }
   }
 

@@ -20,11 +20,13 @@
 <%@ page contentType="text/html;charset=UTF-8"
          import="org.apache.hadoop.conf.Configuration"
          import="org.apache.hadoop.hbase.io.hfile.BlockCache"
-         import="org.apache.hadoop.hbase.regionserver.HRegionServer"
          import="org.apache.hadoop.hbase.io.hfile.BlockCacheUtil"
-         import="org.apache.hadoop.hbase.io.hfile.LruBlockCache"
-         import="org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats"
          import="org.apache.hadoop.hbase.io.hfile.bucket.BucketCache"
+         import="org.apache.hadoop.hbase.io.hfile.bucket.BucketCacheStats"
+         import="org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine"
+         import="org.apache.hadoop.hbase.io.hfile.cache.CacheEngine"
+         import="org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine"
+         import="org.apache.hadoop.hbase.regionserver.HRegionServer"
          import="org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix" %>
 
 <%
@@ -33,7 +35,7 @@
 
   Configuration configuration = regionServer.getConfiguration();
 
-  BlockCache bc = (BlockCache) request.getAttribute("bc");
+  CacheEngine bc = (CacheEngine) request.getAttribute("bc");
 
   String name = (String) request.getAttribute("name");
 %>
@@ -43,19 +45,30 @@
 <% } else { %>
 
 <%
-  String bcUrl = "http://hbase.apache.org/devapidocs/" + bc.getClass().getName().replaceAll("\\.", "/") + ".html";
-  String bcName = bc.getClass().getSimpleName();
-  int maxCachedBlocksByFile = BlockCacheUtil.getMaxCachedBlocksByFile(configuration);
+  Object cacheImplementation = bc;
 
-  boolean isLru = bc instanceof LruBlockCache;
-
-  boolean isBucketCache = bc.getClass().getSimpleName().equals("BucketCache");
-  BucketCacheStats bucketCacheStats = null;
   BucketCache bucketCache = null;
-  if (bc instanceof BucketCache) {
-    bucketCache = (BucketCache) bc;
-    bucketCacheStats = (BucketCacheStats) bc.getStats();
+  BucketCacheStats bucketCacheStats = null;
+
+  if (bc instanceof BlockCacheBackedCacheEngine) {
+    BlockCache blockCache = ((BlockCacheBackedCacheEngine) bc).getBlockCache();
+    cacheImplementation = blockCache;
+
+    if (blockCache instanceof BucketCache) {
+      bucketCache = (BucketCache) blockCache;
+      bucketCacheStats = (BucketCacheStats) blockCache.getStats();
+    }
   }
+
+  String bcUrl = "http://hbase.apache.org/devapidocs/"
+    + cacheImplementation.getClass().getName().replaceAll("\\.", "/") + ".html";
+  String bcName = cacheImplementation.getClass().getSimpleName();
+
+  int maxCachedBlocksByFile =
+    BlockCacheUtil.getMaxCachedBlocksByFile(configuration);
+
+  boolean isLru = bc instanceof LruCacheEngine;
+  boolean isBucketCache = bucketCache != null;
 %>
 
 <table id="blocks_summary" class="table table-striped">
@@ -73,7 +86,13 @@
   <tr>
     <td>IOEngine</td>
     <td><%= bucketCache.getIoEngine() %></td>
-    <td>Supported IOEngine types: offheap, file, files, mmap or pmem. See <a href="https://hbase.apache.org/docs/configuration/default#hbasebucketcacheioengine-toc">hbase.bucketcache.ioengine</a>.</td>
+    <td>
+      Supported IOEngine types: offheap, file, files, mmap or pmem.
+      See
+      <a href="https://hbase.apache.org/docs/configuration/default#hbasebucketcacheioengine-toc">
+        hbase.bucketcache.ioengine
+      </a>.
+    </td>
   </tr>
 <% } %>
   <tr>
@@ -96,12 +115,16 @@
 <% if (isLru) { %>
   <tr>
     <td>Index Block Count</td>
-    <td><%= String.format("%,d", ((LruBlockCache)bc).getIndexBlockCount()) %></td>
+    <td>
+      <%= String.format("%,d", ((LruCacheEngine) bc).getIndexBlockCount()) %>
+    </td>
     <td>Count of INDEX Blocks</td>
   </tr>
   <tr>
     <td>Bloom Block Count</td>
-    <td><%= String.format("%,d", ((LruBlockCache)bc).getBloomBlockCount()) %></td>
+    <td>
+      <%= String.format("%,d", ((LruCacheEngine) bc).getBloomBlockCount()) %>
+    </td>
     <td>Count of BLOOM Blocks</td>
   </tr>
 <% } %>
@@ -113,22 +136,31 @@
 <% if (!isBucketCache) { %>
   <tr>
     <td>Size of Data Blocks</td>
-    <td><%= TraditionalBinaryPrefix.long2String(bc.getCurrentDataSize(), "B", 1) %></td>
+    <td>
+      <%= TraditionalBinaryPrefix.long2String(bc.getCurrentDataSize(), "B", 1) %>
+    </td>
     <td>Size of DATA Blocks</td>
   </tr>
 <% } %>
 <% if (isLru) { %>
   <tr>
     <td>Size of Index Blocks</td>
-    <td><%= TraditionalBinaryPrefix.long2String(((LruBlockCache)bc).getCurrentIndexSize(), "B", 1) %></td>
+    <td>
+      <%= TraditionalBinaryPrefix.long2String(
+        ((LruCacheEngine) bc).getCurrentIndexSize(), "B", 1) %>
+    </td>
     <td>Size of INDEX Blocks</td>
   </tr>
   <tr>
     <td>Size of Bloom Blocks</td>
-    <td><%= TraditionalBinaryPrefix.long2String(((LruBlockCache)bc).getCurrentBloomSize(), "B", 1) %></td>
+    <td>
+      <%= TraditionalBinaryPrefix.long2String(
+        ((LruCacheEngine) bc).getCurrentBloomSize(), "B", 1) %>
+    </td>
     <td>Size of BLOOM Blocks</td>
   </tr>
 <% } %>
+
   <% request.setAttribute("bc", bc); %>
   <jsp:include page="blockCacheEvictions.jsp"/>
   <jsp:include page="blockCacheHits.jsp"/>
@@ -149,10 +181,18 @@
 
 <%-- Call through to block cache Detail rendering template --%>
 <p>
-  View block cache <a href="?format=json&bcn=<%= name %>">as JSON</a> | Block cache <a href="?format=json&bcn=<%= name %>&bcv=file">as JSON by file</a>
+  View block cache
+  <a href="?format=json&bcn=<%= name %>">as JSON</a>
+  |
+  Block cache
+  <a href="?format=json&bcn=<%= name %>&bcv=file">as JSON by file</a>
+
   <% if (bc.getBlockCount() > maxCachedBlocksByFile) { %>
   <br>
-  <b>Note</b>: JSON view of block cache will be incomplete, because block count <%= bc.getBlockCount() %> is greater than <i>hbase.ui.blockcache.by.file.max</i> value of <%= maxCachedBlocksByFile %>.
+  <b>Note</b>: JSON view of block cache will be incomplete, because block count
+  <%= bc.getBlockCount() %> is greater than
+  <i>hbase.ui.blockcache.by.file.max</i> value of
+  <%= maxCachedBlocksByFile %>.
   Increase that value to get a complete picture.
   <% } %>
 </p>

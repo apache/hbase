@@ -18,10 +18,10 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-         import="org.apache.hadoop.hbase.io.hfile.BlockCache" %>
+         import="org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService" %>
 
 <%
-  BlockCache bc = (BlockCache) request.getAttribute("bc");
+  CacheAccessService bc = (CacheAccessService) request.getAttribute("bc");
 
   int hitPeriods = 0;
   for (int i = 0; i < bc.getStats().getNumPeriodsInWindow(); i++) {

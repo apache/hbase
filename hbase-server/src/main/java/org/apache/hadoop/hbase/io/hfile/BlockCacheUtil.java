@@ -30,6 +30,7 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentSkipListMap;
 import java.util.concurrent.ConcurrentSkipListSet;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
 import org.apache.hadoop.hbase.metrics.impl.FastLongHistogram;
 import org.apache.hadoop.hbase.nio.ByteBuff;
@@ -149,6 +150,33 @@ public class BlockCacheUtil {
   /** Returns JSON string of <code>bc</code> content. */
   public static String toJSON(BlockCache bc) throws IOException {
     return GSON.toJson(bc);
+  }
+
+  /** Returns JSON string of <code>cas</code> content. */
+  public static String toJSON(CacheAccessService cas) throws IOException {
+    return GSON.toJson(cas);
+  }
+
+  public static String toJSON(CacheEngine cacheEngine) throws IOException {
+    return GSON.toJson(cacheEngine);
+  }
+
+  public static CachedBlocksByFile getLoadedCachedBlocksByFile(Configuration conf,
+    CacheEngine cacheEngine) {
+    return cacheEngine.asCachedBlockIterable()
+      .map(blocks -> getLoadedCachedBlocksByFile(conf, blocks))
+      .orElseGet(() -> new CachedBlocksByFile(conf));
+  }
+
+  private static CachedBlocksByFile getLoadedCachedBlocksByFile(Configuration conf,
+    Iterable<CachedBlock> cachedBlocks) {
+    CachedBlocksByFile cbsbf = new CachedBlocksByFile(conf);
+    for (CachedBlock cachedBlock : cachedBlocks) {
+      if (cbsbf.update(cachedBlock)) {
+        break;
+      }
+    }
+    return cbsbf;
   }
 
   /** Returns The block content of <code>bc</code> as a String minus the filename. */
