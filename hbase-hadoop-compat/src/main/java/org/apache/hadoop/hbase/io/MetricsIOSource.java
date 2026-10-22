@@ -52,6 +52,9 @@ public interface MetricsIOSource extends BaseSource {
 
   String CHECKSUM_FAILURES_KEY = "fsChecksumFailureCount";
 
+  String STORE_FILE_TRACKER_FILE_READ_ATTEMPTS_KEY = "storeFileTrackerFileReadAttempts";
+  String STORE_FILE_TRACKER_FILE_WRITE_ATTEMPTS_KEY = "storeFileTrackerFileWriteAttempts";
+
   String FS_READ_TIME_HISTO_DESC =
     "Latency of HFile's sequential reads on this region server in milliseconds";
   String FS_PREAD_TIME_HISTO_DESC =
@@ -81,4 +84,10 @@ public interface MetricsIOSource extends BaseSource {
   void updateFsWriteTime(long t);
 
   void incrSlowFsRead();
+
+  /** Count an FSFT manifest file read attempt, including failed attempts. */
+  void incrStoreFileTrackerFileReadAttempts();
+
+  /** Count an FSFT manifest file write attempt, including failed attempts. */
+  void incrStoreFileTrackerFileWriteAttempts();
 }
