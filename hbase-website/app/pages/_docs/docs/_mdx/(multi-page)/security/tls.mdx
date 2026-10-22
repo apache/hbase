@@ -90,6 +90,15 @@ Follow the following steps to generate self-signed certificates.
 
    At the end of this operation you'll have as many key store files as many servers you have in your cluster. Each cluster member will have its own key store.
 
+   If you want to use [separate server and client certificates](#tls-single-eku), create two key stores on each host instead and restrict the purpose of each certificate with the `-ext` option:
+
+   ```bash
+   keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -ext EKU=serverAuth -keypass password -keystore server-keystore.jks -storepass password
+   keytool -genkeypair -alias $(hostname -f) -keyalg RSA -keysize 2048 -dname "cn=$(hostname -f)" -ext EKU=clientAuth -keypass password -keystore client-keystore.jks -storepass password
+   ```
+
+   The client certificate must match the hostname as well, because servers verify the hostname of their clients by default (see `hbase.server.netty.tls.verify.client.hostname`). Repeat the following steps for both key stores.
+
 2. Extract the signed public key (certificate) from each key store
 
    ```bash
@@ -103,6 +112,88 @@ Follow the following steps to generate self-signed certificates.
    ```bash
    keytool -importcert -alias [host1..3] -file [host1..3].cer -keystore truststore.jks -storepass password
    ```
+
+## Using separate server and client certificates (single-EKU) [#tls-single-eku]
+
+Certificates usually contain an Extended Key Usage (EKU) extension which restricts what the certificate can be used for: `serverAuth` allows it to identify a TLS server, `clientAuth` allows it to identify a TLS client. With the configuration described above every HBase process uses the same key store for both purposes, therefore its certificate must carry both EKUs. Master and Region Servers accept connections as servers, but they also connect to each other as clients. Some Certificate Authorities only issue certificates with a single EKU though, which makes such a setup impossible.
+
+To support single-EKU certificates, the key store and trust store can be configured separately for the server and the client role:
+
+- `hbase.rpc.tls.server.*` is used when the process accepts connections, e.g. on Master and Region Servers.
+- `hbase.rpc.tls.client.*` is used when the process connects to a server, e.g. in HBase clients or when a Region Server connects to the Master.
+
+Add the following configuration to `hbase-site.xml` on Master and Region Servers:
+
+```xml
+<property>
+  <name>hbase.rpc.tls.server.keystore.location</name>
+  <value>/path/to/server-keystore.jks</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.server.truststore.location</name>
+  <value>/path/to/server-truststore.jks</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.client.keystore.location</name>
+  <value>/path/to/client-keystore.jks</value>
+</property>
+<property>
+  <name>hbase.rpc.tls.client.truststore.location</name>
+  <value>/path/to/client-truststore.jks</value>
+</property>
+```
+
+The server trust store must contain the certificates which are accepted from clients (see `hbase.server.netty.tls.client.auth.mode`), while the client trust store must contain the certificates which are accepted from servers. Both can point to the same file if the same certificates are trusted in both directions. HBase clients which are not cluster members only need the `hbase.rpc.tls.client.*` properties.
+
+Use `hbase.rpc.tls.server.keystore.password`, `hbase.rpc.tls.server.truststore.password`, `hbase.rpc.tls.client.keystore.password` and `hbase.rpc.tls.client.truststore.password` aliases to retrieve the passwords from Hadoop credential provider. The file format can be explicitly specified with the `.type` properties in the same way, e.g. `hbase.rpc.tls.server.keystore.type`.
+
+The role specific properties are optional and existing configurations keep working without any change:
+
+- When the role specific location of a store is not set (e.g. `hbase.rpc.tls.server.keystore.location`), the store is configured with the `hbase.rpc.tls.keystore.*` / `hbase.rpc.tls.truststore.*` properties as before.
+- A key store or trust store is always read entirely from one prefix, selected by its location. For example, if `hbase.rpc.tls.server.keystore.location` is set, the password and type of that store are read from `hbase.rpc.tls.server.keystore.password` and `hbase.rpc.tls.server.keystore.type` only. Values of `hbase.rpc.tls.keystore.*` are never mixed in, so a missing role specific password is not replaced by the old one.
+- The old properties can be left in place while migrating to the role specific ones. HBase logs a warning listing the properties which are not used anymore, those can be removed once the migration is complete.
+
+<Callout type="warn">
+  Setting a role specific password or type without the location of the same store (e.g.
+  `hbase.rpc.tls.server.keystore.password` without `hbase.rpc.tls.server.keystore.location`) is a
+  configuration error: HBase refuses to set up TLS connections with such configuration instead of
+  silently using the old properties.
+</Callout>
+
+This feature is supported by only versions of HBase having [HBASE-30387](https://issues.apache.org/jira/browse/HBASE-30387).
+
+### Web UI, REST and Thrift servers
+
+The Web UI, the REST server and the Thrift server only accept connections, therefore only a server specific prefix is available for them. When set, these properties take precedence over the existing ones:
+
+| Server             | Server specific prefix     | Used when not set                    |
+| ------------------ | -------------------------- | ------------------------------------ |
+| Web UI             | `hbase.ui.ssl.server.`     | `hbase.ui.ssl.`, then `ssl.server.`  |
+| REST server        | `hbase.rest.ssl.server.`   | `hbase.rest.ssl.`                    |
+| Thrift HTTP server | `hbase.thrift.ssl.server.` | `hbase.thrift.ssl.` (key store only) |
+
+The property names after the prefix are the same as before, e.g. `hbase.rest.ssl.server.keystore.store` or `hbase.ui.ssl.server.keystore.location`. REST and Thrift servers read a store entirely from one prefix the same way as RPC does, while the Web UI falls back separately for each property.
+
+The Thrift server didn't have trust store configuration before, it can be set with `hbase.thrift.ssl.server.truststore.store`, `hbase.thrift.ssl.server.truststore.password` and `hbase.thrift.ssl.server.truststore.type`. These settings only apply to the HTTP transport of the Thrift server (`hbase.regionserver.thrift.http`).
+
+These servers can also request certificates from their clients (mutual TLS) with the following properties: `hbase.ui.ssl.server.client.auth.mode`, `hbase.rest.ssl.server.client.auth.mode` and `hbase.thrift.ssl.server.client.auth.mode`. Possible values are `NONE`, `WANT` (a certificate is requested and verified, but not required) and `NEED` (a certificate is required). Default: `NONE`.
+
+```xml
+<property>
+  <name>hbase.rest.ssl.server.truststore.store</name>
+  <value>/path/to/truststore.jks</value>
+</property>
+<property>
+  <name>hbase.rest.ssl.server.client.auth.mode</name>
+  <value>NEED</value>
+</property>
+```
+
+<Callout type="warn">
+  `WANT` and `NEED` require a trust store to be configured, otherwise the server fails to start.
+  Without a trust store the underlying Jetty server would silently fall back to the key store or to
+  the JDK's default trust store for verifying client certificates.
+</Callout>
 
 ## Upgrading existing non-TLS cluster with no downtime
 
@@ -238,6 +329,8 @@ Certificates usually expire after some time to improve security. In this case we
   <value>true</value>
 </property>
 ```
+
+When [separate server and client certificates](#tls-single-eku) are configured, the files of the role specific key stores and trust stores are watched.
 
 ## Additional configuration
 
