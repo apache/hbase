@@ -19,6 +19,7 @@ package org.apache.hbase.shaded;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assumptions.assumeFalse;
 
 import java.io.File;
 import java.util.jar.JarEntry;
@@ -37,6 +38,7 @@ public class TestShadedTestingUtilJarContents {
   public void testNoBundledJUnitLibraries() throws Exception {
     File path =
       new File(HBaseTestingUtil.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+    assumeFalse(path.isDirectory(), "Shaded JAR contents can only be checked after packaging");
     try (JarFile jar = new JarFile(path)) {
       JarEntry unexpectedEntry = jar.stream().filter(entry -> {
         String name = entry.getName();
