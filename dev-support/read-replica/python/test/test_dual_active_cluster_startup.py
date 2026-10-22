@@ -118,7 +118,7 @@ def run_test(clean_up_containers: bool = False):
         HBaseDockerClient.start_service(first_service, docker_compose_file=docker_compose_file)
         wait_for_active_cluster_file(data_store_root)
 
-        # Start the second cluster — it should detect the existing active cluster and fail
+        # Start the second cluster - it should detect the existing active cluster and fail
         logger.info(f"Starting {second_cluster.name} second (service: {second_service})")
         HBaseDockerClient.start_service(second_service, docker_compose_file=docker_compose_file)
 
