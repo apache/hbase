@@ -200,6 +200,22 @@ public class TestBackupSystemTable {
   }
 
   @Test
+  public void testMixedCaseHostKeysAreReadLowercase() throws IOException {
+    table.writeRegionServerLastLogRollResult("Host-A:1", 102L, "root");
+    table.writeRegionServerLastLogRollResult("host-a:1", 100L, "root");
+    assertEquals(Map.of("host-a:1", 102L), table.readRegionServerLastLogRollResult("root"));
+
+    Map<String, Long> rsTimestampMap = new HashMap<>();
+    rsTimestampMap.put("Host-A:1", 100L);
+    rsTimestampMap.put("host-a:1", 102L);
+    TableName t1 = TableName.valueOf("t1");
+    table.writeRegionServerLogTimestamp(Set.of(t1), rsTimestampMap, "root");
+    assertEquals(Map.of(t1, Map.of("host-a:1", 100L)), table.readLogTimestampMap("root"));
+
+    cleanBackupTable();
+  }
+
+  @Test
   public void testIncrementalBackupTableSet() throws IOException {
     TreeSet<TableName> tables1 = new TreeSet<>();
 
