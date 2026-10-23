@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import static java.util.Collections.emptyMap;
+import static java.util.Collections.singletonMap;
 import static org.apache.hadoop.hbase.io.hfile.CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.ACCEPT_FACTOR_CONFIG_NAME;
 import static org.apache.hadoop.hbase.io.hfile.bucket.BucketCache.DEFAULT_ERROR_TOLERATION_DURATION;
@@ -28,6 +30,7 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
+import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseConfiguration;
@@ -35,12 +38,15 @@ import org.apache.hadoop.hbase.HBaseTestingUtility;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockPriority;
+import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheTestUtils;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 
 /**
  * Basic test for check file's integrity before start BucketCache in fileIOEngine
@@ -206,6 +212,53 @@ public class TestRecoveryPersistentBucketCache {
     assertEquals(BlockPriority.MULTI, newBucketCache.backingMap.get(newKeys[1]).getPriority());
     assertEquals(BlockPriority.MEMORY, newBucketCache.backingMap.get(newKeys[2]).getPriority());
     TEST_UTIL.cleanupTestDir();
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = { false, true })
+  public void testArchivedFlagAfterRecovery(boolean archived) throws Exception {
+    HBaseTestingUtility TEST_UTIL = new HBaseTestingUtility();
+    Path testDir = TEST_UTIL.getDataTestDir();
+    TEST_UTIL.getTestFileSystem().mkdirs(testDir);
+    Configuration conf = HBaseConfiguration.create();
+    conf.setLong(BUCKETCACHE_PERSIST_INTERVAL_KEY, Long.MAX_VALUE);
+    int[] bucketSizes = new int[] { 8 * 1024 + 1024 };
+    CacheTestUtils.HFileBlockPair block = CacheTestUtils.generateHFileBlocks(8192, 1)[0];
+    BlockCacheKey key =
+      new BlockCacheKey("test-file", "cf", "test-region", 0, true, BlockType.DATA, archived);
+    BucketCache bucketCache = null;
+    BucketCache recoveredCache = null;
+    try {
+      bucketCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, 8192,
+        bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      cacheAndWaitUntilFlushedToBucket(bucketCache, key, block.getBlock());
+      long cachedSize = bucketCache.backingMap.get(key).getLength();
+      Map<String, Long> expectedRegionCachedSize =
+        archived ? emptyMap() : singletonMap(key.getRegionName(), cachedSize);
+      assertEquals(expectedRegionCachedSize, bucketCache.getRegionCachedInfo().get());
+
+      bucketCache.shutdown();
+      bucketCache = null;
+      recoveredCache = new BucketCache("file:" + testDir + "/bucket.cache", capacitySize, 8192,
+        bucketSizes, writeThreads, writerQLen, testDir + "/bucket.persistence",
+        DEFAULT_ERROR_TOLERATION_DURATION, conf);
+      assertTrue(recoveredCache.waitForCacheInitialization(10000));
+      assertEquals(1, recoveredCache.backingMap.size());
+      // Inspect the recovered key: BlockCacheKey.equals does not compare the archived flag.
+      assertEquals(archived, recoveredCache.backingMap.keySet().iterator().next().isArchived());
+      assertEquals(expectedRegionCachedSize, recoveredCache.getRegionCachedInfo().get());
+    } finally {
+      if (recoveredCache != null) {
+        recoveredCache.shutdown();
+      }
+      if (bucketCache != null) {
+        bucketCache.shutdown();
+      }
+      block.getBlock().release();
+      TEST_UTIL.cleanupTestDir();
+    }
   }
 
   @Test
