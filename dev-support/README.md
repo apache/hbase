@@ -60,9 +60,8 @@ configurations in this directory:
 
 - `docker/` -- Dockerfile for CI build environment
 - `hbase_docker/`, `hbase_docker.sh` -- Docker-based local test cluster
-- `read-replica/` -- Standalone Jenkins pipeline, test driver script
-  (`hbase_nightly_read_replica_test.sh`), Python test suite, Docker Compose
-  configuration, and cluster config for read-replica integration tests
+- `read-replica/` -- Jenkins pipeline for Read-Replica feature integration
+  tests using Docker and Python
 - `adhoc_run_tests/` -- Scripts for running test suites outside CI
 - `integration-test/` -- Integration test support
 

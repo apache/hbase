@@ -53,8 +53,7 @@ pipeline {
       when {
         anyOf {
           branch 'master'
-          branch 'branch-3*'
-          branch 'HBASE-30087'
+          branch 'branch-3'
         }
       }
       environment {
