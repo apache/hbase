@@ -225,6 +225,11 @@
     "description": "Visible Technologies uses Hadoop, HBase, Katta, and more to collect, parse, store, and search hundreds of millions of Social Media content. We get incredibly fast throughput and very low latency on commodity hardware. HBase enables our business to exist."
   },
   {
+    "name": "Wordfully",
+    "url": "https://wordfully.ai",
+    "description": "Wordfully uses HBase to store activity summaries by account and time. Background jobs read a selected account's recent records to prepare usage reports and evaluation inputs."
+  },
+  {
     "name": "WorldLingo",
     "url": "http://www.worldlingo.com/",
     "description": "The WorldLingo Multilingual Archive. We use HBase to store millions of documents that we scan using Map/Reduce jobs to machine translate them into all or selected target languages from our set of available machine translation languages. We currently store 12 million documents but plan to eventually reach the 450 million mark. HBase allows us to scale out as we need to grow our storage capacities. Combined with Hadoop to keep the data replicated and therefore fail-safe we have the backbone our service can rely on now and in the future. WorldLingo is using HBase since December 2007 and is along with a few others one of the longest running HBase installation."
