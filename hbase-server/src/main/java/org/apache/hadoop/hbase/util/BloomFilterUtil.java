@@ -49,10 +49,6 @@ public final class BloomFilterUtil {
 
   public static final String PREFIX_LENGTH_KEY = "RowPrefixBloomFilter.prefix_length";
 
-  /** Bit-value lookup array to prevent doing the same work over and over */
-  public static final byte[] bitvals = { (byte) 0x01, (byte) 0x02, (byte) 0x04, (byte) 0x08,
-    (byte) 0x10, (byte) 0x20, (byte) 0x40, (byte) 0x80 };
-
   /**
    * Private constructor to keep this class from being instantiated.
    */
@@ -221,8 +217,7 @@ public final class BloomFilterUtil {
     int bytePos = pos >> 3; // pos / 8
     int bitPos = pos & 0x7; // pos % 8
     byte curByte = bloomBuf.get(bloomOffset + bytePos);
-    curByte &= bitvals[bitPos];
-    return (curByte != 0);
+    return (curByte & (1 << bitPos)) != 0;
   }
 
   /**
