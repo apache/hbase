@@ -23,7 +23,12 @@ import java.util.EnumSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.ClusterMetrics;
 import org.apache.hadoop.hbase.ClusterMetrics.Option;
@@ -35,6 +40,7 @@ import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.util.Bytes;
+import org.apache.hadoop.hbase.util.Threads;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.yetus.audience.InterfaceStability;
@@ -44,6 +50,7 @@ import org.slf4j.LoggerFactory;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheBuilder;
 import org.apache.hbase.thirdparty.com.google.common.cache.CacheLoader;
 import org.apache.hbase.thirdparty.com.google.common.cache.LoadingCache;
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
  * Cache that keeps track of the quota settings for the users and tables that are interacting with
@@ -66,6 +73,9 @@ public class QuotaCache implements Stoppable {
     "hbase.quota.user.override.key";
   private static final int REFRESH_DEFAULT_PERIOD = 43_200_000; // 12 hours
 
+  public static final String INITIAL_LOAD_TIMEOUT_MS = "hbase.quota.cache.initial.load.timeout.ms";
+  private static final long INITIAL_LOAD_TIMEOUT_MS_DEFAULT = 10_000;
+
   private final Object initializerLock = new Object();
   private volatile boolean initialized = false;
 
@@ -85,6 +95,15 @@ public class QuotaCache implements Stoppable {
   private QuotaRefresherChore refreshChore;
   private boolean stopped = true;
 
+  // The initial load runs here rather than on the requesting thread, so that a request can put a
+  // bound on how long it waits for it. The load reads hbase:quota and asks the master for cluster
+  // metrics, neither of which is necessarily available yet when the first request arrives.
+  private final ExecutorService initialLoadExecutor = Executors
+    .newSingleThreadExecutor(new ThreadFactoryBuilder().setNameFormat("quota-cache-initial-load-%d")
+      .setDaemon(true).setUncaughtExceptionHandler(Threads.LOGGING_EXCEPTION_HANDLER).build());
+  private Future<?> initialLoad;
+  private long initialLoadTimeoutMs;
+
   public QuotaCache(final RegionServerServices rsServices) {
     this.rsServices = rsServices;
     this.userOverrideRequestAttributeKey =
@@ -99,6 +118,7 @@ public class QuotaCache implements Stoppable {
     // configuration reload is triggered. Periodic reloads are kept to a minimum to avoid
     // flooding the RegionServer holding the hbase:quota table with requests.
     int period = conf.getInt(REFRESH_CONF_KEY, REFRESH_DEFAULT_PERIOD);
+    initialLoadTimeoutMs = conf.getLong(INITIAL_LOAD_TIMEOUT_MS, INITIAL_LOAD_TIMEOUT_MS_DEFAULT);
     refreshChore = new QuotaRefresherChore(conf, period, this);
     rsServices.getChoreService().scheduleChore(refreshChore);
   }
@@ -109,6 +129,7 @@ public class QuotaCache implements Stoppable {
       LOG.debug("Stopping QuotaRefresherChore chore.");
       refreshChore.shutdown(true);
     }
+    initialLoadExecutor.shutdownNow();
     stopped = true;
   }
 
@@ -118,12 +139,31 @@ public class QuotaCache implements Stoppable {
   }
 
   private void ensureInitialized() {
-    if (!initialized) {
-      synchronized (initializerLock) {
-        if (!initialized) {
-          refreshChore.chore();
-          initialized = true;
-        }
+    if (initialized) {
+      return;
+    }
+    synchronized (initializerLock) {
+      if (initialized) {
+        return;
+      }
+      if (initialLoad == null) {
+        initialLoad = initialLoadExecutor.submit(() -> refreshChore.chore());
+      }
+      try {
+        initialLoad.get(initialLoadTimeoutMs, TimeUnit.MILLISECONDS);
+        initialized = true;
+      } catch (TimeoutException e) {
+        // The load is still running, and will mark the cache initialized once a later request
+        // observes that it finished. Until then requests get default quota state, which does not
+        // throttle. Waiting any longer would risk stalling the RPC handler behind a master that
+        // may not have finished initializing.
+        LOG.warn("Quota cache not loaded within {}ms, serving default quotas for now",
+          initialLoadTimeoutMs);
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+      } catch (ExecutionException e) {
+        LOG.warn("Failed to load quota cache", e.getCause());
+        initialLoad = null;
       }
     }
   }
@@ -155,7 +195,7 @@ public class QuotaCache implements Stoppable {
    * @return the limiter associated to the specified user/table
    */
   public QuotaLimiter getUserLimiter(final UserGroupInformation ugi, final TableName table) {
-    if (table.isSystemTable()) {
+    if (QuotaUtil.isThrottleExempt(table)) {
       return NoopQuotaLimiter.get();
     }
     return getUserQuotaState(ugi).getTableLimiter(table);
