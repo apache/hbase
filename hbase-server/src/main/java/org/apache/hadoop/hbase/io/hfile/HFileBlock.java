@@ -822,7 +822,9 @@ public class HFileBlock implements Cacheable {
     @Override
     public void beforeShipped() {
       if (getEncodingState() != null) {
-        getEncodingState().beforeShipped();
+        int streamBaseOffset = baosInMemory.size() - userDataStream.size();
+        getEncodingState().beforeShipped(baosInMemory.getBuffer(), streamBaseOffset,
+          baosInMemory.size());
       }
     }
 
