@@ -108,7 +108,7 @@ public class TestClaimReplicationQueue extends TestReplicationBaseNoBeforeAll {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     Closeables.close(table3, true);
     Closeables.close(table4, true);
   }

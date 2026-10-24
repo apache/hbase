@@ -88,7 +88,7 @@ public class TestAsyncFSWAL extends AbstractTestFSWAL {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     if (GROUP != null) {
       GROUP.shutdownGracefully();
     }
