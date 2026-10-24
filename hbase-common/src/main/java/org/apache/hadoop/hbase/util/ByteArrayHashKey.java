@@ -49,4 +49,9 @@ public class ByteArrayHashKey extends HashKey<byte[]> {
   public int getIntLE(int pos) {
     return LittleEndianBytes.toInt(t, getAbsolutePos(pos));
   }
+
+  @Override
+  public long getLongLE(int pos) {
+    return LittleEndianBytes.toLong(t, getAbsolutePos(pos));
+  }
 }
