@@ -115,4 +115,100 @@ public class TestMetricsTableLatencies {
         MetricsTableQueryMeterImpl.TABLE_WRITE_QUERY_PER_SECOND + "_" + "count"),
       500L, latenciesImpl);
   }
+  /**
+   * Verifies that {@link MetricsTableLatencies#deleteTable(String)} removes every histogram
+   * family (across all metric suffixes) previously registered for the given table on
+   * {@link MetricsTableLatenciesImpl}, while leaving other tables untouched. Also verifies that
+   * re-writing samples for the dropped table lazily re-registers its histograms and that
+   * deleting an unknown table is a no-op (HBASE-27486).
+   */
+  @Test
+  public void testDeleteTableRemovesAllLatencyHistograms() throws IOException {
+    TableName tnKeep = TableName.valueOf("keep_table");
+    TableName tnDrop = TableName.valueOf("drop_table");
+    MetricsTableLatencies latencies =
+      CompatibilitySingletonFactory.getInstance(MetricsTableLatencies.class);
+    assertTrue(latencies instanceof MetricsTableLatenciesImpl,
+      "'latencies' is actually " + latencies.getClass());
+    MetricsTableLatenciesImpl latenciesImpl = (MetricsTableLatenciesImpl) latencies;
+    RegionServerTableMetrics tableMetrics = new RegionServerTableMetrics(false);
+
+    // Every metric family registerd by MetricsTableLatenciesImpl.TableHistograms for a table.
+    String[] families = new String[] {
+      MetricsTableLatencies.GET_TIME,
+      MetricsTableLatencies.PUT_TIME,
+      MetricsTableLatencies.PUT_BATCH_TIME,
+      MetricsTableLatencies.DELETE_TIME,
+      MetricsTableLatencies.DELETE_BATCH_TIME,
+      MetricsTableLatencies.INCREMENT_TIME,
+      MetricsTableLatencies.APPEND_TIME,
+      MetricsTableLatencies.SCAN_TIME,
+      MetricsTableLatencies.SCAN_SIZE,
+      MetricsTableLatencies.CHECK_AND_DELETE_TIME,
+      MetricsTableLatencies.CHECK_AND_PUT_TIME,
+      MetricsTableLatencies.CHECK_AND_MUTATE_TIME };
+
+    // Populate both tables so every histogram family is registered in the underlying
+    // DynamicMetricsRegistry.
+    tableMetrics.updateGet(tnKeep, 100L);
+    tableMetrics.updatePut(tnKeep, 20L);
+    tableMetrics.updatePutBatch(tnKeep, 21L);
+    tableMetrics.updateDelete(tnKeep, 22L);
+    tableMetrics.updateDeleteBatch(tnKeep, 23L);
+    tableMetrics.updateIncrement(tnKeep, 24L);
+    tableMetrics.updateAppend(tnKeep, 25L);
+    tableMetrics.updateScanTime(tnKeep, 26L);
+    tableMetrics.updateScanSize(tnKeep, 27L);
+    tableMetrics.updateCheckAndDelete(tnKeep, 28L);
+    tableMetrics.updateCheckAndPut(tnKeep, 29L);
+    tableMetrics.updateCheckAndMutate(tnKeep, 30L);
+
+    tableMetrics.updateGet(tnDrop, 200L);
+    tableMetrics.updatePut(tnDrop, 40L);
+    tableMetrics.updatePutBatch(tnDrop, 41L);
+    tableMetrics.updateDelete(tnDrop, 42L);
+    tableMetrics.updateDeleteBatch(tnDrop, 43L);
+    tableMetrics.updateIncrement(tnDrop, 44L);
+    tableMetrics.updateAppend(tnDrop, 45L);
+    tableMetrics.updateScanTime(tnDrop, 46L);
+    tableMetrics.updateScanSize(tnDrop, 47L);
+    tableMetrics.updateCheckAndDelete(tnDrop, 48L);
+    tableMetrics.updateCheckAndPut(tnDrop, 49L);
+    tableMetrics.updateCheckAndMutate(tnDrop, 50L);
+
+    // Sanity: every family exists for both tables before deletion.
+    for (String f : families) {
+      assertTrue(
+        HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(tnKeep, f)
+          + "_999th_percentile", latenciesImpl),
+        "keep_table." + f + " should exist before deleteTable");
+      assertTrue(
+        HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(tnDrop, f)
+          + "_999th_percentile", latenciesImpl),
+        "drop_table." + f + " should exist before deleteTable");
+    }
+
+    // Act: drop only tnDrop.
+    latencies.deleteTable(tnDrop.getNameAsString());
+
+    // Assert: all histogram families of tnDrop are gone from the registry, tnKeep is intact.
+    for (String f : families) {
+      assertFalse(
+        HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(tnDrop, f)
+          + "_999th_percentile", latenciesImpl),
+        "drop_table." + f + " should have been removed by deleteTable");
+      assertTrue(
+        HELPER.checkGaugeExists(MetricsTableLatenciesImpl.qualifyMetricsName(tnKeep, f)
+          + "_999th_percentile", latenciesImpl),
+        "keep_table." + f + " must not be affected by deleteTable(drop_table)");
+    }
+
+    // Re-adding samples for the dropped table should lazily re-register its histograms.
+    tableMetrics.updateGet(tnDrop, 999L);
+    HELPER.assertGauge(MetricsTableLatenciesImpl.qualifyMetricsName(tnDrop,
+      MetricsTableLatencies.GET_TIME) + "_999th_percentile", 999L, latenciesImpl);
+
+    // Deleting an unknown table must be a no-op.
+    latencies.deleteTable(TableName.valueOf("never_seen").getNameAsString());
+  }
 }
