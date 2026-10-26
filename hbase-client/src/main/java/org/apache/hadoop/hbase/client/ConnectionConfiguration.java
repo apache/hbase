@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_PAUSE;
 import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_PAUSE;
+import static org.apache.hadoop.hbase.HConstants.HBASE_CLIENT_TABLE_METRICS_ENABLE;
+import static org.apache.hadoop.hbase.HConstants.DEFAULT_HBASE_CLIENT_TABLE_METRICS_ENABLE;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HConstants;
@@ -110,6 +112,7 @@ public class ConnectionConfiguration {
   private final long pauseMs;
   private final long pauseMsForServerOverloaded;
   private final boolean useScannerTimeoutForNextCalls;
+  private final boolean tableMetricsEnabled;
 
   private static int getNonNegativeInt(Configuration conf, String key, int defaultValue) {
     int value = conf.getInt(key, defaultValue);
@@ -199,6 +202,8 @@ public class ConnectionConfiguration {
 
     this.pauseMs = pauseMs;
     this.pauseMsForServerOverloaded = pauseMsForServerOverloaded;
+    this.tableMetricsEnabled = conf.getBoolean(HBASE_CLIENT_TABLE_METRICS_ENABLE,
+      DEFAULT_HBASE_CLIENT_TABLE_METRICS_ENABLE);
   }
 
   /**
@@ -231,6 +236,7 @@ public class ConnectionConfiguration {
     this.pauseMsForServerOverloaded = DEFAULT_HBASE_CLIENT_PAUSE;
     this.useScannerTimeoutForNextCalls =
       HBASE_CLIENT_USE_SCANNER_TIMEOUT_PERIOD_FOR_NEXT_CALLS_DEFAULT;
+    this.tableMetricsEnabled = DEFAULT_HBASE_CLIENT_TABLE_METRICS_ENABLE;
   }
 
   public int getReadRpcTimeout() {
@@ -324,4 +330,9 @@ public class ConnectionConfiguration {
   public long getPauseMillisForServerOverloaded() {
     return pauseMsForServerOverloaded;
   }
+
+  public boolean isTableMetricsEnabled() {
+    return tableMetricsEnabled;
+  }
+
 }

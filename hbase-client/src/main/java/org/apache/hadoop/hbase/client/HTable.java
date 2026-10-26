@@ -53,6 +53,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.HTableDescriptor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.coprocessor.Batch;
+import org.apache.hadoop.hbase.client.metrics.TableMetrics;
 import org.apache.hadoop.hbase.client.trace.TableOperationSpanBuilder;
 import org.apache.hadoop.hbase.client.trace.TableSpanBuilder;
 import org.apache.hadoop.hbase.filter.CompareFilter.CompareOp;
@@ -129,6 +130,7 @@ public class HTable implements Table {
   private final RpcControllerFactory rpcControllerFactory;
 
   private final Map<String, byte[]> requestAttributes;
+  private final TableMetrics tableMetrics;
 
   // Marked Private @since 1.0
   @InterfaceAudience.Private
@@ -203,6 +205,16 @@ public class HTable implements Table {
     // puts need to track errors globally due to how the APIs currently work.
     multiAp = this.connection.getAsyncProcess();
     this.locator = new HRegionLocator(tableName, connection);
+    this.tableMetrics = this.connConfiguration.isTableMetricsEnabled() ? new TableMetrics() :
+      TableMetrics.EMPTY_TABLE_METRICS;
+  }
+
+  public TableMetrics getTableMetrics() {
+    return tableMetrics;
+  }
+
+  public boolean hasTableMetrics() {
+    return true;
   }
 
   /** Returns maxKeyValueSize from configuration. */
@@ -465,7 +477,7 @@ public class HTable implements Table {
     AsyncProcessTask task = AsyncProcessTask.newBuilder().setPool(pool).setTableName(tableName)
       .setRowAccess(actions).setResults(results).setRpcTimeout(rpcTimeout)
       .setOperationTimeout(operationTimeoutMs).setSubmittedRows(AsyncProcessTask.SubmittedRows.ALL)
-      .setRequestAttributes(requestAttributes).build();
+      .setRequestAttributes(requestAttributes).setTableMetrics(tableMetrics).build();
     final Span span = new TableOperationSpanBuilder(connection).setTableName(tableName)
       .setOperation(HBaseSemanticAttributes.Operation.BATCH).setContainerOperations(actions)
       .build();
