@@ -27,9 +27,12 @@ module Shell
           short is shortCompactions's queue,long is longCompactions's queue.
 
           Examples:
-          hbase> clear_compaction_queues 'host187.example.com,60020'
-          hbase> clear_compaction_queues 'host187.example.com,60020','long'
-          hbase> clear_compaction_queues 'host187.example.com,60020', ['long','short']
+          hbase> clear_compaction_queues 'host187.example.com:60020'
+          hbase> clear_compaction_queues 'host187.example.com:60020', 'long'
+          hbase> clear_compaction_queues 'host187.example.com:60020', ['long','short']
+          hbase> clear_compaction_queues 'host187.example.com,60020,1289493121758'
+          hbase> clear_compaction_queues 'host187.example.com,60020,1289493121758', 'long'
+          hbase> clear_compaction_queues 'host187.example.com,60020,1289493121758', ['long','short']
         EOF
       end
 
