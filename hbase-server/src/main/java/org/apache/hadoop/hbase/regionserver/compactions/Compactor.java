@@ -441,7 +441,7 @@ public abstract class Compactor<T extends CellSink> {
     ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(compactionKVMax)
       .setSizeLimit(ScannerContext.LimitScope.BETWEEN_CELLS, Long.MAX_VALUE, Long.MAX_VALUE,
         compactScannerSizeLimit)
-      .build();
+      .setKeepBlockProgress(false).build();
 
     throughputController.start(compactionName);
     Shipper shipper = (scanner instanceof Shipper) ? (Shipper) scanner : null;
