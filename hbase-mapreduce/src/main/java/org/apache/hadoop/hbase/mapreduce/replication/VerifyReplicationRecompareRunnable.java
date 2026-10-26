@@ -75,7 +75,7 @@ public class VerifyReplicationRecompareRunnable implements Runnable {
     get.setCacheBlocks(tableScan.getCacheBlocks());
     get.setFilter(tableScan.getFilter());
 
-    int sleepMs = sleepMsBeforeReCompare;
+    long sleepMs = sleepMsBeforeReCompare;
     int tries = 0;
 
     while (++tries <= reCompareTries) {
@@ -109,7 +109,7 @@ public class VerifyReplicationRecompareRunnable implements Runnable {
         }
       }
 
-      sleepMs = sleepMs * (2 ^ reCompareBackoffExponent);
+      sleepMs = (long) (sleepMs * Math.pow(2, reCompareBackoffExponent));
     }
 
     LOG.error("{}, rowkey={}{}{}", originalCounter, delimiter, Bytes.toStringBinary(row),
