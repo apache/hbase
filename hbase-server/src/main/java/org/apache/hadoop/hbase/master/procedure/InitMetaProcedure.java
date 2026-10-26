@@ -196,9 +196,12 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
       }
     } finally {
       if (!shouldDelete) {
-        throw new IOException("Meta table is not partial, please sideline this meta directory "
-          + "or run HBCK to fix this meta table, e.g. rebuild the server hostname in ZNode for the "
-          + "meta region");
+        LOG.warn("Meta table is not partial, This is expected during express upgrade from"
+          + " HBase 1 to HBase 2 where meta location can be detected neither from zookeeper "
+          + "nor from WAL Files. Still if any issues with meta initialization better to sideline "
+          + "this meta directory or run HBCK to fix meta table, e.g. rebuild the server hostname in"
+          + " ZNode for the meta region");
+        return false;
       }
       return rootDirectoryFs.delete(metaTableDir, true);
     }
