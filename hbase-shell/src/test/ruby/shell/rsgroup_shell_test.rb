@@ -151,8 +151,17 @@ module Hbase
       assert_equal(hostport_str, ns_group.getServers.iterator.next.toString)
       assert_equal(ns_table_name, @admin.listTablesInRSGroup(ns_group_name).iterator.next.toString)
 
+      ns_table_name2 = 'test_namespace:test_ns_table2'
+      @shell.command(:create, ns_table_name2, 'f')
+
+      assert_true(@admin.listTablesInRSGroup(ns_group_name).contains(org.apache.hadoop.hbase.TableName.valueOf(ns_table_name2)))
+      assert_equal(2, @admin.listTablesInRSGroup(ns_group_name).count)
+      assert_equal(ns_group_name, @admin.getNamespaceDescriptor('test_namespace').getConfigurationValue('hbase.rsgroup.name'))
+
       @shell.command(:disable, ns_table_name)
       @shell.command(:drop, ns_table_name)
+      @shell.command(:disable, ns_table_name2)
+      @shell.command(:drop, ns_table_name2)
       @shell.command(:drop_namespace, namespace_name)
       remove_rsgroup(ns_group_name)
     end
