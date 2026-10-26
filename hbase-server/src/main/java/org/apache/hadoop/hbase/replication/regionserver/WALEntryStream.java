@@ -259,10 +259,11 @@ class WALEntryStream implements Closeable {
     Entry readEntry = reader.next();
     long readerPos = reader.getPosition();
     OptionalLong fileLength;
-    if (logQueue.getQueueSize(walGroupId) > 1) {
+    if (logQueue.getQueueSize(walGroupId) > 2) {
       fileLength = OptionalLong.empty();
     } else {
-      // if there is only one file in queue, check whether it is still being written to
+      // if there are less than or equal 2 files in the queue,
+      // check whether it is still being written to.
       fileLength = walFileLengthProvider.getLogFileSizeIfBeingWritten(currentPath);
     }
     if (fileLength.isPresent() && readerPos > fileLength.getAsLong()) {
