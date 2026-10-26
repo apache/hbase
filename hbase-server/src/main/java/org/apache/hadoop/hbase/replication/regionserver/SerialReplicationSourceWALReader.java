@@ -78,6 +78,7 @@ public class SerialReplicationSourceWALReader extends ReplicationSourceWALReader
       if (doFiltering) {
         entry = filterEntry(entry);
       }
+      // TODO: why don't we skip entries with 0 edits here? `entry.getEdit().size() != 0`
       if (entry != null) {
         int sleepMultiplier = 1;
         try {
