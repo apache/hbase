@@ -667,7 +667,7 @@
     <nexus-staging.version>1.7.0</nexus-staging.version>
     <!-- compression -->
     <aircompressor.version>2.0.3</aircompressor.version>
-    <brotli4j.version>1.11.0</brotli4j.version>
+    <brotli4j.version>1.24.0</brotli4j.version>
     <lz4.version>1.11.4</lz4.version>
     <snappy.version>1.1.10.4</snappy.version>
     <xz.version>1.9</xz.version>
