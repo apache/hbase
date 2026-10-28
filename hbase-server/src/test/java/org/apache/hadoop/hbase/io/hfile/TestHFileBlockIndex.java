@@ -61,6 +61,7 @@ import org.apache.hadoop.hbase.io.hfile.HFile.Writer;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex.BlockIndexReader;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder.NoOpEncodedSeeker;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.MultiByteBuff;
 import org.apache.hadoop.hbase.nio.RefCnt;
@@ -194,7 +195,7 @@ public class TestHFileBlockIndex {
 
     long maxSize = NUM_DATA_BLOCKS * 1000;
     long blockSize = 1000;
-    LruBlockCache cache = new LruBlockCache(maxSize, blockSize);
+    CacheAccessService cache = CacheAccessServiceTestFactory.lru(maxSize, blockSize);
     CacheConfig cacheConfig = new CacheConfig(TEST_UTIL.getConfiguration(), null, cache, allocator);
 
     HFileBlockIndex.BlockIndexWriter biw =
@@ -247,7 +248,8 @@ public class TestHFileBlockIndex {
     HFileBlock.Writer hbw =
       new HFileBlock.Writer(localConf, null, meta, allocator, meta.getBlocksize());
     FSDataOutputStream outputStream = fs.create(localPath);
-    LruBlockCache cache = new LruBlockCache(8 * 1024 * 1024, 1024, true, localConf);
+    CacheAccessService cache =
+      CacheAccessServiceTestFactory.lru(8 * 1024 * 1024, 1024, true, localConf);
     CacheConfig cacheConfig = new CacheConfig(localConf, null, cache, allocator);
     HFileBlockIndex.BlockIndexWriter biw =
       new HFileBlockIndex.BlockIndexWriter(hbw, cacheConfig, localPath.getName(), null);

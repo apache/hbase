@@ -56,12 +56,13 @@ import org.apache.yetus.audience.InterfaceAudience;
  * </ul>
  * <p>
  * The important difference from {@link CacheEngine} is the abstraction level. A {@code CacheEngine}
- * is a storage back-end implemented by a concrete cache such as LruBlockCache, BucketCache, or a
- * future CarrotCache engine. {@code CacheAccessService} is the HBase-facing facade above topology
- * and engines. It receives request intent through {@link CacheRequestContext} and insertion intent
- * through {@link CacheWriteContext}. A service implementation may initially delegate to an existing
- * {@code BlockCache}; a later implementation may delegate to {@link CacheTopology},
- * {@link CachePlacementAdmissionPolicy}, and one or more {@link CacheEngine} instances.
+ * is a storage back-end implemented by a concrete cache such as {@link LruCacheEngine},
+ * BucketCache, or a future CarrotCache engine. {@code CacheAccessService} is the HBase-facing
+ * facade above topology and engines. It receives request intent through {@link CacheRequestContext}
+ * and insertion intent through {@link CacheWriteContext}. A service implementation may initially
+ * delegate to an existing {@code BlockCache}; a later implementation may delegate to
+ * {@link CacheTopology}, {@link CachePlacementAdmissionPolicy}, and one or more {@link CacheEngine}
+ * instances.
  * </p>
  * <p>
  * Normal HBase read and write path code should depend on this interface rather than accessing
