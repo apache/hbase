@@ -227,7 +227,7 @@
   {
     "name": "Wordfully",
     "url": "https://wordfully.ai",
-    "description": "Wordfully uses HBase to store activity summaries by account and time. Background jobs read a selected account's recent records to prepare usage reports and evaluation inputs."
+    "description": "Wordfully combines grammar and spell checking with AI rephrasing. It uses HBase to store activity summaries by account and time. Background jobs read a selected account's recent records to prepare usage reports and evaluation inputs."
   },
   {
     "name": "WorldLingo",
