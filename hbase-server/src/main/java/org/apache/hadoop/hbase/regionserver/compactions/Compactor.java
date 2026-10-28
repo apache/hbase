@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.PrivateConstants;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
+import org.apache.hadoop.hbase.regionserver.AbstractMultiFileWriter;
 import org.apache.hadoop.hbase.regionserver.CellSink;
 import org.apache.hadoop.hbase.regionserver.CreateStoreFileWriterParams;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -100,6 +101,21 @@ public abstract class Compactor<T extends CellSink> {
   protected final boolean dropCacheMajor;
   protected final boolean dropCacheMinor;
 
+  /**
+   * Whether to account compaction throughput against the bytes actually written to the compaction
+   * output (i.e. after data block encoding and compression) instead of the serialized cell size.
+   * For column families whose data compresses well, accounting by serialized cell size makes the
+   * effective on-disk write rate proportionally smaller than the configured throughput bound;
+   * accounting by output bytes gives every store the same on-disk budget. Defaults to false, which
+   * keeps the original accounting. Does not apply to MOB store compactions, whose compactor
+   * overrides the compaction loop.
+   */
+  public static final String COMPACTION_THROUGHPUT_CONTROL_BY_OUTPUT_KEY =
+    "hbase.hstore.compaction.throughput.control.by.output";
+  public static final boolean DEFAULT_COMPACTION_THROUGHPUT_CONTROL_BY_OUTPUT = false;
+
+  private final boolean throughputControlByOutput;
+
   // We track progress per request using the CompactionRequestImpl identity as key.
   // completeCompaction() cleans up this state.
   private final Set<CompactionProgress> progressSet =
@@ -124,6 +140,8 @@ public abstract class Compactor<T extends CellSink> {
         HConstants.MIN_KEEP_SEQID_PERIOD);
     this.dropCacheMajor = conf.getBoolean(MAJOR_COMPACTION_DROP_CACHE, true);
     this.dropCacheMinor = conf.getBoolean(MINOR_COMPACTION_DROP_CACHE, true);
+    this.throughputControlByOutput = this.conf.getBoolean(
+      COMPACTION_THROUGHPUT_CONTROL_BY_OUTPUT_KEY, DEFAULT_COMPACTION_THROUGHPUT_CONTROL_BY_OUTPUT);
   }
 
   protected interface CellSinkFactory<S> {
@@ -409,6 +427,22 @@ public abstract class Compactor<T extends CellSink> {
   }
 
   /**
+   * Returns whether the current output position (bytes written after data block encoding and
+   * compression) can be read from the given sink, which is required for output based throughput
+   * control. See {@link #COMPACTION_THROUGHPUT_CONTROL_BY_OUTPUT_KEY}.
+   */
+  private static boolean supportsOutputPos(CellSink writer) {
+    return writer instanceof StoreFileWriter || writer instanceof AbstractMultiFileWriter;
+  }
+
+  /** Returns the current output position (bytes written so far) of the given sink. */
+  private static long outputPos(CellSink writer) throws IOException {
+    return writer instanceof StoreFileWriter
+      ? ((StoreFileWriter) writer).getPos()
+      : ((AbstractMultiFileWriter) writer).getPos();
+  }
+
+  /**
    * Performs the compaction.
    * @param fd                FileDetails of cell sink writer
    * @param scanner           Where to read from.
@@ -436,6 +470,16 @@ public abstract class Compactor<T extends CellSink> {
     }
     CloseChecker closeChecker = new CloseChecker(conf, currentTime);
     String compactionName = ThroughputControlUtil.getNameForThrottling(store, "compaction");
+    // When enabled (and the sink exposes its output position), charge the throughput controller
+    // with the bytes actually written to the output instead of the serialized cell size.
+    boolean controlByOutput = throughputControlByOutput && supportsOutputPos(writer);
+    if (throughputControlByOutput && !controlByOutput) {
+      LOG.warn(
+        "{} is enabled but sink {} does not expose its output position, "
+          + "falling back to cell size based throughput control for {}",
+        COMPACTION_THROUGHPUT_CONTROL_BY_OUTPUT_KEY, writer.getClass().getName(), compactionName);
+    }
+    long lastOutputPos = 0;
     long now = 0;
     boolean hasMore;
     ScannerContext scannerContext = ScannerContext.newBuilder().setBatchLimit(compactionKVMax)
@@ -487,13 +531,22 @@ public abstract class Compactor<T extends CellSink> {
           if (LOG.isDebugEnabled()) {
             bytesWrittenProgressForLog += len;
           }
-          throughputController.control(compactionName, len);
+          if (!controlByOutput) {
+            throughputController.control(compactionName, len);
+          }
           if (closeChecker.isSizeLimit(store, len)) {
             progress.cancel();
             return false;
           }
         }
         writer.appendAll(cells);
+        if (controlByOutput) {
+          long outputPos = outputPos(writer);
+          if (outputPos > lastOutputPos) {
+            throughputController.control(compactionName, outputPos - lastOutputPos);
+            lastOutputPos = outputPos;
+          }
+        }
         if (bytesWrittenProgressForShippedCall > shippedCallSizeLimit) {
           if (shipper != null) {
             if (lastCleanCell != null) {
