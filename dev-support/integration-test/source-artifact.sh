@@ -202,9 +202,35 @@ function build_tarball {
   fi
   if ${MVN} --threads=2 -DskipTests -Prelease --batch-mode -Dmaven.repo.local="${m2_tarbuild}" ${mvn_extra_args} clean install \
     assembly:single >"${working_dir}/${build_log}" 2>&1; then
+    local test_classpath="${working_dir}/${build_log%.log}-test-classpath.txt"
+    if ! ${MVN} --batch-mode -Dmaven.repo.local="${m2_tarbuild}" ${mvn_extra_args} \
+        -pl hbase-testing-util dependency:build-classpath -DincludeScope=test \
+        -DexcludeGroupIds=org.apache.hbase,org.apache.hbase.thirdparty,jdk.tools \
+        -Dmdep.outputFile="${test_classpath}" >>"${working_dir}/${build_log}" 2>&1; then
+      echo "Could not resolve test tool classpath. See ${working_dir}/${build_log}"
+      return 1
+    fi
     for artifact in "${unpack_dir}"/hbase-assembly/target/${tarball_glob}; do
-      if [ -f "${artifact}" ]; then
-        # TODO check the layout of the binary artifact we just made.
+      if [ -f "${artifact}" ] && [[ "${artifact}" != *-client-bin.tar.gz ]]; then
+        local artifact_version="${artifact##*/}"
+        artifact_version="${artifact_version#hbase-}"
+        artifact_version="${artifact_version%-bin.tar.gz}"
+        local runtime_tree="${working_dir}/${build_log%.log}-runtime-tree.txt"
+        if ! ${MVN} --batch-mode -Dmaven.repo.local="${m2_tarbuild}" \
+            -f "${unpack_dir}/dev-support/integration-test/jetty-consumer/pom.xml" \
+            -Dhbase.version="${artifact_version}" \
+            org.apache.maven.plugins:maven-dependency-plugin:3.8.1:tree -Dscope=runtime \
+            -DoutputFile="${runtime_tree}" >>"${working_dir}/${build_log}" 2>&1; then
+          echo "Could not resolve installed hbase-server dependencies. See ${working_dir}/${build_log}"
+          return 1
+        fi
+        if ! python3 "${unpack_dir}/dev-support/integration-test/check-jetty.py" \
+            "${artifact}" "${artifact%-bin.tar.gz}-client-bin.tar.gz" \
+            "${test_classpath}" "${runtime_tree}" \
+            >"${working_dir}/${build_log%.log}-jetty.log" 2>&1; then
+          echo "Jetty packaging or tool regression failed. See ${working_dir}/${build_log%.log}-jetty.log"
+          return 1
+        fi
         echo "Building a binary tarball from the source tarball succeeded."
         return 0
       fi
