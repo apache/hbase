@@ -37,6 +37,9 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.compress.Compression;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestInstance;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,7 +55,7 @@ import org.apache.hbase.thirdparty.com.google.common.collect.Iterables;
 
 /**
  * A kind of integration test at the intersection of {@link HFileBlock}, {@link CacheConfig}, and
- * {@link LruBlockCache}.
+ * {@link LruCacheEngine}.
  */
 @Tag(IOTests.TAG)
 @Tag(SmallTests.TAG)
@@ -132,10 +135,6 @@ public class TestLazyDataBlockDecompression {
     reader.close();
   }
 
-  /*
-   * TODO: migrate this test to use new HBASE-30018 APIs and remove the need to cast to
-   * LruBlockCache
-   */
   @TestTemplate
   public void testCompressionIncreasesEffectiveBlockCacheSize() throws Exception {
     // enough room for 2 uncompressed block
@@ -152,16 +151,19 @@ public class TestLazyDataBlockDecompression {
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressDisabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, false);
-    CacheConfig cc = new CacheConfig(lazyCompressDisabled,
-      new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled));
+
+    CacheAccessServiceTestInstance<LruCacheEngine> disabledCache = CacheAccessServiceTestFactory
+      .lruInstance(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressDisabled);
+
+    CacheConfig cc = new CacheConfig(lazyCompressDisabled, disabledCache.service());
+    LruCacheEngine disabledCacheEngine = disabledCache.cache();
     assertFalse(cc.shouldCacheDataCompressed());
     assertFalse(cc.isCombinedBlockCache());
-    LruBlockCache disabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
-    LOG.info("disabledBlockCache=" + disabledBlockCache);
-    assertEquals(maxSize, disabledBlockCache.getMaxSize(), "test inconsistency detected.");
-    assertTrue(disabledBlockCache.getEvictionThread() == null,
+    LOG.info("disabledCacheEngine=" + disabledCacheEngine);
+    assertEquals(maxSize, disabledCacheEngine.getMaxSize(), "test inconsistency detected.");
+    assertTrue(disabledCacheEngine.getEvictionThread() == null,
       "eviction thread spawned unintentionally.");
-    assertEquals(0, disabledBlockCache.getBlockCount(),
+    assertEquals(0, disabledCacheEngine.getBlockCount(),
       "freshly created blockcache contains blocks.");
 
     // 2000 kv's is ~3.6 full unencoded data blocks.
@@ -170,11 +172,11 @@ public class TestLazyDataBlockDecompression {
 
     // populate the cache
     cacheBlocks(lazyCompressDisabled, cc, fs, hfilePath, context);
-    long disabledBlockCount = disabledBlockCache.getBlockCount();
+    long disabledBlockCount = disabledCacheEngine.getBlockCount();
     assertTrue(disabledBlockCount > 0,
       "blockcache should contain blocks. disabledBlockCount=" + disabledBlockCount);
-    long disabledEvictedCount = disabledBlockCache.getStats().getEvictedCount();
-    for (Map.Entry<BlockCacheKey, LruCachedBlock> e : disabledBlockCache.getMapForTests()
+    long disabledEvictedCount = disabledCacheEngine.getStats().getEvictedCount();
+    for (Map.Entry<BlockCacheKey, LruCachedBlock> e : disabledCacheEngine.getMapForTests()
       .entrySet()) {
       HFileBlock block = (HFileBlock) e.getValue().getBuffer();
       assertTrue(block.isUnpacked(), "found a packed block, block=" + block);
@@ -186,25 +188,28 @@ public class TestLazyDataBlockDecompression {
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, cacheOnWrite);
     lazyCompressEnabled.setBoolean(CacheConfig.CACHE_DATA_BLOCKS_COMPRESSED_KEY, true);
-    cc = new CacheConfig(lazyCompressEnabled,
-      new LruBlockCache(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled));
+
+    CacheAccessServiceTestInstance<LruCacheEngine> enabledCache = CacheAccessServiceTestFactory
+      .lruInstance(maxSize, HConstants.DEFAULT_BLOCKSIZE, false, lazyCompressEnabled);
+
+    cc = new CacheConfig(lazyCompressEnabled, enabledCache.service());
+    LruCacheEngine enabledCacheEngine = enabledCache.cache();
     assertTrue(cc.shouldCacheDataCompressed(), "test improperly configured.");
-    assertTrue(cc.getBlockCache().get() instanceof LruBlockCache);
-    LruBlockCache enabledBlockCache = (LruBlockCache) cc.getBlockCache().get();
-    LOG.info("enabledBlockCache=" + enabledBlockCache);
-    assertEquals(maxSize, enabledBlockCache.getMaxSize(), "test inconsistency detected");
-    assertTrue(enabledBlockCache.getEvictionThread() == null,
+
+    LOG.info("enabledCacheEngine=" + enabledCacheEngine);
+    assertEquals(maxSize, enabledCacheEngine.getMaxSize(), "test inconsistency detected");
+    assertTrue(enabledCacheEngine.getEvictionThread() == null,
       "eviction thread spawned unintentionally.");
-    assertEquals(0, enabledBlockCache.getBlockCount(),
+    assertEquals(0, enabledCacheEngine.getBlockCount(),
       "freshly created blockcache contains blocks.");
 
     cacheBlocks(lazyCompressEnabled, cc, fs, hfilePath, context);
-    long enabledBlockCount = enabledBlockCache.getBlockCount();
+    long enabledBlockCount = enabledCacheEngine.getBlockCount();
     assertTrue(enabledBlockCount > 0,
       "blockcache should contain blocks. enabledBlockCount=" + enabledBlockCount);
-    long enabledEvictedCount = enabledBlockCache.getStats().getEvictedCount();
+    long enabledEvictedCount = enabledCacheEngine.getStats().getEvictedCount();
     int candidatesFound = 0;
-    for (Map.Entry<BlockCacheKey, LruCachedBlock> e : enabledBlockCache.getMapForTests()
+    for (Map.Entry<BlockCacheKey, LruCachedBlock> e : enabledCacheEngine.getMapForTests()
       .entrySet()) {
       candidatesFound++;
       HFileBlock block = (HFileBlock) e.getValue().getBuffer();

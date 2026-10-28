@@ -29,8 +29,12 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
+import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.util.Lists;
 
 /**
  * Test seek performance for encoded data blocks. Read an HFile and do several random seeks.
@@ -179,6 +183,15 @@ public class EncodedSeekPerformanceTest {
   }
 
   private void clearBlockCache() {
-    ((LruBlockCache) cacheConf.getBlockCache().get()).clearCache();
+    CacheAccessService cache = cacheConf.getCacheAccessService();
+    Iterable<CachedBlock> cachedBlocks =
+      CacheAccessServices.asCachedBlockIterable(cache).orElseThrow();
+
+    for (CachedBlock block : Lists.newArrayList(cachedBlocks)) {
+      BlockCacheKey key = new BlockCacheKey(block.getFilename(), block.getOffset());
+      while (cache.evictBlock(key)) {
+        // A block may be present in more than one cache tier.
+      }
+    }
   }
 }

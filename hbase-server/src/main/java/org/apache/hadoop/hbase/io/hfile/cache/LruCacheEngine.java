@@ -108,7 +108,7 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * Hard capacity limit. Inserts are rejected once the cache exceeds this factor multiplied by the
    * acceptable size.
    */
-  static final String LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME =
+  public static final String LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME =
     "hbase.lru.blockcache.hard.capacity.limit.factor";
 
   private static final String LRU_SINGLE_PERCENTAGE_CONFIG_NAME =
@@ -1177,7 +1177,7 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * Returns the background eviction thread.
    * @return eviction thread, or {@code null} if background eviction is disabled
    */
-  EvictionThread getEvictionThread() {
+  public EvictionThread getEvictionThread() {
     return evictionThread;
   }
 

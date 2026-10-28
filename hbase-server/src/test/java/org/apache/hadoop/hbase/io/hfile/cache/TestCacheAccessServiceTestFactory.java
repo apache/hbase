@@ -28,7 +28,6 @@ import java.util.concurrent.Executor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
 import org.apache.hadoop.hbase.io.hfile.LruAdaptiveBlockCache;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.TinyLfuBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.testclassification.IOTests;
@@ -85,14 +84,14 @@ public class TestCacheAccessServiceTestFactory {
   @Test
   void testLruInstanceFactory() {
     Configuration conf = HBaseConfiguration.create();
-    CacheAccessServiceTestInstance<LruBlockCache> instance =
+    CacheAccessServiceTestInstance<LruCacheEngine> instance =
       CacheAccessServiceTestFactory.lruInstance(MAX_SIZE, BLOCK_SIZE, true, conf);
 
     try {
       assertNotNull(instance);
-      assertNotNull(instance.blockCache());
+      assertNotNull(instance.cacheEngine());
       assertNotNull(instance.service());
-      assertInstanceOf(LruBlockCache.class, instance.blockCache());
+      assertInstanceOf(LruCacheEngine.class, instance.cacheEngine());
       assertTrue(instance.service().isCacheEnabled());
     } finally {
       instance.service().shutdown();

@@ -42,6 +42,7 @@ import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
@@ -377,7 +378,32 @@ public class CacheTestUtils {
     }
   }
 
+  public static void getBlockAndAssertEquals(CacheEngine cache, BlockCacheKey key,
+    Cacheable blockToCache, ByteBuffer destBuffer, ByteBuffer expectedBuffer) {
+    destBuffer.clear();
+    cache.cacheBlock(key, blockToCache);
+    Cacheable actualBlock = cache.getBlock(key, false, false, false);
+    try {
+      actualBlock.serialize(destBuffer, true);
+      assertEquals(expectedBuffer, destBuffer);
+    } finally {
+      // Release the reference count increased by getBlock.
+      if (actualBlock != null) {
+        actualBlock.release();
+      }
+    }
+  }
+
   public static void testConvertToJSON(BlockCache toBeTested) {
+    try {
+      String json = BlockCacheUtil.toJSON(toBeTested);
+      assertNotNull(json);
+    } catch (Exception e) {
+      fail("conversion to JSON should not fail, exception is:" + e);
+    }
+  }
+
+  public static void testConvertToJSON(CacheEngine toBeTested) {
     try {
       String json = BlockCacheUtil.toJSON(toBeTested);
       assertNotNull(json);

@@ -22,40 +22,83 @@ import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Test helper that keeps a concrete {@link BlockCache} together with the {@link CacheAccessService}
- * facade backed by that cache.
+ * Test helper that keeps a concrete cache implementation together with its {@link CacheEngine} and
+ * {@link CacheAccessService} views.
  * <p>
- * This is useful for tests that need to exercise production code through
- * {@link CacheAccessService}, while still inspecting implementation-specific state through the
- * concrete cache instance.
+ * The concrete cache may be either a legacy {@link BlockCache} or a native {@link CacheEngine}.
+ * Tests should normally exercise cache operations through {@link CacheAccessService}, while using
+ * the concrete cache or cache engine only for implementation-specific assertions.
  * </p>
- * @param <T> concrete block cache type
+ * @param <T> concrete cache implementation type
  */
 @InterfaceAudience.Private
-public final class CacheAccessServiceTestInstance<T extends BlockCache> {
+public final class CacheAccessServiceTestInstance<T> {
 
-  private final T blockCache;
+  private final T cache;
+  private final BlockCache blockCache;
+  private final CacheEngine cacheEngine;
   private final CacheAccessService cacheAccessService;
 
-  CacheAccessServiceTestInstance(T blockCache) {
-    this.blockCache = Objects.requireNonNull(blockCache, "blockCache must not be null");
-    this.cacheAccessService = CacheAccessServices.fromBlockCache(blockCache);
+  CacheAccessServiceTestInstance(T cache) {
+    this.cache = Objects.requireNonNull(cache, "cache must not be null");
+
+    if (cache instanceof CacheEngine) {
+      this.blockCache = null;
+      this.cacheEngine = (CacheEngine) cache;
+      this.cacheAccessService = createCacheAccessService(cacheEngine);
+    } else if (cache instanceof BlockCache) {
+      this.blockCache = (BlockCache) cache;
+      this.cacheEngine = CacheEngines.fromBlockCache(blockCache);
+      this.cacheAccessService = CacheAccessServices.fromBlockCache(blockCache);
+    } else {
+      throw new IllegalArgumentException(
+        "Unsupported cache implementation: " + cache.getClass().getName());
+    }
   }
 
   /**
-   * Returns the concrete block cache instance.
-   * <p>
-   * Tests should use this only when they need implementation-specific inspection or assertions.
-   * Normal cache access should go through {@link #service()}.
-   * </p>
-   * @return concrete block cache
+   * Creates a single-tier cache access service backed by the specified cache engine.
+   * @param cacheEngine cache engine
+   * @return cache access service
    */
-  public T blockCache() {
+  private static CacheAccessService createCacheAccessService(CacheEngine cacheEngine) {
+    Objects.requireNonNull(cacheEngine, "cacheEngine must not be null");
+
+    CacheTopology topology = new SingleTierTopology(cacheEngine.getName(), cacheEngine);
+    return new TopologyBackedCacheAccessService(topology,
+      new DefaultHBaseCachePlacementAdmissionPolicy());
+  }
+
+  /**
+   * Returns the concrete cache implementation supplied to this instance.
+   * @return concrete cache implementation
+   */
+  public T cache() {
+    return cache;
+  }
+
+  /**
+   * Returns the legacy block cache when this instance was constructed from one.
+   * @return legacy block cache, or {@code null} for a native cache engine
+   */
+  public BlockCache blockCache() {
     return blockCache;
   }
 
   /**
-   * Returns the {@link CacheAccessService} facade backed by the concrete block cache.
+   * Returns the cache engine.
+   * <p>
+   * For a native cache engine this returns the original engine. For a legacy {@link BlockCache},
+   * this returns its cache-engine adapter.
+   * </p>
+   * @return cache engine
+   */
+  public CacheEngine cacheEngine() {
+    return cacheEngine;
+  }
+
+  /**
+   * Returns the cache access service.
    * @return cache access service
    */
   public CacheAccessService service() {

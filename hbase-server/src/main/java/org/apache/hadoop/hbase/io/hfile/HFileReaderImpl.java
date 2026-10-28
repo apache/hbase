@@ -1301,8 +1301,8 @@ public abstract class HFileReaderImpl implements HFile.Reader, Configurable {
     }
 
     if (!cacheConf.isCombinedBlockCache()) {
-      // Block to cache in LruBlockCache must be an heap one, if caching enabled. So just allocate
-      // block memory from heap for saving an extra off-heap to heap copying in that case.
+      // The non-combined cache path requires cached blocks to be heap-backed. Allocate cacheable
+      // blocks on heap directly to avoid an extra off-heap-to-heap copy.
       return cacheBlock;
     }
 
