@@ -47,6 +47,12 @@
             <excludes>
             <!-- Exclude J2EE libraries that get pulled in when building on JDK11 -->
               <exclude>com.sun.xml.ws:jaxws-ri</exclude>
+              <!-- HBase uses shaded Jetty; Hadoop's Jetty is only needed for local test services. -->
+              <exclude>org.mortbay.jetty:jetty</exclude>
+              <exclude>org.mortbay.jetty:jetty-util</exclude>
+              <exclude>org.mortbay.jetty:jetty-sslengine</exclude>
+              <exclude>org.eclipse.jetty:*</exclude>
+              <exclude>org.eclipse.jetty.websocket:*</exclude>
             <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>

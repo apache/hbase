@@ -3494,6 +3494,18 @@
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3548,6 +3560,18 @@
               <exclusion>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3708,6 +3732,18 @@
               <exclusion>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -3872,6 +3908,18 @@
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -3977,6 +4025,18 @@
               <exclusion>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4086,11 +4146,39 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-distcp</artifactId>
             <version>${hadoop-two.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
             <version>${hadoop-two.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-util</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.mortbay.jetty</groupId>
+                <artifactId>jetty-sslengine</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <!--
             for hadoop 2.x, we need to manually depend on kerby
@@ -4195,6 +4283,14 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4237,6 +4333,14 @@
               <exclusion>
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4381,6 +4485,14 @@
               <exclusion>
                 <groupId>commons-logging</groupId>
                 <artifactId>commons-logging</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
               </exclusion>
             </exclusions>
           </dependency>
@@ -4549,6 +4661,14 @@
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk15on</artifactId>
               </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
@@ -4653,6 +4773,16 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-client</artifactId>
             <version>${hadoop-three.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
@@ -4787,11 +4917,31 @@
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-distcp</artifactId>
             <version>${hadoop-three.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
           <dependency>
             <groupId>org.apache.hadoop</groupId>
             <artifactId>hadoop-hdfs-client</artifactId>
             <version>${hadoop-three.version}</version>
+            <exclusions>
+              <exclusion>
+                <groupId>org.eclipse.jetty</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+              <exclusion>
+                <groupId>org.eclipse.jetty.websocket</groupId>
+                <artifactId>*</artifactId>
+              </exclusion>
+            </exclusions>
           </dependency>
         </dependencies>
       </dependencyManagement>
