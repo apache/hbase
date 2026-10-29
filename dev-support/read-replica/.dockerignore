@@ -1,0 +1,5 @@
+# Outer build context for read-replica/Dockerfile (compose, tests, output).
+tmp-read-replica-data
+output
+.venv
+__pycache__
