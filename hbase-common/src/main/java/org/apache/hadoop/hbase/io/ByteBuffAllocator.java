@@ -29,7 +29,6 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.nio.SingleByteBuff;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
-import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -349,12 +348,7 @@ public class ByteBuffAllocator {
    * Free all direct buffers if allocated, mainly used for testing.
    */
   public void clean() {
-    while (!buffers.isEmpty()) {
-      ByteBuffer b = buffers.poll();
-      if (b.isDirect()) {
-        UnsafeAccess.freeDirectBuffer(b);
-      }
-    }
+    this.buffers.clear();
     this.usedBufCount.set(0);
     this.maxPoolSizeInfoLevelLogged = false;
     this.poolAllocationBytes.reset();
