@@ -19,10 +19,14 @@ package org.apache.hadoop.hbase.regionserver.storefiletracker;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -33,11 +37,14 @@ import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
+import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.Reference;
 import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -47,6 +54,8 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -63,6 +72,9 @@ public class TestStoreFileListFile {
 
   private static final HBaseCommonTestingUtil UTIL = new HBaseCommonTestingUtil();
 
+  private static final MetricsAssertHelper METRICS =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
+
   private Path testDir;
 
   private StoreFileListFile storeFileListFile;
@@ -70,8 +82,12 @@ public class TestStoreFileListFile {
   private String name;
 
   private StoreFileListFile create() throws IOException {
+    return create(FileSystem.get(UTIL.getConfiguration()));
+  }
+
+  private StoreFileListFile create(FileSystem fs) {
     HRegionFileSystem hfs = mock(HRegionFileSystem.class);
-    when(hfs.getFileSystem()).thenReturn(FileSystem.get(UTIL.getConfiguration()));
+    when(hfs.getFileSystem()).thenReturn(fs);
     StoreContext ctx = StoreContext.getBuilder().withFamilyStoreDirectoryPath(testDir)
       .withRegionFileSystem(hfs).build();
     return new StoreFileListFile(ctx);
@@ -92,6 +108,142 @@ public class TestStoreFileListFile {
   @Test
   public void testEmptyLoad() throws IOException {
     assertNull(storeFileListFile.load(false));
+  }
+
+  private long readAttempts() {
+    return METRICS.getCounter("storeFileTrackerFileReadAttempts",
+      MetricsIO.getInstance().getMetricsSource());
+  }
+
+  private long writeAttempts() {
+    return METRICS.getCounter("storeFileTrackerFileWriteAttempts",
+      MetricsIO.getInstance().getMetricsSource());
+  }
+
+  @Test
+  public void testFileAccessMetrics() throws IOException {
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    assertNull(storeFileListFile.load(false));
+    assertEquals(reads, readAttempts());
+    assertEquals(writes, writeAttempts());
+
+    storeFileListFile.update(StoreFileList.newBuilder());
+    assertEquals(reads, readAttempts());
+    assertEquals(writes + 1, writeAttempts());
+    storeFileListFile.load(true);
+    assertEquals(reads + 1, readAttempts());
+
+    StoreFileListFile another = create();
+    another.update(StoreFileList.newBuilder());
+    assertEquals(reads + 2, readAttempts());
+    another.update(StoreFileList.newBuilder());
+    assertEquals(reads + 2, readAttempts());
+    assertEquals(writes + 3, writeAttempts());
+  }
+
+  @Test
+  public void testCandidateReadMetrics() throws IOException {
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    Path dir = new Path(testDir, StoreFileListFile.TRACK_FILE_DIR);
+    Path first = new Path(dir, "f1.1");
+    Path second = new Path(dir, "f2.1");
+    StoreFileListFile.write(fs, first, StoreFileList.newBuilder().setTimestamp(1).build());
+    StoreFileListFile.write(fs, second, StoreFileList.newBuilder().setTimestamp(2).build());
+    assertEquals(writes, writeAttempts());
+    assertEquals(2, storeFileListFile.load(true).getTimestamp());
+    assertEquals(reads + 2, readAttempts());
+
+    write(fs, first, new byte[0], 0, 0);
+    assertEquals(2, storeFileListFile.load(true).getTimestamp());
+    assertEquals(reads + 4, readAttempts());
+    StoreFileListFile.load(fs, second);
+    assertEquals(reads + 4, readAttempts());
+    assertEquals(writes, writeAttempts());
+  }
+
+  @Test
+  public void testFailedReadMetrics() {
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    assertThrows(IOException.class, () -> storeFileListFile.load(new Path(testDir, "missing")));
+    assertEquals(reads + 1, readAttempts());
+    assertEquals(writes, writeAttempts());
+  }
+
+  @Test
+  public void testFailedInitializationMetrics() throws IOException {
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    FileSystem fs = mock(FileSystem.class);
+    IOException failure = new IOException("list failed");
+    when(fs.listStatus(any(Path.class))).thenThrow(failure);
+    assertSame(failure,
+      assertThrows(IOException.class, () -> create(fs).update(StoreFileList.newBuilder())));
+    assertEquals(reads, readAttempts());
+    assertEquals(writes, writeAttempts());
+  }
+
+  @Test
+  public void testFailedCreateMetrics() throws IOException {
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    FileSystem fs = mock(FileSystem.class);
+    IOException failure = new IOException("create failed");
+    when(fs.create(any(Path.class), eq(true))).thenThrow(failure);
+    assertSame(failure,
+      assertThrows(IOException.class, () -> create(fs).update(StoreFileList.newBuilder())));
+    assertEquals(reads, readAttempts());
+    assertEquals(writes + 1, writeAttempts());
+  }
+
+  @ParameterizedTest
+  @ValueSource(booleans = { false, true })
+  public void testFailedWriteMetrics(boolean failOnClose) throws IOException {
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    FileSystem fs = mock(FileSystem.class);
+    FSDataOutputStream out = mock(FSDataOutputStream.class);
+    when(fs.create(any(Path.class), eq(true))).thenReturn(out);
+    IOException failure = new IOException(failOnClose ? "close failed" : "write failed");
+    if (failOnClose) {
+      doThrow(failure).when(out).close();
+    } else {
+      doThrow(failure).when(out).write(any(byte[].class));
+    }
+    assertSame(failure,
+      assertThrows(IOException.class, () -> create(fs).update(StoreFileList.newBuilder())));
+    assertEquals(reads, readAttempts());
+    assertEquals(writes + 1, writeAttempts());
+  }
+
+  @Test
+  public void testTrackerReadMetrics() throws IOException {
+    FileSystem fs = FileSystem.get(UTIL.getConfiguration());
+    HRegionFileSystem hfs = mock(HRegionFileSystem.class);
+    when(hfs.getFileSystem()).thenReturn(fs);
+    StoreContext ctx = StoreContext.getBuilder().withFamilyStoreDirectoryPath(testDir)
+      .withRegionFileSystem(hfs).build();
+    Path referenceFile = new Path(testDir, "abcdef0123456789.parentRegion");
+    Reference reference = Reference.createTopReference(Bytes.toBytes("split-row"));
+    storeFileListFile.update(StoreFileList.newBuilder().addStoreFile(StoreFileEntry.newBuilder()
+      .setName(referenceFile.getName()).setSize(1).setReference(reference.convert())));
+    long reads = readAttempts();
+    long writes = writeAttempts();
+    FileBasedStoreFileTracker tracker =
+      new FileBasedStoreFileTracker(UTIL.getConfiguration(), true, ctx);
+    assertTrue(tracker.hasReferences());
+    assertEquals(reference, tracker.readReference(referenceFile));
+    assertEquals(reads + 2, readAttempts());
+
+    reference.write(fs, referenceFile);
+    DefaultStoreFileTracker defaultTracker =
+      new DefaultStoreFileTracker(UTIL.getConfiguration(), true, ctx);
+    assertEquals(reference, defaultTracker.readReference(referenceFile));
+    assertEquals(reads + 2, readAttempts());
+    assertEquals(writes, writeAttempts());
   }
 
   private FileStatus getOnlyTrackerFile(FileSystem fs) throws IOException {

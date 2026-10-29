@@ -37,6 +37,7 @@ import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
+import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.regionserver.StoreContext;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -141,6 +142,7 @@ class StoreFileListFile {
 
   StoreFileList load(Path path) throws IOException {
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
+    MetricsIO.getInstance().incrStoreFileTrackerFileReadAttempts();
     return load(fs, path);
   }
 
@@ -282,8 +284,9 @@ class StoreFileListFile {
     }
     FileSystem fs = ctx.getRegionFileSystem().getFileSystem();
     long timestamp = Math.max(prevTimestamp + 1, EnvironmentEdgeManager.currentTime());
-    write(fs, trackFiles[nextTrackFile],
-      builder.setTimestamp(timestamp).setVersion(VERSION).build());
+    StoreFileList storeFileList = builder.setTimestamp(timestamp).setVersion(VERSION).build();
+    MetricsIO.getInstance().incrStoreFileTrackerFileWriteAttempts();
+    write(fs, trackFiles[nextTrackFile], storeFileList);
     // record timestamp
     prevTimestamp = timestamp;
     // rotate the file
