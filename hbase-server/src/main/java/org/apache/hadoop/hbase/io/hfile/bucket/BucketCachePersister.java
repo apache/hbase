@@ -26,23 +26,22 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class BucketCachePersister extends Thread {
   private final BucketCache cache;
-  private final long intervalMillis;
   private static final Logger LOG = LoggerFactory.getLogger(BucketCachePersister.class);
 
   private AtomicBoolean shutdown = new AtomicBoolean(false);
 
-  public BucketCachePersister(BucketCache cache, long intervalMillis) {
+  public BucketCachePersister(BucketCache cache) {
     super("bucket-cache-persister");
     this.cache = cache;
-    this.intervalMillis = intervalMillis;
-    LOG.info("BucketCachePersister started with interval: " + intervalMillis);
+    LOG.info("BucketCachePersister started with initial interval: {}",
+      cache.getBucketcachePersistInterval());
   }
 
   public void run() {
     try {
       while (true) {
         try {
-          Thread.sleep(intervalMillis);
+          Thread.sleep(cache.getBucketcachePersistInterval());
           if (cache.isCacheInconsistent()) {
             LOG.debug("Cache is inconsistent, persisting to disk");
             cache.persistToFile();
