@@ -332,7 +332,7 @@ After build:
 - HBase source code at `/root/hbase/`
 - Built HBase binaries at `/root/hbase-bin/`
 - Maven 3.8.6 at `/opt/maven/`
-- Java 8 (Temurin JDK)
+- Temurin JDK 8, 17 or 21 (selected with `--jdk`; default set per branch)
 - All Maven dependencies cached
 
 ### Build Context Control
