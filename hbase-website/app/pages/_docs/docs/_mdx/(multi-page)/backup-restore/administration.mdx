@@ -114,6 +114,12 @@ Comma-separated list of backup IDs to delete.
 **_-k \<days\>_**  
 Deletes all backup images completed more than the specified number of days ago.
 
+**_--force-delete_** (or **_-fd_**)  
+(Optional) Force deletion of a backup even when it is the only remaining full backup that enables
+Point-in-Time Recovery (PITR) for one or more tables. Without this flag, deletion is rejected when
+it would leave tables without a valid PITR recovery path. After a successful deletion, the system
+attempts to clean up WAL files in the continuous backup store that are no longer needed for PITR.
+
 <Callout type="info">
   These options are **mutually exclusive**. Only one of `-l` or `-k` may be used at a time.
 </Callout>
@@ -124,6 +130,12 @@ Delete specific backup images by ID:
 
 ```bash
 $ hbase backup delete -l backupId_1467823988425,backupId_1467824989999
+```
+
+Force-delete a backup that is required for PITR:
+
+```bash
+$ hbase backup delete -l backupId_1467823988425 --force-delete
 ```
 
 Delete all backup images older than 30 days:
@@ -143,6 +155,11 @@ $ hbase backup delete -k 30
   you should run a **full backup** next.
   Running another incremental backup immediately after may result in missing data in the
   backup image. (See [HBASE-28084](https://issues.apache.org/jira/browse/HBASE-28084))
+
+- For tables with continuous backup enabled, deleting the only remaining full backup that supports
+  PITR is blocked unless `--force-delete` is specified. If the last backup is force-deleted and no
+  full backups remain, the system removes continuous backup metadata, deletes associated WAL files,
+  and disables the `continuous_backup_replication_peer`.
 
 </Callout>
 
