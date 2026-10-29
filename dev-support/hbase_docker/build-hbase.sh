@@ -26,11 +26,16 @@ set -e
 #   ./build-hbase.sh --tarball hbase-2.6.7.tar.gz  # Build from tarball
 #   ./build-hbase.sh --source /path/to/hbase       # Build from local dir
 #   ./build-hbase.sh --source .                    # Build from current repo
+#   ./build-hbase.sh --tag branch-2.6 --jdk 8      # Choose the JDK (8, 17 or 21)
 #   ./build-hbase.sh --help                        # Show help
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_FILE="${LOG_FILE:-/tmp/hbase-docker-build.log}"
 DEFAULT_IMAGE_NAME="hbase_local"
+# JDK used when --jdk is not given. Set per branch: 17 on master, 8 on branch-2.
+DEFAULT_JDK="17"
+SUPPORTED_JDKS="8 17 21"
+JDK_VERSION="$DEFAULT_JDK"
 
 # On Apple Silicon (arm64), use m1/Dockerfile which is tuned for Rosetta emulation.
 # Both cases build linux/amd64 images; m1/Dockerfile just handles arm64 host quirks.
@@ -96,7 +101,7 @@ check_prerequisites() {
 # Help
 #=============================================================================
 show_help() {
-  cat <<'EOF'
+  cat <<EOF
 ╔════════════════════════════════════════╗
 ║   HBase Docker Build Script            ║
 ╚════════════════════════════════════════╝
@@ -128,7 +133,12 @@ EXAMPLES:
   # Custom image name
   ./build-hbase.sh --tag branch-2.4 my_hbase_image
 
+  # Build with a specific JDK
+  ./build-hbase.sh --tag branch-2.6 --jdk 8
+  ./build-hbase.sh --source . --jdk 21
+
 OPTIONS:
+  --jdk VERSION             JDK to build with: 8, 17 or 21 (default: $DEFAULT_JDK for this branch)
   --help, -h                Show this help
 
 ENVIRONMENT:
@@ -150,6 +160,7 @@ build_from_tag() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "Branch/Tag:  $branch_or_tag"
   echo "Image name:  $image_name"
+  echo "JDK:         $JDK_VERSION"
   echo "Log file:    $LOG_FILE"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo
@@ -163,6 +174,7 @@ build_from_tag() {
   docker build --platform "$PLATFORM" \
     -f "$DOCKERFILE" \
     --build-arg INPUT_MODE=tag \
+    --build-arg JDK_VERSION="$JDK_VERSION" \
     --build-arg BRANCH_OR_TAG="$branch_or_tag" \
     -t "$image_name" \
     "$SCRIPT_DIR" 2>&1 | tee "$LOG_FILE"
@@ -179,6 +191,7 @@ build_from_tarball() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "Tarball:     $tarball_path"
   echo "Image name:  $image_name"
+  echo "JDK:         $JDK_VERSION"
   echo "Log file:    $LOG_FILE"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo
@@ -203,6 +216,7 @@ build_from_tarball() {
   docker build --platform "$PLATFORM" \
     -f "$DOCKERFILE" \
     --build-arg INPUT_MODE=tarball \
+    --build-arg JDK_VERSION="$JDK_VERSION" \
     -t "$image_name" \
     "$SCRIPT_DIR" 2>&1 | tee "$LOG_FILE"
 
@@ -230,6 +244,7 @@ build_from_source() {
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo "Source:      $source_path"
   echo "Image name:  $image_name"
+  echo "JDK:         $JDK_VERSION"
   echo "Log file:    $LOG_FILE"
   echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
   echo
@@ -268,6 +283,7 @@ DOCKERIGNORE
 
   docker build --platform "$PLATFORM" \
     --build-arg INPUT_MODE=source-dir \
+    --build-arg JDK_VERSION="$JDK_VERSION" \
     -f "$temp_dockerfile/Dockerfile" \
     -t "$image_name" \
     "$source_path" 2>&1 | tee "$LOG_FILE"
@@ -335,6 +351,35 @@ main() {
   local mode=""
   local value=""
   local image_name="$DEFAULT_IMAGE_NAME"
+
+  # Extract --jdk (position-independent); the rest stays positional
+  local args=()
+  while [ $# -gt 0 ]; do
+    case "$1" in
+      --jdk)
+        if [ $# -lt 2 ] || [ -z "$2" ]; then
+          echo "ERROR: --jdk requires a value (supported: $SUPPORTED_JDKS)"
+          exit 1
+        fi
+        JDK_VERSION="$2"
+        shift 2
+        ;;
+      --jdk=*)
+        JDK_VERSION="${1#--jdk=}"
+        shift
+        ;;
+      *)
+        args+=("$1")
+        shift
+        ;;
+    esac
+  done
+  set -- "${args[@]+"${args[@]}"}"
+
+  if [[ " $SUPPORTED_JDKS " != *" $JDK_VERSION "* ]]; then
+    echo "ERROR: Unsupported JDK version: $JDK_VERSION (supported: $SUPPORTED_JDKS)"
+    exit 1
+  fi
 
   # Parse arguments
   case "${1:-}" in
