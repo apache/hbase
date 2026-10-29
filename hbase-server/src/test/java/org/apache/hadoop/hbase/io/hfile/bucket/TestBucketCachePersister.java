@@ -25,7 +25,9 @@ import java.io.IOException;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Random;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -93,6 +95,53 @@ public class TestBucketCachePersister {
     bucketCache.shutdown();
     TEST_UTIL.cleanupDataTestDirOnTestFS(String.valueOf(testDir));
     assertFalse(TEST_UTIL.getTestFileSystem().exists(testDir));
+  }
+
+  @Test
+  public void testPersistenceIntervalChange() throws Exception {
+    // Keep the initial interval above the assertion timeout so a stale interval fails the test.
+    Configuration conf = setupBucketCacheConfig(TimeUnit.SECONDS.toMillis(10));
+    CountDownLatch firstPersistence = new CountDownLatch(1);
+    CountDownLatch resumePersister = new CountDownLatch(1);
+    CountDownLatch secondPersistence = new CountDownLatch(1);
+    BucketCache bucketCache = new BucketCache("file:" + testDir + "/interval.cache", capacitySize,
+      constructedBlockSize, constructedBlockSizes, writeThreads, writerQLen,
+      testDir + "/bucket.persistence", 60 * 1000, conf) {
+      @Override
+      public void setCacheInconsistent(boolean inconsistent) {
+        super.setCacheInconsistent(inconsistent);
+        if (!inconsistent) {
+          if (firstPersistence.getCount() > 0) {
+            firstPersistence.countDown();
+            // Pause after the first persistence, before the persister starts its next sleep.
+            try {
+              resumePersister.await();
+            } catch (InterruptedException e) {
+              Thread.currentThread().interrupt();
+            }
+          } else {
+            secondPersistence.countDown();
+          }
+        }
+      }
+    };
+    try {
+      assertTrue(bucketCache.waitForCacheInitialization(10000));
+      bucketCache.setCacheInconsistent(true);
+      assertTrue(firstPersistence.await(30, TimeUnit.SECONDS),
+        "The persister should persist using the initial interval");
+
+      conf.setLong(CacheConfig.BUCKETCACHE_PERSIST_INTERVAL_KEY, TimeUnit.SECONDS.toMillis(1));
+      bucketCache.onConfigurationChange(conf);
+      bucketCache.setCacheInconsistent(true);
+      resumePersister.countDown();
+
+      assertTrue(secondPersistence.await(5, TimeUnit.SECONDS),
+        "The next persistence should use the updated interval");
+    } finally {
+      resumePersister.countDown();
+      cleanupBucketCache(bucketCache);
+    }
   }
 
   @Test
