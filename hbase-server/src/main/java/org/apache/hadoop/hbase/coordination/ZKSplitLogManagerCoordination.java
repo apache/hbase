@@ -58,8 +58,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * ZooKeeper based implementation of {@link SplitLogManagerCoordination}
+ * ZooKeeper based implementation of {@link SplitLogManagerCoordination}.
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *             distributed WAL splitter; see SplitWALManager.
  */
+@Deprecated
 @InterfaceAudience.Private
 public class ZKSplitLogManagerCoordination extends ZKListener
   implements SplitLogManagerCoordination {
