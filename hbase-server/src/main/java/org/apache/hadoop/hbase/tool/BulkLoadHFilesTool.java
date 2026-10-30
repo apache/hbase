@@ -625,7 +625,9 @@ public class BulkLoadHFilesTool extends Configured implements BulkLoadHFiles, To
     // we don't need it anymore. Clean up to save space.
     // It is not part of the original input files.
     try {
-      if (tmpDir.getName().equals(TMP_DIR)) {
+      // Preserve original input files so a new bulk load invocation can retry if loading the split
+      // outputs fails. Only delete an input which was itself produced by an earlier split.
+      if (hfilePath.getParent().getName().equals(TMP_DIR)) {
         fs.delete(hfilePath, false);
       }
     } catch (IOException e) {

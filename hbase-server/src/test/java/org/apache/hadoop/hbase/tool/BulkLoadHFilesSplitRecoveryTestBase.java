@@ -39,6 +39,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -409,9 +410,62 @@ public class BulkLoadHFilesSplitRecoveryTestBase {
     assertEquals(4, bulkloadRpcTimes.get());
   }
 
+  @Test
+  public void testFreshRetryAfterSplitFailure(TestInfo testInfo) throws Exception {
+    TableName table = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    setupTableWithSplitkeys(table, NUM_CFS, new byte[][] { rowkey(ROWCOUNT / 2) });
+
+    Path dir = buildBulkFiles(table, 1);
+    FileSystem fs = dir.getFileSystem(util.getConfiguration());
+    Path familyDir = new Path(dir, family(0));
+    Path originalHFile = new Path(familyDir, "hfile_0");
+    Path tmpDir = new Path(familyDir, BulkLoadHFilesTool.TMP_DIR);
+    assertTrue(fs.exists(originalHFile));
+
+    BulkLoadHFilesTool failingLoader = new BulkLoadHFilesTool(util.getConfiguration()) {
+      @Override
+      protected void bulkLoadPhase(AsyncClusterConnection conn, TableName tableName,
+        Deque<LoadQueueItem> queue, Multimap<ByteBuffer, LoadQueueItem> regionGroups,
+        boolean copyFiles, Map<LoadQueueItem, ByteBuffer> item2RegionMap) throws IOException {
+        throw new IOException("failure after splitting");
+      }
+    };
+
+    assertThrows(IOException.class, () -> failingLoader.bulkLoad(table, dir));
+
+    assertTrue(fs.exists(originalHFile));
+    FileStatus[] abandonedChildren = CommonFSUtils.listStatus(fs, tmpDir);
+    assertNotNull(abandonedChildren);
+    assertEquals(2, abandonedChildren.length);
+    Path top = null;
+    Path bottom = null;
+    for (FileStatus child : abandonedChildren) {
+      if (child.getPath().getName().endsWith(".top")) {
+        top = child.getPath();
+      } else if (child.getPath().getName().endsWith(".bottom")) {
+        bottom = child.getPath();
+      }
+    }
+    assertNotNull(top);
+    assertNotNull(bottom);
+
+    // Use a new loader to simulate retrying in another process. The original HFiles must remain in
+    // the family directory so the retry does not depend on in-memory references to split outputs.
+    BulkLoadHFiles.create(util.getConfiguration()).bulkLoad(table, dir);
+
+    // The retry consumes the preserved original HFiles. Split outputs abandoned by the failed
+    // invocation remain temporary and are deliberately not treated as input because they may be
+    // incomplete.
+    assertTrue(fs.exists(originalHFile));
+    assertTrue(fs.exists(top));
+    assertTrue(fs.exists(bottom));
+    assertEquals(2, CommonFSUtils.listStatus(fs, tmpDir).length);
+    assertExpectedTable(table, ROWCOUNT, 1);
+  }
+
   /**
-   * This test creates a table with many small regions. The bulk load files would be splitted
-   * multiple times before all of them can be loaded successfully.
+   * This test creates a table with many small regions. The bulk load files would be split multiple
+   * times before all of them can be loaded successfully.
    */
   @Test
   public void testSplitTmpFileCleanUp(TestInfo testInfo) throws Exception {
