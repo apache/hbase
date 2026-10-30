@@ -49,6 +49,16 @@ import org.apache.hbase.thirdparty.org.apache.commons.cli.PosixParser;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.StoreFileTrackerProtos.StoreFileList;
 
+/**
+ * Read-only viewer for FILE store-file-tracker manifests ({@code .filelist}). Prints the store
+ * file names recorded in a tracker file, either for a directly-specified file or for every tracker
+ * file currently present under a {@code table/region/family}'s {@code .filelist} directory (each
+ * file's contents are printed, prefixed by its path; this includes any stale older generations that
+ * have not yet been pruned, not only the one the runtime would load).
+ * <p>
+ * This tool does not modify anything. To rebuild a corrupted manifest use the offline
+ * {@link StoreFileListRecoverTool}.
+ */
 @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.TOOLS)
 @InterfaceStability.Evolving
 public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
@@ -126,9 +136,9 @@ public class StoreFileListFilePrettyPrinter extends Configured implements Tool {
         formatter.printHelp(cmdString, options, true);
         System.exit(1);
       }
-      TableName tn = TableName.valueOf(tableNameWtihNS);
-      namespace = tn.getNamespaceAsString();
-      tableName = tn.getNameAsString();
+      TableName targetTableName = TableName.valueOf(tableNameWtihNS);
+      namespace = targetTableName.getNamespaceAsString();
+      tableName = targetTableName.getNameAsString();
     }
     return true;
   }
