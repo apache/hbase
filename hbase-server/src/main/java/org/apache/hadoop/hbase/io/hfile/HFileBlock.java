@@ -1223,7 +1223,7 @@ public class HFileBlock implements Cacheable {
         .withUncompressedSizeWithoutHeader(getUncompressedSizeWithoutHeader())
         .withPrevBlockOffset(prevOffset).withByteBuff(buff).withFillHeader(FILL_HEADER)
         .withOffset(startOffset).withNextBlockOnDiskSize(UNSET)
-        .withOnDiskDataSizeWithHeader(onDiskBlockBytesWithHeader.size() + onDiskChecksum.length)
+        .withOnDiskDataSizeWithHeader(onDiskBlockBytesWithHeader.size())
         .withHFileContext(newContext).withByteBuffAllocator(cacheConf.getByteBuffAllocator())
         .withShared(!buff.hasArray()).build();
     }
