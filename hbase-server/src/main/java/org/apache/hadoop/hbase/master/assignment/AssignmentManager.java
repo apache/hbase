@@ -738,11 +738,11 @@ public class AssignmentManager {
                 }
               }
             }
-            for (RegionPlan plan : plans) {
-              LOG.info("Async MOVE of {} to newer Server={}", plan.getRegionInfo().getEncodedName(),
-                server);
-              moveAsync(plan);
-            }
+          }
+          for (RegionPlan plan : plans) {
+            LOG.info("Async MOVE of {} from Server={}",
+              plan.getRegionInfo().getEncodedName(), plan.getSource());
+            moveAsync(plan);
           }
         }
       } catch (Throwable t) {
