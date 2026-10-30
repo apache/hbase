@@ -43,7 +43,6 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
@@ -88,6 +87,7 @@ import org.apache.hadoop.hbase.regionserver.compactions.CompactionContext;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionLifeCycleTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionProgress;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionRequestImpl;
+import org.apache.hadoop.hbase.regionserver.compactions.OffPeakCompactionTracker;
 import org.apache.hadoop.hbase.regionserver.compactions.OffPeakHours;
 import org.apache.hadoop.hbase.regionserver.querymatcher.ScanQueryMatcher;
 import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
@@ -199,7 +199,8 @@ public class HStore
 
   final StoreEngine<?, ?, ?, ?> storeEngine;
 
-  private static final AtomicBoolean offPeakCompactionTracker = new AtomicBoolean();
+  private static final OffPeakCompactionTracker offPeakCompactionTracker =
+    OffPeakCompactionTracker.getInstance();
   private volatile OffPeakHours offPeakHours;
 
   private static final int DEFAULT_FLUSH_RETRIES_NUMBER = 10;
@@ -1500,20 +1501,20 @@ public class HStore
         if (!compaction.hasSelection()) {
           boolean isUserCompaction = priority == Store.PRIORITY_USER;
           boolean mayUseOffPeak =
-            offPeakHours.isOffPeakHour() && offPeakCompactionTracker.compareAndSet(false, true);
+            offPeakHours.isOffPeakHour() && offPeakCompactionTracker.tryAcquire();
           try {
             compaction.select(this.filesCompacting, isUserCompaction, mayUseOffPeak,
               forceMajor && filesCompacting.isEmpty());
           } catch (IOException e) {
             if (mayUseOffPeak) {
-              offPeakCompactionTracker.set(false);
+              offPeakCompactionTracker.release();
             }
             throw e;
           }
           assert compaction.hasSelection();
           if (mayUseOffPeak && !compaction.getRequest().isOffPeak()) {
             // Compaction policy doesn't want to take advantage of off-peak.
-            offPeakCompactionTracker.set(false);
+            offPeakCompactionTracker.release();
           }
         }
         if (this.getCoprocessorHost() != null) {
@@ -1623,7 +1624,7 @@ public class HStore
   private void finishCompactionRequest(CompactionRequestImpl cr) {
     this.region.reportCompactionRequestEnd(cr.isMajor(), cr.getFiles().size(), cr.getSize());
     if (cr.isOffPeak()) {
-      offPeakCompactionTracker.set(false);
+      offPeakCompactionTracker.release();
       cr.setOffPeak(false);
     }
     synchronized (filesCompacting) {
@@ -2220,6 +2221,7 @@ public class HStore
     if (cacheConfig != null) {
       manager.registerObserver(cacheConfig);
     }
+    offPeakCompactionTracker.registerIfNeeded(manager, conf);
   }
 
   /**
