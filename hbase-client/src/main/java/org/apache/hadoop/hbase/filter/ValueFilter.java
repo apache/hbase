@@ -54,7 +54,7 @@ public class ValueFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     if (compareValue(getCompareOperator(), this.comparator, c)) {
       return ReturnCode.SKIP;
     }
