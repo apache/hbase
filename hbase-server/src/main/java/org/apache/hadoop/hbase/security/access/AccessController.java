@@ -924,6 +924,27 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         return null;
       }
     });
+    // Remove the permissions of the column families dropped from the table. Otherwise, if a
+    // column family with the same name is added back later, the stale permissions would be
+    // effective again.
+    final Set<byte[]> removedFamilies = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    if (oldDesc != null) {
+      removedFamilies.addAll(oldDesc.getColumnFamilyNames());
+      removedFamilies.removeAll(currentDesc.getColumnFamilyNames());
+    }
+    if (!removedFamilies.isEmpty()) {
+      User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Table table =
+            c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+            PermissionStorage.removeTableColumnFamiliesPermissions(conf, tableName, removedFamilies,
+              table);
+          }
+          return null;
+        }
+      });
+    }
   }
 
   @Override
