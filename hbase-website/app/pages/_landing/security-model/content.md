@@ -24,7 +24,7 @@ This page was created following the [ASF recommendation for documenting project 
 
 ## Reporting Security Vulnerabilities
 
-To report an undisclosed, sensitive security vulnerability in Apache HBase, please send your report privately via email to the Apache Software Foundation's security team at [security@apache.org](mailto:security@apache.org). Please do not use JIRA or any public channel for security reports.
+To report an undisclosed, sensitive security vulnerability in Apache HBase, please send your report privately via email to the Apache HBase security team at [security@hbase.apache.org](mailto:security@hbase.apache.org?subject=%5BSECURITY%5D). Please do not use JIRA or any public channel for security reports.
 
 HBase follows the [Apache Software Foundation's vulnerability handling policy](https://www.apache.org/security/).
 
@@ -89,7 +89,7 @@ The web UI can optionally be configured with [SPNEGO](/docs/security/web-ui#usin
 
 ## What Is Considered a Vulnerability
 
-The following categories of issues are considered valid security vulnerabilities and should be reported to [security@apache.org](mailto:security@apache.org):
+The following categories of issues are considered valid security vulnerabilities and should be reported to [security@hbase.apache.org](mailto:security@hbase.apache.org?subject=%5BSECURITY%5D):
 
 - **Authentication bypass**: Circumventing configured Kerberos/SASL authentication to gain access without valid credentials.
 - **Authorization bypass or privilege escalation**: An authenticated user performing operations beyond their granted ACL permissions, including gaining administrative or superuser capabilities.
