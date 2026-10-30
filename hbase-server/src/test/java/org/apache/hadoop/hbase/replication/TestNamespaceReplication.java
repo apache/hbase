@@ -124,7 +124,7 @@ public class TestNamespaceReplication extends TestReplicationBase {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     admin1.disableTable(tabAName);
     admin1.deleteTable(tabAName);
     admin1.disableTable(tabBName);
