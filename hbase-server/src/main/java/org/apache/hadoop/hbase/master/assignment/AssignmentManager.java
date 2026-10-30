@@ -695,9 +695,6 @@ public class AssignmentManager {
    * </p>
    */
   public void checkIfShouldMoveSystemRegionAsync() {
-    // TODO: Fix this thread. If a server is killed and a new one started, this thread thinks that
-    // it should 'move' the system tables from the old server to the new server but
-    // ServerCrashProcedure is on it; and it will take care of the assign without dataloss.
     if (this.master.getServerManager().countOfRegionServers() <= 1) {
       return;
     }
@@ -711,37 +708,37 @@ public class AssignmentManager {
       try {
         synchronized (checkIfShouldMoveSystemRegionLock) {
           List<RegionPlan> plans = new ArrayList<>();
-          // TODO: I don't think this code does a good job if all servers in cluster have same
-          // version. It looks like it will schedule unnecessary moves.
           for (ServerName server : getExcludedServersForSystemTable()) {
-            if (master.getServerManager().isServerDead(server)) {
-              // TODO: See HBASE-18494 and HBASE-18495. Though getExcludedServersForSystemTable()
-              // considers only online servers, the server could be queued for dead server
-              // processing. As region assignments for crashed server is handled by
-              // ServerCrashProcedure, do NOT handle them here. The goal is to handle this through
-              // regular flow of LoadBalancer as a favored node and not to have this special
-              // handling.
+            if (!master.getServerManager().isServerOnline(server)) {
+              // Leave regions on crashed servers to ServerCrashProcedure.
               continue;
             }
-            List<RegionInfo> regionsShouldMove = getSystemTables(server);
-            if (!regionsShouldMove.isEmpty()) {
-              for (RegionInfo regionInfo : regionsShouldMove) {
-                // null value for dest forces destination server to be selected by balancer
-                RegionPlan plan = new RegionPlan(regionInfo, server, null);
-                if (regionInfo.isMetaRegion()) {
-                  // Must move meta region first.
-                  LOG.info("Async MOVE of {} to newer Server={}", regionInfo.getEncodedName(),
-                    server);
-                  moveAsync(plan);
-                } else {
-                  plans.add(plan);
-                }
-              }
+            for (RegionInfo regionInfo : getSystemTables(server)) {
+              // null value for dest forces destination server to be selected by balancer
+              plans.add(new RegionPlan(regionInfo, server, null));
             }
-            for (RegionPlan plan : plans) {
-              LOG.info("Async MOVE of {} to newer Server={}", plan.getRegionInfo().getEncodedName(),
-                server);
-              moveAsync(plan);
+          }
+          // Submit meta moves before other system regions, and submit each plan only once.
+          plans.sort(Comparator.comparing(plan -> !plan.getRegionInfo().isMetaRegion()));
+          for (RegionPlan plan : plans) {
+            RegionStateNode regionNode = regionStates.getRegionStateNode(plan.getRegionInfo());
+            if (regionNode == null || !master.getServerManager().isServerOnline(plan.getSource())) {
+              continue;
+            }
+            if (regionNode.isTransitionScheduled()) {
+              LOG.debug("Skip system region move for {}; a transition is already scheduled",
+                regionNode);
+              continue;
+            }
+            try {
+              // balance checks the source location; preTransitCheck still guards against a
+              // transition starting after the check above.
+              if (balance(plan) != null) {
+                LOG.info("Async MOVE of {} from {} to a newer RegionServer",
+                  plan.getRegionInfo().getEncodedName(), plan.getSource());
+              }
+            } catch (HBaseIOException e) {
+              LOG.warn("Failed system region move {}, skipping this plan", plan, e);
             }
           }
         }
