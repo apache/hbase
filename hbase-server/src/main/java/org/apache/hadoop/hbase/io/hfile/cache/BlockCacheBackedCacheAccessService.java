@@ -29,6 +29,7 @@ import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
+import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileInfo;
 import org.apache.hadoop.hbase.util.Pair;
@@ -340,5 +341,25 @@ public class BlockCacheBackedCacheAccessService
   @Override
   public long getCurrentSize() {
     return blockCache.getCurrentSize();
+  }
+
+  @Override
+  public Optional<CacheEngine> getEngine(CacheTier tier) {
+    BlockCache cache = getBlockCache();
+
+    if (cache instanceof CombinedBlockCache) {
+      CombinedBlockCache combined = (CombinedBlockCache) cache;
+      if (tier == CacheTier.L1) {
+        return Optional.of(CacheEngines.fromBlockCache(combined.getFirstLevelCache()));
+      }
+      if (tier == CacheTier.L2) {
+        return Optional.of(CacheEngines.fromBlockCache(combined.getSecondLevelCache()));
+      }
+      return Optional.empty();
+    }
+
+    return tier == CacheTier.SINGLE
+      ? Optional.of(CacheEngines.fromBlockCache(cache))
+      : Optional.empty();
   }
 }

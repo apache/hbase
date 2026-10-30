@@ -252,6 +252,15 @@ public class BlockCacheBackedCacheEngine implements CacheEngine {
     return blockCache.getFullyCachedFiles();
   }
 
+  /**
+   * Returns region-level cache information exposed by the wrapped block cache.
+   * @return region-level cache information when supported
+   */
+  @Override
+  public Optional<Map<String, Long>> getRegionCachedInfo() {
+    return blockCache.getRegionCachedInfo();
+  }
+
   @Override
   public Optional<Iterable<CachedBlock>> asCachedBlockIterable() {
     return Optional.of(blockCache);

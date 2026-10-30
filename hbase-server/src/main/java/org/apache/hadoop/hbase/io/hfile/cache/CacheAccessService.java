@@ -557,6 +557,15 @@ public interface CacheAccessService extends ConfigurationObserver {
   }
 
   /**
+   * Returns region-level cache information when supported by the cache implementation.
+   * @return an {@link Optional} containing cached-size information by region when supported;
+   *         otherwise {@link Optional#empty()}
+   */
+  default Optional<Map<String, Long>> getRegionCachedInfo() {
+    return Optional.empty();
+  }
+
+  /**
    * Saves persistent state owned by cache components managed by this service.
    * <p>
    * The default implementation performs no persistence. Implementations which manage persistent
@@ -578,5 +587,27 @@ public interface CacheAccessService extends ConfigurationObserver {
    * @throws IOException if persistent state cannot be restored
    */
   default void restorePersistentState(CachePersistenceStorage storage) throws IOException {
+  }
+
+  /**
+   * Returns the cache engine for the requested tier.
+   * @param tier cache tier
+   * @return cache engine for the tier, if present
+   */
+  default Optional<CacheEngine> getEngine(CacheTier tier) {
+    return Optional.empty();
+  }
+
+  /**
+   * Returns the first-level cache engine.
+   * <p>
+   * For a single-tier cache this is the {@link CacheTier#SINGLE} engine. For a tiered cache this is
+   * the {@link CacheTier#L1} engine.
+   * </p>
+   * @return first-level cache engine, if present
+   */
+  default Optional<CacheEngine> getFirstLevelEngine() {
+    Optional<CacheEngine> engine = getEngine(CacheTier.SINGLE);
+    return engine.isPresent() ? engine : getEngine(CacheTier.L1);
   }
 }

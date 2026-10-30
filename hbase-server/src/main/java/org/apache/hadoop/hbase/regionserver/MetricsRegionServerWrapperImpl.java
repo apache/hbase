@@ -37,9 +37,10 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.FSDataInputStreamWrapper;
 import org.apache.hadoop.hbase.io.asyncfs.monitor.ExcludeDatanodeManager;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheStats;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -64,9 +65,9 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   private final MetricsWALSource metricsWALSource;
   private final ByteBuffAllocator allocator;
 
-  private BlockCache blockCache;
-  private BlockCache l1Cache = null;
-  private BlockCache l2Cache = null;
+  private CacheAccessService cacheAccessService;
+  private CacheEngine l1CacheEngine;
+  private CacheEngine l2CacheEngine;
   private MobFileCache mobFileCache;
   private CacheStats cacheStats;
   private CacheStats l1Stats = null;
@@ -121,25 +122,21 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
     }
   }
 
+  /**
+   * Initializes block cache references used by RegionServer metrics.
+   */
   private void initBlockCache() {
-    this.blockCache = this.regionServer.getBlockCache().orElse(null);
-    this.cacheStats = this.blockCache != null ? this.blockCache.getStats() : null;
-    if (this.cacheStats != null) {
-      if (this.cacheStats instanceof CombinedBlockCache.CombinedCacheStats) {
-        l1Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getLruCacheStats();
-        l2Stats = ((CombinedBlockCache.CombinedCacheStats) this.cacheStats).getBucketCacheStats();
-      } else {
-        l1Stats = this.cacheStats;
-      }
+    this.cacheAccessService = this.regionServer.getCacheAccessService();
+    if (this.cacheAccessService == null) {
+      return;
     }
-    if (this.blockCache != null) {
-      if (this.blockCache instanceof CombinedBlockCache) {
-        l1Cache = ((CombinedBlockCache) this.blockCache).getFirstLevelCache();
-        l2Cache = ((CombinedBlockCache) this.blockCache).getSecondLevelCache();
-      } else {
-        l1Cache = this.blockCache;
-      }
-    }
+
+    this.cacheStats = this.cacheAccessService.getStats();
+    this.l1CacheEngine = this.cacheAccessService.getFirstLevelEngine().orElse(null);
+    this.l2CacheEngine = this.cacheAccessService.getEngine(CacheTier.L2).orElse(null);
+
+    this.l1Stats = this.l1CacheEngine != null ? this.l1CacheEngine.getStats() : null;
+    this.l2Stats = this.l2CacheEngine != null ? this.l2CacheEngine.getStats() : null;
   }
 
   /**
@@ -240,12 +237,12 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getBlockCacheCount() {
-    return this.blockCache != null ? this.blockCache.getBlockCount() : 0L;
+    return this.cacheAccessService != null ? this.cacheAccessService.getBlockCount() : 0L;
   }
 
   @Override
   public long getBlockCacheDataBlockCount() {
-    return this.blockCache != null ? this.blockCache.getDataBlockCount() : 0L;
+    return this.cacheAccessService != null ? this.cacheAccessService.getDataBlockCount() : 0L;
   }
 
   @Override
@@ -265,12 +262,12 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
 
   @Override
   public long getBlockCacheSize() {
-    return this.blockCache != null ? this.blockCache.getCurrentSize() : 0L;
+    return this.cacheAccessService != null ? this.cacheAccessService.getCurrentSize() : 0L;
   }
 
   @Override
   public long getBlockCacheFreeSize() {
-    return this.blockCache != null ? this.blockCache.getFreeSize() : 0L;
+    return this.cacheAccessService != null ? this.cacheAccessService.getFreeSize() : 0L;
   }
 
   @Override
@@ -337,15 +334,15 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   public long getL1CacheSize() {
-    return this.l1Cache != null ? this.l1Cache.getCurrentSize() : 0L;
+    return this.l1CacheEngine != null ? this.l1CacheEngine.getCurrentSize() : 0L;
   }
 
   public long getL1CacheFreeSize() {
-    return this.l1Cache != null ? this.l1Cache.getFreeSize() : 0L;
+    return this.l1CacheEngine != null ? this.l1CacheEngine.getFreeSize() : 0L;
   }
 
   public long getL1CacheCount() {
-    return this.l1Cache != null ? this.l1Cache.getBlockCount() : 0L;
+    return this.l1CacheEngine != null ? this.l1CacheEngine.getBlockCount() : 0L;
   }
 
   public long getL1CacheEvictedCount() {
@@ -353,15 +350,15 @@ class MetricsRegionServerWrapperImpl implements MetricsRegionServerWrapper {
   }
 
   public long getL2CacheSize() {
-    return this.l2Cache != null ? this.l2Cache.getCurrentSize() : 0L;
+    return this.l2CacheEngine != null ? this.l2CacheEngine.getCurrentSize() : 0L;
   }
 
   public long getL2CacheFreeSize() {
-    return this.l2Cache != null ? this.l2Cache.getFreeSize() : 0L;
+    return this.l2CacheEngine != null ? this.l2CacheEngine.getFreeSize() : 0L;
   }
 
   public long getL2CacheCount() {
-    return this.l2Cache != null ? this.l2Cache.getBlockCount() : 0L;
+    return this.l2CacheEngine != null ? this.l2CacheEngine.getBlockCount() : 0L;
   }
 
   public long getL2CacheEvictedCount() {

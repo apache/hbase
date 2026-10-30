@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.lang.ref.WeakReference;
 import java.util.EnumMap;
 import java.util.Iterator;
@@ -1602,7 +1603,9 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * </p>
    * @return sorted set of cached HFile names
    */
-  SortedSet<String> getCachedFileNamesForTest() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public SortedSet<String> getCachedFileNamesForTest() {
     SortedSet<String> fileNames = new TreeSet<>();
 
     for (BlockCacheKey cacheKey : map.keySet()) {
@@ -1619,6 +1622,8 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * </p>
    * @return block counts grouped by data block encoding
    */
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
   public Map<DataBlockEncoding, Integer> getEncodingCountsForTest() {
     Map<DataBlockEncoding, Integer> counts = new EnumMap<>(DataBlockEncoding.class);
 
@@ -1638,7 +1643,9 @@ public class LruCacheEngine implements ResizableCacheEngine, HeapSize, Iterable<
    * </p>
    * @return internal cached-block map
    */
-  Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  public Map<BlockCacheKey, LruCachedBlock> getMapForTests() {
     return map;
   }
 

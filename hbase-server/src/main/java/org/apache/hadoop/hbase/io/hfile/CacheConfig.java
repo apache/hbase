@@ -21,8 +21,7 @@ import java.util.Objects;
 import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
-import org.apache.hadoop.hbase.conf.ConfigurationManager;
-import org.apache.hadoop.hbase.conf.PropagatingConfigurationObserver;
+import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
 import org.apache.hadoop.hbase.io.hfile.BlockType.BlockCategory;
 import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
@@ -41,7 +40,7 @@ import org.slf4j.LoggerFactory;
  * Stores all of the cache objects and configuration for a single HFile.
  */
 @InterfaceAudience.Private
-public class CacheConfig implements PropagatingConfigurationObserver {
+public class CacheConfig implements ConfigurationObserver {
   private static final Logger LOG = LoggerFactory.getLogger(CacheConfig.class.getName());
 
   /**
@@ -637,19 +636,5 @@ public class CacheConfig implements PropagatingConfigurationObserver {
         + "hbase.rs.cacheblocksonwrite is changed to {}, "
         + "hbase.rs.evictblocksonclose is changed to {}",
       cacheDataOnRead, cacheDataOnWrite, evictOnClose);
-  }
-
-  @Override
-  public void registerChildren(ConfigurationManager manager) {
-    if (cacheAccessService != null) {
-      manager.registerObserver(cacheAccessService);
-    }
-  }
-
-  @Override
-  public void deregisterChildren(ConfigurationManager manager) {
-    if (cacheAccessService != null) {
-      manager.deregisterObserver(cacheAccessService);
-    }
   }
 }

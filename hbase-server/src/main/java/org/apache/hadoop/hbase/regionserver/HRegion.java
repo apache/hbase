@@ -140,9 +140,16 @@ import org.apache.hadoop.hbase.io.HFileLink;
 import org.apache.hadoop.hbase.io.HeapSize;
 import org.apache.hadoop.hbase.io.TimeRange;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.CombinedBlockCache;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTopology;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTopologyType;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
 import org.apache.hadoop.hbase.ipc.CoprocessorRpcUtils;
 import org.apache.hadoop.hbase.ipc.RpcCall;
 import org.apache.hadoop.hbase.ipc.RpcServer;
@@ -379,7 +386,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   final LongAdder compactionsQueued = new LongAdder();
   final LongAdder flushesQueued = new LongAdder();
 
-  private BlockCache blockCache;
+  private CacheAccessService cacheAccessService;
   private MobFileCache mobFileCache;
   private final WAL wal;
   private final HRegionFileSystem fs;
@@ -900,7 +907,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
     this.rsServices = rsServices;
     if (this.rsServices != null) {
-      this.blockCache = rsServices.getBlockCache().orElse(null);
+      this.cacheAccessService = rsServices.getCacheAccessService();
       this.mobFileCache = rsServices.getMobFileCache().orElse(null);
     }
     this.regionServicesForStores = new RegionServicesForStores(this, rsServices);
@@ -1715,21 +1722,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     status.setStatus("Waiting for close lock");
     try {
       synchronized (closeLock) {
-        if (isGracefulStop && rsServices != null) {
-          rsServices.getBlockCache().ifPresent(blockCache -> {
-            if (blockCache instanceof CombinedBlockCache) {
-              BlockCache l2 = ((CombinedBlockCache) blockCache).getSecondLevelCache();
-              if (l2 instanceof BucketCache) {
-                if (((BucketCache) l2).isCachePersistenceEnabled()) {
-                  LOG.info(
-                    "Closing region {} during a graceful stop, and cache persistence is on, "
-                      + "so setting evict on close to false. ",
-                    this.getRegionInfo().getRegionNameAsString());
-                  this.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(false));
-                }
-              }
-            }
-          });
+        if (isGracefulStop && rsServices != null && isPersistentBucketCacheL2(cacheAccessService)) {
+          LOG.info(
+            "Closing region {} during a graceful stop, and cache persistence is on, "
+              + "so setting evict on close to false. ",
+            this.getRegionInfo().getRegionNameAsString());
+          this.getStores().forEach(s -> s.getCacheConfig().setEvictOnClose(false));
         }
         return doClose(abort, status);
       }
@@ -1740,6 +1738,33 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       }
       status.cleanup();
     }
+  }
+
+  /**
+   * Returns whether the cache uses a persistent BucketCache as L2 in the topology equivalent to
+   * legacy CombinedBlockCache. TODO: Fix this code once BuckeCache is migrated to a CacheEngine
+   * @param cacheAccessService cache access service to inspect
+   * @return {@code true} when the service uses a persistent BucketCache as L2
+   */
+  static boolean isPersistentBucketCacheL2(CacheAccessService cacheAccessService) {
+    if (!(cacheAccessService instanceof TopologyBackedCacheAccessService)) {
+      return false;
+    }
+
+    CacheTopology topology = ((TopologyBackedCacheAccessService) cacheAccessService).getTopology();
+
+    if (topology.getType() != CacheTopologyType.TIERED_EXCLUSIVE) {
+      return false;
+    }
+
+    Optional<CacheEngine> l2 = topology.getEngine(CacheTier.L2);
+    if (!l2.isPresent() || !(l2.get() instanceof BlockCacheBackedCacheEngine)) {
+      return false;
+    }
+
+    BlockCache blockCache = ((BlockCacheBackedCacheEngine) l2.get()).getBlockCache();
+    return blockCache instanceof BucketCache
+      && ((BucketCache) blockCache).isCachePersistenceEnabled();
   }
 
   /**
@@ -2177,8 +2202,12 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     return this.wal;
   }
 
-  public BlockCache getBlockCache() {
-    return this.blockCache;
+  /**
+   * Returns the cache access service used by this region.
+   * @return cache access service
+   */
+  public CacheAccessService getCacheAccessService() {
+    return cacheAccessService;
   }
 
   public ManagedKeyDataCache getManagedKeyDataCache() {
@@ -2190,10 +2219,15 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   /**
-   * Only used for unit test which doesn't start region server.
+   * Sets the cache access service used by this region.
+   * <p>
+   * Intended only for tests that create a region without a RegionServer.
+   * </p>
+   * @param cacheAccessService cache access service
    */
-  public void setBlockCache(BlockCache blockCache) {
-    this.blockCache = blockCache;
+  public void setCacheAccessService(CacheAccessService cacheAccessService) {
+    this.cacheAccessService =
+      cacheAccessService == null ? new NoOpCacheAccessService() : cacheAccessService;
   }
 
   public MobFileCache getMobFileCache() {

@@ -90,7 +90,6 @@ import org.apache.hadoop.hbase.exceptions.ScannerResetException;
 import org.apache.hadoop.hbase.exceptions.TimeoutIOException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.PriorityFunction;
 import org.apache.hadoop.hbase.ipc.QosPriority;
@@ -3918,7 +3917,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
           stats.addException(region.getRegionInfo().getRegionName(), e);
         }
       }
-      stats.withMaxCacheSize(server.getBlockCache().map(BlockCache::getMaxSize).orElse(0L));
+      stats.withMaxCacheSize(server.getCacheAccessService().getMaxSize());
       server.getRegionServerCoprocessorHost().postClearRegionBlockCache(stats.build());
       return builder.setStats(ProtobufUtil.toCacheEvictionStats(stats.build())).build();
     } catch (IOException e) {
@@ -4055,7 +4054,7 @@ public class RSRpcServices extends HBaseRpcServicesBase<HRegionServer>
     GetCachedFilesListRequest request) throws ServiceException {
     GetCachedFilesListResponse.Builder responseBuilder = GetCachedFilesListResponse.newBuilder();
     List<String> fullyCachedFiles = new ArrayList<>();
-    server.getBlockCache().flatMap(BlockCache::getFullyCachedFiles).ifPresent(fcf -> {
+    server.getCacheAccessService().getFullyCachedFiles().ifPresent(fcf -> {
       fullyCachedFiles.addAll(fcf.keySet());
     });
     return responseBuilder.addAllCachedFiles(fullyCachedFiles).build();

@@ -85,9 +85,9 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.ChecksumUtil;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeymetaAdminClient;
 import org.apache.hadoop.hbase.logging.Log4jUtils;
@@ -2460,9 +2460,10 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
    * {@link HBaseTestingUtility#closeRegionAndWAL(HRegion)} to clean up all resources.
    */
   public static HRegion createRegionAndWAL(final RegionInfo info, final Path rootDir,
-    final Configuration conf, final TableDescriptor htd, BlockCache blockCache) throws IOException {
+    final Configuration conf, final TableDescriptor htd, CacheAccessService cas)
+    throws IOException {
     HRegion region = createRegionAndWAL(info, rootDir, conf, htd, false);
-    region.setBlockCache(blockCache);
+    region.setCacheAccessService(cas);
     region.initialize();
     return region;
   }
@@ -3886,7 +3887,7 @@ public class HBaseTestingUtility extends HBaseZKTestingUtility {
   }
 
   public HRegion createTestRegion(String tableName, ColumnFamilyDescriptor cd,
-    BlockCache blockCache) throws IOException {
+    CacheAccessService blockCache) throws IOException {
     TableDescriptor td =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName)).setColumnFamily(cd).build();
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
