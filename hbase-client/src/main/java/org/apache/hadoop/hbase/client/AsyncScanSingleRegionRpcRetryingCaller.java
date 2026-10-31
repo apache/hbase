@@ -395,7 +395,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
   }
 
   private void completeWhenError(boolean closeScanner) {
-    incRPCRetriesMetrics(scanMetrics, closeScanner);
+    incRPCRetriesMetrics(scanMetrics, regionServerRemote);
     resultCache.clear();
     if (closeScanner) {
       closeScanner();
