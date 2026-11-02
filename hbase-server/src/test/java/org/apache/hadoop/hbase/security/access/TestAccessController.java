@@ -52,6 +52,7 @@ import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.SingleProcessHBaseCluster;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotFoundException;
+import org.apache.hadoop.hbase.Waiter.Predicate;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Append;
 import org.apache.hadoop.hbase.client.BalanceRequest;
@@ -107,6 +108,7 @@ import org.apache.hadoop.hbase.regionserver.RegionServerCoprocessorHost;
 import org.apache.hadoop.hbase.regionserver.ScanType;
 import org.apache.hadoop.hbase.replication.ReplicationPeerConfig;
 import org.apache.hadoop.hbase.replication.SyncReplicationState;
+import org.apache.hadoop.hbase.security.AccessDeniedException;
 import org.apache.hadoop.hbase.security.Superusers;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
@@ -128,6 +130,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcController;
@@ -474,6 +477,149 @@ public class TestAccessController extends SecureTestUtil {
     verifyAllowed(modifyTable, SUPERUSER, USER_ADMIN, USER_CREATE, USER_OWNER, USER_GROUP_CREATE,
       USER_GROUP_ADMIN);
     verifyDenied(modifyTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
+  }
+
+  @Test
+  public void testTableModifyRemoveFamiliesClearsPermissions(TestInfo testInfo) throws Exception {
+    final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
+    final byte[] family1 = Bytes.toBytes("cf1");
+    final byte[] family2 = Bytes.toBytes("cf2");
+    final byte[] family3 = Bytes.toBytes("cf3");
+    // a qualifier on a surviving family, sharing its name with a dropped column family
+    final byte[] qualifier = Bytes.toBytes("cf1");
+
+    TableDescriptor tableDescriptor = TableDescriptorBuilder.newBuilder(tableName)
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family1))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family2))
+      .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family3)).build();
+    createTable(TEST_UTIL, tableDescriptor);
+
+    try {
+      grantOnTable(TEST_UTIL, USER_NONE.getShortName(), tableName, null, null, Action.READ);
+      grantOnTable(TEST_UTIL, USER_RO.getShortName(), tableName, family1, null, Action.READ);
+      grantOnTable(TEST_UTIL, USER_RW.getShortName(), tableName, family1, TEST_QUALIFIER,
+        Action.READ);
+      grantOnTable(TEST_UTIL, USER_CREATE.getShortName(), tableName, family2, null, Action.READ);
+      grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(), tableName, family3, qualifier,
+        Action.READ);
+
+      ListMultimap<String, UserPermission> perms =
+        PermissionStorage.getTablePermissions(conf, tableName);
+      assertTablePermission(perms, USER_NONE, null, null, true);
+      assertTablePermission(perms, USER_RO, family1, null, true);
+      assertTablePermission(perms, USER_RW, family1, TEST_QUALIFIER, true);
+      assertTablePermission(perms, USER_CREATE, family2, null, true);
+      assertTablePermission(perms, USER_ADMIN_CF, family3, qualifier, true);
+
+      // Drop cf1 and cf2 in a single modify. The permissions scoped to them must be removed
+      // along with them, while the table level permission and the permissions on cf3 survive.
+      TableDescriptor droppedFamilyDesc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family3)).build();
+      try (Admin admin = TEST_UTIL.getAdmin()) {
+        admin.modifyTable(droppedFamilyDesc);
+      }
+
+      perms = PermissionStorage.getTablePermissions(conf, tableName);
+      assertTablePermission(perms, USER_RO, family1, null, false);
+      assertTablePermission(perms, USER_RW, family1, TEST_QUALIFIER, false);
+      assertTablePermission(perms, USER_CREATE, family2, null, false);
+      assertTablePermission(perms, USER_NONE, null, null, true);
+      assertTablePermission(perms, USER_ADMIN_CF, family3, qualifier, true);
+
+      // Add cf1 and cf2 back. The removed permissions must not be resurrected.
+      TableDescriptor addedFamilyDesc = TableDescriptorBuilder.newBuilder(tableName)
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family1))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family2))
+        .setColumnFamily(ColumnFamilyDescriptorBuilder.of(family3)).build();
+      try (Admin admin = TEST_UTIL.getAdmin()) {
+        admin.modifyTable(addedFamilyDesc);
+      }
+
+      perms = PermissionStorage.getTablePermissions(conf, tableName);
+      assertTablePermission(perms, USER_RO, family1, null, false);
+      assertTablePermission(perms, USER_RW, family1, TEST_QUALIFIER, false);
+      assertTablePermission(perms, USER_CREATE, family2, null, false);
+
+      final AccessTestAction getFamily1Action = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          Get get = new Get(TEST_ROW);
+          get.addColumn(family1, TEST_QUALIFIER);
+          try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table table = conn.getTable(tableName)) {
+            table.get(get);
+          }
+          return null;
+        }
+      };
+      // wait until the cache update is propagated to all region servers
+      TEST_UTIL.waitFor(30000, 100, new Predicate<IOException>() {
+        @Override
+        public boolean evaluate() throws IOException {
+          try {
+            USER_RW.runAs(getFamily1Action);
+            return false;
+          } catch (AccessDeniedException e) {
+            return true;
+          } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            return false;
+          }
+        }
+      });
+      verifyDenied(getFamily1Action, USER_RO, USER_RW);
+
+      final AccessTestAction getFamily2Action = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          Get get = new Get(TEST_ROW);
+          get.addColumn(family2, TEST_QUALIFIER);
+          try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table table = conn.getTable(tableName)) {
+            table.get(get);
+          }
+          return null;
+        }
+      };
+      verifyDenied(getFamily2Action, USER_CREATE);
+
+      final AccessTestAction getFamily3Action = new AccessTestAction() {
+        @Override
+        public Object run() throws Exception {
+          Get get = new Get(TEST_ROW);
+          get.addColumn(family3, qualifier);
+          try (Connection conn = ConnectionFactory.createConnection(conf);
+            Table table = conn.getTable(tableName)) {
+            table.get(get);
+          }
+          return null;
+        }
+      };
+      verifyAllowed(getFamily3Action, USER_ADMIN_CF);
+    } finally {
+      deleteTable(TEST_UTIL, tableName);
+    }
+  }
+
+  private static void assertTablePermission(ListMultimap<String, UserPermission> perms, User user,
+    byte[] family, byte[] qualifier, boolean expected) {
+    boolean found = false;
+    for (UserPermission perm : perms.get(user.getShortName())) {
+      if (perm.getPermission() instanceof TablePermission) {
+        TablePermission tablePermission = (TablePermission) perm.getPermission();
+        if (
+          Arrays.equals(family, tablePermission.getFamily())
+            && Arrays.equals(qualifier, tablePermission.getQualifier())
+        ) {
+          found = true;
+          break;
+        }
+      }
+    }
+    assertEquals(expected, found,
+      "Unexpected permission state for " + user.getShortName() + " on family="
+        + (family == null ? "<table level>" : Bytes.toStringBinary(family)) + ", qualifier="
+        + (qualifier == null ? "<family level>" : Bytes.toStringBinary(qualifier)));
   }
 
   @Test
