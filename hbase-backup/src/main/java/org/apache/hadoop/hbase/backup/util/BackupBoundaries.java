@@ -37,19 +37,21 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Private
 public class BackupBoundaries {
   private static final Logger LOG = LoggerFactory.getLogger(BackupBoundaries.class);
+  private static final BackupBoundaries EMPTY_BOUNDARIES =
+    new BackupBoundaries(Collections.emptyMap());
 
-  // This map tracks, for every RegionServer, the least recent (= oldest / lowest timestamp)
-  // inclusion in any backup. In other words, it is the timestamp boundary up to which all backup
-  // roots have included the WAL in their backup.
-  private final Map<Address, Long> boundaries;
+  // Tracks WAL cleanup boundaries separately for each backup root to ensure WALs are only deleted
+  // when ALL backup roots no longer need them. The map key is the backup ID of the most recent
+  // backup from each backup root. Each BoundaryInfo contains: (1) a map of WAL timestamp
+  // boundaries per RegionServer (the oldest WAL timestamp included in that backup root's most
+  // recent backup), and (2) a defaultBoundary used as a fallback boundary for RegionServers not
+  // explicitly tracked (e.g., servers that joined after the backup began). A WAL file can only be
+  // deleted if it's older than the boundary for ALL backup roots, protecting WALs needed by any
+  // backup root even when other roots have already backed up that host at a later timestamp.
+  private final Map<String, BoundaryInfo> boundaries;
 
-  // The fallback cleanup boundary for RegionServers without explicit backup boundaries
-  // (e.g., servers that joined after backups began can be checked against this boundary)
-  private final long defaultBoundary;
-
-  private BackupBoundaries(Map<Address, Long> boundaries, long defaultBoundary) {
+  private BackupBoundaries(Map<String, BoundaryInfo> boundaries) {
     this.boundaries = boundaries;
-    this.defaultBoundary = defaultBoundary;
   }
 
   public boolean isDeletable(Path walLogPath) {
@@ -66,32 +68,17 @@ public class BackupBoundaries {
       Address address = Address.fromString(hostname);
       long pathTs = AbstractFSWALProvider.getTimestamp(walLogPath.getName());
 
-      if (!boundaries.containsKey(address)) {
-        boolean isDeletable = pathTs <= defaultBoundary;
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "Boundary for {} not found. isDeletable = {} based on defaultBoundary = {} and WAL ts of {}",
-            walLogPath, isDeletable, defaultBoundary, pathTs);
+      for (Map.Entry<String, BoundaryInfo> entry : boundaries.entrySet()) {
+        String backupId = entry.getKey();
+        BoundaryInfo boundary = entry.getValue();
+        DeletionEligibility eligibility = boundary.getDeletionEligibility(address, pathTs);
+        if (!eligibility.isEligible()) {
+          LOG.debug("Backup {} preventing deletion of {} with ts of {} due to {}", backupId,
+            walLogPath, pathTs, eligibility);
+          return false;
         }
-        return isDeletable;
       }
-
-      long backupTs = boundaries.get(address);
-      if (pathTs <= backupTs) {
-        if (LOG.isDebugEnabled()) {
-          LOG.debug(
-            "WAL cleanup time-boundary found for server {}: {}. Ok to delete older file: {}",
-            address.getHostName(), pathTs, walLogPath);
-        }
-        return true;
-      }
-
-      if (LOG.isDebugEnabled()) {
-        LOG.debug("WAL cleanup time-boundary found for server {}: {}. Keeping younger file: {}",
-          address.getHostName(), backupTs, walLogPath);
-      }
-
-      return false;
+      return true;
     } catch (Exception e) {
       LOG.warn("Error occurred while filtering file: {}. Ignoring cleanup of this log", walLogPath,
         e);
@@ -99,12 +86,8 @@ public class BackupBoundaries {
     }
   }
 
-  public Map<Address, Long> getBoundaries() {
+  public Map<String, BoundaryInfo> getBoundaries() {
     return boundaries;
-  }
-
-  public long getDefaultBoundary() {
-    return defaultBoundary;
   }
 
   public static BackupBoundariesBuilder builder(long tsCleanupBuffer) {
@@ -112,10 +95,8 @@ public class BackupBoundaries {
   }
 
   public static class BackupBoundariesBuilder {
-    private final Map<Address, Long> boundaries = new HashMap<>();
+    private final Map<String, BoundaryInfoBuilder> boundaries = new HashMap<>();
     private final long tsCleanupBuffer;
-
-    private long oldestStartTs = Long.MAX_VALUE;
 
     private BackupBoundariesBuilder(long tsCleanupBuffer) {
       this.tsCleanupBuffer = tsCleanupBuffer;
@@ -127,6 +108,27 @@ public class BackupBoundaries {
      *                   such completed backup, the currently running backup.
      */
     public void update(BackupInfo backupInfo) {
+      boundaries.computeIfAbsent(backupInfo.getBackupId(), ignore -> new BoundaryInfoBuilder())
+        .update(backupInfo);
+    }
+
+    public BackupBoundaries build() {
+      if (boundaries.isEmpty()) {
+        return EMPTY_BOUNDARIES;
+      }
+
+      Map<String, BoundaryInfo> built = new HashMap<>();
+      boundaries
+        .forEach((backupId, builder) -> built.put(backupId, builder.build(tsCleanupBuffer)));
+      return new BackupBoundaries(built);
+    }
+  }
+
+  private static class BoundaryInfoBuilder {
+    private final Map<Address, Long> boundaries = new HashMap<>();
+    private long oldestStartTs = Long.MAX_VALUE;
+
+    void update(BackupInfo backupInfo) {
       switch (backupInfo.getState()) {
         case COMPLETE:
           // If a completed backup exists in the backup root, we want to protect all logs that
@@ -155,15 +157,67 @@ public class BackupBoundaries {
       }
     }
 
-    public BackupBoundaries build() {
+    BoundaryInfo build(long tsCleanupBuffer) {
+      // The buffer is only applied to the default boundary, intentionally. A per-host boundary is
+      // that RegionServer's own log-roll timestamp and is compared against WALs from the same host,
+      // so both come from one clock. The default boundary is compared against WALs of other hosts,
+      // or derived from a backup's start time, so it needs a margin for clock skew across machines.
+      long defaultBoundary;
       if (boundaries.isEmpty()) {
-        long defaultBoundary = oldestStartTs - tsCleanupBuffer;
-        return new BackupBoundaries(Collections.emptyMap(), defaultBoundary);
+        defaultBoundary = oldestStartTs - tsCleanupBuffer;
+      } else {
+        long oldestRollTs = Collections.min(boundaries.values());
+        defaultBoundary = Math.min(oldestRollTs, oldestStartTs) - tsCleanupBuffer;
+      }
+      return new BoundaryInfo(Collections.unmodifiableMap(boundaries), defaultBoundary);
+    }
+  }
+
+  public static class BoundaryInfo {
+    private final Map<Address, Long> boundaries;
+    private final long defaultBoundary;
+
+    private BoundaryInfo(Map<Address, Long> boundaries, long defaultBoundary) {
+      this.boundaries = boundaries;
+      this.defaultBoundary = defaultBoundary;
+    }
+
+    public Map<Address, Long> getBoundaries() {
+      return boundaries;
+    }
+
+    public long getDefaultBoundary() {
+      return defaultBoundary;
+    }
+
+    private DeletionEligibility getDeletionEligibility(Address address, long hostLogRollTs) {
+      Long storedTs = boundaries.get(address);
+
+      if (storedTs == null) {
+        return hostLogRollTs <= defaultBoundary
+          ? DeletionEligibility.ELIGIBLE
+          : DeletionEligibility.PROTECTED_BY_DEFAULT_BOUNDARY;
       }
 
-      long oldestRollTs = Collections.min(boundaries.values());
-      long defaultBoundary = Math.min(oldestRollTs, oldestStartTs) - tsCleanupBuffer;
-      return new BackupBoundaries(boundaries, defaultBoundary);
+      return hostLogRollTs <= storedTs
+        ? DeletionEligibility.ELIGIBLE
+        : DeletionEligibility.PROTECTED_BY_HOST_BOUNDARY;
+    }
+  }
+
+  private enum DeletionEligibility {
+    ELIGIBLE(true),
+    PROTECTED_BY_DEFAULT_BOUNDARY(false),
+    PROTECTED_BY_HOST_BOUNDARY(false);
+
+    private final boolean eligible;
+
+    DeletionEligibility(boolean eligible) {
+      this.eligible = eligible;
+    }
+
+    public boolean isEligible() {
+      return eligible;
     }
   }
 }
