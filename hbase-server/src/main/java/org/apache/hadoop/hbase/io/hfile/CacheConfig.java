@@ -521,11 +521,8 @@ public class CacheConfig implements PropagatingConfigurationObserver {
   @Override
   public void onConfigurationChange(Configuration conf) {
     updateCacheSettings(conf);
-    LOG.info(
-      "Config hbase.block.data.cacheonread is changed to {}, "
-        + "hbase.rs.cacheblocksonwrite is changed to {}, "
-        + "hbase.rs.evictblocksonclose is changed to {}",
-      cacheDataOnRead, cacheDataOnWrite, evictOnClose);
+    LOG.info("Effective cache settings after configuration change: cacheDataOnRead={}, "
+      + "cacheDataOnWrite={}, evictOnClose={}", cacheDataOnRead, cacheDataOnWrite, evictOnClose);
   }
 
   private void updateCacheSettings(Configuration conf) {
