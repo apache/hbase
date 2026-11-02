@@ -23,12 +23,14 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.stream.Collectors;
 import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
@@ -37,7 +39,6 @@ import org.apache.hadoop.hbase.Cell.Type;
 import org.apache.hadoop.hbase.CellBuilderFactory;
 import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
-import org.apache.hadoop.hbase.CompareOperator;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.PrivateCellUtil;
@@ -55,8 +56,6 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
-import org.apache.hadoop.hbase.filter.QualifierFilter;
-import org.apache.hadoop.hbase.filter.RegexStringComparator;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
@@ -285,53 +284,37 @@ public final class PermissionStorage {
     }
   }
 
-  static private void removeTablePermissions(TableName tableName, byte[] column, Table table,
-    boolean closeTable) throws IOException {
-    Scan scan = new Scan();
-    scan.addFamily(ACL_LIST_FAMILY);
-
-    String columnName = Bytes.toString(column);
-    scan.setFilter(new QualifierFilter(CompareOperator.EQUAL,
-      new RegexStringComparator(String.format("(%s%s%s)|(%s%s)$", ACL_KEY_DELIMITER, columnName,
-        ACL_KEY_DELIMITER, ACL_KEY_DELIMITER, columnName))));
-
-    Set<byte[]> qualifierSet = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-    ResultScanner scanner = null;
+  /**
+   * Remove permissions of the specified column families of the given table from the acl table.
+   */
+  static void removeTableColumnFamiliesPermissions(Configuration conf, TableName tableName,
+    Collection<byte[]> columns, Table t) throws IOException {
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing permissions of removed columns {} from table {}",
+        columns.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")), tableName);
+    }
     try {
-      scanner = table.getScanner(scan);
-      for (Result res : scanner) {
-        for (byte[] q : res.getFamilyMap(ACL_LIST_FAMILY).navigableKeySet()) {
-          qualifierSet.add(q);
+      Set<byte[]> families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+      families.addAll(columns);
+      ListMultimap<String, UserPermission> perms = getTablePermissions(conf, tableName, t);
+      Delete d = new Delete(tableName.getName());
+      boolean found = false;
+      for (UserPermission perm : perms.values()) {
+        Permission permission = perm.getPermission();
+        if (permission instanceof TablePermission) {
+          byte[] family = ((TablePermission) permission).getFamily();
+          if (family != null && families.contains(family)) {
+            d.addColumns(ACL_LIST_FAMILY, userPermissionKey(perm));
+            found = true;
+          }
         }
       }
-
-      if (qualifierSet.size() > 0) {
-        Delete d = new Delete(tableName.getName());
-        for (byte[] qualifier : qualifierSet) {
-          d.addColumns(ACL_LIST_FAMILY, qualifier);
-        }
-        table.delete(d);
+      if (found) {
+        t.delete(d);
       }
     } finally {
-      if (scanner != null) {
-        scanner.close();
-      }
-      if (closeTable) {
-        table.close();
-      }
+      t.close();
     }
-  }
-
-  /**
-   * Remove specified table column from the acl table.
-   */
-  static void removeTablePermissions(Configuration conf, TableName tableName, byte[] column,
-    Table t) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removing permissions of removed column " + Bytes.toString(column) + " from table "
-        + tableName);
-    }
-    removeTablePermissions(tableName, column, t, true);
   }
 
   static byte[] userPermissionRowKey(Permission permission) {
