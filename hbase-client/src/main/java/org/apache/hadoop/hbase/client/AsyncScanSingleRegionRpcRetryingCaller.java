@@ -521,7 +521,7 @@ class AsyncScanSingleRegionRpcRetryingCaller {
     int numberOfCompleteRowsBefore = resultCache.numberOfCompleteRows();
     try {
       rawResults = ResponseConverter.getResults(controller.cellScanner(), resp);
-      updateResultsMetrics(scanMetrics, rawResults, isHeartbeatMessage);
+      updateResultsMetrics(scanMetrics, rawResults, regionServerRemote);
       results = resultCache.addAndGet(
         Optional.ofNullable(rawResults).orElse(ScanResultCache.EMPTY_RESULT_ARRAY),
         isHeartbeatMessage);
