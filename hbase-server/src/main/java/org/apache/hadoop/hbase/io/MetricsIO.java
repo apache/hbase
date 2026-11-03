@@ -73,7 +73,7 @@ public class MetricsIO {
 
   @RestrictedApi(explanation = "Should only be called in tests", link = "",
       allowedOnPath = ".*/src/test/.*")
-  static synchronized void resetForTesting() {
+  public static synchronized void resetForTesting() {
     enabled = false;
     instance = null;
   }
@@ -146,8 +146,8 @@ public class MetricsIO {
   }
 
   /**
-   * A {@link MetricsIOSource} that discards all updates. Used when the real metrics source could
-   * not be created.
+   * A {@link MetricsIOSource} that discards all updates. Used while IO metrics are disabled, or
+   * when the real metrics source could not be created.
    */
   static final class NoOpMetricsIOSource implements MetricsIOSource {
 

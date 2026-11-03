@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.HConstants.ZOOKEEPER_QUORUM;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
@@ -28,6 +29,7 @@ import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.ZooKeeperConnectionException;
+import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -115,6 +117,24 @@ public class TestMasterNoCluster {
     // Immediately have it stop. We used hang in assigning meta.
     master.stopMaster();
     master.join();
+  }
+
+  /**
+   * The master reads and writes HFiles through its local MasterRegion, so it must enable IO
+   * metrics even when no RegionServer runs in the same JVM. See HBASE-30231.
+   */
+  @Test
+  public void testMasterEnablesMetricsIO() throws IOException, InterruptedException {
+    MetricsIO.resetForTesting();
+    HMaster master = new HMaster(TESTUTIL.getConfiguration());
+    master.start();
+    try {
+      assertTrue(MetricsIO.isEnabled());
+    } finally {
+      master.stopMaster();
+      master.join();
+      MetricsIO.resetForTesting();
+    }
   }
 
   @Test

@@ -109,7 +109,6 @@ import org.apache.hadoop.hbase.exceptions.RegionOpeningException;
 import org.apache.hadoop.hbase.exceptions.UnknownProtocolException;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.http.InfoServer;
-import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -517,9 +516,6 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       this.dataFsOk = true;
       this.masterless = !clusterMode();
       MemorySizeUtil.validateRegionServerHeapMemoryAllocation(conf);
-      // Report HFile IO metrics only from server processes, not from clients and tools that also
-      // read or write HFiles. Also covers HMaster, which extends HRegionServer. See HBASE-30231.
-      MetricsIO.enable();
       HFile.checkHFileVersion(this.conf);
       checkCodecs(this.conf);
       FSUtils.setupShortCircuitRead(this.conf);
