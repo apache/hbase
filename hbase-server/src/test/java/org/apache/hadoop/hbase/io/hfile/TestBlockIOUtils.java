@@ -38,15 +38,16 @@ import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
-
 import io.opentelemetry.api.trace.Span;
 import io.opentelemetry.context.Scope;
 import io.opentelemetry.sdk.testing.junit5.OpenTelemetryExtension;
 import io.opentelemetry.sdk.trace.data.SpanData;
+import java.io.ByteArrayInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+import java.util.Arrays;
 import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
@@ -144,6 +145,41 @@ public class TestBlockIOUtils {
   @Test
   public void testPreadWithoutReadFullBytes() throws IOException {
     testPreadReadFullBytesInternal(false, EnvironmentEdgeManager.currentTime());
+  }
+
+  @Test
+  public void testReadFullyFromInputStreamUsesHeapByteBuffArray() throws IOException {
+    byte[] expected = Bytes.toBytes("hello world");
+    byte[] destinationArray = new byte[expected.length + 7];
+    ByteBuff destination = new SingleByteBuff(ByteBuffer.wrap(destinationArray));
+    destination.position(7);
+    CountingInputStream in = new CountingInputStream(expected);
+
+    BlockIOUtils.readFully(in, destination, expected.length);
+
+    assertTrue(in.wasReadInto(destinationArray));
+    assertEquals(1, in.getReadCount());
+    assertEquals(expected.length, in.getMaxReadLength());
+    assertEquals(7 + expected.length, destination.position());
+    assertArrayEquals(expected, Arrays.copyOfRange(destinationArray, 7,
+      7 + expected.length));
+  }
+
+  @Test
+  public void testReadFullyFromInputStreamUsesHeapBufferForDirectByteBuff() throws IOException {
+    byte[] expected = createData(3 * 1024 + 17);
+    ByteBuff destination = new SingleByteBuff(ByteBuffer.allocateDirect(expected.length));
+    CountingInputStream in = new CountingInputStream(expected);
+
+    BlockIOUtils.readFully(in, destination, expected.length);
+
+    byte[] actual = new byte[expected.length];
+    destination.rewind();
+    destination.get(actual);
+    assertEquals(4, in.getReadCount());
+    assertEquals(1024, in.getMaxReadLength());
+    assertEquals(expected.length, destination.position());
+    assertArrayEquals(expected, actual);
   }
 
   private void testPreadReadFullBytesInternal(boolean readAllBytes, long randomSeed)
@@ -554,5 +590,46 @@ public class TestBlockIOUtils {
     verify(in).read(firstReadLen, buf);
     verify(in).hasCapability(anyString());
     verifyNoMoreInteractions(in);
+  }
+
+  private static byte[] createData(int length) {
+    byte[] data = new byte[length];
+    for (int i = 0; i < data.length; i++) {
+      data[i] = (byte) (i * 31);
+    }
+    return data;
+  }
+
+  private static final class CountingInputStream extends ByteArrayInputStream {
+    private int readCount;
+    private int maxReadLength;
+    private byte[] lastReadBuffer;
+
+    private CountingInputStream(byte[] data) {
+      super(data);
+    }
+
+    @Override
+    public synchronized int read(byte[] b, int off, int len) {
+      int bytesRead = super.read(b, off, len);
+      if (bytesRead > 0) {
+        readCount++;
+        maxReadLength = Math.max(maxReadLength, len);
+        lastReadBuffer = b;
+      }
+      return bytesRead;
+    }
+
+    private int getReadCount() {
+      return readCount;
+    }
+
+    private int getMaxReadLength() {
+      return maxReadLength;
+    }
+
+    private boolean wasReadInto(byte[] buffer) {
+      return lastReadBuffer == buffer;
+    }
   }
 }
