@@ -22,20 +22,28 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseIOException;
+import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
 import org.apache.hadoop.hbase.TableNotFoundException;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.RegionInfo;
+import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.MasterFileSystem;
+import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.assignment.RegionStates;
 import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
@@ -380,5 +388,215 @@ public class TestTruncateTableProcedure extends TestTableDDLProcedureBase {
     // confirm that we have the correct number of regions
     assertEquals((regions.length + 1) * regionReplication,
       UTIL.getAdmin().getRegions(tableName).size());
+  }
+
+  @Test
+  public void testTruncatePreserveSplitsWithDuplicateStartKeyRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final String[] families = new String[] { "f1", "f2" };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+
+    // Create a table with splits
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
+
+    // Manually insert a duplicate startKey region into meta to simulate region overlap.
+    // This creates a region with the same startKey as an existing region (startKey="a").
+    RegionInfo overlapRegion = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
+    MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(),
+      Collections.singletonList(overlapRegion), 1);
+    // Register the overlap region into RegionStates (CLOSED state) so that it shows up in
+    // the region list seen by TruncateTableProcedure
+    RegionStates regionStates = getMaster().getAssignmentManager().getRegionStates();
+    RegionStateNode node = regionStates.getOrCreateRegionStateNode(overlapRegion);
+    node.setState(RegionState.State.CLOSED);
+
+    // Disable the table
+    UTIL.getAdmin().disableTable(tableName);
+
+    // Try to truncate with preserveSplits=true, should fail due to duplicate startKey
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
+
+    Procedure<?> result = procExec.getResult(procId);
+    assertTrue(result.isFailed(), "Truncate should fail when there are duplicate startKey regions");
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue(cause instanceof HBaseIOException,
+      "Expected HBaseIOException but got: " + cause.getClass().getName());
+    assertTrue(cause.getMessage().contains("Found duplicate startKey region"),
+      "Error message should mention duplicate startKey");
+    LOG.info("Truncate correctly failed with: " + cause.getMessage());
+  }
+
+  @Test
+  public void testTruncateNoPreserveSplitsWithDuplicateStartKeyRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final String[] families = new String[] { "f1", "f2" };
+    final byte[][] splitKeys =
+      new byte[][] { Bytes.toBytes("a"), Bytes.toBytes("b"), Bytes.toBytes("c") };
+
+    // Create a table with splits
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
+
+    // Manually insert a duplicate startKey region into meta to simulate region overlap
+    RegionInfo overlapRegion = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(Bytes.toBytes("a")).setEndKey(Bytes.toBytes("b")).build();
+    MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(),
+      Collections.singletonList(overlapRegion), 1);
+    // Register the overlap region into RegionStates (CLOSED state) so that it shows up in
+    // the region list seen by TruncateTableProcedure
+    RegionStates regionStates = getMaster().getAssignmentManager().getRegionStates();
+    RegionStateNode node = regionStates.getOrCreateRegionStateNode(overlapRegion);
+    node.setState(RegionState.State.CLOSED);
+
+    // Disable the table
+    UTIL.getAdmin().disableTable(tableName);
+
+    // Truncate with preserveSplits=false should succeed even with duplicate startKey regions,
+    // because it creates a single new region regardless of existing region state
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, false));
+    ProcedureTestingUtility.assertProcNotFailed(procExec, procId);
+
+    UTIL.waitUntilAllRegionsAssigned(tableName);
+
+    // Verify table has only 1 region (no splits preserved)
+    RegionInfo[] newRegions = UTIL.getAdmin().getRegions(tableName).toArray(new RegionInfo[0]);
+    assertEquals(1, newRegions.length,
+      "Should have exactly 1 region after truncate without preserving splits");
+    LOG.info("Truncate without preserveSplits succeeded with " + newRegions.length + " region(s)");
+  }
+
+  /**
+   * Test scenario: the table has 2 regions (split key "m"), each region has an overlapping
+   * duplicate region (same startKey/endKey but different regionId, hence different encodedName --
+   * i.e. duplicate regions with the same key range caused by region overlap in production). With
+   * preserveSplits=true, TruncateTableProcedure detects the duplicate startKey in the pre-check
+   * phase via checkRegionsStartKeyNoDuplicate and FAILs the truncate operation instead of
+   * proceeding. This case verifies that failure behavior.
+   */
+  @Test
+  public void testTruncatePreserveSplitsWithOverlapRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final String[] families = new String[] { "f1" };
+    final byte[][] splitKeys = new byte[][] { Bytes.toBytes("m") };
+
+    // Create a normal table with 2 regions ("" -> "m" and "m" -> "")
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
+    assertEquals(2, regions.length);
+
+    // Build overlap regions (same key range but different regionId, different encodedName)
+    long overlapRegionId1 = regions[0].getRegionId() + 1000;
+    long overlapRegionId2 = regions[1].getRegionId() + 1000;
+
+    RegionInfo overlapRegion1 =
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(regions[0].getStartKey())
+        .setEndKey(regions[0].getEndKey()).setRegionId(overlapRegionId1).build();
+
+    RegionInfo overlapRegion2 =
+      RegionInfoBuilder.newBuilder(tableName).setStartKey(regions[1].getStartKey())
+        .setEndKey(regions[1].getEndKey()).setRegionId(overlapRegionId2).build();
+
+    // Write the overlap regions into meta
+    List<RegionInfo> overlapRegions = new ArrayList<>();
+    overlapRegions.add(overlapRegion1);
+    overlapRegions.add(overlapRegion2);
+    MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), overlapRegions, 1);
+
+    // Register the overlap regions into RegionStates (CLOSED state, simulating post-disable)
+    RegionStates regionStates = getMaster().getAssignmentManager().getRegionStates();
+    RegionStateNode node1 = regionStates.getOrCreateRegionStateNode(overlapRegion1);
+    node1.setState(RegionState.State.CLOSED);
+    RegionStateNode node2 = regionStates.getOrCreateRegionStateNode(overlapRegion2);
+    node2.setState(RegionState.State.CLOSED);
+
+    // Verify RegionStates has 4 regions for this table (2 normal + 2 overlap)
+    assertEquals(4, regionStates.getRegionsOfTable(tableName).size(),
+      "Should have 4 regions (2 normal + 2 overlap)");
+
+    // Disable the table
+    UTIL.getAdmin().disableTable(tableName);
+
+    // preserveSplits=true should fail due to duplicate startKey (instead of succeeding)
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
+
+    Procedure<?> result = procExec.getResult(procId);
+    assertTrue(result.isFailed(),
+      "Truncate should fail with overlap regions when preserveSplits=true");
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue(cause instanceof HBaseIOException,
+      "Expected HBaseIOException but got: " + cause.getClass().getName());
+    assertTrue(cause.getMessage().contains("Found duplicate startKey region"),
+      "Error message should mention duplicate startKey");
+    LOG.info("Truncate correctly failed with: " + cause.getMessage());
+  }
+
+  /**
+   * Test scenario: the table has 2 regions, each has 3 overlapping duplicate regions (8 regions in
+   * total), simulating more severe overlap with the same key range. Same as
+   * {@link #testTruncatePreserveSplitsWithOverlapRegions()}, the duplicate startKey check across
+   * multiple overlapping regions FAILs the whole truncate operation when preserveSplits=true.
+   */
+  @Test
+  public void testTruncatePreserveSplitsWithMultipleOverlapRegions() throws Exception {
+    final TableName tableName = TableName.valueOf(testMethodName);
+    final String[] families = new String[] { "f1" };
+    final byte[][] splitKeys = new byte[][] { Bytes.toBytes("m") };
+
+    // Create a normal table with 2 regions
+    RegionInfo[] regions = MasterProcedureTestingUtility.createTable(getMasterProcedureExecutor(),
+      tableName, splitKeys, families);
+    assertEquals(2, regions.length);
+
+    // Build 3 overlap regions per region (6 extra regions in total, same key range)
+    RegionStates regionStates = getMaster().getAssignmentManager().getRegionStates();
+    List<RegionInfo> overlapRegions = new ArrayList<>();
+
+    for (int i = 0; i < regions.length; i++) {
+      for (int j = 1; j <= 3; j++) {
+        long overlapRegionId = regions[i].getRegionId() + j * 1000;
+        RegionInfo overlapRegion =
+          RegionInfoBuilder.newBuilder(tableName).setStartKey(regions[i].getStartKey())
+            .setEndKey(regions[i].getEndKey()).setRegionId(overlapRegionId).build();
+        overlapRegions.add(overlapRegion);
+
+        // Register into RegionStates (CLOSED state)
+        RegionStateNode node = regionStates.getOrCreateRegionStateNode(overlapRegion);
+        node.setState(RegionState.State.CLOSED);
+      }
+    }
+
+    // Write into meta
+    MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), overlapRegions, 1);
+
+    // Verify there are 8 regions (2 normal + 6 overlap)
+    assertEquals(8, regionStates.getRegionsOfTable(tableName).size(),
+      "Should have 8 regions (2 normal + 6 overlap)");
+
+    // Disable the table
+    UTIL.getAdmin().disableTable(tableName);
+
+    // preserveSplits=true should fail due to duplicate startKey
+    final ProcedureExecutor<MasterProcedureEnv> procExec = getMasterProcedureExecutor();
+    long procId = ProcedureTestingUtility.submitAndWait(procExec,
+      new TruncateTableProcedure(procExec.getEnvironment(), tableName, true));
+
+    Procedure<?> result = procExec.getResult(procId);
+    assertTrue(result.isFailed(),
+      "Truncate should fail with multiple overlap regions when preserveSplits=true");
+    Throwable cause = ProcedureTestingUtility.getExceptionCause(result);
+    assertTrue(cause instanceof HBaseIOException,
+      "Expected HBaseIOException but got: " + cause.getClass().getName());
+    assertTrue(cause.getMessage().contains("Found duplicate startKey region"),
+      "Error message should mention duplicate startKey");
+    LOG.info("Truncate correctly failed with: " + cause.getMessage());
   }
 }
