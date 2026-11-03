@@ -298,7 +298,8 @@ public class ScannerContext {
    * @return true when we have more cells for the current row. This usually because we have reached
    *         a limit in the middle of a row
    */
-  boolean mayHaveMoreCellsInRow() {
+  @InterfaceAudience.Private
+  public boolean mayHaveMoreCellsInRow() {
     return scannerState == NextState.SIZE_LIMIT_REACHED_MID_ROW
       || scannerState == NextState.TIME_LIMIT_REACHED_MID_ROW
       || scannerState == NextState.BATCH_LIMIT_REACHED;
