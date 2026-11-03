@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io;
 
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
+import org.apache.hadoop.hbase.metrics.Counter;
 import org.apache.hadoop.metrics2.MetricHistogram;
 import org.apache.hadoop.metrics2.MetricsCollector;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
@@ -34,6 +35,8 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
   private final MetricHistogram fsPReadTimeHisto;
   private final MetricHistogram fsWriteTimeHisto;
   private final MutableFastCounter fsSlowReads;
+  private final Counter storeFileTrackerFileReadAttempts;
+  private final Counter storeFileTrackerFileWriteAttempts;
 
   public MetricsIOSourceImpl(MetricsIOWrapper wrapper) {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT, wrapper);
@@ -52,6 +55,9 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
     fsWriteTimeHisto =
       getMetricsRegistry().newTimeHistogram(FS_WRITE_HISTO_KEY, FS_WRITE_TIME_HISTO_DESC);
     fsSlowReads = getMetricsRegistry().newCounter(SLOW_FS_READS_KEY, SLOW_FS_READS_DESC, 0L);
+    storeFileTrackerFileReadAttempts = registry.counter(STORE_FILE_TRACKER_FILE_READ_ATTEMPTS_KEY);
+    storeFileTrackerFileWriteAttempts =
+      registry.counter(STORE_FILE_TRACKER_FILE_WRITE_ATTEMPTS_KEY);
   }
 
   @Override
@@ -75,6 +81,16 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
   }
 
   @Override
+  public void incrStoreFileTrackerFileReadAttempts() {
+    storeFileTrackerFileReadAttempts.increment();
+  }
+
+  @Override
+  public void incrStoreFileTrackerFileWriteAttempts() {
+    storeFileTrackerFileWriteAttempts.increment();
+  }
+
+  @Override
   public void getMetrics(MetricsCollector metricsCollector, boolean all) {
     MetricsRecordBuilder mrb = metricsCollector.addRecord(metricsName);
 
@@ -85,5 +101,9 @@ public class MetricsIOSourceImpl extends BaseSourceImpl implements MetricsIOSour
     }
 
     metricsRegistry.snapshot(mrb, all);
+    // The source is registered before the superclass constructor finishes.
+    if (metricsAdapter != null) {
+      metricsAdapter.snapshotAllMetrics(registry, mrb);
+    }
   }
 }

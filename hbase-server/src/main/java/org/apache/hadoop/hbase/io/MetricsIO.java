@@ -79,4 +79,12 @@ public class MetricsIO {
   public void incrSlowFsRead() {
     source.incrSlowFsRead();
   }
+
+  public void incrStoreFileTrackerFileReadAttempts() {
+    source.incrStoreFileTrackerFileReadAttempts();
+  }
+
+  public void incrStoreFileTrackerFileWriteAttempts() {
+    source.incrStoreFileTrackerFileWriteAttempts();
+  }
 }
