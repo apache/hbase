@@ -20,14 +20,15 @@ limitations under the License.
 
 ## Reporting a Vulnerability
 
-To report a security vulnerability in Apache HBase, please send a
-private email to <security@apache.org> — the Apache Software
-Foundation security team. Do **not** open a public GitHub issue or
-pull request, as that risks disclosure before a fix is available.
+To report a security vulnerability in Apache HBase,
+please send a private email to <security@hbase.apache.org>
+— the Apache HBase project's private security list.
+Do **not** open a public GitHub issue or pull request,
+as that risks disclosure before a fix is available.
 
-The Apache HBase PMC is looped in privately as part of the standard
-ASF disclosure process. See <https://www.apache.org/security/> for
-the overall ASF vulnerability handling flow.
+The Apache Software Foundation security team is copied on that list,
+and reports are handled following the standard ASF disclosure process.
+See <https://www.apache.org/security/> for the overall ASF vulnerability handling flow.
 
 ## Threat Model
 
