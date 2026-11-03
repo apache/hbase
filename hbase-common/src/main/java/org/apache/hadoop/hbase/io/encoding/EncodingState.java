@@ -41,11 +41,18 @@ public class EncodingState {
   protected int encodedDataSizeWritten = 0;
 
   public void beforeShipped() {
+    beforeShipped(null, 0, 0);
+  }
+
+  public void beforeShipped(byte[] encodedBlockBuffer, int streamBaseOffset,
+      int encodedBlockLength) {
     if (this.prevCell != null) {
-      // can't use KeyValueUtil#toNewKeyCell, because we need both key and value
-      // from the prevCell in FastDiffDeltaEncoder
-      this.prevCell = KeyValueUtil.copyToNewKeyValue(this.prevCell);
+      this.prevCell = KeyValueUtil.toNewKeyCell(this.prevCell);
     }
+  }
+
+  protected void setPreviousCell(ExtendedCell cell) {
+    this.prevCell = cell;
   }
 
   public void postCellEncode(int unencodedCellSizeWritten, int encodedCellSizeWritten) {
