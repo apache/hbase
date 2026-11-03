@@ -89,6 +89,11 @@ do
     shift
     # shellcheck disable=SC2034
     INTERNAL_CLASSPATH="true"
+  elif [ "--slf4j2" = "$1" ]
+  then
+    shift
+    # shellcheck disable=SC2034
+    SLF4J2_CLASSPATH="true"
   elif [ "--debug" = "$1" ]
   then
     shift
