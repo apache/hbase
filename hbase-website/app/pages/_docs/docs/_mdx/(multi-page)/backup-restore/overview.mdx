@@ -6,8 +6,7 @@ description: "Introduction to HBase backup and restore feature, including full a
 Backup and restore is a standard operation provided by many databases. An effective backup and restore
 strategy helps ensure that users can recover data in case of unexpected failures. The HBase backup and restore
 feature helps ensure that enterprises using HBase as a canonical data repository can recover from catastrophic
-failures. Another important feature is the ability to restore the database to a particular
-point-in-time, commonly referred to as a snapshot.
+failures.
 
 The HBase backup and restore feature provides the ability to create full backups and incremental backups on
 tables in an HBase cluster. The full backup is the foundation on which incremental backups are applied
@@ -16,6 +15,13 @@ for example by using a Cron task. Incremental backups are more cost-effective th
 the changes since the last backup and they also enable administrators to restore the database to any prior incremental backup. Furthermore, the
 utilities also enable table-level data backup-and-recovery if you do not want to restore the entire dataset
 of the backup.
+
+**Continuous backup** extends this model by continuously streaming Write-Ahead Logs (WALs) to external
+storage using the HBase replication framework. This reduces the Recovery Point Objective (RPO) compared
+with scheduled incremental backups alone, because WALs are replicated as they are produced rather than
+waiting for the next backup job. **Point-in-Time Recovery (PITR)** builds on continuous backup by
+restoring a table to an arbitrary timestamp within a configurable retention window, using a combination
+of full backups, incremental backups, and replay of continuously backed-up WALs.
 
 The backup and restore feature supplements the HBase Replication feature. While HBase replication is ideal for
 creating "hot" copies of the data (where the replicated data is immediately available for query), the backup and
@@ -47,6 +53,12 @@ system.
 - _A backup_: A logical unit of data and metadata which can restore a table to its state at a specific point in time.
 - _Full backup_: a type of backup which wholly encapsulates the contents of the table at a point in time.
 - _Incremental backup_: a type of backup which contains the changes in a table since a full backup.
+- _Continuous backup_: A mode in which WAL entries are continuously replicated to external storage via a dedicated replication peer, enabling low-RPO recovery and PITR.
+- _Point-in-Time Recovery (PITR)_: Restoring table data to a specific timestamp by applying a full or incremental backup and replaying WALs from the continuous backup store.
+- _Backup directory_: The filesystem location where full and incremental backup images are stored.
+- _WAL directory_: The filesystem location where continuously backed-up WALs are stored. Configured via `hbase.backup.continuous.wal.dir`.
+- _PITR window_: The maximum duration, in days, for which point-in-time recovery is supported. Configured via `hbase.backup.continuous.pitr.window.days` (default: 30).
+- _Replication checkpoint_: The earliest timestamp across the active RegionServers for which WAL entries before that point are known to have been persisted to the continuous backup WAL directory. PITR cannot restore beyond this checkpoint.
 - _Backup set_: A user-defined name which references one or more tables over which a backup can be executed.
 - _Backup ID_: A unique names which identifies one backup from the rest, e.g. `backupId_1467823988425`
 
@@ -155,3 +167,46 @@ Add the following properties to hbase-site.xml and restart HBase if it is alread
   <value>org.apache.hadoop.hbase.backup.BackupHFileCleaner,...</value>
 </property>
 ```
+
+### Continuous backup and PITR configuration
+
+To enable continuous backup and point-in-time recovery, add the following properties to
+`hbase-site.xml` in addition to the properties above:
+
+```xml
+<property>
+  <name>hbase.backup.continuous.wal.dir</name>
+  <value>s3a://my-bucket/wal-backup</value>
+  <description>
+    Filesystem path for continuously backed-up WALs. Required for continuous backup and PITR.
+    Must be an HDFS-compatible URI (hdfs:, s3a:, etc.).
+  </description>
+</property>
+<property>
+  <name>hbase.backup.continuous.pitr.window.days</name>
+  <value>30</value>
+  <description>
+    Maximum number of days in the past from which point-in-time recovery is allowed (default: 30).
+  </description>
+</property>
+```
+
+If your tables use bulk load operations and you need those files included in continuous backup,
+also enable bulk load replication:
+
+```xml
+<property>
+  <name>hbase.replication.bulkload.enabled</name>
+  <value>true</value>
+</property>
+```
+
+When bulk-load replication is enabled, bulk-load operations are represented in the WAL and the
+corresponding HFiles are copied to the continuous backup storage. During PITR, applicable bulk-loaded
+HFiles are restored for the requested time range.
+
+<Callout type="warn">
+  When continuous backup is enabled for a table, the replication scope of every column family on that
+  table is set to GLOBAL. This is required by the replication framework that streams WAL entries to
+  the WAL directory.
+</Callout>
