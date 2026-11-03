@@ -142,4 +142,14 @@ public interface MetricsTableLatencies {
    */
   void updateCheckAndMutate(String nameAsString, long time);
 
+  /**
+   * Remove all latency histograms of the given table. Should be called when the table is no
+   * longer online on this RegionServer (e.g. dropped, moved out, disabled) to avoid unbounded
+   * growth of histogramsByTable and the associated metrics registry (see HBASE-27486 /
+   * HBASE-27681).
+   *
+   * @param tableName The table whose latency histograms should be removed.
+   */
+  void deleteTable(String tableName);
+
 }
