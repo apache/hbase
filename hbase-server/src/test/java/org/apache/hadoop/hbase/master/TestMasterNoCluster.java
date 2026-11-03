@@ -120,8 +120,8 @@ public class TestMasterNoCluster {
   }
 
   /**
-   * The master reads and writes HFiles through its local MasterRegion, so it must enable IO
-   * metrics even when no RegionServer runs in the same JVM. See HBASE-30231.
+   * The master reads and writes HFiles through its local MasterRegion, so it must enable IO metrics
+   * even when no RegionServer runs in the same JVM. See HBASE-30231.
    */
   @Test
   public void testMasterEnablesMetricsIO() throws IOException, InterruptedException {
