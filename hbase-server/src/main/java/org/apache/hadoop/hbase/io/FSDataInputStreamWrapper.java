@@ -21,9 +21,11 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.fs.FSDataInputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.fs.HFileSystem;
+import org.apache.hadoop.hbase.util.FSUtils;
 import org.apache.hadoop.hdfs.client.HdfsDataInputStream;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -90,28 +92,37 @@ public class FSDataInputStreamWrapper implements Closeable {
 
   protected Path readerPath;
 
+  // used to avoid redundant metadata lookups when opening the read stream.
+  private final FileStatus fileStatus;
+
   public FSDataInputStreamWrapper(FileSystem fs, Path path) throws IOException {
     this(fs, path, false, -1L);
   }
 
   public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind, long readahead)
     throws IOException {
-    this(fs, null, path, dropBehind, readahead);
+    this(fs, path, dropBehind, readahead, null);
+  }
+
+  public FSDataInputStreamWrapper(FileSystem fs, Path path, boolean dropBehind, long readahead,
+    FileStatus fileStatus) throws IOException {
+    this(fs, null, path, dropBehind, readahead, fileStatus);
   }
 
   public FSDataInputStreamWrapper(FileSystem fs, FileLink link, boolean dropBehind, long readahead)
     throws IOException {
-    this(fs, link, null, dropBehind, readahead);
+    this(fs, link, null, dropBehind, readahead, null);
   }
 
   private FSDataInputStreamWrapper(FileSystem fs, FileLink link, Path path, boolean dropBehind,
-    long readahead) throws IOException {
+    long readahead, FileStatus fileStatus) throws IOException {
     assert (path == null) != (link == null);
     this.path = path;
     this.link = link;
     this.doCloseStreams = true;
     this.dropBehind = dropBehind;
     this.readahead = readahead;
+    this.fileStatus = fileStatus;
     // If the fs is not an instance of HFileSystem, then create an instance of HFileSystem
     // that wraps over the specified fs. In this case, we will not be able to avoid
     // checksumming inside the filesystem.
@@ -119,7 +130,7 @@ public class FSDataInputStreamWrapper implements Closeable {
 
     // Initially we are going to read the tail block. Open the reader w/FS checksum.
     this.useHBaseChecksumConfigured = this.useHBaseChecksum = false;
-    this.stream = (link != null) ? link.open(hfs) : hfs.open(path);
+    this.stream = (link != null) ? link.open(hfs) : FSUtils.openForRead(hfs, path, fileStatus);
     this.readerPath = this.stream.getWrappedStream() instanceof FileLink.FileLinkInputStream
       ? ((FileLink.FileLinkInputStream) this.stream.getWrappedStream()).getCurrentPath()
       : path;
@@ -155,7 +166,9 @@ public class FSDataInputStreamWrapper implements Closeable {
 
     if (useHBaseChecksum) {
       FileSystem fsNc = hfs.getNoChecksumFs();
-      this.streamNoFsChecksum = (link != null) ? link.open(fsNc) : fsNc.open(path);
+      this.streamNoFsChecksum = (link != null)
+        ? link.open(fsNc)
+        : FSUtils.openForRead(fsNc, path, fileStatus);
       setStreamOptions(streamNoFsChecksum);
       this.useHBaseChecksumConfigured = this.useHBaseChecksum = useHBaseChecksum;
       // Close the checksum stream; we will reopen it if we get an HBase checksum failure.
@@ -177,6 +190,7 @@ public class FSDataInputStreamWrapper implements Closeable {
     path = null;
     link = null;
     hfs = null;
+    fileStatus = null;
     useHBaseChecksumConfigured = useHBaseChecksum = false;
     dropBehind = false;
     readahead = 0;
@@ -207,7 +221,9 @@ public class FSDataInputStreamWrapper implements Closeable {
       synchronized (streamNoFsChecksumFirstCreateLock) {
         partOfConvoy = (this.stream != null);
         if (!partOfConvoy) {
-          this.stream = (link != null) ? link.open(hfs) : hfs.open(path);
+          this.stream = (link != null)
+            ? link.open(hfs)
+            : FSUtils.openForRead(hfs, path, fileStatus);
         }
       }
     }
