@@ -401,6 +401,8 @@ public abstract class TableBackupClient {
     }
     BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
+    HBackupFileSystem.writeBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
 
     // Finish active session
     backupManager.finishBackupSession();

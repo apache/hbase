@@ -306,4 +306,12 @@ public class TestBackupUtils {
       dummyFs.delete(walDir, true);
     }
   }
+
+  public static void assertBackupCompleteFileExists(Configuration conf, String backupRootDir,
+    String backupId) throws IOException {
+    FileSystem fs = FileSystem.get(new Path(backupRootDir).toUri(), conf);
+    Path marker = new Path(HBackupFileSystem.getBackupPath(backupRootDir, backupId),
+      HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME);
+    assertTrue(fs.exists(marker));
+  }
 }

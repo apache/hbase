@@ -46,6 +46,7 @@ import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 @InterfaceAudience.Private
 public final class HBackupFileSystem {
   public static final Logger LOG = LoggerFactory.getLogger(HBackupFileSystem.class);
+  public static final String BACKUP_COMPLETE_FILE_NAME = ".backup.complete";
 
   /**
    * This is utility class.
@@ -91,6 +92,21 @@ public final class HBackupFileSystem {
 
   public static Path getBackupPath(String backupRootDir, String backupId) {
     return new Path(backupRootDir + Path.SEPARATOR + backupId);
+  }
+
+  /**
+   * Write an empty completion marker file to signal a backup has completed successfully.
+   * @param conf          configuration
+   * @param backupRootDir backup root directory
+   * @param backupId      backup id
+   * @throws IOException  if writing the marker file fails
+   */
+  public static void writeBackupCompleteMarker(Configuration conf, String backupRootDir, String backupId)
+    throws IOException {
+    Path markerPath = new Path(getBackupPath(backupRootDir, backupId), BACKUP_COMPLETE_FILE_NAME);
+    FileSystem fs = markerPath.getFileSystem(conf);
+    fs.create(markerPath, true).close();
+    LOG.info("Backup completion marker {} written to {}", BACKUP_COMPLETE_FILE_NAME, markerPath);
   }
 
   /**

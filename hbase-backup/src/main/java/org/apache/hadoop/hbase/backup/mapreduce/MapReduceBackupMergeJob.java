@@ -208,7 +208,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   }
 
   /**
-   * Copy meta data to of a backup session
+   * Copy metadata of a backup session
    * @param fs            file system
    * @param tmpBackupDir  temp backup directory, where meta is locaed
    * @param backupDirPath new path for backup
@@ -229,6 +229,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
           || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0
           || fileName.indexOf(BackupManifest.MANIFEST_FILE_NAME) > 0
+          || fileName.indexOf(HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME) > 0
       ) {
         toKeep.add(p);
       }
