@@ -107,6 +107,11 @@ public class CacheConfig implements ConfigurationObserver {
   public static final boolean DROP_BEHIND_CACHE_COMPACTION_DEFAULT = true;
   public static final long DEFAULT_CACHE_COMPACTED_BLOCKS_ON_WRITE_THRESHOLD = Long.MAX_VALUE;
 
+  // Retain the column family settings when reloading the global configuration.
+  private final boolean familyBlockCacheEnabled;
+  private final boolean familyCacheDataOnWrite;
+  private final boolean familyEvictOnClose;
+
   /**
    * Whether blocks should be cached on read (default is on if there is a cache but this can be
    * turned off on a per-family or per-request basis). If off we will STILL cache meta blocks; i.e.
@@ -172,8 +177,10 @@ public class CacheConfig implements ConfigurationObserver {
    */
   public CacheConfig(Configuration conf, ColumnFamilyDescriptor family, BlockCache blockCache,
     ByteBuffAllocator byteBuffAllocator) {
-    this.cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ)
-      && (family == null ? true : family.isBlockCacheEnabled());
+    this.familyBlockCacheEnabled = family == null || family.isBlockCacheEnabled();
+    this.familyCacheDataOnWrite = family != null && family.isCacheDataOnWrite();
+    this.familyEvictOnClose = family != null && family.isEvictBlocksOnClose();
+    updateCacheSettings(conf);
     this.inMemory = family == null ? DEFAULT_IN_MEMORY : family.isInMemory();
     this.cacheDataCompressed =
       conf.getBoolean(CACHE_DATA_BLOCKS_COMPRESSED_KEY, DEFAULT_CACHE_DATA_COMPRESSED);
@@ -181,16 +188,12 @@ public class CacheConfig implements ConfigurationObserver {
       conf.getBoolean(DROP_BEHIND_CACHE_COMPACTION_KEY, DROP_BEHIND_CACHE_COMPACTION_DEFAULT);
     // For the following flags we enable them regardless of per-schema settings
     // if they are enabled in the global configuration.
-    this.cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE)
-      || (family == null ? false : family.isCacheDataOnWrite());
     this.cacheIndexesOnWrite =
       conf.getBoolean(CACHE_INDEX_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_INDEXES_ON_WRITE)
         || (family == null ? false : family.isCacheIndexesOnWrite());
     this.cacheBloomsOnWrite =
       conf.getBoolean(CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_BLOOMS_ON_WRITE)
         || (family == null ? false : family.isCacheBloomsOnWrite());
-    this.evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE)
-      || (family == null ? false : family.isEvictBlocksOnClose());
     this.prefetchOnOpen = conf.getBoolean(PREFETCH_BLOCKS_ON_OPEN_KEY, DEFAULT_PREFETCH_ON_OPEN)
       || (family == null ? false : family.isPrefetchBlocksOnOpen());
     this.cacheCompactedDataOnWrite =
@@ -204,6 +207,9 @@ public class CacheConfig implements ConfigurationObserver {
    * Constructs a cache configuration copied from the specified configuration.
    */
   public CacheConfig(CacheConfig cacheConf) {
+    this.familyBlockCacheEnabled = cacheConf.familyBlockCacheEnabled;
+    this.familyCacheDataOnWrite = cacheConf.familyCacheDataOnWrite;
+    this.familyEvictOnClose = cacheConf.familyEvictOnClose;
     this.cacheDataOnRead = cacheConf.cacheDataOnRead;
     this.inMemory = cacheConf.inMemory;
     this.cacheDataOnWrite = cacheConf.cacheDataOnWrite;
@@ -220,6 +226,9 @@ public class CacheConfig implements ConfigurationObserver {
   }
 
   private CacheConfig() {
+    this.familyBlockCacheEnabled = false;
+    this.familyCacheDataOnWrite = false;
+    this.familyEvictOnClose = false;
     this.cacheDataOnRead = false;
     this.inMemory = false;
     this.cacheDataOnWrite = false;
@@ -434,13 +443,19 @@ public class CacheConfig implements ConfigurationObserver {
 
   @Override
   public void onConfigurationChange(Configuration conf) {
-    cacheDataOnRead = conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
-    cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
-    evictOnClose = conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
-    LOG.info(
-      "Config hbase.block.data.cacheonread is changed to {}, "
-        + "hbase.rs.cacheblocksonwrite is changed to {}, "
-        + "hbase.rs.evictblocksonclose is changed to {}",
-      cacheDataOnRead, cacheDataOnWrite, evictOnClose);
+    updateCacheSettings(conf);
+    LOG.info("Effective cache settings after configuration change: cacheDataOnRead={}, "
+      + "cacheDataOnWrite={}, evictOnClose={}", cacheDataOnRead, cacheDataOnWrite, evictOnClose);
+  }
+
+  private void updateCacheSettings(Configuration conf) {
+    // A column family with block cache disabled does not cache data blocks on read. The global
+    // cache on write and evict on close settings are combined with the family settings.
+    cacheDataOnRead = familyBlockCacheEnabled
+      && conf.getBoolean(CACHE_DATA_ON_READ_KEY, DEFAULT_CACHE_DATA_ON_READ);
+    cacheDataOnWrite = conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE)
+      || familyCacheDataOnWrite;
+    evictOnClose =
+      conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE) || familyEvictOnClose;
   }
 }
