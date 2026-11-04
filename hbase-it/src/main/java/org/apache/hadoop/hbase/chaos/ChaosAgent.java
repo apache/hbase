@@ -259,7 +259,7 @@ public class ChaosAgent implements Watcher, Closeable, Runnable {
             setStatusOfTaskZNode(path, status);
             Thread.sleep(ChaosConstants.SET_STATUS_SLEEP_TIME);
           } catch (InterruptedException e) {
-            LOG.error("Error occured after setting status: " + e);
+            LOG.error("Error occurred after setting status: " + e);
           }
 
         default:
