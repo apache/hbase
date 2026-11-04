@@ -61,7 +61,7 @@
     request.setAttribute("conf", regionServer.getConfiguration());
     request.setAttribute(RSStatusConstants.BLOCK_CACHE_NAME, bcn);
     request.setAttribute(RSStatusConstants.BLOCK_CACHE_V, bcv);
-    request.setAttribute("blockCache", regionServer.getBlockCache().orElse(null));
+    request.setAttribute("blockCache", regionServer.getCacheAccessService());
 %><jsp:include page="blockCacheView.jsp"/>
 <%
     return;

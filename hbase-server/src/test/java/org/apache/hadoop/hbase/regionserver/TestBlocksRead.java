@@ -39,9 +39,10 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -52,14 +53,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestInfo;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 @Tag(RegionServerTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestBlocksRead {
 
-  private static final Logger LOG = LoggerFactory.getLogger(TestBlocksRead.class);
   private String testName;
 
   @BeforeEach
@@ -99,7 +97,7 @@ public class TestBlocksRead {
    * Callers must afterward call {@link HBaseTestingUtil#closeRegionAndWAL(HRegion)}
    */
   private HRegion initHRegion(byte[] tableName, String callingMethod, Configuration conf,
-    String family, BlockCache blockCache) throws IOException {
+    String family, CacheAccessService cas) throws IOException {
     TableDescriptorBuilder builder =
       TableDescriptorBuilder.newBuilder(TableName.valueOf(tableName));
     for (int i = 0; i < BLOOM_TYPE.length; i++) {
@@ -110,8 +108,8 @@ public class TestBlocksRead {
     }
     RegionInfo info = RegionInfoBuilder.newBuilder(TableName.valueOf(tableName)).build();
     Path path = new Path(DIR + callingMethod);
-    if (blockCache != null) {
-      return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build(), blockCache);
+    if (!(cas instanceof NoOpCacheAccessService)) {
+      return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build(), cas);
     } else {
       return HBaseTestingUtil.createRegionAndWAL(info, path, conf, builder.build());
     }
@@ -371,8 +369,8 @@ public class TestBlocksRead {
     byte[] TABLE = Bytes.toBytes("testBlocksReadWhenCachingDisabled");
     String FAMILY = "cf1";
 
-    BlockCache blockCache = BlockCacheFactory.createBlockCache(conf);
-    this.region = initHRegion(TABLE, testName, conf, FAMILY, blockCache);
+    CacheAccessService cas = CacheAccessServices.fromConfiguration(conf);
+    this.region = initHRegion(TABLE, testName, conf, FAMILY, cas);
 
     try {
       putData(FAMILY, "row", "col1", 1);
@@ -381,7 +379,7 @@ public class TestBlocksRead {
 
       // Execute a scan with caching turned off
       // Expected blocks stored: 0
-      long blocksStart = blockCache.getBlockCount();
+      long blocksStart = cas.getBlockCount();
       Scan scan = new Scan();
       scan.setCacheBlocks(false);
       RegionScanner rs = region.getScanner(scan);
@@ -389,7 +387,7 @@ public class TestBlocksRead {
       rs.next(result);
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();
-      long blocksEnd = blockCache.getBlockCount();
+      long blocksEnd = cas.getBlockCount();
 
       assertEquals(blocksStart, blocksEnd);
 
@@ -402,7 +400,7 @@ public class TestBlocksRead {
       rs.next(result);
       assertEquals(2 * BLOOM_TYPE.length, result.size());
       rs.close();
-      blocksEnd = blockCache.getBlockCount();
+      blocksEnd = cas.getBlockCount();
 
       assertEquals(2 * BLOOM_TYPE.length, blocksEnd - blocksStart);
     } finally {

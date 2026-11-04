@@ -46,9 +46,12 @@ import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.CachedBlock;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
 import org.apache.hadoop.hbase.regionserver.DelegatingInternalScanner;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HStore;
@@ -444,18 +447,21 @@ public class TestAvoidCellReferencesIntoShippedBlocks {
   }
 
   /**
-   * For {@link BucketCache},we only evict Block if there is no rpc referenced.
+   * For {@link BucketCache}, only evict the block if there is no RPC reference.
+   * @param cache         cache access service
+   * @param blockCacheKey block cache key
    */
   private void evictBlock(CacheAccessService cache, BlockCacheKey blockCacheKey) {
-    BlockCache l1Cache = CacheAccessServiceTestFactory.getFirstLevelBlockCache(cache);
-    BlockCache l2Cache = CacheAccessServiceTestFactory.getSecondLevelBlockCache(cache);
-
+    CacheEngine l1Cache = CacheAccessServiceTestFactory.getCacheEngine(cache, CacheTier.L1);
+    CacheEngine l2Cache = CacheAccessServiceTestFactory.getCacheEngine(cache, CacheTier.L2);
     l1Cache.evictBlock(blockCacheKey);
-
-    if (l2Cache instanceof BucketCache) {
-      ((BucketCache) l2Cache).evictBlockIfNoRpcReferenced(blockCacheKey);
-    } else {
-      l2Cache.evictBlock(blockCacheKey);
+    if (l2Cache instanceof BlockCacheBackedCacheEngine) {
+      BlockCache blockCache = ((BlockCacheBackedCacheEngine) l2Cache).getBlockCache();
+      if (blockCache instanceof BucketCache) {
+        ((BucketCache) blockCache).evictBlockIfNoRpcReferenced(blockCacheKey);
+        return;
+      }
     }
+    l2Cache.evictBlock(blockCacheKey);
   }
 }

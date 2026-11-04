@@ -349,8 +349,9 @@ public class MetricsRegionWrapperImpl implements MetricsRegionWrapper, Closeable
         }
       }
       MutableLong regionCachedAmount = new MutableLong(0);
-      region.getBlockCache().getRegionCachedInfo().ifPresent(regionCacheRatio -> regionCachedAmount
-        .addAndGet(regionCacheRatio.getOrDefault(region.getRegionInfo().getEncodedName(), 0L)));
+      region.getCacheAccessService().getRegionCachedInfo()
+        .ifPresent(regionCacheRatio -> regionCachedAmount
+          .addAndGet(regionCacheRatio.getOrDefault(region.getRegionInfo().getEncodedName(), 0L)));
       if (tempStoreFileSize > 0) {
         LOG.debug("Region {}, had cached {} bytes from a total of {}",
           region.getRegionInfo().getEncodedName(), regionCachedAmount.getValue(),

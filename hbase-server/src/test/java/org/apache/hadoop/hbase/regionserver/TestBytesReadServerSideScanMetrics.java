@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -51,7 +52,6 @@ import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.executor.ExecutorType;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.CompoundBloomFilter;
@@ -60,8 +60,13 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.hadoop.hbase.io.hfile.HFileBlockIndex;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.NoOpIndexBlockEncoder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
@@ -193,10 +198,15 @@ public class TestBytesReadServerSideScanMetrics {
       TableName tableName = TableName.valueOf(name);
       createTable(tableName, true, BloomType.NONE);
       HRegionServer server = UTIL.getMiniHBaseCluster().getRegionServer(0);
-      LruBlockCache blockCache = (LruBlockCache) server.getBlockCache().get();
 
-      // Assert that acceptable size of LRU block cache is greater than 1MB
-      assertTrue(blockCache.acceptableSize() > 1024 * 1024);
+      CacheAccessService cacheAccessService = server.getCacheAccessService();
+      CacheEngine cacheEngine =
+        CacheAccessServiceTestFactory.getCacheEngine(cacheAccessService, CacheTier.SINGLE);
+      assertInstanceOf(LruCacheEngine.class, cacheEngine);
+
+      // Assert that the LRU cache is greater than 1MB.
+      assertTrue(cacheEngine.getMaxSize() > 1024 * 1024);
+
       writeData(tableName, true);
       readDataAndGetScanMetrics(tableName, false);
       KeyValue keyValue = new KeyValue(ROW2, CF, CQ, PrivateConstants.OLDEST_TIMESTAMP, VALUE);
@@ -712,7 +722,7 @@ public class TestBytesReadServerSideScanMetrics {
     MutableInt totalExpectedBytesReadFromFs = new MutableInt(0);
     MutableInt totalExpectedReadOps = new MutableInt(0);
     for (HRegion region : regions) {
-      assertNull(region.getBlockCache());
+      assertTrue(region.getCacheAccessService() instanceof NoOpCacheAccessService);
       HStore store = region.getStore(CF);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
       assertEquals(2, storeFiles.size());
@@ -819,7 +829,7 @@ public class TestBytesReadServerSideScanMetrics {
     assertEquals(1, regions.size());
     MutableInt totalExpectedBytesReadFromBlockCache = new MutableInt(0);
     for (HRegion region : regions) {
-      assertNotNull(region.getBlockCache());
+      assertNotNull(!(region.getCacheAccessService() instanceof NoOpCacheAccessService));
       HStore store = region.getStore(CF);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
       assertEquals(2, storeFiles.size());
@@ -848,7 +858,7 @@ public class TestBytesReadServerSideScanMetrics {
     List<HRegion> regions = UTIL.getMiniHBaseCluster().getRegions(tableName);
     assertEquals(1, regions.size());
     for (HRegion region : regions) {
-      assertNotNull(region.getBlockCache());
+      assertNotNull(!(region.getCacheAccessService() instanceof NoOpCacheAccessService));
       HStore store = region.getStore(CF);
       Collection<HStoreFile> storeFiles = store.getStorefiles();
       assertEquals(2, storeFiles.size());
@@ -861,7 +871,7 @@ public class TestBytesReadServerSideScanMetrics {
         Consumer<HFileBlock> bytesReadFunction = new Consumer<HFileBlock>() {
           @Override
           public void accept(HFileBlock block) {
-            assertBlockIsCached(hfileReader, block, region.getBlockCache());
+            assertBlockIsCached(hfileReader, block, region.getCacheAccessService());
           }
         };
         readHFile(hfileReader, cbf, keyValue, bytesReadFunction);
@@ -870,13 +880,13 @@ public class TestBytesReadServerSideScanMetrics {
   }
 
   private void assertBlockIsCached(HFile.Reader hfileReader, HFileBlock block,
-    BlockCache blockCache) {
-    if (blockCache == null) {
+    CacheAccessService cas) {
+    if (cas instanceof NoOpCacheAccessService) {
       return;
     }
     Path path = hfileReader.getPath();
     BlockCacheKey key = new BlockCacheKey(path, block.getOffset(), true, block.getBlockType());
-    HFileBlock cachedBlock = (HFileBlock) blockCache.getBlock(key, true, false, true);
+    HFileBlock cachedBlock = (HFileBlock) cas.getBlock(key, true, false, true);
     assertNotNull(cachedBlock);
     assertEquals(block.getOnDiskSizeWithHeader(), cachedBlock.getOnDiskSizeWithHeader());
     assertEquals(block.getNextBlockOnDiskSize(), cachedBlock.getNextBlockOnDiskSize());

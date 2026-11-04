@@ -49,7 +49,8 @@ import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.locking.EntityLock;
 import org.apache.hadoop.hbase.executor.ExecutorService;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.keymeta.KeyManagementService;
@@ -763,8 +764,8 @@ class MockRegionServer implements AdminProtos.AdminService.BlockingInterface,
   }
 
   @Override
-  public Optional<BlockCache> getBlockCache() {
-    return Optional.empty();
+  public CacheAccessService getCacheAccessService() {
+    return new NoOpCacheAccessService();
   }
 
   @Override

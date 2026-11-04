@@ -347,6 +347,15 @@ public interface CacheEngine extends ConfigurationObserver {
   }
 
   /**
+   * Returns region-level cache information when supported by this engine.
+   * @return an {@link Optional} containing cached-size information by region when supported;
+   *         otherwise {@link Optional#empty()}
+   */
+  default Optional<Map<String, Long>> getRegionCachedInfo() {
+    return Optional.empty();
+  }
+
+  /**
    * Returns an iterable view of cached blocks exposed by this cache engine.
    * <p>
    * Not all cache engines expose their internal cached block list. Implementations that do not

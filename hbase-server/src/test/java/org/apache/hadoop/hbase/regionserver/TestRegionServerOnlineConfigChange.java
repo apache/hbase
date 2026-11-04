@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.client.RegionLocator;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.regionserver.compactions.CompactionConfiguration;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -278,6 +279,42 @@ public class TestRegionServerOnlineConfigChange {
     assertFalse(hMaster.isInMaintenanceMode());
     hMaster.getConfigurationManager().notifyAllObservers(masterConf);
     assertNotNull(hMaster.getMasterCoprocessorHost().findCoprocessor(JMXListener.class.getName()));
+  }
+
+  /**
+   * Verify that the RegionServer owns the CacheAccessService configuration registration and closing
+   * a region does not de-register the shared cache service.
+   */
+  @Test
+  public void testCacheAccessServiceRegistrationSurvivesRegionClose() throws Exception {
+    CacheAccessService cacheAccessService = rs1.getCacheAccessService();
+
+    assertTrue(rs1.getConfigurationManager().containsObserver(cacheAccessService),
+      "CacheAccessService is not registered as a ConfigurationObserver");
+
+    try (Connection connection = ConnectionFactory.createConnection(conf);
+      Admin admin = connection.getAdmin()) {
+      admin.move(r1name);
+
+      hbaseTestingUtility.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return rs1.getOnlineRegion(r1name) == null;
+        }
+      });
+
+      assertTrue(rs1.getConfigurationManager().containsObserver(cacheAccessService),
+        "Closing a region deregistered the RegionServer CacheAccessService");
+
+      admin.move(r1name, rs1.getServerName());
+
+      hbaseTestingUtility.waitFor(WAIT_TIMEOUT, new Waiter.Predicate<Exception>() {
+        @Override
+        public boolean evaluate() throws Exception {
+          return rs1.getOnlineRegion(r1name) != null;
+        }
+      });
+    }
   }
 
 }

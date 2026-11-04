@@ -441,8 +441,7 @@ public class TestCacheOnWrite {
       ColumnFamilyDescriptor cfd = ColumnFamilyDescriptorBuilder.newBuilder(cfBytes)
         .setCompressionType(compress).setBloomFilterType(BLOOM_TYPE).setMaxVersions(maxVersions)
         .setDataBlockEncoding(NoOpDataBlockEncoder.INSTANCE.getDataBlockEncoding()).build();
-      HRegion region = TEST_UTIL.createTestRegion(table, cfd,
-        TopologyBackedCacheAccessServices.getBlockCache(cache));
+      HRegion region = TEST_UTIL.createTestRegion(table, cfd, cache);
       int rowIdx = 0;
       long ts = EnvironmentEdgeManager.currentTime();
       for (int iFile = 0; iFile < 5; ++iFile) {

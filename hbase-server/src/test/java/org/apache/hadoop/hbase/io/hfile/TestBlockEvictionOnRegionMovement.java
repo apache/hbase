@@ -38,6 +38,9 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -94,13 +97,14 @@ public class TestBlockEvictionOnRegionMovement {
       cluster.getRegionServer(1).getRegions(tableRegionMove).size() == 1
         ? cluster.getRegionServer(1)
         : cluster.getRegionServer(0);
-    assertTrue(regionServingRS.getBlockCache().isPresent());
 
-    // wait for running prefetch threads to be completed.
+    CacheEngine l2 = CacheAccessServiceTestFactory
+      .getCacheEngine(regionServingRS.getCacheAccessService(), CacheTier.L2);
+
+    // Wait for running prefetch threads to be completed.
     Waiter.waitFor(this.conf, 200, () -> PrefetchExecutor.getPrefetchFutures().isEmpty());
 
-    long oldUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
+    long oldUsedCacheSize = l2.getCurrentSize();
     assertNotEquals(0, oldUsedCacheSize);
 
     Admin admin = TEST_UTIL.getAdmin();
@@ -109,10 +113,9 @@ public class TestBlockEvictionOnRegionMovement {
       TEST_UTIL.getOtherRegionServer(regionServingRS).getServerName());
     assertEquals(0, regionServingRS.getRegions(tableRegionMove).size());
 
-    long newUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
+    long newUsedCacheSize = l2.getCurrentSize();
     assertTrue(oldUsedCacheSize > newUsedCacheSize);
-    assertEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    assertEquals(0, l2.getBlockCount());
   }
 
   @Test
@@ -125,21 +128,22 @@ public class TestBlockEvictionOnRegionMovement {
         ? cluster.getRegionServer(1)
         : cluster.getRegionServer(0);
 
-    assertTrue(regionServingRS.getBlockCache().isPresent());
-    long oldUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
-    assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    CacheEngine l2 = CacheAccessServiceTestFactory
+      .getCacheEngine(regionServingRS.getCacheAccessService(), CacheTier.L2);
+
+    long oldUsedCacheSize = l2.getCurrentSize();
+    assertNotEquals(0, l2.getBlockCount());
 
     cluster.stopRegionServer(regionServingRS.getServerName());
     Thread.sleep(500);
     cluster.startRegionServer();
     Thread.sleep(500);
 
-    regionServingRS.getBlockCache().get().waitForCacheInitialization(10000);
-    long newUsedCacheSize =
-      regionServingRS.getBlockCache().get().getBlockCaches()[1].getCurrentSize();
+    l2.waitForCacheInitialization(10000);
+    long newUsedCacheSize = l2.getCurrentSize();
+
     assertEquals(oldUsedCacheSize, newUsedCacheSize);
-    assertNotEquals(0, regionServingRS.getBlockCache().get().getBlockCaches()[1].getBlockCount());
+    assertNotEquals(0, l2.getBlockCount());
   }
 
   public TableName writeDataToTable(String testName) throws IOException, InterruptedException {

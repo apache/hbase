@@ -41,8 +41,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -70,7 +70,7 @@ public class TestRecoveredEdits {
   private static final HBaseTestingUtil TEST_UTIL = new HBaseTestingUtil();
   private static final Logger LOG = LoggerFactory.getLogger(TestRecoveredEdits.class);
 
-  private static BlockCache blockCache;
+  private static CacheAccessService cas;
 
   private String methodName;
 
@@ -78,7 +78,6 @@ public class TestRecoveredEdits {
    * Path to a recovered.edits file in hbase-server test resources folder. This is a little fragile
    * getting this path to a file of 10M of edits.
    */
-  @SuppressWarnings("checkstyle:VisibilityModifier")
   public static final Path RECOVEREDEDITS_PATH = new Path(
     System.getProperty("test.build.classes", "target/test-classes"), "0000000000000016310");
 
@@ -101,7 +100,7 @@ public class TestRecoveredEdits {
    */
   @BeforeAll
   public static void setUpBeforeClass() throws Exception {
-    blockCache = BlockCacheFactory.createBlockCache(TEST_UTIL.getConfiguration());
+    cas = CacheAccessServices.fromConfiguration(TEST_UTIL.getConfiguration());
   }
 
   @BeforeEach
@@ -140,7 +139,7 @@ public class TestRecoveredEdits {
       fs.delete(hrfs.getRegionDir(), true);
     }
     HRegion region =
-      HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, conf, tableDescriptor, blockCache);
+      HBaseTestingUtil.createRegionAndWAL(hri, hbaseRootDir, conf, tableDescriptor, cas);
     assertEquals(encodedRegionName, region.getRegionInfo().getEncodedName());
     List<String> storeFiles = region.getStoreFileList(RECOVEREDITS_COLUMNFAMILY_ARRAY);
     // There should be no store files.

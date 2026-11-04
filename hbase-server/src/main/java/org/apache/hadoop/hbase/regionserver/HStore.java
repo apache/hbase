@@ -400,7 +400,7 @@ public class HStore
    * @param family The current column family.
    */
   protected CacheConfig createCacheConf(final ColumnFamilyDescriptor family) {
-    CacheConfig cacheConf = new CacheConfig(conf, family, region.getBlockCache(),
+    CacheConfig cacheConf = new CacheConfig(conf, family, region.getCacheAccessService(),
       region.getRegionServicesForStores().getByteBuffAllocator());
     LOG.info("Created cacheConfig: {}, for column family {} of region {} ", cacheConf,
       family.getNameAsString(), region.getRegionInfo().getEncodedName());
