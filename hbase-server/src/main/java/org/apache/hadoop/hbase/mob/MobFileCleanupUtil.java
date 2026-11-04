@@ -183,14 +183,14 @@ public final class MobFileCleanupUtil {
 
     // Now scan MOB directories and find MOB files with no references to them
     for (ColumnFamilyDescriptor hcd : list) {
-      checkColumnFamilyDescriptor(conf, table, fs, admin, hcd, regionNames,
+      checkColumnFamilyDescriptor(conf, table, fs, admin, hcd, regionNames, allActiveMobFileName,
         maxCreationTimeToArchive);
     }
   }
 
   private static void checkColumnFamilyDescriptor(Configuration conf, TableName table,
     FileSystem fs, Admin admin, ColumnFamilyDescriptor hcd, Set<String> regionNames,
-    long maxCreationTimeToArchive) throws IOException {
+    Set<String> allActiveMobFileName, long maxCreationTimeToArchive) throws IOException {
     List<Path> toArchive = new ArrayList<Path>();
     String family = hcd.getNameAsString();
     Path dir = MobUtils.getMobFamilyPath(conf, table, family);
@@ -201,8 +201,10 @@ public final class MobFileCleanupUtil {
       String[] mobParts = p.getName().split("_");
       String regionName = mobParts[mobParts.length - 1];
 
-      if (!regionNames.contains(regionName)) {
-        // MOB belonged to a region no longer hosted
+      if (!regionNames.contains(regionName) && !allActiveMobFileName.contains(p.getName())) {
+        // MOB belonged to a region no longer hosted and is not referenced by any store file.
+        // After a split or merge, the children keep referencing the MOB files of the parent
+        // regions until the MOB cells are rewritten by a MOB compaction.
         long creationTime = fs.getFileStatus(p).getModificationTime();
         if (creationTime < maxCreationTimeToArchive) {
           LOG.trace("Archiving MOB file {} creation time={}", p,
@@ -213,7 +215,7 @@ public final class MobFileCleanupUtil {
             fs.getFileStatus(p).getModificationTime());
         }
       } else {
-        LOG.trace("Keeping MOB file with existing region: {}", p);
+        LOG.trace("Keeping MOB file with existing region or active reference: {}", p);
       }
     }
     LOG.info(" MOB Cleaner found {} files to archive for table={} family={}", toArchive.size(),
