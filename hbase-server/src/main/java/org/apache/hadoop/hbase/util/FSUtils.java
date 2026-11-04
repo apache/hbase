@@ -218,6 +218,32 @@ public final class FSUtils {
   }
 
   /**
+   * Opens a file for reading. When {@code fileStatus} is supplied and the {@link FileSystem}
+   * supports {@code FileSystem.openFile().withFileStatus()}, that path is used so the client
+   * can skip a redundant metadata lookup (for example {@code getFileInfo}).
+   * @param fs         filesystem
+   * @param path       file to open
+   * @param fileStatus status from a recent {@code listStatus} / {@code getFileStatus}, or
+   *                   {@code null}
+   * @return input stream for the file
+   * @throws IOException if the file cannot be opened
+   */
+  public static FSDataInputStream openForRead(FileSystem fs, Path path, FileStatus fileStatus)
+    throws IOException {
+    if (fileStatus != null) {
+      try {
+        return fs.openFile(path).withFileStatus(fileStatus).build().get();
+      } catch (UnsupportedOperationException | InterruptedException | ExecutionException e) {
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("openFile().withFileStatus() not supported or failed for {}, "
+              + "fail back with open()", fs.getUri(), e);
+        }
+      }
+    }
+    return fs.open(path);
+  }
+
+  /**
    * Create the specified file on the filesystem. By default, this will:
    * <ol>
    * <li>overwrite the file if it exists</li>
