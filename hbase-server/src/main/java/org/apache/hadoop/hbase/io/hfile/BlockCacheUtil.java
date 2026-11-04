@@ -57,7 +57,9 @@ public class BlockCacheUtil {
   public static final long NANOS_PER_SECOND = 1000000000;
 
   /**
-   * Needed generating JSON.
+   * Needed generating JSON. {@code excludeFieldsWithModifiers} replaces Gson's default exclusion of
+   * static and transient fields rather than adding to it, so they have to be listed explicitly.
+   * Otherwise cache internals such as {@code BucketCache.backingMap} end up in the JSON.
    */
   private static final Gson GSON = GsonUtil.createGson()
     .excludeFieldsWithModifiers(Modifier.PRIVATE, Modifier.TRANSIENT, Modifier.STATIC)

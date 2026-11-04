@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
@@ -384,13 +385,8 @@ public class CacheTestUtils {
   }
 
   public static void testConvertToJSON(BlockCache toBeTested) {
-    String json = null;
-    try {
-      json = BlockCacheUtil.toJSON(toBeTested);
-      assertNotNull(json);
-    } catch (Exception e) {
-      fail("conversion to JSON should not fail, exception is:" + e);
-    }
+    String json = assertDoesNotThrow(() -> BlockCacheUtil.toJSON(toBeTested));
+    assertNotNull(json);
     // static and transient fields, e.g. the cache internals, should not be serialized
     JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
     for (Class<?> clazz = toBeTested.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
