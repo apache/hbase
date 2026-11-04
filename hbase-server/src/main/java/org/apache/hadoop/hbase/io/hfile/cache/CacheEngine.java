@@ -40,10 +40,9 @@ import org.apache.yetus.audience.InterfaceAudience;
  * orchestration, admission control, placement decisions, or promotion/demotion across cache levels.
  * </p>
  * <p>
- * This interface is intentionally aligned with the storage-oriented subset of the current
- * {@code BlockCache} contract so that existing implementations such as LruBlockCache and
- * BucketCache can be migrated incrementally with minimal behavioral risk.
- * </p>
+ * Storage-engine abstraction used by the pluggable block cache architecture. Native
+ * implementations, such as {@link LruCacheEngine}, implement this contract directly. Legacy
+ * {@code BlockCache} implementations can be integrated through compatibility adapters.
  * <p>
  * Responsibilities of a {@code CacheEngine} include:
  * </p>

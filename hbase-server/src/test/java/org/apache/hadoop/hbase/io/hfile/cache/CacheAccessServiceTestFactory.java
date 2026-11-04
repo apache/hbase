@@ -24,7 +24,6 @@ import java.util.concurrent.Executor;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.LruAdaptiveBlockCache;
-import org.apache.hadoop.hbase.io.hfile.LruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.TinyLfuBlockCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
@@ -36,8 +35,8 @@ import org.apache.yetus.audience.InterfaceAudience;
  * <p>
  * These helpers are intended to keep integration-style tests concise while the block cache
  * architecture migrates toward {@link CacheAccessService}. They deliberately do not replace
- * implementation-specific tests for {@link LruBlockCache}, {@link LruAdaptiveBlockCache},
- * {@link TinyLfuBlockCache}, {@link BucketCache}, or other concrete cache implementations.
+ * implementation-specific tests for {@link LruAdaptiveBlockCache}, {@link TinyLfuBlockCache},
+ * {@link BucketCache}, or other concrete cache implementations.
  * </p>
  * <p>
  * Each helper mirrors a public constructor on one of the legacy cache implementations and returns
@@ -97,59 +96,59 @@ public final class CacheAccessServiceTestFactory {
   }
 
   /**
-   * Creates a {@link CacheAccessService} backed by {@link LruBlockCache}.
+   * Creates a {@link CacheAccessService} backed by {@link LruCacheEngine}.
    * @param maxSize   maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
-   * @return cache access service backed by {@link LruBlockCache}
+   * @return cache access service backed by {@link LruCacheEngine}
    */
   public static CacheAccessService lru(long maxSize, long blockSize) {
     return lruInstance(maxSize, blockSize).service();
   }
 
   /**
-   * Creates a test instance containing {@link LruBlockCache} and its {@link CacheAccessService}
+   * Creates a test instance containing {@link LruCacheEngine} and its {@link CacheAccessService}
    * facade.
    * @param maxSize   maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
    * @return test instance
    */
-  public static CacheAccessServiceTestInstance<LruBlockCache> lruInstance(long maxSize,
+  public static CacheAccessServiceTestInstance<LruCacheEngine> lruInstance(long maxSize,
     long blockSize) {
-    return new CacheAccessServiceTestInstance<>(new LruBlockCache(maxSize, blockSize));
+    return new CacheAccessServiceTestInstance<>(new LruCacheEngine(maxSize, blockSize));
   }
 
   /**
-   * Creates a {@link CacheAccessService} backed by {@link LruBlockCache}.
+   * Creates a {@link CacheAccessService} backed by {@link LruCacheEngine}.
    * @param maxSize        maximum size of cache, in bytes
    * @param blockSize      approximate size of each block, in bytes
    * @param evictionThread whether to start the eviction thread
-   * @return cache access service backed by {@link LruBlockCache}
+   * @return cache access service backed by {@link LruCacheEngine}
    */
   public static CacheAccessService lru(long maxSize, long blockSize, boolean evictionThread) {
     return lruInstance(maxSize, blockSize, evictionThread).service();
   }
 
   /**
-   * Creates a test instance containing {@link LruBlockCache} and its {@link CacheAccessService}
+   * Creates a test instance containing {@link LruCacheEngine} and its {@link CacheAccessService}
    * facade.
    * @param maxSize        maximum size of cache, in bytes
    * @param blockSize      approximate size of each block, in bytes
    * @param evictionThread whether to start the eviction thread
    * @return test instance
    */
-  public static CacheAccessServiceTestInstance<LruBlockCache> lruInstance(long maxSize,
+  public static CacheAccessServiceTestInstance<LruCacheEngine> lruInstance(long maxSize,
     long blockSize, boolean evictionThread) {
     return new CacheAccessServiceTestInstance<>(
-      new LruBlockCache(maxSize, blockSize, evictionThread));
+      new LruCacheEngine(maxSize, blockSize, evictionThread));
   }
 
   /**
-   * Creates a {@link CacheAccessService} backed by {@link LruBlockCache}.
+   * Creates a {@link CacheAccessService} backed by {@link LruCacheEngine}.
    * @param maxSize        maximum size of cache, in bytes
    * @param blockSize      approximate size of each block, in bytes
    * @param evictionThread whether to start the eviction thread
    * @param conf           configuration used by the cache constructor
-   * @return cache access service backed by {@link LruBlockCache}
+   * @return cache access service backed by {@link LruCacheEngine}
    * @throws NullPointerException if {@code conf} is {@code null}
    */
   public static CacheAccessService lru(long maxSize, long blockSize, boolean evictionThread,
@@ -158,7 +157,7 @@ public final class CacheAccessServiceTestFactory {
   }
 
   /**
-   * Creates a test instance containing {@link LruBlockCache} and its {@link CacheAccessService}
+   * Creates a test instance containing {@link LruCacheEngine} and its {@link CacheAccessService}
    * facade.
    * @param maxSize        maximum size of cache, in bytes
    * @param blockSize      approximate size of each block, in bytes
@@ -167,19 +166,19 @@ public final class CacheAccessServiceTestFactory {
    * @return test instance
    * @throws NullPointerException if {@code conf} is {@code null}
    */
-  public static CacheAccessServiceTestInstance<LruBlockCache> lruInstance(long maxSize,
+  public static CacheAccessServiceTestInstance<LruCacheEngine> lruInstance(long maxSize,
     long blockSize, boolean evictionThread, Configuration conf) {
     Objects.requireNonNull(conf, "conf must not be null");
     return new CacheAccessServiceTestInstance<>(
-      new LruBlockCache(maxSize, blockSize, evictionThread, conf));
+      new LruCacheEngine(maxSize, blockSize, evictionThread, conf));
   }
 
   /**
-   * Creates a {@link CacheAccessService} backed by {@link LruBlockCache}.
+   * Creates a {@link CacheAccessService} backed by {@link LruCacheEngine}.
    * @param maxSize   maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
    * @param conf      configuration used by the cache constructor
-   * @return cache access service backed by {@link LruBlockCache}
+   * @return cache access service backed by {@link LruCacheEngine}
    * @throws NullPointerException if {@code conf} is {@code null}
    */
   public static CacheAccessService lru(long maxSize, long blockSize, Configuration conf) {
@@ -187,7 +186,7 @@ public final class CacheAccessServiceTestFactory {
   }
 
   /**
-   * Creates a test instance containing {@link LruBlockCache} and its {@link CacheAccessService}
+   * Creates a test instance containing {@link LruCacheEngine} and its {@link CacheAccessService}
    * facade.
    * @param maxSize   maximum size of cache, in bytes
    * @param blockSize approximate size of each block, in bytes
@@ -195,14 +194,14 @@ public final class CacheAccessServiceTestFactory {
    * @return test instance
    * @throws NullPointerException if {@code conf} is {@code null}
    */
-  public static CacheAccessServiceTestInstance<LruBlockCache> lruInstance(long maxSize,
+  public static CacheAccessServiceTestInstance<LruCacheEngine> lruInstance(long maxSize,
     long blockSize, Configuration conf) {
     Objects.requireNonNull(conf, "conf must not be null");
-    return new CacheAccessServiceTestInstance<>(new LruBlockCache(maxSize, blockSize, conf));
+    return new CacheAccessServiceTestInstance<>(new LruCacheEngine(maxSize, blockSize, conf));
   }
 
   /**
-   * Creates a {@link CacheAccessService} backed by a fully configured {@link LruBlockCache}.
+   * Creates a {@link CacheAccessService} backed by a fully configured {@link LruCacheEngine}.
    * @param maxSize             maximum size of this cache, in bytes
    * @param blockSize           expected average size of blocks, in bytes
    * @param evictionThread      whether to run evictions in a background thread
@@ -217,7 +216,7 @@ public final class CacheAccessServiceTestFactory {
    * @param hardLimitFactor     hard capacity limit factor
    * @param forceInMemory       whether in-memory HFile data blocks have higher priority
    * @param maxBlockSize        maximum block size accepted by the cache
-   * @return cache access service backed by {@link LruBlockCache}
+   * @return cache access service backed by {@link LruCacheEngine}
    */
   public static CacheAccessService lru(long maxSize, long blockSize, boolean evictionThread,
     int mapInitialSize, float mapLoadFactor, int mapConcurrencyLevel, float minFactor,
@@ -229,7 +228,7 @@ public final class CacheAccessServiceTestFactory {
   }
 
   /**
-   * Creates a test instance containing a fully configured {@link LruBlockCache} and its
+   * Creates a test instance containing a fully configured {@link LruCacheEngine} and its
    * {@link CacheAccessService} facade.
    * @param maxSize             maximum size of this cache, in bytes
    * @param blockSize           expected average size of blocks, in bytes
@@ -247,13 +246,13 @@ public final class CacheAccessServiceTestFactory {
    * @param maxBlockSize        maximum block size accepted by the cache
    * @return test instance
    */
-  public static CacheAccessServiceTestInstance<LruBlockCache> lruInstance(long maxSize,
+  public static CacheAccessServiceTestInstance<LruCacheEngine> lruInstance(long maxSize,
     long blockSize, boolean evictionThread, int mapInitialSize, float mapLoadFactor,
     int mapConcurrencyLevel, float minFactor, float acceptableFactor, float singleFactor,
     float multiFactor, float memoryFactor, float hardLimitFactor, boolean forceInMemory,
     long maxBlockSize) {
     return new CacheAccessServiceTestInstance<>(
-      new LruBlockCache(maxSize, blockSize, evictionThread, mapInitialSize, mapLoadFactor,
+      new LruCacheEngine(maxSize, blockSize, evictionThread, mapInitialSize, mapLoadFactor,
         mapConcurrencyLevel, minFactor, acceptableFactor, singleFactor, multiFactor, memoryFactor,
         hardLimitFactor, forceInMemory, maxBlockSize));
   }
@@ -774,5 +773,11 @@ public final class CacheAccessServiceTestFactory {
 
     return topologyService.getTopology().getEngine(tier)
       .orElseThrow(() -> new IllegalArgumentException("Cache tier is not present: " + tier));
+  }
+
+  public static CacheAccessService singleTierService(CacheEngine engine) {
+    CacheTopology topology = new SingleTierTopology("single", engine);
+    return new TopologyBackedCacheAccessService(topology,
+      new DefaultHBaseCachePlacementAdmissionPolicy());
   }
 }

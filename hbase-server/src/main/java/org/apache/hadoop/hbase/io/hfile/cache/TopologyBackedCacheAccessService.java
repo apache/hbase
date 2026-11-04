@@ -491,9 +491,9 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
    * <p>
    * This method aggregates {@link CacheEngine#getCurrentSize()} rather than
    * {@link CacheEngine#getCurrentDataSize()} so topology-backed diagnostics preserve legacy
-   * {@link BlockCache#getCurrentSize()} semantics. For cache implementations such as
-   * {@code LruBlockCache}, current size may include metadata and cache overhead in addition to
-   * cached data bytes.
+   * {@link BlockCache#getCurrentSize()} semantics. For some cache engines, such as
+   * {@link LruCacheEngine}, current size may include metadata and cache overhead in addition to
+   * cached block data.
    * </p>
    * @return aggregate current total cache size in bytes
    */

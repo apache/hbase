@@ -215,8 +215,7 @@ public final class TopologyBackedCacheAccessServices {
       .orElseThrow(() -> new IllegalArgumentException("No cache engine found for tier " + tier));
 
     if (!(engine instanceof BlockCacheBackedCacheEngine)) {
-      throw new IllegalArgumentException(
-        "Cache engine for tier " + tier + " must be a BlockCacheBackedCacheEngine");
+      return null;
     }
 
     return ((BlockCacheBackedCacheEngine) engine).getBlockCache();

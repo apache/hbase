@@ -48,6 +48,10 @@ import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.HFileReaderImpl.HFileScannerImpl;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.io.hfile.bucket.TestBucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -387,15 +391,18 @@ public class TestHFileScannerImplReferenceCount {
   }
 
   @TestTemplate
-  public void testWithLruBlockCache() throws Exception {
+  public void testWithLruCacheEngine() throws Exception {
     HFileBlock curBlock;
     writeHFile(conf, fs, hfilePath, Algorithm.NONE, DataBlockEncoding.NONE, CELL_COUNT);
-    // Set LruBlockCache
+    // Use a single-tier LRU cache engine.
     conf.set(BUCKET_CACHE_IOENGINE_KEY, "");
-    BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
-    CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
-    assertNotNull(defaultBC);
-    assertFalse(cacheConfig.isCombinedBlockCache()); // Must be LruBlockCache.
+    CacheAccessService cache = CacheAccessServiceTestFactory.fromConfiguration(conf);
+    CacheConfig cacheConfig = new CacheConfig(conf, null, cache, allocator);
+
+    assertTrue(cache.isCacheEnabled());
+    assertFalse(cacheConfig.isCombinedBlockCache());
+    assertTrue(CacheAccessServiceTestFactory.getCacheEngine(cache,
+      CacheTier.SINGLE) instanceof LruCacheEngine);
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
     assertTrue(reader instanceof HFileReaderImpl);
     // We've build a HFile tree with index = 16.
@@ -440,12 +447,12 @@ public class TestHFileScannerImplReferenceCount {
   @TestTemplate
   public void testDisabledBlockCache() throws Exception {
     writeHFile(conf, fs, hfilePath, Algorithm.NONE, DataBlockEncoding.NONE, CELL_COUNT);
-    // Set LruBlockCache
+    // Disable block cache.
     conf.setFloat(HFILE_BLOCK_CACHE_SIZE_KEY, 0.0f);
     BlockCache defaultBC = BlockCacheFactory.createBlockCache(conf);
     assertNull(defaultBC);
     CacheConfig cacheConfig = new CacheConfig(conf, null, defaultBC, allocator);
-    assertFalse(cacheConfig.isCombinedBlockCache()); // Must be LruBlockCache.
+    assertFalse(cacheConfig.isCombinedBlockCache()); // Must be a single-tier LruCacheEngine.
     HFile.Reader reader = HFile.createReader(fs, hfilePath, cacheConfig, true, conf);
     assertTrue(reader instanceof HFileReaderImpl);
     // We've build a HFile tree with index = 16.

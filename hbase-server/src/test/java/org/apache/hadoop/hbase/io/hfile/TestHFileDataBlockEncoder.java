@@ -40,6 +40,10 @@ import org.apache.hadoop.hbase.io.compress.Compression.Algorithm;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockDefaultEncodingContext;
 import org.apache.hadoop.hbase.io.encoding.HFileBlockEncodingContext;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestInstance;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.testclassification.IOTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -88,11 +92,14 @@ public class TestHFileDataBlockEncoder {
     HFileBlock block = getSampleHFileBlock(kvs, useTag);
     HFileBlock cacheBlock = createBlockOnDisk(conf, kvs, block, useTag);
 
-    LruBlockCache blockCache = new LruBlockCache(8 * 1024 * 1024, 32 * 1024);
-    BlockCacheKey cacheKey = new BlockCacheKey("test", 0);
-    blockCache.cacheBlock(cacheKey, cacheBlock);
+    CacheAccessServiceTestInstance<LruCacheEngine> cacheInstance =
+      CacheAccessServiceTestFactory.lruInstance(8 * 1024 * 1024, 32 * 1024);
 
-    HeapSize heapSize = blockCache.getBlock(cacheKey, false, false, true);
+    CacheAccessService cache = cacheInstance.service();
+    BlockCacheKey cacheKey = new BlockCacheKey("test", 0);
+    cache.cacheBlock(cacheKey, cacheBlock);
+
+    HeapSize heapSize = cache.getBlock(cacheKey, false, false, true);
     assertTrue(heapSize instanceof HFileBlock);
 
     HFileBlock returnedBlock = (HFileBlock) heapSize;
