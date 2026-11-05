@@ -218,6 +218,77 @@ public class TestTablePermissions {
   }
 
   @Test
+  public void testRevokeFamilyPermissionKeepsTableLevelPermission() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      // table level READ for userA
+      addUserPermission(conf,
+        new UserPermission("userA",
+          Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()),
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
+      // family level WRITE for userA on the same table
+      addUserPermission(conf,
+        new UserPermission("userA",
+          Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+            .withActions(Permission.Action.WRITE).build()),
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
+    }
+
+    // revoke only the family level WRITE
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      PermissionStorage.removeUserPermission(conf,
+        new UserPermission("userA", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+          .withActions(Permission.Action.WRITE).build()),
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
+    }
+
+    List<UserPermission> userPerms =
+      PermissionStorage.getTablePermissions(conf, TEST_TABLE).get("userA");
+    assertEquals(1, userPerms.size(),
+      "family level WRITE should be revoked, only the table level READ should remain");
+    TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
+    assertNull(permission.getFamily(), "table level permission should be kept untouched");
+    assertArrayEquals(new Permission.Action[] { Permission.Action.READ }, permission.getActions(),
+      "table level READ should be kept untouched");
+  }
+
+  @Test
+  public void testRevokeFamilyPermissionKeepsTableLevelActions() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      // table level READ,WRITE for userB
+      addUserPermission(conf,
+        new UserPermission("userB", Permission.newBuilder(TEST_TABLE)
+          .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
+      // family level WRITE for userB on the same table
+      addUserPermission(conf,
+        new UserPermission("userB",
+          Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+            .withActions(Permission.Action.WRITE).build()),
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
+    }
+
+    // revoke only the family level WRITE
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      PermissionStorage.removeUserPermission(conf,
+        new UserPermission("userB", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
+          .withActions(Permission.Action.WRITE).build()),
+        connection.getTable(PermissionStorage.ACL_TABLE_NAME));
+    }
+
+    List<UserPermission> userPerms =
+      PermissionStorage.getTablePermissions(conf, TEST_TABLE).get("userB");
+    assertEquals(1, userPerms.size(),
+      "family level WRITE should be revoked, only the table level permission should remain");
+    TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
+    assertNull(permission.getFamily(), "table level permission should be kept untouched");
+    assertArrayEquals(
+      new Permission.Action[] { Permission.Action.READ, Permission.Action.WRITE },
+      permission.getActions(), "table level actions should be kept untouched");
+  }
+
+  @Test
   public void testPersistence() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     try (Connection connection = ConnectionFactory.createConnection(conf)) {

@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.security.access;
 
 import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
+import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
@@ -37,6 +39,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
+import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.ResultScanner;
@@ -481,7 +484,57 @@ public class TestAccessController2 extends SecureTestUtil {
     // Verify user from a group whose column qualifier level access has been revoked can't read the
     // data having this column family and qualifier.
     revokeFromTable(TEST_UTIL, TESTGROUP_1_NAME, tableName, TEST_FAMILY, Q1);
-    verifyDenied(TESTGROUP1_USER1, scanTableActionForGroupWithQualifierLevelAccess);
+    verifyDenied(TESTGROUP1_USER1, scanQualifierActionForGroupWithQualifierLevelAccess);
+  }
+
+  @Test
+  public void testRevokeFamilyActionKeepsTableLevelPermission() throws Throwable {
+    User user = User.createUserForTesting(conf, "revoke_family_user", new String[0]);
+
+    AccessTestAction putFamilyAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table table = connection.getTable(tableName)) {
+          table.put(new Put(TEST_ROW).addColumn(TEST_FAMILY, Q1, value1));
+        }
+        return null;
+      }
+    };
+
+    AccessTestAction getFamilyAction = new AccessTestAction() {
+      @Override
+      public Object run() throws Exception {
+        try (Connection connection = ConnectionFactory.createConnection(conf);
+          Table table = connection.getTable(tableName)) {
+          table.get(new Get(TEST_ROW).addColumn(TEST_FAMILY, Q1));
+        }
+        return null;
+      }
+    };
+
+    // Client side grants: table level READ plus family level WRITE on TEST_FAMILY
+    grantOnTable(TEST_UTIL, user.getShortName(), tableName, null, null, Action.READ);
+    grantOnTable(TEST_UTIL, user.getShortName(), tableName, TEST_FAMILY, null, Action.WRITE);
+    verifyAllowed(user, getFamilyAction);
+    verifyAllowed(user, putFamilyAction);
+
+    // Client side revoke of the family level WRITE only
+    revokeFromTable(TEST_UTIL, user.getShortName(), tableName, TEST_FAMILY, null, Action.WRITE);
+
+    // Only the table level READ should remain
+    List<UserPermission> userPerms = AccessControlClient.getUserPermissions(systemUserConnection,
+      tableName.getNameAsString(), user.getShortName());
+    assertEquals(1, userPerms.size(),
+      "family level WRITE should be revoked, only the table level READ should remain");
+    TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
+    assertNull(permission.getFamily(), "table level permission should be kept untouched");
+    assertArrayEquals(new Permission.Action[] { Action.READ }, permission.getActions(),
+      "table level READ should be kept untouched");
+
+    // Enforcement: reading still works, writing to the family must now be denied
+    verifyAllowed(user, getFamilyAction);
+    verifyDenied(user, putFamilyAction);
   }
 
   public static class MyAccessController extends AccessController {
