@@ -39,6 +39,7 @@ import org.apache.hadoop.hbase.ZooKeeperConnectionException;
 import org.apache.hadoop.hbase.client.ClusterConnection;
 import org.apache.hadoop.hbase.client.HConnectionTestingUtility;
 import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -136,6 +137,24 @@ public class TestMasterNoCluster {
     // Immediately have it stop. We used hang in assigning meta.
     master.stopMaster();
     master.join();
+  }
+
+  /**
+   * The master reads and writes HFiles through its local MasterRegion, so it must enable IO metrics
+   * even when no RegionServer runs in the same JVM. See HBASE-30231.
+   */
+  @Test
+  public void testMasterEnablesMetricsIO() throws IOException, InterruptedException {
+    MetricsIO.resetForTesting();
+    HMaster master = new HMaster(TESTUTIL.getConfiguration());
+    master.start();
+    try {
+      assertTrue(MetricsIO.isEnabled());
+    } finally {
+      master.stopMaster();
+      master.join();
+      MetricsIO.resetForTesting();
+    }
   }
 
   /**
