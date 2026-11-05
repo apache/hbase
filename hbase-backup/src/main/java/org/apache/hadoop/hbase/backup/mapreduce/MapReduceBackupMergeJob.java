@@ -224,12 +224,16 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
         continue;
       }
       // Keep meta
-      String fileName = p.toString();
+      String fullPath = p.toString();
+      String baseName = p.getName();
+      // TABLEINFO_DIR is a directory that might have a name like ".tableinfo.0000000001.367", so
+      // we can't rely on an exact match. The other constants are files with those exact names, so
+      // an exact match is preferred.
       if (
-        fileName.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
-          || fileName.indexOf(HRegionFileSystem.REGION_INFO_FILE) > 0
-          || fileName.indexOf(BackupManifest.MANIFEST_FILE_NAME) > 0
-          || fileName.indexOf(HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME) > 0
+        fullPath.indexOf(FSTableDescriptors.TABLEINFO_DIR) > 0
+          || HRegionFileSystem.REGION_INFO_FILE.equals(baseName)
+          || BackupManifest.MANIFEST_FILE_NAME.equals(baseName)
+          || HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME.equals(baseName)
       ) {
         toKeep.add(p);
       }

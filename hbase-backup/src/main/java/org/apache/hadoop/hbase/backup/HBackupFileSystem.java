@@ -95,7 +95,12 @@ public final class HBackupFileSystem {
   }
 
   /**
-   * Write an empty completion marker file to signal a backup has completed successfully.
+   * Write a completion marker file to signal a backup has completed successfully. This is a
+   * best-effort operation: if the write fails, the backup itself is still considered complete (the
+   * system table is the source of truth). The marker file is intended for external consumers (e.g.,
+   * another cluster) that cannot access the originating cluster's BackupSystemTable. Absence of the
+   * marker should not be interpreted as backup failure; consumers should fall back to checking for
+   * a valid BackupManifest.
    * @param conf          configuration
    * @param backupRootDir backup root directory
    * @param backupId      backup id
@@ -112,6 +117,21 @@ public final class HBackupFileSystem {
       LOG.warn("Failed to write {} marker file to backup directory: {}", BACKUP_COMPLETE_FILE_NAME,
         backupDir, e);
     }
+  }
+
+  /**
+   * Check whether a backup completion marker file exists for the given backup.
+   * @param conf          configuration
+   * @param backupRootDir backup root directory
+   * @param backupId      backup id
+   * @return true if the marker file exists
+   * @throws IOException if the file system cannot be accessed
+   */
+  public static boolean isBackupComplete(Configuration conf, String backupRootDir, String backupId)
+    throws IOException {
+    Path markerPath = new Path(getBackupPath(backupRootDir, backupId), BACKUP_COMPLETE_FILE_NAME);
+    FileSystem fs = markerPath.getFileSystem(conf);
+    return fs.exists(markerPath);
   }
 
   /**

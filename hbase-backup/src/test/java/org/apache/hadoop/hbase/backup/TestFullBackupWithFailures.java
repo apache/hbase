@@ -66,7 +66,7 @@ public class TestFullBackupWithFailures extends TestBackupBase {
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 
-      assertEquals(after, before + 1);
+      assertEquals(before + 1, after);
       for (BackupInfo data : backups) {
         String backupId = data.getBackupId();
         assertFalse(checkSucceeded(backupId));

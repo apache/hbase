@@ -216,6 +216,14 @@ public abstract class TableBackupClient {
         }
       }
 
+      // The .backup.complete marker file should not exist, but attempt to remove it in case it does
+      Path backupDir =
+        HBackupFileSystem.getBackupPath(backupInfo.getBackupRootDir(), backupInfo.getBackupId());
+      Path markerPath = new Path(backupDir, HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME);
+      FileSystem markerFs = markerPath.getFileSystem(conf);
+      if (markerFs.delete(markerPath, false)) {
+        LOG.debug("Removed stale backup completion marker: {}", markerPath);
+      }
     } catch (IOException e1) {
       LOG.error("Cleaning up uncompleted backup data of " + backupInfo.getBackupId() + " at "
         + backupInfo.getBackupRootDir() + " failed due to " + e1.getMessage() + ".");

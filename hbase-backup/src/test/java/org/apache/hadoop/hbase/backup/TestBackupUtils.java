@@ -309,20 +309,19 @@ public class TestBackupUtils {
 
   private static void assertBackupCompleteFileExistence(Configuration conf, String backupRootDir,
     String backupId, boolean exists) throws IOException {
-    FileSystem fs = FileSystem.get(new Path(backupRootDir).toUri(), conf);
+    boolean markerExists = HBackupFileSystem.isBackupComplete(conf, backupRootDir, backupId);
     Path backupDir = HBackupFileSystem.getBackupPath(backupRootDir, backupId);
-    Path marker = new Path(backupDir, HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME);
     if (exists) {
       String msg = String.format(
         "Expected marker file %s to exist in backup directory %s and confirm the backup is complete",
         HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME, backupDir);
-      assertTrue(fs.exists(marker), msg);
+      assertTrue(markerExists, msg);
     } else {
       String msg = String.format(
         "Expected marker file %s to not exist in backup directory %s and "
           + "confirm the backup did not complete successfully",
         HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME, backupDir);
-      assertFalse(fs.exists(marker), msg);
+      assertFalse(markerExists, msg);
     }
   }
 
