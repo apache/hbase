@@ -892,22 +892,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
     final TableDescriptor htd) throws IOException {
-    final Configuration conf = c.getEnvironment().getConfiguration();
-    // default the table owner to current user, if not specified.
-    final String owner =
-      (htd.getOwnerString() != null) ? htd.getOwnerString() : getActiveUser(c).getShortName();
-    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
-      @Override
-      public Void run() throws Exception {
-        UserPermission userperm = new UserPermission(owner,
-          Permission.newBuilder(htd.getTableName()).withActions(Action.values()).build());
-        try (Table table =
-          c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.addUserPermission(conf, userperm, table);
-        }
-        return null;
-      }
-    });
+
   }
 
   public String preModifyTableStoreFileTracker(ObserverContext<MasterCoprocessorEnvironment> c,
@@ -924,6 +909,49 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     requirePermission(c, "modifyColumnFamilyStoreFileTracker", tableName, family, null,
       Action.ADMIN, Action.CREATE);
     return dstSFT;
+  }
+
+  @Override
+  public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
+    TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
+    final Configuration conf = c.getEnvironment().getConfiguration();
+    // default the table owner to current user, if not specified.
+    final String owner = currentDesc.getOwnerString() != null
+      ? currentDesc.getOwnerString()
+      : getActiveUser(c).getShortName();
+    User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        UserPermission userperm = new UserPermission(owner,
+          Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
+        try (Table table =
+          c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+          PermissionStorage.addUserPermission(conf, userperm, table);
+        }
+        return null;
+      }
+    });
+    // Remove the permissions of the column families dropped from the table. Otherwise, if a
+    // column family with the same name is added back later, the stale permissions would be
+    // effective again.
+    final Set<byte[]> removedFamilies = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    if (oldDesc != null) {
+      removedFamilies.addAll(oldDesc.getColumnFamilyNames());
+      removedFamilies.removeAll(currentDesc.getColumnFamilyNames());
+    }
+    if (!removedFamilies.isEmpty()) {
+      User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
+        @Override
+        public Void run() throws Exception {
+          try (Table table =
+            c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+            PermissionStorage.removeTableColumnFamiliesPermissions(conf, tableName, removedFamilies,
+              table);
+          }
+          return null;
+        }
+      });
+    }
   }
 
   @Override
