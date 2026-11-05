@@ -452,8 +452,9 @@ public class IncrementalTableBackupClient extends TableBackupClient {
       int res = copyService.copy(backupInfo, backupManager, conf, BackupType.INCREMENTAL, strArr);
       if (res != 0) {
         LOG.error("Copy incremental HFile files failed with return code: " + res + ".");
-        throw new IOException(
-          "Failed copy from " + StringUtils.join(files, ',') + " to " + backupDest);
+        String message = "Failed copy from " + StringUtils.join(files, ',') + " to " + backupDest;
+        throw copyService.getError().map(e -> new IOException(message, e))
+          .orElseGet(() -> new IOException(message));
       }
       LOG.debug("Incremental copy HFiles from " + StringUtils.join(files, ',') + " to " + backupDest
         + " finished.");
