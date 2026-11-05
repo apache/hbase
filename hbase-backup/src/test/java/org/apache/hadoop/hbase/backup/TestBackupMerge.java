@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileDoesNotExist;
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileExists;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -62,6 +64,7 @@ public class TestBackupMerge extends TestBackupBase {
     String backupIdFull = client.backupTables(request);
 
     assertTrue(checkSucceeded(backupIdFull));
+    assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdFull);
 
     // #2 - insert some data to table1
     Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
@@ -83,6 +86,7 @@ public class TestBackupMerge extends TestBackupBase {
     String backupIdIncMultiple = client.backupTables(request);
 
     assertTrue(checkSucceeded(backupIdIncMultiple));
+    assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple);
 
     t1 = insertIntoTable(conn, table1, famName, 2, ADD_ROWS);
     t1.close();
@@ -94,11 +98,16 @@ public class TestBackupMerge extends TestBackupBase {
     request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
     String backupIdIncMultiple2 = client.backupTables(request);
     assertTrue(checkSucceeded(backupIdIncMultiple2));
+    assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple2);
 
     try (BackupAdmin bAdmin = new BackupAdminImpl(conn)) {
       String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
       bAdmin.mergeBackups(backups);
     }
+
+    // Backups should be merged into the most recent backup
+    assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple2);
+    assertBackupCompleteFileDoesNotExist(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple);
 
     // #6 - restore incremental backup for multiple tables, with overwrite
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1, table2 };

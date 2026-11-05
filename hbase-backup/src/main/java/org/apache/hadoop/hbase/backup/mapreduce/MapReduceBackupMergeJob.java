@@ -210,7 +210,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
   /**
    * Copy metadata of a backup session
    * @param fs            file system
-   * @param tmpBackupDir  temp backup directory, where meta is locaed
+   * @param tmpBackupDir  temp backup directory, where meta is located
    * @param backupDirPath new path for backup
    * @throws IOException exception
    */

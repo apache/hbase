@@ -307,11 +307,32 @@ public class TestBackupUtils {
     }
   }
 
+  private static void assertBackupCompleteFileExistence(Configuration conf, String backupRootDir,
+    String backupId, boolean exists) throws IOException {
+    FileSystem fs = FileSystem.get(new Path(backupRootDir).toUri(), conf);
+    Path backupDir = HBackupFileSystem.getBackupPath(backupRootDir, backupId);
+    Path marker = new Path(backupDir, HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME);
+    if (exists) {
+      String msg = String.format(
+        "Expected marker file %s to exist in backup directory %s and confirm the backup is complete",
+        HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME, backupDir);
+      assertTrue(fs.exists(marker), msg);
+    } else {
+      String msg = String.format(
+        "Expected marker file %s to not exist in backup directory %s and "
+          + "confirm the backup did not complete successfully",
+        HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME, backupDir);
+      assertFalse(fs.exists(marker), msg);
+    }
+  }
+
   public static void assertBackupCompleteFileExists(Configuration conf, String backupRootDir,
     String backupId) throws IOException {
-    FileSystem fs = FileSystem.get(new Path(backupRootDir).toUri(), conf);
-    Path marker = new Path(HBackupFileSystem.getBackupPath(backupRootDir, backupId),
-      HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME);
-    assertTrue(fs.exists(marker));
+    assertBackupCompleteFileExistence(conf, backupRootDir, backupId, true);
+  }
+
+  public static void assertBackupCompleteFileDoesNotExist(Configuration conf, String backupRootDir,
+    String backupId) throws IOException {
+    assertBackupCompleteFileExistence(conf, backupRootDir, backupId, false);
   }
 }

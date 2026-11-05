@@ -99,14 +99,19 @@ public final class HBackupFileSystem {
    * @param conf          configuration
    * @param backupRootDir backup root directory
    * @param backupId      backup id
-   * @throws IOException  if writing the marker file fails
    */
-  public static void writeBackupCompleteMarker(Configuration conf, String backupRootDir, String backupId)
-    throws IOException {
-    Path markerPath = new Path(getBackupPath(backupRootDir, backupId), BACKUP_COMPLETE_FILE_NAME);
-    FileSystem fs = markerPath.getFileSystem(conf);
-    fs.create(markerPath, true).close();
-    LOG.info("Backup completion marker {} written to {}", BACKUP_COMPLETE_FILE_NAME, markerPath);
+  public static void writeBackupCompleteMarker(Configuration conf, String backupRootDir,
+    String backupId) {
+    Path backupDir = getBackupPath(backupRootDir, backupId);
+    Path markerPath = new Path(backupDir, BACKUP_COMPLETE_FILE_NAME);
+    try {
+      FileSystem fs = markerPath.getFileSystem(conf);
+      fs.create(markerPath, true).close();
+      LOG.info("Backup completion marker file written to: {}", markerPath);
+    } catch (IOException e) {
+      LOG.warn("Failed to write {} marker file to backup directory: {}", BACKUP_COMPLETE_FILE_NAME,
+        backupDir, e);
+    }
   }
 
   /**
