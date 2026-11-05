@@ -50,6 +50,7 @@ import org.apache.hadoop.hbase.coprocessor.CoprocessorHost;
 import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.util.MemorySizeUtil;
 import org.apache.hadoop.hbase.ipc.RpcServerInterface;
 import org.apache.hadoop.hbase.master.HMaster;
@@ -248,6 +249,10 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
     final Span span = TraceUtil.createSpan("HBaseServerBase.cxtor");
     try (Scope ignored = span.makeCurrent()) {
       this.conf = conf;
+      // Report HFile IO metrics only from server processes, not from clients and tools that also
+      // read or write HFiles. Done here so it covers both HRegionServer and HMaster, which reads
+      // and writes HFiles through its local MasterRegion. See HBASE-30231.
+      MetricsIO.enable();
       this.eventLoopGroupConfig =
         NettyEventLoopGroupConfig.setup(conf, getClass().getSimpleName() + "-EventLoopGroup");
       this.startcode = EnvironmentEdgeManager.currentTime();
