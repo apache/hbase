@@ -23,7 +23,6 @@ import static org.apache.hadoop.hbase.HConstants.NINES;
 import static org.apache.hadoop.hbase.HConstants.USE_META_REPLICAS;
 import static org.apache.hadoop.hbase.HConstants.ZEROES;
 import static org.apache.hadoop.hbase.TableName.META_TABLE_NAME;
-import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.isGood;
 import static org.apache.hadoop.hbase.client.ConnectionConfiguration.HBASE_CLIENT_META_CACHE_INVALIDATE_INTERVAL;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.createClosestRowAfter;
@@ -575,7 +574,7 @@ class AsyncNonMetaRegionLocator {
   }
 
   void addLocationToCache(HRegionLocation loc) {
-    getTableCache(loc.getRegion().getTable()).regionLocationCache.add(createRegionLocations(loc));
+    getTableCache(loc.getRegion().getTable()).regionLocationCache.add(loc);
   }
 
   RegionLocations getCachedLocation(TableName tableName, byte[] startKey) {
