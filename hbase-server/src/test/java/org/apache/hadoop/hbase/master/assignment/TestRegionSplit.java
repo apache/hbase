@@ -38,6 +38,7 @@ import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -96,8 +97,12 @@ public class TestRegionSplit {
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     // Disable compaction.
-    for (int i = 0; i < UTIL.getHBaseCluster().getLiveRegionServerThreads().size(); i++) {
-      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(false);
+    for (JVMClusterUtil.RegionServerThread rst : UTIL.getHBaseCluster()
+      .getLiveRegionServerThreads()) {
+      HRegionServer rs = rst.getRegionServer();
+      if (!rs.isStopped() && rs.getCompactSplitThread() != null) {
+        rs.getCompactSplitThread().switchCompaction(false);
+      }
     }
   }
 
