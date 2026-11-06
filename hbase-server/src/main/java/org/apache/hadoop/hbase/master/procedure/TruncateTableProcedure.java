@@ -148,6 +148,14 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
           break;
         case TRUNCATE_TABLE_ADD_TO_META:
           regions = CreateTableProcedure.addTableToMeta(env, tableDescriptor, regions);
+          // Reconcile the namespace quota cache with the new region layout (HBASE-30483).
+          // Replica regions do not count toward the namespace region quota. This state has no
+          // rollback, so an IOException here makes the procedure retry the whole state; both
+          // addTableToMeta and the absolute count update are idempotent, so retrying is safe.
+          int defaultRegionCount =
+            (int) regions.stream().filter(RegionReplicaUtil::isDefaultReplica).count();
+          ProcedureSyncWait.getMasterQuotaManager(env)
+            .setTableRegionCountForTruncate(getTableName(), defaultRegionCount);
           setNextState(TruncateTableState.TRUNCATE_TABLE_ASSIGN_REGIONS);
           break;
         case TRUNCATE_TABLE_ASSIGN_REGIONS:
