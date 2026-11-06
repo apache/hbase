@@ -126,6 +126,7 @@ import org.apache.hadoop.hbase.executor.ExecutorService;
 import org.apache.hadoop.hbase.executor.ExecutorType;
 import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.http.InfoServer;
+import org.apache.hadoop.hbase.io.MetricsIO;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.io.hfile.HFile;
@@ -633,6 +634,10 @@ public class HRegionServer extends Thread
     try (Scope ignored = span.makeCurrent()) {
       this.startcode = EnvironmentEdgeManager.currentTime();
       this.conf = conf;
+      // Report HFile IO metrics only from server processes, not from clients and tools that also
+      // read or write HFiles. Also covers HMaster, which extends HRegionServer and reads and writes
+      // HFiles through its local MasterRegion. See HBASE-30231.
+      MetricsIO.enable();
       this.dataFsOk = true;
       this.masterless = conf.getBoolean(MASTERLESS_CONFIG_NAME, false);
       this.eventLoopGroupConfig = setupNetty(this.conf);
