@@ -25,6 +25,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HBaseTestingUtility;
@@ -138,6 +139,35 @@ public class TestRegionStateStore {
       }
     });
     assertFalse(visitorCalled.get(), "Visitor has been called, but it shouldn't.");
+  }
+
+  @Test
+  public void testSplitRegionWritesSplitStateForParentInMeta() throws IOException {
+    long regionId = EnvironmentEdgeManager.currentTime();
+    ServerName serverName =
+      ServerName.valueOf("foo", 60010, ThreadLocalRandom.current().nextLong());
+    TableName tableName = name.getTableName();
+    RegionInfo parent = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(HConstants.EMPTY_END_ROW).setSplit(false)
+      .setRegionId(regionId).setReplicaId(0).build();
+    RegionInfo splitA = RegionInfoBuilder.newBuilder(tableName)
+      .setStartKey(HConstants.EMPTY_START_ROW).setEndKey(Bytes.toBytes("a")).setSplit(false)
+      .setRegionId(regionId + 1).setReplicaId(0).build();
+    RegionInfo splitB = RegionInfoBuilder.newBuilder(tableName).setStartKey(Bytes.toBytes("a"))
+      .setEndKey(HConstants.EMPTY_END_ROW).setSplit(false).setRegionId(regionId + 1).setReplicaId(0)
+      .build();
+    MetaTableAccessor.addRegionsToMeta(UTIL.getConnection(), Lists.newArrayList(parent), 1);
+    MetaTableAccessor.splitRegion(UTIL.getConnection(), parent, HConstants.NO_SEQNUM, splitA,
+      splitB, serverName, 1);
+
+    try (Table meta = MetaTableAccessor.getMetaHTable(UTIL.getConnection())) {
+      Result result = meta.get(new Get(parent.getRegionName()));
+      Cell stateCell = result.getColumnLatestCell(HConstants.CATALOG_FAMILY,
+        MetaTableAccessor.getRegionStateColumn(RegionInfo.DEFAULT_REPLICA_ID));
+      assertNotNull(stateCell);
+      assertEquals(RegionState.State.SPLIT.name(), Bytes.toString(stateCell.getValueArray(),
+        stateCell.getValueOffset(), stateCell.getValueLength()));
+    }
   }
 
   @Test
