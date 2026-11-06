@@ -86,6 +86,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
       String backupIdFull = takeFullBackup(tables, client);
       validateRootPathCanBeOverridden(BACKUP_ROOT_DIR, backupIdFull);
       assertTrue(checkSucceeded(backupIdFull));
+      TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdFull);
 
       // #2 - insert some data to table
       Table t1 = insertIntoTable(conn, table1, famName, 1, ADD_ROWS);
@@ -130,6 +131,7 @@ public class TestIncrementalBackupRestore extends IncrementalBackupRestoreTestBa
       request = createBackupRequest(BackupType.INCREMENTAL, tables, BACKUP_ROOT_DIR);
       String backupIdIncMultiple = client.backupTables(request);
       assertTrue(checkSucceeded(backupIdIncMultiple));
+      TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple);
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), backupIdIncMultiple);
       assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));

@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -27,7 +28,10 @@ import static org.mockito.Mockito.when;
 import java.io.IOException;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
@@ -101,6 +105,48 @@ public class TestHBackupFileSystem {
       assertEquals(backupId1, images.get(1).getBackupId());
     } finally {
       log4jLogger.removeAppender(mockAppender);
+    }
+  }
+
+  // Verifies a failure to create a .backup.complete file in a completed backup directory does
+  // not cause the backup to fail
+  @Test
+  public void testWriteBackupCompleteMarkerFailsGracefully(@TempDir java.nio.file.Path tempDir)
+    throws IOException {
+    Configuration conf = new Configuration();
+    // Tell hadoop to use MarkerCreationFailFileSystem instead of the default LocalFileSystem
+    // whenever a file:// URI is resolved
+    conf.setClass("fs.file.impl", MarkerCreationFailFileSystem.class, FileSystem.class);
+    // Disable cache to force Hadoop to instantiate a fresh filesystem. If LocalFileSystem is
+    // cached, then Hadoop will use that instead of MarkerCreationFailFileSystem
+    conf.setBoolean("fs.file.impl.disable.cache", true);
+
+    String backupRootDir = tempDir.toUri().toString();
+    String backupId = "backup_fail_marker";
+
+    // Create the backup directory so the path is valid
+    Path backupDir = HBackupFileSystem.getBackupPath(backupRootDir, backupId);
+    FileSystem realFs = FileSystem.getLocal(new Configuration());
+    realFs.mkdirs(backupDir);
+
+    // This should NOT throw -- marker creation is best-effort
+    HBackupFileSystem.writeBackupCompleteMarker(conf, backupRootDir, backupId);
+
+    // Marker should not exist since create() was intercepted
+    assertFalse(HBackupFileSystem.isBackupComplete(new Configuration(), backupRootDir, backupId));
+  }
+
+  public static class MarkerCreationFailFileSystem extends FilterFileSystem {
+    public MarkerCreationFailFileSystem() {
+      super(new LocalFileSystem());
+    }
+
+    @Override
+    public FSDataOutputStream create(Path f, boolean overwrite) throws IOException {
+      if (f.getName().equals(HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME)) {
+        throw new IOException("Injected failure for marker creation test");
+      }
+      return super.create(f, overwrite);
     }
   }
 }
