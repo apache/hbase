@@ -81,6 +81,13 @@ final class StoreFileComparators {
 
     @Override
     public long applyAsLong(HStoreFile sf) {
+      // The reader may be null for a compacted file whose archiving failed, leaving it stranded in
+      // the store's compacted-files list (HBASE-29348). Fall back to a default timestamp instead of
+      // dereferencing the null reader (which HStoreFile.getMaximumTimestamp would do), mirroring the
+      // null-safe convention already used by GetFileSize above.
+      if (sf.getReader() == null) {
+        return Long.MAX_VALUE;
+      }
       return sf.getMaximumTimestamp().orElse(Long.MAX_VALUE);
     }
   }
