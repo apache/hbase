@@ -21,6 +21,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.master.SplitWALManager;
+import org.apache.hadoop.hbase.procedure2.ProcedureMetrics;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
 import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
@@ -191,6 +192,11 @@ public class SplitWALProcedure
         env.getMasterServices().getSplitWALManager().addUsedSplitWALWorker(worker);
       }
     }
+  }
+
+  @Override
+  protected ProcedureMetrics getProcedureMetrics(MasterProcedureEnv env) {
+    return env.getMasterServices().getMasterMetrics().getSplitWALProcMetrics();
   }
 
   @Override
