@@ -102,10 +102,10 @@ public class RegionReplicaFlushHandler extends EventHandler {
         return true;
       }
     } catch (IOException e) {
-      if (error instanceof TableNotFoundException) {
+      if (e instanceof TableNotFoundException) {
         return true;
       } else {
-        LOG.warn("failed tp check whether table {} is disabled", region.getRegionInfo().getTable(),
+        LOG.warn("failed to check whether table {} is disabled", region.getRegionInfo().getTable(),
           e);
       }
     }
