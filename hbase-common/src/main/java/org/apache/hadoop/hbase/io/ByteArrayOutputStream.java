@@ -91,7 +91,7 @@ public class ByteArrayOutputStream extends OutputStream implements ByteBufferWri
         throw new BufferOverflowException();
       }
       byte[] newBuf = new byte[(int) nextCapacity];
-      System.arraycopy(buf, 0, newBuf, 0, buf.length);
+      System.arraycopy(buf, 0, newBuf, 0, pos);
       buf = newBuf;
     }
   }
