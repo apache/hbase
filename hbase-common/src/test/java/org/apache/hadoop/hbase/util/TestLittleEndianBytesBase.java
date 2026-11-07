@@ -67,6 +67,44 @@ public abstract class TestLittleEndianBytesBase {
   }
 
   @Test
+  public void testToLong() {
+    byte[] b = generateByteArray(40);
+
+    for (int i = 0; i <= b.length - Long.BYTES; i++) {
+      long expected = readLongLE(b, i);
+      assertEquals(expected, LittleEndianBytes.toLong(b, i));
+    }
+  }
+
+  @Test
+  public void testByteBufferToLong() {
+    byte[] b = generateByteArray(40);
+    ByteBuffer buf = ByteBuffer.wrap(b);
+
+    for (int i = 0; i <= b.length - Long.BYTES; i++) {
+      long expected = readLongLE(b, i);
+      assertEquals(expected, LittleEndianBytes.toLong(buf, i));
+    }
+  }
+
+  @Test
+  public void testPutLong() {
+    byte[] b = new byte[24];
+
+    int offset = 4;
+    long value = 0x0123456789ABCDEFL;
+    LittleEndianBytes.putLong(b, offset, value);
+    long expected = readLongLE(b, offset);
+    assertEquals(value, expected);
+
+    offset += Long.BYTES;
+    value = 0xFEDCBA9876543210L;
+    LittleEndianBytes.putLong(b, offset, value);
+    expected = readLongLE(b, offset);
+    assertEquals(value, expected);
+  }
+
+  @Test
   public void testGetRowAsIntFromByteBufferExtendedCell() {
     Cell bbCell = createByteBufferExtendedCell();
     byte[] row = bbCell.getRowArray();
@@ -85,6 +123,28 @@ public abstract class TestLittleEndianBytesBase {
     for (int i = 0; i <= cell.getRowLength() - Integer.BYTES; i++) {
       int expected = readIntLE(row, cell.getRowOffset() + i);
       assertEquals(expected, LittleEndianBytes.getRowAsInt(cell, i));
+    }
+  }
+
+  @Test
+  public void testGetRowAsLongFromByteBufferExtendedCell() {
+    Cell bbCell = createByteBufferExtendedCell();
+    byte[] row = bbCell.getRowArray();
+
+    for (int i = bbCell.getRowOffset(); i <= bbCell.getRowLength() - Long.BYTES; i++) {
+      long expected = readLongLE(row, i);
+      assertEquals(expected, LittleEndianBytes.getRowAsLong(bbCell, i));
+    }
+  }
+
+  @Test
+  public void testGetRowAsLongFromCell() {
+    KeyValue cell = createCell();
+    byte[] row = cell.getRowArray();
+
+    for (int i = cell.getRowOffset(); i <= cell.getRowLength() - Long.BYTES; i++) {
+      long expected = readLongLE(row, cell.getRowOffset() + i);
+      assertEquals(expected, LittleEndianBytes.getRowAsLong(cell, i));
     }
   }
 
@@ -135,5 +195,12 @@ public abstract class TestLittleEndianBytesBase {
   private static int readIntLE(byte[] b, int off) {
     return (b[off] & 0xFF) | ((b[off + 1] & 0xFF) << 8) | ((b[off + 2] & 0xFF) << 16)
       | ((b[off + 3] & 0xFF) << 24);
+  }
+
+  private static long readLongLE(byte[] b, int off) {
+    return ((long) (b[off] & 0xFF)) | ((long) (b[off + 1] & 0xFF) << 8)
+      | ((long) (b[off + 2] & 0xFF) << 16) | ((long) (b[off + 3] & 0xFF) << 24)
+      | ((long) (b[off + 4] & 0xFF) << 32) | ((long) (b[off + 5] & 0xFF) << 40)
+      | ((long) (b[off + 6] & 0xFF) << 48) | ((long) (b[off + 7] & 0xFF) << 56);
   }
 }

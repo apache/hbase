@@ -179,7 +179,8 @@ public final class BloomFilterUtil {
 
   private static <T> boolean contains(ByteBuff bloomBuf, int bloomOffset, int bloomSize, Hash hash,
     int hashCount, HashKey<T> hashKey) {
-    int hash1 = hash.hash(hashKey, 0);
+    long hashPair = getHashPair(hash, hashKey);
+    int hash1 = unpackHash1(hashPair);
     int bloomBitSize = bloomSize << 3;
 
     int hash2 = 0;
@@ -188,7 +189,7 @@ public final class BloomFilterUtil {
     if (randomGeneratorForTest == null) {
       // Production mode
       compositeHash = hash1;
-      hash2 = hash.hash(hashKey, hash1);
+      hash2 = unpackHash2(hashPair);
     }
 
     for (int i = 0; i < hashCount; i++) {
@@ -277,5 +278,39 @@ public final class BloomFilterUtil {
       bloomParam = Bytes.toBytes(prefixLength);
     }
     return bloomParam;
+  }
+
+  /**
+   * Generate the two hash values needed for Bloom filter index generation, packed into a single
+   * {@code long} to avoid object allocation. The lower 32 bits hold hash1 and the upper 32 bits
+   * hold hash2.
+   * <p>
+   * Use {@link #unpackHash1(long)} and {@link #unpackHash2(long)} to extract each value.
+   * <ul>
+   * <li>If the hash implementation provides a 64-bit hash, we split the 64-bit value into two
+   * 32-bit hashes to avoid extra hashing cost.</li>
+   * <li>Otherwise, fall back to classic double hashing by rehashing with hash1 as the seed.</li>
+   * </ul>
+   * @param hash the hash function
+   * @param key  the hash key
+   * @return hash1 in bits [31..0], hash2 in bits [63..32]
+   */
+  public static long getHashPair(Hash hash, HashKey<?> key) {
+    if (hash instanceof Hash64) {
+      return ((Hash64) hash).hash64(key);
+    } else {
+      // Use double hashing
+      int hash1 = hash.hash(key, 0);
+      int hash2 = hash.hash(key, hash1);
+      return (hash1 & 0xFFFFFFFFL) | ((long) hash2 << 32);
+    }
+  }
+
+  public static int unpackHash1(long hashPair) {
+    return (int) hashPair;
+  }
+
+  public static int unpackHash2(long hashPair) {
+    return (int) (hashPair >>> 32);
   }
 }

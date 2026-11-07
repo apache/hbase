@@ -90,7 +90,7 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-shade-plugin</artifactId>
-          <version>3.6.0</version>
+          <version>3.6.1</version>
           <executions>
             <execution>
               <id>aggregate-into-a-jar-with-relocated-third-parties</id>
@@ -164,6 +164,10 @@
                   <relocation>
                     <pattern>com.dropwizard</pattern>
                     <shadedPattern>${shaded.prefix}.com.dropwizard</shadedPattern>
+                  </relocation>
+                  <relocation>
+                    <pattern>com.dynatrace.hash4j</pattern>
+                    <shadedPattern>${shaded.prefix}.com.dynatrace.hash4j</shadedPattern>
                   </relocation>
                   <relocation>
                     <pattern>com.fasterxml</pattern>
