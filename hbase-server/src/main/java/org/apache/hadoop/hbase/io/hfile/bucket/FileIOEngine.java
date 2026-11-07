@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.io.hfile.bucket;
 
+import java.io.Closeable;
 import java.io.File;
 import java.io.IOException;
 import java.io.RandomAccessFile;
@@ -225,15 +226,23 @@ public class FileIOEngine extends PersistentIOEngine {
   @Override
   public void shutdown() {
     for (int i = 0; i < filePaths.length; i++) {
+      closeAll(filePaths[i], fileChannels[i], rafs[i]);
+    }
+  }
+
+  /**
+   * Close each non-null closeable, logging failures without throwing, so one failure cannot skip
+   * the rest.
+   */
+  private static void closeAll(String filePath, Closeable... closeables) {
+    for (Closeable c : closeables) {
+      if (c == null) {
+        continue;
+      }
       try {
-        if (fileChannels[i] != null) {
-          fileChannels[i].close();
-        }
-        if (rafs[i] != null) {
-          rafs[i].close();
-        }
-      } catch (IOException ex) {
-        LOG.error("Failed closing " + filePaths[i] + " when shudown the IOEngine", ex);
+        c.close();
+      } catch (IOException e) {
+        LOG.error("Failed closing {} when shutting down the IOEngine", filePath, e);
       }
     }
   }
