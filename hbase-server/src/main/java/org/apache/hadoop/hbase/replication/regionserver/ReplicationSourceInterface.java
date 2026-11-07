@@ -167,7 +167,7 @@ public interface ReplicationSourceInterface {
    * Try to throttle when the peer config with a bandwidth
    * @param batchSize entries size will be pushed
    */
-  void tryThrottle(int batchSize) throws InterruptedException;
+  void tryThrottle(long batchSize) throws InterruptedException;
 
   /**
    * Call this after the shipper thread ship some entries to peer cluster.
