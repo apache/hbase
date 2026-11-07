@@ -665,6 +665,14 @@ possible configurations would overwhelm and obscure the important.
     <description>Whether to merge a region as part of normalization.</description>
   </property>
   <property>
+    <name>hbase.normalizer.skip.broken.chain</name>
+    <value>true</value>
+    <description>Whether the normalizer should skip a table whose region chain is broken
+      (contains a hole, an overlap, or a degenerate region). Normalizing (in particular
+      splitting) such a table can increase the number of holes/overlaps and complicate the
+      eventual repair by the CatalogJanitor/HBCK. Set to false to normalize regardless.</description>
+  </property>
+  <property>
     <name>hbase.normalizer.merge.min.region.count</name>
     <value>3</value>
     <description>The minimum number of regions in a table to consider it for merge
