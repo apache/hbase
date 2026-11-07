@@ -56,7 +56,7 @@ public class FamilyFilter extends CompareFilter {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     int familyLength = c.getFamilyLength();
     if (familyLength > 0) {
       if (compareFamily(getCompareOperator(), this.comparator, c)) {

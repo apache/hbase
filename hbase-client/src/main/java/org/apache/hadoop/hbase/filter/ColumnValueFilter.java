@@ -121,12 +121,16 @@ public class ColumnValueFilter extends FilterBase {
    * @return true means cell should be filtered out, included otherwise.
    */
   private boolean compareValue(final CompareOperator op, final ByteArrayComparable comparator,
-    final Cell cell) {
+    final Cell cell) throws IOException {
     if (op == CompareOperator.NO_OP) {
       return true;
     }
-    int compareResult = PrivateCellUtil.compareValue(cell, comparator);
-    return CompareFilter.compare(op, compareResult);
+    try {
+      int compareResult = PrivateCellUtil.compareValue(cell, comparator);
+      return CompareFilter.compare(op, compareResult);
+    } catch (RuntimeException e) {
+      throw CompareFilter.wrapInHBaseIOException(e, comparator);
+    }
   }
 
   /**
