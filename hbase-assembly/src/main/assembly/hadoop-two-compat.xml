@@ -92,6 +92,10 @@
               <exclude>org.glassfish.pfl:*</exclude>
               <exclude>org.jvnet.mimepull:mimepull</exclude>
               <exclude>org.jvnet.staxex:stax-ex</exclude>
+              <!-- HBase uses shaded Jetty; Hadoop's Jetty is only needed for local test services. -->
+              <exclude>org.mortbay.jetty:jetty</exclude>
+              <exclude>org.mortbay.jetty:jetty-util</exclude>
+              <exclude>org.mortbay.jetty:jetty-sslengine</exclude>
               <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>com.github.stephenc.findbugs:findbugs-annotations</exclude>
               <exclude>com.sun.jersey.contribs:*</exclude>
