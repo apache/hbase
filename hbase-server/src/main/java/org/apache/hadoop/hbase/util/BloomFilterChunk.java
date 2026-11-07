@@ -203,12 +203,12 @@ public class BloomFilterChunk implements BloomFilterBase {
    * @param pos index of bit
    */
   void set(long pos) {
-    int bytePos = (int) (pos / 8);
-    int bitPos = (int) (pos % 8);
+    int bytePos = (int) (pos >> 3);
+    int bitPos = (int) (pos & 7);
     byte curByte = bloom.get(bytePos);
-    curByte |= BloomFilterUtil.bitvals[bitPos];
+    curByte |= (1 << bitPos);  
     bloom.put(bytePos, curByte);
-  }
+}
 
   /**
    * Check if bit at specified index is 1.
@@ -216,13 +216,11 @@ public class BloomFilterChunk implements BloomFilterBase {
    * @return true if bit at specified index is 1, false if 0.
    */
   static boolean get(int pos, ByteBuffer bloomBuf, int bloomOffset) {
-    int bytePos = pos >> 3; // pos / 8
-    int bitPos = pos & 0x7; // pos % 8
-    // TODO access this via Util API which can do Unsafe access if possible(?)
+    int bytePos = pos >> 3;
+    int bitPos = pos & 0x7;
     byte curByte = bloomBuf.get(bloomOffset + bytePos);
-    curByte &= BloomFilterUtil.bitvals[bitPos];
-    return (curByte != 0);
-  }
+    return (curByte & (1 << bitPos)) != 0;
+}
 
   @Override
   public long getKeyCount() {
