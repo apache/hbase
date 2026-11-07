@@ -30,12 +30,13 @@ import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
-import org.apache.hadoop.hbase.client.metrics.ServerSideScanMetrics;
 import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheFactory;
 import org.apache.hadoop.hbase.mob.MobFileCache;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
+import org.apache.hadoop.hbase.regionserver.ScannerContext;
+import org.apache.hadoop.hbase.regionserver.ScannerContext.LimitScope;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -44,6 +45,10 @@ import org.slf4j.LoggerFactory;
 /**
  * A client scanner for a region opened for read-only on the client side. Assumes region data is not
  * changing.
+ * <p>
+ * When {@link Scan#getAllowPartialResults()} is true, rows may be returned in multiple results.
+ * Their size is limited by {@link Scan#getMaxResultSize()} or, if unset, by
+ * {@link HConstants#HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY}.
  */
 @InterfaceAudience.Private
 public class ClientSideRegionScanner extends AbstractClientScanner {
@@ -57,6 +62,7 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
   List<Cell> values;
   boolean hasMore = true;
   private final Set<Path> filesRead;
+  private final ScannerContext.Builder scannerContextBuilder;
 
   public ClientSideRegionScanner(Configuration conf, FileSystem fs, Path rootDir,
     TableDescriptor htd, RegionInfo hri, Scan scan, ScanMetrics scanMetrics) throws IOException {
@@ -103,27 +109,39 @@ public class ClientSideRegionScanner extends AbstractClientScanner {
       this.scanMetrics.initScanMetricsRegionInfo(region.getRegionInfo().getEncodedName(), null);
       // The server name will be null in scan metrics as this is a client side region scanner
     }
+    scannerContextBuilder = ScannerContext.newBuilder().setBatchLimit(scan.getBatch())
+      .setTrackMetrics(this.scanMetrics != null).setScanMetrics(this.scanMetrics);
+    if (scan.getAllowPartialResults()) {
+      long maxResultSize = scan.getMaxResultSize() > 0
+        ? scan.getMaxResultSize()
+        : conf.getLong(HConstants.HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE_KEY,
+          HConstants.DEFAULT_HBASE_CLIENT_SCANNER_MAX_RESULT_SIZE);
+      scannerContextBuilder.setSizeLimit(LimitScope.BETWEEN_CELLS, maxResultSize, maxResultSize,
+        Long.MAX_VALUE);
+    }
     region.startRegionOperation();
   }
 
   @Override
   public Result next() throws IOException {
+    ScannerContext scannerContext;
     do {
       if (!hasMore) {
         return null;
       }
       values.clear();
-      this.hasMore = scanner.nextRaw(values);
+      // Limits apply to each result, not to the whole scan.
+      scannerContext = scannerContextBuilder.build();
+      this.hasMore = scanner.nextRaw(values, scannerContext);
     } while (values.isEmpty());
 
-    Result result = Result.create(values);
+    Result result = Result.create(values, null, false, scannerContext.mayHaveMoreCellsInRow());
     if (this.scanMetrics != null) {
       long resultSize = 0;
       for (Cell cell : values) {
         resultSize += PrivateCellUtil.estimatedSerializedSizeOf(cell);
       }
       this.scanMetrics.addToCounter(ScanMetrics.BYTES_IN_RESULTS_METRIC_NAME, resultSize);
-      this.scanMetrics.addToCounter(ServerSideScanMetrics.COUNT_OF_ROWS_SCANNED_KEY_METRIC_NAME, 1);
     }
 
     return result;

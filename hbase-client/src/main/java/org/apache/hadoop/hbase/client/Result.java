@@ -851,6 +851,7 @@ public class Result implements ExtendedCellScannable, ExtendedCellScanner {
     this.row = null;
     this.familyMap = null;
     this.cells = other.cells;
+    this.mayHaveMoreCellsInRow = other.mayHaveMoreCellsInRow;
   }
 
   /**
