@@ -113,8 +113,9 @@ public class CloseRegionProcedure extends RegionRemoteProcedureBase {
   }
 
   @Override
-  protected void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode, long seqId)
-    throws IOException {
+  protected void restoreSucceedState(AssignmentManager am, RegionStateNode regionNode,
+    TransitionCode transitionCode, long seqId) throws IOException {
+    // CLOSE has no failure variant, so transitionCode is always CLOSED here
     if (regionNode.getState() == State.CLOSED) {
       // should have already been persisted, ignore
       return;
