@@ -58,20 +58,6 @@ public class TestHRegionWithInMemoryFlush extends TestHRegion {
       isReadOnly, durability, wal, inMemory, families);
   }
 
-  @Override
-  protected int getTestCountForTestWritesWhileScanning() {
-    return 10;
-  }
-
-  /**
-   * testWritesWhileScanning is flakey when called out of this class. Need to dig in. Meantime go
-   * easy on it. See if that helps.
-   */
-  @Override
-  protected int getNumQualifiersForTestWritesWhileScanning() {
-    return 10;
-  }
-
   /**
    * A test case of HBASE-21041
    */
