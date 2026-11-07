@@ -18,9 +18,11 @@
 package org.apache.hadoop.hbase.io.crypto;
 
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.crypto.aes.AES;
 import org.apache.yetus.audience.InterfaceAudience;
+
+import org.apache.hbase.thirdparty.com.google.common.base.Preconditions;
 
 /**
  * The default cipher provider. Supports AES via the JCE.
@@ -30,6 +32,7 @@ public final class DefaultCipherProvider implements CipherProvider {
 
   private static DefaultCipherProvider instance;
 
+  @InterfaceAudience.LimitedPrivate(HBaseInterfaceAudience.UNITTEST)
   @edu.umd.cs.findbugs.annotations.SuppressWarnings(value = "MS_EXPOSE_REP",
       justification = "singleton pattern")
   public static DefaultCipherProvider getInstance() {
@@ -40,7 +43,7 @@ public final class DefaultCipherProvider implements CipherProvider {
     return instance;
   }
 
-  private Configuration conf = HBaseConfiguration.create();
+  private Configuration conf; // set via setConf() before use
 
   // Prevent instantiation
   private DefaultCipherProvider() {
@@ -48,6 +51,8 @@ public final class DefaultCipherProvider implements CipherProvider {
 
   @Override
   public Configuration getConf() {
+    Preconditions.checkState(conf != null,
+      "Configuration not set; call setConf() before using this provider");
     return conf;
   }
 

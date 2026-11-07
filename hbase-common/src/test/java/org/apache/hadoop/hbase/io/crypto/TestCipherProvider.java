@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.crypto;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -151,6 +152,22 @@ public class TestCipherProvider {
     assertTrue(a.getProvider() instanceof DefaultCipherProvider);
     assertEquals(a.getName(), algorithm);
     assertEquals(AES.KEY_LENGTH, a.getKeyLength());
+  }
+
+  @Test
+  public void testDefaultProviderGetConfWithoutConf() {
+    // The singleton no longer eagerly parses a Configuration at construction; getConf() must fail
+    // loudly when called before setConf() rather than NPE-ing deep inside cipher construction.
+    DefaultCipherProvider provider = DefaultCipherProvider.getInstance();
+    provider.setConf(null);
+    assertThrows(IllegalStateException.class, provider::getConf);
+  }
+
+  @Test
+  public void testCryptoProviderGetConfWithoutConf() {
+    CryptoCipherProvider provider = CryptoCipherProvider.getInstance();
+    provider.setConf(null);
+    assertThrows(IllegalStateException.class, provider::getConf);
   }
 
 }
