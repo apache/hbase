@@ -371,6 +371,38 @@ public class TestBackupLogCleaner extends TestBackupBase {
     assertTrue(BackupLogCleaner.canDeleteFile(empty, masterPath));
   }
 
+  @Test
+  public void testBackupBoundariesProtectsWALsNeededByAnyRoot() {
+    long r1BoundaryTs = 2000L;
+    long r2BoundaryTs = 1000L;
+
+    BackupInfo r1Backup = new BackupInfo();
+    r1Backup.setBackupId("backup-B1");
+    r1Backup.setBackupRootDir("/backup/root1");
+    r1Backup.setState(BackupInfo.BackupState.COMPLETE);
+    r1Backup.setTableSetTimestampMap(
+      Map.of(TableName.valueOf("table1"), Map.of("server1:60020", r1BoundaryTs)));
+
+    BackupInfo r2Backup = new BackupInfo();
+    r2Backup.setBackupId("backup-B2");
+    r2Backup.setBackupRootDir("/backup/root2");
+    r2Backup.setState(BackupInfo.BackupState.COMPLETE);
+    r2Backup.setTableSetTimestampMap(
+      Map.of(TableName.valueOf("table2"), Map.of("otherhost:60020", r2BoundaryTs)));
+
+    BackupBoundaries boundaries =
+      BackupLogCleaner.calculatePreservationBoundary(List.of(r1Backup, r2Backup), 0L);
+
+    Path walForHostH = new Path("/hbase/oldWALs/server1%2C60020%2C12345.1500");
+    assertFalse(BackupLogCleaner.canDeleteFile(boundaries, walForHostH),
+      "WAL for hostH at ts=1500 must NOT be deletable: R2 has not backed up hostH "
+        + "and its default boundary (" + r2BoundaryTs + ") is lower than the WAL ts");
+
+    Path walBeforeStartCode = new Path("/hbase/oldWALs/server1%2C60020%2C12345.500");
+    assertTrue(BackupLogCleaner.canDeleteFile(boundaries, walBeforeStartCode),
+      "WAL for hostH at ts=500 should be deletable: before all roots' default boundaries");
+  }
+
   private Set<FileStatus> mergeAsSet(Collection<FileStatus> toCopy, Collection<FileStatus> toAdd) {
     Set<FileStatus> result = new LinkedHashSet<>(toCopy);
     result.addAll(toAdd);
