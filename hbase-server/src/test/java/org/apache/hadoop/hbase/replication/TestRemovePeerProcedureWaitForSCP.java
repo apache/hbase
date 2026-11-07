@@ -124,7 +124,7 @@ public class TestRemovePeerProcedureWaitForSCP extends TestReplicationBaseNoBefo
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     Closeables.close(table3, true);
   }
 

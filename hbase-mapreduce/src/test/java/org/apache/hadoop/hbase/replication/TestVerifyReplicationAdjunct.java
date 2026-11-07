@@ -342,7 +342,7 @@ public class TestVerifyReplicationAdjunct extends TestReplicationBase {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     htable3.close();
   }
 }
