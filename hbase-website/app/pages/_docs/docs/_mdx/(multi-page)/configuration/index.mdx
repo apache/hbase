@@ -30,6 +30,19 @@ Configuration file for HBase logging via `log4j2`.
 **_regionservers_**  
 A plain-text file containing a list of hosts which should run a RegionServer in your HBase cluster. By default, this file contains the single entry `localhost`. It should contain a list of hostnames or IP addresses, one per line, and should only contain `localhost` if each node in your cluster will run a RegionServer on its `localhost` interface.
 
+## Using HBase with SLF4J 2.x
+
+HBase is compiled against SLF4J 1.7 to preserve compatibility with applications that still use it. Applications using SLF4J 2.x can use HBase without rebuilding it: select one `slf4j-api` 2.x version and a matching provider in the application. For Log4j 2, use `log4j-slf4j2-impl` instead of the SLF4J 1.x binding `log4j-slf4j-impl`. Keep only one SLF4J API and provider on the runtime classpath.
+
+The binary distributions also include an optional SLF4J 2.x API and Log4j 2 provider under `lib/slf4j2`. On Unix-like systems, include them in the classpath printed for an application or a MapReduce job with:
+
+```bash
+bin/hbase --slf4j2 classpath
+bin/hbase --slf4j2 mapredcp
+```
+
+These options only change the printed classpath. HBase commands continue to use the default SLF4J 1.x binding. If Hadoop contributes its own logging jars, check the resulting classpath for other SLF4J providers before running the application.
+
 <Callout type="tip">
   When you edit XML, it is a good idea to use an XML-aware editor to be sure that your syntax is
   correct and your XML is well-formed. You can also use the `xmllint` utility to check that your XML
