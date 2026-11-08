@@ -2182,6 +2182,11 @@ public class HStore
     this.conf = storeConf;
     this.storeEngine.compactionPolicy.setConf(storeConf);
     this.offPeakHours = OffPeakHours.getInstance(storeConf);
+    CacheConfig cacheConfig = this.storeContext.getCacheConf();
+    if (cacheConfig != null) {
+      // Pass the store configuration so the table and column family overrides are kept.
+      cacheConfig.onConfigurationChange(storeConf);
+    }
   }
 
   /**
@@ -2189,10 +2194,7 @@ public class HStore
    */
   @Override
   public void registerChildren(ConfigurationManager manager) {
-    CacheConfig cacheConfig = this.storeContext.getCacheConf();
-    if (cacheConfig != null) {
-      manager.registerObserver(cacheConfig);
-    }
+    // The cache config is refreshed in onConfigurationChange with the store configuration.
   }
 
   /**
