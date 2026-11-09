@@ -84,10 +84,8 @@ public class MasterQuotaManager implements RegionStateListener {
   private boolean initialized = false;
   private NamespaceAuditor namespaceQuotaManager;
   private ConcurrentHashMap<RegionInfo, SizeSnapshotWithTimestamp> regionSizes;
-  // Storage for quota rpc throttle
-  private RpcThrottleStorage rpcThrottleStorage;
 
-  public MasterQuotaManager(final MasterServices masterServices) {
+  public MasterQuotaManager(MasterServices masterServices) {
     this.masterServices = masterServices;
   }
 
@@ -114,9 +112,6 @@ public class MasterQuotaManager implements RegionStateListener {
     namespaceQuotaManager = new NamespaceAuditor(masterServices);
     namespaceQuotaManager.start();
     initialized = true;
-
-    rpcThrottleStorage =
-      new RpcThrottleStorage(masterServices.getZooKeeper(), masterServices.getConfiguration());
   }
 
   public void stop() {
@@ -394,13 +389,13 @@ public class MasterQuotaManager implements RegionStateListener {
     boolean rpcThrottle = request.getRpcThrottleEnabled();
     if (initialized) {
       masterServices.getMasterCoprocessorHost().preSwitchRpcThrottle(rpcThrottle);
-      boolean oldRpcThrottle = rpcThrottleStorage.isRpcThrottleEnabled();
+      boolean oldRpcThrottle = masterServices.getRpcThrottleStateStore().get();
       if (rpcThrottle != oldRpcThrottle) {
         LOG.info("{} switch rpc throttle from {} to {}", masterServices.getClientIdAuditPrefix(),
           oldRpcThrottle, rpcThrottle);
         ProcedurePrepareLatch latch = ProcedurePrepareLatch.createBlockingLatch();
-        SwitchRpcThrottleProcedure procedure = new SwitchRpcThrottleProcedure(rpcThrottleStorage,
-          rpcThrottle, masterServices.getServerName(), latch);
+        SwitchRpcThrottleProcedure procedure =
+          new SwitchRpcThrottleProcedure(rpcThrottle, masterServices.getServerName(), latch);
         masterServices.getMasterProcedureExecutor().submitProcedure(procedure);
         latch.await();
       } else {
@@ -432,8 +427,8 @@ public class MasterQuotaManager implements RegionStateListener {
     }
   }
 
-  public boolean isRpcThrottleEnabled() throws IOException {
-    return initialized ? rpcThrottleStorage.isRpcThrottleEnabled() : false;
+  public boolean isRpcThrottleEnabled() {
+    return initialized && masterServices.getRpcThrottleStateStore().get();
   }
 
   public SwitchExceedThrottleQuotaResponse

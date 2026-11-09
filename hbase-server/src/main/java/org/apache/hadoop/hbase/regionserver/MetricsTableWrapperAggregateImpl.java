@@ -31,11 +31,14 @@ import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.metrics2.MetricsExecutor;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 
 @InterfaceAudience.Private
 public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggregate, Closeable {
+  private static final Logger LOG = LoggerFactory.getLogger(MetricsTableWrapperAggregateImpl.class);
   private final HRegionServer regionServer;
   private ScheduledExecutorService executor;
   private Runnable runnable;
@@ -58,95 +61,104 @@ public class MetricsTableWrapperAggregateImpl implements MetricsTableWrapperAggr
 
     @Override
     public void run() {
-      Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
-      for (Region r : regionServer.getOnlineRegionsLocalContext()) {
-        TableName tbl = r.getTableDescriptor().getTableName();
-        MetricsTableValues mt = localMetricsTableMap.get(tbl);
-        if (mt == null) {
-          mt = new MetricsTableValues();
-          localMetricsTableMap.put(tbl, mt);
-        }
-        long memstoreReadCount = 0L;
-        long mixedReadCount = 0L;
-        String tempKey = null;
-        if (r.getStores() != null) {
-          String familyName = null;
-          for (Store store : r.getStores()) {
-            familyName = store.getColumnFamilyName();
-
-            mt.storeFileCount += store.getStorefilesCount();
-            mt.maxStoreFileCount = Math.max(mt.maxStoreFileCount, store.getStorefilesCount());
-            final MemStoreSize memstoreSize = store.getMemStoreSize();
-            mt.memstoreSize += memstoreSize.getDataSize();
-            mt.memstoreHeapSize += memstoreSize.getHeapSize();
-            mt.memstoreOffHeapSize += memstoreSize.getOffHeapSize();
-            mt.storeFileSize += store.getStorefilesSize();
-            mt.referenceFileCount += store.getNumReferenceFiles();
-            if (store.getMaxStoreFileAge().isPresent()) {
-              mt.maxStoreFileAge =
-                Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
-            }
-            if (store.getMinStoreFileAge().isPresent()) {
-              mt.minStoreFileAge =
-                Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
-            }
-            if (store.getAvgStoreFileAge().isPresent()) {
-              mt.totalStoreFileAge +=
-                (long) (store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount());
-            }
-            mt.storeCount += 1;
-
-            mt.staticIndexSize += store.getTotalStaticIndexSize();
-            mt.staticBloomSize += store.getTotalStaticBloomSize();
-
-            mt.bloomRequestsCount += store.getBloomFilterRequestsCount();
-            mt.bloomNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
-            mt.bloomEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
-
-            tempKey = tbl.getNameAsString() + HASH + familyName;
-            Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
-            if (tempVal == null) {
-              tempVal = 0L;
-            }
-            memstoreReadCount = store.getMemstoreOnlyRowReadsCount() + tempVal;
-            tempVal = mt.perStoreMixedReadCount.get(tempKey);
-            if (tempVal == null) {
-              tempVal = 0L;
-            }
-            mixedReadCount = store.getMixedRowReadsCount() + tempVal;
-            // accumulate the count
-            mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
-            mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
-            mt.perStoreFileSize.merge(tempKey, store.getStorefilesSize(), Long::sum);
+      // The executor only reschedules this task (scheduleWithFixedDelay) if run() returns
+      // normally. Any Throwable that escapes here (e.g. an NPE from a region closing mid-scan)
+      // is swallowed by the underlying ScheduledFutureTask with no log output anywhere, and this
+      // task permanently stops running. Catch everything so a failure is visible AND the next
+      // scheduled run still happens.
+      try {
+        Map<TableName, MetricsTableValues> localMetricsTableMap = new HashMap<>();
+        for (Region r : regionServer.getOnlineRegionsLocalContext()) {
+          TableName tbl = r.getTableDescriptor().getTableName();
+          MetricsTableValues mt = localMetricsTableMap.get(tbl);
+          if (mt == null) {
+            mt = new MetricsTableValues();
+            localMetricsTableMap.put(tbl, mt);
           }
+          long memstoreReadCount = 0L;
+          long mixedReadCount = 0L;
+          String tempKey = null;
+          if (r.getStores() != null) {
+            String familyName = null;
+            for (Store store : r.getStores()) {
+              familyName = store.getColumnFamilyName();
 
-          mt.regionCount += 1;
+              mt.storeFileCount += store.getStorefilesCount();
+              mt.maxStoreFileCount = Math.max(mt.maxStoreFileCount, store.getStorefilesCount());
+              final MemStoreSize memstoreSize = store.getMemStoreSize();
+              mt.memstoreSize += memstoreSize.getDataSize();
+              mt.memstoreHeapSize += memstoreSize.getHeapSize();
+              mt.memstoreOffHeapSize += memstoreSize.getOffHeapSize();
+              mt.storeFileSize += store.getStorefilesSize();
+              mt.referenceFileCount += store.getNumReferenceFiles();
+              if (store.getMaxStoreFileAge().isPresent()) {
+                mt.maxStoreFileAge =
+                  Math.max(mt.maxStoreFileAge, store.getMaxStoreFileAge().getAsLong());
+              }
+              if (store.getMinStoreFileAge().isPresent()) {
+                mt.minStoreFileAge =
+                  Math.min(mt.minStoreFileAge, store.getMinStoreFileAge().getAsLong());
+              }
+              if (store.getAvgStoreFileAge().isPresent()) {
+                mt.totalStoreFileAge +=
+                  (long) (store.getAvgStoreFileAge().getAsDouble() * store.getStorefilesCount());
+              }
+              mt.storeCount += 1;
 
-          mt.readRequestCount += r.getReadRequestsCount();
-          mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
-          mt.writeRequestCount += r.getWriteRequestsCount();
-        }
-      }
+              mt.staticIndexSize += store.getTotalStaticIndexSize();
+              mt.staticBloomSize += store.getTotalStaticBloomSize();
 
-      for (Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
-        TableName tbl = entry.getKey();
-        if (metricsTableMap.get(tbl) == null) {
-          // this will add the Wrapper to the list of TableMetrics
-          CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
-            .getTableAggregate()
-            .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
+              mt.bloomRequestsCount += store.getBloomFilterRequestsCount();
+              mt.bloomNegativeResultsCount += store.getBloomFilterNegativeResultsCount();
+              mt.bloomEligibleRequestsCount += store.getBloomFilterEligibleRequestsCount();
+
+              tempKey = tbl.getNameAsString() + HASH + familyName;
+              Long tempVal = mt.perStoreMemstoreOnlyReadCount.get(tempKey);
+              if (tempVal == null) {
+                tempVal = 0L;
+              }
+              memstoreReadCount = store.getMemstoreOnlyRowReadsCount() + tempVal;
+              tempVal = mt.perStoreMixedReadCount.get(tempKey);
+              if (tempVal == null) {
+                tempVal = 0L;
+              }
+              mixedReadCount = store.getMixedRowReadsCount() + tempVal;
+              // accumulate the count
+              mt.perStoreMemstoreOnlyReadCount.put(tempKey, memstoreReadCount);
+              mt.perStoreMixedReadCount.put(tempKey, mixedReadCount);
+              mt.perStoreFileSize.merge(tempKey, store.getStorefilesSize(), Long::sum);
+            }
+
+            mt.regionCount += 1;
+
+            mt.readRequestCount += r.getReadRequestsCount();
+            mt.filteredReadRequestCount += r.getFilteredReadRequestsCount();
+            mt.writeRequestCount += r.getWriteRequestsCount();
+          }
         }
-        metricsTableMap.put(entry.getKey(), entry.getValue());
-      }
-      Set<TableName> existingTableNames = Sets.newHashSet(metricsTableMap.keySet());
-      existingTableNames.removeAll(localMetricsTableMap.keySet());
-      MetricsTableAggregateSource agg = CompatibilitySingletonFactory
-        .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
-      for (TableName table : existingTableNames) {
-        agg.deleteTableSource(table.getNameAsString());
-        if (metricsTableMap.get(table) != null) {
-          metricsTableMap.remove(table);
+
+        for (Map.Entry<TableName, MetricsTableValues> entry : localMetricsTableMap.entrySet()) {
+          TableName tbl = entry.getKey();
+          if (metricsTableMap.get(tbl) == null) {
+            // this will add the Wrapper to the list of TableMetrics
+            CompatibilitySingletonFactory.getInstance(MetricsRegionServerSourceFactory.class)
+              .getTableAggregate()
+              .getOrCreateTableSource(tbl.getNameAsString(), MetricsTableWrapperAggregateImpl.this);
+          }
+          metricsTableMap.put(entry.getKey(), entry.getValue());
         }
+        Set<TableName> existingTableNames = Sets.newHashSet(metricsTableMap.keySet());
+        existingTableNames.removeAll(localMetricsTableMap.keySet());
+        MetricsTableAggregateSource agg = CompatibilitySingletonFactory
+          .getInstance(MetricsRegionServerSourceFactory.class).getTableAggregate();
+        for (TableName table : existingTableNames) {
+          agg.deleteTableSource(table.getNameAsString());
+          if (metricsTableMap.get(table) != null) {
+            metricsTableMap.remove(table);
+          }
+        }
+      } catch (Throwable t) {
+        LOG.error("Failed to compute per-table metrics; will retry on next scheduled run", t);
       }
     }
   }

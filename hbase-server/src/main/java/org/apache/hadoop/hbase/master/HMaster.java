@@ -220,6 +220,7 @@ import org.apache.hadoop.hbase.quotas.MasterQuotasObserver;
 import org.apache.hadoop.hbase.quotas.QuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.QuotaTableUtil;
 import org.apache.hadoop.hbase.quotas.QuotaUtil;
+import org.apache.hadoop.hbase.quotas.RpcThrottleStateStore;
 import org.apache.hadoop.hbase.quotas.SnapshotQuotaObserverChore;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot;
 import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
@@ -467,6 +468,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private RegionsRecoveryConfigManager regionsRecoveryConfigManager = null;
   // it is assigned after 'initialized' guard set to true, so should be volatile
   private volatile MasterQuotaManager quotaManager;
+  private RpcThrottleStateStore rpcThrottleStateStore;
   private SpaceQuotaSnapshotNotifier spaceQuotaSnapshotNotifier;
   private QuotaObserverChore quotaObserverChore;
   private SnapshotQuotaObserverChore snapshotQuotaChore;
@@ -889,6 +891,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     this.mpmHost.register(new MasterFlushTableProcedureManager());
     this.mpmHost.loadProcedures(conf);
     this.mpmHost.initialize(this, this.metricsMaster);
+
+    String rpcThrottleZNode = conf.get(RpcThrottleStateStore.RPC_THROTTLE_ZNODE,
+      RpcThrottleStateStore.RPC_THROTTLE_ZNODE_DEFAULT);
+    this.rpcThrottleStateStore = new RpcThrottleStateStore(masterRegion, zooKeeper,
+      ZNodePaths.joinZNode(zooKeeper.getZNodePaths().baseZNode, rpcThrottleZNode));
   }
 
   // Will be overriden in test to inject customized AssignmentManager
@@ -1063,10 +1070,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // it out).
     // We also pass dirs that are already 'splitting'... so we can do some checks down in tracker.
     // TODO: Generate the splitting and live Set in one pass instead of two as we currently do.
+    // The procedure store may hold more than one SCP for the same server; keep the earliest
+    // submit time as the crash time, matching DeadServer#putIfAbsent.
     this.regionServerTracker.upgrade(
       procsByType.getOrDefault(ServerCrashProcedure.class, Collections.emptyList()).stream()
-        .map(p -> (ServerCrashProcedure) p).collect(
-          Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime)),
+        .map(p -> (ServerCrashProcedure) p)
+        .collect(Collectors.toMap(ServerCrashProcedure::getServerName, Procedure::getSubmittedTime,
+          Math::min)),
       Sets.union(rsListStorage.getAll(), walManager.getLiveServersFromWALDir()),
       walManager.getSplittingServersFromWALDir());
     // This manager must be accessed AFTER hbase:meta is confirmed on line..
@@ -4807,5 +4817,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
           return "RefreshHfilesProcedure for all tables";
         }
       });
+  }
+
+  @Override
+  public RpcThrottleStateStore getRpcThrottleStateStore() {
+    return rpcThrottleStateStore;
   }
 }

@@ -108,9 +108,10 @@ final class BucketProtoUtils {
   }
 
   private static BucketCacheProtos.BlockCacheKey toPB(BlockCacheKey key) {
-    BucketCacheProtos.BlockCacheKey.Builder builder = BucketCacheProtos.BlockCacheKey.newBuilder()
-      .setHfilename(key.getHfileName()).setOffset(key.getOffset())
-      .setPrimaryReplicaBlock(key.isPrimary()).setBlockType(toPB(key.getBlockType()));
+    BucketCacheProtos.BlockCacheKey.Builder builder =
+      BucketCacheProtos.BlockCacheKey.newBuilder().setHfilename(key.getHfileName())
+        .setOffset(key.getOffset()).setPrimaryReplicaBlock(key.isPrimary())
+        .setBlockType(toPB(key.getBlockType())).setArchived(key.isArchived());
     if (key.getCfName() != null) {
       builder.setFamilyName(key.getCfName());
     }
@@ -188,8 +189,7 @@ final class BucketProtoUtils {
       // which created by RpcServer elegantly.
       BucketEntry value = new BucketEntry(protoValue.getOffset(), protoValue.getLength(),
         protoValue.getDiskSizeWithHeader(), protoValue.getAccessCounter(),
-        protoValue.getCachedTime(),
-        protoValue.getPriority() == BucketCacheProtos.BlockPriority.memory, createRecycler,
+        protoValue.getCachedTime(), fromPb(protoValue.getPriority()), createRecycler,
         ByteBuffAllocator.HEAP);
       // This is the deserializer that we stored
       int oldIndex = protoValue.getDeserialiserIndex();
@@ -240,6 +240,19 @@ final class BucketProtoUtils {
         return BlockType.DELETE_FAMILY_BLOOM_META;
       default:
         throw new Error("Unrecognized BlockType.");
+    }
+  }
+
+  private static BlockPriority fromPb(BucketCacheProtos.BlockPriority p) {
+    switch (p) {
+      case multi:
+        return BlockPriority.MULTI;
+      case memory:
+        return BlockPriority.MEMORY;
+      case single:
+        return BlockPriority.SINGLE;
+      default:
+        throw new Error("Unrecognized BlockPriority.");
     }
   }
 

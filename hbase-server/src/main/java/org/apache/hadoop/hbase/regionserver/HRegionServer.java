@@ -223,6 +223,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.LockServiceProtos.LockS
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLastFlushedSequenceIdResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerReportRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.RegionServerStartupResponse;
@@ -2355,7 +2357,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
     builder.setServer(ProtobufUtil.toServerName(serverName));
     RegionStateTransition.Builder transition = builder.addTransitionBuilder();
     transition.setTransitionCode(code);
-    if (code == TransitionCode.OPENED && openSeqNum >= 0) {
+    // Carry the seqid for OPENED (openSeqNum) and CLOSED (durable flushed seqid). The master uses
+    // both to seed its flushedSequenceIdByRegion watermark; see HBASE-30335 and the CLOSE-time
+    // follow-up.
+    if ((code == TransitionCode.OPENED || code == TransitionCode.CLOSED) && openSeqNum >= 0) {
       transition.setOpenSeqNum(openSeqNum);
     }
     for (RegionInfo hri : hris) {
@@ -3663,6 +3668,29 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
       throw ProtobufUtil.getRemoteException(se);
     }
+  }
+
+  @Override
+  public boolean isRpcThrottleEnabled() throws IOException {
+    RegionServerStatusService.BlockingInterface rss = rssStub;
+    if (rss == null) { // Try to connect one more time
+      createRegionServerStatusStub();
+      rss = rssStub;
+      if (rss == null) {
+        // Still no luck, we tried
+        throw new IOException("failed to connect to master");
+      }
+    }
+    GetThrottleStateResponse resp;
+    try {
+      resp = rss.getThrottleState(null, GetThrottleStateRequest.getDefaultInstance());
+    } catch (ServiceException e) {
+      if (rssStub == rss) {
+        rssStub = null;
+      }
+      throw ProtobufUtil.getRemoteException(e);
+    }
+    return resp.getRpcThrottleEnabled();
   }
 
   /**

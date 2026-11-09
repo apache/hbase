@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -207,6 +209,11 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
     }
     ADMIN.moveServersToRSGroup(set, groupName);
     RSGroupInfo result = ADMIN.getRSGroup(groupName);
+    assertEquals(set, result.getServers());
+    Set<Address> remainingDefaultServers = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP).getServers();
+    for (Address server : set) {
+      assertFalse(remainingDefaultServers.contains(server));
+    }
     return result;
   }
 
@@ -226,8 +233,29 @@ public abstract class TestRSGroupsBase extends AbstractTestUpdateConfiguration {
       }
     }
     RSGroupInfo groupInfo = ADMIN.getRSGroup(groupName);
-    ADMIN.moveServersToRSGroup(groupInfo.getServers(), RSGroupInfo.DEFAULT_GROUP);
+    Set<Address> servers = groupInfo.getServers();
+    ADMIN.moveServersToRSGroup(servers, RSGroupInfo.DEFAULT_GROUP);
     ADMIN.removeRSGroup(groupName);
+    assertFalse(ADMIN.listRSGroups().stream().anyMatch(g -> g.getName().equals(groupName)));
+    Set<Address> onlineServers = new HashSet<>();
+    for (ServerName sn : MASTER.getServerManager().getOnlineServersList()) {
+      onlineServers.add(sn.getAddress());
+    }
+    RSGroupInfo defaultInfo = ADMIN.getRSGroup(RSGroupInfo.DEFAULT_GROUP);
+    for (Address server : servers) {
+      // moveServersToRSGroup()-to-'default' silently drops servers that are no longer online
+      // (see RSGroupInfoManagerImpl#moveServers), so only online servers are guaranteed to land
+      // in 'default'; an offline server's former group membership is simply dropped.
+      if (onlineServers.contains(server)) {
+        assertTrue(defaultInfo.getServers().contains(server));
+      }
+    }
+    for (TableName table : tables) {
+      // ADMIN.getRSGroup(String)/listRSGroups() do not resolve table membership from the
+      // TableDescriptor's RegionServerGroup attribute (only ADMIN.getRSGroup(TableName) does),
+      // so look up each table's group individually rather than via defaultInfo.getTables().
+      assertEquals(RSGroupInfo.DEFAULT_GROUP, ADMIN.getRSGroup(table).getName());
+    }
   }
 
   protected final void deleteTableIfNecessary() throws IOException {

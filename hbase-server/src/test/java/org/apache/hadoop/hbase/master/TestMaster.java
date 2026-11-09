@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -252,10 +253,23 @@ public class TestMaster {
     TEST_UTIL.getMiniHBaseCluster().shutdown();
     TEST_UTIL.restartHBaseCluster(2);
     TEST_UTIL.waitUntilNoRegionsInTransition();
-    // check equality after reloading flushed sequence id map
+    // Post HBASE-30335 the master seeds flushedSequenceIdByRegion on OPEN via
+    // merge(openSeqNum, Math::max). openSeqNum is monotonic across close/open cycles, so a region
+    // reopened after cluster restart may carry a strictly higher value than what was persisted.
+    // The preserved invariant is: every region persisted at shutdown is loaded on restart, and no
+    // watermark regresses.
     Map<byte[], Long> regionMapAfter =
       TEST_UTIL.getHBaseCluster().getMaster().getServerManager().getFlushedSequenceIdByRegion();
-    assertTrue(regionMapBefore.equals(regionMapAfter));
+    assertEquals(regionMapBefore.size(), regionMapAfter.size());
+    for (Map.Entry<byte[], Long> before : regionMapBefore.entrySet()) {
+      Long after = regionMapAfter.get(before.getKey());
+      assertNotNull(after,
+        "region missing after restart: " + Bytes.toStringBinary(before.getKey()));
+      assertTrue(after >= before.getValue(),
+        "flushedSequenceId regressed across restart for region "
+          + Bytes.toStringBinary(before.getKey()) + " before=" + before.getValue() + " after="
+          + after);
+    }
   }
 
   @Test

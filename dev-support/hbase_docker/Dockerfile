@@ -38,12 +38,24 @@ SHELL ["/bin/bash", "-o", "pipefail", "-c"]
 RUN curl --location --fail --silent --show-error --output /tmp/maven.tar.gz "${MAVEN_URL}" && \
   echo "${MAVEN_SHA512} */tmp/maven.tar.gz" | sha512sum -c -
 
-FROM base_image AS openjdk8_download_image
-ENV OPENJDK8_URL 'https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u352-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u352b08.tar.gz'
-ENV OPENJDK8_SHA256 '1633bd7590cb1cd72f5a1378ae8294451028b274d798e2a4ac672059a2f00fee'
+# JDK pins mirror dev-support/docker/Dockerfile; keep them in sync.
+FROM base_image AS jdk_download_image
+ARG JDK_VERSION=17
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
-RUN curl --location --fail --silent --show-error --output /tmp/adoptopenjdk8.tar.gz "${OPENJDK8_URL}" && \
-  echo "${OPENJDK8_SHA256} */tmp/adoptopenjdk8.tar.gz" | sha256sum -c -
+RUN case "${JDK_VERSION}" in \
+    8) \
+      JDK_URL='https://github.com/adoptium/temurin8-binaries/releases/download/jdk8u412-b08/OpenJDK8U-jdk_x64_linux_hotspot_8u412b08.tar.gz'; \
+      JDK_SHA256='b9884a96f78543276a6399c3eb8c2fd8a80e6b432ea50e87d3d12d495d1d2808' ;; \
+    17) \
+      JDK_URL='https://github.com/adoptium/temurin17-binaries/releases/download/jdk-17.0.11%2B9/OpenJDK17U-jdk_x64_linux_hotspot_17.0.11_9.tar.gz'; \
+      JDK_SHA256='aa7fb6bb342319d227a838af5c363bfa1b4a670c209372f9e6585bd79da6220c' ;; \
+    21) \
+      JDK_URL='https://github.com/adoptium/temurin21-binaries/releases/download/jdk-21.0.12.1%2B1/OpenJDK21U-jdk_x64_linux_hotspot_21.0.12.1_1.tar.gz'; \
+      JDK_SHA256='ce79869e1307ed8ee1e2baa86a412b1eb5b75d10a01006d788a6f968bcfaee94' ;; \
+    *) echo "Unsupported JDK_VERSION: ${JDK_VERSION} (supported: 8, 17, 21)" >&2; exit 1 ;; \
+  esac && \
+  curl --location --fail --silent --show-error --output /tmp/jdk.tar.gz "${JDK_URL}" && \
+  echo "${JDK_SHA256} */tmp/jdk.tar.gz" | sha256sum -c -
 
 FROM base_image
 SHELL ["/bin/bash", "-o", "pipefail", "-c"]
@@ -60,15 +72,15 @@ RUN tar xzf /tmp/maven.tar.gz -C /opt && \
   rm /tmp/maven.tar.gz
 
 # hadolint ignore=DL3010
-COPY --from=openjdk8_download_image /tmp/adoptopenjdk8.tar.gz /tmp/adoptopenjdk8.tar.gz
+COPY --from=jdk_download_image /tmp/jdk.tar.gz /tmp/jdk.tar.gz
+ARG JDK_VERSION=17
 RUN mkdir -p /usr/lib/jvm && \
-  tar xzf /tmp/adoptopenjdk8.tar.gz -C /usr/lib/jvm && \
-  ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/adoptopenjdk8.tar.gz | head -n1)")" /usr/lib/jvm/java-8-adoptopenjdk && \
-  ln -s /usr/lib/jvm/java-8-adoptopenjdk /usr/lib/jvm/java-8 && \
-  rm /tmp/adoptopenjdk8.tar.gz
+  tar xzf /tmp/jdk.tar.gz -C /usr/lib/jvm && \
+  ln -s "/usr/lib/jvm/$(basename "$(tar -tf /tmp/jdk.tar.gz | head -n1)")" "/usr/lib/jvm/java-${JDK_VERSION}" && \
+  rm /tmp/jdk.tar.gz
 
 ENV MAVEN_HOME '/opt/maven'
-ENV JAVA_HOME '/usr/lib/jvm/java-8'
+ENV JAVA_HOME="/usr/lib/jvm/java-${JDK_VERSION}"
 ENV PATH '/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 ENV PATH "${JAVA_HOME}/bin:${MAVEN_HOME}/bin:${PATH}"
 

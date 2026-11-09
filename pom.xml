@@ -718,10 +718,10 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
-      <id>cconnell</id>
+      <id>charlesconnell</id>
       <name>Charles Connell</name>
       <email>cconnell@apache.org</email>
-      <timezone>-5</timezone>
+      <timezone>-8</timezone>
     </developer>
     <developer>
       <id>chandrakambham</id>
@@ -975,9 +975,9 @@
     <nexus-staging.version>1.7.0</nexus-staging.version>
     <!-- compression -->
     <aircompressor.version>2.0.3</aircompressor.version>
-    <brotli4j.version>1.11.0</brotli4j.version>
-    <lz4.version>1.11.1</lz4.version>
-    <snappy.version>1.1.10.4</snappy.version>
+    <brotli4j.version>1.24.0</brotli4j.version>
+    <lz4.version>1.11.4</lz4.version>
+    <snappy.version>1.1.10.9</snappy.version>
     <zstd-jni.version>1.5.7-20</zstd-jni.version>
     <!--
         Note that the version of protobuf shipped in hbase-thirdparty must match the version used

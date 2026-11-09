@@ -57,62 +57,74 @@ import org.junit.jupiter.api.Test;
 @Tag(SmallTests.TAG)
 public class TestMemcachedBlockCache {
 
+  private int port;
+
   private MemcachedBlockCache cache;
 
   private ConcurrentMap<String, CachedData> backingMap;
 
   @BeforeEach
   public void setup() throws Exception {
-    int port = ThreadLocalRandom.current().nextInt(1024, 65536);
+    port = ThreadLocalRandom.current().nextInt(1024, 65536);
     Configuration conf = new Configuration();
     conf.set("hbase.cache.memcached.servers", "localhost:" + port);
     backingMap = new ConcurrentHashMap<>();
-    cache = new MemcachedBlockCache(conf) {
+    cache = new MockMemcachedBlockCache(conf);
+  }
 
-      private <T> OperationFuture<T> createFuture(String key, long opTimeout, T result) {
-        OperationFuture<T> future =
-          new OperationFuture<>(key, new CountDownLatch(0), opTimeout, ForkJoinPool.commonPool());
-        Operation op = mock(Operation.class);
-        when(op.getState()).thenReturn(OperationState.COMPLETE);
-        future.setOperation(op);
-        future.set(result, new OperationStatus(true, ""));
+  /**
+   * Must not be an anonymous or local class, as Gson serializes those as null, which would break
+   * {@link CacheTestUtils#testConvertToJSON(BlockCache)}.
+   */
+  private class MockMemcachedBlockCache extends MemcachedBlockCache {
 
-        return future;
-      }
+    MockMemcachedBlockCache(Configuration conf) throws IOException {
+      super(conf);
+    }
 
-      @Override
-      protected MemcachedClient createMemcachedClient(ConnectionFactory factory,
-        List<InetSocketAddress> serverAddresses) throws IOException {
-        assertEquals(FailureMode.Redistribute, factory.getFailureMode());
-        assertTrue(factory.isDaemon());
-        assertFalse(factory.useNagleAlgorithm());
-        assertEquals(MAX_SIZE, factory.getReadBufSize());
-        assertEquals(1, serverAddresses.size());
-        assertEquals("localhost", serverAddresses.get(0).getHostName());
-        assertEquals(port, serverAddresses.get(0).getPort());
-        MemcachedClient client = mock(MemcachedClient.class);
-        when(client.set(anyString(), anyInt(), any(), any())).then(inv -> {
-          String key = inv.getArgument(0);
-          HFileBlock block = inv.getArgument(2);
-          Transcoder<HFileBlock> tc = inv.getArgument(3);
-          CachedData cd = tc.encode(block);
-          backingMap.put(key, cd);
-          return createFuture(key, factory.getOperationTimeout(), true);
-        });
-        when(client.delete(anyString())).then(inv -> {
-          String key = inv.getArgument(0);
-          backingMap.remove(key);
-          return createFuture(key, factory.getOperationTimeout(), true);
-        });
-        when(client.get(anyString(), any())).then(inv -> {
-          String key = inv.getArgument(0);
-          Transcoder<HFileBlock> tc = inv.getArgument(1);
-          CachedData cd = backingMap.get(key);
-          return tc.decode(cd);
-        });
-        return client;
-      }
-    };
+    private <T> OperationFuture<T> createFuture(String key, long opTimeout, T result) {
+      OperationFuture<T> future =
+        new OperationFuture<>(key, new CountDownLatch(0), opTimeout, ForkJoinPool.commonPool());
+      Operation op = mock(Operation.class);
+      when(op.getState()).thenReturn(OperationState.COMPLETE);
+      future.setOperation(op);
+      future.set(result, new OperationStatus(true, ""));
+
+      return future;
+    }
+
+    @Override
+    protected MemcachedClient createMemcachedClient(ConnectionFactory factory,
+      List<InetSocketAddress> serverAddresses) throws IOException {
+      assertEquals(FailureMode.Redistribute, factory.getFailureMode());
+      assertTrue(factory.isDaemon());
+      assertFalse(factory.useNagleAlgorithm());
+      assertEquals(MAX_SIZE, factory.getReadBufSize());
+      assertEquals(1, serverAddresses.size());
+      assertEquals("localhost", serverAddresses.get(0).getHostName());
+      assertEquals(port, serverAddresses.get(0).getPort());
+      MemcachedClient client = mock(MemcachedClient.class);
+      when(client.set(anyString(), anyInt(), any(), any())).then(inv -> {
+        String key = inv.getArgument(0);
+        HFileBlock block = inv.getArgument(2);
+        Transcoder<HFileBlock> tc = inv.getArgument(3);
+        CachedData cd = tc.encode(block);
+        backingMap.put(key, cd);
+        return createFuture(key, factory.getOperationTimeout(), true);
+      });
+      when(client.delete(anyString())).then(inv -> {
+        String key = inv.getArgument(0);
+        backingMap.remove(key);
+        return createFuture(key, factory.getOperationTimeout(), true);
+      });
+      when(client.get(anyString(), any())).then(inv -> {
+        String key = inv.getArgument(0);
+        Transcoder<HFileBlock> tc = inv.getArgument(1);
+        CachedData cd = backingMap.get(key);
+        return tc.decode(cd);
+      });
+      return client;
+    }
   }
 
   @Test

@@ -35,6 +35,7 @@ import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
+import org.apache.hadoop.hbase.util.HFileArchiveUtil;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.AfterEach;
@@ -172,6 +173,15 @@ public class TestExpiredMobFileCleaner {
     // there are 4 mob files in total, but only 3 need to be cleaned
     assertEquals(1, filesAfterClean.length, "After cleanup without delay 1");
     assertEquals(secondFile, lastFile, "After cleanup without delay 2");
+
+    // The 3 expired files must have been archived (renamed) into the mob region's archive
+    // directory, not merely deleted.
+    Path mobTableDir =
+      CommonFSUtils.getTableDir(MobUtils.getMobHome(TEST_UTIL.getConfiguration()), tableName);
+    Path archiveDir = HFileArchiveUtil.getStoreArchivePath(TEST_UTIL.getConfiguration(),
+      MobUtils.getMobRegionInfo(tableName), mobTableDir, Bytes.toBytes(family));
+    FileStatus[] archivedFiles = TEST_UTIL.getTestFileSystem().listStatus(archiveDir);
+    assertEquals(3, archivedFiles.length, "Expired mob files should be archived");
   }
 
   private int secondsOfDay() {

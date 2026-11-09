@@ -60,12 +60,10 @@ import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
 import org.apache.hadoop.hbase.io.hfile.HFileContextBuilder;
 import org.apache.hadoop.hbase.regionserver.BloomType;
-import org.apache.hadoop.hbase.regionserver.HRegionFileSystem;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
+import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
 import org.apache.hadoop.hbase.regionserver.StoreUtils;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTracker;
-import org.apache.hadoop.hbase.regionserver.storefiletracker.StoreFileTrackerFactory;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
@@ -265,14 +263,12 @@ public final class MobUtils {
    * columnFamily.ttl), and the minVersions of that column family is 0.
    * @param fs               The current file system.
    * @param conf             The current configuration.
-   * @param tableName        The current table name.
+   * @param htd              The current table descriptor.
    * @param columnDescriptor The descriptor of the current column family.
-   * @param cacheConfig      The cacheConfig that disables the block cache.
    * @param current          The current time.
    */
   public static void cleanExpiredMobFiles(FileSystem fs, Configuration conf, TableDescriptor htd,
-    ColumnFamilyDescriptor columnDescriptor, CacheConfig cacheConfig, long current)
-    throws IOException {
+    ColumnFamilyDescriptor columnDescriptor, long current) throws IOException {
     long timeToLive = columnDescriptor.getTimeToLive();
     if (Integer.MAX_VALUE == timeToLive) {
       // no need to clean, because the TTL is not set.
@@ -292,26 +288,26 @@ public final class MobUtils {
 
     FileStatus[] stats = null;
     TableName tableName = htd.getTableName();
-    Path mobTableDir = CommonFSUtils.getTableDir(getMobHome(conf), tableName);
-    HRegionFileSystem regionFS =
-      HRegionFileSystem.create(conf, fs, mobTableDir, getMobRegionInfo(tableName));
-    StoreFileTracker sft = StoreFileTrackerFactory.create(conf, htd, columnDescriptor, regionFS);
     Path path = getMobFamilyPath(conf, tableName, columnDescriptor.getNameAsString());
     try {
       stats = fs.listStatus(path);
     } catch (FileNotFoundException e) {
-      LOG.warn("Failed to find the mob file " + path, e);
+      LOG.warn("Failed to find the mob file {}", path, e);
     }
     if (null == stats) {
       // no file found
       return;
     }
-    List<HStoreFile> filesToClean = new ArrayList<>();
+    List<FileStatus> filesToClean = new ArrayList<>();
     int deletedFileCount = 0;
     for (FileStatus file : stats) {
+      if (!file.isFile()) {
+        continue;
+      }
       String fileName = file.getPath().getName();
       try {
-        if (HFileLink.isHFileLink(file.getPath())) {
+        boolean isLink = HFileLink.isHFileLink(file.getPath());
+        if (isLink) {
           HFileLink hfileLink = HFileLink.buildFromHFileLinkPattern(conf, file.getPath());
           fileName = hfileLink.getOriginPath().getName();
         }
@@ -322,31 +318,36 @@ public final class MobUtils {
           LOG.debug("Checking file {}", fileName);
         }
         if (fileDate.getTime() < expireDate.getTime()) {
+          // Preserve the name validation previously done when constructing HStoreFile.
+          if (
+            !isLink && !StoreFileInfo.isReference(file.getPath())
+              && !StoreFileInfo.isHFile(file.getPath()) && !StoreFileInfo.isMobFile(file.getPath())
+              && !StoreFileInfo.isMobRefFile(file.getPath())
+          ) {
+            LOG.warn("Skipping {} because it is not a valid store file name", file.getPath());
+            continue;
+          }
           if (LOG.isDebugEnabled()) {
             LOG.debug("{} is an expired file", fileName);
           }
-          filesToClean
-            .add(new HStoreFile(fs, file.getPath(), conf, cacheConfig, BloomType.NONE, true, sft));
+          filesToClean.add(file);
           if (
             filesToClean.size() >= conf.getInt(MOB_CLEANER_BATCH_SIZE_UPPER_BOUND,
               DEFAULT_MOB_CLEANER_BATCH_SIZE_UPPER_BOUND)
           ) {
-            if (
-              removeMobFiles(conf, fs, tableName, mobTableDir, columnDescriptor.getName(),
-                filesToClean)
-            ) {
+            if (removeMobFiles(conf, fs, tableName, columnDescriptor.getName(), filesToClean)) {
               deletedFileCount += filesToClean.size();
             }
             filesToClean.clear();
           }
         }
       } catch (Exception e) {
-        LOG.error("Cannot parse the fileName " + fileName, e);
+        LOG.error("Cannot parse the fileName {}", fileName, e);
       }
     }
     if (
-      !filesToClean.isEmpty() && removeMobFiles(conf, fs, tableName, mobTableDir,
-        columnDescriptor.getName(), filesToClean)
+      !filesToClean.isEmpty()
+        && removeMobFiles(conf, fs, tableName, columnDescriptor.getName(), filesToClean)
     ) {
       deletedFileCount += filesToClean.size();
     }
@@ -483,14 +484,13 @@ public final class MobUtils {
    * @param conf       The current configuration.
    * @param fs         The current file system.
    * @param tableName  The table name.
-   * @param tableDir   The table directory.
    * @param family     The name of the column family.
-   * @param storeFiles The files to be deleted.
+   * @param storeFiles The files to be archived.
    */
   public static boolean removeMobFiles(Configuration conf, FileSystem fs, TableName tableName,
-    Path tableDir, byte[] family, Collection<HStoreFile> storeFiles) {
+    byte[] family, Collection<FileStatus> storeFiles) {
     try {
-      HFileArchiver.archiveStoreFiles(conf, fs, getMobRegionInfo(tableName), tableDir, family,
+      HFileArchiver.archiveStoreFileStatuses(conf, fs, getMobRegionInfo(tableName), family,
         storeFiles);
       LOG.info("Table {} {} expired mob files are deleted", tableName, storeFiles.size());
       return true;
