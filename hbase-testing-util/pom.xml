@@ -206,6 +206,13 @@
         </property>
       </activation>
       <dependencies>
+        <!-- Keep Hadoop's test dependencies, including its unshaded Jetty, available to consumers. -->
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>
@@ -314,6 +321,13 @@
         </property>
       </activation>
       <dependencies>
+        <!-- Keep Hadoop's test dependencies, including its unshaded Jetty, available to consumers. -->
+        <dependency>
+          <groupId>org.apache.hadoop</groupId>
+          <artifactId>hadoop-common</artifactId>
+          <type>test-jar</type>
+          <scope>compile</scope>
+        </dependency>
         <dependency>
           <groupId>org.apache.hadoop</groupId>
           <artifactId>hadoop-common</artifactId>

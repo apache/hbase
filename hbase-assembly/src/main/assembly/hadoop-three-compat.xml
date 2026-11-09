@@ -89,6 +89,9 @@
               <exclude>jakarta.xml.bind:jakarta.xml.bind-api</exclude>
               <exclude>jakarta.xml.soap:jakarta.xml.soap-api</exclude>
               <exclude>jakarta.jws:jakarta.jws-api</exclude>
+              <!-- HBase uses shaded Jetty; Hadoop's Jetty is only needed for local test services. -->
+              <exclude>org.eclipse.jetty:*</exclude>
+              <exclude>org.eclipse.jetty.websocket:*</exclude>
             <!-- Exclude libraries that we put in their own dirs under lib/ -->
               <exclude>org.jruby:jruby-complete</exclude>
               <exclude>com.sun.jersey:*</exclude>
