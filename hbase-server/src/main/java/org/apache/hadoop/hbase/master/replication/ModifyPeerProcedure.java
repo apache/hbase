@@ -170,7 +170,7 @@ public abstract class ModifyPeerProcedure extends AbstractPeerProcedure<PeerModi
         continue;
       }
       if (needReopen(tsm, tn)) {
-        addChildProcedure(new ReopenTableRegionsProcedure(tn));
+        addChildProcedure(ReopenTableRegionsProcedure.throttled(env.getMasterConfiguration(), td));
       }
     }
   }
