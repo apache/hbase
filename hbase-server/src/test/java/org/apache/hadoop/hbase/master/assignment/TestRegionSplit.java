@@ -32,11 +32,13 @@ import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
+import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.regionserver.HRegion;
+import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -95,8 +97,12 @@ public class TestRegionSplit {
     // Turn off the meta scanner so it don't remove parent on us.
     UTIL.getHBaseCluster().getMaster().setCatalogJanitorEnabled(false);
     // Disable compaction.
-    for (int i = 0; i < UTIL.getHBaseCluster().getLiveRegionServerThreads().size(); i++) {
-      UTIL.getHBaseCluster().getRegionServer(i).getCompactSplitThread().switchCompaction(false);
+    for (JVMClusterUtil.RegionServerThread rst : UTIL.getHBaseCluster()
+      .getLiveRegionServerThreads()) {
+      HRegionServer rs = rst.getRegionServer();
+      if (!rs.isStopped() && rs.getCompactSplitThread() != null) {
+        rs.getCompactSplitThread().switchCompaction(false);
+      }
     }
   }
 
@@ -211,6 +217,8 @@ public class TestRegionSplit {
       UTIL.getHBaseCluster().getMaster().getAssignmentManager()));
     assertTrue(UTIL.getHBaseCluster().getMaster().getAssignmentManager().getRegionStates()
       .getOrCreateRegionStateNode(regions[0]).isSplit());
+    assertEquals(RegionState.State.SPLIT, UTIL.getHBaseCluster().getMaster().getAssignmentManager()
+      .getRegionStates().getOrCreateRegionStateNode(regions[0]).getState());
   }
 
   @Test
