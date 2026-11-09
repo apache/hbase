@@ -760,7 +760,7 @@ public class TestFSUtils {
 
   @Test
   public void testOpenForReadUsesOpenFileWithSuppliedStatus() throws IOException {
-    Path testPath = new Path(new File(htu.getDataTestDir("openForReadStatus").toString()), "data");
+    Path testPath = new Path(htu.getDataTestDir("openForReadStatus").toString(), "data");
     FileSystem rawFs = testPath.getFileSystem(conf);
     try (FSDataOutputStream out = rawFs.create(testPath)) {
       out.writeBytes("x");
@@ -778,8 +778,7 @@ public class TestFSUtils {
 
   @Test
   public void testOpenForReadFallsBackWhenOpenFileUnsupported() throws IOException {
-    Path testPath =
-      new Path(new File(htu.getDataTestDir("openForReadFallback").toString()), "data");
+    Path testPath = new Path(htu.getDataTestDir("openForReadFallback").toString(), "data");
     FileSystem rawFs = testPath.getFileSystem(conf);
     try (FSDataOutputStream out = rawFs.create(testPath)) {
       out.writeBytes("x");
@@ -797,8 +796,7 @@ public class TestFSUtils {
 
   @Test
   public void testOpenForReadPropagatesInterrupt() throws IOException {
-    Path testPath =
-      new Path(new File(htu.getDataTestDir("openForReadInterrupt").toString()), "data");
+    Path testPath = new Path(htu.getDataTestDir("openForReadInterrupt").toString(), "data");
     FileSystem rawFs = testPath.getFileSystem(conf);
     try (FSDataOutputStream out = rawFs.create(testPath)) {
       out.writeBytes("x");
@@ -812,7 +810,8 @@ public class TestFSUtils {
       fail("expected InterruptedIOException");
     } catch (InterruptedIOException e) {
       assertTrue(Thread.currentThread().isInterrupted());
-      // Clear for subsequent tests in this JVM.
+      assertEquals(0, trackingFs.legacyOpenCount.get());
+    } finally {
       Thread.interrupted();
     }
   }
@@ -860,16 +859,16 @@ public class TestFSUtils {
       @Override
       public FutureDataInputStreamBuilder withFileStatus(FileStatus status) {
         suppliedFileStatus = status;
-        return delegate.withFileStatus(status);
+        delegate.withFileStatus(status);
+        return this;
       }
 
       @Override
-      public CompletableFuture<FSDataInputStream> build() {
+      public CompletableFuture<FSDataInputStream> build() throws IOException {
         openFileBuildCount.incrementAndGet();
         if (interruptOnBuildGet) {
-          CompletableFuture<FSDataInputStream> interrupted = new CompletableFuture<>();
-          interrupted.completeExceptionally(new InterruptedException("test"));
-          return interrupted;
+          Thread.currentThread().interrupt();
+          return new CompletableFuture<>();
         }
         return delegate.build();
       }
