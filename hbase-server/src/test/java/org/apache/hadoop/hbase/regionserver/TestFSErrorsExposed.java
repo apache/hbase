@@ -23,13 +23,16 @@ import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.UncheckedIOException;
 import java.lang.ref.SoftReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PositionedReadable;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -240,10 +243,89 @@ public class TestFSErrorsExposed {
 
     @Override
     public FSDataInputStream open(Path p, int bufferSize) throws IOException {
-      FSDataInputStream orig = fs.open(p, bufferSize);
+      return wrapOpenedStream(fs.open(p, bufferSize));
+    }
+
+    /**
+     * Plain HFile reads may use {@link FileSystem#openFile(Path)} (e.g. via {@code withFileStatus})
+     * instead of {@link #open(Path, int)}. Route those opens through the same faulty wrapper.
+     */
+    @Override
+    public FutureDataInputStreamBuilder openFile(Path path)
+      throws IOException, UnsupportedOperationException {
+      FutureDataInputStreamBuilder delegate;
+      try {
+        delegate = fs.openFile(path);
+      } catch (UnsupportedOperationException e) {
+        delegate = null;
+      }
+      return new FaultyFutureDataInputStreamBuilder(path, delegate);
+    }
+
+    private FSDataInputStream wrapOpenedStream(FSDataInputStream orig) throws IOException {
       FaultyInputStream faulty = new FaultyInputStream(orig);
       inStreams.add(new SoftReference<>(faulty));
       return faulty;
+    }
+
+    private FSDataInputStream wrapOpenedStreamUnchecked(FSDataInputStream orig) {
+      try {
+        return wrapOpenedStream(orig);
+      } catch (IOException e) {
+        throw new UncheckedIOException(e);
+      }
+    }
+
+    private final class FaultyFutureDataInputStreamBuilder implements FutureDataInputStreamBuilder {
+
+      private final Path path;
+      private final FutureDataInputStreamBuilder delegate;
+
+      private FaultyFutureDataInputStreamBuilder(Path path, FutureDataInputStreamBuilder delegate) {
+        this.path = path;
+        this.delegate = delegate;
+      }
+
+      @Override
+      public CompletableFuture<FSDataInputStream> build()
+        throws IllegalArgumentException, UnsupportedOperationException, IOException {
+        if (delegate != null) {
+          return delegate.build().thenApply(FaultyFileSystem.this::wrapOpenedStreamUnchecked);
+        }
+        return CompletableFuture.completedFuture(open(path));
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder opt(String key, String value) {
+        if (delegate != null) {
+          delegate.opt(key, value);
+        }
+        return this;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder opt(String key, String... values) {
+        if (delegate != null) {
+          delegate.opt(key, values);
+        }
+        return this;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder must(String key, String value) {
+        if (delegate != null) {
+          delegate.must(key, value);
+        }
+        return this;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder must(String key, String... values) {
+        if (delegate != null) {
+          delegate.must(key, values);
+        }
+        return this;
+      }
     }
 
     /**

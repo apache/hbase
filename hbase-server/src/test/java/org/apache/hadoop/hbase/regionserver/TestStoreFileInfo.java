@@ -24,10 +24,10 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.concurrent.atomic.AtomicInteger;
+import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FilterFileSystem;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
@@ -81,8 +81,8 @@ public class TestStoreFileInfo {
     throws IOException {
     RegionInfo regionInfo = RegionInfoBuilder.newBuilder(TableName.valueOf("table1")).build();
     return StoreContext.getBuilder()
-      .withRegionFileSystem(HRegionFileSystem.create(TEST_UTIL.getConfiguration(), fs, regionDir,
-        regionInfo))
+      .withRegionFileSystem(
+        HRegionFileSystem.create(TEST_UTIL.getConfiguration(), fs, regionDir, regionInfo))
       .withColumnFamilyDescriptor(
         ColumnFamilyDescriptorBuilder.newBuilder("cf1".getBytes()).build())
       .build();
@@ -167,9 +167,9 @@ public class TestStoreFileInfo {
     FileStatus listedStatus = baseFs.getFileStatus(file);
     AtomicInteger statCalls = new AtomicInteger();
     FileSystem fs = fileSystemCountingGetFileStatus(baseFs, statCalls);
-    StoreFileInfo info = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs,
-      listedStatus.getModificationTime(), file, listedStatus.getLen(), null, null, false,
-      listedStatus);
+    StoreFileInfo info =
+      new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, listedStatus.getModificationTime(), file,
+        listedStatus.getLen(), null, null, false, listedStatus);
     statCalls.set(0);
     assertEquals(listedStatus.getLen(), info.getReferencedFileStatus(fs).getLen());
     assertEquals(0, statCalls.get(),
@@ -191,8 +191,7 @@ public class TestStoreFileInfo {
       listedStatus.getModificationTime(), file, listedStatus.getLen(), null, null, false);
     statCalls.set(0);
     info.getReferencedFileStatus(fs);
-    assertEquals(1, statCalls.get(),
-      "inferred status must be refreshed for block locality");
+    assertEquals(1, statCalls.get(), "inferred status must be refreshed for block locality");
     statCalls.set(0);
     info.getReferencedFileStatus(fs);
     assertEquals(0, statCalls.get(), "second getReferencedFileStatus should use refreshed status");
@@ -214,9 +213,8 @@ public class TestStoreFileInfo {
     FileStatus listedStatus = baseFs.getFileStatus(file);
     AtomicInteger statCalls = new AtomicInteger();
     FileSystem fs = fileSystemCountingGetFileStatus(baseFs, statCalls);
-    StoreFileTrackerForTest tracker =
-      new StoreFileTrackerForTest(TEST_UTIL.getConfiguration(), true,
-        newStoreContextForTest(fs, regionDir));
+    StoreFileTrackerForTest tracker = new StoreFileTrackerForTest(TEST_UTIL.getConfiguration(),
+      true, newStoreContextForTest(fs, regionDir));
     statCalls.set(0);
     StoreFileInfo info = tracker.getStoreFileInfo(listedStatus, file, true);
     assertEquals(0, statCalls.get(), "tracker should not stat when fileStatus is supplied");
@@ -224,8 +222,7 @@ public class TestStoreFileInfo {
     info.getReferencedFileStatus(fs);
     ReaderContext context =
       info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
-    assertEquals(0, statCalls.get(),
-      "open and referenced status should reuse listed fileStatus");
+    assertEquals(0, statCalls.get(), "open and referenced status should reuse listed fileStatus");
     assertEquals(listedStatus.getLen(), context.getFileSize());
     context.getInputStreamWrapper().close();
   }
@@ -237,9 +234,8 @@ public class TestStoreFileInfo {
     FileSystem baseFs = TEST_UTIL.getTestFileSystem();
     AtomicInteger statCalls = new AtomicInteger();
     FileSystem fs = fileSystemCountingGetFileStatus(baseFs, statCalls);
-    StoreFileTrackerForTest tracker =
-      new StoreFileTrackerForTest(TEST_UTIL.getConfiguration(), true,
-        newStoreContextForTest(fs, regionDir));
+    StoreFileTrackerForTest tracker = new StoreFileTrackerForTest(TEST_UTIL.getConfiguration(),
+      true, newStoreContextForTest(fs, regionDir));
     statCalls.set(0);
     StoreFileInfo info = tracker.getStoreFileInfo(file, true);
     assertEquals(1, statCalls.get(), "tracker should stat once when fileStatus is absent");
@@ -252,8 +248,8 @@ public class TestStoreFileInfo {
     context.getInputStreamWrapper().close();
     statCalls.set(0);
     info.getReferencedFileStatus(fs);
-    assertEquals(1, statCalls.get(),
-      "getReferencedFileStatus should refresh inferred status once");
+    assertEquals(0, statCalls.get(),
+      "getReferencedFileStatus should reuse status from tracker getFileStatus");
     statCalls.set(0);
     info.getReferencedFileStatus(fs);
     assertEquals(0, statCalls.get());
