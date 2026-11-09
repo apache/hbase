@@ -337,6 +337,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
           FileStatus fStatus = fs.getFileStatus(initialPath);
           createdTimestamp = fStatus.getModificationTime();
           size = fStatus.getLen();
+          listedPlainHFileStatus = fStatus;
         }
       } else {
         throw new IOException("path=" + p + " doesn't look like a valid StoreFile");

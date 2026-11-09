@@ -219,8 +219,8 @@ public final class FSUtils {
 
   /**
    * Opens a file for reading. When {@code fileStatus} is supplied and the {@link FileSystem}
-   * supports {@code FileSystem.openFile().withFileStatus()}, that path is used so the client
-   * can skip a redundant metadata lookup (for example {@code getFileInfo}).
+   * supports {@code FileSystem.openFile().withFileStatus()}, that path is used so the client can
+   * skip a redundant metadata lookup (for example {@code getFileInfo}).
    * @param fs         filesystem
    * @param path       file to open
    * @param fileStatus status from a recent {@code listStatus} / {@code getFileStatus}, or
@@ -233,10 +233,13 @@ public final class FSUtils {
     if (fileStatus != null) {
       try {
         return fs.openFile(path).withFileStatus(fileStatus).build().get();
-      } catch (UnsupportedOperationException | InterruptedException | ExecutionException e) {
+      } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+        throw new InterruptedIOException("Interrupted opening " + path);
+      } catch (UnsupportedOperationException | ExecutionException e) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("openFile().withFileStatus() not supported or failed for {}, "
-              + "fail back with open()", fs.getUri(), e);
+            + "fail back with open()", fs.getUri(), e);
         }
       }
     }

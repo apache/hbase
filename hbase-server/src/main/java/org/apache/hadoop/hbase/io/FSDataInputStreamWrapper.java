@@ -166,9 +166,8 @@ public class FSDataInputStreamWrapper implements Closeable {
 
     if (useHBaseChecksum) {
       FileSystem fsNc = hfs.getNoChecksumFs();
-      this.streamNoFsChecksum = (link != null)
-        ? link.open(fsNc)
-        : FSUtils.openForRead(fsNc, path, fileStatus);
+      this.streamNoFsChecksum =
+        (link != null) ? link.open(fsNc) : FSUtils.openForRead(fsNc, path, fileStatus);
       setStreamOptions(streamNoFsChecksum);
       this.useHBaseChecksumConfigured = this.useHBaseChecksum = useHBaseChecksum;
       // Close the checksum stream; we will reopen it if we get an HBase checksum failure.
@@ -221,9 +220,8 @@ public class FSDataInputStreamWrapper implements Closeable {
       synchronized (streamNoFsChecksumFirstCreateLock) {
         partOfConvoy = (this.stream != null);
         if (!partOfConvoy) {
-          this.stream = (link != null)
-            ? link.open(hfs)
-            : FSUtils.openForRead(hfs, path, fileStatus);
+          this.stream =
+            (link != null) ? link.open(hfs) : FSUtils.openForRead(hfs, path, fileStatus);
         }
       }
     }

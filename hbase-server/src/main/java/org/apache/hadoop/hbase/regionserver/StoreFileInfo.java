@@ -108,9 +108,9 @@ public class StoreFileInfo implements Configurable {
   private long size;
 
   /**
-   * Cached {@link FileStatus} for plain HFiles (not links or references). Populated at construction,
-   * synthesized from known size for reader open, or refreshed from the filesystem for block
-   * locality.
+   * Cached {@link FileStatus} for plain HFiles (not links or references). Populated at
+   * construction, synthesized from known size for reader open, or refreshed from the filesystem for
+   * block locality.
    */
   private FileStatus plainHFileStatus;
 
@@ -409,11 +409,10 @@ public class StoreFileInfo implements Configurable {
       readerPath = initialPath;
       length = size > 0 ? size : statusForOpen.getLen();
     }
-    ReaderContextBuilder contextBuilder =
-      new ReaderContextBuilder().withInputStreamWrapper(in).withFileSize(length)
-        .withPrimaryReplicaReader(this.primaryReplica).withReaderType(type).withFileSystem(fs)
-        .withSystemKeyCache(systemKeyCache).withManagedKeyDataCache(managedKeyDataCache)
-        .withFilePath(readerPath);
+    ReaderContextBuilder contextBuilder = new ReaderContextBuilder().withInputStreamWrapper(in)
+      .withFileSize(length).withPrimaryReplicaReader(this.primaryReplica).withReaderType(type)
+      .withFileSystem(fs).withSystemKeyCache(systemKeyCache)
+      .withManagedKeyDataCache(managedKeyDataCache).withFilePath(readerPath);
     return contextBuilder.build();
   }
 
@@ -446,8 +445,8 @@ public class StoreFileInfo implements Configurable {
       return;
     }
     Path pathForOpen = fs.makeQualified(initialPath);
-    plainHFileStatus = new FileStatus(size, false, 1, HConstants.DEFAULT_BLOCKSIZE,
-      createdTimestamp, pathForOpen);
+    plainHFileStatus =
+      new FileStatus(size, false, 1, HConstants.DEFAULT_BLOCKSIZE, createdTimestamp, pathForOpen);
     plainHFileStatusNeedsRefresh = true;
   }
 
