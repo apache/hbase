@@ -718,10 +718,10 @@
       <timezone>+8</timezone>
     </developer>
     <developer>
-      <id>cconnell</id>
+      <id>charlesconnell</id>
       <name>Charles Connell</name>
       <email>cconnell@apache.org</email>
-      <timezone>-5</timezone>
+      <timezone>-8</timezone>
     </developer>
     <developer>
       <id>chandrakambham</id>
