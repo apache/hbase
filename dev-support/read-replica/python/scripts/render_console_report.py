@@ -194,8 +194,6 @@ _INFRA_STAGES = [
      "Build time for Docker test environment image"),
     ("rsync", "RSYNC_SEC",
      "Copy hbase repo for Docker build context with read-replica image"),
-    ("mvn clean", "MVN_CLEAN_SEC",
-     "Maven clean to remove previous build artifacts for read-replica image"),
     ("read-replica image", "DOCKER_BUILD_SEC",
      "Docker image used for containers running an HBase read-replica setup"),
 ]

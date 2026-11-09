@@ -49,9 +49,7 @@ print_timing_summary() {
   local total_sec=$(( SECONDS - OVERALL_START_SEC + ${DEV_SUPPORT_IMAGE_BUILD_SEC:-0} ))
   local dev_image_sec="${DEV_SUPPORT_IMAGE_BUILD_SEC}"
   local rsync_sec="${RSYNC_SEC:--}"
-  local mvn_clean_sec="${MVN_CLEAN_SEC:--}"
   local docker_build_sec="${DOCKER_BUILD_SEC:--}"
-  local build_images_sec="${BUILD_IMAGES_SEC:--}"
   local pytest_sec="${PYTEST_SEC:--}"
 
   echo ""
@@ -68,29 +66,19 @@ print_timing_summary() {
   else
     echo "  2. Rsync source staging:                         (not run)"
   fi
-  if [ "${mvn_clean_sec}" != "-" ]; then
-    printf "  3. Maven clean (pre-Docker):                  %6ss (%s)\n" \
-      "${mvn_clean_sec}" "$(format_duration_hms "${mvn_clean_sec}")"
-  else
-    echo "  3. Maven clean (pre-Docker):                     (not run)"
-  fi
   if [ "${docker_build_sec}" != "-" ]; then
-    printf "  4. Docker image build (incl. Maven in image): %6ss (%s)\n" \
+    printf "  3. Docker image build (incl. Maven in image): %6ss (%s)\n" \
       "${docker_build_sec}" "$(format_duration_hms "${docker_build_sec}")"
   else
-    echo "  4. Docker image build:                           (not run)"
-  fi
-  if [ "${build_images_sec}" != "-" ]; then
-    printf "     build-images.sh total (3+4):              %6ss (%s)\n" \
-      "${build_images_sec}" "$(format_duration_hms "${build_images_sec}")"
+    echo "  3. Docker image build:                           (not run)"
   fi
   if [ "${pytest_sec}" != "-" ]; then
-    printf "  5. Pytest integration suite:                 %6ss (%s)\n" \
+    printf "  4. Pytest integration suite:                  %6ss (%s)\n" \
       "${pytest_sec}" "$(format_duration_hms "${pytest_sec}")"
   else
-    echo "  5. Pytest integration suite:                     (not run)"
+    echo "  4. Pytest integration suite:                     (not run)"
   fi
-  printf "  6. Total wall time:                           %6ss (%s)\n" \
+  printf "  5. Total wall time:                           %6ss (%s)\n" \
     "${total_sec}" "$(format_duration_hms "${total_sec}")"
   echo "========================================"
 }
@@ -106,7 +94,6 @@ TIMING_SUMMARY_PRINTED=false
 CLEANUP_RAN=false
 DEV_SUPPORT_IMAGE_BUILD_SEC="${DEV_SUPPORT_IMAGE_BUILD_SEC:-}"
 RSYNC_SEC=""
-MVN_CLEAN_SEC=""
 DOCKER_BUILD_SEC=""
 BUILD_IMAGES_SEC=""
 PYTEST_SEC=""
@@ -206,7 +193,19 @@ set -a
 source .env
 set +a
 
+# Derive unique container and project names from BUILD_TAG to avoid collisions
+# when master and branch-3 pipelines run on the same Jenkins agent.
+if [ -n "${BUILD_TAG}" ]; then
+  UNIQUE_SUFFIX=$(echo "${BUILD_TAG}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g')
+else
+  UNIQUE_SUFFIX="local"
+fi
+export HBASE_CONTAINER_NAME="hbase-${UNIQUE_SUFFIX}"
+export COMPOSE_PROJECT_NAME="rr-${UNIQUE_SUFFIX}"
+
 echo "HBASE_IMAGE=${HBASE_IMAGE}"
+echo "HBASE_CONTAINER_NAME=${HBASE_CONTAINER_NAME}"
+echo "COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME}"
 echo "ACTIVE_CLUSTER_CONF_DIR=${ACTIVE_CLUSTER_CONF_DIR}"
 echo "ACTIVE_CLUSTER_LOGS_DIR=${ACTIVE_CLUSTER_LOGS_DIR}"
 echo "REPLICA_CLUSTER_CONF_DIR=${REPLICA_CLUSTER_CONF_DIR}"
@@ -333,7 +332,6 @@ TOTAL_SEC=$(( SECONDS - OVERALL_START_SEC + ${DEV_SUPPORT_IMAGE_BUILD_SEC:-0} ))
 cat > "${OUTPUT_DIR}/read-replica-all-timing.env" <<EOF
 DEV_SUPPORT_IMAGE_BUILD_SEC=${DEV_SUPPORT_IMAGE_BUILD_SEC}
 RSYNC_SEC=${RSYNC_SEC}
-MVN_CLEAN_SEC=${MVN_CLEAN_SEC}
 DOCKER_BUILD_SEC=${DOCKER_BUILD_SEC}
 PYTEST_SEC=${PYTEST_SEC}
 TOTAL_SEC=${TOTAL_SEC}

@@ -19,6 +19,7 @@
 
 import ast
 import logging
+import os
 import re
 from concurrent.futures import ThreadPoolExecutor, TimeoutError as FuturesTimeoutError
 
@@ -81,6 +82,7 @@ class HBaseDockerClient:
                 try:
                     result = future.result(timeout=timeout)
                 except FuturesTimeoutError:
+                    self._kill_orphaned_processes(container, bash_cmd)
                     raise DockerExecCommandTimeoutError(
                         f"Command timed out after {timeout}s on {self._cluster_name} "
                         f"({self._container_name}): {bash_cmd}\n"
@@ -111,9 +113,9 @@ class HBaseDockerClient:
     def run_hbase_shell_command(self, hbase_cmd: str, timeout: int | None = None) -> str:
         """
         Uses 'docker exec' to run the provided HBase shell command in the object's Docker container.
-        The command looks like: docker exec <container> bash -c hbase shell -n <<< "<hbase_cmd>"
+        The command is piped to hbase shell via a quoted heredoc to prevent shell expansion.
         """
-        hbase_shell_cmd = f'''hbase shell -n <<< "{hbase_cmd}"'''
+        hbase_shell_cmd = f"hbase shell -n <<'HBASECMD'\n{hbase_cmd}\nHBASECMD"
         try:
             return self.run_docker_exec_command(hbase_shell_cmd, timeout=timeout)
         except DockerExecCommandTimeoutError:
@@ -122,6 +124,25 @@ class HBaseDockerClient:
             raise
         except DockerExecCommandError as e:
             raise HBaseShellCommandError(e)
+
+    def _kill_orphaned_processes(self, container, bash_cmd: str) -> None:
+        """Best-effort cleanup of hbase shell processes left behind by a timed-out exec."""
+        if "hbase shell" not in bash_cmd:
+            return
+        try:
+            logger.warning(
+                f"Killing orphaned hbase shell process on {self._cluster_name} "
+                f"({self._container_name}) after timeout"
+            )
+            container.exec_run(
+                ["bash", "-c", "pkill -9 -f 'org.jruby.Main.*shell' 2>/dev/null; true"],
+                detach=True
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to kill orphaned hbase shell process on {self._cluster_name} "
+                f"({self._container_name}): {e}"
+            )
 
     def _get_pid_from_jps(self, process_name: str) -> int | None:
         """Runs jps inside the container and returns the PID of the named process, or None."""
@@ -176,7 +197,7 @@ class HBaseDockerClient:
                     return True
                 except DockerExecCommandError:
                     pass
-            logging.info(f"Waiting {self._sleep_time} seconds before checking Master initialization again")
+            logger.info(f"Waiting {self._sleep_time} seconds before checking Master initialization again")
             time.sleep(self._sleep_time)
 
         raise HBaseInitializationError(
@@ -201,7 +222,7 @@ class HBaseDockerClient:
                     return True
                 except DockerExecCommandError:
                     pass
-            logging.info(f"Waiting {self._sleep_time} seconds before checking RegionServer initialization again")
+            logger.info(f"Waiting {self._sleep_time} seconds before checking RegionServer initialization again")
             time.sleep(self._sleep_time)
 
         raise HBaseInitializationError(
@@ -239,7 +260,7 @@ class HBaseDockerClient:
             except HBaseShellCommandError:
                 pass
 
-            logging.info(f"Waiting {self._sleep_time} seconds before getting status on {self.name} again")
+            logger.info(f"Waiting {self._sleep_time} seconds before getting status on {self.name} again")
             time.sleep(self._sleep_time)
 
         raise HBaseInitializationError(
@@ -278,11 +299,11 @@ class HBaseDockerClient:
     def list_tables(self) -> list:
         """Gets the list of HBase tables and returns it as a Python list"""
         logger.debug(f"Getting the list of tables in HBase on {self.name}")
-        pattern = r'\[(.*?)\]'
         output = self.run_hbase_shell_command("list")
-        output = output.replace('\n', ' ')
-        match = re.search(pattern, output)
-        return ast.literal_eval(match.group(0))
+        match = re.search(r'=>\s*(\[.*?\])', output, re.DOTALL)
+        if not match:
+            return []
+        return ast.literal_eval(match.group(1))
 
     def list_regions(self, table_name: str) -> str:
         """Gets list of regions and their info for the provided table"""
@@ -332,7 +353,7 @@ class HBaseDockerClient:
         if spec_map:
             scan_cmd += f", {spec_map}"
             log_msg += f" with spec_map {spec_map}"
-        logging.info(log_msg)
+        logger.info(log_msg)
         return self.run_hbase_shell_command(scan_cmd)
 
     def count(self, table_name: str, spec: str | None = None) -> str:
@@ -589,15 +610,48 @@ class HBaseDockerClient:
         return bool(result.stdout.strip())
 
     @staticmethod
-    def set_up_data_store_dir(data_store_root: str) -> None:
+    def set_up_data_store_dir(data_store_root: str, src_dst_conf_pairs: list[tuple[str, str]]) -> None:
         command = ["mkdir", "-p", f"{data_store_root}/data-store/hbase", f"{data_store_root}/data-store/run",
-                   f"{data_store_root}/data-store/logs", f"{data_store_root}/data-store/zk"]
+                   f"{data_store_root}/data-store/logs", f"{data_store_root}/data-store/zk",
+                   f"{data_store_root}/cluster1/conf", f"{data_store_root}/cluster2/conf"]
         HBaseDockerClient.__run_subprocess_command(command,
                                                    error_msg=f"Failed to create {data_store_root} and its sub-dirs")
+
+        # Copy original conf files to the data-store directory, where they will be modified and
+        # used by the docker containers
+        for src, dst in src_dst_conf_pairs:
+            # -a preserves structure and attributes of files but not directory structure.
+            # With this, we can copy the contents of the src dir to the dst dir.
+            command = ["cp", "-a", f"{src}/.", f"{dst}/"]
+            HBaseDockerClient.__run_subprocess_command(command,
+                                                       error_msg=f"Failed to copy files in {src} to dir {dst}")
+
+        container_name = os.environ.get("HBASE_CONTAINER_NAME", "hbase-docker")
+        HBaseDockerClient._replace_hostnames_in_configs(data_store_root, container_name)
+
         command = ["chmod", "-R", "777", f"{data_store_root}"]
         HBaseDockerClient.__run_subprocess_command(command,
                                                    error_msg=f"Failed to give {data_store_root} "
                                                              f"and its sub-dirs full permissions")
+
+    @staticmethod
+    def _replace_hostnames_in_configs(data_store_root: str, container_name: str) -> None:
+        default_name = "hbase-docker"
+        if container_name == default_name:
+            return
+        conf_files = [
+            os.path.join(data_store_root, "cluster1", "conf", "hbase-site.xml"),
+            os.path.join(data_store_root, "cluster2", "conf", "hbase-site.xml"),
+        ]
+        for conf_file in conf_files:
+            with open(conf_file, "r") as f:
+                content = f.read()
+            # Replace longer string first to avoid partial match
+            content = content.replace(f"{default_name}-2", f"{container_name}-2")
+            content = content.replace(default_name, container_name)
+            with open(conf_file, "w") as f:
+                f.write(content)
+            logger.info(f"Replaced hostname references in {conf_file}")
 
     @staticmethod
     def remove_data_store_dir(data_store_root: str, sudo: bool = False) -> None:
@@ -609,9 +663,11 @@ class HBaseDockerClient:
                                                    f"Could not delete data store root: {data_store_root}")
 
     @staticmethod
-    def start_or_restart_containers(docker_compose_file: str | None = None, data_store_root: str | None = None) -> None:
+    def start_or_restart_containers(src_dst_conf_pairs: list[tuple[str, str]],
+                                    docker_compose_file: str | None = None,
+                                    data_store_root: str | None = None, ) -> None:
         if data_store_root:
-            HBaseDockerClient.set_up_data_store_dir(data_store_root)
+            HBaseDockerClient.set_up_data_store_dir(data_store_root, src_dst_conf_pairs)
 
         if HBaseDockerClient.are_containers_running(docker_compose_file):
             logger.info("Restarting docker containers")

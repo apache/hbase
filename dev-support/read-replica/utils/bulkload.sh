@@ -16,6 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 
+set -e
+
 usage() {
   echo "Usage: $0 <table_name> <column_family> [-n|--num-rows NUM_ROWS] [-i|--initial-row-value INITIAL_ROW_VALUE]"
   exit 1

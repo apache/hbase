@@ -45,6 +45,16 @@ export HBASE_ROOT="$(cd "${REPLICA_DIR}/../.." && pwd)"
 
 DEV_IMAGE_NAME="hbase-dev-support:${BUILD_NUMBER:-local}"
 
+# Derive unique naming suffix for Docker containers/projects (must match the
+# logic in run_read_replica_integration_tests.sh so the outer cleanup can
+# target the right compose stack).
+if [ -n "${BUILD_TAG}" ]; then
+  UNIQUE_SUFFIX=$(echo "${BUILD_TAG}" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9]/-/g' | sed 's/--*/-/g')
+else
+  UNIQUE_SUFFIX="local"
+fi
+export COMPOSE_PROJECT_NAME="rr-${UNIQUE_SUFFIX}"
+
 PYTEST_K_VALUE=""
 JAVA_VERSION=""
 M2_DIR="${HOME}"
@@ -142,6 +152,14 @@ echo "Output Dir: ${EFFECTIVE_OUTPUT_DIR}"
 cleanup_host() {
   local exit_code=$?
   set +e
+  # Safety net: tear down any compose containers left behind if the inner
+  # script was killed (e.g. by a Jenkins timeout) before its own cleanup ran.
+  if [ -n "${COMPOSE_PROJECT_NAME}" ]; then
+    echo "Ensuring compose stack '${COMPOSE_PROJECT_NAME}' is stopped..."
+    docker compose -p "${COMPOSE_PROJECT_NAME}" \
+      -f "${HBASE_ROOT}/dev-support/read-replica/docker-compose.yml" \
+      down 2>/dev/null || true
+  fi
   if [ -z "${BUILD_NUMBER}" ]; then
     echo "Local execution complete. Preserving local container image ${DEV_IMAGE_NAME}."
   else
@@ -186,6 +204,7 @@ if [ "${DEV_MODE}" = "true" ]; then
     -v "${M2_DIR}/.m2:/root/.m2" \
     -e OUTPUT_DIR="${EFFECTIVE_OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
+    -e BUILD_TAG="${BUILD_TAG:-}" \
     -e LOGS_URL="${LOGS_URL}" \
     -w "${REPLICA_DIR}" \
     "${DEV_IMAGE_NAME}" \
@@ -225,6 +244,7 @@ else
     -v "${M2_DIR}/.m2:/root/.m2" \
     -e OUTPUT_DIR="${EFFECTIVE_OUTPUT_DIR}" \
     -e BUILD_NUMBER="${BUILD_NUMBER:-local}" \
+    -e BUILD_TAG="${BUILD_TAG:-}" \
     -e DEV_SUPPORT_IMAGE_BUILD_SEC="${DEV_SUPPORT_IMAGE_BUILD_SEC}" \
     -e LOGS_URL="${LOGS_URL}" \
     -w "${REPLICA_DIR}" \

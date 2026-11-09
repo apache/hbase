@@ -213,7 +213,7 @@ def run_test(new_containers: bool = False):
         cluster1.assert_region_count_for_table(table, num_regions)
 
         # Replica cluster still has old region count
-        cluster2.assert_region_count_for_table(table, num_regions/2)
+        cluster2.assert_region_count_for_table(table, num_regions // 2)
 
         # Update the replica cluster and verify new region count
         cluster2.refresh_meta_and_hfiles()

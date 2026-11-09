@@ -135,7 +135,7 @@ pipeline {
           echo env.BUILD_URL
           echo currentBuild.result
           echo currentBuild.durationString
-          def comment = "Results for branch ${env.BRANCH_NAME}\n"
+          def comment = "Read-Replica Jenkins Test Results for branch ${env.BRANCH_NAME}\n"
           comment += "\t[build ${currentBuild.displayName} on builds.a.o|${env.BUILD_URL}]: "
           if (currentBuild.result == null || currentBuild.result == "SUCCESS") {
              comment += "(/) *{color:green}+1 overall{color}*\n"
@@ -202,8 +202,6 @@ String getCronParams(String branchName) {
   if (branchName == 'master') {
     return 'H H 1-31/3 * *'
   } else if (branchName == 'branch-3') {
-    return 'H H 1-31/3 * *'
-  } else if (branchName == 'branch-2') {
     return 'H H 2-31/3 * *'
   } else {
     return 'H H 3-31/3 * *'

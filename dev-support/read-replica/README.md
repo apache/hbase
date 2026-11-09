@@ -81,6 +81,11 @@ The active cluster writes data and the replica cluster reads it after explicit `
 / `refresh_hfiles` calls. Each cluster has its own ZooKeeper instance and distinct
 `hbase.meta.table.suffix` to avoid meta table collisions.
 
+Container names in the diagram above (`hbase-docker`, `hbase-docker-2`) are the defaults
+used for local runs. In CI, both names are derived from the Jenkins `BUILD_TAG` environment
+variable (e.g., `hbase-jenkins-hbase-read-replica-42`) so that `master` and `branch-3`
+pipelines can run simultaneously on the same agent without Docker naming collisions.
+
 ## Directory Structure
 
 ```
@@ -135,12 +140,15 @@ The test framework uses two scripts in a layered architecture:
 
 Runs on the host (Jenkins agent or local machine). It builds a test environment Docker image
 from `dev-support/docker/Dockerfile`, starts a container, and either runs the inner test
-script automatically or drops into an interactive shell for development.
+script automatically or drops into an interactive shell for development. It derives a unique
+`COMPOSE_PROJECT_NAME` from `BUILD_TAG` for parallel-build isolation and includes a safety-net
+cleanup that tears down any leftover compose containers if the inner script is killed before
+its own cleanup runs.
 
 | Step | Description |
 |------|-------------|
 | 1 | Build the test environment Docker image (`hbase-dev-support:<build-number>`) |
-| 2 | Start a container from that image, mounting the HBase repo, Docker socket, and `.m2` cache |
+| 2 | Start a container from that image, mounting the HBase repo, Docker socket, and `.m2` cache. Passes `BUILD_TAG` into the container for unique naming. |
 | 3 | Run `run_read_replica_integration_tests.sh` inside the container (or start an interactive shell in dev mode) |
 
 **Options:**
@@ -159,11 +167,13 @@ also be run directly when using dev mode.
 
 | Step | Description |
 |------|-------------|
-| 1 | Rsync a trimmed HBase tree into `read-replica/hbase/` for the Docker build context (excludes `.git`, `target/`, nested `read-replica/hbase`, etc.) |
-| 2 | Copy and compile the `ActiveClusterSuffix.proto` protobuf definition |
-| 3 | Create a Python virtual environment and install dependencies |
-| 4 | Build the `hbase-read-replica` Docker image for the active and replica clusters |
-| 5 | Run the pytest integration suite |
+| 1 | Copy cluster config files into `tmp-read-replica-data/conf/` so that Python's ElementTree (which strips XML comments) never modifies the checked-in originals |
+| 2 | Derive unique container and project names from `BUILD_TAG` (falls back to `local`) and rewrite hostnames in the scratch configs to match |
+| 3 | Rsync a trimmed HBase tree into `read-replica/hbase/` for the Docker build context (excludes `.git`, `target/`, nested `read-replica/hbase`, etc.) |
+| 4 | Copy and compile the `ActiveClusterSuffix.proto` protobuf definition |
+| 5 | Create a Python virtual environment and install dependencies |
+| 6 | Build the `hbase-read-replica` Docker image for the active and replica clusters |
+| 7 | Run the pytest integration suite |
 
 **Options:**
 
@@ -184,7 +194,9 @@ also be run directly when using dev mode.
 ### When It Runs
 
 The read-replica tests run as their own standalone nightly pipeline on the `master` and `branch-3`
-branches, separate from the main HBase nightly build.
+branches, separate from the main HBase nightly build. Both branches can run simultaneously
+on the same Jenkins agent; Docker container and project names are derived from `BUILD_TAG`
+to prevent collisions.
 
 ### On Failure
 
@@ -237,6 +249,9 @@ Defines environment variables consumed by Docker Compose, the build script, and 
 - `HBASE_IMAGE` — Docker image tag
 - `HBASE_DATA_STORE_ROOT` — Host path for the shared data store
 - `DOCKER_COMPOSE_FILE` — Absolute path to `docker-compose.yml`
+
+At runtime, the inner test runner overrides `HBASE_CONTAINER_NAME` and sets
+`COMPOSE_PROJECT_NAME` based on `BUILD_TAG`, replacing the static defaults for CI isolation.
 
 ### Protobuf Verification
 
@@ -333,9 +348,10 @@ docker stop <container-id> && docker rm <container-id>
 
 ### Mounted Volumes
 
-The data-store directory (`tmp-read-replica-data/`) is mounted into the containers. Between
-`docker compose down` and `docker compose up`, consider removing this directory to start with
-a clean state:
+The data-store directory (`tmp-read-replica-data/`) is mounted into the containers and also
+holds scratch copies of the cluster config files (used to avoid modifying checked-in
+originals). Between `docker compose down` and `docker compose up`, consider removing this
+directory to start with a clean state:
 
 ```bash
 rm -rf tmp-read-replica-data

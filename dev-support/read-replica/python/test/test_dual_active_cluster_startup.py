@@ -22,7 +22,7 @@ Verifies that two clusters cannot both start with read-only mode disabled (both 
 on the same shared data store. One cluster must fail to start, with the HMaster process not
 running, and an error logged to the master log.
 
-Usage: python3 ./python/scripts/test_dual_active_cluster_startup.py
+Usage: python3 ./python/test/test_dual_active_cluster_startup.py
 """
 import argparse
 import os
@@ -31,7 +31,8 @@ import time
 from python.src.environment_loader import get_env
 from python.src.hbase_docker_client import HBaseDockerClient, DockerExecCommandError, HBaseInitializationError
 from python.src.logger_config import get_logger
-from python.src.utils import load_env_and_set_up_clients, log_script_start, log_script_end
+from python.src.utils import load_env_and_set_up_clients, log_script_start, log_script_end, \
+    get_src_dst_conf_pairs
 
 logger = get_logger(__name__)
 
@@ -92,18 +93,18 @@ def run_test(clean_up_containers: bool = False):
     cluster1, cluster2 = load_env_and_set_up_clients()
     data_store_root = get_env("HBASE_DATA_STORE_ROOT")
     docker_compose_file = get_env("DOCKER_COMPOSE_FILE")
+    conf_pairs = get_src_dst_conf_pairs()
 
     test_iterations = 4
     for i in range(1, test_iterations+1):
         logger.info(f"---------- Iteration {i} ----------")
 
         HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_store_root=data_store_root)
+        HBaseDockerClient.set_up_data_store_dir(data_store_root, conf_pairs)
 
         # Make both clusters an active cluster (read-only disabled)
         cluster1.disable_read_only_mode(run_update_all_config=False)
         cluster2.disable_read_only_mode(run_update_all_config=False)
-
-        HBaseDockerClient.set_up_data_store_dir(data_store_root)
 
         # Alternate which cluster starts first
         if i % 2 == 1:
@@ -154,6 +155,7 @@ def run_test(clean_up_containers: bool = False):
         logger.info("Stopping Docker containers and reverting test environment to having "
                     "one active cluster and one replica cluster")
         HBaseDockerClient.stop_containers(docker_compose_file=docker_compose_file, data_store_root=data_store_root)
+        HBaseDockerClient.set_up_data_store_dir(data_store_root, conf_pairs)
         cluster1.disable_read_only_mode(run_update_all_config=False)
         cluster2.enable_read_only_mode(run_update_all_config=False)
 
