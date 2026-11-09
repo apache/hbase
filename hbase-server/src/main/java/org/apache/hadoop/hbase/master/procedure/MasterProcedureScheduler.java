@@ -1081,7 +1081,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return false;
       }
       waitProcedure(lock, procedure);
-      // TODO: Get dynamic name from MasterServices
+      // TODO(HBASE-29691): resolve the meta table name dynamically rather than using the
+      // deprecated global static. The scheduler currently has no MasterServices reference;
+      // threading one in is tracked under the HBASE-29691 umbrella follow-up work. This is a
+      // log-only call so the deprecated static is tolerable for the moment.
       logLockedResource(LockedResourceType.META, TableName.META_TABLE_NAME.getNameAsString());
       return true;
     } finally {

@@ -3356,7 +3356,11 @@ public final class ProtobufUtil {
     long regionId = proto.getRegionId();
     int defaultReplicaId = org.apache.hadoop.hbase.client.RegionInfo.DEFAULT_REPLICA_ID;
     int replicaId = proto.hasReplicaId() ? proto.getReplicaId() : defaultReplicaId;
-    if (TableName.isMetaTableName(tableName) && replicaId == defaultReplicaId) {
+    // Only short-circuit to the singleton when the proto names *this* JVM's meta table. Any other
+    // meta-pattern name (e.g. hbase:meta_<suffix> from a shared-storage read-replica cluster) must
+    // flow through the general builder so the TableName is preserved — the singleton is bound to
+    // TableName.META_TABLE_NAME and would silently rename the region.
+    if (tableName.equals(TableName.META_TABLE_NAME) && replicaId == defaultReplicaId) {
       return RegionInfoBuilder.FIRST_META_REGIONINFO;
     }
     byte[] startKey = null;

@@ -48,9 +48,16 @@ public interface AsyncConnection extends Closeable {
    * lifetime of this connection. For most clusters, this will be "hbase:meta". For read replica
    * clusters or other specialized configurations, this may return a different table name.
    * <p>
+   * This method has a {@code default} implementation that returns {@link TableName#META_TABLE_NAME}
+   * so that out-of-tree {@code AsyncConnection} implementations and test doubles compiled against
+   * the pre-HBASE-29691 interface do not break. Implementations that support cluster-specific meta
+   * table names must override this to resolve the name from the connection registry.
    * @return The meta table name for this cluster
    */
-  TableName getMetaTableName();
+  @SuppressWarnings("deprecation")
+  default TableName getMetaTableName() {
+    return TableName.META_TABLE_NAME;
+  }
 
   /**
    * Retrieve a AsyncRegionLocator implementation to inspect region information on a table. The

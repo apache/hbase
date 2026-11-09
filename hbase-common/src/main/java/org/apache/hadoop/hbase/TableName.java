@@ -132,19 +132,22 @@ public final class TableName implements Comparable<TableName> {
 
   /**
    * Pattern that the qualifier of a meta table must match. Either the literal {@code meta} (the
-   * default meta table) or {@code meta_<suffix>} where {@code <suffix>} is one or more lowercase
-   * alphanumeric characters (the form used for cluster-specific meta tables, e.g. read replica meta
-   * tables). This is the single source of truth for what qualifies as a meta table name; all
-   * callers should go through {@link #isMetaTableName(TableName)} rather than reproducing the
-   * check.
+   * default meta table) or {@code meta_<suffix>} where {@code <suffix>} matches
+   * {@link #VALID_META_TABLE_SUFFIX_REGEX} (the form used for cluster-specific meta tables, e.g.
+   * read replica meta tables). Derived from {@link #VALID_META_TABLE_SUFFIX_REGEX} so the
+   * recognizer and the validator cannot drift. This is the single source of truth for what
+   * qualifies as a meta table name; all callers should go through
+   * {@link #isMetaTableName(TableName)} rather than reproducing the check.
    */
-  private static final Pattern META_QUALIFIER_PATTERN = Pattern.compile("meta(_[a-z0-9]+)?");
+  private static final Pattern META_QUALIFIER_PATTERN =
+    Pattern.compile("meta(_" + VALID_META_TABLE_SUFFIX_REGEX + ")?");
 
   /**
    * Returns True if <code>tn</code> is a meta table. A meta table is a table in the {@code hbase}
    * system namespace whose qualifier is either exactly {@code meta} or matches
-   * {@code meta_[a-z0-9]+}. The latter form is reserved for cluster-specific meta tables (e.g. read
-   * replica meta tables) generated from a deterministic suffix.
+   * {@code meta_<suffix>}, where {@code <suffix>} satisfies {@link #VALID_META_TABLE_SUFFIX_REGEX}.
+   * The latter form is reserved for cluster-specific meta tables (e.g. read replica meta tables)
+   * generated from a deterministic suffix.
    * <p>
    * Names like {@code hbase:metadata} or {@code hbase:meta_} (no suffix characters) are
    * intentionally <em>not</em> considered meta table names.

@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.master;
 import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMagic;
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
@@ -90,27 +91,17 @@ public class TestMigrateAndMirrorMetaLocations {
 
   private void checkMirrorLocation(int replicaCount) throws Exception {
     MasterRegion masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
-    Result locationResult = null;
+    Result locationResult;
     try (RegionScanner scanner =
       masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
-      boolean moreRows;
-      do {
-        cells.clear();
-        moreRows = scanner.next(cells);
-        if (!cells.isEmpty()) {
-          Result result = Result.create(cells);
-          // find the row that contains meta region location data; other rows in CATALOG_FAMILY
-          // (e.g. meta_table_name written by MetaTableNameStore) should be skipped
-          if (CatalogFamilyFormat.getRegionLocations(result) != null) {
-            locationResult = result;
-            break;
-          }
-        }
-      } while (moreRows);
+      scanner.next(cells);
+      assertFalse(cells.isEmpty(), "No row found in MasterRegion CATALOG_FAMILY");
+      locationResult = Result.create(cells);
     }
     // should have one meta region row with all replicas in the same row
-    assertNotNull(locationResult, "No meta region location found in MasterRegion CATALOG_FAMILY");
+    assertNotNull(CatalogFamilyFormat.getRegionLocations(locationResult),
+      "First CATALOG_FAMILY row does not contain meta region locations");
     // make sure we publish the correct location to zookeeper too
     assertLocationEquals(locationResult, replicaCount);
   }
@@ -160,27 +151,14 @@ public class TestMigrateAndMirrorMetaLocations {
     UTIL.shutdownMiniHBaseCluster();
     UTIL.startMiniHBaseCluster(StartTestingClusterOption.builder().numRegionServers(3).build());
     masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
-    // After ZK migration, master may also persist MetaTableNameStore on the same info family; only
-    // one row should carry hbase:meta replica locations.
     try (RegionScanner scanner =
       masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
-      int rowsWithMetaLocations = 0;
-      Result migrated = null;
-      boolean moreRows;
-      do {
-        cells.clear();
-        moreRows = scanner.next(cells);
-        if (!cells.isEmpty()) {
-          Result r = Result.create(cells);
-          if (CatalogFamilyFormat.getRegionLocations(r) != null) {
-            rowsWithMetaLocations++;
-            migrated = r;
-          }
-        }
-      } while (moreRows);
-      assertNotNull(migrated, "No migrated meta locations in MasterRegion");
-      assertEquals(1, rowsWithMetaLocations);
+      scanner.next(cells);
+      assertFalse(cells.isEmpty(), "No migrated meta locations in MasterRegion");
+      Result migrated = Result.create(cells);
+      assertNotNull(CatalogFamilyFormat.getRegionLocations(migrated),
+        "Migrated row does not contain meta region locations");
     }
     // wait until all meta regions have been assigned
     UTIL.waitFor(30000,

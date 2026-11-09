@@ -34,6 +34,13 @@ message GetClusterIdRequest {
 message GetClusterIdResponse {
   /** Not set if cluster ID could not be determined. */
   optional string cluster_id = 1;
+  /**
+   * The meta table name for this cluster. Added by HBASE-29691 so that clusters with a
+   * cluster-specific meta table (e.g. read-replica deployments) can advertise it on the
+   * same RPC used to fetch the cluster id. Not set by pre-HBASE-29691 servers; clients that
+   * do not see this field should fall back to the default name "hbase:meta".
+   */
+  optional string meta_table_name = 2;
 }
 
 /** Request and response to get the currently active master name for this cluster */
@@ -73,14 +80,6 @@ message GetBootstrapNodesResponse {
   repeated ServerName server_name = 1;
 }
 
-/** Request and response to get the meta table name for this cluster */
-message GetMetaTableNameRequest {
-}
-message GetMetaTableNameResponse {
-  /** The name of the meta table. Defaults to "hbase:meta" if not set. */
-  optional string table_name = 1;
-}
-
 /**
  * Implements all the RPCs needed by clients to look up cluster meta information needed for
  * connection establishment.
@@ -113,11 +112,6 @@ service ClientMetaService {
    * Get nodes which could be used as ClientMetaService
    */
   rpc GetBootstrapNodes(GetBootstrapNodesRequest) returns (GetBootstrapNodesResponse);
-
-  /**
-   * Get the meta table name for this cluster.
-   */
-  rpc GetMetaTableName(GetMetaTableNameRequest) returns(GetMetaTableNameResponse);
 }
 
 message GetConnectionRegistryRequest {

@@ -190,9 +190,9 @@ public class RegionStateStore {
     final int replicaId = regionInfo.getReplicaId();
     final Put put = new Put(CatalogFamilyFormat.getMetaKeyForRegion(regionInfo), time);
     MetaTableAccessor.addRegionInfo(put, regionInfo);
-    final StringBuilder info = new StringBuilder("pid=").append(pid).append(" updating ")
-      .append(master.getConnection().getMetaTableName()).append(" row=")
-      .append(regionInfo.getEncodedName()).append(", regionState=").append(state);
+    final StringBuilder info =
+      new StringBuilder("pid=").append(pid).append(" updating ").append(master.getMetaTableName())
+        .append(" row=").append(regionInfo.getEncodedName()).append(", regionState=").append(state);
     if (openSeqNum >= 0) {
       Preconditions.checkArgument(state == State.OPEN && regionLocation != null,
         "Open region should be on a server");

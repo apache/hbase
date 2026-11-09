@@ -1700,28 +1700,47 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   /**
    * Override base implementation to read from Master Local Region storage. This allows the master
    * to return the cluster-specific meta table name.
+   * <p>
+   * The cached value is populated by {@link #initMetaTableName()} during
+   * {@link #finishActiveMasterInitialization()}, which only runs on the active master. On a backup
+   * master before it has transitioned to active, the cache is {@code null}; fall back to the
+   * configuration-derived default so this method never returns {@code null} and clients hitting a
+   * backup master via the registry RPC still receive a usable value. If the configuration diverges
+   * from the persisted name, {@link #initMetaTableName()} fails fast on activation (see
+   * HBASE-29691) so the backup can never silently serve a wrong custom name after promotion.
    */
   @Override
   public TableName getMetaTableName() {
-    return cachedMetaTableName;
+    TableName cached = cachedMetaTableName;
+    return cached != null ? cached : super.getMetaTableName();
   }
 
-  private TableName initMetaTableName() {
+  private TableName initMetaTableName() throws IOException {
     metaTableNameStore = new MetaTableNameStore(masterRegion);
-    try {
-      TableName metaTableName = metaTableNameStore.load();
-      // If metaTableNameStore is empty (bootstrap case), get meta table name from super, store it,
-      // and return.
-      if (Objects.isNull(metaTableName)) {
-        metaTableName = super.getDefaultMetaTableName();
-        LOG.info("Bootstrap: storing default meta table name in master region: {}", metaTableName);
-        metaTableNameStore.store(metaTableName);
-      }
+    TableName metaTableName = metaTableNameStore.load();
+    // If metaTableNameStore is empty (bootstrap case), get meta table name from super, store it,
+    // and return.
+    if (Objects.isNull(metaTableName)) {
+      metaTableName = super.getDefaultMetaTableName();
+      LOG.info("Bootstrap: storing default meta table name in master region: {}", metaTableName);
+      metaTableNameStore.store(metaTableName);
       return metaTableName;
-    } catch (IOException e) {
-      LOG.error("Exception loading/storing meta table name from master region", e);
-      throw new RuntimeException("Exception loading/storing meta table name from master region", e);
     }
+    // The meta table name is pinned at first-boot bootstrap and persisted. Changing
+    // hbase.meta.table.suffix on an existing cluster is unsupported — statics in the client
+    // (TableName.META_TABLE_NAME, FIRST_META_REGIONINFO) and server (FSTableDescriptors,
+    // InitMetaProcedure, MasterProcedureScheduler/SchemaLocking) still resolve the configured
+    // value, so a divergent config would silently cause callers to look at the wrong table.
+    // Fail fast with a clear operator message instead.
+    TableName configuredMetaTableName = TableName.initializeHbaseMetaTableName(getConfiguration());
+    if (!metaTableName.equals(configuredMetaTableName)) {
+      throw new IllegalStateException("Meta table name mismatch: persisted=" + metaTableName
+        + ", configured=" + configuredMetaTableName + ". The '" + HConstants.HBASE_META_TABLE_SUFFIX
+        + "' value was changed after cluster bootstrap,"
+        + " which is not supported. Revert the configuration to match the persisted value"
+        + " to continue, or bootstrap a new cluster to use the new suffix.");
+    }
+    return metaTableName;
   }
 
   /*
@@ -2677,8 +2696,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
-  private static boolean isCatalogTable(final TableName tableName) {
-    return TableName.isMetaTableName(tableName);
+  private boolean isCatalogTable(final TableName tableName) {
+    // Compare against this master's resolved meta name, not the general meta-name pattern. In a
+    // shared-storage read-replica deployment, other clusters' meta tables (e.g. hbase:meta_<X>)
+    // may be visible but are not catalog tables from this master's point of view.
+    return tableName.equals(getMetaTableName());
   }
 
   @Override

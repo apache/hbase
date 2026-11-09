@@ -2008,8 +2008,8 @@ public class HBaseFsck extends Configured implements Closeable {
     Result r = meta.get(get);
     RegionLocations rl = CatalogFamilyFormat.getRegionLocations(r);
     if (rl == null) {
-      LOG.warn("Unable to close region " + hi.getRegionNameAsString()
-        + " since meta does not have handle to reach it");
+      LOG.warn("Unable to close region {} since meta does not have handle to reach it",
+        hi.getRegionNameAsString());
       return;
     }
     for (HRegionLocation h : rl.getRegionLocations()) {
@@ -2155,8 +2155,9 @@ public class HBaseFsck extends Configured implements Closeable {
         // This region has already been merged, the remaining hdfs file will be
         // cleaned by CatalogJanitor later
         hbi.setSkipChecks(true);
-        LOG.info("Region " + descriptiveName
-          + " got merge recently, its file(s) will be cleaned by CatalogJanitor later");
+        LOG.info(
+          "Region {} got merge recently, its file(s) will be cleaned by CatalogJanitor later",
+          descriptiveName);
         return;
       }
       errors.reportError(ERROR_CODE.NOT_IN_META_OR_DEPLOYED,
@@ -2165,8 +2166,8 @@ public class HBaseFsck extends Configured implements Closeable {
       // restore region consistency of an adopted orphan
       if (shouldFixMeta()) {
         if (!hbi.isHdfsRegioninfoPresent()) {
-          LOG.error("Region " + hbi.getHdfsHRI() + " could have been repaired"
-            + " in table integrity repair phase if -fixHdfsOrphans was" + " used.");
+          LOG.error("Region {} could have been repaired in table integrity repair phase if "
+            + "-fixHdfsOrphans was used.", hbi.getHdfsHRI());
           return;
         }
 
@@ -2190,9 +2191,9 @@ public class HBaseFsck extends Configured implements Closeable {
                 Path parentRegionDir =
                   StoreFileInfo.getReferredToFile(referenceFilePath).getParent().getParent();
                 if (parentRegionDir.toString().endsWith(region.getEncodedName())) {
-                  LOG.warn(hri + " start and stop keys are in the range of " + region
-                    + ". The region might not be cleaned up from hdfs when region " + region
-                    + " split failed. Hence deleting from hdfs.");
+                  LOG.warn("{} start and stop keys are in the range of {}. The region might not be "
+                    + "cleaned up from hdfs when region {} split failed. Hence deleting from hdfs.",
+                    hri, region, region);
                   HRegionFileSystem.deleteRegionFromFileSystem(getConf(), fs, regionDir.getParent(),
                     hri);
                   return;

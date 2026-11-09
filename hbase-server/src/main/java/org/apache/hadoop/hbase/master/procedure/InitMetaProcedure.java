@@ -67,8 +67,12 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   public TableName getTableName() {
-    // Always returns default "hbase:meta" for now
-    // Future: will support replica-specific names (e.g., "hbase:meta_replica1")
+    // Called by the procedure framework without a MasterProcedureEnv, so the dynamically-resolved
+    // meta table name is not reachable here. The returned value is used for lock routing (the
+    // MasterProcedureScheduler routes anything matching TableName.isMetaTableName() to the single
+    // meta lock queue, so a custom-suffix meta still coordinates correctly) and for operator-
+    // facing logging. The actual meta region creation in writeFsLayout / INIT_META_ASSIGN_META
+    // uses the dynamic name via env.getMetaTableName().
     return TableName.META_TABLE_NAME;
   }
 
@@ -91,10 +95,9 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     // Enable after.
     TableDescriptor metaDescriptor = FSTableDescriptors
       .tryUpdateAndGetMetaTableDescriptor(env.getMasterConfiguration(), fs, rootDir);
-    HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, env.getMasterConfiguration(),
-        metaDescriptor, null, env.getMasterServices().getKeyManagementService())
-      .close();
+    HRegion.createHRegion(RegionInfoBuilder.firstMetaRegionInfo(metaTableName), rootDir,
+      env.getMasterConfiguration(), metaDescriptor, null,
+      env.getMasterServices().getKeyManagementService()).close();
     return metaDescriptor;
   }
 
@@ -113,8 +116,8 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
           return Flow.HAS_MORE_STATE;
         case INIT_META_ASSIGN_META:
           LOG.info("Going to assign meta");
-          addChildProcedure(env.getAssignmentManager()
-            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+          addChildProcedure(env.getAssignmentManager().createAssignProcedures(
+            Arrays.asList(RegionInfoBuilder.firstMetaRegionInfo(env.getMetaTableName()))));
           setNextState(InitMetaState.INIT_META_CREATE_NAMESPACES);
           return Flow.HAS_MORE_STATE;
         case INIT_META_CREATE_NAMESPACES:

@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.master;
 
+import static org.apache.hadoop.hbase.master.region.MasterRegionFactory.STATE_FAMILY;
+
 import java.io.IOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Get;
@@ -31,16 +33,27 @@ import org.slf4j.LoggerFactory;
 /**
  * Stores and retrieves the meta table name for this cluster in the Master Local Region. This
  * provides cluster-specific storage for the meta table name.
+ * <p>
+ * This class is intentionally stateless: it is instantiated once by {@code HMaster} during
+ * {@code finishActiveMasterInitialization()}, {@link #load()} is called exactly once, and
+ * {@link #store(TableName)} is called at most once (on first-boot bootstrap). The caller
+ * ({@code HMaster.cachedMetaTableName}) owns the in-memory cache of the resolved value, so there is
+ * no benefit to caching here and no concurrency to protect.
+ * <p>
+ * Writes to the master region's {@code state} column family (same family used by sibling
+ * {@code MasterStateStore} subclasses). This deliberately avoids the {@code info} /
+ * {@link org.apache.hadoop.hbase.HConstants#CATALOG_FAMILY} family that holds meta region location
+ * rows, since {@code HMaster.tryMigrateMetaLocationsFromZooKeeper} treats a non-empty info family
+ * as "migration already done" — colocating the meta table name there was fragile and required
+ * loosening {@code TestMigrateAndMirrorMetaLocations} to filter non-location rows out of its scans.
  */
 @InterfaceAudience.Private
 public class MetaTableNameStore {
   private static final Logger LOG = LoggerFactory.getLogger(MetaTableNameStore.class);
   private static final byte[] META_TABLE_NAME_ROW = Bytes.toBytes("meta_table_name");
-  private static final byte[] INFO_FAMILY = Bytes.toBytes("info");
   private static final byte[] NAME_QUALIFIER = Bytes.toBytes("name");
 
   private final MasterRegion masterRegion;
-  private volatile TableName cachedMetaTableName;
 
   public MetaTableNameStore(MasterRegion masterRegion) {
     this.masterRegion = masterRegion;
@@ -56,38 +69,28 @@ public class MetaTableNameStore {
   public void store(TableName metaTableName) throws IOException {
     LOG.info("Storing meta table name in Master Local Region: {}", metaTableName);
     Put put = new Put(META_TABLE_NAME_ROW);
-    put.addColumn(INFO_FAMILY, NAME_QUALIFIER, Bytes.toBytes(metaTableName.getNameAsString()));
+    put.addColumn(STATE_FAMILY, NAME_QUALIFIER, Bytes.toBytes(metaTableName.getNameAsString()));
     masterRegion.update(r -> r.put(put));
-    cachedMetaTableName = metaTableName;
     LOG.info("Successfully stored meta table name: {}", metaTableName);
   }
 
   /**
    * Load the meta table name from the Master Local Region.
-   * @return the meta table name for this cluster
+   * @return the meta table name for this cluster, or {@code null} if no value has been persisted
+   *         (i.e. first-boot bootstrap).
    * @throws IOException if the load operation fails
    */
   public TableName load() throws IOException {
-    if (cachedMetaTableName != null) {
-      return cachedMetaTableName;
+    Get get = new Get(META_TABLE_NAME_ROW);
+    get.addColumn(STATE_FAMILY, NAME_QUALIFIER);
+    Result result = masterRegion.get(get);
+    if (result.isEmpty()) {
+      LOG.info("No stored meta table name found in Master Local Region (first-boot bootstrap)");
+      return null;
     }
-
-    synchronized (this) {
-      if (cachedMetaTableName != null) {
-        return cachedMetaTableName;
-      }
-      Get get = new Get(META_TABLE_NAME_ROW);
-      get.addColumn(INFO_FAMILY, NAME_QUALIFIER);
-      Result result = masterRegion.get(get);
-
-      if (!result.isEmpty()) {
-        byte[] value = result.getValue(INFO_FAMILY, NAME_QUALIFIER);
-        cachedMetaTableName = TableName.valueOf(Bytes.toString(value));
-        LOG.debug("Loaded meta table name from Master Local Region: {}", cachedMetaTableName);
-        return cachedMetaTableName;
-      }
-      LOG.info("No stored meta table name found in Master Local Region, will use default");
-      return cachedMetaTableName;
-    }
+    byte[] value = result.getValue(STATE_FAMILY, NAME_QUALIFIER);
+    TableName metaTableName = TableName.valueOf(Bytes.toString(value));
+    LOG.debug("Loaded meta table name from Master Local Region: {}", metaTableName);
+    return metaTableName;
   }
 }

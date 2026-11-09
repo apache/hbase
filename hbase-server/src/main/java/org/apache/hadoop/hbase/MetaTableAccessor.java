@@ -592,7 +592,11 @@ public final class MetaTableAccessor {
    */
   @Nullable
   public static TableState getTableState(Connection conn, TableName tableName) throws IOException {
-    if (TableName.isMetaTableName(tableName)) {
+    // Short-circuit only for *this* connection's meta table. The meta table's own state is not
+    // stored in meta (that would be circular) and this connection's meta is always ENABLED. A
+    // foreign meta table name (e.g. hbase:meta_<X> from another cluster on shared storage) must
+    // fall through so we don't lie about a table whose state we don't own.
+    if (tableName.equals(conn.getMetaTableName())) {
       return new TableState(tableName, TableState.State.ENABLED);
     }
     Table metaHTable = getMetaHTable(conn);

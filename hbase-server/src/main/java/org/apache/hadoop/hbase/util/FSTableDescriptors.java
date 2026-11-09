@@ -143,13 +143,18 @@ public class FSTableDescriptors implements TableDescriptors {
       CommonFSUtils.getRootDir(conf));
   }
 
+  /**
+   * Resolves the meta table name from the given configuration via
+   * {@link TableName#initializeHbaseMetaTableName(Configuration)}. Deliberately avoids the JVM-wide
+   * {@link TableName#META_TABLE_NAME} static — that value is pinned at {@code TableName} class load
+   * and ignores any later {@code hbase.meta.table.suffix} override (common in integration tests and
+   * in processes that construct a {@code Configuration} after static init). Must stay in agreement
+   * with {@code HBaseServerBase.getDefaultMetaTableName()} and
+   * {@link org.apache.hadoop.hbase.master.procedure.InitMetaProcedure#getTableName()} so the meta
+   * descriptor on disk and the meta region actually created at bootstrap resolve to the same table.
+   */
   private static TableName getMetaTableNameFromConf(Configuration conf) {
-    // TODO: Support cluster-specific (e.g. read-replica) meta table names. This method is static
-    // and runs from contexts (FS bootstrap) where neither MasterRegion nor a Connection is yet
-    // available, so the dynamic name cannot be resolved here today. A follow-up should plumb the
-    // resolved meta TableName from the caller (e.g. via Configuration once the master has written
-    // it, or by passing a TableName argument from contexts that know it).
-    return TableName.META_TABLE_NAME;
+    return TableName.initializeHbaseMetaTableName(conf);
   }
 
   public static TableDescriptor tryUpdateAndGetMetaTableDescriptor(Configuration conf,

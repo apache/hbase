@@ -80,8 +80,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMaste
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMastersResponseEntry;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameResponse;
 
 /**
  * Base class for Master and RegionServer RpcServices.
@@ -273,7 +271,18 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       String clusterId = server.getClusterId();
       String clusterIdReply = clientMetaCoprocessorHost.postGetClusterId(clusterId);
 
-      return GetClusterIdResponse.newBuilder().setClusterId(clusterIdReply).build();
+      GetClusterIdResponse.Builder builder = GetClusterIdResponse.newBuilder();
+      if (clusterIdReply != null) {
+        builder.setClusterId(clusterIdReply);
+      }
+      // Advertise this cluster's meta table name alongside the cluster id so clients can resolve
+      // custom meta names (e.g. read-replica deployments) without a second RPC. Pre-HBASE-29691
+      // clients ignore unknown fields; pre-HBASE-29691 servers simply never set this field.
+      TableName metaTableName = server.getMetaTableName();
+      if (metaTableName != null) {
+        builder.setMetaTableName(metaTableName.getNameAsString());
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }
@@ -367,23 +376,6 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       bootstrapNodesReply
         .forEach(serverName -> builder.addServerName(ProtobufUtil.toServerName(serverName)));
     } catch (IOException e) {
-      throw new ServiceException(e);
-    }
-
-    return builder.build();
-  }
-
-  @Override
-  public final GetMetaTableNameResponse getMetaTableName(RpcController controller,
-    GetMetaTableNameRequest request) throws ServiceException {
-    GetMetaTableNameResponse.Builder builder = GetMetaTableNameResponse.newBuilder();
-
-    try {
-      TableName metaTableName = server.getMetaTableName();
-      if (metaTableName != null) {
-        builder.setTableName(metaTableName.getNameAsString());
-      }
-    } catch (Exception e) {
       throw new ServiceException(e);
     }
 

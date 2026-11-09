@@ -56,8 +56,6 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClust
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetClusterIdResponse;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaRegionLocationsResponse;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameRequest;
-import org.apache.hadoop.hbase.shaded.protobuf.generated.RegistryProtos.GetMetaTableNameResponse;
 
 /**
  * Base class for rpc based connection registry implementation.
@@ -255,14 +253,16 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
 
   @Override
   public CompletableFuture<TableName> getMetaTableName() {
-    return tracedFuture(() -> this.<GetMetaTableNameResponse> call(
-      (c, s, d) -> s.getMetaTableName(c, GetMetaTableNameRequest.getDefaultInstance(), d),
-      r -> true, "getMetaTableName()").thenApply(resp -> {
-        if (resp.hasTableName() && !resp.getTableName().isEmpty()) {
-          return TableName.valueOf(resp.getTableName());
-        } else {
-          return TableName.META_TABLE_NAME;
+    return tracedFuture(() -> this.<GetClusterIdResponse> call(
+      (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d), r -> true,
+      "getClusterId()").thenApply(resp -> {
+        // The meta table name is piggybacked on GetClusterIdResponse so new clients can talk to
+        // pre-HBASE-29691 servers without needing an "unknown method" fallback. An old server
+        // simply doesn't set the field; its absence is equivalent to the default meta table name.
+        if (resp.hasMetaTableName() && !resp.getMetaTableName().isEmpty()) {
+          return TableName.valueOf(resp.getMetaTableName());
         }
+        return TableName.META_TABLE_NAME;
       }), getClass().getSimpleName() + ".getMetaTableName");
   }
 

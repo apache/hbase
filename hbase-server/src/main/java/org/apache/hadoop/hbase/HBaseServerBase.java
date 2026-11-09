@@ -751,15 +751,35 @@ public abstract class HBaseServerBase<R extends HBaseRpcServicesBase<?>> extends
 
   protected abstract boolean clusterMode();
 
+  /**
+   * Resolves the configuration-derived default meta table name for this server. Reads
+   * {@code hbase.meta.table.suffix} from this server's {@link #getConfiguration()} rather than the
+   * JVM-wide {@link TableName#META_TABLE_NAME} static, which is initialized once at
+   * {@code TableName} class load and does not reflect per-server (per-test) configuration changes.
+   * This is the entry point every server-side bootstrap path should use so that
+   * {@code HMaster.initMetaTableName}, {@code FSTableDescriptors}, and the piggybacked
+   * {@code GetClusterIdResponse.meta_table_name} field all agree on one value.
+   */
   protected TableName getDefaultMetaTableName() {
-    return TableName.META_TABLE_NAME;
+    return TableName.initializeHbaseMetaTableName(getConfiguration());
   }
 
+  /**
+   * Base-class implementation of the {@link ConnectionRegistryEndpoint#getMetaTableName()}
+   * contract. Returns the configuration-derived default meta table name from
+   * {@link #getDefaultMetaTableName()} (i.e. {@link TableName#META_TABLE_NAME}, which is computed
+   * from {@code hbase.meta.table.suffix} at TableName class load).
+   * <p>
+   * Concrete subclasses override this to return the cluster-specific meta table name resolved
+   * dynamically: {@link org.apache.hadoop.hbase.master.HMaster} loads it from the master local
+   * region via {@code MetaTableNameStore};
+   * {@link org.apache.hadoop.hbase.regionserver.HRegionServer} fetches it from the master through
+   * the connection registry. Those overrides also fall back to this base implementation during
+   * bootstrap / pre-active windows when the dynamic value is not yet available, so this method must
+   * never return {@code null}.
+   */
   @Override
   public TableName getMetaTableName() {
-    // For now, it is hbase:meta because we don't support custom meta table name.
-    // After adding support for custom meta table names, we can calculate this from conf and use it
-    // downstream to persist it in Master Region.
     return getDefaultMetaTableName();
   }
 }
