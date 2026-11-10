@@ -237,9 +237,10 @@ public class HBTop extends Configured implements Tool {
   }
 
   private void printUsage(Options opts) {
-    new HelpFormatter().printHelp("hbase hbtop [opts] [-D<property=value>]*", opts);
+    new HelpFormatter().printHelp("hbase hbtop [-D<property=value>]* [opts]", opts);
     System.out.println("");
-    System.out.println(" Note: -D properties will be applied to the conf used.");
+    System.out.println(" Note: -D properties must come before other options; they are applied to"
+      + " the conf used.");
     System.out.println("  For example:");
     System.out.println("   -Dhbase.client.zookeeper.quorum=<zookeeper quorum>");
     System.out.println("   -Dzookeeper.znode.parent=<znode parent>");
