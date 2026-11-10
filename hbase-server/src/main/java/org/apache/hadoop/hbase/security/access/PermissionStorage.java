@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import com.google.errorprone.annotations.RestrictedApi;
 import java.io.ByteArrayInputStream;
 import java.io.DataInput;
 import java.io.DataInputStream;
@@ -24,6 +25,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -31,13 +33,10 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.stream.Collectors;
-import org.apache.commons.lang3.StringUtils;
+import org.apache.commons.lang3.ArrayUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.Cell.Type;
-import org.apache.hadoop.hbase.CellBuilderFactory;
-import org.apache.hadoop.hbase.CellBuilderType;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ExtendedCell;
 import org.apache.hadoop.hbase.NamespaceDescriptor;
@@ -46,7 +45,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Tag;
 import org.apache.hadoop.hbase.TagType;
 import org.apache.hadoop.hbase.client.Connection;
-import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.client.Delete;
 import org.apache.hadoop.hbase.client.Get;
 import org.apache.hadoop.hbase.client.Put;
@@ -60,7 +58,6 @@ import org.apache.hadoop.hbase.regionserver.InternalScanner;
 import org.apache.hadoop.hbase.regionserver.Region;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.Bytes;
-import org.apache.hadoop.hbase.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.WritableFactories;
@@ -123,69 +120,132 @@ public final class PermissionStorage {
   private PermissionStorage() {
   }
 
-  /**
-   * Stores a new user permission grant in the access control lists table.
-   * @param conf     the configuration
-   * @param userPerm the details of the permission to be granted
-   * @param t        acl table instance. It is closed upon method return.
-   * @throws IOException in the case of an error accessing the metadata table
-   */
-  public static void addUserPermission(Configuration conf, UserPermission userPerm, Table t,
-    boolean mergeExistingPermissions) throws IOException {
-    Permission permission = userPerm.getPermission();
-    Permission.Action[] actions = permission.getActions();
-    byte[] rowKey = userPermissionRowKey(permission);
-    Put p = new Put(rowKey);
-    byte[] key = userPermissionKey(userPerm);
-
-    if ((actions == null) || (actions.length == 0)) {
-      String msg = "No actions associated with user '" + userPerm.getUser() + "'";
-      LOG.warn(msg);
-      throw new IOException(msg);
-    }
-
-    Set<Permission.Action> actionSet = new TreeSet<Permission.Action>();
-    if (mergeExistingPermissions) {
-      List<UserPermission> perms = getUserPermissions(conf, rowKey, null, null, null, false);
-      UserPermission currentPerm = null;
-      for (UserPermission perm : perms) {
-        if (userPerm.equalsExceptActions(perm)) {
-          currentPerm = perm;
-          break;
-        }
-      }
-
-      if (currentPerm != null && currentPerm.getPermission().getActions() != null) {
-        actionSet.addAll(Arrays.asList(currentPerm.getPermission().getActions()));
-      }
-    }
-
-    // merge current action with new action.
-    actionSet.addAll(Arrays.asList(actions));
-
-    // serialize to byte array.
-    byte[] value = new byte[actionSet.size()];
-    int index = 0;
-    for (Permission.Action action : actionSet) {
-      value[index++] = action.code();
-    }
-    p.add(CellBuilderFactory.create(CellBuilderType.SHALLOW_COPY).setRow(p.getRow())
-      .setFamily(ACL_LIST_FAMILY).setQualifier(key).setTimestamp(p.getTimestamp()).setType(Type.Put)
-      .setValue(value).build());
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Writing permission with rowKey " + Bytes.toString(rowKey) + " "
-        + Bytes.toString(key) + ": " + Bytes.toStringBinary(value));
-    }
-    try {
-      t.put(p);
-    } finally {
-      t.close();
-    }
+  private static byte[] toTableEntryName(TableName tableName) {
+    return tableName.getName();
   }
 
-  static void addUserPermission(Configuration conf, UserPermission userPerm, Table t)
+  private static String getNamespaceFromEntryName(byte[] entryName) {
+    return Bytes.toString(entryName, 1);
+  }
+
+  /**
+   * Return the username for this table entry, and add family/qualifer to the given {@code builder}
+   * if available.
+   */
+  private static String parseTableEntry(Permission.Builder builder, byte[] qual) {
+    byte delimiter = (byte) ACL_KEY_DELIMITER;
+    int idx = ArrayUtils.indexOf(qual, delimiter);
+    // no family/qualifier
+    if (idx < 0) {
+      return Bytes.toString(qual);
+    }
+    int idx2 = ArrayUtils.indexOf(qual, delimiter, idx + 1);
+    if (idx2 < 0) {
+      // no qualifer
+      builder.withFamily(Arrays.copyOfRange(qual, idx + 1, qual.length));
+    } else {
+      builder.withFamily(Arrays.copyOfRange(qual, idx + 1, idx2))
+        .withQualifier(Arrays.copyOfRange(qual, idx2 + 1, qual.length));
+    }
+    return Bytes.toString(qual, 0, idx);
+  }
+
+  private static UserPermission parseUserPermission(byte[] entryName, byte[] qual,
+    byte[] actionCodes) {
+    if (actionCodes == null || actionCodes.length == 0) {
+      return null;
+    }
+    String user;
+    Permission.Builder builder;
+    if (isGlobalEntry(entryName)) {
+      builder = Permission.newBuilder();
+      user = Bytes.toString(qual);
+    } else if (isNamespaceEntry(entryName)) {
+      builder = Permission.newBuilder(getNamespaceFromEntryName(entryName));
+      user = Bytes.toString(qual);
+    } else {
+      // table entry
+      builder = Permission.newBuilder(TableName.valueOf(entryName));
+      user = parseTableEntry(builder, qual);
+    }
+    return new UserPermission(user, builder.withActionCodes(actionCodes).build());
+  }
+
+  // mainly used in grant/revoke, where we need to get the exact permission record for a given user
+  private static UserPermission getUserPermission(Table aclTable, UserPermission userPerm)
     throws IOException {
-    addUserPermission(conf, userPerm, t, false);
+    byte[] entryName = userPermissionRowKey(userPerm.getPermission());
+    Get get = new Get(entryName);
+    byte[] qual = userPermissionKey(userPerm);
+    get.addColumn(ACL_LIST_FAMILY, qual);
+    Result result = aclTable.get(get);
+    if (result.isEmpty()) {
+      return null;
+    }
+    byte[] actionCodes = result.getValue(ACL_LIST_FAMILY, qual);
+    return parseUserPermission(entryName, qual, actionCodes);
+  }
+
+  private static byte[] getActionCodes(Permission perm) {
+    Permission.Action[] actions = perm.getActions();
+    byte[] actionCodes = new byte[actions.length];
+    for (int i = 0; i < actionCodes.length; i++) {
+      actionCodes[i] = actions[i].code();
+    }
+    return actionCodes;
+  }
+
+  private static void put(Table aclTable, UserPermission userPerm) throws IOException {
+    Permission perm = userPerm.getPermission();
+    Put put = new Put(userPermissionRowKey(perm));
+    byte[] qual = userPermissionKey(userPerm);
+    byte[] value = getActionCodes(perm);
+    put.addColumn(ACL_LIST_FAMILY, qual, value);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Writing permission with rowKey " + Bytes.toString(put.getRow()) + " "
+        + Bytes.toString(qual) + ": " + Bytes.toStringBinary(value));
+    }
+    aclTable.put(put);
+  }
+
+  private static void delete(UserPermission userPerm, Table aclTable) throws IOException {
+    Delete d = new Delete(userPermissionRowKey(userPerm.getPermission()));
+    byte[] qual = userPermissionKey(userPerm);
+    d.addColumns(ACL_LIST_FAMILY, qual);
+    if (LOG.isDebugEnabled()) {
+      LOG.debug("Removing permission with rowKey " + Bytes.toString(d.getRow()) + " "
+        + Bytes.toString(qual));
+    }
+    aclTable.delete(d);
+  }
+
+  /**
+   * Stores a new user permission grant in the access control lists table.
+   * @param conn     connection to hbase cluster
+   * @param userPerm the details of the permission to be granted
+   * @param aclTable acl table instance. It is closed upon method return.
+   * @throws IOException in the case of an error accessing the metadata table
+   */
+  public static void addUserPermission(Connection conn, UserPermission userPerm,
+    boolean mergeExistingPermissions) throws IOException {
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      UserPermission toAdd;
+      if (mergeExistingPermissions) {
+        UserPermission oldUserPerm = getUserPermission(aclTable, userPerm);
+        if (oldUserPerm == null || ArrayUtils.isEmpty(oldUserPerm.getPermission().getActions())) {
+          toAdd = userPerm;
+        } else {
+          Set<Permission.Action> actionSet = new TreeSet<>();
+          actionSet.addAll(Arrays.asList(oldUserPerm.getPermission().getActions()));
+          actionSet.addAll(Arrays.asList(userPerm.getPermission().getActions()));
+          oldUserPerm.getPermission().setActions(actionSet.toArray(Permission.Action[]::new));
+          toAdd = oldUserPerm;
+        }
+      } else {
+        toAdd = userPerm;
+      }
+      put(aclTable, toAdd);
+    }
   }
 
   /**
@@ -195,137 +255,107 @@ public final class PermissionStorage {
    * column family plus qualifier "info:colA", then trying to call this method with only user "bob"
    * and the table name "data" (but without specifying the column qualifier "info:colA") will have
    * no effect.
-   * @param conf     the configuration
+   * @param conn     connection to hbase cluster
    * @param userPerm the details of the permission to be revoked
-   * @param t        acl table
    * @throws IOException if there is an error accessing the metadata table
    */
-  public static void removeUserPermission(Configuration conf, UserPermission userPerm, Table t)
+  public static void removeUserPermission(Connection conn, UserPermission userPerm)
     throws IOException {
-    if (
-      null == userPerm.getPermission().getActions()
-        || userPerm.getPermission().getActions().length == 0
-    ) {
-      removePermissionRecord(conf, userPerm, t);
-    } else {
-      // Get all the global user permissions from the acl table
-      List<UserPermission> permsList = getUserPermissions(conf,
-        userPermissionRowKey(userPerm.getPermission()), null, null, null, false);
-      List<Permission.Action> remainingActions = new ArrayList<>();
-      List<Permission.Action> dropActions = Arrays.asList(userPerm.getPermission().getActions());
-      for (UserPermission perm : permsList) {
-        // Find the exact permission record (same user and scope) and remove only the requested
-        // permissions
-        if (userPerm.equalsExceptActions(perm)) {
-          for (Permission.Action oldAction : perm.getPermission().getActions()) {
-            if (!dropActions.contains(oldAction)) {
-              remainingActions.add(oldAction);
-            }
-          }
-          if (!remainingActions.isEmpty()) {
-            perm.getPermission()
-              .setActions(remainingActions.toArray(new Permission.Action[remainingActions.size()]));
-            addUserPermission(conf, perm, t);
-          } else {
-            removePermissionRecord(conf, userPerm, t);
-          }
-          break;
-        }
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      Permission perm = userPerm.getPermission();
+      if (ArrayUtils.isEmpty(perm.getActions())) {
+        delete(userPerm, aclTable);
+        return;
       }
-    }
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Removed permission " + userPerm.toString());
-    }
-  }
-
-  private static void removePermissionRecord(Configuration conf, UserPermission userPerm, Table t)
-    throws IOException {
-    Delete d = new Delete(userPermissionRowKey(userPerm.getPermission()));
-    d.addColumns(ACL_LIST_FAMILY, userPermissionKey(userPerm));
-    try {
-      t.delete(d);
-    } finally {
-      t.close();
+      UserPermission oldUserPerm = getUserPermission(aclTable, userPerm);
+      if (oldUserPerm == null) {
+        // nothing to revoke
+        return;
+      }
+      Permission oldPerm = oldUserPerm.getPermission();
+      Set<Permission.Action> remainingActions = new TreeSet<>();
+      if (!ArrayUtils.isEmpty(oldPerm.getActions())) {
+        remainingActions.addAll(Arrays.asList(oldPerm.getActions()));
+      }
+      for (Permission.Action action : perm.getActions()) {
+        remainingActions.remove(action);
+      }
+      if (remainingActions.isEmpty()) {
+        delete(userPerm, aclTable);
+      } else {
+        oldPerm.setActions(remainingActions.toArray(Permission.Action[]::new));
+        put(aclTable, oldUserPerm);
+      }
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Removed permission " + userPerm.toString());
+      }
     }
   }
 
   /**
    * Remove specified table from the _acl_ table.
    */
-  static void removeTablePermissions(Configuration conf, TableName tableName, Table t)
-    throws IOException {
-    Delete d = new Delete(tableName.getName());
-    d.addFamily(ACL_LIST_FAMILY);
-
+  static void removeTablePermissions(Connection conn, TableName tableName) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed table " + tableName);
     }
-    try {
-      t.delete(d);
-    } finally {
-      t.close();
+    Delete d = new Delete(toTableEntryName(tableName)).addFamily(ACL_LIST_FAMILY);
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      aclTable.delete(d);
     }
   }
 
   /**
    * Remove specified namespace from the acl table.
    */
-  static void removeNamespacePermissions(Configuration conf, String namespace, Table t)
-    throws IOException {
-    Delete d = new Delete(Bytes.toBytes(toNamespaceEntry(namespace)));
-    d.addFamily(ACL_LIST_FAMILY);
+  static void removeNamespacePermissions(Connection conn, String namespace) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed namespace " + namespace);
     }
+    Delete d = new Delete(toNamespaceEntry(namespace)).addFamily(ACL_LIST_FAMILY);
 
-    try {
-      t.delete(d);
-    } finally {
-      t.close();
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      aclTable.delete(d);
     }
   }
 
   /**
    * Remove permissions of the specified column families of the given table from the acl table.
    */
-  static void removeTableColumnFamiliesPermissions(Configuration conf, TableName tableName,
-    Collection<byte[]> columns, Table t) throws IOException {
+  static void removeTableColumnFamiliesPermissions(Connection conn, TableName tableName,
+    Collection<byte[]> columns) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("Removing permissions of removed columns {} from table {}",
         columns.stream().map(Bytes::toStringBinary).collect(Collectors.joining(", ")), tableName);
     }
-    try {
-      Set<byte[]> families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
-      families.addAll(columns);
-      ListMultimap<String, UserPermission> perms = getTablePermissions(conf, tableName, t);
-      Delete d = new Delete(tableName.getName());
-      boolean found = false;
-      for (UserPermission perm : perms.values()) {
-        Permission permission = perm.getPermission();
-        if (permission instanceof TablePermission) {
-          byte[] family = ((TablePermission) permission).getFamily();
-          if (family != null && families.contains(family)) {
-            d.addColumns(ACL_LIST_FAMILY, userPermissionKey(perm));
-            found = true;
-          }
-        }
+    Set<byte[]> families = new TreeSet<>(Bytes.BYTES_COMPARATOR);
+    families.addAll(columns);
+    List<UserPermission> userPerms = getTablePermissions(conn, tableName);
+    Delete d = new Delete(toTableEntryName(tableName));
+    boolean found = false;
+    for (UserPermission userPerm : userPerms) {
+      TablePermission perm = (TablePermission) userPerm.getPermission();
+      byte[] family = perm.getFamily();
+      if (family != null && families.contains(family)) {
+        d.addColumns(ACL_LIST_FAMILY, userPermissionKey(userPerm));
+        found = true;
       }
-      if (found) {
-        t.delete(d);
+    }
+    if (found) {
+      try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+        aclTable.delete(d);
       }
-    } finally {
-      t.close();
     }
   }
 
-  static byte[] userPermissionRowKey(Permission permission) {
+  private static byte[] userPermissionRowKey(Permission permission) {
     byte[] row;
     if (permission instanceof TablePermission) {
       TablePermission tablePerm = (TablePermission) permission;
-      row = tablePerm.getTableName().getName();
+      row = toTableEntryName(tablePerm.getTableName());
     } else if (permission instanceof NamespacePermission) {
       NamespacePermission nsPerm = (NamespacePermission) permission;
-      row = Bytes.toBytes(toNamespaceEntry(nsPerm.getNamespace()));
+      row = toNamespaceEntry(nsPerm.getNamespace());
     } else {
       // permission instanceof TablePermission
       row = ACL_GLOBAL_NAME;
@@ -336,7 +366,7 @@ public final class PermissionStorage {
   /**
    * Build qualifier key from user permission: username username,family username,family,qualifier
    */
-  static byte[] userPermissionKey(UserPermission permission) {
+  private static byte[] userPermissionKey(UserPermission permission) {
     byte[] key = Bytes.toBytes(permission.getUser());
     byte[] qualifier = null;
     byte[] family = null;
@@ -387,29 +417,22 @@ public final class PermissionStorage {
 
     // do a full scan of _acl_ table
 
-    Scan scan = new Scan();
-    scan.addFamily(ACL_LIST_FAMILY);
+    Scan scan = new Scan().addFamily(ACL_LIST_FAMILY);
 
-    InternalScanner iScanner = null;
-    try {
-      iScanner = aclRegion.getScanner(scan);
-
+    try (InternalScanner scanner = aclRegion.getScanner(scan);) {
       while (true) {
         List<Cell> row = new ArrayList<>();
-
-        boolean hasNext = iScanner.next(row);
+        boolean hasNext = scanner.next(row);
         ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
         byte[] entry = null;
         for (Cell kv : row) {
           if (entry == null) {
             entry = CellUtil.cloneRow(kv);
           }
-          Pair<String, Permission> permissionsOfUserOnTable =
-            parsePermissionRecord(entry, kv, null, null, false, null);
-          if (permissionsOfUserOnTable != null) {
-            String username = permissionsOfUserOnTable.getFirst();
-            Permission permission = permissionsOfUserOnTable.getSecond();
-            perms.put(username, new UserPermission(username, permission));
+          UserPermission userPerm =
+            parseUserPermission(entry, CellUtil.cloneQualifier(kv), CellUtil.cloneValue(kv));
+          if (userPerm != null) {
+            perms.put(userPerm.getUser(), userPerm);
           }
         }
         if (entry != null) {
@@ -418,10 +441,6 @@ public final class PermissionStorage {
         if (!hasNext) {
           break;
         }
-      }
-    } finally {
-      if (iScanner != null) {
-        iScanner.close();
       }
     }
 
@@ -432,7 +451,9 @@ public final class PermissionStorage {
    * Load all permissions from the region server holding {@code _acl_}, primarily intended for
    * testing purposes.
    */
-  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Configuration conf)
+  @RestrictedApi(explanation = "Should only be called in tests", link = "",
+      allowedOnPath = ".*/src/test/.*")
+  static Map<byte[], ListMultimap<String, UserPermission>> loadAll(Connection conn)
     throws IOException {
     Map<byte[], ListMultimap<String, UserPermission>> allPerms =
       new TreeMap<>(Bytes.BYTES_RAWCOMPARATOR);
@@ -442,49 +463,174 @@ public final class PermissionStorage {
     Scan scan = new Scan();
     scan.addFamily(ACL_LIST_FAMILY);
 
-    ResultScanner scanner = null;
     // TODO: Pass in a Connection rather than create one each time.
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-        scanner = table.getScanner(scan);
-        try {
-          for (Result row : scanner) {
-            ListMultimap<String, UserPermission> resultPerms =
-              parsePermissions(row.getRow(), row, null, null, null, false);
-            allPerms.put(row.getRow(), resultPerms);
-          }
-        } finally {
-          if (scanner != null) {
-            scanner.close();
-          }
+    try (Table table = conn.getTable(ACL_TABLE_NAME);
+      ResultScanner scanner = table.getScanner(scan)) {
+      while (true) {
+        Result result = scanner.next();
+        if (result == null) {
+          break;
         }
+        byte[] entryName = result.getRow();
+        ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
+        result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+          UserPermission userPerm = parseUserPermission(entryName, qual, actionCodes);
+          perms.put(userPerm.getUser(), userPerm);
+        });
+        allPerms.put(entryName, perms);
       }
     }
 
     return allPerms;
   }
 
-  public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
-    TableName tableName) throws IOException {
-    return getTablePermissions(conf, tableName, null);
-  }
-
-  public static ListMultimap<String, UserPermission> getTablePermissions(Configuration conf,
-    TableName tableName, Table t) throws IOException {
-    return getPermissions(conf, tableName != null ? tableName.getName() : null, t, null, null, null,
-      false);
-  }
-
-  public static ListMultimap<String, UserPermission> getNamespacePermissions(Configuration conf,
-    String namespace) throws IOException {
-    return getPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null, null, null, null,
-      false);
-  }
-
-  public static ListMultimap<String, UserPermission> getGlobalPermissions(Configuration conf)
+  /**
+   * Get all the permission entries for this table.
+   */
+  public static List<UserPermission> getTablePermissions(Connection conn, TableName tableName)
     throws IOException {
-    return getPermissions(conf, null, null, null, null, null, false);
+    byte[] entryName = toTableEntryName(tableName);
+    Get get = new Get(entryName).addFamily(ACL_LIST_FAMILY);
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      Result result = aclTable.get(get);
+      if (result.isEmpty()) {
+        return Collections.emptyList();
+      }
+      List<UserPermission> userPerms = new ArrayList<>();
+      result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        Permission.Builder builder = Permission.newBuilder(tableName).withActionCodes(actionCodes);
+        String user = parseTableEntry(builder, qual);
+        userPerms.add(new UserPermission(user, builder.build()));
+      });
+      return userPerms;
+    }
   }
+
+  public static List<UserPermission> getNamespacePermissions(Connection conn, String namespace)
+    throws IOException {
+    byte[] entryName = toNamespaceEntry(namespace);
+    Get get = new Get(entryName).addFamily(ACL_LIST_FAMILY);
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      Result result = aclTable.get(get);
+      if (result.isEmpty()) {
+        return Collections.emptyList();
+      }
+      List<UserPermission> userPerms = new ArrayList<>();
+      result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        Permission perm = Permission.newBuilder(namespace).withActionCodes(actionCodes).build();
+        String user = Bytes.toString(qual);
+        userPerms.add(new UserPermission(user, perm));
+      });
+      return userPerms;
+    }
+  }
+
+  public static List<UserPermission> getGlobalPermissions(Connection conn) throws IOException {
+    Get get = new Get(ACL_GLOBAL_NAME).addFamily(ACL_LIST_FAMILY);
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      Result result = aclTable.get(get);
+      if (result.isEmpty()) {
+        return Collections.emptyList();
+      }
+      List<UserPermission> userPerms = new ArrayList<>();
+      result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        Permission perm = Permission.newBuilder().withActionCodes(actionCodes).build();
+        String user = Bytes.toString(qual);
+        userPerms.add(new UserPermission(user, perm));
+      });
+      return userPerms;
+    }
+  }
+
+  public static boolean isGlobalEntry(byte[] entryName) {
+    return Bytes.equals(entryName, ACL_GLOBAL_NAME);
+  }
+
+  public static boolean isNamespaceEntry(String entryName) {
+    return isNamespaceEntry(Bytes.toBytes(entryName));
+  }
+
+  public static boolean isNamespaceEntry(byte[] entryName) {
+    return entryName != null && entryName.length != 0 && entryName[0] == NAMESPACE_PREFIX;
+  }
+
+  public static boolean isTableEntry(byte[] entryName) {
+    return !isNamespaceEntry(entryName) && !isGlobalEntry(entryName) && entryName != null;
+  }
+
+  public static byte[] toNamespaceEntry(String namespace) {
+    return Bytes.toBytes(NAMESPACE_PREFIX + namespace);
+  }
+
+  public static String fromNamespaceEntry(String namespace) {
+    if (namespace.charAt(0) != NAMESPACE_PREFIX) {
+      throw new IllegalArgumentException("Argument is not a valid namespace entry");
+    }
+    return namespace.substring(1);
+  }
+
+  public static byte[] toNamespaceEntry(byte[] namespace) {
+    byte[] ret = new byte[namespace.length + 1];
+    ret[0] = NAMESPACE_PREFIX;
+    System.arraycopy(namespace, 0, ret, 1, namespace.length);
+    return ret;
+  }
+
+  public static byte[] fromNamespaceEntry(byte[] namespace) {
+    if (namespace[0] != NAMESPACE_PREFIX) {
+      throw new IllegalArgumentException(
+        "Argument is not a valid namespace entry: " + Bytes.toString(namespace));
+    }
+    return Arrays.copyOfRange(namespace, 1, namespace.length);
+  }
+
+  public static List<Permission> getCellPermissionsForUser(User user, ExtendedCell cell)
+    throws IOException {
+    // Save an object allocation where we can
+    if (cell.getTagsLength() == 0) {
+      return null;
+    }
+    List<Permission> results = Lists.newArrayList();
+    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
+    while (tagsIterator.hasNext()) {
+      Tag tag = tagsIterator.next();
+      if (tag.getType() == ACL_TAG_TYPE) {
+        // Deserialize the table permissions from the KV
+        // TODO: This can be improved. Don't build UsersAndPermissions just to unpack it again,
+        // use the builder
+        AccessControlProtos.UsersAndPermissions.Builder builder =
+          AccessControlProtos.UsersAndPermissions.newBuilder();
+        if (tag.hasArray()) {
+          ProtobufUtil.mergeFrom(builder, tag.getValueArray(), tag.getValueOffset(),
+            tag.getValueLength());
+        } else {
+          ProtobufUtil.mergeFrom(builder, Tag.cloneValue(tag));
+        }
+        ListMultimap<String, Permission> kvPerms =
+          AccessControlUtil.toUsersAndPermissions(builder.build());
+        // Are there permissions for this user?
+        List<Permission> userPerms = kvPerms.get(user.getShortName());
+        if (userPerms != null) {
+          results.addAll(userPerms);
+        }
+        // Are there permissions for any of the groups this user belongs to?
+        String[] groupNames = user.getGroupNames();
+        if (groupNames != null) {
+          for (String group : groupNames) {
+            List<Permission> groupPerms = kvPerms.get(AuthUtil.toGroupEntry(group));
+            if (results != null) {
+              results.addAll(groupPerms);
+            }
+          }
+        }
+      }
+    }
+    return results;
+  }
+
+  // ====================
+  // Below are methods for sync permission between acl table and zk
+  // ====================
 
   /**
    * Reads user permission assignments stored in the <code>l:</code> column family of the first
@@ -493,228 +639,27 @@ public final class PermissionStorage {
    * See {@link PermissionStorage class documentation} for the key structure used for storage.
    * </p>
    */
-  static ListMultimap<String, UserPermission> getPermissions(Configuration conf, byte[] entryName,
-    Table t, byte[] cf, byte[] cq, String user, boolean hasFilterUser) throws IOException {
-    if (entryName == null) {
-      entryName = ACL_GLOBAL_NAME;
-    }
+  static ListMultimap<String, UserPermission> getPermissions(Connection conn, byte[] entryName)
+    throws IOException {
     // for normal user tables, we just read the table row from _acl_
     ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
     Get get = new Get(entryName);
     get.addFamily(ACL_LIST_FAMILY);
-    Result row = null;
-    if (t == null) {
-      try (Connection connection = ConnectionFactory.createConnection(conf)) {
-        try (Table table = connection.getTable(ACL_TABLE_NAME)) {
-          row = table.get(get);
-        }
-      }
-    } else {
-      row = t.get(get);
+    Result result;
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      result = aclTable.get(get);
     }
-    if (!row.isEmpty()) {
-      perms = parsePermissions(entryName, row, cf, cq, user, hasFilterUser);
+    if (!result.isEmpty()) {
+      result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        UserPermission userPerms = parseUserPermission(entryName, qual, actionCodes);
+        perms.put(userPerms.getUser(), userPerms);
+      });
     } else {
       LOG.info("No permissions found in " + ACL_TABLE_NAME + " for acl entry "
         + Bytes.toString(entryName));
     }
 
     return perms;
-  }
-
-  /**
-   * Returns the currently granted permissions for a given table as the specified user plus
-   * associated permissions.
-   */
-  public static List<UserPermission> getUserTablePermissions(Configuration conf,
-    TableName tableName, byte[] cf, byte[] cq, String userName, boolean hasFilterUser)
-    throws IOException {
-    return getUserPermissions(conf, tableName == null ? null : tableName.getName(), cf, cq,
-      userName, hasFilterUser);
-  }
-
-  /**
-   * Returns the currently granted permissions for a given namespace as the specified user plus
-   * associated permissions.
-   */
-  public static List<UserPermission> getUserNamespacePermissions(Configuration conf,
-    String namespace, String user, boolean hasFilterUser) throws IOException {
-    return getUserPermissions(conf, Bytes.toBytes(toNamespaceEntry(namespace)), null, null, user,
-      hasFilterUser);
-  }
-
-  /**
-   * Returns the currently granted permissions for a given table/namespace with associated
-   * permissions based on the specified column family, column qualifier and user name.
-   * @param conf          the configuration
-   * @param entryName     Table name or the namespace
-   * @param cf            Column family
-   * @param cq            Column qualifier
-   * @param user          User name to be filtered from permission as requested
-   * @param hasFilterUser true if filter user is provided, otherwise false.
-   * @return List of UserPermissions
-   * @throws IOException on failure
-   */
-  public static List<UserPermission> getUserPermissions(Configuration conf, byte[] entryName,
-    byte[] cf, byte[] cq, String user, boolean hasFilterUser) throws IOException {
-    ListMultimap<String, UserPermission> allPerms =
-      getPermissions(conf, entryName, null, cf, cq, user, hasFilterUser);
-    List<UserPermission> perms = new ArrayList<>();
-    for (Map.Entry<String, UserPermission> entry : allPerms.entries()) {
-      perms.add(entry.getValue());
-    }
-    return perms;
-  }
-
-  /**
-   * Parse and filter permission based on the specified column family, column qualifier and user
-   * name.
-   */
-  private static ListMultimap<String, UserPermission> parsePermissions(byte[] entryName,
-    Result result, byte[] cf, byte[] cq, String user, boolean hasFilterUser) {
-    ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
-    if (result != null && result.size() > 0) {
-      for (Cell kv : result.rawCells()) {
-        Pair<String, Permission> permissionsOfUserOnTable =
-          parsePermissionRecord(entryName, kv, cf, cq, hasFilterUser, user);
-
-        if (permissionsOfUserOnTable != null) {
-          String username = permissionsOfUserOnTable.getFirst();
-          Permission permission = permissionsOfUserOnTable.getSecond();
-          perms.put(username, new UserPermission(username, permission));
-        }
-      }
-    }
-    return perms;
-  }
-
-  private static Pair<String, Permission> parsePermissionRecord(byte[] entryName, Cell kv,
-    byte[] cf, byte[] cq, boolean filterPerms, String filterUser) {
-    // return X given a set of permissions encoded in the permissionRecord kv.
-    byte[] family = CellUtil.cloneFamily(kv);
-    if (!Bytes.equals(family, ACL_LIST_FAMILY)) {
-      return null;
-    }
-
-    byte[] key = CellUtil.cloneQualifier(kv);
-    byte[] value = CellUtil.cloneValue(kv);
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Read acl: entry[" + Bytes.toStringBinary(entryName) + "], kv ["
-        + Bytes.toStringBinary(key) + ": " + Bytes.toStringBinary(value) + "]");
-    }
-
-    // check for a column family appended to the key
-    // TODO: avoid the string conversion to make this more efficient
-    String username = Bytes.toString(key);
-
-    // Retrieve group list for the filterUser if cell key is a group.
-    // Group list is not required when filterUser itself a group
-    List<String> filterUserGroups = null;
-    if (filterPerms) {
-      if (
-        username.charAt(0) == '@' && !StringUtils.isEmpty(filterUser) && filterUser.charAt(0) != '@'
-      ) {
-        filterUserGroups = AccessChecker.getUserGroups(filterUser);
-      }
-    }
-
-    // Handle namespace entry
-    if (isNamespaceEntry(entryName)) {
-      // Filter the permissions cell record if client query
-      if (filterPerms && !validateFilterUser(username, filterUser, filterUserGroups)) {
-        return null;
-      }
-
-      return new Pair<>(username, Permission
-        .newBuilder(Bytes.toString(fromNamespaceEntry(entryName))).withActionCodes(value).build());
-    }
-
-    // Handle global entry
-    if (isGlobalEntry(entryName)) {
-      // Filter the permissions cell record if client query
-      if (filterPerms && !validateFilterUser(username, filterUser, filterUserGroups)) {
-        return null;
-      }
-
-      return new Pair<>(username, Permission.newBuilder().withActionCodes(value).build());
-    }
-
-    // Handle table entry
-    int idx = username.indexOf(ACL_KEY_DELIMITER);
-    byte[] permFamily = null;
-    byte[] permQualifier = null;
-    if (idx > 0 && idx < username.length() - 1) {
-      String remainder = username.substring(idx + 1);
-      username = username.substring(0, idx);
-      idx = remainder.indexOf(ACL_KEY_DELIMITER);
-      if (idx > 0 && idx < remainder.length() - 1) {
-        permFamily = Bytes.toBytes(remainder.substring(0, idx));
-        permQualifier = Bytes.toBytes(remainder.substring(idx + 1));
-      } else {
-        permFamily = Bytes.toBytes(remainder);
-      }
-    }
-
-    // Filter the permissions cell record if client query
-    if (filterPerms) {
-      // ACL table contain 3 types of cell key entries; hbase:Acl, namespace and table. So to filter
-      // the permission cell records additional validations are required at CF, CQ and username.
-      // Here we can proceed based on client input whether it contain filterUser.
-      // Validate the filterUser when specified
-      if (filterUser != null && !validateFilterUser(username, filterUser, filterUserGroups)) {
-        return null;
-      }
-      if (!validateCFAndCQ(permFamily, cf, permQualifier, cq)) {
-        return null;
-      }
-    }
-
-    return new Pair<>(username, Permission.newBuilder(TableName.valueOf(entryName))
-      .withFamily(permFamily).withQualifier(permQualifier).withActionCodes(value).build());
-  }
-
-  /*
-   * Validate the cell key with the client filterUser if specified in the query input. 1. If cell
-   * key (username) is not a group then check whether client filterUser is equal to username 2. If
-   * cell key (username) is a group then check whether client filterUser belongs to the cell key
-   * group (username) 3. In case when both filterUser and username are group names then cell will be
-   * filtered if not equal.
-   */
-  private static boolean validateFilterUser(String username, String filterUser,
-    List<String> filterUserGroups) {
-    if (filterUserGroups == null) {
-      // Validate user name or group names whether equal
-      if (filterUser.equals(username)) {
-        return true;
-      }
-    } else {
-      // Check whether filter user belongs to the cell key group.
-      return filterUserGroups.contains(username.substring(1));
-    }
-    return false;
-  }
-
-  /*
-   * Validate the cell with client CF and CQ if specified in the query input. 1. If CF is NULL, then
-   * no need of further validation, result should include all CF and CQ. 2. IF CF specified and
-   * equal then validation required at CQ level if CF specified in client input, otherwise return
-   * all CQ records.
-   */
-  private static boolean validateCFAndCQ(byte[] permFamily, byte[] cf, byte[] permQualifier,
-    byte[] cq) {
-    boolean include = true;
-    if (cf != null) {
-      if (Bytes.equals(cf, permFamily)) {
-        if (cq != null && !Bytes.equals(cq, permQualifier)) {
-          // if CQ specified and didn't match then ignore this cell
-          include = false;
-        }
-      } else {
-        // if CF specified and didn't match then ignore this cell
-        include = false;
-      }
-    }
-    return include;
   }
 
   /**
@@ -812,91 +757,5 @@ public final class PermissionStorage {
       }
       return perms;
     }
-  }
-
-  public static boolean isGlobalEntry(byte[] entryName) {
-    return Bytes.equals(entryName, ACL_GLOBAL_NAME);
-  }
-
-  public static boolean isNamespaceEntry(String entryName) {
-    return isNamespaceEntry(Bytes.toBytes(entryName));
-  }
-
-  public static boolean isNamespaceEntry(byte[] entryName) {
-    return entryName != null && entryName.length != 0 && entryName[0] == NAMESPACE_PREFIX;
-  }
-
-  public static boolean isTableEntry(byte[] entryName) {
-    return !isNamespaceEntry(entryName) && !isGlobalEntry(entryName) && entryName != null;
-  }
-
-  public static String toNamespaceEntry(String namespace) {
-    return NAMESPACE_PREFIX + namespace;
-  }
-
-  public static String fromNamespaceEntry(String namespace) {
-    if (namespace.charAt(0) != NAMESPACE_PREFIX) {
-      throw new IllegalArgumentException("Argument is not a valid namespace entry");
-    }
-    return namespace.substring(1);
-  }
-
-  public static byte[] toNamespaceEntry(byte[] namespace) {
-    byte[] ret = new byte[namespace.length + 1];
-    ret[0] = NAMESPACE_PREFIX;
-    System.arraycopy(namespace, 0, ret, 1, namespace.length);
-    return ret;
-  }
-
-  public static byte[] fromNamespaceEntry(byte[] namespace) {
-    if (namespace[0] != NAMESPACE_PREFIX) {
-      throw new IllegalArgumentException(
-        "Argument is not a valid namespace entry: " + Bytes.toString(namespace));
-    }
-    return Arrays.copyOfRange(namespace, 1, namespace.length);
-  }
-
-  public static List<Permission> getCellPermissionsForUser(User user, ExtendedCell cell)
-    throws IOException {
-    // Save an object allocation where we can
-    if (cell.getTagsLength() == 0) {
-      return null;
-    }
-    List<Permission> results = Lists.newArrayList();
-    Iterator<Tag> tagsIterator = PrivateCellUtil.tagsIterator(cell);
-    while (tagsIterator.hasNext()) {
-      Tag tag = tagsIterator.next();
-      if (tag.getType() == ACL_TAG_TYPE) {
-        // Deserialize the table permissions from the KV
-        // TODO: This can be improved. Don't build UsersAndPermissions just to unpack it again,
-        // use the builder
-        AccessControlProtos.UsersAndPermissions.Builder builder =
-          AccessControlProtos.UsersAndPermissions.newBuilder();
-        if (tag.hasArray()) {
-          ProtobufUtil.mergeFrom(builder, tag.getValueArray(), tag.getValueOffset(),
-            tag.getValueLength());
-        } else {
-          ProtobufUtil.mergeFrom(builder, Tag.cloneValue(tag));
-        }
-        ListMultimap<String, Permission> kvPerms =
-          AccessControlUtil.toUsersAndPermissions(builder.build());
-        // Are there permissions for this user?
-        List<Permission> userPerms = kvPerms.get(user.getShortName());
-        if (userPerms != null) {
-          results.addAll(userPerms);
-        }
-        // Are there permissions for any of the groups this user belongs to?
-        String[] groupNames = user.getGroupNames();
-        if (groupNames != null) {
-          for (String group : groupNames) {
-            List<Permission> groupPerms = kvPerms.get(AuthUtil.toGroupEntry(group));
-            if (results != null) {
-              results.addAll(groupPerms);
-            }
-          }
-        }
-      }
-    }
-    return results;
   }
 }
