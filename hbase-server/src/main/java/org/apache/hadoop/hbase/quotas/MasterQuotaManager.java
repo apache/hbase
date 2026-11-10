@@ -518,6 +518,20 @@ public class MasterQuotaManager implements RegionStateListener {
     }
   }
 
+  /**
+   * Set the absolute region count of a table in its namespace quota, after a truncate has replaced
+   * the table's regions. No quota limit check is performed, as the region layout change has already
+   * happened.
+   * @param tName   - The table name to update quota usage.
+   * @param regions - The new region count, counting default replicas only.
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  public void setTableRegionCountForTruncate(TableName tName, int regions) throws IOException {
+    if (initialized) {
+      namespaceQuotaManager.updateQuotaForTableTruncate(tName, regions);
+    }
+  }
+
   /** Returns cached region count, or -1 if quota manager is disabled or table status not found */
   public int getRegionCountOfTable(TableName tName) throws IOException {
     if (initialized) {
