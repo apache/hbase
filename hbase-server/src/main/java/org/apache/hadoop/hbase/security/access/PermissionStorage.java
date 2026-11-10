@@ -212,8 +212,9 @@ public final class PermissionStorage {
       List<Permission.Action> remainingActions = new ArrayList<>();
       List<Permission.Action> dropActions = Arrays.asList(userPerm.getPermission().getActions());
       for (UserPermission perm : permsList) {
-        // Find the user and remove only the requested permissions
-        if (perm.getUser().equals(userPerm.getUser())) {
+        // Find the exact permission record (same user and scope) and remove only the requested
+        // permissions
+        if (userPerm.equalsExceptActions(perm)) {
           for (Permission.Action oldAction : perm.getPermission().getActions()) {
             if (!dropActions.contains(oldAction)) {
               remainingActions.add(oldAction);
