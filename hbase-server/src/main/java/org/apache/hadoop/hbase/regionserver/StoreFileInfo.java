@@ -425,7 +425,9 @@ public class StoreFileInfo implements Configurable {
    * possible so reader open does not repeat metadata lookups.
    */
   private FileStatus getPlainHFileStatusForOpen() throws IOException {
-    if (plainHFileStatus != null) {
+f    // A complete HFile is never empty, so a zero-length cached status was captured before the
+    // file was fully written and must be refreshed.
+    if (plainHFileStatus != null && plainHFileStatus.getLen() > 0) {
       return plainHFileStatus;
     }
     plainHFileStatus = fs.getFileStatus(initialPath);
