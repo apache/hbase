@@ -19,16 +19,38 @@ package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTimeoutPreemptively;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.timeout;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.time.Duration;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.ChoreService;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.Waiter;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.Get;
+import org.apache.hadoop.hbase.client.Result;
+import org.apache.hadoop.hbase.client.ResultScanner;
+import org.apache.hadoop.hbase.client.Scan;
+import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.regionserver.RegionServerServices;
 import org.apache.hadoop.hbase.testclassification.RegionServerTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
+import org.mockito.stubbing.Answer;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.HBaseProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.QuotaProtos;
@@ -171,5 +193,75 @@ public class TestQuotaCache2 {
     TimeBasedLimiter updatedLimiter =
       (TimeBasedLimiter) newCache.get("my_table").getGlobalLimiter();
     assertEquals(999, updatedLimiter.getReadAvailable());
+  }
+
+  @Test
+  public void testLookupDoesNotWaitForInitialLoad() throws Exception {
+    CountDownLatch quotaTableAvailable = new CountDownLatch(1);
+    Connection connection = mockConnection(invocation -> {
+      quotaTableAvailable.await();
+      return emptyQuotaTable();
+    });
+    QuotaCache quotaCache = startQuotaCache(connection);
+    try {
+      TableName table = TableName.valueOf("my_table");
+      assertTimeoutPreemptively(Duration.ofSeconds(5),
+        () -> assertTrue(quotaCache.getTableLimiter(table).isBypass()));
+      assertFalse(quotaCache.isInitialized());
+
+      quotaTableAvailable.countDown();
+      Waiter.waitFor(conf, 10_000, quotaCache::isInitialized);
+    } finally {
+      quotaTableAvailable.countDown();
+      quotaCache.stop("test");
+    }
+  }
+
+  @Test
+  public void testFailedInitialLoadIsRetried() throws Exception {
+    AtomicBoolean quotaTableAvailable = new AtomicBoolean(false);
+    Connection connection = mockConnection(invocation -> {
+      if (!quotaTableAvailable.get()) {
+        throw new IOException("hbase:quota is not available");
+      }
+      return emptyQuotaTable();
+    });
+    QuotaCache quotaCache = startQuotaCache(connection);
+    try {
+      quotaCache.getTableLimiter(TableName.valueOf("my_table"));
+      verify(connection, timeout(10_000).atLeast(1)).getTable(any(TableName.class));
+      assertFalse(quotaCache.isInitialized());
+
+      quotaTableAvailable.set(true);
+      Waiter.waitFor(conf, 10_000, quotaCache::isInitialized);
+    } finally {
+      quotaCache.stop("test");
+    }
+  }
+
+  private static QuotaCache startQuotaCache(Connection connection) throws IOException {
+    RegionServerServices rsServices = mock(RegionServerServices.class);
+    when(rsServices.getConfiguration()).thenReturn(conf);
+    when(rsServices.getChoreService()).thenReturn(mock(ChoreService.class));
+    when(rsServices.getConnection()).thenReturn(connection);
+    QuotaCache quotaCache = new QuotaCache(rsServices);
+    quotaCache.start();
+    return quotaCache;
+  }
+
+  private static Connection mockConnection(Answer<Table> quotaTable) throws IOException {
+    Connection connection = mock(Connection.class);
+    when(connection.getTable(any(TableName.class))).thenAnswer(quotaTable);
+    when(connection.getAdmin()).thenThrow(new IOException("master is not available"));
+    return connection;
+  }
+
+  private static Table emptyQuotaTable() throws IOException {
+    ResultScanner scanner = mock(ResultScanner.class);
+    when(scanner.iterator()).thenReturn(Collections.emptyIterator());
+    Table table = mock(Table.class);
+    when(table.getScanner(any(Scan.class))).thenReturn(scanner);
+    when(table.get(any(Get.class))).thenReturn(Result.EMPTY_RESULT);
+    return table;
   }
 }
