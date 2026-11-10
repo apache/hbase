@@ -89,7 +89,7 @@ public class ReopenTableRegionsProcedure
   /**
    * Create a new ReopenTableRegionsProcedure respecting the throttling configuration for the table.
    * First check the table descriptor, then fall back to the global configuration. Only used in
-   * ModifyTableProcedure.
+   * ModifyTableProcedure and ModifyPeerProcedure.
    */
   public static ReopenTableRegionsProcedure throttled(final Configuration conf,
     final TableDescriptor desc) {
