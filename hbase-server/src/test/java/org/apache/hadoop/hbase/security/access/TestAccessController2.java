@@ -21,12 +21,12 @@ import static org.apache.hadoop.hbase.AuthUtil.toGroupEntry;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.Coprocessor;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -147,7 +147,8 @@ public class TestAccessController2 extends SecureTestUtil {
         new Put(TEST_ROW_3).addColumn(TEST_FAMILY_2, Q1, value1)));
     }
 
-    assertEquals(1, PermissionStorage.getTablePermissions(conf, tableName).size());
+    assertEquals(1,
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), tableName).size());
     try {
       assertEquals(1,
         AccessControlClient.getUserPermissions(systemUserConnection, tableName.toString()).size());
@@ -174,8 +175,10 @@ public class TestAccessController2 extends SecureTestUtil {
     }
     deleteNamespace(TEST_UTIL, namespace);
     // Verify all table/namespace permissions are erased
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, tableName).size());
-    assertEquals(0, PermissionStorage.getNamespacePermissions(conf, namespace).size());
+    assertEquals(0,
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), tableName).size());
+    assertEquals(0,
+      PermissionStorage.getNamespacePermissions(TEST_UTIL.getConnection(), namespace).size());
   }
 
   @Test
@@ -204,8 +207,8 @@ public class TestAccessController2 extends SecureTestUtil {
     // Verify that owner permissions have been granted to the test user on the
     // table just created
     List<UserPermission> perms = PermissionStorage
-      .getTablePermissions(conf, testTable.getTableName()).get(testUser.getShortName());
-    assertNotNull(perms);
+      .getTablePermissions(TEST_UTIL.getConnection(), testTable.getTableName()).stream()
+      .filter(up -> up.getUser().equals(testUser.getShortName())).collect(Collectors.toList());
     assertFalse(perms.isEmpty());
     // Should be RWXCA
     assertTrue(perms.get(0).getPermission().implies(Permission.Action.READ));

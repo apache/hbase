@@ -30,7 +30,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -60,7 +59,6 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
 import org.apache.hbase.thirdparty.com.google.common.collect.Sets;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
@@ -94,6 +92,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
 
   private Admin admin;
   private final Configuration conf;
+  private final Connection conn;
   private FileSystem fs;
   private PathHelper pathHelper;
   private ExecutorService pool;
@@ -101,6 +100,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   public SnapshotScannerHDFSAclHelper(Configuration configuration, Connection connection)
     throws IOException {
     this.conf = configuration;
+    this.conn = connection;
     this.pathHelper = new PathHelper(conf);
     this.fs = pathHelper.getFileSystem();
     this.pool = Executors.newFixedThreadPool(conf.getInt(ACL_SYNC_TO_HDFS_THREAD_NUMBER, 10),
@@ -496,7 +496,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
    * @throws IOException if an error occurred
    */
   private Set<String> getUsersWithGlobalReadAction() throws IOException {
-    return getUsersWithReadAction(PermissionStorage.getGlobalPermissions(conf));
+    return getUsersWithReadAction(PermissionStorage.getGlobalPermissions(conn));
   }
 
   /**
@@ -509,7 +509,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   Set<String> getUsersWithNamespaceReadAction(String namespace, boolean includeGlobal)
     throws IOException {
     Set<String> users =
-      getUsersWithReadAction(PermissionStorage.getNamespacePermissions(conf, namespace));
+      getUsersWithReadAction(PermissionStorage.getNamespacePermissions(conn, namespace));
     if (includeGlobal) {
       users.addAll(getUsersWithGlobalReadAction());
     }
@@ -527,7 +527,7 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
   Set<String> getUsersWithTableReadAction(TableName tableName, boolean includeNamespace,
     boolean includeGlobal) throws IOException {
     Set<String> users =
-      getUsersWithReadAction(PermissionStorage.getTablePermissions(conf, tableName));
+      getUsersWithReadAction(PermissionStorage.getTablePermissions(conn, tableName));
     if (includeNamespace) {
       users
         .addAll(getUsersWithNamespaceReadAction(tableName.getNamespaceAsString(), includeGlobal));
@@ -535,10 +535,8 @@ public class SnapshotScannerHDFSAclHelper implements Closeable {
     return users;
   }
 
-  private Set<String>
-    getUsersWithReadAction(ListMultimap<String, UserPermission> permissionMultimap) {
-    return permissionMultimap.entries().stream()
-      .filter(entry -> checkUserPermission(entry.getValue())).map(Map.Entry::getKey)
+  private Set<String> getUsersWithReadAction(List<UserPermission> perms) {
+    return perms.stream().filter(this::checkUserPermission).map(UserPermission::getUser)
       .collect(Collectors.toSet());
   }
 

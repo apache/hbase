@@ -52,7 +52,6 @@ import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -111,6 +110,7 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
+import org.apache.hadoop.hbase.security.access.PermissionUtils;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -2947,10 +2947,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
           ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         boolean mergeExistingPermissions = request.getMergeExistingPermissions();
         server.cpHost.preGrant(perm, mergeExistingPermissions);
-        try (Table table = server.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.addUserPermission(getConfiguration(), perm, table,
-            mergeExistingPermissions);
-        }
+        PermissionStorage.addUserPermission(server.getConnection(), perm, mergeExistingPermissions);
         server.cpHost.postGrant(perm, mergeExistingPermissions);
         return GrantResponse.getDefaultInstance();
       } else {
@@ -2971,9 +2968,7 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         final UserPermission userPermission =
           ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         server.cpHost.preRevoke(userPermission);
-        try (Table table = server.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.removeUserPermission(server.getConfiguration(), userPermission, table);
-        }
+        PermissionStorage.removeUserPermission(server.getConnection(), userPermission);
         server.cpHost.postRevoke(userPermission);
         return RevokeResponse.getDefaultInstance();
       } else {
@@ -3005,18 +3000,17 @@ public class MasterRpcServices extends HBaseRpcServicesBase<HMaster>
         server.getMasterCoprocessorHost().preGetUserPermissions(userName, namespace, table, cf, cq,
           permissionScope);
 
-        List<UserPermission> perms = null;
+        List<UserPermission> perms;
         if (permissionType == Type.Table) {
-          boolean filter = (cf != null || userName != null) ? true : false;
-          perms = PermissionStorage.getUserTablePermissions(server.getConfiguration(), table, cf,
-            cq, userName, filter);
+          perms = PermissionUtils.filter(
+            PermissionStorage.getTablePermissions(server.getConnection(), table), cf, cq, userName);
         } else if (permissionType == Type.Namespace) {
-          perms = PermissionStorage.getUserNamespacePermissions(server.getConfiguration(),
-            namespace, userName, userName != null ? true : false);
+          perms = PermissionUtils.filter(
+            PermissionStorage.getNamespacePermissions(server.getConnection(), namespace), userName);
         } else {
-          perms = PermissionStorage.getUserPermissions(server.getConfiguration(), null, null, null,
-            userName, userName != null ? true : false);
-          // Skip super users when filter user is specified
+          perms = PermissionUtils
+            .filter(PermissionStorage.getGlobalPermissions(server.getConnection()), userName);
+          // Skip super users when userName is specified
           if (userName == null) {
             // Adding superusers explicitly to the result set as PermissionStorage do not store
             // them. Also using acl as table name to be inline with the results of global admin and

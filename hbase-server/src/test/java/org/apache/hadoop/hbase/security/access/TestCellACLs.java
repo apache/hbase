@@ -454,6 +454,7 @@ public class TestCellACLs extends SecureTestUtil {
       // Test deleted the table, no problem
       LOG.info("Test deleted table " + testTable.getTableName());
     }
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, testTable.getTableName()).size());
+    assertEquals(0, PermissionStorage
+      .getTablePermissions(TEST_UTIL.getConnection(), testTable.getTableName()).size());
   }
 }
