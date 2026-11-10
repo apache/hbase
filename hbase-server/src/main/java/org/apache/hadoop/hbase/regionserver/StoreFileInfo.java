@@ -406,7 +406,7 @@ public class StoreFileInfo implements Configurable {
     } else {
       statusForOpen = getPlainHFileStatusForOpen();
       in = new FSDataInputStreamWrapper(fs, initialPath, doDropBehind, readahead, statusForOpen);
-      readerPath = initialPath;
+      readerPath = statusForOpen.getPath();
       length = size > 0 ? size : statusForOpen.getLen();
     }
     ReaderContextBuilder contextBuilder = new ReaderContextBuilder().withInputStreamWrapper(in)
