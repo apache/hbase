@@ -102,6 +102,7 @@ public interface MetricsMasterSource extends BaseSource {
   String OFFLINE_REGION_COUNT_DESC = "Number of Offline Regions";
 
   String SERVER_CRASH_METRIC_PREFIX = "serverCrash";
+  String SPLIT_WAL_METRIC_PREFIX = "splitWAL";
   String OLD_WAL_DIR_SIZE_DESC = "size of old WALs directory in bytes";
 
   /**
@@ -124,4 +125,7 @@ public interface MetricsMasterSource extends BaseSource {
 
   /** Returns {@link OperationMetrics} containing common metrics for server crash operation */
   OperationMetrics getServerCrashMetrics();
+
+  /** Returns {@link OperationMetrics} containing common metrics for split WAL operation */
+  OperationMetrics getSplitWALMetrics();
 }
