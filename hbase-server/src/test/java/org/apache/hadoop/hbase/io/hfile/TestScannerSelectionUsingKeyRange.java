@@ -132,7 +132,7 @@ public class TestScannerSelectionUsingKeyRange {
       accessedFiles.add(block.getFilename());
     }
     assertEquals(expectedCount, accessedFiles.size());
-    cache.shutdown();
     HBaseTestingUtil.closeRegionAndWAL(region);
+    cache.shutdown();
   }
 }

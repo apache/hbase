@@ -29,7 +29,6 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
 import java.util.stream.Stream;
@@ -551,21 +550,6 @@ public class TestCacheOnWrite {
       conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY, localCacheBloomBlocksValue);
       conf.setBoolean(CacheConfig.CACHE_INDEX_BLOCKS_ON_WRITE_KEY, localCacheIndexBlocksValue);
     }
-  }
-
-  /**
-   * Returns whether the cache has a legacy BucketCache as its L2 engine.
-   * @param cache cache access service to inspect
-   * @return {@code true} if L2 is backed by a {@link BucketCache}
-   */
-  private static boolean isBucketCacheL2(CacheAccessService cache) {
-    Optional<CacheEngine> l2 = cache.getEngine(CacheTier.L2);
-    if (!l2.isPresent() || !(l2.get() instanceof BlockCacheBackedCacheEngine)) {
-      return false;
-    }
-
-    BlockCache blockCache = ((BlockCacheBackedCacheEngine) l2.get()).getBlockCache();
-    return blockCache instanceof BucketCache;
   }
 
   @TestTemplate

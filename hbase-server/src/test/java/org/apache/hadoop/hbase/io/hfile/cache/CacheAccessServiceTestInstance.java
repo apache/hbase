@@ -79,7 +79,7 @@ public final class CacheAccessServiceTestInstance<T> {
 
   /**
    * Returns the legacy block cache when this instance was constructed from one.
-   * @return legacy block cache, or {@code null} for a native cache engine
+   * @return legacy block cache, or throws {@link IllegalStateException} for a native cache engine
    */
   public BlockCache blockCache() {
     if (!(cache instanceof BlockCache)) {
