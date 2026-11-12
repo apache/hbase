@@ -45,6 +45,7 @@ import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.IndexOnlyCachePlacementAdmissionPolicy;
 import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
@@ -372,19 +373,33 @@ public class TestCacheConfig {
     }
   }
 
+  /**
+   * Verifies that IndexOnlyLRU uses the native LRU cache engine with the index-only admission
+   * policy and admits only non-data blocks.
+   */
   @Test
-  public void testIndexOnlyLruBlockCache() {
+  public void testIndexOnlyLruCachePolicy() {
     conf.set(BlockCacheFactory.BLOCKCACHE_POLICY_KEY, "IndexOnlyLRU");
+
     CacheAccessService cache = CacheAccessServiceTestFactory.fromConfiguration(this.conf);
-    assertTrue(CacheAccessServiceTestFactory.blockCache(cache) instanceof IndexOnlyLruBlockCache);
-    // reject data block
+
+    assertTrue(cache instanceof TopologyBackedCacheAccessService);
+    TopologyBackedCacheAccessService service = (TopologyBackedCacheAccessService) cache;
+    assertTrue(service.getPolicy() instanceof IndexOnlyCachePlacementAdmissionPolicy);
+
+    CacheEngine engine = CacheAccessServiceTestFactory.getCacheEngine(cache, CacheTier.SINGLE);
+    assertTrue(engine instanceof LruCacheEngine);
+
     long initialBlockCount = cache.getBlockCount();
-    BlockCacheKey bck = new BlockCacheKey("bck", 0);
-    Cacheable c = new DataCacheEntry();
-    cache.cacheBlock(bck, c, true);
-    // accept index block
-    Cacheable indexCacheEntry = new IndexCacheEntry();
-    cache.cacheBlock(bck, indexCacheEntry, true);
+
+    // Reject data block.
+    BlockCacheKey dataKey = new BlockCacheKey("data", 0);
+    cache.cacheBlock(dataKey, new DataCacheEntry(), true);
+    assertEquals(initialBlockCount, cache.getBlockCount());
+
+    // Accept index block.
+    BlockCacheKey indexKey = new BlockCacheKey("index", 0);
+    cache.cacheBlock(indexKey, new IndexCacheEntry(), true);
     assertEquals(initialBlockCount + 1, cache.getBlockCount());
   }
 

@@ -158,15 +158,14 @@ public final class BlockCacheFactory {
     LOG.info("Allocating CacheEngine size=" + StringUtils.byteDesc(cacheSize) + ", blockSize="
       + StringUtils.byteDesc(blockSize));
 
-    if (policy.equalsIgnoreCase("LRU")) {
+    if (
+      policy.equalsIgnoreCase("LRU") || policy.equalsIgnoreCase("AdaptiveLRU")
+        || policy.equalsIgnoreCase("IndexOnlyLRU")
+    ) {
       return new LruCacheEngine(cacheSize, blockSize, true, c);
-    } else if (policy.equalsIgnoreCase("IndexOnlyLRU")) {
-      return CacheEngines.fromBlockCache(new IndexOnlyLruBlockCache(cacheSize, blockSize, true, c));
     } else if (policy.equalsIgnoreCase("TinyLFU")) {
       return CacheEngines
         .fromBlockCache(new TinyLfuBlockCache(cacheSize, blockSize, ForkJoinPool.commonPool(), c));
-    } else if (policy.equalsIgnoreCase("AdaptiveLRU")) {
-      return new LruCacheEngine(cacheSize, blockSize, true, c);
     } else {
       throw new IllegalArgumentException("Unknown policy: " + policy);
     }
