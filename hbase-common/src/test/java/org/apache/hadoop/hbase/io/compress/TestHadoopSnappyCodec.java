@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.io.compress;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
@@ -27,6 +28,7 @@ import java.io.OutputStream;
 import java.util.Random;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
+import org.apache.hadoop.hbase.util.VersionInfo;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.compress.Compressor;
 import org.apache.hadoop.io.compress.Decompressor;
@@ -46,6 +48,11 @@ public class TestHadoopSnappyCodec {
 
   @Test
   public void testRoundTrip() throws Exception {
+    // Hadoop's SnappyCodec only uses snappy-java since 3.3.1 (HADOOP-17125). Earlier versions
+    // need the native hadoop library.
+    assumeTrue(
+      VersionInfo.compareVersion(org.apache.hadoop.util.VersionInfo.getVersion(), "3.3.1") >= 0,
+      "Hadoop SnappyCodec does not use snappy-java before 3.3.1");
     Compression.Algorithm algo = Compression.Algorithm.SNAPPY;
     byte[] data = new byte[256 * 1024];
     Random rand = new Random(0x30538);
