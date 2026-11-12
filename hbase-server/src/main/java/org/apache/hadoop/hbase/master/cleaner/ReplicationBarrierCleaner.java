@@ -80,9 +80,8 @@ public class ReplicationBarrierCleaner extends ScheduledChore {
     long deletedLastPushedSeqIds = 0;
     TableName tableName = null;
     List<String> peerIds = null;
-    try (Table metaTable = conn.getTable(TableName.META_TABLE_NAME);
-      ResultScanner scanner = metaTable.getScanner(
-        new Scan().addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions())) {
+    try (Table metaTable = conn.getTable(conn.getMetaTableName()); ResultScanner scanner = metaTable
+      .getScanner(new Scan().addFamily(HConstants.REPLICATION_BARRIER_FAMILY).readAllVersions())) {
       for (;;) {
         Result result = scanner.next();
         if (result == null) {

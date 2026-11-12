@@ -42,6 +42,24 @@ public interface AsyncConnection extends Closeable {
   Configuration getConfiguration();
 
   /**
+   * Returns the meta table name for this cluster.
+   * <p>
+   * This value is fetched from the cluster during connection establishment and cached for the
+   * lifetime of this connection. For most clusters, this will be "hbase:meta". For read replica
+   * clusters or other specialized configurations, this may return a different table name.
+   * <p>
+   * This method has a {@code default} implementation that returns {@link TableName#META_TABLE_NAME}
+   * so that out-of-tree {@code AsyncConnection} implementations and test doubles compiled against
+   * the pre-HBASE-29691 interface do not break. Implementations that support cluster-specific meta
+   * table names must override this to resolve the name from the connection registry.
+   * @return The meta table name for this cluster
+   */
+  @SuppressWarnings("deprecation")
+  default TableName getMetaTableName() {
+    return TableName.META_TABLE_NAME;
+  }
+
+  /**
    * Retrieve a AsyncRegionLocator implementation to inspect region information on a table. The
    * returned AsyncRegionLocator is not thread-safe, so a new instance should be created for each
    * using thread. This is a lightweight operation. Pooling or caching of the returned
@@ -102,6 +120,15 @@ public interface AsyncConnection extends Closeable {
    */
   default AsyncTable<ScanResultConsumer> getTable(TableName tableName, ExecutorService pool) {
     return getTableBuilder(tableName, pool).build();
+  }
+
+  /**
+   * Retrieve an {@link AsyncTable} implementation for accessing the meta table. This method returns
+   * the correct meta table for this connection
+   * @return An AsyncTable to use for interactions with the meta table
+   */
+  default AsyncTable<AdvancedScanResultConsumer> getMetaTable() {
+    return getTable(getMetaTableName());
   }
 
   /**

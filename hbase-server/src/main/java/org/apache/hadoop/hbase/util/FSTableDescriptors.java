@@ -143,24 +143,39 @@ public class FSTableDescriptors implements TableDescriptors {
       CommonFSUtils.getRootDir(conf));
   }
 
+  /**
+   * Resolves the meta table name from the given configuration via
+   * {@link TableName#initializeHbaseMetaTableName(Configuration)}. Deliberately avoids the JVM-wide
+   * {@link TableName#META_TABLE_NAME} static — that value is pinned at {@code TableName} class load
+   * and ignores any later {@code hbase.meta.table.suffix} override (common in integration tests and
+   * in processes that construct a {@code Configuration} after static init). Must stay in agreement
+   * with {@code HBaseServerBase.getDefaultMetaTableName()} and
+   * {@link org.apache.hadoop.hbase.master.procedure.InitMetaProcedure#getTableName()} so the meta
+   * descriptor on disk and the meta region actually created at bootstrap resolve to the same table.
+   */
+  private static TableName getMetaTableNameFromConf(Configuration conf) {
+    return TableName.initializeHbaseMetaTableName(conf);
+  }
+
   public static TableDescriptor tryUpdateAndGetMetaTableDescriptor(Configuration conf,
     FileSystem fs, Path rootdir) throws IOException {
     // see if we already have meta descriptor on fs. Write one if not.
-    Optional<Pair<FileStatus, TableDescriptor>> opt = getTableDescriptorFromFs(fs,
-      CommonFSUtils.getTableDir(rootdir, TableName.META_TABLE_NAME), false);
+    TableName metaTableName = getMetaTableNameFromConf(conf);
+    Optional<Pair<FileStatus, TableDescriptor>> opt =
+      getTableDescriptorFromFs(fs, CommonFSUtils.getTableDir(rootdir, metaTableName), false);
     if (opt.isPresent()) {
       return opt.get().getSecond();
     }
     TableDescriptorBuilder builder = createMetaTableDescriptorBuilder(conf);
     TableDescriptor td = StoreFileTrackerFactory.updateWithTrackerConfigs(conf, builder.build());
-    LOG.info("Creating new {} table descriptor {}", TableName.META_TABLE_NAME, td);
+    LOG.info("Creating new {} table descriptor {}", metaTableName, td);
     TableName tableName = td.getTableName();
     Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, null);
     if (p == null) {
-      throw new IOException("Failed update " + TableName.META_TABLE_NAME + " table descriptor");
+      throw new IOException("Failed update " + metaTableName + " table descriptor");
     }
-    LOG.info("Updated {} table descriptor to {}", TableName.META_TABLE_NAME, p);
+    LOG.info("Updated {} table descriptor to {}", metaTableName, p);
     return td;
   }
 
@@ -198,7 +213,7 @@ public class FSTableDescriptors implements TableDescriptors {
     // TODO We used to set CacheDataInL1 for META table. When we have BucketCache in file mode, now
     // the META table data goes to File mode BC only. Test how that affect the system. If too much,
     // we have to rethink about adding back the setCacheDataInL1 for META table CFs.
-    return TableDescriptorBuilder.newBuilder(TableName.META_TABLE_NAME)
+    return TableDescriptorBuilder.newBuilder(getMetaTableNameFromConf(conf))
       .setColumnFamily(ColumnFamilyDescriptorBuilder.newBuilder(HConstants.CATALOG_FAMILY)
         .setMaxVersions(
           conf.getInt(HConstants.HBASE_META_VERSIONS, HConstants.DEFAULT_HBASE_META_VERSIONS))

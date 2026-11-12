@@ -34,6 +34,13 @@ message GetClusterIdRequest {
 message GetClusterIdResponse {
   /** Not set if cluster ID could not be determined. */
   optional string cluster_id = 1;
+  /**
+   * The meta table name for this cluster. Added by HBASE-29691 so that clusters with a
+   * cluster-specific meta table (e.g. read-replica deployments) can advertise it on the
+   * same RPC used to fetch the cluster id. Not set by pre-HBASE-29691 servers; clients that
+   * do not see this field should fall back to the default name "hbase:meta".
+   */
+  optional string meta_table_name = 2;
 }
 
 /** Request and response to get the currently active master name for this cluster */

@@ -519,6 +519,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private ReplicationPeerModificationStateStore replicationPeerModificationStateStore;
 
   /**
+   * Store for the meta table name in the Master Local Region. This provides cluster-specific
+   * storage for dynamic meta table name discovery.
+   */
+  private MetaTableNameStore metaTableNameStore;
+
+  private volatile TableName cachedMetaTableName;
+
+  /**
    * Initializes the HMaster. The steps are as follows:
    * <p>
    * <ol>
@@ -1035,6 +1043,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     masterRegion = MasterRegionFactory.create(this);
     rsListStorage = new MasterRegionServerList(masterRegion, this);
 
+    tryMigrateMetaLocationsFromZooKeeper();
+
+    cachedMetaTableName = initMetaTableName();
+
     // Initialize the ServerManager and register it as a configuration observer
     this.serverManager = createServerManager(this, rsListStorage);
     this.configurationManager.registerObserver(this.serverManager);
@@ -1045,8 +1057,6 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     ) {
       this.splitWALManager = new SplitWALManager(this);
     }
-
-    tryMigrateMetaLocationsFromZooKeeper();
 
     createProcedureExecutor();
     Map<Class<?>, List<Procedure<MasterProcedureEnv>>> procsByType = procedureExecutor
@@ -1129,9 +1139,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       .map(o -> (InitMetaProcedure) o).findAny();
     if (optProc.isPresent()) {
       initMetaProc = optProc.get();
-    } else if (
-      !this.assignmentManager.getRegionStates().hasTableRegionStates(TableName.META_TABLE_NAME)
-    ) {
+    } else if (!this.assignmentManager.getRegionStates().hasTableRegionStates(getMetaTableName())) {
       // schedule an init meta procedure if meta has not been deployed yet
       initMetaProc = new InitMetaProcedure();
       procedureExecutor.submitProcedure(initMetaProc);
@@ -1190,7 +1198,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       return;
     }
 
-    TableDescriptor metaDescriptor = tableDescriptors.get(TableName.META_TABLE_NAME);
+    TableDescriptor metaDescriptor = tableDescriptors.get(getMetaTableName());
     final ColumnFamilyDescriptor tableFamilyDesc =
       metaDescriptor.getColumnFamily(HConstants.TABLE_FAMILY);
     final ColumnFamilyDescriptor replBarrierFamilyDesc =
@@ -1208,17 +1216,17 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     if (conf.get(HConstants.META_REPLICAS_NUM) != null) {
       int replicasNumInConf =
         conf.getInt(HConstants.META_REPLICAS_NUM, HConstants.DEFAULT_META_REPLICA_NUM);
-      TableDescriptor metaDesc = tableDescriptors.get(TableName.META_TABLE_NAME);
+      TableDescriptor metaDesc = tableDescriptors.get(getMetaTableName());
       if (metaDesc.getRegionReplication() != replicasNumInConf) {
         // it is possible that we already have some replicas before upgrading, so we must set the
         // region replication number in meta TableDescriptor directly first, without creating a
         // ModifyTableProcedure, otherwise it may cause a double assign for the meta replicas.
         int existingReplicasCount =
-          assignmentManager.getRegionStates().getRegionsOfTable(TableName.META_TABLE_NAME).size();
+          assignmentManager.getRegionStates().getRegionsOfTable(getMetaTableName()).size();
         if (existingReplicasCount > metaDesc.getRegionReplication()) {
           LOG.info(
-            "Update replica count of {} from {}(in TableDescriptor)" + " to {}(existing ZNodes)",
-            TableName.META_TABLE_NAME, metaDesc.getRegionReplication(), existingReplicasCount);
+            "Update replica count of {} from {} (in TableDescriptor) to {} (existing ZNodes)",
+            getMetaTableName(), metaDesc.getRegionReplication(), existingReplicasCount);
           metaDesc = TableDescriptorBuilder.newBuilder(metaDesc)
             .setRegionReplication(existingReplicasCount).build();
           tableDescriptors.update(metaDesc);
@@ -1229,7 +1237,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
             "The {} config is {} while the replica count in TableDescriptor is {}"
               + " for {}, altering...",
             HConstants.META_REPLICAS_NUM, replicasNumInConf, metaDesc.getRegionReplication(),
-            TableName.META_TABLE_NAME);
+            getMetaTableName());
           procedureExecutor.submitProcedure(new ModifyTableProcedure(
             procedureExecutor.getEnvironment(), TableDescriptorBuilder.newBuilder(metaDesc)
               .setRegionReplication(replicasNumInConf).build(),
@@ -1459,7 +1467,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     TableDescriptor newMetaDesc = TableDescriptorBuilder.newBuilder(metaDescriptor)
       .setColumnFamily(FSTableDescriptors.getTableFamilyDescForMeta(conf))
       .setColumnFamily(FSTableDescriptors.getReplBarrierFamilyDescForMeta()).build();
-    long pid = this.modifyTable(TableName.META_TABLE_NAME, () -> newMetaDesc, 0, 0, false);
+    long pid = this.modifyTable(getMetaTableName(), () -> newMetaDesc, 0, 0, false);
     waitForProcedureToComplete(pid, "Failed to add table and rep_barrier CFs to meta");
   }
 
@@ -1687,6 +1695,52 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   @Override
   public TableStateManager getTableStateManager() {
     return tableStateManager;
+  }
+
+  /**
+   * Override base implementation to read from Master Local Region storage. This allows the master
+   * to return the cluster-specific meta table name.
+   * <p>
+   * The cached value is populated by {@link #initMetaTableName()} during
+   * {@link #finishActiveMasterInitialization()}, which only runs on the active master. On a backup
+   * master before it has transitioned to active, the cache is {@code null}; fall back to the
+   * configuration-derived default so this method never returns {@code null} and clients hitting a
+   * backup master via the registry RPC still receive a usable value. If the configuration diverges
+   * from the persisted name, {@link #initMetaTableName()} fails fast on activation (see
+   * HBASE-29691) so the backup can never silently serve a wrong custom name after promotion.
+   */
+  @Override
+  public TableName getMetaTableName() {
+    TableName cached = cachedMetaTableName;
+    return cached != null ? cached : super.getMetaTableName();
+  }
+
+  private TableName initMetaTableName() throws IOException {
+    metaTableNameStore = new MetaTableNameStore(masterRegion);
+    TableName metaTableName = metaTableNameStore.load();
+    // If metaTableNameStore is empty (bootstrap case), get meta table name from super, store it,
+    // and return.
+    if (Objects.isNull(metaTableName)) {
+      metaTableName = super.getDefaultMetaTableName();
+      LOG.info("Bootstrap: storing default meta table name in master region: {}", metaTableName);
+      metaTableNameStore.store(metaTableName);
+      return metaTableName;
+    }
+    // The meta table name is pinned at first-boot bootstrap and persisted. Changing
+    // hbase.meta.table.suffix on an existing cluster is unsupported — statics in the client
+    // (TableName.META_TABLE_NAME, FIRST_META_REGIONINFO) and server (FSTableDescriptors,
+    // InitMetaProcedure, MasterProcedureScheduler/SchemaLocking) still resolve the configured
+    // value, so a divergent config would silently cause callers to look at the wrong table.
+    // Fail fast with a clear operator message instead.
+    TableName configuredMetaTableName = TableName.initializeHbaseMetaTableName(getConfiguration());
+    if (!metaTableName.equals(configuredMetaTableName)) {
+      throw new IllegalStateException("Meta table name mismatch: persisted=" + metaTableName
+        + ", configured=" + configuredMetaTableName + ". The '" + HConstants.HBASE_META_TABLE_SUFFIX
+        + "' value was changed after cluster bootstrap,"
+        + " which is not supported. Revert the configuration to match the persisted value"
+        + " to continue, or bootstrap a new cluster to use the new suffix.");
+    }
+    return metaTableName;
   }
 
   /*
@@ -2642,8 +2696,11 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
   }
 
-  private static boolean isCatalogTable(final TableName tableName) {
-    return tableName.equals(TableName.META_TABLE_NAME);
+  private boolean isCatalogTable(final TableName tableName) {
+    // Compare against this master's resolved meta name, not the general meta-name pattern. In a
+    // shared-storage read-replica deployment, other clusters' meta tables (e.g. hbase:meta_<X>)
+    // may be visible but are not catalog tables from this master's point of view.
+    return tableName.equals(getMetaTableName());
   }
 
   @Override

@@ -22,6 +22,7 @@ import java.net.SocketAddress;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.ReflectionUtils;
@@ -42,13 +43,14 @@ public final class ClusterConnectionFactory {
   private static AsyncClusterConnection createAsyncClusterConnection(Configuration conf,
     ConnectionRegistry registry, SocketAddress localAddress, User user) throws IOException {
     String clusterId = FutureUtils.get(registry.getClusterId());
+    TableName metaTableName = FutureUtils.get(registry.getMetaTableName());
     Class<? extends AsyncClusterConnection> clazz =
       conf.getClass(HBASE_SERVER_CLUSTER_CONNECTION_IMPL, AsyncClusterConnectionImpl.class,
         AsyncClusterConnection.class);
     try {
       return user
         .runAs((PrivilegedExceptionAction<? extends AsyncClusterConnection>) () -> ReflectionUtils
-          .newInstance(clazz, conf, registry, clusterId, localAddress, user));
+          .newInstance(clazz, conf, registry, clusterId, metaTableName, localAddress, user));
     } catch (Exception e) {
       throw new IOException(e);
     }

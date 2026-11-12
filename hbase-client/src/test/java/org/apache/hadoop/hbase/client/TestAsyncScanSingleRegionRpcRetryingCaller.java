@@ -90,7 +90,7 @@ public class TestAsyncScanSingleRegionRpcRetryingCaller {
     Configuration conf = HBaseConfiguration.create();
     User user = User.getCurrent();
     try (AsyncConnectionImpl conn = new AsyncConnectionImpl(conf,
-      new DoNothingConnectionRegistry(conf, user), "test", null, user)) {
+      new DoNothingConnectionRegistry(conf, user), "test", TableName.META_TABLE_NAME, null, user)) {
       ScanMetrics metrics = new ScanMetrics();
       AsyncScanSingleRegionRpcRetryingCaller caller =
         createCaller(conn, mock(ClientService.Interface.class), metrics);
@@ -124,7 +124,7 @@ public class TestAsyncScanSingleRegionRpcRetryingCaller {
     Configuration conf = HBaseConfiguration.create();
     User user = User.getCurrent();
     try (AsyncConnectionImpl conn = new AsyncConnectionImpl(conf,
-      new DoNothingConnectionRegistry(conf, user), "test", null, user)) {
+      new DoNothingConnectionRegistry(conf, user), "test", TableName.META_TABLE_NAME, null, user)) {
       ClientService.Interface stub = mock(ClientService.Interface.class);
       doAnswer(invocation -> {
         HBaseRpcController controller = invocation.getArgument(0);

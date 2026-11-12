@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.ByteBuffer;
 import java.util.HashMap;
@@ -185,5 +187,48 @@ public class TestTableName {
         () -> TableName.initializeHbaseMetaTableName(conf),
         "Expected IllegalArgumentException for suffix: " + suffix);
     }
+  }
+
+  /**
+   * Edge cases for {@link TableName#isMetaTableName(TableName)}. The recognizer must accept the
+   * default qualifier {@code meta} and the cluster-specific form {@code meta_<suffix>} (where the
+   * suffix matches {@link TableName#VALID_META_TABLE_SUFFIX_REGEX}), while rejecting lookalikes
+   * such as a bare trailing underscore, double-underscore suffixes, {@code metadata}, and any
+   * non-{@code hbase} namespace.
+   */
+  @Test
+  public void testIsMetaTableNameTrueCases() {
+    // Default meta.
+    assertTrue(TableName
+      .isMetaTableName(TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta")));
+    // Cluster-specific suffixed meta tables with suffixes drawn from VALID_META_TABLE_SUFFIX_REGEX
+    // ([a-zA-Z0-9]+). The matcher must accept each.
+    String[] validSuffixedQualifiers =
+      { "meta_1", "meta_a", "meta_REPL1", "meta_abc123", "meta_123abc", "meta_data" };
+    for (String q : validSuffixedQualifiers) {
+      TableName tn = TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, q);
+      assertTrue(TableName.isMetaTableName(tn), "isMetaTableName should accept hbase:" + q);
+    }
+  }
+
+  @Test
+  public void testIsMetaTableNameFalseCases() {
+    // Bare trailing underscore — suffix is required to be at least one char from
+    // VALID_META_TABLE_SUFFIX_REGEX = [a-zA-Z0-9]+, so "meta_" alone must not match.
+    assertFalse(TableName
+      .isMetaTableName(TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta_")));
+    // Double underscore — the character immediately after "meta_" is not in [a-zA-Z0-9].
+    assertFalse(TableName.isMetaTableName(
+      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "meta__suffix")));
+    // Lookalikes without the "_" delimiter — must not be interpreted as meta tables.
+    assertFalse(TableName.isMetaTableName(
+      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "metadata")));
+    assertFalse(TableName.isMetaTableName(
+      TableName.valueOf(NamespaceDescriptor.SYSTEM_NAMESPACE_NAME_STR, "metatable")));
+    // Non-hbase namespace — same qualifier must not count as a meta table.
+    assertFalse(TableName.isMetaTableName(TableName.valueOf("default", "meta")));
+    assertFalse(TableName.isMetaTableName(TableName.valueOf("other", "meta_1")));
+    // Null tolerance.
+    assertFalse(TableName.isMetaTableName(null));
   }
 }

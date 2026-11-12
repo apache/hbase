@@ -95,7 +95,7 @@ public class TestAsyncRegionLocatorTracing {
       public CompletableFuture<RegionLocations> getMetaRegionLocations() {
         return CompletableFuture.completedFuture(locs);
       }
-    }, "test", null, user);
+    }, "test", TableName.META_TABLE_NAME, null, user);
   }
 
   @AfterEach
@@ -142,38 +142,36 @@ public class TestAsyncRegionLocatorTracing {
 
   @Test
   public void testClearCacheTableName() {
-    conn.getLocator().clearCache(TableName.META_TABLE_NAME);
+    conn.getLocator().clearCache(conn.getMetaTableName());
     SpanData span = waitSpan("AsyncRegionLocator.clearCache");
     assertThat(span,
       allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
         buildConnectionAttributesMatcher(conn),
-        buildTableAttributesMatcher(TableName.META_TABLE_NAME)));
+        buildTableAttributesMatcher(conn.getMetaTableName())));
   }
 
   @Test
   public void testGetRegionLocation() {
-    conn.getLocator().getRegionLocation(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
+    conn.getLocator().getRegionLocation(conn.getMetaTableName(), HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocation");
-    assertThat(span,
-      allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
-        buildConnectionAttributesMatcher(conn),
-        buildTableAttributesMatcher(TableName.META_TABLE_NAME),
-        hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
-          locs.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
+    assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
+      buildConnectionAttributesMatcher(conn), buildTableAttributesMatcher(conn.getMetaTableName()),
+      hasAttributes(containsEntryWithStringValuesOf("db.hbase.regions",
+        locs.getDefaultRegionLocation().getRegion().getRegionNameAsString()))));
   }
 
   @Test
   public void testGetRegionLocations() {
-    conn.getLocator().getRegionLocations(TableName.META_TABLE_NAME, HConstants.EMPTY_START_ROW,
+    conn.getLocator().getRegionLocations(conn.getMetaTableName(), HConstants.EMPTY_START_ROW,
       RegionLocateType.CURRENT, false, TimeUnit.SECONDS.toNanos(1)).join();
     SpanData span = waitSpan("AsyncRegionLocator.getRegionLocations");
     String[] expectedRegions =
       Arrays.stream(locs.getRegionLocations()).map(HRegionLocation::getRegion)
         .map(RegionInfo::getRegionNameAsString).toArray(String[]::new);
     assertThat(span, allOf(hasStatusWithCode(StatusCode.OK), hasKind(SpanKind.INTERNAL),
-      buildConnectionAttributesMatcher(conn),
-      buildTableAttributesMatcher(TableName.META_TABLE_NAME), hasAttributes(
+      buildConnectionAttributesMatcher(conn), buildTableAttributesMatcher(conn.getMetaTableName()),
+      hasAttributes(
         containsEntryWithStringValuesOf("db.hbase.regions", containsInAnyOrder(expectedRegions)))));
   }
 }

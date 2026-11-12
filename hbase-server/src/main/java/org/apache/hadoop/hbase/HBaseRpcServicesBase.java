@@ -271,7 +271,18 @@ public abstract class HBaseRpcServicesBase<S extends HBaseServerBase<?>>
       String clusterId = server.getClusterId();
       String clusterIdReply = clientMetaCoprocessorHost.postGetClusterId(clusterId);
 
-      return GetClusterIdResponse.newBuilder().setClusterId(clusterIdReply).build();
+      GetClusterIdResponse.Builder builder = GetClusterIdResponse.newBuilder();
+      if (clusterIdReply != null) {
+        builder.setClusterId(clusterIdReply);
+      }
+      // Advertise this cluster's meta table name alongside the cluster id so clients can resolve
+      // custom meta names (e.g. read-replica deployments) without a second RPC. Pre-HBASE-29691
+      // clients ignore unknown fields; pre-HBASE-29691 servers simply never set this field.
+      TableName metaTableName = server.getMetaTableName();
+      if (metaTableName != null) {
+        builder.setMetaTableName(metaTableName.getNameAsString());
+      }
+      return builder.build();
     } catch (IOException e) {
       throw new ServiceException(e);
     }

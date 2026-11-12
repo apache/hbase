@@ -36,6 +36,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.ClientExceptionsUtil;
 import org.apache.hadoop.hbase.exceptions.MasterRegistryFetchException;
 import org.apache.hadoop.hbase.ipc.HBaseRpcController;
@@ -248,6 +249,21 @@ abstract class AbstractRpcBasedConnectionRegistry implements ConnectionRegistry 
           GetActiveMasterResponse::hasServerName, "getActiveMaster()")
         .thenApply(resp -> ProtobufUtil.toServerName(resp.getServerName())),
       getClass().getSimpleName() + ".getActiveMaster");
+  }
+
+  @Override
+  public CompletableFuture<TableName> getMetaTableName() {
+    return tracedFuture(() -> this.<GetClusterIdResponse> call(
+      (c, s, d) -> s.getClusterId(c, GetClusterIdRequest.getDefaultInstance(), d), r -> true,
+      "getClusterId()").thenApply(resp -> {
+        // The meta table name is piggybacked on GetClusterIdResponse so new clients can talk to
+        // pre-HBASE-29691 servers without needing an "unknown method" fallback. An old server
+        // simply doesn't set the field; its absence is equivalent to the default meta table name.
+        if (resp.hasMetaTableName() && !resp.getMetaTableName().isEmpty()) {
+          return TableName.valueOf(resp.getMetaTableName());
+        }
+        return TableName.META_TABLE_NAME;
+      }), getClass().getSimpleName() + ".getMetaTableName");
   }
 
   @Override
