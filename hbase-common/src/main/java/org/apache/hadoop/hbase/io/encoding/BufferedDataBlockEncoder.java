@@ -32,7 +32,6 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
 import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.io.TagCompressionContext;
-import org.apache.hadoop.hbase.io.util.LRUDictionary;
 import org.apache.hadoop.hbase.io.util.StreamUtils;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
@@ -72,8 +71,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         decodingCtx.getTagCompressionContext().clear();
       } else {
         try {
-          TagCompressionContext tagCompressionContext =
-            new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+          TagCompressionContext tagCompressionContext = new TagCompressionContext(Byte.MAX_VALUE);
           decodingCtx.setTagCompressionContext(tagCompressionContext);
         } catch (Exception e) {
           throw new IOException("Failed to initialize TagCompressionContext", e);
@@ -815,7 +813,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
       super(decodingCtx);
       if (decodingCtx.getHFileContext().isCompressTags()) {
         try {
-          tagCompressionContext = new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+          tagCompressionContext = new TagCompressionContext(Byte.MAX_VALUE);
         } catch (Exception e) {
           throw new RuntimeException("Failed to initialize TagCompressionContext", e);
         }
@@ -1232,8 +1230,7 @@ abstract class BufferedDataBlockEncoder extends AbstractDataBlockEncoder {
         encodingCtx.getTagCompressionContext().clear();
       } else {
         try {
-          TagCompressionContext tagCompressionContext =
-            new TagCompressionContext(LRUDictionary.class, Byte.MAX_VALUE);
+          TagCompressionContext tagCompressionContext = new TagCompressionContext(Byte.MAX_VALUE);
           encodingCtx.setTagCompressionContext(tagCompressionContext);
         } catch (Exception e) {
           throw new IOException("Failed to initialize TagCompressionContext", e);

@@ -223,7 +223,7 @@ public class CompressionContext {
     getDictionary(DictionaryIndex.QUALIFIER).init(Byte.MAX_VALUE);
 
     if (hasTagCompression) {
-      tagCompressionContext = new TagCompressionContext(dictType, Short.MAX_VALUE);
+      tagCompressionContext = new TagCompressionContext(Short.MAX_VALUE);
     }
     if (hasValueCompression && valueCompressionType != null) {
       valueCompressor = new ValueCompressor(valueCompressionType);
