@@ -47,11 +47,14 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.metrics.ScanMetrics;
 import org.apache.hadoop.hbase.client.metrics.ScanMetricsRegionInfo;
 import org.apache.hadoop.hbase.filter.FilterBase;
-import org.apache.hadoop.hbase.io.hfile.BlockCache;
-import org.apache.hadoop.hbase.io.hfile.IndexOnlyLruBlockCache;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.IndexOnlyCachePlacementAdmissionPolicy;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.NoOpCacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessService;
 import org.apache.hadoop.hbase.regionserver.HStore;
 import org.apache.hadoop.hbase.regionserver.HStoreFile;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
@@ -108,11 +111,15 @@ public class TestClientSideRegionScanner {
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
       CacheAccessService cas = clientSideRegionScanner.getRegion().getCacheAccessService();
-      BlockCache blockCache = CacheAccessServiceTestFactory.blockCache(cas);
-      assertNotNull(blockCache);
-      assertThat(blockCache, instanceOf(IndexOnlyLruBlockCache.class));
+
+      assertThat(cas, instanceOf(TopologyBackedCacheAccessService.class));
+      TopologyBackedCacheAccessService service = (TopologyBackedCacheAccessService) cas;
+      assertThat(service.getPolicy(), instanceOf(IndexOnlyCachePlacementAdmissionPolicy.class));
+
+      CacheEngine cacheEngine = CacheAccessServiceTestFactory.getCacheEngine(cas, CacheTier.SINGLE);
+      assertThat(cacheEngine, instanceOf(LruCacheEngine.class));
       assertEquals(HConstants.HBASE_CLIENT_SCANNER_ONHEAP_BLOCK_CACHE_FIXED_SIZE_DEFAULT,
-        blockCache.getMaxSize());
+        cacheEngine.getMaxSize());
     }
   }
 
@@ -122,13 +129,18 @@ public class TestClientSideRegionScanner {
     // tiny 1MB fixed cache size
     long blockCacheFixedSize = 1024 * 1024L;
     copyConf.setLong(HConstants.HFILE_ONHEAP_BLOCK_CACHE_FIXED_SIZE_KEY, blockCacheFixedSize);
+
     try (ClientSideRegionScanner clientSideRegionScanner =
       new ClientSideRegionScanner(copyConf, fs, rootDir, htd, hri, scan, null)) {
       CacheAccessService cas = clientSideRegionScanner.getRegion().getCacheAccessService();
-      BlockCache blockCache = CacheAccessServiceTestFactory.blockCache(cas);
-      assertNotNull(blockCache);
-      assertThat(blockCache, instanceOf(IndexOnlyLruBlockCache.class));
-      assertEquals(blockCacheFixedSize, blockCache.getMaxSize());
+
+      assertThat(cas, instanceOf(TopologyBackedCacheAccessService.class));
+      TopologyBackedCacheAccessService service = (TopologyBackedCacheAccessService) cas;
+      assertThat(service.getPolicy(), instanceOf(IndexOnlyCachePlacementAdmissionPolicy.class));
+
+      CacheEngine cacheEngine = CacheAccessServiceTestFactory.getCacheEngine(cas, CacheTier.SINGLE);
+      assertThat(cacheEngine, instanceOf(LruCacheEngine.class));
+      assertEquals(blockCacheFixedSize, cacheEngine.getMaxSize());
     }
   }
 

@@ -199,6 +199,10 @@ public final class CacheAccessServices {
       return new AdaptiveLruCachePlacementAdmissionPolicy(conf);
     }
 
+    if (blockCachePolicy.equalsIgnoreCase("IndexOnlyLRU")) {
+      return IndexOnlyCachePlacementAdmissionPolicy.INSTANCE;
+    }
+
     return DefaultHBaseCachePlacementAdmissionPolicy.INSTANCE;
   }
 }
