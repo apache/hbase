@@ -1280,20 +1280,13 @@ public class HFileBlock implements Cacheable {
      *                      or -1 if unknown
      * @param pread         true to use pread, otherwise use the stream read.
      * @param updateMetrics update the metrics or not.
-     * @param intoHeap      allocate the block's ByteBuff by {@link ByteBuffAllocator} or JVM heap.
-     *                      For LRUBlockCache, we must ensure that the block to cache is an heap
-     *                      one, because the memory occupation is based on heap now, also for
-     *                      {@link CombinedBlockCache}, we use the heap LRUBlockCache as L1 cache to
-     *                      cache small blocks such as IndexBlock or MetaBlock for faster access. So
-     *                      introduce an flag here to decide whether allocate from JVM heap or not
-     *                      so that we can avoid an extra off-heap to heap memory copy when using
-     *                      LRUBlockCache. For most cases, we known what's the expected block type
-     *                      we'll read, while for some special case (Example:
-     *                      HFileReaderImpl#readNextDataBlock()), we cannot pre-decide what's the
-     *                      expected block type, then we can only allocate block's ByteBuff from
-     *                      {@link ByteBuffAllocator} firstly, and then when caching it in
-     *                      {@link LruBlockCache} we'll check whether the ByteBuff is from heap or
-     *                      not, if not then we'll clone it to an heap one and cache it.
+     * @param intoHeap      whether to allocate the block's ByteBuff on the JVM heap instead of
+     *                      using {@link ByteBuffAllocator}. Some cache paths require heap-backed
+     *                      blocks. Allocating directly on heap avoids an extra off-heap-to-heap
+     *                      copy when the block is cached. When the expected block type is not known
+     *                      in advance, the block may first be allocated by
+     *                      {@link ByteBuffAllocator} and copied to heap later if required by the
+     *                      cache.
      * @return the newly read block
      */
     HFileBlock readBlockData(long offset, long onDiskSize, boolean pread, boolean updateMetrics,

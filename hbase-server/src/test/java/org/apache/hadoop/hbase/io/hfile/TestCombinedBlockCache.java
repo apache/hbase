@@ -111,7 +111,7 @@ public class TestCombinedBlockCache {
   @Test
   public void testMultiThreadGetAndEvictBlock() throws Exception {
     BlockCache blockCache = createCombinedBlockCache();
-    TestLruBlockCache.testMultiThreadGetAndEvictBlockInternal(blockCache);
+    BlockCacheTestUtils.testMultiThreadGetAndEvictBlockInternal(blockCache);
   }
 
   @Test

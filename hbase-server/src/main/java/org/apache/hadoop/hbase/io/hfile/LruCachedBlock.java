@@ -23,7 +23,7 @@ import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
- * Represents an entry in the {@link LruBlockCache}.
+ * Represents a cached entry in {@link org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine}.
  * <p>
  * Makes the block memory-aware with {@link HeapSize} and Comparable to sort by access time for the
  * LRU. It also takes care of priority by either instantiating as in-memory or handling the

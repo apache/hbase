@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -38,6 +39,8 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.InternalScanner;
@@ -101,8 +104,9 @@ public class TestScannerSelectionUsingKeyRange {
       .build();
 
     RegionInfo info = RegionInfoBuilder.newBuilder(TABLE).build();
-    HRegion region =
-      HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf, tableDescriptor);
+    CacheAccessService cache = CacheAccessServices.fromConfiguration(conf);
+    HRegion region = HBaseTestingUtil.createRegionAndWAL(info, TEST_UTIL.getDataTestDir(), conf,
+      tableDescriptor, cache);
 
     for (int iFile = 0; iFile < NUM_FILES; ++iFile) {
       for (int iRow = 0; iRow < NUM_ROWS; ++iRow) {
@@ -117,17 +121,18 @@ public class TestScannerSelectionUsingKeyRange {
     }
 
     Scan scan = new Scan().withStartRow(Bytes.toBytes("aaa")).withStopRow(Bytes.toBytes("aaz"));
-    BlockCache cache = BlockCacheFactory.createBlockCache(conf);
     InternalScanner scanner = region.getScanner(scan);
     List<Cell> results = new ArrayList<>();
     while (scanner.next(results)) {
     }
     scanner.close();
     assertEquals(0, results.size());
-    if (cache instanceof LruBlockCache) {
-      Set<String> accessedFiles = ((LruBlockCache) cache).getCachedFileNamesForTest();
-      assertEquals(expectedCount, accessedFiles.size());
+    Set<String> accessedFiles = new HashSet<>();
+    for (CachedBlock block : CacheAccessServices.asCachedBlockIterable(cache).orElseThrow()) {
+      accessedFiles.add(block.getFilename());
     }
+    assertEquals(expectedCount, accessedFiles.size());
     HBaseTestingUtil.closeRegionAndWAL(region);
+    cache.shutdown();
   }
 }

@@ -50,10 +50,13 @@ import org.apache.hadoop.hbase.fs.HFileSystem;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
 import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
+import org.apache.hadoop.hbase.io.hfile.cache.BlockCacheBackedCacheEngine;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessService;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServiceTestFactory;
 import org.apache.hadoop.hbase.io.hfile.cache.CacheAccessServices;
-import org.apache.hadoop.hbase.io.hfile.cache.TopologyBackedCacheAccessServices;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheEngine;
+import org.apache.hadoop.hbase.io.hfile.cache.CacheTier;
+import org.apache.hadoop.hbase.io.hfile.cache.LruCacheEngine;
 import org.apache.hadoop.hbase.regionserver.BloomType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.StoreFileWriter;
@@ -168,8 +171,8 @@ public class TestCacheOnWrite {
     // default
     BlockCache defaultBlockCache = BlockCacheFactory.createBlockCache(conf);
     caches.add(CacheAccessServices.fromBlockCache(defaultBlockCache));
-    // set LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
-    TEST_UTIL.getConfiguration().setFloat(LruBlockCache.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
+    // set LruCacheEngine.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME to 2.0f due to HBASE-16287
+    TEST_UTIL.getConfiguration().setFloat(LruCacheEngine.LRU_HARD_CAPACITY_LIMIT_FACTOR_CONFIG_NAME,
       2.0f);
     // memory
     CacheAccessService lru =
@@ -200,27 +203,30 @@ public class TestCacheOnWrite {
     return params.stream();
   }
 
+  /**
+   * Clears all blocks visible through the cache access service.
+   * @param cache cache access service to clear
+   * @throws InterruptedException if interrupted while waiting for asynchronous cache removal
+   */
   private void clearBlockCache(CacheAccessService cache) throws InterruptedException {
-    // TODO: HBASE-30018 refactor later
-    BlockCache blockCache = TopologyBackedCacheAccessServices.getBlockCache(cache);
-    if (blockCache instanceof LruBlockCache) {
-      ((LruBlockCache) blockCache).clearCache();
-    } else {
-      // BucketCache may not return all cached blocks(blocks in write queue), so check it here.
-      for (int clearCount = 0; cache.getBlockCount() > 0; clearCount++) {
-        if (clearCount > 0) {
-          LOG.warn("clear block cache " + cache + " " + clearCount + " times, "
-            + cache.getBlockCount() + " blocks remaining");
-          Thread.sleep(10);
-        }
-        for (CachedBlock block : Lists.newArrayList(blockCache)) {
-          BlockCacheKey key = new BlockCacheKey(block.getFilename(), block.getOffset());
-          // CombinedBucketCache may need evict two times.
-          for (int evictCount = 0; cache.evictBlock(key); evictCount++) {
-            if (evictCount > 1) {
-              LOG.warn("evict block " + block + " in " + cache + " " + evictCount
-                + " times, maybe a bug here");
-            }
+    for (int clearCount = 0; cache.getBlockCount() > 0; clearCount++) {
+      if (clearCount > 0) {
+        LOG.warn("clear block cache " + cache + " " + clearCount + " times, "
+          + cache.getBlockCount() + " blocks remaining");
+        Thread.sleep(10);
+      }
+
+      Iterable<CachedBlock> cachedBlocks = CacheAccessServices.asCachedBlockIterable(cache)
+        .orElseThrow(() -> new IllegalStateException("Cache does not support block iteration"));
+
+      for (CachedBlock block : Lists.newArrayList(cachedBlocks)) {
+        BlockCacheKey key = new BlockCacheKey(block.getFilename(), block.getOffset());
+
+        // A block may exist in more than one tier, so keep evicting until it is gone.
+        for (int evictCount = 0; cache.evictBlock(key); evictCount++) {
+          if (evictCount > 1) {
+            LOG.warn("evict block " + block + " in " + cache + " " + evictCount
+              + " times, maybe a bug here");
           }
         }
       }
@@ -240,7 +246,7 @@ public class TestCacheOnWrite {
       cowType.shouldBeCached(BlockType.LEAF_INDEX));
     conf.setBoolean(CacheConfig.CACHE_BLOOM_BLOCKS_ON_WRITE_KEY,
       cowType.shouldBeCached(BlockType.BLOOM_CHUNK));
-    cacheConf = new CacheConfig(conf, TopologyBackedCacheAccessServices.getBlockCache(cache));
+    cacheConf = new CacheConfig(conf, cache);
     fs = HFileSystem.get(conf);
   }
 
@@ -498,9 +504,11 @@ public class TestCacheOnWrite {
       // Data blocks should be cached in instances where we are caching blocks on write. In the case
       // of testing
       // BucketCache, we cannot verify block type as it is not stored in the cache.
-      boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction
-        && !(TopologyBackedCacheAccessServices.getBlockCache(cache) instanceof BucketCache);
-
+      CacheEngine cacheEngine =
+        CacheAccessServiceTestFactory.getCacheEngine(cache, CacheTier.SINGLE);
+      boolean isBucketCache = cacheEngine instanceof BlockCacheBackedCacheEngine
+        && ((BlockCacheBackedCacheEngine) cacheEngine).getBlockCache() instanceof BucketCache;
+      boolean cacheOnCompactAndNonBucketCache = cacheBlocksOnCompaction && !isBucketCache;
       String assertErrorMessage = "\nTest description: " + testDescription
         + "\ncacheBlocksOnCompaction: " + cacheBlocksOnCompaction + "\n";
 
