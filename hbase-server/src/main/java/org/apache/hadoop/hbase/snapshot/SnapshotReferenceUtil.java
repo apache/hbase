@@ -296,12 +296,6 @@ public final class SnapshotReferenceUtil {
       // not mob region
       link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
     }
-    LOG.info("===============================================================================");
-    LOG.info("fileName is {}", fileName);
-    LOG.info("LinkPath is {}", linkPath);
-    LOG.info("link is {}", link.toString());
-    LOG.info("Region {} is MOB : {}",  regionInfo.getEncodedName(), MobUtils.isMobRegionInfo(regionInfo));
-    LOG.info("The END -----------------------------------------------------------------------");
     try {
       FileStatus fstat = link.getFileStatus(fs);
       if (storeFile.hasFileSize() && storeFile.getFileSize() != fstat.getLen()) {
