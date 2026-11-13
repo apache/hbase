@@ -60,6 +60,7 @@ import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.BackupRestoreConstants;
 import org.apache.hadoop.hbase.backup.BackupType;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.BufferedMutator;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptor;
@@ -555,7 +556,10 @@ public final class BackupSystemTable implements Closeable {
         byte[] row = CellUtil.cloneRow(cell);
         String server = getServerNameForReadRegionServerLastLogRollResult(row);
         byte[] data = CellUtil.cloneValue(cell);
-        rsTimestampMap.put(server, Bytes.toLong(data));
+        // Older versions wrote mixed-case keys, so a host can have a row under each spelling. Both
+        // rows map to the same key here. Roll results only increase, so the larger value is the
+        // newest.
+        rsTimestampMap.merge(BackupUtils.toHostKey(server), Bytes.toLong(data), Math::max);
       }
       return rsTimestampMap;
     }
@@ -758,7 +762,7 @@ public final class BackupSystemTable implements Closeable {
     for (BackupProtos.ServerTimestamp st : list) {
       ServerName sn =
         org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.toServerName(st.getServerName());
-      map.put(sn.getHostname() + ":" + sn.getPort(), st.getTimestamp());
+      map.put(BackupUtils.toHostKey(sn.getHostname() + ":" + sn.getPort()), st.getTimestamp());
     }
     return map;
   }
