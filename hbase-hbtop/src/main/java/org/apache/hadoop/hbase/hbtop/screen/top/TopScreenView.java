@@ -224,7 +224,9 @@ public class TopScreenView extends AbstractScreenView {
 
   public void showTopScreen(Summary summary, List<Header> headers, List<Record> records,
     Record selectedRecord) {
-    showSummary(summary);
+    if (summary != null) {
+      showSummary(summary);
+    }
     clearMessage();
     showHeaders(headers);
     showRecords(headers, records, selectedRecord);
