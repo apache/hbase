@@ -110,6 +110,25 @@ class HBaseDockerClient:
             )
         return stdout_str
 
+    def _kill_orphaned_processes(self, container, bash_cmd: str) -> None:
+        """Best-effort cleanup of hbase shell processes left behind by a timed-out exec."""
+        if "hbase shell" not in bash_cmd:
+            return
+        try:
+            logger.warning(
+                f"Killing orphaned hbase shell process on {self._cluster_name} "
+                f"({self._container_name}) after timeout. The command was:\n{bash_cmd}"
+            )
+            container.exec_run(
+                ["bash", "-c", "pkill -9 -f 'org.jruby.JarBootstrapMain' 2>/dev/null; true"],
+                detach=True
+            )
+        except Exception as e:
+            logger.warning(
+                f"Failed to kill orphaned hbase shell process on {self._cluster_name} "
+                f"({self._container_name}): {e}"
+            )
+
     def run_hbase_shell_command(self, hbase_cmd: str, timeout: int | None = None) -> str:
         """
         Uses 'docker exec' to run the provided HBase shell command in the object's Docker container.
@@ -119,30 +138,12 @@ class HBaseDockerClient:
         try:
             return self.run_docker_exec_command(hbase_shell_cmd, timeout=timeout)
         except DockerExecCommandTimeoutError:
-            # DockerExecCommandTimeoutError is a subclass of DockerExecCommandError, so we need to make sure
-            # it's specifically caught and re-raised. Otherwise, it's swallowed when catching DockerExecCommandError
+            # DockerExecCommandTimeoutError is a subclass of DockerExecCommandError, so we need to
+            # make sure it's specifically caught and re-raised. Otherwise, it's swallowed when
+            # catching DockerExecCommandError
             raise
         except DockerExecCommandError as e:
             raise HBaseShellCommandError(e)
-
-    def _kill_orphaned_processes(self, container, bash_cmd: str) -> None:
-        """Best-effort cleanup of hbase shell processes left behind by a timed-out exec."""
-        if "hbase shell" not in bash_cmd:
-            return
-        try:
-            logger.warning(
-                f"Killing orphaned hbase shell process on {self._cluster_name} "
-                f"({self._container_name}) after timeout"
-            )
-            container.exec_run(
-                ["bash", "-c", "pkill -9 -f 'org.jruby.Main.*shell' 2>/dev/null; true"],
-                detach=True
-            )
-        except Exception as e:
-            logger.warning(
-                f"Failed to kill orphaned hbase shell process on {self._cluster_name} "
-                f"({self._container_name}): {e}"
-            )
 
     def _get_pid_from_jps(self, process_name: str) -> int | None:
         """Runs jps inside the container and returns the PID of the named process, or None."""
@@ -302,7 +303,10 @@ class HBaseDockerClient:
         output = self.run_hbase_shell_command("list")
         match = re.search(r'=>\s*(\[.*?\])', output, re.DOTALL)
         if not match:
-            return []
+            raise HBaseShellCommandError(
+                f"Failed to parse table list from HBase shell output on "
+                f"{self.name}:\n{output}"
+            )
         return ast.literal_eval(match.group(1))
 
     def list_regions(self, table_name: str) -> str:
@@ -642,6 +646,8 @@ class HBaseDockerClient:
         conf_files = [
             os.path.join(data_store_root, "cluster1", "conf", "hbase-site.xml"),
             os.path.join(data_store_root, "cluster2", "conf", "hbase-site.xml"),
+            os.path.join(data_store_root, "cluster1", "conf", "zoo.cfg"),
+            os.path.join(data_store_root, "cluster2", "conf", "zoo.cfg"),
         ]
         for conf_file in conf_files:
             with open(conf_file, "r") as f:
