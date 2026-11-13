@@ -184,8 +184,17 @@ public class StoreFileWriter implements CellSink, ShipperListener {
     return false;
   }
 
+  /**
+   * Returns the number of bytes written so far to the output(s) of this writer, including the
+   * historical file writer when historical compaction files are enabled. Used for output based
+   * compaction throughput control, which should account every byte actually written to disk.
+   */
   public long getPos() throws IOException {
-    return liveFileWriter.getPos();
+    long pos = liveFileWriter.getPos();
+    if (historicalFileWriter != null) {
+      pos += historicalFileWriter.getPos();
+    }
+    return pos;
   }
 
   /**
