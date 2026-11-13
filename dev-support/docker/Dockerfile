@@ -58,6 +58,10 @@ RUN DEBIAN_FRONTEND=noninteractive apt-get -qq update && \
     libxml2-dev='2.9.13+dfsg-*' \
     libxml2-utils='2.9.13+dfsg-*' \
     zip='3.0-*' \
+# read-replica nightly tests use this Dockerfile and need these docker and python dependencies
+    docker.io='20.10.*' \
+    docker-compose-v2='2.*' \
+    python3-venv='3.10.6-*' \
     && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/* \
