@@ -279,7 +279,7 @@ public final class SnapshotReferenceUtil {
     Path linkPath;
     if (refPath != null && HFileLink.isHFileLink(refPath)) {
       linkPath = new Path(family, refPath.getName());
-    } else if (HFileLink.isHFileLink(fileName)) {
+    } else if (HFileLink.isHFileLink(fileName) || StoreFileInfo.isMobFileLink(fileName)) {
       linkPath = new Path(family, fileName);
     } else {
       linkPath = new Path(family,
@@ -343,7 +343,7 @@ public final class SnapshotReferenceUtil {
       public void storeFile(final RegionInfo regionInfo, final String family,
         final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
         String hfile = storeFile.getName();
-        if (HFileLink.isHFileLink(hfile)) {
+        if (HFileLink.isHFileLink(hfile) || StoreFileInfo.isMobFileLink(hfile)) {
           names.add(HFileLink.getReferencedHFileName(hfile));
         } else if (StoreFileInfo.isReference(hfile)) {
           Path refPath =

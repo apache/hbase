@@ -22,11 +22,17 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
+import java.util.Arrays;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.NamespaceDescriptor;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
+import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
+import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.client.Table;
+import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.mob.MobConstants;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.snapshot.MobSnapshotTestingUtils.SnapshotMock;
@@ -106,5 +112,80 @@ public class TestMobRestoreSnapshotHelper extends TestRestoreSnapshotHelper {
     errorMobRegionPathInTableDir = new Path(CommonFSUtils.getTableDir(hbaseRootDir, mobTableName),
       MobUtils.getMobRegionInfo(mobTableName).getEncodedName());
     assertFalse(fs.exists(errorMobRegionPathInTableDir));
+  }
+
+  @Test
+  public void testSecondSnapshotAfterMobRestore() throws IOException {
+    testSecondSnapshotAfterMobRestore(TableName.valueOf("testSecondSnapshotAfterMobRestore"),
+      "testSecondSnapshotAfterMobRestore_snapshot", "testSecondSnapshotAfterMobRestore_snapshot2");
+  }
+
+  @Test
+  public void testSecondSnapshotAfterMobTableRestoreWithNamespace() throws IOException {
+    String namespace = "testMobSnapshotNs";
+    TEST_UTIL.getAdmin().createNamespace(NamespaceDescriptor.create(namespace).build());
+    try {
+      testSecondSnapshotAfterMobRestore(
+        TableName.valueOf(namespace, "testSecondSnapshotAfterMobRestore"),
+        "testSecondSnapshotAfterMobRestoreWithNamespace_snapshot",
+        "testSecondSnapshotAfterMobRestoreWithNamespace_snapshot2");
+    } finally {
+      TEST_UTIL.getAdmin().deleteNamespace(namespace);
+    }
+  }
+
+  private void testSecondSnapshotAfterMobRestore(TableName tableName, String snapshotName,
+    String secondSnapshotName) throws IOException {
+    Admin admin = TEST_UTIL.getAdmin();
+    byte[] family = Bytes.toBytes("info");
+    byte[] data = Bytes.toBytes("test");
+    byte[] mobData = new byte[100];
+    Arrays.fill(mobData, (byte) 'A');
+
+    try {
+      admin.createTable(
+        TableDescriptorBuilder.newBuilder(tableName).setColumnFamily(ColumnFamilyDescriptorBuilder
+          .newBuilder(family).setMobEnabled(true).setMobThreshold(10L).build()).build());
+      assertTrue(admin.tableExists(tableName));
+      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        table.put(new Put(Bytes.toBytes("row1")).addColumn(family, Bytes.toBytes("q"), data));
+        table.put(new Put(Bytes.toBytes("row2")).addColumn(family, Bytes.toBytes("q"), mobData));
+      }
+      admin.flush(tableName);
+      admin.snapshot(snapshotName, tableName);
+
+      TEST_UTIL.deleteTable(tableName);
+      assertFalse(admin.tableExists(tableName));
+      admin.cloneSnapshot(snapshotName, tableName);
+      assertTrue(admin.tableExists(tableName));
+
+      try (Table table = TEST_UTIL.getConnection().getTable(tableName)) {
+        table.put(new Put(Bytes.toBytes("row3")).addColumn(family, Bytes.toBytes("q"), data));
+        table.put(new Put(Bytes.toBytes("row4")).addColumn(family, Bytes.toBytes("q"), mobData));
+      }
+      admin.flush(tableName);
+      admin.snapshot(secondSnapshotName, tableName);
+
+      TEST_UTIL.deleteTable(tableName);
+      assertFalse(admin.tableExists(tableName));
+      admin.cloneSnapshot(secondSnapshotName, tableName);
+      assertTrue(admin.tableExists(tableName));
+      assertEquals(4, TEST_UTIL.countRows(tableName));
+
+    } finally {
+      if (admin.tableExists(tableName)) {
+        TEST_UTIL.deleteTable(tableName);
+      }
+      deleteSnapshotIfExists(admin, secondSnapshotName);
+      deleteSnapshotIfExists(admin, snapshotName);
+    }
+  }
+
+  private void deleteSnapshotIfExists(Admin admin, String snapshotName) throws IOException {
+    if (
+      admin.listSnapshots().stream().anyMatch(snapshot -> snapshotName.equals(snapshot.getName()))
+    ) {
+      admin.deleteSnapshot(snapshotName);
+    }
   }
 }
