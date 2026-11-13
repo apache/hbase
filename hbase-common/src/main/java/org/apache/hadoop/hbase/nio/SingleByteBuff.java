@@ -24,10 +24,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.FileChannel;
 import java.nio.channels.ReadableByteChannel;
 import org.apache.hadoop.hbase.io.ByteBuffAllocator.Recycler;
-import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.hadoop.hbase.util.ByteBufferUtils;
 import org.apache.hadoop.hbase.util.ObjectIntPair;
-import org.apache.hadoop.hbase.util.UnsafeAccess;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -37,15 +35,8 @@ import org.apache.yetus.audience.InterfaceAudience;
 @InterfaceAudience.Private
 public class SingleByteBuff extends ByteBuff {
 
-  private static final boolean UNSAFE_AVAIL = HBasePlatformDependent.isUnsafeAvailable();
-  private static final boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
-
   // Underlying BB
   private final ByteBuffer buf;
-
-  // To access primitive values from underlying ByteBuffer using Unsafe
-  private long unsafeOffset;
-  private Object unsafeRef = null;
 
   public SingleByteBuff(ByteBuffer buf) {
     this(NONE, buf);
@@ -58,12 +49,6 @@ public class SingleByteBuff extends ByteBuff {
   SingleByteBuff(RefCnt refCnt, ByteBuffer buf) {
     this.refCnt = refCnt;
     this.buf = buf;
-    if (buf.hasArray()) {
-      this.unsafeOffset = UnsafeAccess.BYTE_ARRAY_BASE_OFFSET + buf.arrayOffset();
-      this.unsafeRef = buf.array();
-    } else {
-      this.unsafeOffset = UnsafeAccess.directBufferAddress(buf);
-    }
   }
 
   @Override
@@ -181,10 +166,7 @@ public class SingleByteBuff extends ByteBuff {
   @Override
   public byte get(int index) {
     checkRefCount();
-    if (UNSAFE_AVAIL) {
-      return UnsafeAccess.toByte(this.unsafeRef, this.unsafeOffset + index);
-    }
-    return this.buf.get(index);
+    return ByteBufferUtils.toByte(buf, index);
   }
 
   @Override
@@ -284,10 +266,7 @@ public class SingleByteBuff extends ByteBuff {
   @Override
   public short getShort(int index) {
     checkRefCount();
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.toShort(unsafeRef, unsafeOffset + index);
-    }
-    return this.buf.getShort(index);
+    return ByteBufferUtils.toShort(this.buf, index);
   }
 
   @Override
@@ -312,10 +291,7 @@ public class SingleByteBuff extends ByteBuff {
   @Override
   public int getInt(int index) {
     checkRefCount();
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.toInt(unsafeRef, unsafeOffset + index);
-    }
-    return this.buf.getInt(index);
+    return ByteBufferUtils.toInt(this.buf, index);
   }
 
   @Override
@@ -340,10 +316,7 @@ public class SingleByteBuff extends ByteBuff {
   @Override
   public long getLong(int index) {
     checkRefCount();
-    if (UNSAFE_UNALIGNED) {
-      return UnsafeAccess.toLong(unsafeRef, unsafeOffset + index);
-    }
-    return this.buf.getLong(index);
+    return ByteBufferUtils.toLong(this.buf, index);
   }
 
   @Override

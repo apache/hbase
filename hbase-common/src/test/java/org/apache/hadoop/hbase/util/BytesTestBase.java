@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNotSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
@@ -576,5 +577,561 @@ public class BytesTestBase {
     hellohello[2] = 0;
     assertEquals(2, Bytes.findCommonPrefix(hellohello, hellohellohi, hellohello.length,
       hellohellohi.length, 0, 0));
+  }
+
+  @Test
+  public void testConverterToShort() {
+    byte[] array = new byte[20];
+
+    short[] testValues =
+      { 0, 1, -1, Short.MIN_VALUE, Short.MAX_VALUE, 127, -128, 255, -255, 1000, -1000 };
+
+    for (short value : testValues) {
+      Arrays.fill(array, (byte) 0);
+
+      Bytes.putShort(array, 0, value);
+      Bytes.putShort(array, 5, value);
+      Bytes.putShort(array, 10, value);
+
+      assertEquals(value, Bytes.toShort(array, 0));
+      assertEquals(value, Bytes.toShort(array, 5));
+      assertEquals(value, Bytes.toShort(array, 10));
+    }
+  }
+
+  @Test
+  public void testConverterToInt() {
+    byte[] array = new byte[20];
+
+    int[] testValues = { 0, 1, -1, Integer.MIN_VALUE, Integer.MAX_VALUE, 127, -128, 65535, -65535,
+      1000000, -1000000 };
+
+    for (int value : testValues) {
+      Arrays.fill(array, (byte) 0);
+
+      Bytes.putInt(array, 0, value);
+      Bytes.putInt(array, 4, value);
+      Bytes.putInt(array, 12, value);
+
+      assertEquals(value, Bytes.toInt(array, 0));
+      assertEquals(value, Bytes.toInt(array, 4));
+      assertEquals(value, Bytes.toInt(array, 12));
+    }
+  }
+
+  @Test
+  public void testConverterToLong() {
+    byte[] array = new byte[32];
+
+    long[] testValues = { 0L, 1L, -1L, Long.MIN_VALUE, Long.MAX_VALUE, 127L, -128L, 65535L, -65535L,
+      Integer.MAX_VALUE + 1L, Integer.MIN_VALUE - 1L, 1000000000000L, -1000000000000L };
+
+    for (long value : testValues) {
+      Arrays.fill(array, (byte) 0);
+
+      Bytes.putLong(array, 0, value);
+      Bytes.putLong(array, 8, value);
+      Bytes.putLong(array, 16, value);
+
+      assertEquals(value, Bytes.toLong(array, 0));
+      assertEquals(value, Bytes.toLong(array, 8));
+      assertEquals(value, Bytes.toLong(array, 16));
+    }
+  }
+
+  @Test
+  public void testConverterPutShort() {
+    byte[] array = new byte[20];
+
+    short[] testValues =
+      { 0, 1, -1, Short.MIN_VALUE, Short.MAX_VALUE, 127, -128, 255, -255, 1000, -1000 };
+
+    for (short value : testValues) {
+      Arrays.fill(array, (byte) 0);
+
+      int newIndex = Bytes.putShort(array, 0, value);
+      assertEquals(Short.BYTES, newIndex);
+      assertEquals(value, Bytes.toShort(array, 0));
+
+      newIndex = Bytes.putShort(array, 5, (short) (value + 1));
+      assertEquals(5 + Short.BYTES, newIndex);
+      assertEquals((short) (value + 1), Bytes.toShort(array, 5));
+    }
+  }
+
+  @Test
+  public void testConverterPutInt() {
+    byte[] array = new byte[20];
+
+    int[] testValues = { 0, 1, -1, Integer.MIN_VALUE, Integer.MAX_VALUE, 127, -128, 65535, -65535,
+      1000000, -1000000 };
+
+    for (int value : testValues) {
+      Arrays.fill(array, (byte) 0);
+
+      int newIndex = Bytes.putInt(array, 0, value);
+      assertEquals(Integer.BYTES, newIndex);
+      assertEquals(value, Bytes.toInt(array, 0));
+
+      newIndex = Bytes.putInt(array, 5, value + 1);
+      assertEquals(5 + Integer.BYTES, newIndex);
+      assertEquals(value + 1, Bytes.toInt(array, 5));
+    }
+  }
+
+  @Test
+  public void testConverterPutLong() {
+    byte[] array = new byte[32];
+
+    long[] testValues = { 0L, 1L, -1L, Long.MIN_VALUE, Long.MAX_VALUE, 127L, -128L, 65535L, -65535L,
+      Integer.MAX_VALUE + 1L, Integer.MIN_VALUE - 1L, 1000000000000L, -1000000000000L };
+
+    for (long value : testValues) {
+      Arrays.fill(array, (byte) 0);
+
+      int newIndex = Bytes.putLong(array, 0, value);
+      assertEquals(Long.BYTES, newIndex);
+      assertEquals(value, Bytes.toLong(array, 0));
+
+      newIndex = Bytes.putLong(array, 8, value + 1);
+      assertEquals(8 + Long.BYTES, newIndex);
+      assertEquals(value + 1, Bytes.toLong(array, 8));
+    }
+  }
+
+  @Test
+  public void testConverterRoundTrip() {
+    byte[] array = new byte[50];
+
+    short shortValue = 12345;
+    int intValue = 200000;
+    long longValue = 3000000000L;
+
+    int offset = 0;
+    offset = Bytes.putShort(array, offset, shortValue);
+    offset = Bytes.putInt(array, offset, intValue);
+    offset = Bytes.putLong(array, offset, longValue);
+    offset = Bytes.putShort(array, offset, Short.MIN_VALUE);
+    offset = Bytes.putInt(array, offset, Integer.MAX_VALUE);
+    offset = Bytes.putLong(array, offset, Long.MIN_VALUE);
+
+    assertEquals(28, offset);
+
+    assertEquals(shortValue, Bytes.toShort(array, 0));
+    assertEquals(intValue, Bytes.toInt(array, 2));
+    assertEquals(longValue, Bytes.toLong(array, 6));
+    assertEquals(Short.MIN_VALUE, Bytes.toShort(array, 14));
+    assertEquals(Integer.MAX_VALUE, Bytes.toInt(array, 16));
+    assertEquals(Long.MIN_VALUE, Bytes.toLong(array, 20));
+  }
+
+  @Test
+  public void testConverterBigEndianByteOrder() {
+    byte[] array = new byte[20];
+
+    Bytes.putInt(array, 0, 0x01020304);
+    assertEquals((byte) 0x01, array[0]);
+    assertEquals((byte) 0x02, array[1]);
+    assertEquals((byte) 0x03, array[2]);
+    assertEquals((byte) 0x04, array[3]);
+
+    Bytes.putShort(array, 0, (short) 0x0102);
+    assertEquals((byte) 0x01, array[0]);
+    assertEquals((byte) 0x02, array[1]);
+
+    Bytes.putLong(array, 0, 0x0102030405060708L);
+    assertEquals((byte) 0x01, array[0]);
+    assertEquals((byte) 0x02, array[1]);
+    assertEquals((byte) 0x03, array[2]);
+    assertEquals((byte) 0x04, array[3]);
+    assertEquals((byte) 0x05, array[4]);
+    assertEquals((byte) 0x06, array[5]);
+    assertEquals((byte) 0x07, array[6]);
+    assertEquals((byte) 0x08, array[7]);
+  }
+
+  @Test
+  public void testCommonPrefixerIdenticalSequences() {
+    byte[] array1 = new byte[100];
+    byte[] array2 = new byte[100];
+
+    for (int i = 0; i < 100; i++) {
+      array1[i] = (byte) i;
+      array2[i] = (byte) i;
+    }
+
+    assertEquals(100, Bytes.findCommonPrefix(array1, array2, array1.length, array2.length, 0, 0));
+  }
+
+  @Test
+  public void testCommonPrefixerEmptySequences() {
+    byte[] array1 = new byte[10];
+    byte[] array2 = new byte[10];
+
+    assertEquals(0, Bytes.findCommonPrefix(array1, array2, 0, 0, 0, 0));
+  }
+
+  @Test
+  public void testCommonPrefixerDifferentLengths() {
+    byte[] shortArray = new byte[50];
+    byte[] longArray = new byte[100];
+
+    for (int i = 0; i < 100; i++) {
+      byte value = (byte) i;
+      if (i < 50) {
+        shortArray[i] = value;
+      }
+      longArray[i] = value;
+    }
+
+    assertEquals(50, Bytes.findCommonPrefix(longArray, shortArray, 100, 50, 0, 0));
+    assertEquals(50, Bytes.findCommonPrefix(shortArray, longArray, 50, 100, 0, 0));
+  }
+
+  @Test
+  public void testCommonPrefixerDifferenceAtStrideBoundaries() {
+    byte[] array1 = new byte[100];
+    byte[] array2 = new byte[100];
+
+    int[] boundaryPositions = { 0, 1, 7, 8, 9, 15, 16, 17, 23, 24, 31, 32 };
+
+    for (int diffPos : boundaryPositions) {
+      Arrays.fill(array1, (byte) 5);
+      Arrays.fill(array2, (byte) 5);
+
+      array2[diffPos] = (byte) 99;
+
+      assertEquals(diffPos, Bytes.findCommonPrefix(array1, array2, 100, 100, 0, 0));
+    }
+  }
+
+  @Test
+  public void testCommonPrefixerWithOffsets() {
+    byte[] array = new byte[120];
+
+    for (int i = 0; i < 120; i++) {
+      array[i] = (byte) 42;
+    }
+
+    array[70] = (byte) 99;
+
+    assertEquals(50, Bytes.findCommonPrefix(array, array, 60, 60, 10, 20));
+  }
+
+  @Test
+  public void testCommonPrefixerSingleByteDifferences() {
+    byte[] array1 = new byte[50];
+    byte[] array2 = new byte[50];
+
+    for (int diffPos = 0; diffPos < 50; diffPos++) {
+      Arrays.fill(array1, (byte) 10);
+      Arrays.fill(array2, (byte) 10);
+
+      array2[diffPos] = (byte) 20;
+
+      assertEquals(diffPos, Bytes.findCommonPrefix(array1, array2, 50, 50, 0, 0));
+    }
+  }
+
+  @Test
+  public void testCommonPrefixerEpilogueBytes() {
+    for (int length = 1; length <= 15; length++) {
+      byte[] array1 = new byte[length];
+      byte[] array2 = new byte[length];
+
+      for (int i = 0; i < length; i++) {
+        array1[i] = (byte) i;
+        array2[i] = (byte) i;
+      }
+
+      assertEquals(length, Bytes.findCommonPrefix(array1, array2, length, length, 0, 0));
+    }
+  }
+
+  @Test
+  public void testCommonPrefixerEpilogueDifference() {
+    for (int length = 9; length <= 15; length++) {
+      for (int diffPos = 8; diffPos < length; diffPos++) {
+        byte[] array1 = new byte[length];
+        byte[] array2 = new byte[length];
+
+        for (int i = 0; i < length; i++) {
+          array1[i] = (byte) 5;
+          array2[i] = (byte) 5;
+        }
+
+        array2[diffPos] = (byte) 99;
+
+        assertEquals(diffPos, Bytes.findCommonPrefix(array1, array2, length, length, 0, 0));
+      }
+    }
+  }
+
+  @Test
+  public void testCommonPrefixerExtremeValues() {
+    byte[] array1 = new byte[50];
+    byte[] array2 = new byte[50];
+
+    byte[] extremeValues = { Byte.MIN_VALUE, Byte.MAX_VALUE, 0, -1, 1, 127, -128, (byte) 0xFF };
+
+    for (byte value : extremeValues) {
+      Arrays.fill(array1, value);
+      Arrays.fill(array2, value);
+
+      assertEquals(50, Bytes.findCommonPrefix(array1, array2, 50, 50, 0, 0));
+    }
+  }
+
+  @Test
+  public void testCommonPrefixerMultipleStrides() {
+    byte[] array1 = new byte[100];
+    byte[] array2 = new byte[100];
+
+    for (int i = 0; i < 100; i++) {
+      array1[i] = (byte) (i % 10);
+      array2[i] = (byte) (i % 10);
+    }
+
+    int[] diffPositions = { 72, 73, 74, 75, 76, 77, 78, 79, 80 };
+
+    for (int diffPos : diffPositions) {
+      array2[diffPos] = (byte) 99;
+
+      assertEquals(diffPos, Bytes.findCommonPrefix(array1, array2, 100, 100, 0, 0));
+
+      array2[diffPos] = (byte) (diffPos % 10);
+    }
+  }
+
+  @Test
+  public void testCommonPrefixerPartialMatches() {
+    byte[] array1 = new byte[64];
+    byte[] array2 = new byte[64];
+
+    for (int i = 0; i < 32; i++) {
+      array1[i] = (byte) i;
+      array2[i] = (byte) i;
+    }
+    for (int i = 32; i < 64; i++) {
+      array1[i] = (byte) (i + 100);
+      array2[i] = (byte) (i + 200);
+    }
+
+    assertEquals(32, Bytes.findCommonPrefix(array1, array2, 64, 64, 0, 0));
+  }
+
+  /**
+   * Comparisons whose offset/length extend past the end of an array must fail rather than read
+   * adjacent memory. Both the 8-byte stride loop and the single-byte epilogue are covered.
+   */
+  @Test
+  public void testCompareToOutOfBoundsThrows() {
+    byte[] a = new byte[20];
+    byte[] b = new byte[20];
+
+    // In range: succeeds
+    assertEquals(0, Bytes.compareTo(a, 4, 16, b, 4, 16));
+
+    // Overrun reached in the stride loop
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 8, 16, b, 0, 16));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 0, 16, b, 8, 16));
+    // Overrun reached in the epilogue
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 15, 6, b, 0, 6));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 0, 6, b, 15, 6));
+    // Negative offset
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, -1, 8, b, 0, 8));
+  }
+
+  /**
+   * Covers segments longer than one long whose length is not a multiple of eight, where the final
+   * partial long decides the result.
+   */
+  @Test
+  public void testCompareToSubLongTail() {
+    // Equal common prefix with differing lengths is ordered by length
+    byte[] a = Bytes.toBytes("aaaaaaaa");
+    byte[] b = Bytes.toBytes("aaaaaaaab");
+    assertTrue(Bytes.compareTo(a, b) < 0);
+    assertTrue(Bytes.compareTo(b, a) > 0);
+    byte[] c = Bytes.toBytes("aaaaaaaaaaa");
+    byte[] d = Bytes.toBytes("aaaaaaaaaaab");
+    assertTrue(Bytes.compareTo(c, d) < 0);
+    assertTrue(Bytes.compareTo(d, c) > 0);
+
+    // Multiple differing bytes in the tail: the first difference decides
+    byte[] e = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 2, 0 };
+    byte[] f = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 1, 5 };
+    assertTrue(Bytes.compareTo(e, f) > 0);
+    assertTrue(Bytes.compareTo(f, e) < 0);
+
+    // Unsigned byte ordering in the tail
+    byte[] g = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, (byte) 0x80 };
+    byte[] h = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0x7F };
+    assertTrue(Bytes.compareTo(g, h) > 0);
+    assertTrue(Bytes.compareTo(h, g) < 0);
+
+    // Exhaustive check against a byte-by-byte reference for small lengths
+    Random rand = new Random(42);
+    for (int iter = 0; iter < 20000; iter++) {
+      int len1 = rand.nextInt(24);
+      int len2 = rand.nextInt(24);
+      byte[] x = new byte[len1];
+      byte[] y = new byte[len2];
+      rand.nextBytes(x);
+      rand.nextBytes(y);
+      int common = Math.min(len1, len2);
+      System.arraycopy(x, 0, y, 0, common);
+      // Perturb up to two bytes so that differences land in the tail
+      for (int k = 0; k < 2 && common > 0; k++) {
+        if (rand.nextBoolean()) {
+          y[rand.nextInt(common)] = (byte) rand.nextInt(256);
+        }
+      }
+      String msg = "x=" + Bytes.toStringBinary(x) + " y=" + Bytes.toStringBinary(y);
+      int expected = Integer.signum(referenceCompare(x, y));
+      assertEquals(expected, Integer.signum(Bytes.compareTo(x, y)), msg);
+
+      // Same segments embedded at different non-zero offsets, surrounded by random bytes so that
+      // any read outside the segment can change the result
+      byte[] px = embedWithRandomPadding(rand, x, 3);
+      byte[] py = embedWithRandomPadding(rand, y, 5);
+      assertEquals(expected, Integer.signum(Bytes.compareTo(px, 3, len1, py, 5, len2)), msg);
+      assertEquals(-expected, Integer.signum(Bytes.compareTo(py, 5, len2, px, 3, len1)), msg);
+    }
+  }
+
+  /**
+   * For every segment length up to three longs and every pair of positions, places two differences
+   * that order the segments in opposite directions. Only the first difference in memory order may
+   * decide the result, regardless of where the positions fall within a word or the sub-long tail.
+   */
+  @Test
+  public void testCompareAndCommonPrefixFirstDifferenceWins() {
+    for (int len = 1; len <= 24; len++) {
+      for (int p = 0; p < len; p++) {
+        for (int q = p; q < len; q++) {
+          byte[] x = new byte[3 + len];
+          byte[] y = new byte[5 + len];
+          Arrays.fill(x, (byte) 0x80);
+          Arrays.fill(y, (byte) 0x80);
+          x[3 + p] = (byte) 0x7F;
+          y[5 + p] = (byte) 0xFF;
+          if (q != p) {
+            x[3 + q] = (byte) 0xFF;
+            y[5 + q] = (byte) 0x00;
+          }
+          String msg = "len=" + len + " p=" + p + " q=" + q;
+          assertTrue(Bytes.compareTo(x, 3, len, y, 5, len) < 0, msg);
+          assertTrue(Bytes.compareTo(y, 5, len, x, 3, len) > 0, msg);
+          assertFalse(Bytes.equals(x, 3, len, y, 5, len), msg);
+          assertEquals(p, Bytes.findCommonPrefix(x, y, len, len, 3, 5), msg);
+        }
+      }
+    }
+  }
+
+  /**
+   * Returns a copy of the segment placed at the given offset, with random bytes before it and
+   * random trailing bytes after it.
+   */
+  private static byte[] embedWithRandomPadding(Random rand, byte[] segment, int offset) {
+    byte[] padded = new byte[offset + segment.length + 1 + rand.nextInt(8)];
+    rand.nextBytes(padded);
+    System.arraycopy(segment, 0, padded, offset, segment.length);
+    return padded;
+  }
+
+  /**
+   * Covers segments longer than one long whose length is not a multiple of eight, where the final
+   * partial long decides the result.
+   */
+  @Test
+  public void testFindCommonPrefixSubLongTail() {
+    // Identical segments longer than one long
+    byte[] a = Bytes.toBytes("aaaaaaaaaaa");
+    byte[] b = Bytes.toBytes("aaaaaaaaaaab");
+    assertEquals(11, Bytes.findCommonPrefix(a, b, a.length, b.length, 0, 0));
+    // Multiple differing bytes in the tail: the first difference is reported
+    byte[] c = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 2, 0 };
+    byte[] d = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 5 };
+    assertEquals(9, Bytes.findCommonPrefix(c, d, c.length, d.length, 0, 0));
+    // Difference in the last byte
+    byte[] e = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
+    byte[] f = new byte[] { 0, 0, 0, 0, 0, 0, 0, 0, 0, 1 };
+    assertEquals(9, Bytes.findCommonPrefix(e, f, e.length, f.length, 0, 0));
+
+    // Randomized check against a byte-by-byte reference, at non-zero offsets
+    Random rand = new Random(42);
+    for (int iter = 0; iter < 20000; iter++) {
+      int len1 = rand.nextInt(24);
+      int len2 = rand.nextInt(24);
+      byte[] x = new byte[3 + len1];
+      byte[] y = new byte[5 + len2];
+      rand.nextBytes(x);
+      rand.nextBytes(y);
+      int common = Math.min(len1, len2);
+      System.arraycopy(x, 3, y, 5, common);
+      // Perturb up to two bytes so that differences land in the tail
+      for (int k = 0; k < 2 && common > 0; k++) {
+        if (rand.nextBoolean()) {
+          y[5 + rand.nextInt(common)] = (byte) rand.nextInt(256);
+        }
+      }
+      int expected = 0;
+      while (expected < common && x[3 + expected] == y[5 + expected]) {
+        expected++;
+      }
+      assertEquals(expected, Bytes.findCommonPrefix(x, y, len1, len2, 3, 5),
+        "x=" + Bytes.toStringBinary(x) + " y=" + Bytes.toStringBinary(y));
+    }
+  }
+
+  /**
+   * The read covering the sub-long tail of a segment must stay within the arrays.
+   */
+  @Test
+  public void testSubLongTailOutOfBoundsThrows() {
+    byte[] a = new byte[16];
+    byte[] b = new byte[16];
+
+    // Segments ending exactly at the end of the array succeed
+    assertEquals(0, Bytes.compareTo(a, 4, 12, b, 4, 12));
+    assertEquals(12, Bytes.findCommonPrefix(a, b, 12, 12, 4, 4));
+
+    // A 13-byte segment starting at 4 ends one byte past the array, inside the tail read
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 4, 13, b, 0, 13));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.compareTo(a, 0, 13, b, 4, 13));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 13, 13, 4, 0));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 13, 13, 0, 4));
+  }
+
+  private static int referenceCompare(byte[] x, byte[] y) {
+    int n = Math.min(x.length, y.length);
+    for (int i = 0; i < n; i++) {
+      int a = x[i] & 0xFF;
+      int b = y[i] & 0xFF;
+      if (a != b) {
+        return a - b;
+      }
+    }
+    return x.length - y.length;
+  }
+
+  @Test
+  public void testFindCommonPrefixOutOfBoundsThrows() {
+    byte[] a = new byte[20];
+    byte[] b = new byte[20];
+
+    // In range: succeeds
+    assertEquals(16, Bytes.findCommonPrefix(a, b, 16, 16, 4, 4));
+
+    // Overrun reached in the stride loop
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 16, 16, 8, 0));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 16, 16, 0, 8));
+    // Overrun reached in the epilogue
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 6, 6, 15, 0));
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 6, 6, 0, 15));
+    // Negative offset
+    assertThrows(IndexOutOfBoundsException.class, () -> Bytes.findCommonPrefix(a, b, 8, 8, -1, 0));
   }
 }

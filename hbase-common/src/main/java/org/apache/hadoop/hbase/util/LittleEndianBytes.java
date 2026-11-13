@@ -17,10 +17,12 @@
  */
 package org.apache.hadoop.hbase.util;
 
+import java.lang.invoke.MethodHandles;
+import java.lang.invoke.VarHandle;
 import java.nio.ByteBuffer;
+import java.nio.ByteOrder;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
 import org.apache.hadoop.hbase.Cell;
-import org.apache.hadoop.hbase.unsafe.HBasePlatformDependent;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -30,85 +32,27 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public final class LittleEndianBytes {
-  final static boolean UNSAFE_UNALIGNED = HBasePlatformDependent.unaligned();
+  private static final VarHandle BYTE_BUFFER_INT_VIEW_LITTLE_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteBufferViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
+  private static final VarHandle BYTE_ARRAY_INT_VIEW_LITTLE_ENDIAN_VAR_HANDLE =
+    MethodHandles.byteArrayViewVarHandle(int[].class, ByteOrder.LITTLE_ENDIAN);
 
-  static abstract class Converter {
-    abstract int toInt(byte[] bytes, int offset);
+  static final class Converter {
+    static final Converter INSTANCE = new Converter();
 
-    abstract int toInt(ByteBuffer buffer, int offset);
-
-    abstract int putInt(byte[] bytes, int offset, int val);
-  }
-
-  static class ConverterHolder {
-    static final String UNSAFE_CONVERTER_NAME =
-      ConverterHolder.class.getName() + "$UnsafeConverter";
-    static final Converter BEST_CONVERTER = getBestConverter();
-
-    static Converter getBestConverter() {
-      try {
-        Class<? extends Converter> theClass =
-          Class.forName(UNSAFE_CONVERTER_NAME).asSubclass(Converter.class);
-        return theClass.getConstructor().newInstance();
-      } catch (Throwable t) {
-        return PureJavaConverter.INSTANCE;
-      }
+    public Converter() {
     }
 
-    static final class PureJavaConverter extends Converter {
-      static final PureJavaConverter INSTANCE = new PureJavaConverter();
-
-      private PureJavaConverter() {
-      }
-
-      @Override
-      int toInt(byte[] bytes, int offset) {
-        return (bytes[offset] & 0xFF) | ((bytes[offset + 1] & 0xFF) << 8)
-          | ((bytes[offset + 2] & 0xFF) << 16) | ((bytes[offset + 3] & 0xFF) << 24);
-      }
-
-      @Override
-      int toInt(ByteBuffer buffer, int offset) {
-        return (buffer.get(offset) & 0xFF) | ((buffer.get(offset + 1) & 0xFF) << 8)
-          | ((buffer.get(offset + 2) & 0xFF) << 16) | ((buffer.get(offset + 3) & 0xFF) << 24);
-      }
-
-      @Override
-      int putInt(byte[] bytes, int offset, int val) {
-        bytes[offset] = (byte) val;
-        bytes[offset + 1] = (byte) (val >>> 8);
-        bytes[offset + 2] = (byte) (val >>> 16);
-        bytes[offset + 3] = (byte) (val >>> 24);
-        return offset + Bytes.SIZEOF_INT;
-      }
+    int toInt(byte[] bytes, int offset) {
+      return (int) BYTE_ARRAY_INT_VIEW_LITTLE_ENDIAN_VAR_HANDLE.get(bytes, offset);
     }
 
-    static final class UnsafeConverter extends Converter {
-      static final UnsafeConverter INSTANCE = new UnsafeConverter();
+    int toInt(ByteBuffer buffer, int offset) {
+      return (int) BYTE_BUFFER_INT_VIEW_LITTLE_ENDIAN_VAR_HANDLE.get(buffer, offset);
+    }
 
-      public UnsafeConverter() {
-      }
-
-      static {
-        if (!UNSAFE_UNALIGNED) {
-          throw new Error();
-        }
-      }
-
-      @Override
-      int toInt(byte[] bytes, int offset) {
-        return UnsafeAccess.toIntLE(bytes, offset);
-      }
-
-      @Override
-      int toInt(ByteBuffer buffer, int offset) {
-        return UnsafeAccess.toIntLE(buffer, offset);
-      }
-
-      @Override
-      int putInt(byte[] bytes, int offset, int val) {
-        return UnsafeAccess.putIntLE(bytes, offset, val);
-      }
+    void putInt(byte[] bytes, int offset, int val) {
+      BYTE_ARRAY_INT_VIEW_LITTLE_ENDIAN_VAR_HANDLE.set(bytes, offset, val);
     }
   }
 
@@ -117,7 +61,7 @@ public final class LittleEndianBytes {
    */
   public static void putInt(byte[] bytes, int offset, int val) {
     assert offset >= 0 && bytes.length - offset >= Bytes.SIZEOF_INT;
-    ConverterHolder.BEST_CONVERTER.putInt(bytes, offset, val);
+    Converter.INSTANCE.putInt(bytes, offset, val);
   }
 
   /*
@@ -125,7 +69,7 @@ public final class LittleEndianBytes {
    */
   public static int toInt(byte[] bytes, int offset) {
     assert offset >= 0 && bytes.length - offset >= Bytes.SIZEOF_INT;
-    return ConverterHolder.BEST_CONVERTER.toInt(bytes, offset);
+    return Converter.INSTANCE.toInt(bytes, offset);
   }
 
   /*
@@ -134,7 +78,7 @@ public final class LittleEndianBytes {
    */
   public static int toInt(ByteBuffer buffer, int offset) {
     assert offset >= 0 && buffer.capacity() - offset >= Bytes.SIZEOF_INT;
-    return ConverterHolder.BEST_CONVERTER.toInt(buffer, offset);
+    return Converter.INSTANCE.toInt(buffer, offset);
   }
 
   /*
