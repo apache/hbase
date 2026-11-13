@@ -157,9 +157,6 @@ public class FSTableDescriptors implements TableDescriptors {
     TableName tableName = td.getTableName();
     Path tableDir = CommonFSUtils.getTableDir(rootdir, tableName);
     Path p = writeTableDescriptor(fs, td, tableDir, null);
-    if (p == null) {
-      throw new IOException("Failed update hbase:meta table descriptor");
-    }
     LOG.info("Updated hbase:meta table descriptor to {}", p);
     return td;
   }
@@ -355,9 +352,6 @@ public class FSTableDescriptors implements TableDescriptors {
     Path tableDir = getTableDir(tableName);
     Path p = writeTableDescriptor(fs, td, tableDir,
       getTableDescriptorFromFs(fs, tableDir, fsreadonly).map(Pair::getFirst).orElse(null));
-    if (p == null) {
-      throw new IOException("Failed update");
-    }
     LOG.info("Updated tableinfo=" + p);
     return p;
   }
@@ -601,7 +595,9 @@ public class FSTableDescriptors implements TableDescriptors {
    * currentSequenceId + 1 and tries 10 times to find a new sequence number not already in use.
    * <p/>
    * Removes the current descriptor file if passed in.
-   * @return Descriptor file or null if we failed write.
+   * @return The written descriptor file, never null.
+   * @throws IOException if the descriptor could not be written after all attempts, so that callers
+   *                     never mistake a failed write for a successful one
    */
   private static Path writeTableDescriptor(final FileSystem fs, final TableDescriptor td,
     final Path tableDir, final FileStatus currentDescriptorFile) throws IOException {
@@ -622,6 +618,7 @@ public class FSTableDescriptors implements TableDescriptors {
     int maxAttempts = 10;
     int maxSequenceId = currentSequenceId + maxAttempts;
     byte[] bytes = TableDescriptorBuilder.toByteArray(td);
+    IOException lastFailure = null;
     for (int newSequenceId = currentSequenceId + 1; newSequenceId
         <= maxSequenceId; newSequenceId++) {
       String fileName = getTableInfoFileName(newSequenceId, bytes);
@@ -630,15 +627,18 @@ public class FSTableDescriptors implements TableDescriptors {
         out.write(bytes);
       } catch (FileAlreadyExistsException e) {
         LOG.debug("{} exists; retrying up to {} times", filePath, maxAttempts, e);
+        lastFailure = e;
         continue;
       } catch (IOException e) {
-        LOG.debug("Failed write {}; retrying up to {} times", filePath, maxAttempts, e);
+        LOG.warn("Failed write {}; retrying up to {} times", filePath, maxAttempts, e);
+        lastFailure = e;
         continue;
       }
       deleteTableDescriptorFiles(fs, tableInfoDir, newSequenceId - 1);
       return filePath;
     }
-    return null;
+    throw new IOException("Failed to write table descriptor of " + td.getTableName() + " under "
+      + tableInfoDir + " after " + maxAttempts + " attempts", lastFailure);
   }
 
   /**
@@ -668,9 +668,10 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param htd           description of the table to write
    * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
    *                      be overwritten
-   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
-   *         already exists and we weren't forcing the descriptor creation.
-   * @throws IOException if a filesystem error occurs
+   * @return <tt>true</tt> if we successfully created the file, <tt>false</tt> if the file already
+   *         exists, and we weren't forcing the descriptor creation.
+   * @throws IOException if a filesystem error occurs, including when the descriptor could not be
+   *                     written after all retries
    */
   public boolean createTableDescriptorForTableDirectory(Path tableDir, TableDescriptor htd,
     boolean forceCreation) throws IOException {
@@ -688,9 +689,10 @@ public class FSTableDescriptors implements TableDescriptors {
    * @param htd           description of the table to write
    * @param forceCreation if <tt>true</tt>,then even if previous table descriptor is present it will
    *                      be overwritten
-   * @return <tt>true</tt> if the we successfully created the file, <tt>false</tt> if the file
-   *         already exists and we weren't forcing the descriptor creation.
-   * @throws IOException if a filesystem error occurs
+   * @return <tt>true</tt> if we successfully created the file, <tt>false</tt> if the file already
+   *         exists, and we weren't forcing the descriptor creation.
+   * @throws IOException if a filesystem error occurs, including when the descriptor could not be
+   *                     written after all retries
    */
   public static boolean createTableDescriptorForTableDirectory(FileSystem fs, Path tableDir,
     TableDescriptor htd, boolean forceCreation) throws IOException {
@@ -704,6 +706,7 @@ public class FSTableDescriptors implements TableDescriptors {
         }
       }
     }
-    return writeTableDescriptor(fs, htd, tableDir, opt.map(Pair::getFirst).orElse(null)) != null;
+    writeTableDescriptor(fs, htd, tableDir, opt.map(Pair::getFirst).orElse(null));
+    return true;
   }
 }
