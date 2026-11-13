@@ -279,7 +279,7 @@ public final class SnapshotReferenceUtil {
     Path linkPath;
     if (refPath != null && HFileLink.isHFileLink(refPath)) {
       linkPath = new Path(family, refPath.getName());
-    } else if (HFileLink.isHFileLink(fileName)) {
+    } else if (HFileLink.isHFileLink(fileName) || StoreFileInfo.isMobFileLink(fileName)) {
       linkPath = new Path(family, fileName);
     } else {
       linkPath = new Path(family,
@@ -296,6 +296,12 @@ public final class SnapshotReferenceUtil {
       // not mob region
       link = HFileLink.buildFromHFileLinkPattern(conf, linkPath);
     }
+    LOG.info("===============================================================================");
+    LOG.info("fileName is {}", fileName);
+    LOG.info("LinkPath is {}", linkPath);
+    LOG.info("link is {}", link.toString());
+    LOG.info("Region {} is MOB : {}",  regionInfo.getEncodedName(), MobUtils.isMobRegionInfo(regionInfo));
+    LOG.info("The END -----------------------------------------------------------------------");
     try {
       FileStatus fstat = link.getFileStatus(fs);
       if (storeFile.hasFileSize() && storeFile.getFileSize() != fstat.getLen()) {
@@ -343,7 +349,7 @@ public final class SnapshotReferenceUtil {
       public void storeFile(final RegionInfo regionInfo, final String family,
         final SnapshotRegionManifest.StoreFile storeFile) throws IOException {
         String hfile = storeFile.getName();
-        if (HFileLink.isHFileLink(hfile)) {
+        if (HFileLink.isHFileLink(hfile) || StoreFileInfo.isMobFileLink(hfile)) {
           names.add(HFileLink.getReferencedHFileName(hfile));
         } else if (StoreFileInfo.isReference(hfile)) {
           Path refPath =
