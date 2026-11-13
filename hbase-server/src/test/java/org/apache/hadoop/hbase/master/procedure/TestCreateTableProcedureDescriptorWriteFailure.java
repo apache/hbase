@@ -123,6 +123,14 @@ public class TestCreateTableProcedureDescriptorWriteFailure {
     INJECTED_FAILURES.set(0);
   }
 
+  /**
+   * Every write of the table descriptor fails, so the {@value #WRITE_ATTEMPTS} in-method attempts
+   * of {@code writeTableDescriptor} are exhausted, over and over. The create procedure must keep
+   * retrying {@code CREATE_TABLE_WRITE_FS_LAYOUT}: it must not fail, finish, add the regions to
+   * {@code hbase:meta} or start any {@link TransitRegionStateProcedure} for region assignment. Once
+   * the injection is cleared, i.e. HDFS recovers, the same procedure completes, the descriptor is
+   * on the file system and the region server can load it.
+   */
   @Test
   public void testCreateTableDoesNotProceedWhenTableDescriptorWriteFails() throws Exception {
     final TableName tableName = TableName.valueOf("testDescriptorWriteFailure");
