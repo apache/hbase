@@ -17,12 +17,18 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.BackupInfo.withState;
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileDoesNotExist;
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileExists;
+import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
 import java.util.List;
 import java.util.Set;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupInfo.BackupState;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.backup.impl.TableBackupClient;
 import org.apache.hadoop.hbase.backup.impl.TableBackupClient.Stage;
@@ -62,24 +68,33 @@ public class TestBackupRepair extends TestBackupBase {
         table1.getNameAsString() + "," + table2.getNameAsString() };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertFalse(ret == 0);
+      assertNotEquals(0, ret);
+
+      // Create a stale .backup.complete marker and verify repair removes it
+      List<BackupInfo> runningBackups =
+        table.getBackupHistory(NEW_TO_OLD, 1, withState(BackupState.RUNNING));
+      assertEquals(1, runningBackups.size());
+      String failedBackupId = runningBackups.get(0).getBackupId();
+      HBackupFileSystem.writeBackupCompleteMarker(conf1, BACKUP_ROOT_DIR, failedBackupId);
+      assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, failedBackupId);
 
       // Now run restore
       args = new String[] { "repair" };
 
       ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertTrue(ret == 0);
+      assertEquals(0, ret);
 
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 
-      assertTrue(after == before + 1);
+      assertEquals(before + 1, after);
       for (BackupInfo data : backups) {
         String backupId = data.getBackupId();
         assertFalse(checkSucceeded(backupId));
+        assertBackupCompleteFileDoesNotExist(conf1, BACKUP_ROOT_DIR, backupId);
       }
       Set<TableName> tables = table.getIncrementalBackupTableSet(BACKUP_ROOT_DIR);
-      assertTrue(tables.size() == 0);
+      assertEquals(0, tables.size());
     }
   }
 

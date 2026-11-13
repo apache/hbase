@@ -96,6 +96,8 @@ public class TestContinuousBackup extends TestBackupBase {
       for (BackupInfo data : List.of(backups.get(0))) {
         String backupId = data.getBackupId();
         assertTrue(checkSucceeded(backupId));
+
+        TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupId);
       }
 
       // Verify backup manifest contains the correct tables

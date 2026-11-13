@@ -17,6 +17,8 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileDoesNotExist;
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileExists;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.succeeded;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -186,6 +188,9 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
         // Finish merge session
         table.finishMergeOperation();
+        // Write the completion marker after the merge is fully finalized so
+        // external consumers never observe it on a partially-merged backup.
+        HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
         // Release lock
         table.finishBackupExclusiveOperation();
       } catch (RuntimeException e) {
@@ -287,6 +292,9 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
           // No need to repair:
           // Both Merge and backup exclusive operations are finished
           assertFalse(table.isMergeInProgress());
+          // Merge failed before filesystem modifications — original markers intact
+          assertBackupCompleteFileExists(conf, BACKUP_ROOT_DIR, backupIdIncMultiple);
+          assertBackupCompleteFileExists(conf, BACKUP_ROOT_DIR, backupIdIncMultiple2);
           try {
             table.finishBackupExclusiveOperation();
             fail("IOException is expected");
@@ -296,6 +304,8 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         } else {
           // Repair is required
           assertTrue(table.isMergeInProgress());
+          // Merge failed during finalization — merged backup must NOT appear complete
+          assertBackupCompleteFileDoesNotExist(conf, BACKUP_ROOT_DIR, backupIdIncMultiple2);
           try {
             table.startBackupExclusiveOperation();
             fail("IOException is expected");
@@ -321,6 +331,11 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
       String[] backups = new String[] { backupIdIncMultiple, backupIdIncMultiple2 };
       bAdmin.mergeBackups(backups);
     }
+
+    // After successful merge, the merged-into backup should have the marker
+    assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple2);
+    // The merged-away backup should no longer exist
+    assertBackupCompleteFileDoesNotExist(conf1, BACKUP_ROOT_DIR, backupIdIncMultiple);
 
     // #6 - restore incremental backup for multiple tables, with overwrite
     TableName[] tablesRestoreIncMultiple = new TableName[] { table1, table2 };

@@ -17,7 +17,10 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileDoesNotExist;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
@@ -59,14 +62,15 @@ public class TestFullBackupWithFailures extends TestBackupBase {
         table1.getNameAsString() + "," + table2.getNameAsString() };
       // Run backup
       int ret = ToolRunner.run(conf1, new BackupDriver(), args);
-      assertFalse(ret == 0);
+      assertNotEquals(0, ret);
       List<BackupInfo> backups = table.getBackupHistory();
       int after = table.getBackupHistory().size();
 
-      assertTrue(after == before + 1);
+      assertEquals(before + 1, after);
       for (BackupInfo data : backups) {
         String backupId = data.getBackupId();
         assertFalse(checkSucceeded(backupId));
+        assertBackupCompleteFileDoesNotExist(conf1, BACKUP_ROOT_DIR, backupId);
       }
       Set<TableName> tables = table.getIncrementalBackupTableSet(BACKUP_ROOT_DIR);
       assertTrue(tables.isEmpty());
