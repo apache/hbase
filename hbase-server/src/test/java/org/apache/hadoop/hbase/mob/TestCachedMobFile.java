@@ -63,9 +63,9 @@ public class TestCachedMobFile {
     HFileContext meta = new HFileContextBuilder().withBlockSize(8 * 1024).build();
     StoreFileWriter writer = new StoreFileWriter.Builder(conf, cacheConf, fs).withOutputDir(testDir)
       .withFileContext(meta).build();
+    MobTestUtil.writeStoreFile(writer, caseName);
     StoreFileInfo storeFileInfo =
       StoreFileInfo.createStoreFileInfoForHFile(conf, fs, writer.getPath(), true);
-    MobTestUtil.writeStoreFile(writer, caseName);
     CachedMobFile cachedMobFile =
       new CachedMobFile(new HStoreFile(storeFileInfo, BloomType.NONE, cacheConf));
     assertEquals(EXPECTED_REFERENCE_ZERO, cachedMobFile.getReferenceCount());

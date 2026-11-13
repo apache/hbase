@@ -308,6 +308,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     HFileLink link = null;
     long createdTimestamp = 0;
     long size = 0;
+    FileStatus listedPlainHFileStatus = null;
     Path p = initialPath;
     if (HFileLink.isHFileLink(p)) {
       // HFileLink
@@ -331,16 +332,18 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
         if (fileStatus != null) {
           createdTimestamp = fileStatus.getModificationTime();
           size = fileStatus.getLen();
+          listedPlainHFileStatus = fileStatus;
         } else {
           FileStatus fStatus = fs.getFileStatus(initialPath);
           createdTimestamp = fStatus.getModificationTime();
           size = fStatus.getLen();
+          listedPlainHFileStatus = fStatus;
         }
       } else {
         throw new IOException("path=" + p + " doesn't look like a valid StoreFile");
       }
     return new StoreFileInfo(conf, fs, createdTimestamp, initialPath, size, reference, link,
-      isPrimaryReplica);
+      isPrimaryReplica, listedPlainHFileStatus);
   }
 
   public HFileLink createAndCommitHFileLink(final TableName linkedTable, final String linkedRegion,
