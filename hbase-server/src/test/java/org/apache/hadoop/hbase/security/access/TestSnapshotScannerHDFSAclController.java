@@ -538,8 +538,10 @@ public class TestSnapshotScannerHDFSAclController {
 
     // grant T(R) -> revoke table family
     TestHDFSAclHelper.grantOnTable(TEST_UTIL, grantUserName, table, READ);
-    SecureTestUtil.revokeFromTable(TEST_UTIL, grantUserName, table, TestHDFSAclHelper.COLUMN1, null,
-      READ);
+    // the revoke below has no effect on the table level permission, so it does not update the acl
+    // table and must not wait for acl cache changes
+    admin.revoke(new UserPermission(grantUserName, Permission.newBuilder(table)
+      .withFamily(TestHDFSAclHelper.COLUMN1).withActions(READ).build()));
     TestHDFSAclHelper.canUserScanSnapshot(TEST_UTIL, grantUser, snapshot, 6);
 
     // grant T(R) -> revoke T(R)
