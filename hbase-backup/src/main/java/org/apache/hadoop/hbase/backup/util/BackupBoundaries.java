@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.backup.util;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo;
@@ -123,15 +124,22 @@ public class BackupBoundaries {
 
     /**
      * Updates the boundaries based on the provided backup info.
-     * @param backupInfo the most recent completed backup info for a backup root, or if there is no
-     *                   such completed backup, the currently running backup.
+     * @param backupInfo   the most recent completed backup info for a backup root, or if there is
+     *                     no such completed backup, the currently running backup.
+     * @param activeTables the tables of the backup root that future incremental backups will
+     *                     include. Timestamps of other tables in the backup info are ignored.
      */
-    public void update(BackupInfo backupInfo) {
+    public void update(BackupInfo backupInfo, Set<TableName> activeTables) {
       switch (backupInfo.getState()) {
         case COMPLETE:
           // If a completed backup exists in the backup root, we want to protect all logs that
           // have been created since the log-roll that happened for that backup.
           for (TableName table : backupInfo.getTableSetTimestampMap().keySet()) {
+            if (!activeTables.contains(table)) {
+              LOG.debug("Skipping stale table {} in backup root {}: not in active tables", table,
+                backupInfo.getBackupRootDir());
+              continue;
+            }
             for (Map.Entry<String, Long> entry : backupInfo.getTableSetTimestampMap().get(table)
               .entrySet()) {
               Address regionServerAddress = Address.fromString(entry.getKey());
