@@ -183,14 +183,14 @@ public final class MobFileCleanupUtil {
 
     // Now scan MOB directories and find MOB files with no references to them
     for (ColumnFamilyDescriptor hcd : list) {
-      checkColumnFamilyDescriptor(conf, table, fs, admin, hcd, regionNames,
+      checkColumnFamilyDescriptor(conf, table, fs, admin, hcd, regionNames, allActiveMobFileName,
         maxCreationTimeToArchive);
     }
   }
 
   private static void checkColumnFamilyDescriptor(Configuration conf, TableName table,
     FileSystem fs, Admin admin, ColumnFamilyDescriptor hcd, Set<String> regionNames,
-    long maxCreationTimeToArchive) throws IOException {
+    Set<String> allActiveMobFileName, long maxCreationTimeToArchive) throws IOException {
     List<Path> toArchive = new ArrayList<Path>();
     String family = hcd.getNameAsString();
     Path dir = MobUtils.getMobFamilyPath(conf, table, family);
@@ -198,22 +198,22 @@ public final class MobFileCleanupUtil {
     while (rit.hasNext()) {
       LocatedFileStatus lfs = rit.next();
       Path p = lfs.getPath();
-      String[] mobParts = p.getName().split("_");
+      String fileName = p.getName();
+      String[] mobParts = fileName.split("_");
       String regionName = mobParts[mobParts.length - 1];
 
-      if (!regionNames.contains(regionName)) {
-        // MOB belonged to a region no longer hosted
-        long creationTime = fs.getFileStatus(p).getModificationTime();
-        if (creationTime < maxCreationTimeToArchive) {
-          LOG.trace("Archiving MOB file {} creation time={}", p,
-            (fs.getFileStatus(p).getModificationTime()));
-          toArchive.add(p);
-        } else {
-          LOG.trace("Skipping fresh file: {}. Creation time={}", p,
-            fs.getFileStatus(p).getModificationTime());
-        }
+      // After a split or merge, the children keep referencing the MOB files of the parent
+      // regions until the MOB cells are rewritten by a MOB compaction.
+      if (regionNames.contains(regionName) || allActiveMobFileName.contains(fileName)) {
+        LOG.trace("Keeping MOB file with existing region or active reference: {}", p);
+        continue;
+      }
+      long creationTime = lfs.getModificationTime();
+      if (creationTime < maxCreationTimeToArchive) {
+        LOG.trace("Archiving MOB file {} creation time={}", p, creationTime);
+        toArchive.add(p);
       } else {
-        LOG.trace("Keeping MOB file with existing region: {}", p);
+        LOG.trace("Skipping fresh file: {}. Creation time={}", p, creationTime);
       }
     }
     LOG.info(" MOB Cleaner found {} files to archive for table={} family={}", toArchive.size(),
