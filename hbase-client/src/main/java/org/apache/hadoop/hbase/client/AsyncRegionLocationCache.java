@@ -18,7 +18,9 @@
 package org.apache.hadoop.hbase.client;
 
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.canUpdateOnError;
+import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.createRegionLocations;
 import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.removeRegionLocation;
+import static org.apache.hadoop.hbase.client.AsyncRegionLocatorHelper.replaceRegionLocation;
 import static org.apache.hadoop.hbase.client.ConnectionUtils.isEmptyStopRow;
 import static org.apache.hadoop.hbase.util.Bytes.BYTES_COMPARATOR;
 
@@ -95,6 +97,24 @@ final class AsyncRegionLocationCache {
     cache.put(startKey, locs);
     cleanProblematicOverlappedRegions(locs);
     return locs;
+  }
+
+  public synchronized RegionLocations add(HRegionLocation loc) {
+    byte[] startKey = loc.getRegion().getStartKey();
+    RegionLocations oldLocs = cache.get(startKey);
+    if (
+      oldLocs == null || !RegionReplicaUtil
+        .isReplicasForSameRegion(oldLocs.getRegionLocation().getRegion(), loc.getRegion())
+    ) {
+      return add(createRegionLocations(loc));
+    }
+
+    RegionLocations newLocs = replaceRegionLocation(oldLocs, loc);
+    if (isEqual(newLocs, oldLocs)) {
+      return oldLocs;
+    }
+    cache.put(startKey, newLocs);
+    return newLocs;
   }
 
   /**
