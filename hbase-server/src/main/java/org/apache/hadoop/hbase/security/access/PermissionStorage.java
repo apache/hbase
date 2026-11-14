@@ -129,7 +129,7 @@ public final class PermissionStorage {
   }
 
   /**
-   * Return the username for this table entry, and add family/qualifer to the given {@code builder}
+   * Return the username for this table entry, and add family/qualifier to the given {@code builder}
    * if available.
    */
   private static String parseTableEntry(Permission.Builder builder, byte[] qual) {
@@ -152,7 +152,7 @@ public final class PermissionStorage {
 
   private static UserPermission parseUserPermission(byte[] entryName, byte[] qual,
     byte[] actionCodes) {
-    if (actionCodes == null || actionCodes.length == 0) {
+    if (ArrayUtils.isEmpty(actionCodes)) {
       return null;
     }
     String user;
@@ -228,6 +228,11 @@ public final class PermissionStorage {
    */
   public static void addUserPermission(Connection conn, UserPermission userPerm,
     boolean mergeExistingPermissions) throws IOException {
+    if (ArrayUtils.isEmpty(userPerm.getPermission().getActions())) {
+      String msg = "No actions associated with user '" + userPerm.getUser() + "'";
+      LOG.warn(msg);
+      throw new IOException(msg);
+    }
     try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
       UserPermission toAdd;
       if (mergeExistingPermissions) {
@@ -475,7 +480,13 @@ public final class PermissionStorage {
         ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
         result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
           UserPermission userPerm = parseUserPermission(entryName, qual, actionCodes);
-          perms.put(userPerm.getUser(), userPerm);
+          if (userPerm != null) {
+            perms.put(userPerm.getUser(), userPerm);
+          } else {
+            // Malformed/empty ACL cell; skip to avoid NPE and continue scanning.
+            LOG.warn("Skipping malformed ACL entry for row={} qualifier={}",
+              Bytes.toStringBinary(entryName), Bytes.toStringBinary(qual));
+          }
         });
         allPerms.put(entryName, perms);
       }
@@ -498,6 +509,12 @@ public final class PermissionStorage {
       }
       List<UserPermission> userPerms = new ArrayList<>();
       result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        if (ArrayUtils.isEmpty(actionCodes)) {
+          // Malformed/empty ACL cell; skip to avoid NPE
+          LOG.warn("Skipping malformed ACL entry for row={} qualifier={}",
+            Bytes.toStringBinary(entryName), Bytes.toStringBinary(qual));
+          return;
+        }
         Permission.Builder builder = Permission.newBuilder(tableName).withActionCodes(actionCodes);
         String user = parseTableEntry(builder, qual);
         userPerms.add(new UserPermission(user, builder.build()));
@@ -517,6 +534,12 @@ public final class PermissionStorage {
       }
       List<UserPermission> userPerms = new ArrayList<>();
       result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        if (ArrayUtils.isEmpty(actionCodes)) {
+          // Malformed/empty ACL cell; skip to avoid NPE
+          LOG.warn("Skipping malformed ACL entry for row={} qualifier={}",
+            Bytes.toStringBinary(entryName), Bytes.toStringBinary(qual));
+          return;
+        }
         Permission perm = Permission.newBuilder(namespace).withActionCodes(actionCodes).build();
         String user = Bytes.toString(qual);
         userPerms.add(new UserPermission(user, perm));
@@ -534,6 +557,12 @@ public final class PermissionStorage {
       }
       List<UserPermission> userPerms = new ArrayList<>();
       result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
+        if (ArrayUtils.isEmpty(actionCodes)) {
+          // Malformed/empty ACL cell; skip to avoid NPE
+          LOG.warn("Skipping malformed ACL entry for row={} qualifier={}",
+            Bytes.toStringBinary(ACL_GLOBAL_NAME), Bytes.toStringBinary(qual));
+          return;
+        }
         Permission perm = Permission.newBuilder().withActionCodes(actionCodes).build();
         String user = Bytes.toString(qual);
         userPerms.add(new UserPermission(user, perm));
@@ -651,8 +680,14 @@ public final class PermissionStorage {
     }
     if (!result.isEmpty()) {
       result.getFamilyMap(ACL_LIST_FAMILY).forEach((qual, actionCodes) -> {
-        UserPermission userPerms = parseUserPermission(entryName, qual, actionCodes);
-        perms.put(userPerms.getUser(), userPerms);
+        UserPermission userPerm = parseUserPermission(entryName, qual, actionCodes);
+        if (userPerm != null) {
+          perms.put(userPerm.getUser(), userPerm);
+        } else {
+          // Malformed/empty ACL cell; skip to avoid NPE
+          LOG.warn("Skipping malformed ACL entry for row={} qualifier={}",
+            Bytes.toStringBinary(entryName), Bytes.toStringBinary(qual));
+        }
       });
     } else {
       LOG.info("No permissions found in " + ACL_TABLE_NAME + " for acl entry "

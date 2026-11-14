@@ -55,7 +55,8 @@ public final class PermissionUtils {
    * table permission.
    * <p>
    * When there is group permission, i.e, the user field for the {@link UserPermission} is start
-   * with {@literal @}, then we will check whether the given {@code username} belongs to this group.
+   * with {@literal @}, then we will check whether the given {@code username} belongs to this group,
+   * if the given {@code username} itself is not a group.
    */
   public static List<UserPermission> filter(List<UserPermission> userPerms, byte[] cf, byte[] cq,
     String username) {
@@ -74,14 +75,20 @@ public final class PermissionUtils {
     }
     if (username != null) {
       MutableObject<Set<String>> userGroupsHolder = new MutableObject<>();
-      stream = stream.filter(up -> {
-        String u = up.getUser();
-        if (u.charAt(0) == '@') {
-          // this is a group, check whether the given user belongs to this group
-          return getUserGroups(userGroupsHolder, username).contains(u.substring(1));
-        }
-        return u.equals(username);
-      });
+      if (username.startsWith("@")) {
+        // the given username itself is a group, just check equals
+        stream = stream.filter(up -> up.getUser().equals(username));
+      } else {
+        // for normal user, when meeting a group, check whether the username belongs to the group
+        stream = stream.filter(up -> {
+          String user = up.getUser();
+          if (user.startsWith("@")) {
+            return getUserGroups(userGroupsHolder, username).contains(user.substring(1));
+          } else {
+            return user.equals(username);
+          }
+        });
+      }
     }
     return stream.collect(Collectors.toList());
   }
