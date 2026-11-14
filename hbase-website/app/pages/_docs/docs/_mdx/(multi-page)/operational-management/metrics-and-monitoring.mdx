@@ -133,6 +133,38 @@ The number of regions that have been in transition longer than a threshold time 
 **hbase.master.ritOldestAge**  
 The age of the longest region in transition, in milliseconds
 
+#### Master switch states
+
+The active, initialized Master exposes numeric switch-state gauges under
+`Hadoop:service=HBase,name=Master,sub=Server`. A value of `1` means enabled and
+`0` means disabled. The gauges are absent on backup Masters and before the Master
+is initialized.
+Enabled states indicate that an operation is permitted, rather than that it is
+currently running.
+
+| Gauge                                | HBase shell command                            |
+| ------------------------------------ | ---------------------------------------------- |
+| `balancerEnabled`                    | `balance_switch true\|false`                   |
+| `normalizerEnabled`                  | `normalizer_switch true\|false`                |
+| `splitEnabled`                       | `splitormerge_switch 'SPLIT', true\|false`     |
+| `mergeEnabled`                       | `splitormerge_switch 'MERGE', true\|false`     |
+| `cleanerChoreEnabled`                | `cleaner_chore_switch true\|false`             |
+| `catalogJanitorEnabled`              | `catalogjanitor_switch true\|false`            |
+| `snapshotCleanupEnabled`             | `snapshot_cleanup_switch true\|false`          |
+| `replicationPeerModificationEnabled` | `peer_modification_switch true\|false`         |
+| `rpcThrottleEnabled`                 | `enable_rpc_throttle` / `disable_rpc_throttle` |
+
+The gauges follow the corresponding enabled-state queries. Maintenance mode
+disables the balancer, normalizer, split, and merge states. Per-table settings can
+further restrict these operations. The cleaner state covers the default HFile
+cleaner and the WAL cleaner. The existing `tag.isBalancerActive` tag under
+`Master,sub=Balancer` remains available.
+
+All switch states are read from memory during metrics collection.
+When quota support is disabled, `rpcThrottleEnabled` is `0`. With quota support
+enabled, it is omitted while the quota manager is unavailable, including in
+Master maintenance mode.
+
 ### Most Important RegionServer Metrics
 
 Note: Counts are usually over the last metrics reporting interval.

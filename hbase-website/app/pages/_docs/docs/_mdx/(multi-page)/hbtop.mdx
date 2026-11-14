@@ -11,12 +11,19 @@ You can run hbtop with the following command:
 $ hbase hbtop
 ```
 
-In this case, the values of `hbase.client.zookeeper.quorum` and `zookeeper.znode.parent` in `hbase-site.xml` in the classpath or the default values of them are used to connect.
+In this case, the connection settings in `hbase-site.xml` in the classpath, or their default values, are used to connect.
 
-Or, you can specify your own zookeeper quorum and znode parent as follows:
+Or, you can pass your own settings with `-D` options. They must come before the other hbtop options.
+With the RPC connection registry (the default since HBase 3.0), specify the bootstrap servers as follows:
 
 ```bash
-$ hbase hbtop -Dhbase.client.zookeeper.quorum=<zookeeper quorum> -Dzookeeper.znode.parent=<znode parent>
+$ hbase hbtop -Dhbase.client.bootstrap.servers=<host:port[,host:port...]>
+```
+
+With the ZooKeeper connection registry (the default before HBase 3.0), specify your own zookeeper quorum and znode parent as follows:
+
+```bash
+$ hbase hbtop -Dhbase.client.registry.impl=org.apache.hadoop.hbase.client.ZKConnectionRegistry -Dhbase.client.zookeeper.quorum=<zookeeper quorum> -Dzookeeper.znode.parent=<znode parent>
 ```
 
 ![Top screen](/docs-images/top_screen.gif)

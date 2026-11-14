@@ -292,7 +292,7 @@ public class BucketCache implements BlockCache, HeapSize {
   /** In-memory bucket size */
   private float memoryFactor;
 
-  private long bucketcachePersistInterval;
+  private volatile long bucketcachePersistInterval;
 
   private static final String FILE_VERIFY_ALGORITHM =
     "hbase.bucketcache.persistent.file.integrity.check.algorithm";
@@ -483,7 +483,7 @@ public class BucketCache implements BlockCache, HeapSize {
 
   void startBucketCachePersisterThread() {
     LOG.info("Starting BucketCachePersisterThread");
-    cachePersister = new BucketCachePersister(this, bucketcachePersistInterval);
+    cachePersister = new BucketCachePersister(this);
     cachePersister.setDaemon(true);
     cachePersister.start();
   }
@@ -779,10 +779,13 @@ public class BucketCache implements BlockCache, HeapSize {
     boolean evictedByEvictionProcess) {
     bucketEntry.markAsEvicted();
     blocksByHFile.remove(cacheKey);
+    // putIntoBackingMap accounts every entry added to the backingMap, regardless of the IOEngine,
+    // so every entry removed from it must be decremented as well.
+    updateRegionCachedSize(cacheKey, (bucketEntry.getLength() * -1));
     if (decrementBlockNumber) {
       this.blockNumber.decrement();
       if (ioEngine.isPersistent()) {
-        fileNotFullyCached(cacheKey, bucketEntry);
+        fullyCachedFiles.remove(cacheKey.getHfileName());
       }
     }
     if (evictedByEvictionProcess) {
@@ -791,13 +794,6 @@ public class BucketCache implements BlockCache, HeapSize {
     if (ioEngine.isPersistent()) {
       setCacheInconsistent(true);
     }
-  }
-
-  private void fileNotFullyCached(BlockCacheKey key, BucketEntry entry) {
-    // Update the updateRegionCachedSize before removing the file from fullyCachedFiles.
-    // This computation should happen even if the file is not in fullyCachedFiles map.
-    updateRegionCachedSize(key, (entry.getLength() * -1));
-    fullyCachedFiles.remove(key.getHfileName());
   }
 
   public void fileCacheCompleted(Path filePath, long size) {
@@ -951,8 +947,9 @@ public class BucketCache implements BlockCache, HeapSize {
    * hbase.bucketcache.queue.addition.waittime property allows for introducing a delay in the
    * publishing of blocks for the cache writer threads during prefetch reads only (client reads
    * wouldn't get delayed). It has also been made dynamic configurable since HBASE-29249. The
-   * hbase.bucketcache.persist.intervalinmillis propperty determines the frequency for saving the
-   * persistent cache, and it has also been made dynamically configurable since HBASE-29249. The
+   * hbase.bucketcache.persist.intervalinmillis property determines the frequency for saving the
+   * persistent cache, and it has also been made dynamically configurable since HBASE-29249. The new
+   * interval applies to subsequent sleeps without interrupting a sleep already in progress. The
    * hbase.bucketcache.persistence.chunksize property determines the size of the persistent file
    * splits (due to the limitation of maximum allowed protobuff size), and it has also been made
    * dynamically configurable since HBASE-29249.
@@ -1743,7 +1740,7 @@ public class BucketCache implements BlockCache, HeapSize {
           } catch (IOException e1) {
             LOG.debug("Check for key {} failed. Evicting.", keyEntry.getKey());
             evictBlock(keyEntry.getKey());
-            fileNotFullyCached(keyEntry.getKey(), keyEntry.getValue());
+            fullyCachedFiles.remove(keyEntry.getKey().getHfileName());
           }
         }
         backingMapValidated.set(true);

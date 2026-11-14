@@ -18,13 +18,17 @@
 package org.apache.hadoop.hbase.io.hfile;
 
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.HashSet;
@@ -45,6 +49,9 @@ import org.apache.hadoop.hbase.io.hfile.bucket.BucketCache;
 import org.apache.hadoop.hbase.nio.ByteBuff;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ChecksumType;
+
+import org.apache.hbase.thirdparty.com.google.gson.JsonObject;
+import org.apache.hbase.thirdparty.com.google.gson.JsonParser;
 
 public class CacheTestUtils {
 
@@ -378,11 +385,18 @@ public class CacheTestUtils {
   }
 
   public static void testConvertToJSON(BlockCache toBeTested) {
-    try {
-      String json = BlockCacheUtil.toJSON(toBeTested);
-      assertNotNull(json);
-    } catch (Exception e) {
-      fail("conversion to JSON should not fail, exception is:" + e);
+    String json = assertDoesNotThrow(() -> BlockCacheUtil.toJSON(toBeTested));
+    assertNotNull(json);
+    // static and transient fields, e.g. the cache internals, should not be serialized
+    JsonObject jsonObject = JsonParser.parseString(json).getAsJsonObject();
+    for (Class<?> clazz = toBeTested.getClass(); clazz != null; clazz = clazz.getSuperclass()) {
+      for (Field field : clazz.getDeclaredFields()) {
+        int modifiers = field.getModifiers();
+        if (Modifier.isStatic(modifiers) || Modifier.isTransient(modifiers)) {
+          assertFalse(jsonObject.has(field.getName()),
+            "static or transient field " + field.getName() + " should not be serialized");
+        }
+      }
     }
   }
 }

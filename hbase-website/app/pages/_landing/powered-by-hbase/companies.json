@@ -77,7 +77,7 @@
   {
     "name": "HubSpot",
     "url": "http://hubspot.com",
-    "description": "HubSpot is an online marketing platform, providing analytics, email, and segmentation of leads/contacts. HBase is our primary datastore for our customers' customer data, with multiple HBase clusters powering the majority of our product. We have nearly 200 regionservers across the various clusters, and 2 hadoop clusters also with nearly 200 tasktrackers. We use c1.xlarge in EC2 for both, but are starting to move some of that to baremetal hardware. We've been running HBase for over 2 years."
+    "description": "HubSpot is a CRM platform. HBase is our primary datastore for our customers' customer data, with hundreds of HBase clusters powering the majority of our product. We have about 5000 RegionServers across the various clusters, hosting about 2 petabytes of data."
   },
   {
     "name": "Infolinks",
@@ -223,6 +223,11 @@
     "name": "Visible Technologies",
     "url": "http://www.visibletechnologies.com/",
     "description": "Visible Technologies uses Hadoop, HBase, Katta, and more to collect, parse, store, and search hundreds of millions of Social Media content. We get incredibly fast throughput and very low latency on commodity hardware. HBase enables our business to exist."
+  },
+  {
+    "name": "Wordfully",
+    "url": "https://wordfully.ai",
+    "description": "Wordfully combines grammar and spell checking with AI rephrasing. It uses HBase to store activity summaries by account and time. Background jobs read a selected account's recent records to prepare usage reports and evaluation inputs."
   },
   {
     "name": "WorldLingo",

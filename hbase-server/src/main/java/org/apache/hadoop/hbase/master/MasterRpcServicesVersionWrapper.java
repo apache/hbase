@@ -26,6 +26,8 @@ import org.apache.hbase.thirdparty.com.google.protobuf.ServiceException;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersRequest;
 import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetLiveRegionServersResponse;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateRequest;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.RegionServerStatusProtos.GetThrottleStateResponse;
 
 /**
  * A wrapper class for MasterRpcServices shortcut that ensures a client version is available to the
@@ -112,5 +114,11 @@ public class MasterRpcServicesVersionWrapper
   public GetLiveRegionServersResponse getLiveRegionServers(RpcController controller,
     GetLiveRegionServersRequest request) throws ServiceException {
     return masterRpcServices.getLiveRegionServers(controller, request);
+  }
+
+  @Override
+  public GetThrottleStateResponse getThrottleState(RpcController controller,
+    GetThrottleStateRequest request) throws ServiceException {
+    return masterRpcServices.getThrottleState(controller, request);
   }
 }

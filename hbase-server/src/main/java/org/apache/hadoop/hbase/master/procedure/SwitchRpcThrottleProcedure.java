@@ -24,7 +24,6 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureUtil;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
-import org.apache.hadoop.hbase.quotas.RpcThrottleStorage;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -40,11 +39,10 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.ProcedureProtos;
 @InterfaceAudience.Private
 public class SwitchRpcThrottleProcedure
   extends StateMachineProcedure<MasterProcedureEnv, SwitchRpcThrottleState>
-  implements ServerProcedureInterface {
+  implements GlobalProcedureInterface {
 
   private static Logger LOG = LoggerFactory.getLogger(SwitchRpcThrottleProcedure.class);
 
-  private RpcThrottleStorage rpcThrottleStorage;
   private boolean rpcThrottleEnabled;
   private ProcedurePrepareLatch syncLatch;
   private ServerName serverName;
@@ -53,9 +51,8 @@ public class SwitchRpcThrottleProcedure
   public SwitchRpcThrottleProcedure() {
   }
 
-  public SwitchRpcThrottleProcedure(RpcThrottleStorage rpcThrottleStorage,
-    boolean rpcThrottleEnabled, ServerName serverName, final ProcedurePrepareLatch syncLatch) {
-    this.rpcThrottleStorage = rpcThrottleStorage;
+  public SwitchRpcThrottleProcedure(boolean rpcThrottleEnabled, ServerName serverName,
+    final ProcedurePrepareLatch syncLatch) {
     this.syncLatch = syncLatch;
     this.rpcThrottleEnabled = rpcThrottleEnabled;
     this.serverName = serverName;
@@ -138,23 +135,13 @@ public class SwitchRpcThrottleProcedure
   }
 
   @Override
-  public ServerName getServerName() {
-    return serverName;
+  public String getGlobalId() {
+    return getClass().getSimpleName();
   }
 
-  @Override
-  public boolean hasMetaTableRegion() {
-    return false;
-  }
-
-  @Override
-  public ServerOperationType getServerOperationType() {
-    return ServerOperationType.SWITCH_RPC_THROTTLE;
-  }
-
-  public void switchThrottleState(MasterProcedureEnv env, boolean rpcThrottleEnabled)
+  private void switchThrottleState(MasterProcedureEnv env, boolean rpcThrottleEnabled)
     throws IOException {
-    rpcThrottleStorage.switchRpcThrottle(rpcThrottleEnabled);
+    env.getMasterServices().getRpcThrottleStateStore().set(rpcThrottleEnabled);
   }
 
   @Override

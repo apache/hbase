@@ -20,9 +20,9 @@ package org.apache.hadoop.hbase.procedure2;
 import java.io.IOException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
-import org.apache.commons.lang3.mutable.MutableBoolean;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.util.FutureUtils;
 import org.apache.hadoop.hbase.util.IdLock;
@@ -60,8 +60,7 @@ public final class ProcedureFutureUtil {
     Consumer<CompletableFuture<Void>> setFuture, CompletableFuture<Void> future,
     MasterProcedureEnv env, Runnable actionAfterDone)
     throws IOException, ProcedureSuspendedException {
-    MutableBoolean completed = new MutableBoolean(false);
-    Thread currentThread = Thread.currentThread();
+    AtomicInteger completed = new AtomicInteger(0);
     // This is for testing. In ProcedureTestingUtility, we will restart a ProcedureExecutor and
     // reuse it, for performance, so we need to make sure that all the procedure have been stopped.
     // But here, the callback of this future is not executed in a PEWorker, so in ProcedureExecutor
@@ -71,12 +70,11 @@ public final class ProcedureFutureUtil {
     // asyncTaskExecutor will also be shutdown so we can not add anything back to the scheduler.
     ExecutorService asyncTaskExecutor = env.getAsyncTaskExecutor();
     FutureUtils.addListener(future, (r, e) -> {
-      if (Thread.currentThread() == currentThread) {
+      if (completed.compareAndSet(0, 1)) {
+        // this means the future has already been completed, as we have not execute the below
+        // compareAndSet(0, 2) yet, so here we just set completed to true without doing anything
         LOG.debug("The future has completed while adding callback, give up suspending procedure {}",
           proc);
-        // this means the future has already been completed, as we call the callback directly while
-        // calling addListener, so here we just set completed to true without doing anything
-        completed.setTrue();
         return;
       }
       LOG.debug("Going to wake up procedure {} because future has completed", proc);
@@ -88,14 +86,15 @@ public final class ProcedureFutureUtil {
       // I/O, which could even cause dead lock.
       asyncTaskExecutor.execute(() -> wakeUp(proc, env));
     });
-    if (completed.getValue()) {
-      FutureUtils.get(future);
-      actionAfterDone.run();
-    } else {
+    if (completed.compareAndSet(0, 2)) {
       // suspend the procedure
       setFuture.accept(future);
-      proc.skipPersistence();
       suspend(proc);
+    } else {
+      // if completed has been set to 1, i.e, not 0, it means the future has already been completed,
+      // so we give up suspending and call the done action directly.
+      FutureUtils.get(future);
+      actionAfterDone.run();
     }
   }
 

@@ -131,6 +131,12 @@
                   <exclude>org.javassist:*</exclude>
                   <exclude>io.opentelemetry:*</exclude>
                   <exclude>io.opentelemetry.semconv:*</exclude>
+                  <!-- The test runner must provide a consistent JUnit version. -->
+                  <exclude>junit:junit</exclude>
+                  <exclude>org.junit.jupiter:*</exclude>
+                  <exclude>org.junit.platform:*</exclude>
+                  <exclude>org.opentest4j:opentest4j</exclude>
+                  <exclude>org.apiguardian:apiguardian-api</exclude>
                 </excludes>
               </artifactSet>
             </configuration>

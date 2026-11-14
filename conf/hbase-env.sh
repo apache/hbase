@@ -208,5 +208,7 @@
 #
 # JDK11+ JShell
 #
-# Additional arguments passed to jshell invocation
+# Additional arguments passed to jshell (interactive and *.jsh script dispatch).
+# When unset, bin/hbase uses DEFAULT + PRINTING (+ hbase_startup.jsh when present)
+# and --execution local unless --execution is already set here.
 # export HBASE_JSHELL_ARGS="--startup DEFAULT --startup PRINTING --startup hbase_startup.jsh"

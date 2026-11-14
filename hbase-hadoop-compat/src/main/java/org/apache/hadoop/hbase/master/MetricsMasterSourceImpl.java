@@ -132,6 +132,9 @@ public class MetricsMasterSourceImpl extends BaseSourceImpl implements MetricsMa
           String.valueOf(masterWrapper.getIsActiveMaster()))
         .addGauge(Interns.info(OLD_WAL_DIR_SIZE_NAME, OLD_WAL_DIR_SIZE_DESC),
           masterWrapper.getOldWALsDirSize());
+
+      masterWrapper.getSwitchStates().forEach((name, state) -> metricsRecordBuilder
+        .addGauge(Interns.info(name, SWITCH_STATE_DESC), state));
     }
 
     metricsRegistry.snapshot(metricsRecordBuilder, all);

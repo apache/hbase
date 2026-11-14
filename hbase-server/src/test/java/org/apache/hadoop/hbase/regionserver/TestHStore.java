@@ -100,11 +100,13 @@ import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.Scan.ReadType;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
+import org.apache.hadoop.hbase.conf.ConfigurationManager;
 import org.apache.hadoop.hbase.exceptions.IllegalArgumentIOException;
 import org.apache.hadoop.hbase.filter.Filter;
 import org.apache.hadoop.hbase.filter.FilterBase;
 import org.apache.hadoop.hbase.io.compress.Compression;
 import org.apache.hadoop.hbase.io.encoding.DataBlockEncoding;
+import org.apache.hadoop.hbase.io.hfile.BlockCache;
 import org.apache.hadoop.hbase.io.hfile.CacheConfig;
 import org.apache.hadoop.hbase.io.hfile.HFile;
 import org.apache.hadoop.hbase.io.hfile.HFileContext;
@@ -2726,6 +2728,42 @@ public class TestHStore {
     conf.getBoolean(CACHE_BLOCKS_ON_WRITE_KEY, DEFAULT_CACHE_DATA_ON_WRITE);
     conf.getBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, DEFAULT_EVICT_ON_CLOSE);
     this.store.onConfigurationChange(conf);
+  }
+
+  @Test
+  public void testCacheConfigKeepsStoreConfigurationOnConfigurationChange() throws IOException {
+    Configuration conf = HBaseConfiguration.create(TEST_UTIL.getConfiguration());
+    conf.setBoolean(CACHE_DATA_ON_READ_KEY, true);
+    conf.setBoolean(CACHE_BLOCKS_ON_WRITE_KEY, false);
+    conf.setBoolean(EVICT_BLOCKS_ON_CLOSE_KEY, true);
+    // Override the global cache settings in the table and column family configuration.
+    TableDescriptorBuilder builder = TableDescriptorBuilder.newBuilder(TableName.valueOf(table))
+      .setValue(EVICT_BLOCKS_ON_CLOSE_KEY, "false");
+    ColumnFamilyDescriptor hcd = ColumnFamilyDescriptorBuilder.newBuilder(family)
+      .setConfiguration(CACHE_BLOCKS_ON_WRITE_KEY, "true").build();
+    initHRegion(name, conf, builder, hcd, null, false);
+    BlockCache blockCache = mock(BlockCache.class);
+    region.setBlockCache(blockCache);
+    store = new HStore(region, hcd, conf, false);
+    CacheConfig cacheConfig = store.getCacheConfig();
+    assertTrue(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheDataOnWrite());
+    assertFalse(cacheConfig.shouldEvictOnClose());
+
+    ConfigurationManager manager = new ConfigurationManager();
+    manager.registerObserver(store);
+    // The cache config is refreshed through the store, while the shared block cache still listens
+    // to the global configuration.
+    assertFalse(manager.containsObserver(cacheConfig));
+    assertTrue(manager.containsObserver(blockCache));
+
+    Configuration newConf = new Configuration(conf);
+    newConf.setBoolean(CACHE_DATA_ON_READ_KEY, false);
+    manager.notifyAllObservers(newConf);
+    assertFalse(cacheConfig.shouldCacheDataOnRead());
+    assertTrue(cacheConfig.shouldCacheDataOnWrite());
+    assertFalse(cacheConfig.shouldEvictOnClose());
+    verify(blockCache).onConfigurationChange(newConf);
   }
 
   /**
