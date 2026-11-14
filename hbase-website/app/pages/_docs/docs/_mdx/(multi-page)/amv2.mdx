@@ -86,7 +86,7 @@ In this section we note some idiosyncrasies of operation as an attempt at saving
 
 ### Region Transition RPC and RS Heartbeat can arrive at ~same time on Master
 
-Reporting Region Transition on a RegionServer is now an RPC distinct from RS heartbeating ('RegionServerServices' Service). A heartbeat and a status update can arrive at the Master at about the same time. The Master will update its internal state for a Region but this same state is checked when heartbeat processing. We may find the unexpected; i.e. a Region just reported as CLOSED so heartbeat is surprised to find region OPEN on the back of the RS report. In the new system, all slaves must cow to the Master's understanding of cluster state; the Master will kill/close any misaligned entities.
+Reporting Region Transition on a RegionServer is now an RPC distinct from RS heartbeating ('RegionServerServices' Service). A heartbeat and a status update can arrive at the Master at about the same time. The Master will update its internal state for a Region but this same state is checked when heartbeat processing. We may find the unexpected; i.e. a Region just reported as CLOSED so heartbeat is surprised to find region OPEN on the back of the RS report. In the new system, all slaves must defer to the Master's understanding of cluster state; the Master will kill/close any misaligned entities.
 
 To address the above, we added a lastUpdate for in-memory Master state. Let a region state have some vintage before we act on it (one second currently).
 
