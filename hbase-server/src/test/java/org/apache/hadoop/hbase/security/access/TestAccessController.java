@@ -130,6 +130,7 @@ import org.junit.jupiter.api.TestInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 import org.apache.hbase.thirdparty.com.google.protobuf.BlockingRpcChannel;
 import org.apache.hbase.thirdparty.com.google.protobuf.RpcCallback;
@@ -320,7 +321,8 @@ public class TestAccessController extends SecureTestUtil {
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
-    assertEquals(5, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(5,
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), TEST_TABLE).size());
     int size = 0;
     try {
       size =
@@ -341,9 +343,12 @@ public class TestAccessController extends SecureTestUtil {
       LOG.info("Test deleted table " + TEST_TABLE);
     }
     // Verify all table/namespace permissions are erased
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     assertEquals(0,
-      PermissionStorage.getNamespacePermissions(conf, TEST_TABLE.getNamespaceAsString()).size());
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), TEST_TABLE).size());
+    assertEquals(0,
+      PermissionStorage
+        .getNamespacePermissions(TEST_UTIL.getConnection(), TEST_TABLE.getNamespaceAsString())
+        .size());
   }
 
   @Test
@@ -479,6 +484,14 @@ public class TestAccessController extends SecureTestUtil {
     verifyDenied(modifyTable, USER_RW, USER_RO, USER_NONE, USER_GROUP_READ, USER_GROUP_WRITE);
   }
 
+  private ListMultimap<String, UserPermission> getTablePerms(TableName tableName)
+    throws IOException {
+    ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
+    PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), tableName)
+      .forEach(up -> perms.put(up.getUser(), up));
+    return perms;
+  }
+
   @Test
   public void testTableModifyRemoveFamiliesClearsPermissions(TestInfo testInfo) throws Exception {
     final TableName tableName = TableName.valueOf(testInfo.getTestMethod().get().getName());
@@ -503,8 +516,7 @@ public class TestAccessController extends SecureTestUtil {
       grantOnTable(TEST_UTIL, USER_ADMIN_CF.getShortName(), tableName, family3, qualifier,
         Action.READ);
 
-      ListMultimap<String, UserPermission> perms =
-        PermissionStorage.getTablePermissions(conf, tableName);
+      ListMultimap<String, UserPermission> perms = getTablePerms(tableName);
       assertTablePermission(perms, USER_NONE, null, null, true);
       assertTablePermission(perms, USER_RO, family1, null, true);
       assertTablePermission(perms, USER_RW, family1, TEST_QUALIFIER, true);
@@ -519,7 +531,7 @@ public class TestAccessController extends SecureTestUtil {
         admin.modifyTable(droppedFamilyDesc);
       }
 
-      perms = PermissionStorage.getTablePermissions(conf, tableName);
+      perms = getTablePerms(tableName);
       assertTablePermission(perms, USER_RO, family1, null, false);
       assertTablePermission(perms, USER_RW, family1, TEST_QUALIFIER, false);
       assertTablePermission(perms, USER_CREATE, family2, null, false);
@@ -535,7 +547,7 @@ public class TestAccessController extends SecureTestUtil {
         admin.modifyTable(addedFamilyDesc);
       }
 
-      perms = PermissionStorage.getTablePermissions(conf, tableName);
+      perms = getTablePerms(tableName);
       assertTablePermission(perms, USER_RO, family1, null, false);
       assertTablePermission(perms, USER_RW, family1, TEST_QUALIFIER, false);
       assertTablePermission(perms, USER_CREATE, family2, null, false);
@@ -2970,8 +2982,9 @@ public class TestAccessController extends SecureTestUtil {
   private void getNamespacePermissionsAndVerify(String namespaceRegexWithoutPrefix,
     int expectedAmount, String expectedNamespace) throws HBaseException {
     try {
-      List<UserPermission> namespacePermissions = AccessControlClient.getUserPermissions(
-        systemUserConnection, PermissionStorage.toNamespaceEntry(namespaceRegexWithoutPrefix));
+      List<UserPermission> namespacePermissions =
+        AccessControlClient.getUserPermissions(systemUserConnection,
+          Bytes.toString(PermissionStorage.toNamespaceEntry(namespaceRegexWithoutPrefix)));
       assertTrue(namespacePermissions != null);
       assertEquals(expectedAmount, namespacePermissions.size());
       for (UserPermission namespacePermission : namespacePermissions) {

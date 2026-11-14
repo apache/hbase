@@ -177,7 +177,8 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_READ), Permission.Action.READ);
     grantGlobal(TEST_UTIL, toGroupEntry(GROUP_WRITE), Permission.Action.WRITE);
 
-    assertEquals(4, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
+    assertEquals(4,
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), TEST_TABLE).size());
     try {
       assertEquals(4,
         AccessControlClient.getUserPermissions(systemUserConnection, TEST_TABLE.toString()).size());
@@ -197,9 +198,12 @@ public class TestRSGroupsWithACL extends SecureTestUtil {
       LOG.info("Test deleted table " + TEST_TABLE);
     }
     // Verify all table/namespace permissions are erased
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, TEST_TABLE).size());
     assertEquals(0,
-      PermissionStorage.getNamespacePermissions(conf, TEST_TABLE.getNamespaceAsString()).size());
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), TEST_TABLE).size());
+    assertEquals(0,
+      PermissionStorage
+        .getNamespacePermissions(TEST_UTIL.getConnection(), TEST_TABLE.getNamespaceAsString())
+        .size());
   }
 
   @AfterAll
