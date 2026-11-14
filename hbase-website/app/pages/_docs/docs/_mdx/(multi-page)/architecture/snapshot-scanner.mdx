@@ -9,7 +9,7 @@ which can scan HBase-written HFiles directly in the HDFS filesystem completely b
 performs better than going via HBase and can be used with an offline HBase with in-place or exported
 snapshot HFiles.
 
-To read HFiles directly, the user must have sufficient permissions to access snapshots or in-place hbase HFiles.
+To read HFiles directly, the user must have sufficient permissions to access snapshots or in-place HBase HFiles.
 
 ## TableSnapshotScanner
 
@@ -65,7 +65,7 @@ The HBase files are organized in the following ways:
 - `{hbase-rootdir}/.hbase-snapshot/{snapshotName}`
 
 So the basic idea is to add or remove HDFS ACLs to files of the global/namespace/table directory
-when grant or revoke permission to global/namespace/table.
+when granting or revoking permission to global/namespace/table.
 
 See the design doc in [HBASE-18659](https://issues.apache.org/jira/browse/HBASE-18659) for more details.
 
@@ -91,7 +91,7 @@ See the design doc in [HBASE-18659](https://issues.apache.org/jira/browse/HBASE-
   hbase.acl.sync.to.hdfs.enable=true
   ```
 
-- Modify table scheme to enable this feature for a specified table, this config is
+- Modify table schema to enable this feature for a specified table, this config is
   false by default for every table, this means the HBase granted ACLs will not be synced to HDFS
 
   ```ruby

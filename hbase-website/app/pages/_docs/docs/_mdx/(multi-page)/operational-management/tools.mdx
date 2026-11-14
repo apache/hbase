@@ -51,7 +51,7 @@ Some of the tools and utilities below are Java classes which are passed directly
 
 ## Canary
 
-The Canary tool can help users "canary-test" the HBase cluster status. The default "region mode" fetches a row from every column-family of every regions. In "regionserver mode", the Canary tool will fetch a row from a random region on each of the cluster's RegionServers. In "zookeeper mode", the Canary will read the root znode on each member of the zookeeper ensemble.
+The Canary tool can help users "canary-test" the HBase cluster status. The default "region mode" fetches a row from every column-family of every region. In "regionserver mode", the Canary tool will fetch a row from a random region on each of the cluster's RegionServers. In "zookeeper mode", the Canary will read the root znode on each member of the zookeeper ensemble.
 
 To see usage, pass the `-help` parameter (if you pass no parameters, the Canary tool starts executing in the default region "mode" fetching a row from every region in the cluster).
 
@@ -102,7 +102,7 @@ private static final int ERROR_EXIT_CODE = 4;
 private static final int FAILURE_EXIT_CODE = 5;
 ```
 
-Here are some examples based on the following given case: given two Table objects called test-01 and test-02 each with two column family cf1 and cf2 respectively, deployed on 3 RegionServers. See the following table.
+Here are some examples based on the following given case: given two Table objects called test-01 and test-02 each with two column families cf1 and cf2 respectively, deployed on 3 RegionServers. See the following table.
 
 | RegionServer | test-01 | test-02 |
 | ------------ | ------- | ------- |
@@ -129,7 +129,7 @@ $ ${HBASE_HOME}/bin/hbase canary
 
 ```
 
-So you can see, table test-01 has two regions and two column families, so the Canary tool in the default "region mode" will pick 4 small piece of data from 4 (2 region \* 2 store) different stores. This is a default behavior.
+So you can see, table test-01 has two regions and two column families, so the Canary tool in the default "region mode" will pick 4 small pieces of data from 4 (2 region \* 2 store) different stores. This is a default behavior.
 
 ### Canary test for every column family (store) of every region of a specific table(s)
 
@@ -164,7 +164,7 @@ $ ${HBASE_HOME}/bin/hbase canary -e test-0[1-2]
 
 ### Run canary test as a "daemon"
 
-Run repeatedly with an interval defined via the option `-interval` (default value is 60 seconds). This daemon will stop itself and return non-zero error code if any error occur. To have the daemon keep running across errors, pass the -f flag with its value set to false (see usage above).
+Run repeatedly with an interval defined via the option `-interval` (default value is 60 seconds). This daemon will stop itself and return non-zero error code if any error occurs. To have the daemon keep running across errors, pass the -f flag with its value set to false (see usage above).
 
 ```bash
 $ ${HBASE_HOME}/bin/hbase canary -daemon
@@ -318,7 +318,7 @@ Count cells in an HBase table.
 `replication.VerifyReplication`  
 Compare the data from tables in two different clusters. WARNING: It doesn't work for incrementColumnValues'd cells since the timestamp is changed. Note that this command is in a different package than the others.
 
-Each command except `RowCounter` and `CellCounter` accept a single `--help` argument to print usage instructions.
+Each command except `RowCounter` and `CellCounter` accepts a single `--help` argument to print usage instructions.
 
 ## HBase `hbck`
 
@@ -374,7 +374,7 @@ See [compression.test](/docs/compression#compressiontest).
 
 ## CopyTable
 
-CopyTable is a utility that can copy part or of all of a table, either to the same cluster or another cluster. The target table must first exist. The usage is as follows:
+CopyTable is a utility that can copy part of or all of a table, either to the same cluster or another cluster. The target table must first exist. The usage is as follows:
 
 ```bash
 $ ./bin/hbase org.apache.hadoop.hbase.mapreduce.CopyTable --help
@@ -440,7 +440,7 @@ See Jonathan Hsieh's [Online HBase Backups with CopyTable](https://blog.cloudera
 
 ## HashTable/SyncTable
 
-HashTable/SyncTable is a two steps tool for synchronizing table data, where each of the steps are implemented as MapReduce jobs. Similarly to CopyTable, it can be used for partial or entire table data syncing, under same or remote cluster. However, it performs the sync in a more efficient way than CopyTable. Instead of copying all cells in specified row key/time period range, HashTable (the first step) creates hashed indexes for batch of cells on source table and output those as results. On the next stage, SyncTable scans the source table and now calculates hash indexes for table cells, compares these hashes with the outputs of HashTable, then it just scans (and compares) cells for diverging hashes, only updating mismatching cells. This results in less network traffic/data transfers, which can be impacting when syncing large tables on remote clusters.
+HashTable/SyncTable is a two-step tool for synchronizing table data, where each of the steps is implemented as MapReduce jobs. Similarly to CopyTable, it can be used for partial or entire table data syncing, under same or remote cluster. However, it performs the sync in a more efficient way than CopyTable. Instead of copying all cells in specified row key/time period range, HashTable (the first step) creates hashed indexes for batch of cells on source table and output those as results. On the next stage, SyncTable scans the source table and now calculates hash indexes for table cells, compares these hashes with the outputs of HashTable, then it just scans (and compares) cells for diverging hashes, only updating mismatching cells. This results in less network traffic/data transfers, which can be impacting when syncing large tables on remote clusters.
 
 ### Step 1, HashTable
 
@@ -483,7 +483,7 @@ The **batchsize** property defines how much cell data for a given region will be
 
 ### Step 2, SyncTable
 
-Once HashTable has completed on source cluster, SyncTable can be ran on target cluster. Just like replication and other synchronization jobs, it requires that all RegionServers/DataNodes on source cluster be accessible by NodeManagers on the target cluster (where SyncTable job tasks will be running).
+Once HashTable has completed on source cluster, SyncTable can be run on target cluster. Just like replication and other synchronization jobs, it requires that all RegionServers/DataNodes on source cluster be accessible by NodeManagers on the target cluster (where SyncTable job tasks will be running).
 
 Usage:
 
@@ -592,7 +592,7 @@ $ bin/hbase org.apache.hadoop.hbase.mapreduce.Export TABLENAME OUTPUTDIR [VERSIO
 $ bin/hbase org.apache.hadoop.hbase.coprocessor.Export TABLENAME OUTPUTDIR [VERSIONS [STARTTIME [ENDTIME]]]
 ```
 
-The outputdir is a HDFS directory that does not exist prior to the export. When done, the exported files will be owned by the user invoking the export command.
+The outputdir is an HDFS directory that does not exist prior to the export. When done, the exported files will be owned by the user invoking the export command.
 
 **The Comparison of Endpoint-based Export And Mapreduce-based Export**
 
@@ -715,7 +715,7 @@ For ImportTsv to use this input file, the command line needs to look like this:
 
 ### ImportTsv Warning
 
-If you have preparing a lot of data for bulk loading, make sure the target HBase table is pre-split appropriately.
+If you are preparing a lot of data for bulk loading, make sure the target HBase table is pre-split appropriately.
 
 ### See Also [#importtsv-see-also]
 
@@ -755,7 +755,7 @@ The WAL can be replayed for a set of tables or all tables, and a timerange can b
 
 WALPlayer can also generate HFiles for later bulk importing, in that case only a single table and no mapping can be specified.
 
-Finally, you can use WALPlayer to replay the content of a Regions `recovered.edits` directory (the files under `recovered.edits` directory have the same format as WAL files).
+Finally, you can use WALPlayer to replay the content of a Region's `recovered.edits` directory (the files under `recovered.edits` directory have the same format as WAL files).
 
 <Callout type="info" title="WALPrettyPrinter">
   To read or verify single WAL files or *recovered.edits* files, since they share the WAL format,
@@ -846,7 +846,7 @@ It is possible to optionally pin your servers in physical memory making them les
 
 ## Offline Compaction Tool
 
-**CompactionTool** provides a way of running compactions (either minor or major) as an independent process from the RegionServer. It reuses same internal implementation classes executed by RegionServer compaction feature. However, since this runs on a complete separate independent java process, it releases RegionServers from the overhead involved in rewrite a set of hfiles, which can be critical for latency sensitive use cases.
+**CompactionTool** provides a way of running compactions (either minor or major) as an independent process from the RegionServer. It reuses same internal implementation classes executed by RegionServer compaction feature. However, since this runs on a completely separate independent java process, it releases RegionServers from the overhead involved in rewriting a set of hfiles, which can be critical for latency sensitive use cases.
 
 Usage:
 
@@ -882,14 +882,14 @@ If a major compaction is desired, **major** flag can be specified. If omitted, *
 
 It also allows for configuration overrides with `-D` flag. In the usage section above, for example, `-Dhbase.compactiontool.delete=false` option will instruct compaction engine to not delete original files from temp folder.
 
-Files targeted for compaction must be specified as parent hdfs dirs. It allows for multiple dirs definition, as long as each for these dirs are either a **family**, a **region**, or a **table** dir. If a table or region dir is passed, the program will recursively iterate through related sub-folders, effectively running compaction for each family found below the table/region level.
+Files targeted for compaction must be specified as parent hdfs dirs. It allows for multiple dirs definition, as long as each of these dirs is either a **family**, a **region**, or a **table** dir. If a table or region dir is passed, the program will recursively iterate through related sub-folders, effectively running compaction for each family found below the table/region level.
 
 Since these dirs are nested under **hbase** hdfs directory tree, **CompactionTool** requires hbase super user permissions in order to have access to required hfiles.
 
 <Callout type="info" title="Running in MapReduce mode">
   MapReduce mode offers the ability to process each family dir in parallel, as a separate map task.
   Generally, it would make sense to run in this mode when specifying one or more table dirs as
-  targets for compactions. The caveat, though, is that if number of families to be compacted become
+  targets for compactions. The caveat, though, is that if number of families to be compacted becomes
   too large, the related mapreduce job may have indirect impacts on **RegionServers** performance .
   Since **NodeManagers** are normally co-located with RegionServers, such large jobs could compete
   for IO/Bandwidth resources with the **RegionServers**.
@@ -897,7 +897,7 @@ Since these dirs are nested under **hbase** hdfs directory tree, **CompactionToo
 
 <Callout
   type="info"
-  title="MajorCompaction completely disabled on RegionServers due performance impacts"
+  title="MajorCompaction completely disabled on RegionServers due to performance impacts"
 >
   **Major compactions** can be a costly operation (see
   [compaction](/docs/architecture/regions#compaction)), and can indeed impact performance on
@@ -936,7 +936,7 @@ The `hbase ltt` command runs the LoadTestTool utility, which is used for testing
 
 You must specify either `-init_only` or at least one of `-write`, `-update`, or `-read`. For general usage instructions, pass the `-h` option.
 
-The LoadTestTool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLS and visibility labels, testing security-related features, ability to specify the number of regions per server, tests for multi-get RPC calls, and tests relating to replication.
+The LoadTestTool has received many updates in recent HBase releases, including support for namespaces, support for tags, cell-level ACLs and visibility labels, testing security-related features, ability to specify the number of regions per server, tests for multi-get RPC calls, and tests relating to replication.
 
 ## Pre-Upgrade validator
 
@@ -948,7 +948,7 @@ $ bin/hbase pre-upgrade command ...
 
 ### Coprocessor validation
 
-HBase supports co-processors for a long time, but the co-processor API can be changed between major releases. Co-processor validator tries to determine whether the old co-processors are still compatible with the actual HBase version.
+HBase has supported co-processors for a long time, but the co-processor API can be changed between major releases. Co-processor validator tries to determine whether the old co-processors are still compatible with the actual HBase version.
 
 ```bash
 $ bin/hbase pre-upgrade validate-cp [-jar ...] [-class ... | -table ... | -config]
@@ -978,7 +978,7 @@ It validates `MyMasterObserver` and `MyRegionObserver` classes which are located
 $ bin/hbase pre-upgrade validate-cp -table .*
 ```
 
-It validates every table level co-processors where the table name matches to `.*` regular expression.
+It validates every table level co-processor where the table name matches to `.*` regular expression.
 
 ### DataBlockEncoding validation
 
@@ -988,7 +988,7 @@ HBase 2.0 removed `PREFIX_TREE` Data Block Encoding from column families. For fu
 $ bin/hbase pre-upgrade validate-dbe
 ```
 
-This check validates all column families and print out any incompatibilities. For example:
+This check validates all column families and prints out any incompatibilities. For example:
 
 ```
 2018-07-13 09:58:32,028 WARN  [main] tool.DataBlockEncodingValidator: Incompatible DataBlockEncoding for table: t, cf: f, encoding: PREFIX_TREE
@@ -1028,7 +1028,7 @@ Caused by: java.lang.IllegalArgumentException: No enum constant org.apache.hadoo
 
 #### Fixing PREFIX_TREE errors
 
-It's possible to get `PREFIX_TREE` errors after changing Data Block Encoding to a supported one. It can happen because there are some HFiles which still encoded with `PREFIX_TREE` or there are still some snapshots.
+It's possible to get `PREFIX_TREE` errors after changing Data Block Encoding to a supported one. It can happen because there are some HFiles which are still encoded with `PREFIX_TREE` or there are still some snapshots.
 
 For fixing HFiles, please run a major compaction on the table (it was `default:t` according to the log message):
 

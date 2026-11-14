@@ -34,7 +34,7 @@ Give each ZooKeeper server around 1GB of RAM, and if possible, its own dedicated
 
 For example, to have HBase manage a ZooKeeper quorum on nodes _rs\{1,2,3,4,5\}.example.com_, bound to port 2222 (the default is 2181) ensure `HBASE_MANAGE_ZK` is commented out or set to `true` in _conf/hbase-env.sh_ and then edit _conf/hbase-site.xml_ and set `hbase.zookeeper.property.clientPort` and `hbase.zookeeper.quorum`.
 You should also set `hbase.zookeeper.property.dataDir` to other than the default as the default has ZooKeeper persist data under _/tmp_ which is often cleared on system restart.
-In the example below we have ZooKeeper persist to _/user/local/zookeeper_.
+In the example below we have ZooKeeper persist to _/usr/local/zookeeper_.
 
 ```xml
 <configuration>
@@ -116,11 +116,11 @@ ZooKeeper/HBase mutual authentication ([HBASE-2418](https://issues.apache.org/ji
 ### Operating System Prerequisites
 
 You need to have a working Kerberos KDC setup.
-For each `$HOST` that will run a ZooKeeper server, you should have a principle `zookeeper/$HOST`.
+For each `$HOST` that will run a ZooKeeper server, you should have a principal `zookeeper/$HOST`.
 For each such host, add a service key (using the `kadmin` or `kadmin.local` tool's `ktadd` command) for `zookeeper/$HOST` and copy this file to `$HOST`, and make it readable only to the user that will run zookeeper on `$HOST`.
 Note the location of this file, which we will use below as _\$PATH_TO_ZOOKEEPER_KEYTAB_.
 
-Similarly, for each `$HOST` that will run an HBase server (master or regionserver), you should have a principle: `hbase/$HOST`.
+Similarly, for each `$HOST` that will run an HBase server (master or regionserver), you should have a principal: `hbase/$HOST`.
 For each host, add a keytab file called _hbase.keytab_ containing a service key for `hbase/$HOST`, copy this file to `$HOST`, and make it readable only to the user that will run an HBase service on `$HOST`.
 Note the location of this file, which we will use below as _\$PATH_TO_HBASE_KEYTAB_.
 
@@ -446,5 +446,5 @@ to Java system properties this could be more convenient under some circumstances
 
 <Callout type="info">
   These settings are eventually transformed into Java system properties, it's just a convenience
-  feature. So, the same rules that mentioned in the previous point, applies to them as well.
+  feature. So, the same rules that were mentioned in the previous point apply to them as well.
 </Callout>

@@ -34,7 +34,7 @@ coprocessor can severely degrade cluster performance and stability.
 ## Coprocessor Overview
 
 In HBase, you fetch data using a `Get` or `Scan`, whereas in an RDBMS you use a SQL
-query. In order to fetch only the relevant data, you filter it using a HBase
+query. In order to fetch only the relevant data, you filter it using an HBase
 [Filter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/Filter.html)
 , whereas in an RDBMS you use a `WHERE` predicate.
 
@@ -55,15 +55,15 @@ are some analogies which may help to explain some of the benefits of coprocessor
 ### Coprocessor Analogies
 
 **Triggers and Stored Procedure**  
-An Observer coprocessor is similar to a trigger in a RDBMS in that it executes
+An Observer coprocessor is similar to a trigger in an RDBMS in that it executes
 your code either before or after a specific event (such as a `Get` or `Put`)
-occurs. An endpoint coprocessor is similar to a stored procedure in a RDBMS
+occurs. An endpoint coprocessor is similar to a stored procedure in an RDBMS
 because it allows you to perform custom computations on the data on the
 RegionServer itself, rather than on the client.
 
 **MapReduce**  
 MapReduce operates on the principle of moving the computation to the location of
-the data. Coprocessors operate on the same principal.
+the data. Coprocessors operate on the same principle.
 
 **AOP**  
 If you are familiar with Aspect Oriented Programming (AOP), you can think of a coprocessor
@@ -156,7 +156,7 @@ In [HBASE-21512](https://issues.apache.org/jira/browse/HBASE-21512)
 we reimplement the sync client based on the async client. The coprocessorService
 method defined in `Table` interface directly references a method from protobuf's
 `BlockingInterface`, which means we need to use a separate thread pool to execute
-the method so we avoid blocking the async client(We want to avoid blocking calls in
+the method so we avoid blocking the async client (We want to avoid blocking calls in
 our async implementation).
 
 Since coprocessor is an advanced feature, we believe it is OK for coprocessor users to
@@ -169,7 +169,7 @@ method to get an `AsyncConnection` from `Connection` if needed.
 Starting with HBase 0.96, endpoint coprocessors are implemented using Google Protocol
 Buffers (protobuf). For more details on protobuf, see Google's
 [Protocol Buffer Guide](https://developers.google.com/protocol-buffers/docs/proto).
-Endpoints Coprocessor written in version 0.94 are not compatible with version 0.96 or later.
+Endpoint Coprocessors written in version 0.94 are not compatible with version 0.96 or later.
 See
 [HBASE-5448](https://issues.apache.org/jira/browse/HBASE-5448)). To upgrade your
 HBase cluster from 0.94 or earlier to 0.96 or later, you need to reimplement your
@@ -186,9 +186,9 @@ only avail of public APIs; ideally a CPEP should depend on Interfaces
 and data structures only. This is not always possible but beware
 that doing so makes the Endpoint brittle, liable to breakage as HBase
 internals evolve. HBase internal APIs annotated as private or evolving
-do not have to respect semantic versioning rules or general java rules on
+do not have to respect semantic versioning rules or general Java rules on
 deprecation before removal. While generated protobuf files are
-absent the hbase audience annotations — they are created by the
+absent the HBase audience annotations — they are created by the
 protobuf protoc tool which knows nothing of how HBase works —
 they should be considered `@InterfaceAudience.Private` so are liable to
 change.
@@ -216,7 +216,7 @@ restart HBase to unload a coprocessor that has been loaded statically.
             class.
 
             For example to load a Coprocessor (implemented in class SumEndPoint.java) you have to create
-            following entry in RegionServer's 'hbase-site.xml' file (generally located under 'conf' directory):
+            the following entry in RegionServer's 'hbase-site.xml' file (generally located under 'conf' directory):
 
             ```xml
             <property>
@@ -230,7 +230,7 @@ restart HBase to unload a coprocessor that has been loaded statically.
             Therefore, the jar file must reside on the server-side HBase classpath.
 
             Coprocessors which are loaded in this way will be active on all regions of all tables.
-            These are also called system Coprocessor.
+            These are also called system Coprocessors.
             The first listed Coprocessors will be assigned the priority `Coprocessor.Priority.SYSTEM`.
             Each subsequent coprocessor in the list will have its priority value incremented by one (which
             reduces its priority, because priorities have the natural sort order of Integers).
@@ -247,12 +247,12 @@ restart HBase to unload a coprocessor that has been loaded statically.
             </property>
             ```
 
-        When calling out to registered observers, the framework executes their callbacks methods in the
+        When calling out to registered observers, the framework executes their callback methods in the
         sorted order of their priority.
         Ties are broken arbitrarily.
 
 2.  Put your code on HBase's classpath. One easy way to do this is to drop the jar
-    (containing you code and all the dependencies) into the `lib/` directory in the
+    (containing your code and all the dependencies) into the `lib/` directory in the
     HBase installation.
 
 3.  Restart HBase.
@@ -277,7 +277,7 @@ and the table must be taken offline to load the coprocessor.
 There are three ways to dynamically load Coprocessor.
 
 <Callout type="info" title="Assumptions">
-The below mentioned instructions makes the following assumptions:
+The below mentioned instructions make the following assumptions:
 
 - A JAR called `coprocessor.jar` contains the Coprocessor implementation along with all of its
   dependencies.
@@ -306,7 +306,7 @@ The below mentioned instructions makes the following assumptions:
      `hdfs://NAMENODE:PORT/user/HADOOP_USER/*.jar`. Please note that if a directory is specified,
      all jar files(.jar) in the directory are added. It does not search for files in sub-directories.
      Do not use a wildcard if you would like to specify a directory. This enhancement applies to the
-     usage via the JAVA API as well.
+     usage via the Java API as well.
    - Class name: The full class name of the Coprocessor.
    - Priority: An integer. The framework will determine the execution sequence of all configured
      observers registered at the same hook using priorities. This field can be left blank. In that
@@ -454,7 +454,7 @@ returned in a `Get` or `Scan` of the `users` table.
 5. Load the Coprocessor.
 6. Write a simple program to test it.
 
-Following are the implementation of the above steps:
+Following is the implementation of the above steps:
 
 ```java
 public class RegionObserverExample implements RegionCoprocessor, RegionObserver {
@@ -553,7 +553,7 @@ the sum of all employee salaries, using an endpoint coprocessor.
     $ protoc --java_out=src ./sum.proto
     ```
 
-    This will generate a class call `Sum.java`.
+    This will generate a class called `Sum.java`.
 
 3.  Write a class that extends the generated service class, implement the `Coprocessor`
     and `CoprocessorService` classes, and override the service method.

@@ -104,7 +104,7 @@ The combination of access levels and scopes creates a matrix of possible access 
   <Callout type="warn">
     In the current implementation, a Global Admin with `Admin` permission can grant himself `Read`
     and `Write` permissions on a table and gain access to that table's data. For this reason, only
-    grant `Global Admin` permissions to trusted user who actually need them. Also be aware that a
+    grant `Global Admin` permissions to trusted users who actually need them. Also be aware that a
     `Global Admin` with `Create` permission can perform a `Put` operation on the ACL table,
     simulating a `grant` or `revoke` and circumventing the authorization check for `Global Admin`
     permissions. Due to these issues, be cautious with granting `Global Admin` privileges.
@@ -727,7 +727,7 @@ The default implementation, which was implemented in [HBASE-12466](https://issue
 
 ### Replicating Visibility Tags as Strings
 
-As mentioned in the above sections, the interface `VisibilityLabelService` could be used to implement a different way of storing the visibility expressions in the cells. Clusters with replication enabled also must replicate the visibility expressions to the peer cluster. If `DefaultVisibilityLabelServiceImpl` is used as the implementation for `VisibilityLabelService`, all the visibility expression are converted to the corresponding expression based on the ordinals for each visibility label stored in the labels table. During replication, visible cells are also replicated with the ordinal-based expression intact. The peer cluster may not have the same `labels` table with the same ordinal mapping for the visibility labels. In that case, replicating the ordinals makes no sense. It would be better if the replication occurred with the visibility expressions transmitted as strings. To replicate the visibility expression as strings to the peer cluster, create a `RegionServerObserver` configuration which works based on the implementation of the `VisibilityLabelService` interface. The configuration below enables replication of visibility expressions to peer clusters as strings. See [HBASE-11639](https://issues.apache.org/jira/browse/HBASE-11639) for more details.
+As mentioned in the above sections, the interface `VisibilityLabelService` could be used to implement a different way of storing the visibility expressions in the cells. Clusters with replication enabled also must replicate the visibility expressions to the peer cluster. If `DefaultVisibilityLabelServiceImpl` is used as the implementation for `VisibilityLabelService`, all the visibility expressions are converted to the corresponding expression based on the ordinals for each visibility label stored in the labels table. During replication, visible cells are also replicated with the ordinal-based expression intact. The peer cluster may not have the same `labels` table with the same ordinal mapping for the visibility labels. In that case, replicating the ordinals makes no sense. It would be better if the replication occurred with the visibility expressions transmitted as strings. To replicate the visibility expression as strings to the peer cluster, create a `RegionServerObserver` configuration which works based on the implementation of the `VisibilityLabelService` interface. The configuration below enables replication of visibility expressions to peer clusters as strings. See [HBASE-11639](https://issues.apache.org/jira/browse/HBASE-11639) for more details.
 
 ```xml
 <property>
@@ -824,7 +824,7 @@ You also need to be sure your HFiles use HFile v3, in order to use transparent e
 </property>
 ```
 
-Optionally, you can use a different cipher provider, either a Java Cryptography Encryption (JCE) algorithm provider or a custom HBase cipher implementation.
+Optionally, you can use a different cipher provider, either a Java Cryptography Extension (JCE) algorithm provider or a custom HBase cipher implementation.
 
 - JCE:
   - Install a signed JCE provider (supporting `AES/CTR/NoPadding` mode with 128 bit keys)
@@ -861,7 +861,8 @@ Configure WAL encryption in every RegionServer's _hbase-site.xml_, by setting th
 <Callout type="info">
   Starting from 2.6.0, the hbase.regionserver.hlog.reader.impl and
   hbase.regionserver.hlog.writer.impl configurations are removed, you do not need to specify them
-  any more. Just set hbase.regionserver.wal.encryption to true is enough to enable WAL encryption.
+  any more. Just setting hbase.regionserver.wal.encryption to true is enough to enable WAL
+  encryption.
 </Callout>
 
 </Step>

@@ -12,7 +12,7 @@ HBase TLS is based on the Netty library therefore it only works with Netty clien
 Since Region Servers effectively work as clients from Master's perspective, TLS supports encrypted communication between cluster members too.
 
 <Callout type="info">
-From version 2.6.0 HBase supports the [Hadoop CredentialProvider API](https://hadoop.apache.org/docs/r3.3.4/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html) to avoid storing sensitive information in HBase configuration files. The recommended way of storing keystore / truststore passwords is to use one of the supported credential providers e.g. the local jceks file provider. You can find more information about how to setup credential providers in the Hadoop documentation.
+From version 2.6.0 HBase supports the [Hadoop CredentialProvider API](https://hadoop.apache.org/docs/r3.3.4/hadoop-project-dist/hadoop-common/CredentialProviderAPI.html) to avoid storing sensitive information in HBase configuration files. The recommended way of storing keystore / truststore passwords is to use one of the supported credential providers e.g. the local jceks file provider. You can find more information about how to set up credential providers in the Hadoop documentation.
 
 The CLI interface for accessing the Hadoop Credential Shell is also available in HBase CLI. Type `hbase credential` to get help.
 
@@ -106,7 +106,7 @@ Follow the following steps to generate self-signed certificates.
 
 ## Upgrading existing non-TLS cluster with no downtime
 
-Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of port unification functionality. There's a property on server side called `hbase.server.netty.tls.supportplaintext` which makes possible to accept TLS and plaintext connections on the same socket port.
+Here are the steps needed to upgrade an already running HBase cluster to TLS without downtime by taking advantage of port unification functionality. There's a property on server side called `hbase.server.netty.tls.supportplaintext` which makes it possible to accept TLS and plaintext connections on the same socket port.
 
 <Steps>
 
@@ -298,7 +298,7 @@ Enables [OCSP](https://en.wikipedia.org/wiki/OCSP_stapling) stapling. Please not
 
 ### Client handshake timeout
 
-Set the TLS client handshake timeout is milliseconds. Default is 5 seconds.
+Set the TLS client handshake timeout in milliseconds. Default is 5 seconds.
 
 ```xml
 <property>

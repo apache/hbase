@@ -35,7 +35,7 @@ For stand-alone deployments the logs are obviously going to be on a single machi
 
 ### NameNode [#troubleshooting-logs-namenode]
 
-The NameNode log is on the NameNode server. The HBase Master is typically run on the NameNode server, and well as ZooKeeper.
+The NameNode log is on the NameNode server. The HBase Master is typically run on the NameNode server, as well as ZooKeeper.
 
 For smaller clusters the JobTracker/ResourceManager is typically run on the NameNode server as well.
 
@@ -151,7 +151,7 @@ At this point the sweep starts, and you can watch the heap size go down:
 
 At this point, the CMS sweep took 3.332 seconds, and heap went from about ~ 2.8 GB to 1.3 GB (approximate).
 
-The key points here is to keep all these pauses low. CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high at 400ms.
+The key point here is to keep all these pauses low. CMS pauses are always low, but if your ParNew starts growing, you can see minor GC pauses approach 100ms, exceed 100ms and hit as high as 400ms.
 
 This can be due to the size of the ParNew, which should be relatively small. If your ParNew is very large after running HBase for a while, in one example a ParNew was about 150MB, then you might have to constrain the size of ParNew (The larger it is, the longer the collections take but if it's too small, objects are promoted to old gen too quickly). In the below we constrain new gen size to 64m.
 
@@ -210,11 +210,11 @@ The Master web UI lists created tables and their definition (e.g., ColumnFamilie
 
 #### RegionServer Web Interface
 
-RegionServers starts a web-interface on port 16030 by default.
+RegionServers start a web-interface on port 16030 by default.
 
 The RegionServer web UI lists online regions and their start/end keys, as well as point-in-time RegionServer metrics (requests, regions, storeFileIndexSize, compactionQueueSize, etc.).
 
-See [HBase Metrics](/docs/operational-management/metrics-and-monitoring) for more information in metric definitions.
+See [HBase Metrics](/docs/operational-management/metrics-and-monitoring) for more information on metric definitions.
 
 #### zkcli
 
@@ -265,7 +265,7 @@ When maintenance mode is enabled, the master will host all system tables - ensur
 
 #### top
 
-`top` is probably one of the most important tools when first trying to see what's running on a machine and how the resources are consumed. Here's an example from production system:
+`top` is probably one of the most important tools when first trying to see what's running on a machine and how the resources are consumed. Here's an example from a production system:
 
 ```text
 top - 14:46:59 up 39 days, 11:55,  1 user,  load average: 3.75, 3.57, 3.84
@@ -281,7 +281,7 @@ Swap: 16008732k total,  14348k used, 15994384k free, 11106908k cached
 ...
 ```
 
-Here we can see that the system load average during the last five minutes is 3.75, which very roughly means that on average 3.75 threads were waiting for CPU time during these 5 minutes. In general, the _perfect_ utilization equals to the number of cores, under that number the machine is under utilized and over that the machine is over utilized. This is an important concept, see this article to understand it more: [http://www.linuxjournal.com/article/9001](http://www.linuxjournal.com/article/9001).
+Here we can see that the system load average during the last five minutes is 3.75, which very roughly means that on average 3.75 threads were waiting for CPU time during these 5 minutes. In general, the _perfect_ utilization equals to the number of cores, under that number the machine is underutilized and over that the machine is overutilized. This is an important concept, see this article to understand it more: [http://www.linuxjournal.com/article/9001](http://www.linuxjournal.com/article/9001).
 
 Apart from load, we can see that the system is using almost all its available RAM but most of it is used for the OS cache (which is good). The swap only has a few KBs in it and this is wanted, high numbers would indicate swapping activity which is the nemesis of performance of Java systems. Another way to detect swapping is when the load average goes through the roof (although this could also be caused by things like a dying disk, among others).
 
@@ -324,7 +324,7 @@ hadoop   17789  155 35.2 9067824 8604364 ?     S<l  Mar04 9855:48 /usr/java/jdk1
 
 #### jstack
 
-`jstack` is one of the most important tools when trying to figure out what a java process is doing apart from looking at the logs. It has to be used in conjunction with jps in order to give it a process id. It shows a list of threads, each one has a name, and they appear in the order that they were created (so the top ones are the most recent threads). Here are a few example:
+`jstack` is one of the most important tools when trying to figure out what a java process is doing apart from looking at the logs. It has to be used in conjunction with jps in order to give it a process id. It shows a list of threads, each one has a name, and they appear in the order that they were created (so the top ones are the most recent threads). Here are a few examples:
 
 The main thread of a RegionServer waiting for something to do from the master:
 
@@ -474,7 +474,7 @@ It's a good practice to build dashboards with all the important graphs per machi
 
 #### clusterssh+top
 
-clusterssh+top, it's like a poor man's monitoring system and it can be quite useful when you have only a few machines as it's very easy to setup. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type `top` once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.
+clusterssh+top, it's like a poor man's monitoring system and it can be quite useful when you have only a few machines as it's very easy to set up. Starting clusterssh will give you one terminal per machine and another terminal in which whatever you type will be retyped in every window. This means that you can type `top` once and it will start it for all of your machines at the same time giving you full view of the current state of your cluster. You can also tail all the logs at the same time, edit files, etc.
 
 ## Client [#troubleshooting-client]
 
@@ -490,7 +490,7 @@ See [Scan Caching](/docs/performance#scan-caching).
 
 Poor performance, or even `ScannerTimeoutExceptions`, can occur if `Scan.setCaching` is too high, as discussed in [ScannerTimeoutException or UnknownScannerException](/docs/troubleshooting#scannertimeoutexception-or-unknownscannerexception). If the Thrift client uses the wrong caching settings for a given workload, performance can suffer compared to the Java API. To set caching for a given scan in the Thrift client, use the `scannerGetList(scannerId, numRows)` method, where `numRows` is an integer representing the number of rows to cache. In one case, it was found that reducing the cache for Thrift scans from 1000 to 100 increased performance to near parity with the Java API given the same queries.
 
-See also Jesse Andersen's [blog post](http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/) about using Scans with Thrift.
+See also Jesse Anderson's [blog post](http://blog.cloudera.com/blog/2014/04/how-to-use-the-hbase-thrift-interface-part-3-using-scans/) about using Scans with Thrift.
 
 ### `LeaseException` when calling `Scanner.next` [!toc]
 
@@ -521,7 +521,7 @@ Secure Client Connect ([Caused by GSSException: No valid credentials provided
         (Mechanism level: Request is a replay (34) V PROCESS_TGS)])
 ```
 
-This issue is caused by bugs in the MIT Kerberos replay_cache component, [\#1201](http://krbdev.mit.edu/rt/Ticket/Display.html?id=1201) and [\#5924](http://krbdev.mit.edu/rt/Ticket/Display.html?id=5924). These bugs caused the old version of krb5-server to erroneously block subsequent requests sent from a Principal. This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each RegionServer); Messages, such as `Request is a replay (34)`, are logged in the client log You can ignore the messages, because HTable will retry 5 \* 10 (50) times for each failed connection by default. HTable will throw IOException if any connection to the RegionServer fails after the retries, so that the user client code for HTable instance can handle it further. NOTE: `HTable` is deprecated in HBase 1.0, in favor of `Table`.
+This issue is caused by bugs in the MIT Kerberos replay_cache component, [\#1201](http://krbdev.mit.edu/rt/Ticket/Display.html?id=1201) and [\#5924](http://krbdev.mit.edu/rt/Ticket/Display.html?id=5924). These bugs caused the old version of krb5-server to erroneously block subsequent requests sent from a Principal. This caused krb5-server to block the connections sent from one Client (one HTable instance with multi-threading connection instances for each RegionServer); Messages, such as `Request is a replay (34)`, are logged in the client log. You can ignore the messages, because HTable will retry 5 \* 10 (50) times for each failed connection by default. HTable will throw IOException if any connection to the RegionServer fails after the retries, so that the user client code for HTable instance can handle it further. NOTE: `HTable` is deprecated in HBase 1.0, in favor of `Table`.
 
 Alternatively, update krb5-server to a version which solves these issues, such as krb5-server-1.10.3. See JIRA [HBASE-10379](https://issues.apache.org/jira/browse/HBASE-10379) for more details.
 
@@ -568,7 +568,7 @@ Because of a change in the format in which MIT Kerberos writes its credentials c
 
 Prior to JDK 1.4, the JCE was an unbundled product, and as such, the JCA and JCE were regularly referred to as separate, distinct components. As JCE is now bundled in the JDK 7.0, the distinction is becoming less apparent. Since the JCE uses the same architecture as the JCA, the JCE should be more properly thought of as a part of the JCA.
 
-You may need to install the [Java Cryptography Extension](https://docs.oracle.com/javase/1.5.0/docs/guide/security/jce/JCERefGuide.html), or JCE because of JDK 1.5 or earlier version. Insure the JCE jars are on the classpath on both server and client systems.
+You may need to install the [Java Cryptography Extension](https://docs.oracle.com/javase/1.5.0/docs/guide/security/jce/JCERefGuide.html), or JCE because of JDK 1.5 or earlier version. Ensure the JCE jars are on the classpath on both server and client systems.
 
 You may also need to download the [unlimited strength JCE policy files](http://www.oracle.com/technetwork/java/javase/downloads/jce-6-download-429243.html). Uncompress and extract the downloaded file, and install the policy jars into _\<java-home>/lib/security_.
 
@@ -654,7 +654,7 @@ For more information on HDFS shell commands, see the [HDFS FileSystem Shell docu
 
 ### Browsing HDFS for HBase Objects
 
-Sometimes it will be necessary to explore the HBase objects that exist on HDFS. These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc. The easiest way to do this is with the NameNode web application that runs on port 50070. The NameNode web application will provide links to the all the DataNodes in the cluster so that they can be browsed seamlessly.
+Sometimes it will be necessary to explore the HBase objects that exist on HDFS. These objects could include the WALs (Write Ahead Logs), tables, regions, StoreFiles, etc. The easiest way to do this is with the NameNode web application that runs on port 50070. The NameNode web application will provide links to all the DataNodes in the cluster so that they can be browsed seamlessly.
 
 The HDFS directory structure of HBase tables in the cluster is...
 
@@ -694,7 +694,7 @@ Two common use-cases for querying HDFS for HBase objects is research the degree 
 If you see an unexpected spike in filesystem usage by HBase, two possible culprits are snapshots and WALs.
 
 **Snapshots**  
-When you create a snapshot, HBase retains everything it needs to recreate the table's state at that time of the snapshot. This includes deleted cells or expired versions. For this reason, your snapshot usage pattern should be well-planned, and you should prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`, and archives needed to restore snapshots are stored in `/hbase/archive/<tablename>/<region>/<column_family>/`.
+When you create a snapshot, HBase retains everything it needs to recreate the table's state at the time of the snapshot. This includes deleted cells or expired versions. For this reason, your snapshot usage pattern should be well-planned, and you should prune snapshots that you no longer need. Snapshots are stored in `/hbase/.hbase-snapshot`, and archives needed to restore snapshots are stored in `/hbase/archive/<tablename>/<region>/<column_family>/`.
 
 <Callout type="warn">
   **Do not** manage snapshots or archives manually via HDFS. HBase provides APIs and HBase Shell
@@ -806,7 +806,7 @@ If you are attempting to run in standalone mode and see this error, please walk 
 
 #### RegionServer aborts due to can not initialize access to HDFS [!toc]
 
-We will try to use _AsyncFSWAL_ for HBase-2.x as it has better performance while consuming less resources. But the problem for _AsyncFSWAL_ is that it hacks into the internal of the DFSClient implementation, so it will easily be broken when upgrading hadoop, even for a simple patch release.
+We will try to use _AsyncFSWAL_ for HBase-2.x as it has better performance while consuming less resources. But the problem for _AsyncFSWAL_ is that it hacks into the internals of the DFSClient implementation, so it will easily be broken when upgrading hadoop, even for a simple patch release.
 
 If you do not specify the wal provider, we will try to fall back to the old _FSHLog_ if we fail to initialize _AsyncFSWAL_, but it may not always work. The failure will show up in logs like this:
 
@@ -923,7 +923,7 @@ java.io.IOException: Session Expired
 ERROR org.apache.hadoop.hbase.regionserver.HRegionServer: ZooKeeper session expired
 ```
 
-The JVM is doing a long running garbage collecting which is pausing every threads (aka "stop the world"). Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out. By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.
+The JVM is doing a long running garbage collecting which is pausing every thread (aka "stop the world"). Since the RegionServer's local ZooKeeper client cannot send heartbeats, the session times out. By design, we shut down any node that isn't able to contact the ZooKeeper ensemble after getting a timeout so that it stops serving data that may already be assigned elsewhere.
 
 - Make sure you give plenty of RAM (in _hbase-env.sh_), the default of 1GB won't be able to sustain long running imports.
 - Make sure you don't swap, the JVM never behaves well under swapping.
@@ -943,7 +943,7 @@ If you wish to increase the session timeout, add the following to your _hbase-si
 </property>
 ```
 
-Be aware that setting a higher timeout means that the regions served by a failed RegionServer will take at least that amount of time to be transferred to another RegionServer. For a production system serving live requests, we would instead recommend setting it lower than 1 minute and over-provision your cluster in order the lower the memory load on each machines (hence having less garbage to collect per machine).
+Be aware that setting a higher timeout means that the regions served by a failed RegionServer will take at least that amount of time to be transferred to another RegionServer. For a production system serving live requests, we would instead recommend setting it lower than 1 minute and over-provision your cluster in order to lower the memory load on each machine (hence having less garbage to collect per machine).
 
 If this is happening during an upload which only happens once (like initially loading all your data into HBase), consider bulk loading.
 
@@ -953,7 +953,7 @@ See [ZooKeeper, The Cluster Canary](/docs/troubleshooting#zookeeper-the-cluster-
 
 This exception is "normal" when found in the RegionServer logs at DEBUG level. This exception is returned back to the client and then the client goes back to `hbase:meta` to find the new location of the moved region.
 
-However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.
+However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something is probably wrong.
 
 #### Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got brand-new compressor' messages [!toc]
 
@@ -995,7 +995,7 @@ HBase expects the root directory to either not exist, or to have already been in
 
 #### Packet len6080218 is out of range! [!toc]
 
-If you have many regions on your cluster and you see an error like that reported above in this sections title in your logs, see [HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios](https://issues.apache.org/jira/browse/HBASE-4246).
+If you have many regions on your cluster and you see an error like that reported above in this section's title in your logs, see [HBASE-4246 Cluster with too many regions cannot withstand some master failover scenarios](https://issues.apache.org/jira/browse/HBASE-4246).
 
 #### Master fails to become active due to lack of hsync for filesystem [!toc]
 
@@ -1035,7 +1035,7 @@ Use the hostname presented in the error message instead of the value you used. I
 
 ### ZooKeeper, The Cluster Canary
 
-ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure its happy is the short-cut to a humming cluster.
+ZooKeeper is the cluster's "canary in the mineshaft". It'll be the first to notice issues if any so making sure it's happy is the short-cut to a humming cluster.
 
 See the [ZooKeeper Operating Environment Troubleshooting](https://cwiki.apache.org/confluence/display/HADOOP2/ZooKeeper+Troubleshooting) page. It has suggestions and tools for checking disk and networking performance; i.e. the operating environment your ZooKeeper and HBase are running in.
 
@@ -1069,7 +1069,7 @@ See Andrew's answer here, up on the user list: [Remote Java client connection in
 
 ### ...cannot communicate with client version...
 
-If you see something like the following in your logs ... 2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4 ... ...are you trying to talk to an Hadoop 2.0.x from an HBase that has an Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the -Dhadoop.profile=2.0 attribute to Maven (See [Building against various Hadoop versions](/docs/building-and-developing/building#building-against-various-hadoop-versions) for more).
+If you see something like the following in your logs ... 2012-09-24 10:20:52,168 FATAL org.apache.hadoop.hbase.master.HMaster: Unhandled exception. Starting shutdown. org.apache.hadoop.ipc.RemoteException: Server IPC version 7 cannot communicate with client version 4 ... ...are you trying to talk to a Hadoop 2.0.x from an HBase that has a Hadoop 1.0.x client? Use the HBase built against Hadoop 2.0 or rebuild your HBase passing the -Dhadoop.profile=2.0 attribute to Maven (See [Building against various Hadoop versions](/docs/building-and-developing/building#building-against-various-hadoop-versions) for more).
 
 ## HBase and HDFS
 
@@ -1089,7 +1089,7 @@ Some HDFS configurations relating to HBase need to be done at the HDFS (server) 
 When writing, HDFS pipelines communications from one DataNode to another. HBase communicates to both the HDFS NameNode and DataNode, using the HDFS client classes. Communication problems between DataNodes are logged in the HDFS logs, not the HBase logs.
 
 **HBase communicates with HDFS using two different ports.**  
-HBase communicates with DataNodes using the `ipc.Client` interface and the `DataNode` class. References to these will appear in HBase logs. Each of these communication channels use a different port (50010 and 50020 by default). The ports are configured in the HDFS configuration, via the `dfs.datanode.address` and `dfs.datanode.ipc.address` parameters.
+HBase communicates with DataNodes using the `ipc.Client` interface and the `DataNode` class. References to these will appear in HBase logs. Each of these communication channels uses a different port (50010 and 50020 by default). The ports are configured in the HDFS configuration, via the `dfs.datanode.address` and `dfs.datanode.ipc.address` parameters.
 
 **Errors may be logged in HBase, HDFS, or both.**  
 When troubleshooting HDFS issues in HBase, check logs in both places for errors.
@@ -1116,7 +1116,7 @@ HBase can be enabled to use the HDFS favored-nodes feature by switching the HBas
 
 ### Connection Timeouts
 
-Connection timeouts occur between the client (HBASE) and the HDFS DataNode. They may occur when establishing a connection, attempting to read, or attempting to write. The two settings below are used in combination, and affect connections between the DFSClient and the DataNode, the ipc.cClient and the DataNode, and communication between two DataNodes.
+Connection timeouts occur between the client (HBASE) and the HDFS DataNode. They may occur when establishing a connection, attempting to read, or attempting to write. The two settings below are used in combination, and affect connections between the DFSClient and the DataNode, the ipc.Client and the DataNode, and communication between two DataNodes.
 
 `dfs.client.socket-timeout` (default: 60000)  
 The amount of time before a client connection times out when establishing a connection or reading. The value is expressed in milliseconds, so the default is 60 seconds.
@@ -1130,7 +1130,7 @@ The following types of errors are often seen in the logs.
 
 `INFO HDFS.DFSClient: Failed to connect to /xxx50010, add to deadNodes and continue java.net.SocketTimeoutException: 60000 millis timeout while waiting for channel to be ready for connect. ch : java.nio.channels.SocketChannel[connection-pending remote=/region-server-1:50010]`:: All DataNodes for a block are dead, and recovery is not possible. Here is the sequence of events that leads to this error:
 
-`INFO org.apache.hadoop.HDFS.DFSClient: Exception in createBlockOutputStream java.net.SocketTimeoutException: 69000 millis timeout while waiting for channel to be ready for connect. ch : java.nio.channels.SocketChannel[connection-pending remote=/ xxx:50010]`:: This type of error indicates a write issue. In this case, the master wants to split the log. It does not have a local DataNodes so it tries to connect to a remote DataNode, but the DataNode is dead.
+`INFO org.apache.hadoop.HDFS.DFSClient: Exception in createBlockOutputStream java.net.SocketTimeoutException: 69000 millis timeout while waiting for channel to be ready for connect. ch : java.nio.channels.SocketChannel[connection-pending remote=/ xxx:50010]`:: This type of error indicates a write issue. In this case, the master wants to split the log. It does not have a local DataNode so it tries to connect to a remote DataNode, but the DataNode is dead.
 
 ## Running unit or integration tests
 
@@ -1245,9 +1245,9 @@ then check if you compiled with jdk8 and tried to run it on jdk7. If so, this wo
 
 The default size of chunk used by mslab is 2MB, when using G1, if heapRegionSize equals 4MB, these chunks are allocated as humongous objects, exclusively allocating one region, then the remaining 2MB become memory fragment.
 
-Lots of memory fragment may lead to full gc even if the percent of used heap not high enough.
+Lots of memory fragment may lead to full gc even if the percent of used heap is not high enough.
 
-The G1HeapRegionSize calculated by initial_heap_size and max_heap_size, here are some cases for better understand:
+The G1HeapRegionSize is calculated by initial_heap_size and max_heap_size, here are some cases for better understanding:
 
 - xmx=10G -> region size 2M
 - xms=10G, xmx=10G -> region size 4M

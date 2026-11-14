@@ -8,7 +8,7 @@ description: "This feature introduces an abstraction layer to track store files 
 Historically, HBase internals have relied on creating hfiles on temporary directories first, renaming
 those files to the actual store directory at operation commit time. That's a simple and convenient
 way to separate transient from already finalised files that are ready to serve client reads with data.
-This approach works well with strong consistent file systems, but with the popularity of less consistent
+This approach works well with strongly consistent file systems, but with the popularity of less consistent
 file systems, mainly Object Store which can be used like file systems, dependency on atomic rename operations starts to introduce performance penalties. The Amazon S3 Object Store, in particular, has been the most affected deployment,
 due to its lack of atomic renames. The HBase community temporarily bypassed this problem by building a distributed locking layer called HBOSS, to guarantee atomicity of operations against S3.
 
@@ -18,8 +18,8 @@ The implementation can be set at the HBase service level in **hbase-site.xml** o
 Table or Column Family via the TableDescriptor configuration.
 
 <Callout type="info">
-  When the store file tracking implementation is specified in **hbase_site.xml**, this configuration
-  is also propagated into a tables configuration at table creation time. This is to avoid dangerous
+  When the store file tracking implementation is specified in **hbase-site.xml**, this configuration
+  is also propagated into a table's configuration at table creation time. This is to avoid dangerous
   configuration mismatches between processes, which could potentially lead to data loss.
 </Callout>
 
@@ -43,12 +43,12 @@ A file tracker implementation that creates new files straight in the store direc
 need for rename operations. It keeps a list of committed hfiles in memory, backed by meta files, in
 each store directory. Whenever a new hfile is committed, the list of _tracked files_ in the given
 store is updated and a new meta file is written with this list contents, discarding the previous
-meta file now containing an out dated list.
+meta file now containing an outdated list.
 
 ### MIGRATION
 
 A special implementation to be used when swapping between Store File Tracking implementations on
-pre-existing tables that already contain data, and therefore, files being tracked under an specific
+pre-existing tables that already contain data, and therefore, files being tracked under a specific
 logic.
 
 ## Usage [#store-file-tracking-usage]
@@ -64,7 +64,7 @@ list of the _current tracker_.
 
 <Callout type="info">
   MIGRATION tracker should NOT be set at global configuration. To use it, follow below section about
-  setting Store File Tacking at Table or Column Family configuration.
+  setting Store File Tracking at Table or Column Family configuration.
 </Callout>
 
 ### Configuring for Table or Column Family
@@ -79,7 +79,7 @@ the following should be applied:
 create 'my-table', 'f1', 'f2', {CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}}
 ```
 
-To define **FILE** for an specific Column Family:
+To define **FILE** for a specific Column Family:
 
 ```bash
 create 'my-table', {NAME=> '1', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}}
@@ -120,7 +120,7 @@ alter 'my-table', CONFIGURATION => {'hbase.store.file-tracker.impl' => 'FILE'}
 ### Specifying trackers during snapshot recovery
 
 It's also possible to specify a given store file tracking implementation when recovering a snapshot
-using the _CLONE_SFT_ option of _clone_snasphot_ command. This is useful when recovering old
+using the _CLONE_SFT_ option of _clone_snapshot_ command. This is useful when recovering old
 snapshots, taken prior to a change in the global configuration, or if the snapshot has been
 imported from a different cluster that had a different store file tracking setting.
 Because snapshots preserve table and column family descriptors, a simple restore would reload

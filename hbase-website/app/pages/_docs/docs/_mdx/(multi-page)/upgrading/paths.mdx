@@ -7,7 +7,7 @@ description: "Detailed upgrade paths and compatibility considerations when upgra
 
 The RegionServer Grouping feature has been reimplemented. See section [Migrating From Old Implementation](/docs/operational-management/region-and-capacity#migrating-from-old-implementation) in [Apache HBase Operational Management](/docs/operational-management) for more details.
 
-The `hbase:namespace` table has been removed and fold into `hbase:meta`. See [Data Model](/docs/datamodel) for more details.
+The `hbase:namespace` table has been removed and folded into `hbase:meta`. See [Data Model](/docs/datamodel) for more details.
 
 There is no special consideration upgrading to hbase-2.4.x from 2.3.x. And for earlier versions, just follow the [Upgrade from 2.0.x-2.2.x to 2.3+](/docs/upgrading/paths#upgrade-from-20x-22x-to-23) guide. In general, 2.2.x should be rolling upgradeable, for 2.1.x or 2.0.x, you will need to clear the [Upgrade from 2.0 or 2.1 to 2.2+](/docs/upgrading/paths#upgrade-from-20-or-21-to-22) hurdle first.
 
@@ -21,17 +21,17 @@ Our dependency on Apache ZooKeeper has been upgraded to 3.5.7 ([HBASE-24132](htt
 
 ### New In-Master Procedure Store
 
-Of note, HBase 2.3.0 changes the in-Master Procedure Store implementation. It was a dedicated custom store to instead use a standard HBase Region ([HBASE-23326](https://issues.apache.org/jira/browse/HBASE-23326)). The migration from the old to new format is automatic run by the new 2.3.0 Master on startup. The old _MasterProcWALs_ dir which hosted the old custom implementation files in _\$\{hbase.rootdir}_ is deleted on successful migration. A new _MasterProc_ sub-directory replaces it to host the Store files and WALs for the new Procedure Store in-Master Region. The in-Master Region is unusual in that it writes to an alternate location at _\$\{hbase.rootdir\}/MasterProc_ rather than under _\$\{hbase.rootdir\}/data_ in the filesystem and the special Procedure Store in-Master Region is hidden from all clients other than the active Master itself. Otherwise, it is like any other with the Master process running flushes and compactions, archiving WALs when over-flushed, and so on. Its files are readable by standard Region and Store file tooling for triage and analysis as long as they are pointed to the appropriate location in the filesystem.
+Of note, HBase 2.3.0 changes the in-Master Procedure Store implementation. It was a dedicated custom store to instead use a standard HBase Region ([HBASE-23326](https://issues.apache.org/jira/browse/HBASE-23326)). The migration from the old to new format is automatically run by the new 2.3.0 Master on startup. The old _MasterProcWALs_ dir which hosted the old custom implementation files in _\$\{hbase.rootdir}_ is deleted on successful migration. A new _MasterProc_ sub-directory replaces it to host the Store files and WALs for the new Procedure Store in-Master Region. The in-Master Region is unusual in that it writes to an alternate location at _\$\{hbase.rootdir\}/MasterProc_ rather than under _\$\{hbase.rootdir\}/data_ in the filesystem and the special Procedure Store in-Master Region is hidden from all clients other than the active Master itself. Otherwise, it is like any other with the Master process running flushes and compactions, archiving WALs when over-flushed, and so on. Its files are readable by standard Region and Store file tooling for triage and analysis as long as they are pointed to the appropriate location in the filesystem.
 
 Notice that, after the migration, you should make sure to not start an active master with old code, as it can not recognize the new procedure store. So it is suggested to upgrade backup master(s) to new 2.3 first, and then upgrade the active master. And unless explicitly mentioned, this is the suggested way for all upgrading, i.e, upgrading backup master(s) first, then active master, and then region servers.
 
 ## Upgrade from 2.0 or 2.1 to 2.2+
 
-HBase 2.2+ uses a new Procedure form assigning/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
+HBase 2.2+ uses a new Procedure for assigning/unassigning/moving Regions. It does not process HBase 2.1 and 2.0's Unassign/Assign Procedure types. Upgrade requires that we first drain the Master Procedure Store of old style Procedures before starting the new 2.2 Master. So you need to make sure that before you kill the old version (2.0 or 2.1) Master, there is no region in transition. And once the new version (2.2+) Master is up, you can rolling upgrade RegionServers one by one.
 
-And there is a more safer way if you are running 2.1.1+ or 2.0.3+ cluster. It need four steps to upgrade Master.
+And there is a safer way if you are running 2.1.1+ or 2.0.3+ cluster. It needs four steps to upgrade Master.
 
-1.  Shutdown both active and standby Masters (Your cluster will continue to server reads and writes without interruption).
+1.  Shutdown both active and standby Masters (Your cluster will continue to serve reads and writes without interruption).
 2.  Set the property hbase.procedure.upgrade-to-2-2 to true in hbase-site.xml for the Master, and start only one Master, still using the 2.1.1+ (or 2.0.3+) version.
 3.  Wait until the Master quits. Confirm that there is a 'UPGRADE OK: All existed procedures have been finished, quit...' message in the Master log as the cause of the shutdown. The Procedure Store is now empty.
 4.  Start new Masters with the new 2.2+ version.
@@ -142,7 +142,7 @@ The Distributed Log Replay feature was broken and has been removed from HBase 2.
 
 The prefix-tree encoding was removed from HBase 2.0.0 ([HBASE-19179](https://issues.apache.org/jira/browse/HBASE-19179)). It was (late!) deprecated in hbase-1.2.7, hbase-1.4.0, and hbase-1.3.2.
 
-This feature was removed because it as not being actively maintained. If interested in reviving this sweet facility which improved random read latencies at the expensive of slowed writes, write the HBase developers list at _dev at hbase dot apache dot org_.
+This feature was removed because it was not being actively maintained. If interested in reviving this sweet facility which improved random read latencies at the expense of slowed writes, write the HBase developers list at _dev at hbase dot apache dot org_.
 
 The prefix-tree encoding needs to be removed from all tables before upgrading to HBase 2.0+. To do that first you need to change the encoding from PREFIX_TREE to something else that is supported in HBase 2.0. After that you have to major compact the tables that were using PREFIX_TREE encoding before. To check which column families are using incompatible data block encoding you can use [Pre-Upgrade Validator](/docs/operational-management/tools#pre-upgrade-validator).
 
@@ -170,7 +170,7 @@ The following metrics have been added:
 
 HBase-2.0.0 now uses [slf4j](https://www.slf4j.org/) as its logging frontend. Previously, we used [log4j (1.2)](http://logging.apache.org/log4j/1.2/). For most the transition should be seamless; slf4j does a good job interpreting _log4j.properties_ logging configuration files such that you should not notice any difference in your log system emissions.
 
-That said, your _log4j.properties_ may need freshening. See [HBASE-20351](https://issues.apache.org/jira/browse/HBASE-20351) for example, where a stale log configuration file manifest as netty configuration being dumped at DEBUG level as preamble on every shell command invocation.
+That said, your _log4j.properties_ may need freshening. See [HBASE-20351](https://issues.apache.org/jira/browse/HBASE-20351) for example, where a stale log configuration file manifested as netty configuration being dumped at DEBUG level as preamble on every shell command invocation.
 
 #### ZooKeeper configs no longer read from zoo.cfg [!toc]
 
@@ -215,11 +215,11 @@ Previously, the Web UI included functionality on table status pages to merge or 
 
 #### Special upgrading for Replication users from pre-HBase 1.4 [!toc]
 
-User running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section [Replication peer's TableCFs config](/docs/upgrading/paths#replication-peers-tablecfs-config).
+Users running versions of HBase prior to the 1.4.0 release that make use of replication should be sure to read the instructions in the section [Replication peer's TableCFs config](/docs/upgrading/paths#replication-peers-tablecfs-config).
 
 #### HBase shell changes [!toc]
 
-The HBase shell command relies on a bundled JRuby instance. This bundled JRuby been updated from version 1.6.8 to version 9.1.10.0. The represents a change from Ruby 1.8 to Ruby 2.3.3, which introduces non-compatible language changes for user scripts.
+The HBase shell command relies on a bundled JRuby instance. This bundled JRuby has been updated from version 1.6.8 to version 9.1.10.0. This represents a change from Ruby 1.8 to Ruby 2.3.3, which introduces non-compatible language changes for user scripts.
 
 The HBase shell command now ignores the '--return-values' flag that was present in early HBase 1.4 releases. Instead the shell always behaves as though that flag were passed. If you wish to avoid having expression results printed in the console you should alter your IRB configuration.
 
@@ -254,7 +254,7 @@ A clean cluster shutdown should ensure there are no WAL files. If you are unsure
 
 #### Change in behavior for filters [!toc]
 
-The Filter ReturnCode NEXT_ROW has been redefined as skipping to next row in current family, not to next row in all family. it's more reasonable, because ReturnCode is a concept in store level, not in region level.
+The Filter ReturnCode NEXT_ROW has been redefined as skipping to next row in current family, not to next row in all families. It's more reasonable, because ReturnCode is a concept in store level, not in region level.
 
 #### Downstream HBase 2.0+ users should use the shaded client [!toc]
 
@@ -330,11 +330,11 @@ Suggested order of changes to upgrade the coprocessors:
 
 1.  Directly implement observer interfaces instead of extending Base\*Observer classes. Change `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`. ([HBASE-17312](https://issues.apache.org/jira/browse/HBASE-17312)).
 2.  Adapt to design change from Inheritance to Composition ([HBASE-17732](https://issues.apache.org/jira/browse/HBASE-17732)) by following [this example](https://github.com/apache/hbase/blob/master/dev-support/design-docs/Coprocessor_Design_Improvements-Use_composition_instead_of_inheritance-HBASE-17732.adoc#migrating-existing-cps-to-new-design).
-3.  getTable() has been removed from the CoprocessorEnvrionment, coprocessors should self-manage Table instances.
+3.  getTable() has been removed from the CoprocessorEnvironment, coprocessors should self-manage Table instances.
 
 Some examples of writing coprocessors with new API can be found in hbase-example module [here](https://github.com/apache/hbase/tree/branch-2.0/hbase-examples/src/main/java/org/apache/hadoop/hbase/coprocessor/example).
 
-Lastly, if an api has been changed/removed that breaks you in an irreparable way, and if there's a good justification to add it back, bring it our notice [dev@hbase.apache.org](mailto:dev@hbase.apache.org).
+Lastly, if an api has been changed/removed that breaks you in an irreparable way, and if there's a good justification to add it back, bring it to our notice [dev@hbase.apache.org](mailto:dev@hbase.apache.org).
 
 ### Rolling Upgrade from 1.x to 2.x
 
@@ -399,7 +399,7 @@ Users upgrading from versions prior to HBase 1.4 should be aware that the estima
 
 ### Replication peer's TableCFs config
 
-Before 1.4, the table name can't include namespace for replication peer's TableCFs config. It was fixed by add TableCFs to ReplicationPeerConfig which was stored on Zookeeper. So when upgrade to 1.4, you have to update the original ReplicationPeerConfig data on Zookeeper firstly. There are four steps to upgrade when your cluster have a replication peer with TableCFs config.
+Before 1.4, the table name can't include namespace for replication peer's TableCFs config. It was fixed by adding TableCFs to ReplicationPeerConfig which was stored on ZooKeeper. So when upgrading to 1.4, you have to update the original ReplicationPeerConfig data on ZooKeeper firstly. There are four steps to upgrade when your cluster has a replication peer with TableCFs config.
 
 - Disable the replication peer.
 - If master has permission to write replication peer znode, then rolling update master directly. If not, use TableCFsUpdater tool to update the replication peer's config.
@@ -411,7 +411,7 @@ Before 1.4, the table name can't include namespace for replication peer's TableC
 
 Notes:
 
-- Can't use the old client(before 1.4) to change the replication peer's config. Because the client will write config to Zookeeper directly, the old client will miss TableCFs config. And the old client write TableCFs config to the old tablecfs znode, it will not work for new version regionserver.
+- Can't use the old client(before 1.4) to change the replication peer's config. Because the client will write config to ZooKeeper directly, the old client will miss TableCFs config. And the old client writes TableCFs config to the old tablecfs znode, it will not work for new version regionserver.
 
 ### Raw scan now ignores TTL
 

@@ -6,7 +6,7 @@ description: "Guide to using Apache HBase with MapReduce including configuration
 Apache MapReduce is a software framework used to analyze large amounts of data. It is provided by [Apache Hadoop](https://hadoop.apache.org/).
 MapReduce itself is out of the scope of this document.
 A good place to get started with MapReduce is https://hadoop.apache.org/docs/r2.6.0/hadoop-mapreduce-client/hadoop-mapreduce-client-core/MapReduceTutorial.html.
-MapReduce version 2 (MR2)is now part of [YARN](https://hadoop.apache.org/docs/r2.6.0/hadoop-yarn/hadoop-yarn-site/).
+MapReduce version 2 (MR2) is now part of [YARN](https://hadoop.apache.org/docs/r2.6.0/hadoop-yarn/hadoop-yarn-site/).
 
 This chapter discusses specific configuration steps you need to take to use MapReduce on data within HBase.
 In addition, it discusses other interactions and issues between HBase and MapReduce jobs.
@@ -25,7 +25,7 @@ In addition, it discusses other interactions and issues between HBase and MapRed
 By default, MapReduce jobs deployed to a MapReduce cluster do not have access to
 either the HBase configuration under `$HBASE_CONF_DIR` or the HBase classes.
 
-To give the MapReduce jobs the access they need, you could add _hbase-site.xml_to _\$HADOOP*HOME/conf* and add HBase jars to the _\$HADOOP_HOME/lib_ directory.
+To give the MapReduce jobs the access they need, you could add _hbase-site.xml_ to _\$HADOOP*HOME/conf* and add HBase jars to the _\$HADOOP*HOME/lib* directory.
 You would then need to copy these changes across your cluster. Or you could edit _\$HADOOP_HOME/conf/hadoop-env.sh_ and add hbase dependencies to the `HADOOP_CLASSPATH` variable.
 Neither of these approaches is recommended because it will pollute your Hadoop install with HBase references.
 It also requires you restart the Hadoop cluster before Hadoop can use the HBase data.
@@ -40,7 +40,7 @@ job runner letting hbase utility pick out from the full-on classpath what it nee
 MapReduce job configuration (See the source at `TableMapReduceUtil#addDependencyJars(org.apache.hadoop.mapreduce.Job)` for how this is done).
 
 The following example runs the bundled HBase [RowCounter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html) MapReduce job against a table named `usertable`.
-It sets into `HADOOP_CLASSPATH` the jars hbase needs to run in an MapReduce context (including configuration files such as hbase-site.xml).
+It sets into `HADOOP_CLASSPATH` the jars hbase needs to run in a MapReduce context (including configuration files such as hbase-site.xml).
 Be sure to use the correct version of the HBase JAR for your system; replace the VERSION string in the below command line w/ the version of
 your local hbase install. The backticks (\`\`\`) cause the shell to execute the sub-commands, setting the output of `hbase classpath` into `HADOOP_CLASSPATH`.
 This example assumes you use a BASH-compatible shell.
@@ -208,7 +208,7 @@ Valid program names are:
   rowcounter: Count rows in HBase table
 ```
 
-Each of the valid program names are bundled MapReduce jobs.
+Each of the valid program names is bundled MapReduce jobs.
 To run one of the jobs, model your command after the following example.
 
 ```bash
@@ -222,18 +222,18 @@ Writing MapReduce jobs that read or write HBase, it is advisable to subclass [Ta
 See the do-nothing pass-through classes [IdentityTableMapper](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/IdentityTableMapper.html) and [IdentityTableReducer](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/IdentityTableReducer.html) for basic usage.
 For a more involved example, see [RowCounter](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/RowCounter.html) or review the `org.apache.hadoop.hbase.mapreduce.TestTableMapReduce` unit test.
 
-If you run MapReduce jobs that use HBase as source or sink, need to specify source and sink table and column names in your configuration.
+If you run MapReduce jobs that use HBase as source or sink, you need to specify source and sink table and column names in your configuration.
 
 When you read from HBase, the `TableInputFormat` requests the list of regions from HBase and makes a map, which is either a `map-per-region` or `mapreduce.job.maps` map, whichever is smaller.
 If your job only has two maps, raise `mapreduce.job.maps` to a number greater than the number of regions.
-Maps will run on the adjacent TaskTracker/NodeManager if you are running a TaskTracer/NodeManager and RegionServer per node.
+Maps will run on the adjacent TaskTracker/NodeManager if you are running a TaskTracker/NodeManager and RegionServer per node.
 When writing to HBase, it may make sense to avoid the Reduce step and write back into HBase from within your map.
 This approach works when your job does not need the sort and collation that MapReduce does on the map-emitted data.
 On insert, HBase 'sorts' so there is no point double-sorting (and shuffling data around your MapReduce cluster) unless you need to.
 If you do not need the Reduce, your map might emit counts of records processed for reporting at the end of the job, or set the number of Reduces to zero and use TableOutputFormat.
 If running the Reduce step makes sense in your case, you should typically use multiple reducers so that load is spread across the HBase cluster.
 
-A new HBase partitioner, the [HRegionPartitioner](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/HRegionPartitioner.html), can run as many reducers the number of existing regions.
+A new HBase partitioner, the [HRegionPartitioner](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/HRegionPartitioner.html), can run as many reducers as the number of existing regions.
 The HRegionPartitioner is suitable when your table is large and your upload will not greatly alter the number of existing regions upon completion.
 Otherwise use the default partitioner.
 
@@ -273,7 +273,7 @@ That is where the logic for map-task assignment resides.
 
 ### HBase MapReduce Read Example
 
-The following is an example of using HBase as a MapReduce source in read-only manner.
+The following is an example of using HBase as a MapReduce source in a read-only manner.
 Specifically, there is a Mapper instance but no Reducer, and nothing is being emitted from the Mapper.
 The job would be defined as follows...
 
@@ -351,7 +351,7 @@ if (!b) {
 An explanation is required of what `TableMapReduceUtil` is doing, especially with the reducer. [TableOutputFormat](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/mapreduce/TableOutputFormat.html) is being used as the outputFormat class, and several parameters are being set on the config (e.g., `TableOutputFormat.OUTPUT_TABLE`), as well as setting the reducer output key to `ImmutableBytesWritable` and reducer value to `Writable`.
 These could be set by the programmer on the job and conf, but `TableMapReduceUtil` tries to make things easier.
 
-The following is the example mapper, which will create a `Put` and matching the input `Result` and emit it.
+The following is the example mapper, which will create a `Put` matching the input `Result` and emit it.
 Note: this is what the CopyTable utility does.
 
 ```java
@@ -455,7 +455,7 @@ public static class MyTableReducer extends TableReducer<Text, IntWritable, Immut
 
 ### HBase MapReduce Summary to File Example
 
-This very similar to the summary example above, with exception that this is using HBase as a MapReduce source but HDFS as the sink.
+This is very similar to the summary example above, with exception that this is using HBase as a MapReduce source but HDFS as the sink.
 The differences are in the job setup and in the reducer.
 The mapper remains the same.
 
@@ -508,7 +508,7 @@ It is also possible to perform summaries without a reducer - if you use HBase as
 
 An HBase target table would need to exist for the job summary.
 The Table method `incrementColumnValue` would be used to atomically increment values.
-From a performance perspective, it might make sense to keep a Map of values with their values to be incremented for each map-task, and make one update per key at during the `cleanup` method of the mapper.
+From a performance perspective, it might make sense to keep a Map of values with their values to be incremented for each map-task, and make one update per key during the `cleanup` method of the mapper.
 However, your mileage may vary depending on the number of rows to be processed and unique keys.
 
 In the end, the summary results are in HBase.
@@ -549,7 +549,7 @@ In the end, the summary results are written to your RDBMS table/s.
 
 ## Accessing Other HBase Tables in a MapReduce Job
 
-Although the framework currently allows one HBase table as input to a MapReduce job, other HBase tables can be accessed as lookup tables, etc., in a MapReduce job via creating an Table instance in the setup method of the Mapper.
+Although the framework currently allows one HBase table as input to a MapReduce job, other HBase tables can be accessed as lookup tables, etc., in a MapReduce job via creating a Table instance in the setup method of the Mapper.
 
 ```java
 public class MyMapper extends TableMapper<Text, LongWritable> {

@@ -74,7 +74,7 @@ Start HBase, if it is not already running.
 
 <Step>
 
-Run the command `jvisualvm` command on a host with a GUI display. You can launch it from the command line or another method appropriate for your operating system.
+Run the `jvisualvm` command on a host with a GUI display. You can launch it from the command line or another method appropriate for your operating system.
 
 </Step>
 
@@ -299,11 +299,11 @@ To turn on this feature, you have to enable a custom coprocessor by adding the f
 ```
 
 <Callout type="info" title="How the top-N metrics are calculated?">
-The 'top-N' type of metrics will be counted using the Lossy Counting Algorithm (as defined in [Motwani, R; Manku, G.S (2002). "Approximate frequency counts over data streams"](http://www.vldb.org/conf/2002/S10P03.pdf)), which is designed to identify elements in a data stream whose frequency count exceed a user-given threshold. The frequency computed by this algorithm is not always accurate but has an error threshold that can be specified by the user as a configuration parameter. The run time space required by the algorithm is inversely proportional to the specified error threshold, hence larger the error parameter, the smaller the footprint and the less accurate are the metrics.
+The 'top-N' type of metrics will be counted using the Lossy Counting Algorithm (as defined in [Motwani, R; Manku, G.S (2002). "Approximate frequency counts over data streams"](http://www.vldb.org/conf/2002/S10P03.pdf)), which is designed to identify elements in a data stream whose frequency count exceeds a user-given threshold. The frequency computed by this algorithm is not always accurate but has an error threshold that can be specified by the user as a configuration parameter. The run time space required by the algorithm is inversely proportional to the specified error threshold, hence larger the error parameter, the smaller the footprint and the less accurate are the metrics.
 
-You can specify the error rate of the algorithm as a floating-point value between 0 and 1 (exclusive), it's default value is 0.02. Having the error rate set to `E` and having `N` as the total number of meta table operations, then (assuming the uniform distribution of the activity of low frequency elements) at most `7 / E` meters will be kept and each kept element will have a frequency higher than `E * N`.
+You can specify the error rate of the algorithm as a floating-point value between 0 and 1 (exclusive), its default value is 0.02. Having the error rate set to `E` and having `N` as the total number of meta table operations, then (assuming the uniform distribution of the activity of low frequency elements) at most `7 / E` meters will be kept and each kept element will have a frequency higher than `E * N`.
 
-An example: Let's assume we are interested in the HBase clients that are most active in accessing the meta table. When there was 1,000,000 operations on the meta table so far and the error rate parameter is set to 0.02, then we can assume that only at most 350 client IP address related counters will be present in JMX and each of these clients accessed the meta table at least 20,000 times.
+An example: Let's assume we are interested in the HBase clients that are most active in accessing the meta table. When there were 1,000,000 operations on the meta table so far and the error rate parameter is set to 0.02, then we can assume that only at most 350 client IP address related counters will be present in JMX and each of these clients accessed the meta table at least 20,000 times.
 
 ```xml
 <property>
@@ -348,7 +348,7 @@ There are four configuration knobs that can be used to adjust the thresholds for
 
 #### Metrics [#operational-management-hbase-monitoring-slow-query-log-metrics]
 
-The slow query log exposes to metrics to JMX.
+The slow query log exposes two metrics to JMX.
 
 - `hadoop.regionserver_rpc_slowResponse` a global metric reflecting the durations of all responses that triggered logging.
 - `hadoop.regionserver_rpc_methodName.aboveOneSec` A metric reflecting the durations of all responses that lasted for more than one second.
@@ -532,7 +532,7 @@ All of the above APIs access online in-memory ring buffers from individual Regio
 
 If we have a system table that stores such logs in increasing (not so strictly though) order of time, it can definitely help operators debug some historical events (scan, get, put, compaction, flush etc) with detailed inputs.
 
-Config which enabled system table to be created and store all log events is `hbase.regionserver.slowlog.systable.enabled`.
+Config which enables system table to be created and store all log events is `hbase.regionserver.slowlog.systable.enabled`.
 
 The default value for this config is `false`. If provided `true` (Note: `hbase.regionserver.slowlog.buffer.enabled` should also be `true`), a cron job running in every RegionServer will persist the slow/large logs into table hbase:slowlog. By default cron job runs every 10 min. Duration can be configured with key: `hbase.slowlog.systable.chore.duration`. By default, RegionServer will store up to 1000(config key: `hbase.regionserver.slowlog.systable.queue.size`) slow/large logs in an internal queue and the chore will retrieve these logs from the queue and perform batch insertion in hbase:slowlog.
 
@@ -551,7 +551,7 @@ hbase:slowlog has single ColumnFamily: `info` `info` contains multiple qualifier
 - info:type
 - info:username
 
-And example of 2 rows from hbase:slowlog scan result:
+An example of 2 rows from hbase:slowlog scan result:
 
 ```text
  \x024\xC1\x03\xE9\x04\xF5@                                  column=info:call_details, timestamp=2020-05-16T14:58:14.211Z, value=Scan(org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos$ScanRequest)
@@ -634,4 +634,4 @@ The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile si
 **_Empty Snapshot Storefile Stats Example_**
 ![empty snapshots](/docs-images/empty-snapshots.png)
 
-[^5]: The Metrics system was redone in HBase 0.96. See Migration to the New Metrics Hotness – Metrics2 by Elliot Clark for detail.
+[^5]: The Metrics system was redone in HBase 0.96. See Migration to the New Metrics Hotness – Metrics2 by Elliott Clark for detail.

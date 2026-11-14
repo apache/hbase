@@ -11,7 +11,7 @@ For additional information, see [HBase Backup Options](https://web.archive.org/w
 
 ### Full Shutdown Backup
 
-Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used a back-end analytic capacity and not serving front-end web-pages. The benefits are that the NameNode/Master are RegionServers are down, so there is no chance of missing any in-flight changes to either StoreFiles or metadata. The obvious con is that the cluster is down. The steps include:
+Some environments can tolerate a periodic full shutdown of their HBase cluster, for example if it is being used in a back-end analytic capacity and not serving front-end web-pages. The benefits are that the NameNode/Master and RegionServers are down, so there is no chance of missing any in-flight changes to either StoreFiles or metadata. The obvious con is that the cluster is down. The steps include:
 
 #### Stop HBase [#operational-management-backup-and-snapshots-stop-hbase]
 
@@ -42,7 +42,7 @@ Since the cluster is up, there is a risk that edits could be missed in the expor
 
 ## HBase Snapshots
 
-HBase Snapshots allow you to take a copy of a table (both contents and metadata)with a very small performance impact. A Snapshot is an immutable collection of table metadata and a list of HFiles that comprised the table at the time the Snapshot was taken. A "clone" of a snapshot creates a new table from that snapshot, and a "restore" of a snapshot returns the contents of a table to what it was when the snapshot was created. The "clone" and "restore" operations do not require any data to be copied, as the underlying HFiles (the files which contain the data for an HBase table) are not modified with either action. Similarly, exporting a snapshot to another cluster has little impact on RegionServers of the local cluster.
+HBase Snapshots allow you to take a copy of a table (both contents and metadata) with a very small performance impact. A Snapshot is an immutable collection of table metadata and a list of HFiles that comprised the table at the time the Snapshot was taken. A "clone" of a snapshot creates a new table from that snapshot, and a "restore" of a snapshot returns the contents of a table to what it was when the snapshot was created. The "clone" and "restore" operations do not require any data to be copied, as the underlying HFiles (the files which contain the data for an HBase table) are not modified with either action. Similarly, exporting a snapshot to another cluster has little impact on RegionServers of the local cluster.
 
 Prior to version 0.94.6, the only way to backup or to clone a table is to use CopyTable/ExportTable, or to copy all the hfiles in HDFS after disabling the table. The disadvantages of these methods are that you can degrade region server performance (Copy/Export Table) or you need to disable the table, that means no reads or writes; and this is usually unacceptable.
 
@@ -69,7 +69,7 @@ hbase> snapshot 'myTable', 'myTableSnapshot-122112'
 
 #### Take a Snapshot Without Flushing
 
-The default behavior is to perform a flush of data in memory before the snapshot is taken. This means that data in memory is included in the snapshot. In most cases, this is the desired behavior. However, if your set-up can tolerate data in memory being excluded from the snapshot, you can use the `SKIP_FLUSH` option of the `snapshot` command to disable and flushing while taking the snapshot.
+The default behavior is to perform a flush of data in memory before the snapshot is taken. This means that data in memory is included in the snapshot. In most cases, this is the desired behavior. However, if your set-up can tolerate data in memory being excluded from the snapshot, you can use the `SKIP_FLUSH` option of the `snapshot` command to disable flushing while taking the snapshot.
 
 ```ruby
 hbase> snapshot 'mytable', 'snapshot123', {SKIP_FLUSH => true}
@@ -269,7 +269,7 @@ $ hbase org.apache.hadoop.hbase.snapshot.SnapshotInfo \
 
 ## Storing Snapshots in Microsoft Azure Blob Storage
 
-You can store snapshots in Microsoft Azure Blog Storage using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket).
+You can store snapshots in Microsoft Azure Blob Storage using the same techniques as in [Storing Snapshots in an Amazon S3 Bucket](/docs/operational-management/backup-and-snapshots#storing-snapshots-in-an-amazon-s3-bucket).
 
 ### Prerequisites [#operational-management-backup-and-snapshots-stroing-in-azure-prerequisites]
 

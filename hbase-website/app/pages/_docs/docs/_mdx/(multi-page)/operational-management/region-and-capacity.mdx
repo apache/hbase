@@ -19,7 +19,7 @@ Merge is a utility that can merge adjoining regions in the same table (see org.a
 $ bin/hbase org.apache.hadoop.hbase.util.Merge <tablename> <region1> <region2>
 ```
 
-If you feel you have too many regions and want to consolidate them, Merge is the utility you need. Merge must run be done when the cluster is down. See the [O'Reilly HBase Book](https://web.archive.org/web/20111231002503/http://ofps.oreilly.com/titles/9781449396107/performance.html) for an example of usage.
+If you feel you have too many regions and want to consolidate them, Merge is the utility you need. Merge must be done when the cluster is down. See the [O'Reilly HBase Book](https://web.archive.org/web/20111231002503/http://ofps.oreilly.com/titles/9781449396107/performance.html) for an example of usage.
 
 You will need to pass 3 parameters to this application. The first one is the table name. The second one is the fully qualified name of the first region to merge, like "table_name,\x0A,1342956111995.7cef47f192318ba7ccc75b1bbf27a82b.". The third one is the fully qualified name for the second region to merge.
 
@@ -127,7 +127,7 @@ Then, there are some considerations when setting up your cluster and tables.
 
 Depending on read/write volume and latency requirements, optimal compaction settings may be different. See [compaction](/docs/architecture/regions#compaction) for some details.
 
-When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput. Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per regions. Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; [hbase.hstore.blockingStoreFiles](/docs/configuration/default#hbasehstoreblockingStoreFiles-toc) should also be increased, as more files might accumulate in such case. You may also consider manually managing compactions: [managed.compactions](/docs/configuration/important#managed-compactions)
+When provisioning for large data sizes, however, it's good to keep in mind that compactions can affect write throughput. Thus, for write-intensive workloads, you may opt for less frequent compactions and more store files per region. Minimum number of files for compactions (`hbase.hstore.compaction.min`) can be set to higher value; [hbase.hstore.blockingStoreFiles](/docs/configuration/default#hbasehstoreblockingStoreFiles-toc) should also be increased, as more files might accumulate in such case. You may also consider manually managing compactions: [managed.compactions](/docs/configuration/important#managed-compactions)
 
 #### Pre-splitting the table
 
@@ -159,9 +159,9 @@ Then use the admin/shell _rsgroup_ methods/commands to create and manipulate Reg
  Took 0.5610 seconds
 ```
 
-High level, you create a rsgroup that is other than the `default` group using _add_rsgroup_ command. You then add servers and tables to this group with the _move_servers_rsgroup_ and _move_tables_rsgroup_ commands. If necessary, run a balance for the group if tables are slow to migrate to the groups dedicated server with the _balance_rsgroup_ command (Usually this is not needed). To monitor effect of the commands, see the `Tables` tab toward the end of the Master UI home page. If you click on a table, you can see what servers it is deployed across. You should see here a reflection of the grouping done with your shell commands. View the master log if issues.
+High level, you create a rsgroup that is other than the `default` group using _add_rsgroup_ command. You then add servers and tables to this group with the _move_servers_rsgroup_ and _move_tables_rsgroup_ commands. If necessary, run a balance for the group if tables are slow to migrate to the group's dedicated server with the _balance_rsgroup_ command (Usually this is not needed). To monitor effect of the commands, see the `Tables` tab toward the end of the Master UI home page. If you click on a table, you can see what servers it is deployed across. You should see here a reflection of the grouping done with your shell commands. View the master log if issues.
 
-Here is example using a few of the rsgroup commands. To add a group, do as follows:
+Here is an example using a few of the rsgroup commands. To add a group, do as follows:
 
 ```bash
  hbase(main):008:0> add_rsgroup 'my_group'
@@ -188,9 +188,9 @@ Add a server (specified by hostname + port) to the just-made group using the _mo
   Administration
 </Callout>
 
-Servers come and go over the lifetime of a Cluster. Currently, you must manually align the servers referenced in rsgroups with the actual state of nodes in the running cluster. What we mean by this is that if you decommission a server, then you must update rsgroups as part of your server decommission process removing references. Notice that, by calling `clearDeadServers` manually will also remove the dead servers from any rsgroups, but the problem is that we will lost track of the dead servers after master restarts, which means you still need to update the rsgroup by your own.
+Servers come and go over the lifetime of a Cluster. Currently, you must manually align the servers referenced in rsgroups with the actual state of nodes in the running cluster. What we mean by this is that if you decommission a server, then you must update rsgroups as part of your server decommission process removing references. Notice that, by calling `clearDeadServers` manually will also remove the dead servers from any rsgroups, but the problem is that we will lose track of the dead servers after master restarts, which means you still need to update the rsgroup by your own.
 
-Please use `Admin.removeServersFromRSGroup` or shell command _remove_servers_rsgroup_ to remove decommission servers from rsgroup.
+Please use `Admin.removeServersFromRSGroup` or shell command _remove_servers_rsgroup_ to remove decommissioned servers from rsgroup.
 
 The `default` group, and every regex-governed group (see [Regex-Based Membership](#regex-based-membership)), are dynamic. Their server lists mirror the current state of the cluster; i.e. if you shutdown a server that was part of one of them, and then do a _get_rsgroup_ on it to list its content in the shell, the server will no longer be listed. For other non-default rsgroups, though a node may be offline, it will persist in the group's list of servers. But if you move the offline server from the non-default rsgroup to default, it will not show in the `default` list. It will just be dropped.
 
@@ -244,11 +244,11 @@ The authors of the rsgroup feature, the Yahoo! HBase Engineering team, have been
 
 #### Isolate System Tables
 
-Either have a system rsgroup where all the system tables are or just leave the system tables in `default` rsgroup and have all user-space tables are in non-default rsgroups.
+Either have a system rsgroup where all the system tables are or just leave the system tables in `default` rsgroup and have all user-space tables in non-default rsgroups.
 
 #### Dead Nodes
 
-Yahoo! Have found it useful at their scale to keep a special rsgroup of dead or questionable nodes; this is one means of keeping them out of the running until repair.
+Yahoo! have found it useful at their scale to keep a special rsgroup of dead or questionable nodes; this is one means of keeping them out of the running until repair.
 
 Be careful replacing dead nodes in an rsgroup. Ensure there are enough live nodes before you start moving out the dead. Move in good live nodes first if you have to.
 
@@ -262,7 +262,7 @@ If it appears stuck, restart the Master process.
 
 ### Remove RegionServer Grouping
 
-Simply disable RegionServer Grouping feature is easy, just remove the 'hbase.balancer.rsgroup.enabled' from hbase-site.xml or explicitly set it to false in hbase-site.xml.
+Simply disabling RegionServer Grouping feature is easy, just remove the 'hbase.balancer.rsgroup.enabled' from hbase-site.xml or explicitly set it to false in hbase-site.xml.
 
 ```xml
 <property>
@@ -329,7 +329,7 @@ To enable ACL, add the following to your hbase-site.xml and restart your Master:
 
 ### Migrating From Old Implementation
 
-The coprocessor `org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint` is deprecated, but for compatible, if you want the pre 3.0.0 hbase client/shell to communicate with the new hbase cluster, you still need to add this coprocessor to master.
+The coprocessor `org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint` is deprecated, but for compatibility, if you want the pre 3.0.0 hbase client/shell to communicate with the new hbase cluster, you still need to add this coprocessor to master.
 
 The `hbase.rsgroup.grouploadbalancer.class` config has been deprecated, as now the top level load balancer will always be `RSGroupBasedLoadBalaner`, and the `hbase.master.loadbalancer.class` config is for configuring the balancer within a group. This also means you should not set `hbase.master.loadbalancer.class` to `RSGroupBasedLoadBalaner` any more even if rsgroup feature is enabled.
 
@@ -339,17 +339,17 @@ The main difference comparing to the old implementation is that, now the rsgroup
 
 Of course the behavior for the old RSGroupAdminEndpoint is not changed, we will fill the tables field of the RSGroupInfo before returning, to make it compatible with old hbase client/shell.
 
-When upgrading, the migration between the RSGroupInfo and TableDescriptor will be done automatically. It will take sometime, but it is fine to restart master in the middle, the migration will continue after restart. And during the migration, the rs group feature will still work and in most cases the region will not be misplaced(since this is only a one time job and will not last too long so we have not test it very seriously to make sure the region will not be misplaced always, so we use the word 'in most cases'). The implementation is a bit tricky, you can see the code in `RSGroupInfoManagerImpl.migrate` if interested.
+When upgrading, the migration between the RSGroupInfo and TableDescriptor will be done automatically. It will take some time, but it is fine to restart master in the middle, the migration will continue after restart. And during the migration, the rs group feature will still work and in most cases the region will not be misplaced(since this is only a one time job and will not last too long so we have not tested it very seriously to make sure the region will not be misplaced always, so we use the word 'in most cases'). The implementation is a bit tricky, you can see the code in `RSGroupInfoManagerImpl.migrate` if interested.
 
 ## Region Normalizer
 
 The Region Normalizer tries to make Regions all in a table about the same in size. It does this by first calculating total table size and average size per region. It splits any region that is larger than twice this size. Any region that is much smaller is merged into an adjacent region. The Normalizer runs on a regular schedule, which is configurable. It can also be disabled entirely via a runtime "switch". It can be run manually via the shell or Admin API call. Even if normally disabled, it is good to run manually after the cluster has been running a while or say after a burst of activity such as a large delete.
 
-The Normalizer works well for bringing a table's region boundaries into alignment with the reality of data distribution after an initial effort at pre-splitting a table. It is also a nice compliment to the data TTL feature when the schema includes timestamp in the rowkey, as it will automatically merge away regions whose contents have expired.
+The Normalizer works well for bringing a table's region boundaries into alignment with the reality of data distribution after an initial effort at pre-splitting a table. It is also a nice complement to the data TTL feature when the schema includes timestamp in the rowkey, as it will automatically merge away regions whose contents have expired.
 
 (The bulk of the below detail was copied wholesale from the blog by Romil Choksi at [HBase Region Normalizer](https://community.cloudera.com/t5/Community-Articles/HBase-Region-Normalizer/ta-p/247266)).
 
-The Region Normalizer is feature available since HBase-1.2. It runs a set of pre-calculated merge/split actions to resize regions that are either too large or too small compared to the average region size for a given table. Region Normalizer when invoked computes a normalization 'plan' for all of the tables in HBase. System tables (such as hbase:meta, hbase:namespace, Phoenix system tables etc) and user tables with normalization disabled are ignored while computing the plan. For normalization enabled tables, normalization plan is carried out in parallel across multiple tables.
+The Region Normalizer is a feature available since HBase-1.2. It runs a set of pre-calculated merge/split actions to resize regions that are either too large or too small compared to the average region size for a given table. Region Normalizer when invoked computes a normalization 'plan' for all of the tables in HBase. System tables (such as hbase:meta, hbase:namespace, Phoenix system tables etc) and user tables with normalization disabled are ignored while computing the plan. For normalization enabled tables, normalization plan is carried out in parallel across multiple tables.
 
 Normalizer can be enabled or disabled globally for the entire cluster using the ‘normalizer_switch' command in the HBase shell. Normalization can also be controlled on a per table basis, which is disabled by default when a table is created. Normalization for a table can be enabled or disabled by setting the NORMALIZATION_ENABLED table attribute to true or false.
 
@@ -379,9 +379,9 @@ true
 
 When enabled, Normalizer is invoked in the background every 5 mins (by default), which can be configured using `hbase.normalization.period` in `hbase-site.xml`. Normalizer can also be invoked manually/programmatically at will using HBase shell's `normalize` command. HBase by default uses `SimpleRegionNormalizer`, but users can design their own normalizer as long as they implement the RegionNormalizer Interface. Details about the logic used by `SimpleRegionNormalizer` to compute its normalization plan can be found [here](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/master/normalizer/SimpleRegionNormalizer.html).
 
-The below example shows a normalization plan being computed for an user table, and merge action being taken as a result of the normalization plan computed by SimpleRegionNormalizer.
+The below example shows a normalization plan being computed for a user table, and merge action being taken as a result of the normalization plan computed by SimpleRegionNormalizer.
 
-Consider an user table with some pre-split regions having 3 equally large regions (about 100K rows) and 1 relatively small region (about 25K rows). Following is the snippet from an hbase meta table scan showing each of the pre-split regions for the user table.
+Consider a user table with some pre-split regions having 3 equally large regions (about 100K rows) and 1 relatively small region (about 25K rows). Following is the snippet from an hbase meta table scan showing each of the pre-split regions for the user table.
 
 ```
 table_p8ddpd6q5z,,1469494305548.68b9892220865cb6048 column=info:regioninfo, timestamp=1469494306375, value={ENCODED => 68b9892220865cb604809c950d1adf48, NAME => 'table_p8ddpd6q5z,,1469494305548.68b989222 09c950d1adf48.   0865cb604809c950d1adf48.', STARTKEY => '', ENDKEY => '1'}
@@ -395,7 +395,7 @@ table_p8ddpd6q5z,7,1469494339662.94c64e748979ecbb16 column=info:regioninfo, time
 table_p8ddpd6q5z,8,1469494339662.6d2b3f5fd1595ab8e7 column=info:regioninfo, timestamp=1469494339859, value={ENCODED => 6d2b3f5fd1595ab8e7c031876057b1ee, NAME => 'table_p8ddpd6q5z,8,1469494339662.6d2b3f5f c031876057b1ee.   d1595ab8e7c031876057b1ee.', STARTKEY => '8', ENDKEY => ''}
 ```
 
-Invoking the normalizer using 'normalize' int the HBase shell, the below log snippet from HMaster log shows the normalization plan computed as per the logic defined for SimpleRegionNormalizer. Since the total region size (in MB) for the adjacent smallest regions in the table is less than the average region size, the normalizer computes a plan to merge these two regions.
+Invoking the normalizer using 'normalize' in the HBase shell, the below log snippet from HMaster log shows the normalization plan computed as per the logic defined for SimpleRegionNormalizer. Since the total region size (in MB) for the adjacent smallest regions in the table is less than the average region size, the normalizer computes a plan to merge these two regions.
 
 ```
 2016-07-26 07:08:26,928 DEBUG [B.fifo.QRpcServer.handler=20,queue=2,port=20000] master.HMaster: Skipping normalization for table: hbase:namespace, as it's either system table or doesn't have auto
@@ -411,7 +411,7 @@ normalization turned on
 STARTKEY => '1', ENDKEY => '3'}}
 ```
 
-Region normalizer as per it's computed plan, merged the region with start key as ‘' and end key as ‘1', with another region having start key as ‘1' and end key as ‘3'. Now, that these regions have been merged we see a single new region with start key as ‘' and end key as ‘3'
+Region normalizer as per its computed plan, merged the region with start key as ‘' and end key as ‘1', with another region having start key as ‘1' and end key as ‘3'. Now, that these regions have been merged we see a single new region with start key as ‘' and end key as ‘3'
 
 ```text
 table_p8ddpd6q5z,,1469516907210.e06c9b83c4a252b130e column=info:mergeA, timestamp=1469516907431,
@@ -427,7 +427,7 @@ table_p8ddpd6q5z,7,1469514790152.7c5a67bc755e649db2 column=info:regioninfo, time
 table_p8ddpd6q5z,8,1469514790152.58e7503cda69f98f47 column=info:regioninfo, timestamp=1469514790312, value={ENCODED => 58e7503cda69f98f4755178e74288c3a, NAME => 'table_p8ddpd6q5z,8,1469514790152.58e7503c 55178e74288c3a.  da69f98f4755178e74288c3a.', STARTKEY => '8', ENDKEY => ''}
 ```
 
-A similar example can be seen for an user table with 3 smaller regions and 1 relatively large region. For this example, we have an user table with 1 large region containing 100K rows, and 3 relatively smaller regions with about 33K rows each. As seen from the normalization plan, since the larger region is more than twice the average region size it ends being split into two regions – one with start key as ‘1' and end key as ‘154717' and the other region with start key as '154717' and end key as ‘3'
+A similar example can be seen for a user table with 3 smaller regions and 1 relatively large region. For this example, we have a user table with 1 large region containing 100K rows, and 3 relatively smaller regions with about 33K rows each. As seen from the normalization plan, since the larger region is more than twice the average region size it ends up being split into two regions – one with start key as ‘1' and end key as ‘154717' and the other region with start key as '154717' and end key as ‘3'
 
 ```text
 2016-07-26 07:39:45,636 DEBUG [B.fifo.QRpcServer.handler=7,queue=1,port=20000] master.HMaster: Skipping normalization for table: hbase:backup, as it's either system table or doesn't have auto normalization turned on
@@ -451,6 +451,6 @@ server=hbase-test-rc-5.openstacklocal,16020,1469419333913}
 
 ## Auto Region Reopen
 
-We can leak store reader references if a coprocessor or core function somehow opens a scanner, or wraps one, and then does not take care to call close on the scanner or the wrapped instance. Leaked store files can not be removed even after it is invalidated via compaction. A reasonable mitigation for a reader reference leak would be a fast reopen of the region on the same server. This will release all resources, like the refcount, leases, etc. The clients should gracefully ride over this like any other region in transition. By default this auto reopen of region feature would be disabled. To enabled it, please provide high ref count value for config `hbase.regions.recovery.store.file.ref.count`.
+We can leak store reader references if a coprocessor or core function somehow opens a scanner, or wraps one, and then does not take care to call close on the scanner or the wrapped instance. Leaked store files can not be removed even after it is invalidated via compaction. A reasonable mitigation for a reader reference leak would be a fast reopen of the region on the same server. This will release all resources, like the refcount, leases, etc. The clients should gracefully ride over this like any other region in transition. By default this auto reopen of region feature would be disabled. To enable it, please provide high ref count value for config `hbase.regions.recovery.store.file.ref.count`.
 
 Please refer to config descriptions for `hbase.master.regions.recovery.check.interval` and `hbase.regions.recovery.store.file.ref.count`.

@@ -32,7 +32,7 @@ users will face coming from HBase 1.x releases.
 
 - Public Audience
 
-The following tables describes the coprocessor changes.
+The following tables describe the coprocessor changes.
 
 **class CoprocessorRpcChannel**
 
@@ -343,7 +343,7 @@ org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache
 
 ### HTableDescriptor and HColumnDescriptor changes
 
-HTableDescriptor and HColumnDescriptor has become interfaces and you can create it through Builders. HCD has become CFD. It no longer implements writable interface.
+HTableDescriptor and HColumnDescriptor have become interfaces and you can create it through Builders. HCD has become CFD. It no longer implements writable interface.
 package org.apache.hadoop.hbase
 
 #### class HColumnDescriptor [!toc]
@@ -553,7 +553,7 @@ org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | This class became interface. | A client program may be interrupted by IncompatibleClassChangeError or InstantiationError exception dependent on the usage of this class. |
 
-### Mapreduce changes:
+### MapReduce changes:
 
 HFile\*Format has been removed in HBase 2.0.
 

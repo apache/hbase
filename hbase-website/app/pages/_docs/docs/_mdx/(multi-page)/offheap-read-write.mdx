@@ -101,7 +101,7 @@ client will need some off-heap to do its workings especially if short-circuit re
 1 - 2 GB for the max direct memory size has worked in tests.
 
 If you are using coprocessors and refer to the Cells in the read results, DO NOT store reference to these Cells out of
-the scope of the CP hook methods. Some times the CPs want to store info about the cell (Like its row key) for considering
+the scope of the CP hook methods. Sometimes the CPs want to store info about the cell (Like its row key) for considering
 in the next CP hook call etc. For such cases, pls clone the required fields of the entire Cell as per the use cases.
 \[ See CellUtil#cloneXXX(Cell) APIs \]
 
@@ -109,7 +109,7 @@ in the next CP hook call etc. For such cases, pls clone the required fields of t
 
 In HBase-2.x, the RegionServer will read blocks from HDFS to a temporary onheap ByteBuffer and then flush to
 the BucketCache. Even if the BucketCache is offheap, we will first pull the HDFS read onheap before writing
-it out to the offheap BucketCache. We can observe much GC pressure when cache hit ratio low (e.g. a cacheHitRatio ~ 60% ).
+it out to the offheap BucketCache. We can observe much GC pressure when cache hit ratio is low (e.g. a cacheHitRatio ~ 60% ).
 [HBASE-21879](https://issues.apache.org/jira/browse/HBASE-21879) addresses this issue (Requires hbase-2.3.x/hbase-3.x).
 It depends on there being a supporting HDFS being in place (hadoop-2.10.x or hadoop-3.3.x) and it may require patching
 HBase itself (as of this writing); see
@@ -140,7 +140,7 @@ The three config keys —`hbase.ipc.server.reservoir.enabled`, `hbase.ipc.server
 have been renamed and deprecated in hbase-3.x/hbase-2.3.x. Please use the new config keys instead:
 `hbase.server.allocator.pool.enabled`, `hbase.server.allocator.buffer.size` and `hbase.server.allocator.max.buffer.count`.
 
-Next, we have some suggestions regards performance.
+Next, we have some suggestions regarding performance.
 
 **Please make sure that there are enough pooled DirectByteBuffer in your ByteBuffAllocator.**  
 The ByteBuffAllocator will allocate ByteBuffer from the DirectByteBuffer pool first. If
@@ -148,7 +148,7 @@ there's no available ByteBuffer in the pool, then we will allocate the ByteBuffe
 By default, we will pre-allocate 4MB for each RPC handler (The handler count is determined by the config:
 `hbase.regionserver.handler.count`, it has the default value 30) . That's to say, if your `hbase.server.allocator.buffer.size`
 is 65KB, then your pool will have 2MB _ 2 / 65KB _ 30 = 945 DirectByteBuffer. If you have a large scan and a big cache,
-you may have a RPC response whose bytes size is greater than 2MB (another 2MB for receiving rpc request), then it will
+you may have an RPC response whose bytes size is greater than 2MB (another 2MB for receiving rpc request), then it will
 be better to increase the `hbase.server.allocator.max.buffer.count`.
 
 The RegionServer web UI has statistics on ByteBuffAllocator:
@@ -165,10 +165,10 @@ heapAllocationRatio >= hbase.server.allocator.minimal.allocate.size / hbase.serv
 We have the default block size of 64KB, so almost all of the data blocks will be 64KB + a small delta, where the delta is
 very small, depending on the size of the last Cell. If we set `hbase.server.allocator.buffer.size`=64KB,
 then each block will be allocated as two ByteBuffers: one 64KB DirectByteBuffer and one HeapByteBuffer for the delta bytes.
-Ideally, we should let the data block to be allocated as one ByteBuffer; it has a simpler data structure, faster access speed,
+Ideally, we should let the data block be allocated as one ByteBuffer; it has a simpler data structure, faster access speed,
 and less heap usage. Also, if the blocks are a composite of multiple ByteBuffers, to validate the checksum
 we have to perform a temporary heap copy (see [HBASE-21917](https://issues.apache.org/jira/browse/HBASE-21917))
-whereas if it's a single ByteBuffer we can speed the checksum by calling the hadoop' checksum native lib; it's more faster.
+whereas if it's a single ByteBuffer we can speed the checksum by calling the Hadoop checksum native lib; it's faster.
 
 Please also see: [HBASE-22483](https://issues.apache.org/jira/browse/HBASE-22483)
 
@@ -192,6 +192,6 @@ When a Cell is added to a MemStore, the bytes for that Cell are copied into thes
 and a Cell POJO will refer to this memory area. This can greatly reduce the on-heap occupancy of the MemStores and reduce the total heap utilization for RegionServers
 in a write-heavy workload. On-heap and off-heap memory utilization are tracked at multiple levels to implement low level and high level memory management.
 The decision to flush a MemStore considers both the on-heap and off-heap usage of that MemStore. At the Region level, we sum the on-heap and off-heap usages and
-compare them against the region flush size (128MB, by default). Globally, on-heap size occupancy of all memstores are tracked as well as off-heap size. When any of
+compare them against the region flush size (128MB, by default). Globally, on-heap size occupancy of all memstores is tracked as well as off-heap size. When any of
 these sizes breach the lower mark (`hbase.regionserver.global.memstore.size.lower.limit`) or the maximum size `hbase.regionserver.global.memstore.size`), all
 regions are selected for forced flushes.

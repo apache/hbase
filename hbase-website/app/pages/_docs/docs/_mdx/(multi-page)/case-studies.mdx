@@ -40,7 +40,7 @@ Network:
 #### Hypotheses
 
 **HBase "Hot Spot" Region**  
-We hypothesized that we were experiencing a familiar point of pain: a "hot spot" region in an HBase table, where uneven key-space distribution can funnel a huge number of requests to a single HBase region, bombarding the RegionServer process and cause slow response time.
+We hypothesized that we were experiencing a familiar point of pain: a "hot spot" region in an HBase table, where uneven key-space distribution can funnel a huge number of requests to a single HBase region, bombarding the RegionServer process and causing slow response time.
 Examination of the HBase Master status page showed that the number of HBase requests to the troubled node was almost zero.
 Further, examination of the HBase logs showed that there were no region splits, compactions, or other region transitions in progress.
 This effectively ruled out a "hot spot" as the root cause of the observed slowness.
@@ -51,7 +51,7 @@ Examination of the DataNode logs showed that there were very few blocks being re
 This ruled out the possibility of non-local data causing a slowdown.
 
 **Excessive I/O Wait Due To Swapping Or An Over-Worked Or Failing Hard Disk**  
-After concluding that the Hadoop and HBase were not likely to be the culprits, we moved on to troubleshooting the DataNode's hardware.
+After concluding that Hadoop and HBase were not likely to be the culprits, we moved on to troubleshooting the DataNode's hardware.
 Java, by design, will periodically scan its entire memory space to do garbage collection.
 If system memory is heavily overcommitted, the Linux kernel may enter a vicious cycle, using up all of its resources swapping Java heap back and forth from disk to RAM as Java tries to run garbage collection.
 Further, a failing hard disk will often retry reads and/or writes many times before giving up and returning an error.
@@ -78,8 +78,8 @@ collisions:0 txqueuelen:0
 RX bytes:2416328868676 (2.4 TB)  TX bytes:3464991094001 (3.4 TB)
 ```
 
-These errors immediately lead us to suspect that one or more of the ethernet interfaces might have negotiated the wrong line speed.
-This was confirmed both by running an ICMP ping from an external host and observing round-trip-time in excess of 700ms, and by running `ethtool(8)` on the members of the bond interface and discovering that the active interface was operating at 100Mbs/, full duplex.
+These errors immediately led us to suspect that one or more of the ethernet interfaces might have negotiated the wrong line speed.
+This was confirmed both by running an ICMP ping from an external host and observing round-trip-time in excess of 700ms, and by running `ethtool(8)` on the members of the bond interface and discovering that the active interface was operating at 100Mb/s, full duplex.
 
 ```bash
 $ sudo ethtool eth0

@@ -9,7 +9,7 @@ Review the [os](/docs/configuration/basic-prerequisites#operating-system-utiliti
 
 ### Big Cluster Configurations
 
-If you have a cluster with a lot of regions, it is possible that a Regionserver checks in briefly after the Master starts while all the remaining RegionServers lag behind. This first server to check in will be assigned all regions which is not optimal. To prevent the above scenario from happening, up the `hbase.master.wait.on.regionservers.mintostart` property from its default value of 1. See [HBASE-6389 Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments](https://issues.apache.org/jira/browse/HBASE-6389) for more detail.
+If you have a cluster with a lot of regions, it is possible that a RegionServer checks in briefly after the Master starts while all the remaining RegionServers lag behind. This first server to check in will be assigned all regions which is not optimal. To prevent the above scenario from happening, up the `hbase.master.wait.on.regionservers.mintostart` property from its default value of 1. See [HBASE-6389 Modify the conditions to ensure that Master waits for sufficient number of Region Servers before starting region assignments](https://issues.apache.org/jira/browse/HBASE-6389) for more detail.
 
 ## Recommended Configurations
 
@@ -55,7 +55,7 @@ See [compression](/docs/compression) for more information.
 
 ### Configuring the size and number of WAL files
 
-HBase uses [wal]/docs/architecture/regionserver#write-ahead-log-wal to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default a HDFS block is 64Mb and a WAL file is ~60Mb).
+HBase uses [wal]/docs/architecture/regionserver#write-ahead-log-wal to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default an HDFS block is 64Mb and a WAL file is ~60Mb).
 
 HBase also has a limit on the number of WAL files, designed to ensure there's never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocate enough WAL files to store at least that much data (when all memstores are close to full). For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb\*0.4/60, the starting point for WAL file count is ~109. However, as all memstores are not expected to be full all the time, less WAL files can be allocated.
 
@@ -207,7 +207,7 @@ Currently it supports Master and RegionServer Java VM. By default, the JMX liste
 
 The registry port can be shared with connector port in most cases, so you only need to configure `regionserver.rmi.registry.port`. However, if you want to use SSL communication, the 2 ports must be configured to different values.
 
-By default the password authentication and SSL communication is disabled. To enable password authentication, you need to update _hbase-env.sh_ like below:
+By default the password authentication and SSL communication are disabled. To enable password authentication, you need to update _hbase-env.sh_ like below:
 
 ```bash
 export HBASE_JMX_BASE="-Dcom.sun.management.jmxremote.authenticate=true                  \
