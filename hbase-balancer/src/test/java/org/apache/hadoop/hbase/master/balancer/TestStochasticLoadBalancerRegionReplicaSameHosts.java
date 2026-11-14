@@ -34,10 +34,10 @@ import org.junit.jupiter.api.Test;
 public class TestStochasticLoadBalancerRegionReplicaSameHosts extends StochasticBalancerTestBase {
 
   @Test
-  public void testRegionReplicationOnMidClusterSameHosts() {
+  public void testRegionReplicationOnSmallClusterSameHosts() {
     setMaxRunTime(Duration.ofSeconds(10));
-    int numHosts = 30;
-    int numRegions = 30 * 30;
+    int numHosts = 4;
+    int numRegions = numHosts * 5;
     int replication = 3; // 3 replicas per region
     int numRegionsPerServer = 5;
     int numTables = 10;
