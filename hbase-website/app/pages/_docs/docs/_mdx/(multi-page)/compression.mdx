@@ -172,7 +172,7 @@ In general, you need to weigh your options between smaller size and faster compr
 
 The Hadoop shared library has a bunch of facility including compression libraries and fast crc'ing — hardware crc'ing if your chipset supports it.
 To make this facility available to HBase, do the following. HBase/Hadoop will fall back to use alternatives if it cannot find the native library
-versions — or fail outright if you asking for an explicit compressor and there is no alternative available.
+versions — or fail outright if you are asking for an explicit compressor and there is no alternative available.
 
 First make sure of your Hadoop. Fix this message if you are seeing it starting Hadoop processes:
 
@@ -210,13 +210,13 @@ Above shows that the native hadoop library is not available in HBase context.
 
 The above NativeLibraryChecker tool may come back saying all is hunky-dory
 — i.e. all libs show 'true', that they are available — but follow the below
-presecription anyways to ensure the native libs are available in HBase context,
+prescription anyways to ensure the native libs are available in HBase context,
 when it goes to use them.
 
-To fix the above, either copy the Hadoop native libraries local or symlink to them if the Hadoop and HBase stalls are adjacent in the filesystem.
+To fix the above, either copy the Hadoop native libraries local or symlink to them if the Hadoop and HBase installs are adjacent in the filesystem.
 You could also point at their location by setting the `LD_LIBRARY_PATH` environment variable in your hbase-env.sh.
 
-Where the JVM looks to find native libraries is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, is going to look in _lib/native/PLATFORM_ where `PLATFORM` is the label for the platform your HBase is installed on.
+Where the JVM looks to find native libraries is "system dependent" (See `java.lang.System#loadLibrary(name)`). On linux, by default, it is going to look in _lib/native/PLATFORM_ where `PLATFORM` is the label for the platform your HBase is installed on.
 On a local linux machine, it seems to be the concatenation of the java properties `os.name` and `os.arch` followed by whether 32 or 64 bit.
 HBase on startup prints out all of the java system properties so find the os.name and os.arch in the log.
 For example:
@@ -247,7 +247,7 @@ $ ls -la
 ...
 ```
 
-If you see PureJavaCrc32C in a stack track or if you see something like the below in a perf trace, then native is not working; you are using the java CRC functions rather than native:
+If you see PureJavaCrc32C in a stack trace or if you see something like the below in a perf trace, then native is not working; you are using the java CRC functions rather than native:
 
 ```
   5.02%  perf-53601.map      [.] Lorg/apache/hadoop/util/PureJavaCrc32C;.update
@@ -255,9 +255,9 @@ If you see PureJavaCrc32C in a stack track or if you see something like the belo
 
 See [HBASE-11927 Use Native Hadoop Library for HFile checksum (And flip default from CRC32 to CRC32C)](https://issues.apache.org/jira/browse/HBASE-11927),
 for more on native checksumming support. See in particular the release note for how to check if your hardware to see if your processor has support for hardware CRCs.
-Or checkout the Apache [Checksums in HBase](https://blogs.apache.org/hbase/entry/saving_cpu_using_native_hadoop) blog post.
+Or check out the Apache [Checksums in HBase](https://blogs.apache.org/hbase/entry/saving_cpu_using_native_hadoop) blog post.
 
-Here is example of how to point at the Hadoop libs with `LD_LIBRARY_PATH` environment variable:
+Here is an example of how to point at the Hadoop libs with `LD_LIBRARY_PATH` environment variable:
 
 ```bash
 $ LD_LIBRARY_PATH=~/hadoop-2.5.0-SNAPSHOT/lib/native ./bin/hbase --config ~/conf_hbase org.apache.hadoop.util.NativeLibraryChecker
@@ -386,7 +386,7 @@ See [brand.new.compressor](/docs/troubleshooting#logs-flooded-with-2011-01-10-12
 
 #### Install Hadoop Native LZO Support
 
-HBase cannot ship with the Hadoop native LZO codc because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
+HBase cannot ship with the Hadoop native LZO codec because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
 See the [Hadoop-LZO at Twitter](https://github.com/twitter/hadoop-lzo/blob/master/README.md) for information on configuring LZO support for HBase.
 
 If you depend upon LZO compression, consider using the pure Java and ASL licensed
@@ -444,7 +444,7 @@ See [hbase.regionserver.codecs](/docs/compression#enforce-compression-settings-o
 
 </Callout>
 
-Each of these library locations need to be added to the environment variable `HBASE_LIBRARY_PATH` for the operating system user that runs HBase.
+Each of these library locations needs to be added to the environment variable `HBASE_LIBRARY_PATH` for the operating system user that runs HBase.
 You need to restart the RegionServer for the changes to take effect.
 
 #### CompressionTest

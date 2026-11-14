@@ -36,7 +36,7 @@ is only relevant prior to the creation of the `hbase:backup` table. Use the `alt
 when this table already exists. See the [below section](/docs/backup-restore/additional-topics#a-warning-on-file-system-growth) for more details on the impact of this
 configuration property.
 
-**_hbase.backup.attempts.max_**: The number of attempts to perform when taking hbase table snapshots (default: 10).
+**_hbase.backup.attempts.max_**: The number of attempts to perform when taking HBase table snapshots (default: 10).
 
 **_hbase.backup.attempts.pause.ms_**: The amount of time to wait between failed snapshot attempts in milliseconds (default: 10000).
 
@@ -52,7 +52,7 @@ and more importantly, how restores must be performed. Test the plan to ensure th
 At a minimum, store backup data from a production cluster on a different cluster or server. To further safeguard the data,
 use a backup location that is at a different physical location.
 
-If you have a unrecoverable loss of data on your primary production cluster as a result of computer system issues, you may
+If you have an unrecoverable loss of data on your primary production cluster as a result of computer system issues, you may
 be able to restore the data from a different cluster or server at the same site. However, a disaster that destroys the whole
 site renders locally stored backups useless. Consider storing the backup data and necessary resources (both computing capacity
 and operator expertise) to restore the data at a site sufficiently remote from the production site. In the case of a catastrophe
@@ -95,7 +95,7 @@ The admin team also wants to ensure daily backups occur automatically.
 
 ![Tables Composing The Backup Set](/docs-images/backup-app-components.png)
 
-The following is an outline of the steps and examples of commands that are used to backup the data for the _green_ application and
+The following is an outline of the steps and examples of commands that are used to back up the data for the _green_ application and
 to recover the data later. All commands are run when logged in as HBase superuser.
 
 - A backup set called _green_set_ is created as an alias for both the transactions table and the customer table. The backup set can
@@ -118,7 +118,7 @@ to recover the data later. All commands are run when logged in as HBase superuse
       ```
 
 - Incremental backups should be run according to a schedule that ensures essential data recovery in the event of a catastrophe. At
-  this retail company, the HBase admin team decides that automated daily backups secures the data sufficiently. The team decides that
+  this retail company, the HBase admin team decides that automated daily backups secure the data sufficiently. The team decides that
   they can implement this by modifying an existing Cron job that is defined in `/etc/crontab`. Consequently, IT modifies the Cron job
   by adding the following line:
 
@@ -166,7 +166,7 @@ to recover the data later. All commands are run when logged in as HBase superuse
 With this feature which makes copying data to remote locations, it's important to take a moment to clearly state the procedural
 concerns that exist around data security. Like the HBase replication feature, backup and restore provides the constructs to automatically
 copy data from within a corporate boundary to some system outside of that boundary. It is imperative when storing sensitive data that with backup and restore, much
-less any feature which extracts data from HBase, the locations to which data is being sent has undergone a security audit to ensure
+less any feature which extracts data from HBase, the locations to which data is being sent have undergone a security audit to ensure
 that only authenticated users are allowed to access that data.
 
 For example, with the above example of backing up data to S3, it is of the utmost importance that the proper permissions are assigned
@@ -218,7 +218,7 @@ in the HBase shell. Modifying the configuration property `hbase.backup.system.tt
 
 ## Capacity Planning
 
-When designing a distributed system deployment, it is critical that some basic mathmatical rigor is executed to ensure sufficient computational
+When designing a distributed system deployment, it is critical that some basic mathematical rigor is executed to ensure sufficient computational
 capacity is available given the data and software requirements of the system. For this feature, the availability of network capacity is the largest
 bottleneck when estimating the performance of some implementation of backup and restore. The second most costly function is the speed at which
 data can be read/written.
@@ -232,12 +232,12 @@ To estimate the duration of a full backup, we have to understand the general act
 - Export the snapshot to the destination: see below. Relative to the size of the data and the network bandwidth to the destination.
 
 To approximate how long the final step will take, we have to make some assumptions on hardware. Be aware that these will _not_ be accurate for your
-system — these are numbers that your or your administrator know for your system. Let's say the speed of reading data from HDFS on a single node is
+system — these are numbers that you or your administrator know for your system. Let's say the speed of reading data from HDFS on a single node is
 capped at 80MB/s (across all Mappers that run on that host), a modern network interface controller (NIC) supports 10Gb/s, the top-of-rack switch can
 handle 40Gb/s, and the WAN between your clusters is 10Gb/s. This means that you can only ship data to your remote at a speed of 1.25GB/s — meaning
 that 16 nodes (`1.25 * 1024 / 80 = 16`) participating in the ExportSnapshot should be able to fully saturate the link between clusters. With more
 nodes in the cluster, we can still saturate the network but at a lesser impact on any one node which helps ensure local SLAs are made. If the size
-of the snapshot is 10TB, this would full backup would take in the ballpark of 2.5 hours (`10 * 1024 / 1.25 / (60 * 60) = 2.23hrs`)
+of the snapshot is 10TB, this full backup would take in the ballpark of 2.5 hours (`10 * 1024 / 1.25 / (60 * 60) = 2.23hrs`)
 
 As a general statement, it is very likely that the WAN bandwidth between your local cluster and the remote storage is the largest
 bottleneck to the speed of a full backup.
@@ -253,12 +253,12 @@ data at the full 80MB/s and `-w` is used to limit the job from spawning 16 worke
 
 Like we did for full backups, we have to understand the incremental backup process to approximate its runtime and cost.
 
-- Identify new write-ahead logs since the last full or incremental backup: negligible. Apriori knowledge from the backup system table(s).
+- Identify new write-ahead logs since the last full or incremental backup: negligible. A priori knowledge from the backup system table(s).
 - Read, filter, and write "minimized" HFiles equivalent to the WALs: dominated by the speed of writing data. Relative to write speed of HDFS.
 - Read bulk load records from the backup system table, form the paths for bulk-loaded HFiles, and copy them to the backup destination.
 - DistCp the HFiles to the destination: [see above](/docs/backup-restore/additional-topics#full-backups).
 
-For the second step, the dominating cost of this operation would be the re-writing the data (under the assumption that a majority of the
+For the second step, the dominating cost of this operation would be the re-writing of the data (under the assumption that a majority of the
 data in the WAL is preserved). In this case, we can assume an aggregate write speed of 30MB/s per node. Continuing our 16-node cluster example,
 this would require approximately 15 minutes to perform this step for 50GB of data (50 \* 1024 / 60 / 60 = 14.2). The amount of time to start the
 DistCp MapReduce job would likely dominate the actual time taken to copy the data (50 / 1.25 = 40 seconds) and can be ignored.
@@ -279,7 +279,7 @@ Copying backup information to multiple locations is an exercise left to the user
 introduce the ability to specify multiple-backup destinations intrinsically.
 
 **HBase superuser access is required**  
-Only an HBase superuser (e.g. hbase) is allowed to perform backup/restore, can pose a problem for shared HBase installations. Current mitigations would require
+Only an HBase superuser (e.g. hbase) is allowed to perform backup/restore, which can pose a problem for shared HBase installations. Current mitigations would require
 coordination with system administrators to build and deploy a backup and restore strategy ([HBASE-14138](https://issues.apache.org/jira/browse/HBASE-14138)).
 
 **Backup restoration is an online operation**  
@@ -298,4 +298,4 @@ will be modifications that would necessitate breaking compatibility ([HBASE-1751
 
 **Lack of global metrics for backup and restore**  
 Individual backup and restore operations contain metrics about the amount of work the operation included, but there is no centralized location (e.g. the Master UI)
-which present information for consumption ([HBASE-16565](https://issues.apache.org/jira/browse/HBASE-16565)).
+which presents information for consumption ([HBASE-16565](https://issues.apache.org/jira/browse/HBASE-16565)).

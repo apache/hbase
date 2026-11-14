@@ -118,7 +118,7 @@ default namespace with a MOB enabled column family named 'foo' this HDFS directo
 These MOB hfiles are maintained by special chores in the HBase Master and across the individual
 Region Servers. Specifically those chores take care of enforcing TTLs and compacting them. Note that
 this compaction is primarily a matter of controlling the total number of files in HDFS because our
-operational assumptions for MOB data is that it will seldom update or delete.
+operational assumptions for MOB data are that it will seldom update or delete.
 
 When a given MOB hfile is no longer needed as a result of our compaction process then a chore in
 the Master will take care of moving it to the archive just
@@ -220,7 +220,7 @@ value and skip rewriting the value if that file is over threshold.
 
 The bound of write amplification in this mode can be approximated as
 "Write Amplification" = $\log_{K}\!\left(\frac{M}{S}\right)$ where **K** is the number of files in compaction
-selection, **M** is the configurable threshold for MOB files size, and **S** is the minmum size of
+selection, **M** is the configurable threshold for MOB files size, and **S** is the minimum size of
 memstore flushes that create MOB files in the first place. For example given 5 files picked up per
 compaction, a threshold of 1 GB, and a flush size of 10MB the write amplification will be
 $\log\\_{5}\!\left(\frac{1\,\text{GB}}{10\,\text{MB}}\right) = \log\\_{5}(100) \approx 2.86$.
@@ -249,7 +249,7 @@ default MOB size threshold in this mode is set to 1GB. It can be changed by sett
 ```
 
 Additionally, when operating in this mode the compaction process will seek to avoid writing MOB
-files that are over the max file threshold. As it is writing out a additional MOB values into a MOB
+files that are over the max file threshold. As it is writing out additional MOB values into a MOB
 hfile it will check to see if the additional data causes the hfile to be over the max file size.
 When the hfile of MOB values reaches limit, the MOB hfile is committed to the MOB storage area and
 a new one is created. The hfile with reference cells will track the complete set of MOB hfiles it
@@ -260,13 +260,13 @@ needs in its metadata.
   time to compact a single region. If it nears an hour you should read through the troubleshooting
   section below [Adjusting the MOB cleaner's tolerance for new
   hfiles](/docs/architecture/hbase-mob#adjusting-the-mob-cleaners-tolerance-for-new-hfiles). Failure
-  to make the adjustments discussed there could lead to dataloss.
+  to make the adjustments discussed there could lead to data loss.
 </Callout>
 
 ### Configuring the MOB Cache
 
 Because there can be a large number of MOB files at any time, as compared to the number of HFiles,
-MOB files are not always kept open. The MOB file reader cache is a LRU cache which keeps the most
+MOB files are not always kept open. The MOB file reader cache is an LRU cache which keeps the most
 recently used MOB files open. To configure the MOB file reader's cache on each RegionServer, add
 the following properties to the RegionServer's `hbase-site.xml`, customize the configuration to
 suit your environment, and restart or rolling restart the RegionServer.

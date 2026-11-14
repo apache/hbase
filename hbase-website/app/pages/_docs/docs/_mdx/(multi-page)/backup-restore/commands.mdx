@@ -4,7 +4,7 @@ description: "Command-line utilities for creating, restoring, and merging HBase 
 ---
 
 This covers the command-line utilities that administrators would run to create, restore, and merge backups. Tools to
-inspect details on specific backup sessions is covered in the next section, [Administration of Backup Images](/docs/backup-restore/administration).
+inspect details on specific backup sessions are covered in the next section, [Administration of Backup Images](/docs/backup-restore/administration).
 
 Run the command `hbase backup help <command>` to access the online help that provides basic information about a command
 and its options. The below information is captured in this help message for each command.
@@ -13,8 +13,8 @@ and its options. The below information is captured in this help message for each
 
 <Callout type="info">
   For HBase clusters also using Apache Phoenix: include the SQL system catalog tables in the backup.
-  In the event that you need to restore the HBase backup, access to the system catalog tables enable
-  you to resume Phoenix interoperability with the restored data.
+  In the event that you need to restore the HBase backup, access to the system catalog tables
+  enables you to resume Phoenix interoperability with the restored data.
 </Callout>
 
 The first step in running the backup and restore utilities is to perform a full backup and to store the data in a separate image
@@ -50,11 +50,11 @@ _hdfs:_, _webhdfs:_, _s3a:_ or other compatible Hadoop File System implementatio
 **_-t \<table_name\[,table_name\]\>_**  
 A comma-separated list of tables to back up. If no tables are specified, all tables are backed up. No regular-expression or
 wildcard support is present; all table names must be explicitly listed. See [Backup Sets](/docs/backup-restore/commands#using-backup-sets) for more
-information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
-named options are required.
+information about performing operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
+named options is required.
 
 **_-s \<backup_set_name\>_**  
-Identify tables to backup based on a backup set. See [Using Backup Sets](/docs/backup-restore/commands#using-backup-sets) for the purpose and usage
+Identify tables to back up based on a backup set. See [Using Backup Sets](/docs/backup-restore/commands#using-backup-sets) for the purpose and usage
 of backup sets. Mutually exclusive with the _-t_ option.
 
 **_-w \<number_workers\>_**  
@@ -81,13 +81,13 @@ is useful to prevent backup tasks from stealing resources away from other MapRed
 $ hbase backup create full hdfs://host5:9000/data/backup -t SALES2,SALES3 -w 3
 ```
 
-This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance who NameNode is host5:9000
-in the path _/data/backup_. The _-w_ option specifies that no more than three parallel works complete the operation.
+This command creates a full backup image of two tables, SALES2 and SALES3, in the HDFS instance whose NameNode is host5:9000
+in the path _/data/backup_. The _-w_ option specifies that no more than three parallel workers complete the operation.
 
 ### Restoring a Backup Image
 
 Run the following command as an HBase superuser. You can only restore a backup on a running HBase cluster because the data must be
-redistributed the RegionServers for the operation to complete successfully.
+redistributed to the RegionServers for the operation to complete successfully.
 
 ```bash
 hbase restore <backup_path> <backup_id>
@@ -106,11 +106,11 @@ The backup ID that uniquely identifies the backup image to be restored.
 
 **_-t \<table_name\[,table_name\]\>_**  
 A comma-separated list of tables to restore. See [Backup Sets](/docs/backup-restore/commands#using-backup-sets) for more
-information about peforming operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
-named options are required.
+information about performing operations on collections of tables. Mutually exclusive with the _-s_ option; one of these
+named options is required.
 
 **_-s \<backup_set_name\>_**  
-Identify tables to backup based on a backup set. See [Using Backup Sets](/docs/backup-restore/commands#using-backup-sets) for the purpose and usage
+Identify tables to back up based on a backup set. See [Using Backup Sets](/docs/backup-restore/commands#using-backup-sets) for the purpose and usage
 of backup sets. Mutually exclusive with the _-t_ option.
 
 **_-q \<name\>_**  

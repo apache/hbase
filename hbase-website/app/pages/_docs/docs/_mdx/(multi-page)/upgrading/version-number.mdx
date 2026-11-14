@@ -68,12 +68,12 @@ In addition to the usual API versioning considerations HBase has other compatibi
 - Example: If your current version of HBase supported running on JDK 8, then an upgrade to a version that supports _Dependency Compatibility_ will also run on JDK 8.
 
 <Callout type="tip">
-  Previously, we tried to maintain dependency compatibility for the underly Hadoop service but over
-  the last few years this has proven untenable. While the HBase project attempts to maintain support
-  for older versions of Hadoop, we drop the "supported" designator for minor versions that fail to
-  continue to see releases. Additionally, the Hadoop project has its own set of compatibility
-  guidelines, which means in some cases having to update to a newer supported minor release might
-  break some of our compatibility promises.
+  Previously, we tried to maintain dependency compatibility for the underlying Hadoop service but
+  over the last few years this has proven untenable. While the HBase project attempts to maintain
+  support for older versions of Hadoop, we drop the "supported" designator for minor versions that
+  fail to continue to see releases. Additionally, the Hadoop project has its own set of
+  compatibility guidelines, which means in some cases having to update to a newer supported minor
+  release might break some of our compatibility promises.
 </Callout>
 
 #### Operational Compatibility [!toc]
@@ -136,7 +136,7 @@ Please keep in mind the following interactions between the `InterfaceAudience` a
 
 ### HBase Client API
 
-HBase Client API consists of all the classes or methods that are marked with InterfaceAudience.Public interface. All main classes in hbase-client and dependent modules have either InterfaceAudience.Public, InterfaceAudience.LimitedPrivate, or InterfaceAudience.Private marker. Not all classes in other modules (hbase-server, etc) have the marker. If a class is not annotated with one of these, it is assumed to be a InterfaceAudience.Private class.
+HBase Client API consists of all the classes or methods that are marked with InterfaceAudience.Public interface. All main classes in hbase-client and dependent modules have either InterfaceAudience.Public, InterfaceAudience.LimitedPrivate, or InterfaceAudience.Private marker. Not all classes in other modules (hbase-server, etc) have the marker. If a class is not annotated with one of these, it is assumed to be an InterfaceAudience.Private class.
 
 ### HBase LimitedPrivate API
 
