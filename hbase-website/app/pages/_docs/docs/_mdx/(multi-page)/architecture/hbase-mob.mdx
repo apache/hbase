@@ -220,7 +220,7 @@ value and skip rewriting the value if that file is over threshold.
 
 The bound of write amplification in this mode can be approximated as
 "Write Amplification" = $\log_{K}\!\left(\frac{M}{S}\right)$ where **K** is the number of files in compaction
-selection, **M** is the configurable threshold for MOB files size, and **S** is the minmum size of
+selection, **M** is the configurable threshold for MOB files size, and **S** is the minimum size of
 memstore flushes that create MOB files in the first place. For example given 5 files picked up per
 compaction, a threshold of 1 GB, and a flush size of 10MB the write amplification will be
 $\log\\_{5}\!\left(\frac{1\,\text{GB}}{10\,\text{MB}}\right) = \log\\_{5}(100) \approx 2.86$.

@@ -59,7 +59,7 @@ _dev-support/create-release/README.txt_ for how to configure your
 environment and run the script.
 
 <Callout type="info">
-  _dev-support/create-release/do-release-docker.sh_ supercedes the previous _dev-support/make_rc.sh_
+  _dev-support/create-release/do-release-docker.sh_ supersedes the previous _dev-support/make_rc.sh_
   script. It is more comprehensive automating all steps, rather than a portion, building a RC.
 </Callout>
 
@@ -148,7 +148,7 @@ URL to the JIRA points to the proper location which lists fixes for this release
 Next, adjust the version in all the POM files appropriately.
 If you are making a release candidate, you must remove the `-SNAPSHOT` label from all versions
 in all pom.xml files.
-If you are running this receipe to publish a snapshot, you must keep the `-SNAPSHOT` suffix on the hbase version.
+If you are running this recipe to publish a snapshot, you must keep the `-SNAPSHOT` suffix on the hbase version.
 The [Versions Maven Plugin](http://www.mojohaus.org/versions-maven-plugin/) can be of use here.
 To set a version in all the many poms of the hbase multi-module project, use a command like the following:
 
@@ -156,7 +156,7 @@ To set a version in all the many poms of the hbase multi-module project, use a c
 $ mvn clean org.codehaus.mojo:versions-maven-plugin:2.5:set -DnewVersion=2.1.0-SNAPSHOT
 ```
 
-Make sure all versions in poms are changed! Checkin the _CHANGES.md_, _RELEASENOTES.md_, and
+Make sure all versions in poms are changed! Check in the _CHANGES.md_, _RELEASENOTES.md_, and
 any maven version changes.
 
 </Step>
@@ -210,7 +210,7 @@ All tags should be signed tags; i.e. pass the _-s_ option (See
 for how to set up your git environment for signing).
 
 ```bash
-$ git tag -s 2.0.0-alpha4-RC0 -m "Tagging the 2.0.0-alpha4 first Releae Candidate (Candidates start at zero)"
+$ git tag -s 2.0.0-alpha4-RC0 -m "Tagging the 2.0.0-alpha4 first Release Candidate (Candidates start at zero)"
 ```
 
 Or, if you are making a release, tags should have a _rel/_ prefix to ensure
@@ -347,7 +347,7 @@ Making a SNAPSHOT release, this is what you want to happen.
 
 At this stage, you have two tarballs in your 'build output directory' and a set of artifacts
 in a staging area of the maven repository, in the 'closed' state.
-Next sign, fingerprint and then 'stage' your release candiate build output directory via svnpubsub by committing
+Next sign, fingerprint and then 'stage' your release candidate build output directory via svnpubsub by committing
 your directory to [The dev distribution directory](https://dist.apache.org/repos/dist/dev/hbase/)
 (See comments on [HBASE-10554 Please delete old releases from mirroring system](https://issues.apache.org/jira/browse/HBASE-10554)
 but in essence it is an svn checkout of [dev/hbase](https://dist.apache.org/repos/dist/dev/hbase) — releases are at

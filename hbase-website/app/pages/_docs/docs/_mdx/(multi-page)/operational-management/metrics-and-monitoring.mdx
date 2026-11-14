@@ -534,7 +534,7 @@ If we have a system table that stores such logs in increasing (not so strictly t
 
 Config which enabled system table to be created and store all log events is `hbase.regionserver.slowlog.systable.enabled`.
 
-The default value for this config is `false`. If provided `true` (Note: `hbase.regionserver.slowlog.buffer.enabled` should also be `true`), a cron job running in every RegionServer will persist the slow/large logs into table hbase:slowlog. By default cron job runs every 10 min. Duration can be configured with key: `hbase.slowlog.systable.chore.duration`. By default, RegionServer will store upto 1000(config key: `hbase.regionserver.slowlog.systable.queue.size`) slow/large logs in an internal queue and the chore will retrieve these logs from the queue and perform batch insertion in hbase:slowlog.
+The default value for this config is `false`. If provided `true` (Note: `hbase.regionserver.slowlog.buffer.enabled` should also be `true`), a cron job running in every RegionServer will persist the slow/large logs into table hbase:slowlog. By default cron job runs every 10 min. Duration can be configured with key: `hbase.slowlog.systable.chore.duration`. By default, RegionServer will store up to 1000(config key: `hbase.regionserver.slowlog.systable.queue.size`) slow/large logs in an internal queue and the chore will retrieve these logs from the queue and perform batch insertion in hbase:slowlog.
 
 hbase:slowlog has single ColumnFamily: `info` `info` contains multiple qualifiers which are the same attributes present as part of `get_slowlog_responses` API response.
 
@@ -631,7 +631,7 @@ The format of Archived Storefile Size is NNN(MMM). NNN is the total Storefile si
 **_Snapshot Storefile Stats Example 2_**
 ![2 snapshot](/docs-images/2-snapshots.png)
 
-**_Empty Snapshot Storfile Stats Example_**
+**_Empty Snapshot Storefile Stats Example_**
 ![empty snapshots](/docs-images/empty-snapshots.png)
 
 [^5]: The Metrics system was redone in HBase 0.96. See Migration to the New Metrics Hotness – Metrics2 by Elliot Clark for detail.

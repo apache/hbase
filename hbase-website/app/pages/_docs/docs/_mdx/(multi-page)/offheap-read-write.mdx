@@ -6,7 +6,7 @@ description: "Using off-heap memory for HBase read and write paths to reduce GC 
 ## Overview [#offheap-read-write-overview]
 
 To help reduce P99/P999 RPC latencies, HBase 2.x has made the read and write path use a pool of offheap buffers. Cells are
-allocated in offheap memory outside of the purview of the JVM garbage collector with attendent reduction in GC pressure.
+allocated in offheap memory outside of the purview of the JVM garbage collector with attendant reduction in GC pressure.
 In the write path, the request packet received from client will be read in on a pre-allocated offheap buffer and retained
 offheap until those cells are successfully persisted to the WAL and Memstore. The memory data structure in Memstore does
 not directly store the cell memory, but references the cells encoded in the offheap buffers. Similarly for the read path.
@@ -47,7 +47,7 @@ sending results back to the client.
 
 It is possible to tune the ByteBuffer pool on the RPC server side used to accumulate the cell bytes and create result
 cell blocks to send back to the client side. Use `hbase.ipc.server.reservoir.enabled` to turn this pool ON or OFF. By
-default this pool is ON and available. HBase will create off-heap ByteBuffers and pool them them by default. Please
+default this pool is ON and available. HBase will create off-heap ByteBuffers and pool them by default. Please
 make sure not to turn this OFF if you want end-to-end off-heaping in read path.
 
 If this pool is turned off, the server will create temp buffers onheap to accumulate the cell bytes and
@@ -190,8 +190,8 @@ MaxDirectMemorySize property (see [Tuning the RPC buffer pool](/docs/offheap-rea
 
 When a Cell is added to a MemStore, the bytes for that Cell are copied into these off-heap buffers (if `hbase.regionserver.offheap.global.memstore.size` is non-zero)
 and a Cell POJO will refer to this memory area. This can greatly reduce the on-heap occupancy of the MemStores and reduce the total heap utilization for RegionServers
-in a write-heavy workload. On-heap and off-heap memory utiliazation are tracked at multiple levels to implement low level and high level memory management.
+in a write-heavy workload. On-heap and off-heap memory utilization are tracked at multiple levels to implement low level and high level memory management.
 The decision to flush a MemStore considers both the on-heap and off-heap usage of that MemStore. At the Region level, we sum the on-heap and off-heap usages and
 compare them against the region flush size (128MB, by default). Globally, on-heap size occupancy of all memstores are tracked as well as off-heap size. When any of
-these sizes breache the lower mark (`hbase.regionserver.global.memstore.size.lower.limit`) or the maximum size `hbase.regionserver.global.memstore.size`), all
+these sizes breach the lower mark (`hbase.regionserver.global.memstore.size.lower.limit`) or the maximum size `hbase.regionserver.global.memstore.size`), all
 regions are selected for forced flushes.

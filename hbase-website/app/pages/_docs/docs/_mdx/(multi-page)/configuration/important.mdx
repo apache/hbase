@@ -117,7 +117,7 @@ If a big 40ms or so occasional delay is seen in operations against HBase, try th
 
 ### Better Mean Time to Recover (MTTR)
 
-This section is about configurations that will make servers come back faster after a fail. See the Deveraj Das and Nicolas Liochon blog post [Introduction to HBase Mean Time to Recover (MTTR)](http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/) for a brief introduction.
+This section is about configurations that will make servers come back faster after a fail. See the Devaraj Das and Nicolas Liochon blog post [Introduction to HBase Mean Time to Recover (MTTR)](http://hortonworks.com/blog/introduction-to-hbase-mean-time-to-recover-mttr/) for a brief introduction.
 
 The issue [HBASE-8354 forces Namenode into loop with lease recovery requests](https://issues.apache.org/jira/browse/HBASE-8389) is messy but has a bunch of good discussion toward the end on low timeouts and how to cause faster recovery including citation of fixes added to HDFS. Read the Varun Sharma comments. The below suggested configurations are Varun's suggestions distilled and tested. Make sure you are running on a late-version HDFS so you have the fixes he refers to and himself adds to HDFS that help HBase MTTR (e.g. HDFS-3703, HDFS-3712, and HDFS-4791 — Hadoop 2 for sure has them and late Hadoop 1 has some). Set the following in the RegionServer.
 

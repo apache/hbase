@@ -253,7 +253,7 @@ The commands (and arguments) are:
 
 If the cluster has gotten stuck in some state and the standard techniques aren't making progress, it is possible to restart the cluster in "maintenance mode." This mode features drastically reduced capabilities and surface area, making it easier to enact very low-level changes such as repairing/recovering the `hbase:meta` table.
 
-To enter maintenance mode, set `hbase.master.maintenance_mode` to `true` either in your `hbase-site.xml` or via system propery when starting the master process (`-D...=true`). Entering and exiting this mode requires a service restart, however the typical use will be when HBase Master is already facing startup difficulties.
+To enter maintenance mode, set `hbase.master.maintenance_mode` to `true` either in your `hbase-site.xml` or via system property when starting the master process (`-D...=true`). Entering and exiting this mode requires a service restart, however the typical use will be when HBase Master is already facing startup difficulties.
 
 When maintenance mode is enabled, the master will host all system tables - ensure that it has enough memory to do so. RegionServers will not be assigned any regions from user-space tables; in fact, they will go completely unused while in maintenance mode. Additionally, the master will not load any coprocessors, will not run any normalization or merge/split operations, and will not enforce quotas.
 
@@ -305,10 +305,10 @@ hadoop@sv4borg12:~$ jps
 
 In order, we see a:
 
-- Hadoop TaskTracker, manages the local Childs
+- Hadoop TaskTracker, manages the local children
 - HBase RegionServer, serves regions
 - Child, its MapReduce task, cannot tell which type exactly
-- Hadoop TaskTracker, manages the local Childs
+- Hadoop TaskTracker, manages the local children
 - Hadoop DataNode, serves blocks
 - HQuorumPeer, a ZooKeeper ensemble member
 - Jps, well... it's the current process
@@ -880,7 +880,7 @@ This typically shows up in the DataNode logs.
 TODO: add link.
 See the Getting Started section on xceivers configuration.
 
-#### System instability, and the presence of "java.lang.OutOfMemoryError: unable to createnew native thread in exceptions" HDFS DataNode logs or that of any system daemon [!toc]
+#### System instability, and the presence of "java.lang.OutOfMemoryError: unable to create new native thread in exceptions" HDFS DataNode logs or that of any system daemon [!toc]
 
 See the Getting Started section on ulimit and nproc configuration. The default on recent Linux distributions is 1024 - which is far too low for HBase.
 
@@ -955,7 +955,7 @@ This exception is "normal" when found in the RegionServer logs at DEBUG level. T
 
 However, if the NotServingRegionException is logged ERROR, then the client ran out of retries and something probably wrong.
 
-#### Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Gotbrand-new compressor' messages [!toc]
+#### Logs flooded with '2011-01-10 12:40:48,407 INFO org.apache.hadoop.io.compress.CodecPool: Got brand-new compressor' messages [!toc]
 
 We are not using the native versions of compression libraries. See [HBASE-1900 Put back native support when hadoop 0.21 is released](https://issues.apache.org/jira/browse/HBASE-1900). Copy the native libs from hadoop under HBase lib dir or symlink them into place and the message should go away.
 

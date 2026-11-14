@@ -9,7 +9,7 @@ With Pv2 you can build and run state machines. It was built by Matteo to make di
 
 Early Pv2 aspects have been shipping in HBase with a good while now but it has continued to evolve as it takes on more involved scenarios. What we have now is powerful but intricate in operation and incomplete, in need of cleanup and hardening. In this doc we have given overview on the system so you can make use of it (and help with its polishing).
 
-This system has the awkward name of Pv2 because HBase already had the notion of a Procedure used in snapshots (see hbase-server _org.apache.hadoop.hbase.procedure_ as opposed to hbase-procedure _org.apache.hadoop.hbase.procedure2_). Pv2 supercedes and is to replace Procedure.
+This system has the awkward name of Pv2 because HBase already had the notion of a Procedure used in snapshots (see hbase-server _org.apache.hadoop.hbase.procedure_ as opposed to hbase-procedure _org.apache.hadoop.hbase.procedure2_). Pv2 supersedes and is to replace Procedure.
 
 ## Procedures
 
@@ -33,7 +33,7 @@ The ProcedureExecutor stamps the frameworks notions of Procedure State into the 
 - **_RUNNABLE_** Procedure added to the executor, and ready to be executed.
 - **_WAITING_** The procedure is waiting on children (subprocedures) to be completed
 - **_WAITING_TIMEOUT_** The procedure is waiting a timeout or an external event
-- **_ROLLEDBACK_** The procedure failed and was rolledback.
+- **_ROLLEDBACK_** The procedure failed and was rolled back.
 - **_SUCCESS_** The procedure execution completed successfully.
 - **_FAILED_** The procedure execution failed, may need to rollback.
 
@@ -135,4 +135,4 @@ A new RemoteProcedureDispatcher (+ subclass RSProcedureDispatcher) primitive tak
 ## References
 
 - Matteo had a slide deck on what it the Procedure Framework would look like and the problems it addresses initially [attached to the Pv2 issue.](https://issues.apache.org/jira/secure/attachment/12845124/ProcedureV2b.pdf)
-- [A good doc by Matteo](https://issues.apache.org/jira/secure/attachment/12693273/Procedurev2Notification-Bus.pdf) on problem and how Pv2 addresses it w/ roadmap (from the Pv2 JIRA). We should go back to the roadmap to do the Notification Bus, convertion of log splitting to Pv2, etc.
+- [A good doc by Matteo](https://issues.apache.org/jira/secure/attachment/12693273/Procedurev2Notification-Bus.pdf) on problem and how Pv2 addresses it w/ roadmap (from the Pv2 JIRA). We should go back to the roadmap to do the Notification Bus, conversion of log splitting to Pv2, etc.

@@ -3,9 +3,9 @@ title: "Scan Over Snapshot"
 description: "Using TableSnapshotScanner to scan HBase snapshots directly from HDFS, bypassing RegionServers for better performance."
 ---
 
-In HBase, a scan of a table costs server-side HBase resources reading, formating, and returning data back to the client.
+In HBase, a scan of a table costs server-side HBase resources reading, formatting, and returning data back to the client.
 Luckily, HBase provides a TableSnapshotScanner and TableSnapshotInputFormat (introduced by [HBASE-8369](https://issues.apache.org/jira/browse/HBASE-8369)),
-which can scan HBase-written HFiles directly in the HDFS filesystem completely by-passing hbase. This access mode
+which can scan HBase-written HFiles directly in the HDFS filesystem completely bypassing HBase. This access mode
 performs better than going via HBase and can be used with an offline HBase with in-place or exported
 snapshot HFiles.
 

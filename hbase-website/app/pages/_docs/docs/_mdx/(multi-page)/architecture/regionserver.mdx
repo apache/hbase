@@ -47,7 +47,7 @@ HBase provides two different BlockCache implementations to cache data read from 
 
 ### Cache Choices
 
-`LruBlockCache` is the original implementation, and is entirely within the Java heap. `BucketCache` is optional and mainly intended for keeping block cache data off-heap, although `BucketCache` can also be a file-backed cache. In file-backed we can either use it in the file mode or the mmaped mode. We also have pmem mode where the bucket cache resides on the persistent memory device.
+`LruBlockCache` is the original implementation, and is entirely within the Java heap. `BucketCache` is optional and mainly intended for keeping block cache data off-heap, although `BucketCache` can also be a file-backed cache. In file-backed we can either use it in the file mode or the mmapped mode. We also have pmem mode where the bucket cache resides on the persistent memory device.
 
 When you enable BucketCache, you are enabling a two tier caching system. We used to describe the tiers as "L1" and "L2" but have deprecated this terminology as of hbase-2.0.0. The "L1" cache referred to an instance of LruBlockCache and "L2" to an off-heap BucketCache. Instead, when BucketCache is enabled, all DATA blocks are kept in the BucketCache tier and meta blocks — INDEX and BLOOM blocks — are on-heap in the `LruBlockCache`. Management of these two tiers and the policy that dictates how blocks move between them is done by `CombinedBlockCache`.
 
@@ -143,7 +143,7 @@ The usual deployment of BucketCache is via a managing class that sets up two cac
 
 #### BucketCache Deploy Modes
 
-The BucketCache Block Cache can be deployed _offheap_, _file_ or _mmaped_ file mode.
+The BucketCache Block Cache can be deployed _offheap_, _file_ or _mmapped_ file mode.
 
 You set which via the `hbase.bucketcache.ioengine` setting. Setting it to `offheap` will have BucketCache make its allocations off-heap, and an ioengine setting of `file:PATH_TO_FILE` will direct BucketCache to use file caching (Useful in particular if you have some fast I/O attached to the box such as SSDs). From 2.0.0, it is possible to have more than one file backing the BucketCache. This is very useful especially when the Cache size requirement is high. For multiple backing files, configure ioengine as `files:PATH_TO_FILE1,PATH_TO_FILE2,PATH_TO_FILE3`. BucketCache can be configured to use an mmapped file also. Configure ioengine as `mmap:PATH_TO_FILE` for this.
 
@@ -373,7 +373,7 @@ The compressed BlockCache is disabled by default. To enable it, set `hbase.block
 
 ### Cache Aware Load Balancer
 
-Depending on the data size and the configured cache size, the cache warm up can take anywhere from a few minutes to a few hours. This becomes even more critical for HBase deployments over cloud storage, where compute is separated from storage. Doing this everytime the region server starts can be a very expensive process. To eliminate this, [HBASE-27313](https://issues.apache.org/jira/browse/HBASE-27313) implemented the cache persistence feature where the region servers periodically persist the blocks cached in the bucket cache. This persisted information is then used to resurrect the cache in the event of a region server restart because of normal restart or crash.
+Depending on the data size and the configured cache size, the cache warm up can take anywhere from a few minutes to a few hours. This becomes even more critical for HBase deployments over cloud storage, where compute is separated from storage. Doing this every time the region server starts can be a very expensive process. To eliminate this, [HBASE-27313](https://issues.apache.org/jira/browse/HBASE-27313) implemented the cache persistence feature where the region servers periodically persist the blocks cached in the bucket cache. This persisted information is then used to resurrect the cache in the event of a region server restart because of normal restart or crash.
 
 [HBASE-27999](https://issues.apache.org/jira/browse/HBASE-27999) implements the cache aware load balancer, which adds to the load balancer the ability to consider the cache allocation of each region on region servers when calculating a new assignment plan, using the region/region server cache allocation information reported by region servers to calculate the percentage of HFiles cached for each region on the hosting server. This information is then used by the balancer as a factor when deciding on an optimal, new assignment plan.
 
@@ -391,7 +391,7 @@ The cache aware balancer will consider cache cost with the skewness cost to deci
 1.  There is an idle server in the cluster. This can happen when an existing server is restarted or a new server is added to the cluster.
 2.  When the cost of maintaining the balance in the cluster is greater than the minimum threshold defined by the configuration _hbase.master.balancer.stochastic.minCostNeedBalance_.
 
-The CacheAwareLoadBalancer can be enabled in the cluster by setting the following configuration properties in the master master configuration:
+The CacheAwareLoadBalancer can be enabled in the cluster by setting the following configuration properties in the master configuration:
 
 ```xml
 <property>
@@ -404,7 +404,7 @@ The CacheAwareLoadBalancer can be enabled in the cluster by setting the followin
 </property>
 ```
 
-Within HBASE-29168, the CacheAwareLoadBalancer implements region move throttling. This mitigates the impact of "losing" cache factor when balancing mainly due to region skewness, i.e. when new region servers are added to the cluster, a large bulk of cached regions may move to the new servers at once, which can cause noticeable read performance impacts for cache sensitive use cases. The throttling sleep time is determined by the **hbase.master.balancer.move.throttlingMillis** property, and it defaults to 60000 millis. If a region planned to be moved has a cache ratio on the target server above the thershold configurable by the **hbase.master.balancer.stochastic.throttling.cacheRatio** property (80% by default), no throttling will be applied in this region move.
+Within HBASE-29168, the CacheAwareLoadBalancer implements region move throttling. This mitigates the impact of "losing" cache factor when balancing mainly due to region skewness, i.e. when new region servers are added to the cluster, a large bulk of cached regions may move to the new servers at once, which can cause noticeable read performance impacts for cache sensitive use cases. The throttling sleep time is determined by the **hbase.master.balancer.move.throttlingMillis** property, and it defaults to 60000 millis. If a region planned to be moved has a cache ratio on the target server above the threshold configurable by the **hbase.master.balancer.stochastic.throttling.cacheRatio** property (80% by default), no throttling will be applied in this region move.
 
 ## RegionServer Splitting Implementation
 

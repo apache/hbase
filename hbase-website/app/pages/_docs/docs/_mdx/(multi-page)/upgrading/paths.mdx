@@ -156,7 +156,7 @@ The following metrics have changed their meaning:
 
 - The metric 'blockCacheEvictionCount' published on a per-region server basis no longer includes blocks removed from the cache due to the invalidation of the hfiles they are from (e.g. via compaction).
 - The metric 'totalRequestCount' increments once per request; previously it incremented by the number of `Actions` carried in the request; e.g. if a request was a `multi` made of four Gets and two Puts, we'd increment 'totalRequestCount' by six; now we increment by one regardless. Expect to see lower values for this metric in hbase-2.0.0.
-- The 'readRequestCount' now counts reads that return a non-empty row where in older hbases, we'd increment 'readRequestCount' whether a Result or not. This change will flatten the profile of the read-requests graphs if requests for non-existent rows. A YCSB read-heavy workload can do this dependent on how the database was loaded.
+- The 'readRequestCount' now counts reads that return a non-empty row where in older HBase versions, we'd increment 'readRequestCount' whether a Result or not. This change will flatten the profile of the read-requests graphs if requests for non-existent rows. A YCSB read-heavy workload can do this dependent on how the database was loaded.
 
 The following metrics have been removed:
 
@@ -329,7 +329,7 @@ To use coprocessors in 2.0, they should be rebuilt against new API otherwise the
 Suggested order of changes to upgrade the coprocessors:
 
 1.  Directly implement observer interfaces instead of extending Base\*Observer classes. Change `Foo extends BaseXXXObserver` to `Foo implements XXXObserver`. ([HBASE-17312](https://issues.apache.org/jira/browse/HBASE-17312)).
-2.  Adapt to design change from Inheritence to Composition ([HBASE-17732](https://issues.apache.org/jira/browse/HBASE-17732)) by following [this example](https://github.com/apache/hbase/blob/master/dev-support/design-docs/Coprocessor_Design_Improvements-Use_composition_instead_of_inheritance-HBASE-17732.adoc#migrating-existing-cps-to-new-design).
+2.  Adapt to design change from Inheritance to Composition ([HBASE-17732](https://issues.apache.org/jira/browse/HBASE-17732)) by following [this example](https://github.com/apache/hbase/blob/master/dev-support/design-docs/Coprocessor_Design_Improvements-Use_composition_instead_of_inheritance-HBASE-17732.adoc#migrating-existing-cps-to-new-design).
 3.  getTable() has been removed from the CoprocessorEnvrionment, coprocessors should self-manage Table instances.
 
 Some examples of writing coprocessors with new API can be found in hbase-example module [here](https://github.com/apache/hbase/tree/branch-2.0/hbase-examples/src/main/java/org/apache/hadoop/hbase/coprocessor/example).

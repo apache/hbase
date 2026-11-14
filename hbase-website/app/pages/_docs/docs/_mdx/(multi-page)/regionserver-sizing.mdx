@@ -816,7 +816,7 @@ Detect regionserver failure as fast as reasonable. Set the following parameters:
 
 ### Optimize on the Server Side for Low Latency
 
-Skip the network for local blocks when the RegionServer goes to read from HDFS by exploiting HDFS's [Short-Circuit Local Reads](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html) facility. Note how setup must be done both at the datanode and on the dfsclient ends of the conneciton — i.e. at the RegionServer and how both ends need to have loaded the hadoop native `.so` library. After configuring your hadoop setting _dfs.client.read.shortcircuit_ to _true_ and configuring the _dfs.domain.socket.path_ path for the datanode and dfsclient to share and restarting, next configure the regionserver/dfsclient side.
+Skip the network for local blocks when the RegionServer goes to read from HDFS by exploiting HDFS's [Short-Circuit Local Reads](https://hadoop.apache.org/docs/stable/hadoop-project-dist/hadoop-hdfs/ShortCircuitLocalReads.html) facility. Note how setup must be done both at the datanode and on the dfsclient ends of the connection — i.e. at the RegionServer and how both ends need to have loaded the hadoop native `.so` library. After configuring your hadoop setting _dfs.client.read.shortcircuit_ to _true_ and configuring the _dfs.domain.socket.path_ path for the datanode and dfsclient to share and restarting, next configure the regionserver/dfsclient side.
 
 - In `hbase-site.xml`, set the following parameters:
   - `dfs.client.read.shortcircuit = true`

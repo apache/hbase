@@ -101,7 +101,7 @@ Before performing a `Get` or `Put` operation, you can check for permission using
 `preGet` or `prePut` methods.
 
 **Referential Integrity**  
-HBase does not directly support the RDBMS concept of refential integrity, also known
+HBase does not directly support the RDBMS concept of referential integrity, also known
 as foreign keys. You can use a coprocessor to enforce such integrity. For instance,
 if you have a business rule that every insert to the `users` table must be followed
 by a corresponding entry in the `user_daily_attendance` table, you could implement
@@ -190,7 +190,7 @@ do not have to respect semantic versioning rules or general java rules on
 deprecation before removal. While generated protobuf files are
 absent the hbase audience annotations — they are created by the
 protobuf protoc tool which knows nothing of how HBase works —
-they should be consided `@InterfaceAudience.Private` so are liable to
+they should be considered `@InterfaceAudience.Private` so are liable to
 change.
 
 [Examples](/docs/cp#cp-examples) provides working examples of endpoint coprocessors.
@@ -235,7 +235,7 @@ restart HBase to unload a coprocessor that has been loaded statically.
             Each subsequent coprocessor in the list will have its priority value incremented by one (which
             reduces its priority, because priorities have the natural sort order of Integers).
 
-            These priority values can be manually overriden in hbase-site.xml. This can be useful if you
+            These priority values can be manually overridden in hbase-site.xml. This can be useful if you
             want to guarantee that a coprocessor will execute after another. For example, in the following
             configuration `SumEndPoint` would be guaranteed to go last, except in the case of a tie with
             another coprocessor:
@@ -743,7 +743,7 @@ for (Result res : scanner) {
 
 Restricting arbitrary user coprocessors can be a big concern in multitenant environments. HBase provides a continuum of options for ensuring only expected coprocessors are running:
 
-- `hbase.coprocessor.enabled`: Enables or disables all coprocessors. This will limit the functionality of HBase, as disabling all coprocessors will disable some security providers. An example coproccessor so affected is `org.apache.hadoop.hbase.security.access.AccessController`.
+- `hbase.coprocessor.enabled`: Enables or disables all coprocessors. This will limit the functionality of HBase, as disabling all coprocessors will disable some security providers. An example coprocessor so affected is `org.apache.hadoop.hbase.security.access.AccessController`.
   - `hbase.coprocessor.user.enabled`: Enables or disables loading coprocessors on tables (i.e. user coprocessors).
   - One can statically load coprocessors, and optionally tune their priorities, via the following tunables in `hbase-site.xml`:
     - `hbase.coprocessor.regionserver.classes`: A comma-separated list of coprocessors that are loaded by region servers

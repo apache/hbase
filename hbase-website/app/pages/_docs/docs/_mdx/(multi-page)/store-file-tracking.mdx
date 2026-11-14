@@ -14,7 +14,7 @@ due to its lack of atomic renames. The HBase community temporarily bypassed this
 
 With **Store File Tracking**, decision on where to originally create new hfiles and how to proceed upon
 commit is delegated to the specific Store File Tracking implementation.
-The implementation can be set at the HBase service leve in **hbase-site.xml** or at the
+The implementation can be set at the HBase service level in **hbase-site.xml** or at the
 Table or Column Family via the TableDescriptor configuration.
 
 <Callout type="info">
@@ -123,7 +123,7 @@ It's also possible to specify a given store file tracking implementation when re
 using the _CLONE_SFT_ option of _clone_snasphot_ command. This is useful when recovering old
 snapshots, taken prior to a change in the global configuration, or if the snapshot has been
 imported from a different cluster that had a different store file tracking setting.
-Because snapshots preserve table and colum family descriptors, a simple restore would reload
+Because snapshots preserve table and column family descriptors, a simple restore would reload
 the original configuration, requiring the additional steps described above to convert the
 table/column family to the desired tracker implementation.
 An example of how to use _clone_snapshot_ to specify the **FILE** tracker implementation

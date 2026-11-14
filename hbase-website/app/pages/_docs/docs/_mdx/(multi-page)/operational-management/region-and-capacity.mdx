@@ -329,7 +329,7 @@ To enable ACL, add the following to your hbase-site.xml and restart your Master:
 
 ### Migrating From Old Implementation
 
-The coprocessor `org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint` is deprected, but for compatible, if you want the pre 3.0.0 hbase client/shell to communicate with the new hbase cluster, you still need to add this coprocessor to master.
+The coprocessor `org.apache.hadoop.hbase.rsgroup.RSGroupAdminEndpoint` is deprecated, but for compatible, if you want the pre 3.0.0 hbase client/shell to communicate with the new hbase cluster, you still need to add this coprocessor to master.
 
 The `hbase.rsgroup.grouploadbalancer.class` config has been deprecated, as now the top level load balancer will always be `RSGroupBasedLoadBalaner`, and the `hbase.master.loadbalancer.class` config is for configuring the balancer within a group. This also means you should not set `hbase.master.loadbalancer.class` to `RSGroupBasedLoadBalaner` any more even if rsgroup feature is enabled.
 

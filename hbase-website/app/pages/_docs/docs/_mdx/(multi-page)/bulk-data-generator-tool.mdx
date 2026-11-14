@@ -1,6 +1,6 @@
 ---
 title: "Bulk Data Generator Tool"
-description: "This is a random data generator tool for HBase tables leveraging Hbase bulk load. It can create pre-splited HBase table and the generated data is uniformly distributed to all the regions of the table."
+description: "This is a random data generator tool for HBase tables leveraging HBase bulk load. It can create pre-split HBase table and the generated data is uniformly distributed to all the regions of the table."
 ---
 
 ## Usage [#bulk-data-generator-tool-usage]
@@ -44,7 +44,7 @@ with row key as
 
 ### Table Creation
 
-Tool creates a pre-splited HBase Table having "**split-count**" splits (i.e. **split-count** + 1 regions) with sequential 6 digit region boundary prefix.
+Tool creates a pre-split HBase Table having "**split-count**" splits (i.e. **split-count** + 1 regions) with sequential 6 digit region boundary prefix.
 Example: If a table is generated with "**split-count**" as 10, it will have (10+1) regions with following start-end keys.
 
 ```

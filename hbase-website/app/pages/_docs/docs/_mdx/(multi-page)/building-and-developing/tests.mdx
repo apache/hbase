@@ -23,7 +23,7 @@ Starting from 3.0.0, HBaseTestingUtility is renamed to HBaseTestingUtil and mark
 The HBase shell and its tests are predominantly written in jruby.
 
 In order to make these tests run as a part of the standard build, there are a few JUnit test classes that take care of loading the jruby implemented tests and running them.
-The tests were split into separate classes to accomodate class level timeouts (see [Unit Tests](/docs/building-and-developing/tests#building-and-developing-unit-tests) for specifics).
+The tests were split into separate classes to accommodate class level timeouts (see [Unit Tests](/docs/building-and-developing/tests#building-and-developing-unit-tests) for specifics).
 You can run all of these tests from the top level with:
 
 ```bash
@@ -251,7 +251,7 @@ By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CP
 hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
 hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
 You can also have hbase modules
-run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
+run their tests in parallel when the dependency graph allows by passing `--threads=N` when you invoke
 maven, where `N` is the amount of parallelism wanted.
 maven, where `N` is the amount of _module_ parallelism wanted.
 
@@ -263,7 +263,7 @@ $ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount
 ```
 
 If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
-Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+Your mileage may vary. Dependent on hardware, overcommitment of CPU and/or memory can bring the test suite crashing down,
 usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
 and move up gradually.
 
@@ -436,7 +436,7 @@ IntegrationTestsDriver class is used for executing the tests against a distribut
 Integration tests SHOULD NOT assume that they are running against a mini cluster, and SHOULD NOT use private API's to access cluster state.
 To interact with the distributed or mini cluster uniformly, `IntegrationTestingUtility`, and `HBaseCluster` classes, and public client API's can be used.
 
-On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g.
+On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services through cluster manager (e.g.
 restart regionservers) use SSH to do it.
 To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, `hbase.it.clustermanager.ssh.user`, `hbase.it.clustermanager.ssh.opts` and `hbase.it.clustermanager.ssh.cmd` configuration settings can be used.
 "User" is the remote user that cluster manager should use to perform ssh commands.
@@ -659,7 +659,7 @@ Start chaos agent on all hosts where you want to test chaos scenarios.
 $ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
 ```
 
-Start chaos monkey runner from any one host, preferrably an edgenode.
+Start chaos monkey runner from any one host, preferably an edgenode.
 An example log while running chaos monkey with default policy `PeriodicRandomActionPolicy` is as shown below:
 
 ```bash

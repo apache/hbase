@@ -210,7 +210,7 @@ Above shows that the native hadoop library is not available in HBase context.
 
 The above NativeLibraryChecker tool may come back saying all is hunky-dory
 — i.e. all libs show 'true', that they are available — but follow the below
-presecription anyways to ensure the native libs are available in HBase context,
+prescription anyways to ensure the native libs are available in HBase context,
 when it goes to use them.
 
 To fix the above, either copy the Hadoop native libraries local or symlink to them if the Hadoop and HBase stalls are adjacent in the filesystem.
@@ -386,7 +386,7 @@ See [brand.new.compressor](/docs/troubleshooting#logs-flooded-with-2011-01-10-12
 
 #### Install Hadoop Native LZO Support
 
-HBase cannot ship with the Hadoop native LZO codc because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
+HBase cannot ship with the Hadoop native LZO codec because of incompatibility between HBase, which uses an Apache Software License (ASL) and LZO, which uses a GPL license.
 See the [Hadoop-LZO at Twitter](https://github.com/twitter/hadoop-lzo/blob/master/README.md) for information on configuring LZO support for HBase.
 
 If you depend upon LZO compression, consider using the pure Java and ASL licensed
@@ -533,8 +533,8 @@ Options:
                               puts for every column in a row
  -num_keys <arg>              The number of keys to read/write
  -num_tables <arg>            A positive integer number. When a number n is
-                              speicfied, load test tool  will load n table
-                              parallely. -tn parameter value becomes table name
+                              specified, load test tool  will load n table
+                              in parallel. -tn parameter value becomes table name
                               prefix. Each table name is in format
                               <tn>_1...<tn>_n
  -read <arg>                  <verify_percent>[:#threads=20]
