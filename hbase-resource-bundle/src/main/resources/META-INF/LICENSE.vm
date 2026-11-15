@@ -236,11 +236,16 @@ other than ASL v2. Details below.
 ## macros used for including actual text
 #macro(jquery_license)
 ----
-This project bundles a copy of the JQuery minified javascript library version
-1.8.3 under the terms of the MIT license.
+This project bundles the jQuery minified javascript library version
+${bundled_jquery_version} and Tablesorter version
+${bundled_tablesorter_version} under the terms of the MIT license.
 
-    Copyright 2012 jQuery Foundation and other contributors
-    http://jquery.com/
+    jQuery:
+    Copyright OpenJS Foundation and other contributors, https://openjsf.org/
+
+    Tablesorter:
+    Copyright (c) 2007 Christian Bach
+    fork maintained by Rob Garrison
 
     Permission is hereby granted, free of charge, to any person obtaining
     a copy of this software and associated documentation files (the
@@ -264,11 +269,15 @@ This project bundles a copy of the JQuery minified javascript library version
 #end
 #macro(vega_license)
 This project bundles a copy of the Vega minified javascript library version
-5.19.1, the Vega-Lite minified javascript library version 5.0.0, and the
-Vega-Embed minified javascript library version 6.15.1. All three are
+${bundled_vega_version}, the Vega-Lite minified javascript library version
+${bundled_vega_lite_version}, and the Vega-Embed minified javascript
+library version ${bundled_vega_embed_version}. All three are
 available under the following '3-clause BSD' license.
 
-Copyright (c) 2015-2018, University of Washington Interactive Data Lab
+Vega:
+Copyright (c) 2015-2023, University of Washington Interactive Data Lab
+Vega-Lite and Vega-Embed:
+Copyright (c) 2015, University of Washington Interactive Data Lab
 All rights reserved.
 
 Redistribution and use in source and binary forms, with or without
