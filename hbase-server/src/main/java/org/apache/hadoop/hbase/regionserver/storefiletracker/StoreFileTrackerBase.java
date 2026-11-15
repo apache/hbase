@@ -378,12 +378,21 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
 
   public String createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
     throws IOException {
-    Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
-    if (!m.matches()) {
-      throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
+    Matcher hfileLinkMatcher = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
+    if (hfileLinkMatcher.matches()) {
+      return createHFileLink(
+        TableName.valueOf(hfileLinkMatcher.group(1), hfileLinkMatcher.group(2)),
+        hfileLinkMatcher.group(3), hfileLinkMatcher.group(4), createBackRef);
     }
-    return createHFileLink(TableName.valueOf(m.group(1), m.group(2)), m.group(3), m.group(4),
-      createBackRef);
+    if (StoreFileInfo.isMobFileLink(hfileLinkName)) {
+      Matcher mobLinkMatcher = HFileLink.REF_OR_HFILE_LINK_PATTERN.matcher(hfileLinkName);
+      if (mobLinkMatcher.matches()) {
+        return createHFileLink(
+          TableName.valueOf(mobLinkMatcher.group(1), mobLinkMatcher.group(2)),
+          mobLinkMatcher.group(3), mobLinkMatcher.group(4), createBackRef);
+      }
+    }
+    throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
   }
 
   /**

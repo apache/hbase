@@ -732,7 +732,7 @@ public class RestoreSnapshotHelper {
     final SnapshotRegionManifest.StoreFile storeFile, final boolean createBackRef,
     final StoreFileTracker tracker) throws IOException {
     String hfileName = storeFile.getName();
-    if (HFileLink.isHFileLink(hfileName)) {
+    if (HFileLink.isHFileLink(hfileName) || StoreFileInfo.isMobFileLink(hfileName)) {
       return tracker.createFromHFileLink(hfileName, createBackRef);
     } else if (StoreFileInfo.isReference(hfileName)) {
       return restoreReferenceFile(familyDir, regionInfo, storeFile, tracker);
