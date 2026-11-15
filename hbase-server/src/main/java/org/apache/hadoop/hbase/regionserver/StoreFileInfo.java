@@ -629,8 +629,7 @@ public class StoreFileInfo implements Configurable {
     // Check for empty hfile. Should never be the case but can happen
     // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
     // NOTE: that the HFileLink is just a name, so it's an empty file.
-    if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0
-      && !isMobFileLink(p.getName())) {
+    if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0 && !isMobFileLink(p.getName())) {
       LOG.warn("Skipping {} because it is empty. HBASE-646 DATA LOSS?", p);
       return false;
     }

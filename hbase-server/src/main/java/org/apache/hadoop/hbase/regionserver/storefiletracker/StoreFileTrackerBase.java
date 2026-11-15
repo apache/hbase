@@ -387,8 +387,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     if (StoreFileInfo.isMobFileLink(hfileLinkName)) {
       Matcher mobLinkMatcher = HFileLink.REF_OR_HFILE_LINK_PATTERN.matcher(hfileLinkName);
       if (mobLinkMatcher.matches()) {
-        return createHFileLink(
-          TableName.valueOf(mobLinkMatcher.group(1), mobLinkMatcher.group(2)),
+        return createHFileLink(TableName.valueOf(mobLinkMatcher.group(1), mobLinkMatcher.group(2)),
           mobLinkMatcher.group(3), mobLinkMatcher.group(4), createBackRef);
       }
     }
