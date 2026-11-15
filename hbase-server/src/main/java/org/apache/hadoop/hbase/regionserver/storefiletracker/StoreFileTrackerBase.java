@@ -309,7 +309,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     long createdTimestamp = 0;
     long size = 0;
     Path p = initialPath;
-    if (HFileLink.isHFileLink(p)) {
+    if (HFileLink.isHFileLink(p) || StoreFileInfo.isMobFileLink(p.getName())) {
       // HFileLink
       reference = null;
       link = HFileLink.buildFromHFileLinkPattern(conf, p);
