@@ -32,4 +32,4 @@ python-dotenv==1.2.2
 requests==2.33.1
 setuptools==82.0.1
 typing_extensions==4.15.0
-urllib3==2.6.3
+urllib3==2.8.0
