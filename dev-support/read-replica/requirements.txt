@@ -15,7 +15,7 @@
 # specific language governing permissions and limitations
 # under the License.
 
-certifi==2026.2.25
+certifi==2026.10.18
 charset-normalizer==3.4.7
 docker==7.2.0
 grpcio==1.80.0
