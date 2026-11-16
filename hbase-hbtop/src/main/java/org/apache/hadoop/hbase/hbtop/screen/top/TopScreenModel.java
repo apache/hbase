@@ -56,7 +56,7 @@ public class TopScreenModel {
   private List<Field> fields;
 
   private Summary summary;
-  private List<Record> records;
+  private List<Record> records = Collections.emptyList();
 
   private final List<RecordFilter> filters = new ArrayList<>();
   private final List<RecordFilter> pushDownFilters = new ArrayList<>();
