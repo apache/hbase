@@ -23,7 +23,7 @@ Starting from 3.0.0, HBaseTestingUtility is renamed to HBaseTestingUtil and mark
 The HBase shell and its tests are predominantly written in jruby.
 
 In order to make these tests run as a part of the standard build, there are a few JUnit test classes that take care of loading the jruby implemented tests and running them.
-The tests were split into separate classes to accomodate class level timeouts (see [Unit Tests](/docs/building-and-developing/tests#building-and-developing-unit-tests) for specifics).
+The tests were split into separate classes to accommodate class level timeouts (see [Unit Tests](/docs/building-and-developing/tests#building-and-developing-unit-tests) for specifics).
 You can run all of these tests from the top level with:
 
 ```bash
@@ -67,7 +67,7 @@ mvn test
 ```
 
 which will just run the tests IN THAT MODULE.
-If there are other dependencies on other modules, then you will have run the command from the ROOT HBASE DIRECTORY.
+If there are other dependencies on other modules, then you will have to run the command from the ROOT HBASE DIRECTORY.
 This will run the tests in the other modules, unless you specify to skip the tests in that module.
 For instance, to skip the tests in the hbase-server module, you would run:
 
@@ -214,7 +214,7 @@ a small test.
 
 ### Running a single test or all tests in a package
 
-To run an individual test, e.g. `MyTest`, rum `mvn test -Dtest=MyTest` You can also pass multiple,
+To run an individual test, e.g. `MyTest`, run `mvn test -Dtest=MyTest` You can also pass multiple,
 individual tests as a comma-delimited list:
 
 ```bash
@@ -232,7 +232,7 @@ Each junit test is executed in a separate JVM (A fork per test class).
 There is no parallelization when tests are running in this mode.
 You will see a new message at the end of the -report: `"[INFO] Tests are skipped"`.
 It's harmless. However, you need to make sure the sum of
-`Tests run:` in the `Results:` section of test reports matching the number of tests
+`Tests run:` in the `Results:` section of test reports matches the number of tests
 you specified because no error will be reported when a non-existent test case is specified.
 
 ### Other test invocation permutations
@@ -251,8 +251,7 @@ By default, `$ mvn test -P runAllTests` runs all tests using a quarter of the CP
 hosting the test run (see `surefire.firstPartForkCount` and `surefire.secondPartForkCount` in the top-level
 hbase `pom.xml` which default to 0.25C, or 1/4 of CPU count). Up these counts to get the build to run faster.
 You can also have hbase modules
-run their tests in parrallel when the dependency graph allows by passing `--threads=N` when you invoke
-maven, where `N` is the amount of parallelism wanted.
+run their tests in parallel when the dependency graph allows by passing `--threads=N` when you invoke
 maven, where `N` is the amount of _module_ parallelism wanted.
 
 For example, allowing that you want to use all cores on a machine to run tests,
@@ -263,7 +262,7 @@ $ x="1.0C";  mvn -Dsurefire.firstPartForkCount=$x -Dsurefire.secondPartForkCount
 ```
 
 If a 32 core machine, you should see periods during which 32 forked jvms appear in your process listing each running unit tests.
-Your milage may vary. Dependent on hardware, overcommittment of CPU and/or memory can bring the test suite crashing down,
+Your mileage may vary. Dependent on hardware, overcommitment of CPU and/or memory can bring the test suite crashing down,
 usually complaining with a spew of test system exits and incomplete test report xml files. Start gently, with the default fork
 and move up gradually.
 
@@ -373,11 +372,11 @@ Waiting for a socket operation should be done in a 200 ms sleep loop.
 
 ### Tests using a cluster
 
-Tests using a HRegion do not have to start a cluster: A region can use the local file system.
-Start/stopping a cluster cost around 10 seconds.
+Tests using an HRegion do not have to start a cluster: A region can use the local file system.
+Start/stopping a cluster costs around 10 seconds.
 They should not be started per test method but per test class.
-Started cluster must be shutdown using `HBaseTestingUtility#shutdownMiniCluster`, which cleans the directories.
-As most as possible, tests should use the default settings for the cluster.
+Started cluster must be shut down using `HBaseTestingUtility#shutdownMiniCluster`, which cleans the directories.
+As much as possible, tests should use the default settings for the cluster.
 When they don't, they should document it.
 This will allow to share the cluster later.
 
@@ -423,8 +422,8 @@ public class TestExample {
 ## Integration Tests [#building-and-developing-integration-tests]
 
 HBase integration/system tests are tests that are beyond HBase unit tests.
-They are generally long-lasting, sizeable (the test can be asked to 1M rows or 1B rows), targetable (they can take configuration that will point them at the ready-made cluster they are to run against; integration tests do not include cluster start/stop code), and verifying success, integration tests rely on public APIs only; they do not attempt to examine server internals asserting success/fail.
-Integration tests are what you would run when you need to more elaborate proofing of a release candidate beyond what unit tests can do.
+They are generally long-lasting, sizeable (the test can be asked to load 1M rows or 1B rows), targetable (they can take configuration that will point them at the ready-made cluster they are to run against; integration tests do not include cluster start/stop code), and verifying success, integration tests rely on public APIs only; they do not attempt to examine server internals asserting success/fail.
+Integration tests are what you would run when you need more elaborate proofing of a release candidate beyond what unit tests can do.
 They are not generally run on the Apache Continuous Integration build server, however, some sites opt to run integration tests as a part of their continuous testing on an actual cluster.
 
 Integration tests currently live under the _src/test_ directory in the hbase-it submodule and will match the regex: _*IntegrationTest*.java_.
@@ -436,14 +435,14 @@ IntegrationTestsDriver class is used for executing the tests against a distribut
 Integration tests SHOULD NOT assume that they are running against a mini cluster, and SHOULD NOT use private API's to access cluster state.
 To interact with the distributed or mini cluster uniformly, `IntegrationTestingUtility`, and `HBaseCluster` classes, and public client API's can be used.
 
-On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services thru cluster manager (e.g.
+On a distributed cluster, integration tests that use ChaosMonkey or otherwise manipulate services through cluster manager (e.g.
 restart regionservers) use SSH to do it.
 To run these, test process should be able to run commands on remote end, so ssh should be configured accordingly (for example, if HBase runs under hbase user in your cluster, you can set up passwordless ssh for that user and run the test also under it). To facilitate that, `hbase.it.clustermanager.ssh.user`, `hbase.it.clustermanager.ssh.opts` and `hbase.it.clustermanager.ssh.cmd` configuration settings can be used.
 "User" is the remote user that cluster manager should use to perform ssh commands.
 "Opts" contains additional options that are passed to SSH (for example, "-i /tmp/my-key"). Finally, if you have some custom environment setup, "cmd" is the override format for the entire tunnel (ssh) command.
 The default string is \{`/usr/bin/ssh %1$s %2$s%3$s%4$s "%5$s"`\} and is a good starting point.
 This is a standard Java format string with 5 arguments that is used to execute the remote command.
-The argument 1 (%1$s) is SSH options set the via opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use:
+The argument 1 (%1$s) is SSH options set via the opts setting or via environment variable, 2 is SSH user name, 3 is "@" if username is set or "" otherwise, 4 is the target host name, and 5 is the logical command to execute (that may include single quotes, so don't use them). For example, if you run the tests under non-hbase user and want to ssh as that user and change to hbase on remote machine, you can use:
 
 ```bash
 /usr/bin/ssh %1$s %2$s%3$s%4$s "su hbase - -c \"%5$s\""
@@ -545,11 +544,11 @@ Currently there is no support for running integration tests against a distribute
 The tests interact with the distributed cluster by using the methods in the `DistributedHBaseCluster` (implementing `HBaseCluster`) class, which in turn uses a pluggable `ClusterManager`.
 Concrete implementations provide actual functionality for carrying out deployment-specific and environment-dependent tasks (SSH, etc). The default `ClusterManager` is `HBaseClusterManager`, which uses SSH to remotely execute start/stop/kill/signal commands, and assumes some posix commands (ps, etc). Also assumes the user running the test has enough "power" to start/stop servers on the remote machines.
 By default, it picks up `HBASE_SSH_OPTS`, `HBASE_HOME`, `HBASE_CONF_DIR` from the env, and uses `bin/hbase-daemon.sh` to carry out the actions.
-Currently tarball deployments, deployments which uses _hbase-daemons.sh_, and [Apache Ambari](https://incubator.apache.org/ambari/) deployments are supported.
+Currently tarball deployments, deployments which use _hbase-daemons.sh_, and [Apache Ambari](https://incubator.apache.org/ambari/) deployments are supported.
 _/etc/init.d/_ scripts are not supported for now, but it can be easily added.
 For other deployment options, a ClusterManager can be implemented and plugged in.
 
-Some integration tests define a _main_ method as entry point, and can be run on its' own, rather than using the test driver. For example, the _itbll_ test can be run as follows:
+Some integration tests define a _main_ method as entry point, and can be run on its own, rather than using the test driver. For example, the _itbll_ test can be run as follows:
 
 ```bash
 bin/hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList loop 2 1 100000 /temp 1 1000 50 1 0
@@ -558,7 +557,7 @@ bin/hbase org.apache.hadoop.hbase.test.IntegrationTestBigLinkedList loop 2 1 100
 <Callout type="info">
   The _hbase_ script assumes all integration tests with exposed _main_ methods to be run against a
   distributed cluster will follow the **IntegrationTest** regex naming pattern mentioned above, in
-  order to proper set test dependencies into the classpath.
+  order to properly set test dependencies into the classpath.
 </Callout>
 
 ### Destructive integration / system tests (ChaosMonkey)
@@ -659,7 +658,7 @@ Start chaos agent on all hosts where you want to test chaos scenarios.
 $ bin/hbase org.apache.hadoop.hbase.chaos.ChaosService -c start
 ```
 
-Start chaos monkey runner from any one host, preferrably an edgenode.
+Start chaos monkey runner from any one host, preferably an edgenode.
 An example log while running chaos monkey with default policy `PeriodicRandomActionPolicy` is as shown below:
 
 ```bash
@@ -786,7 +785,7 @@ properties file, which may be `hbase-site.xml` or a different properties file.
 
 ### Customizing Destructive ChaosMonkey Actions
 
-The session above shows how to setup custom configurations for the _slowDeterministic_ monkey
+The session above shows how to set up custom configurations for the _slowDeterministic_ monkey
 policy. This is a policy that pre-defines a set of destructive actions of varying gravity for a
 running cluster. These actions are grouped into three categories: _light weight_, _mid weight_ and
 _heavy weight_. Although it's possible to define some properties for the different actions

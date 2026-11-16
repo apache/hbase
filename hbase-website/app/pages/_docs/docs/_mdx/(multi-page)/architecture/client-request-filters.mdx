@@ -125,7 +125,7 @@ See [BinaryComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hba
 
 ### BinaryComponentComparator
 
-[BinaryComponentComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html) can be used to compare specific value at specific location with in the cell value. The comparison can be done for both ascii and binary data.
+[BinaryComponentComparator](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/filter/BinaryComponentComparator.html) can be used to compare specific value at specific location within the cell value. The comparison can be done for both ascii and binary data.
 
 ```java
 byte[] partialValue = Bytes.toBytes("partial_value");
@@ -138,7 +138,7 @@ See [HBASE-22969](https://issues.apache.org/jira/browse/HBASE-22969) for other u
 
 ## KeyValue Metadata
 
-As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate the existence of keys (i.e., ColumnFamily:Column qualifiers) for a row, as opposed to values the previous section.
+As HBase stores data internally as KeyValue pairs, KeyValue Metadata Filters evaluate the existence of keys (i.e., ColumnFamily:Column qualifiers) for a row, as opposed to values in the previous section.
 
 ### FamilyFilter
 

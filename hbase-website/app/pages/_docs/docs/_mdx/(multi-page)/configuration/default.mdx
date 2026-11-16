@@ -7,7 +7,7 @@ description: "HBase default configuration properties and how to customize them v
 
 Just as in Hadoop where you add site-specific HDFS configuration to the _hdfs-site.xml_ file, for HBase, site specific customizations go into the file _conf/hbase-site.xml_. For the list of configurable properties, see [hbase default configurations](/docs/configuration/default#configuration-default-hbase-default-configuration) below or view the raw _hbase-default.xml_ source file in the HBase source code at _src/main/resources_.
 
-Not all configuration options make it out to _hbase-default.xml_. Some configurations would only appear in source code; the only way to identify these changes are through code review.
+Not all configuration options make it out to _hbase-default.xml_. Some configurations would only appear in source code; the only way to identify these changes is through code review.
 
 Currently, changes here will require a cluster restart for HBase to notice the change.
 
@@ -35,11 +35,11 @@ Changes here will require a cluster restart for HBase to notice the change thoug
 
 If you are running HBase in standalone mode, you don't need to configure anything for your client to work provided that they are all on the same machine.
 
-Starting release 3.0.0, the default connection registry has been switched to a rpc based implementation. Refer to [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250). Depending on your HBase version, following is the expected minimal client configuration.
+Starting release 3.0.0, the default connection registry has been switched to an RPC-based implementation. Refer to [Rpc Connection Registry (new as of 2.5.0)](/docs/architecture/client#rpc-connection-registry-new-as-of-250). Depending on your HBase version, following is the expected minimal client configuration.
 
 ### Up until 2.x.y releases
 
-In 2.x.y releases, the default connection registry was based on ZooKeeper as the source of truth. This means that the clients always looked up ZooKeeper znodes to fetch the required metadata. For example, if an active master crashed and the a new master is elected, clients looked up the master znode to fetch the active master address (similarly for meta locations). This meant that the clients needed to have access to ZooKeeper and need to know the ZooKeeper ensemble information before they can do anything. This can be configured in the client configuration xml as follows:
+In 2.x.y releases, the default connection registry was based on ZooKeeper as the source of truth. This means that the clients always looked up ZooKeeper znodes to fetch the required metadata. For example, if an active master crashed and a new master is elected, clients looked up the master znode to fetch the active master address (similarly for meta locations). This meant that the clients needed to have access to ZooKeeper and need to know the ZooKeeper ensemble information before they can do anything. This can be configured in the client configuration xml as follows:
 
 ```xml
 <?xml version="1.0"?>
@@ -55,7 +55,7 @@ In 2.x.y releases, the default connection registry was based on ZooKeeper as the
 
 ### Starting from 3.0.0 release
 
-The default implementation was switched to a rpc based connection registry. With this implementation, by default clients contact the active or stand-by master RPC end points to fetch the connection registry information. This means that the clients should have access to the list of active and master end points before they can do anything. This can be configured in the client configuration xml as follows:
+The default implementation was switched to an RPC-based connection registry. With this implementation, by default clients contact the active or stand-by master RPC end points to fetch the connection registry information. This means that the clients should have access to the list of active and master end points before they can do anything. This can be configured in the client configuration xml as follows:
 
 ```xml
 <?xml version="1.0"?>
@@ -84,7 +84,7 @@ Of course you are free to specify bootstrap nodes other than masters, like:
 
 The configuration value for _hbase.client.bootstrap.servers_ is a comma separated list of _host:port_ values. Notice that port must be specified here.
 
-Usually these configurations are kept out in the _hbase-site.xml_ and is picked up by the client from the `CLASSPATH`.
+Usually these configurations are kept out in the _hbase-site.xml_ and are picked up by the client from the `CLASSPATH`.
 
 If you are configuring an IDE to run an HBase client, you should include the _conf/_ directory on your classpath so _hbase-site.xml_ settings can be found (or add _src/test/resources_ to pick up the hbase-site.xml used by tests).
 
@@ -102,7 +102,7 @@ For Java applications using Maven, including the hbase-shaded-client module is t
 
 The configuration used by a Java client is kept in an [HBaseConfiguration](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/HBaseConfiguration) instance.
 
-The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first _hbase-site.xml_ found on the client's `CLASSPATH`, if one is present (Invocation will also factor in any _hbase-default.xml_ found; an _hbase-default.xml_ ships inside the _hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to read from a _hbase-site.xml_.
+The factory method on HBaseConfiguration, `HBaseConfiguration.create();`, on invocation, will read in the content of the first _hbase-site.xml_ found on the client's `CLASSPATH`, if one is present (Invocation will also factor in any _hbase-default.xml_ found; an _hbase-default.xml_ ships inside the _hbase.X.X.X.jar_). It is also possible to specify configuration directly without having to read from an _hbase-site.xml_.
 
 For example, to set the ZooKeeper ensemble or bootstrap nodes for the cluster programmatically do as follows:
 

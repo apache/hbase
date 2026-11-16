@@ -10,7 +10,7 @@ It was first introduced on the Apache HBase Blog at
 [Accordion: HBase Breathes with In-Memory Compaction](https://blogs.apache.org/hbase/entry/accordion-hbase-breathes-with-in).
 Quoting the blog:
 
-> Accordion reapplies the LSM principal [_Log-Structured-Merge Tree_, the design pattern upon which HBase is based] to MemStore, in order to eliminate redundancies and other overhead while the data is still in RAM. Doing so decreases the frequency of flushes to HDFS, thereby reducing the write amplification and the overall disk footprint. With less flushes, the write operations are stalled less frequently as the MemStore overflows, therefore the write performance is improved. Less data on disk also implies less pressure on the block cache, higher hit rates, and eventually better read response times. Finally, having less disk writes also means having less compaction happening in the background, i.e., less cycles are stolen from productive (read and write) work. All in all, the effect of in-memory compaction can be envisioned as a catalyst that enables the system move faster as a whole.
+> Accordion reapplies the LSM principle [_Log-Structured-Merge Tree_, the design pattern upon which HBase is based] to MemStore, in order to eliminate redundancies and other overhead while the data is still in RAM. Doing so decreases the frequency of flushes to HDFS, thereby reducing the write amplification and the overall disk footprint. With less flushes, the write operations are stalled less frequently as the MemStore overflows, therefore the write performance is improved. Less data on disk also implies less pressure on the block cache, higher hit rates, and eventually better read response times. Finally, having less disk writes also means having less compaction happening in the background, i.e., less cycles are stolen from productive (read and write) work. All in all, the effect of in-memory compaction can be envisioned as a catalyst that enables the system move faster as a whole.
 
 A developer view is available at
 [Accordion: Developer View of In-Memory Compaction](https://blogs.apache.org/hbase/entry/accordion-developer-view-of-in).
@@ -58,7 +58,7 @@ default on creation of a new table (On creation of a column family Store, we loo
 _IN_MEMORY_COMPACTION_ setting, and if none, we then consult the _hbase.hregion.compacting.memstore.type_ value using its content; default is
 _NONE_).
 
-By default, new hbase system tables will have _NONE_ in-memory compaction set. To specify otherwise,
+By default, new HBase system tables will have _NONE_ in-memory compaction set. To specify otherwise,
 on new table-creation, set _hbase.systemtables.compacting.memstore.type_ to _BASIC_ / _EAGER_ / _ADAPTIVE_ (Note, setting this value
 post-creation of system tables will not have a retroactive effect; you will have to alter your tables
 to set the in-memory attribute).

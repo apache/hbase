@@ -28,7 +28,7 @@ The backup and restore feature uses DistCp to transfer files between clusters .
 unconditionally tried to concatenate the files being DistCp'ed to target cluster (though the files are
 independent) . Without the fix from
 [HADOOP-15850](https://issues.apache.org/jira/browse/HADOOP-15850) , the transfer would fail.
-So the backup and restore feature need hadoop version as below
+So the backup and restore feature needs Hadoop version as below
 
 - 2.7.x
 - 2.8.x
@@ -48,7 +48,7 @@ system.
 - _Full backup_: a type of backup which wholly encapsulates the contents of the table at a point in time.
 - _Incremental backup_: a type of backup which contains the changes in a table since a full backup.
 - _Backup set_: A user-defined name which references one or more tables over which a backup can be executed.
-- _Backup ID_: A unique names which identifies one backup from the rest, e.g. `backupId_1467823988425`
+- _Backup ID_: A unique name which identifies one backup from the rest, e.g. `backupId_1467823988425`
 
 ## Planning
 
@@ -56,8 +56,8 @@ There are some common strategies which can be used to implement backup and resto
 shows how these strategies are implemented and identifies potential tradeoffs with each.
 
 <Callout type="warn">
-  This backup and restore tools has not been tested on Transparent Data Encryption (TDE) enabled
-  HDFS clusters. This is related to the open issue
+  This backup and restore tool has not been tested on Transparent Data Encryption (TDE) enabled HDFS
+  clusters. This is related to the open issue
   [HBASE-16178](https://issues.apache.org/jira/browse/HBASE-16178).
 </Callout>
 

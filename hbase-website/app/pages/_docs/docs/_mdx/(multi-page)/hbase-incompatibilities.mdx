@@ -32,7 +32,7 @@ users will face coming from HBase 1.x releases.
 
 - Public Audience
 
-The following tables describes the coprocessor changes.
+The following tables describe the coprocessor changes.
 
 **class CoprocessorRpcChannel**
 
@@ -57,19 +57,19 @@ HBase 2.0 introduces following changes to the MasterObserver interface.
 | Change                                                                                                                                                                              | Result                                                              |
 | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------- |
 | Abstract method voidpostCloneSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.   | A client program may be interrupted by NoSuchMethodError exception. |
-| Abstract method voidpostCreateTable ( ObserverContext\<MasterCoprocessorEnvironment>, HTableDescriptor, HRegionInfo[ ] ) has been removed from this interface.                      | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpostDeleteSnapshot (ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription ) has been removed from this interface.                     | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpostGetTableDescriptors ( ObserverContext\<MasterCoprocessorEnvironment>, List\<HTableDescriptor> ) has been removed from this interface.                       | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpostModifyTable ( ObserverContext\<MasterCoprocessorEnvironment>, TableName, HTableDescriptor ) has been removed from this interface.                           | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpostRestoreSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface. | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpostSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.        | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreCloneSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.    | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreCreateTable ( ObserverContext\<MasterCoprocessorEnvironment>, HTableDescriptor, HRegionInfo[ ] ) has been removed from this interface.                       | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreDeleteSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription ) has been removed from this interface.                     | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreGetTableDescriptors ( ObserverContext\<MasterCoprocessorEnvironment>, List\<TableName>, List\<HTableDescriptor> ) has been removed from this interface.      | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreModifyTable ( ObserverContext\<MasterCoprocessorEnvironment>, TableName, HTableDescriptor ) has been removed from this interface.                            | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreRestoreSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.  | A client program may be interrupted by NoSuchMethodErrorexception.  |
-| Abstract method voidpreSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.         | A client program may be interrupted by NoSuchMethodErrorexception.  |
+| Abstract method voidpostCreateTable ( ObserverContext\<MasterCoprocessorEnvironment>, HTableDescriptor, HRegionInfo[ ] ) has been removed from this interface.                      | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpostDeleteSnapshot (ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription ) has been removed from this interface.                     | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpostGetTableDescriptors ( ObserverContext\<MasterCoprocessorEnvironment>, List\<HTableDescriptor> ) has been removed from this interface.                       | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpostModifyTable ( ObserverContext\<MasterCoprocessorEnvironment>, TableName, HTableDescriptor ) has been removed from this interface.                           | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpostRestoreSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface. | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpostSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.        | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreCloneSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.    | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreCreateTable ( ObserverContext\<MasterCoprocessorEnvironment>, HTableDescriptor, HRegionInfo[ ] ) has been removed from this interface.                       | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreDeleteSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription ) has been removed from this interface.                     | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreGetTableDescriptors ( ObserverContext\<MasterCoprocessorEnvironment>, List\<TableName>, List\<HTableDescriptor> ) has been removed from this interface.      | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreModifyTable ( ObserverContext\<MasterCoprocessorEnvironment>, TableName, HTableDescriptor ) has been removed from this interface.                            | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreRestoreSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.  | A client program may be interrupted by NoSuchMethodError exception. |
+| Abstract method voidpreSnapshot ( ObserverContext\<MasterCoprocessorEnvironment>, HBaseProtos.SnapshotDescription, HTableDescriptor ) has been removed from this interface.         | A client program may be interrupted by NoSuchMethodError exception. |
 
 #### RegionObserver
 
@@ -205,15 +205,15 @@ Following abstract method has been removed:
 HBASE-18733: WALKey has been purged completely in HBase 2.0.
 Following are the changes to the WALKey:
 
-#### classWALKey [!toc]
+#### class WALKey [!toc] [#classwalkey-toc]
 
 | Change                                                                               | Result                                                               |
 | ------------------------------------------------------------------------------------ | -------------------------------------------------------------------- |
 | Access level of field clusterIds has been changed from protected to private.         | A client program may be interrupted by IllegalAccessError exception. |
 | Access level of field compressionContext has been changed from protected to private. | A client program may be interrupted by IllegalAccessError exception. |
 | Access level of field encodedRegionName has been changed from protected to private.  | A client program may be interrupted by IllegalAccessError exception. |
-| Access level of field tablename has been changed from protectedto private.           | A client program may be interrupted by IllegalAccessError exception. |
-| Access level of field writeTime has been changed from protectedto private.           | A client program may be interrupted by IllegalAccessError exception. |
+| Access level of field tablename has been changed from protected to private.          | A client program may be interrupted by IllegalAccessError exception. |
+| Access level of field writeTime has been changed from protected to private.          | A client program may be interrupted by IllegalAccessError exception. |
 
 Following fields have been removed:
 
@@ -269,7 +269,7 @@ HBASE-16769 - PB references from MasterObserver and RegionServerObserver has bee
 
 You cannot administer an HBase 2.0 cluster with an HBase 1.0 client that includes RelicationAdmin, ACC, Thrift and REST usage of Admin ops. Methods returning protobufs have been changed to return POJOs instead. pb is not used in the APIs anymore. Returns have changed from void to Future for async methods.
 HBASE-18106 - Admin.listProcedures and Admin.listLocks were renamed to getProcedures and getLocks.
-MapReduce makes use of Admin doing following admin.getClusterStatus() to calcluate Splits.
+MapReduce makes use of Admin doing following admin.getClusterStatus() to calculate Splits.
 
 - Thrift usage of Admin API:
   compact(ByteBuffer)
@@ -343,7 +343,7 @@ org/apache/hadoop/hbase/client/Admin.getCompactionStateForRegion:([B)Lorg/apache
 
 ### HTableDescriptor and HColumnDescriptor changes
 
-HTableDescriptor and HColumnDescriptor has become interfaces and you can create it through Builders. HCD has become CFD. It no longer implements writable interface.
+HTableDescriptor and HColumnDescriptor have become interfaces and you can create it through Builders. HCD has become CFD. It no longer implements writable interface.
 package org.apache.hadoop.hbase
 
 #### class HColumnDescriptor [!toc]
@@ -430,15 +430,15 @@ org/apache/hadoop/hbase/client/HTableWrapper.createWrapper:(Ljava/util/List;Lorg
 
 #### class OperationConflictException [!toc]
 
-| Change                       | Result                                                                |
-| ---------------------------- | --------------------------------------------------------------------- |
-| This class has been removed. | A client program may be interrupted by NoClassDefFoundErrorexception. |
+| Change                       | Result                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| This class has been removed. | A client program may be interrupted by NoClassDefFoundError exception. |
 
-#### class class LockTimeoutException [!toc]
+#### class LockTimeoutException [!toc] [#class-class-locktimeoutexception-toc]
 
-| Change                       | Result                                                                |
-| ---------------------------- | --------------------------------------------------------------------- |
-| This class has been removed. | A client program may be interrupted by NoClassDefFoundErrorexception. |
+| Change                       | Result                                                                 |
+| ---------------------------- | ---------------------------------------------------------------------- |
+| This class has been removed. | A client program may be interrupted by NoClassDefFoundError exception. |
 
 ### Filter API changes:
 
@@ -469,7 +469,7 @@ package org.apache.hadoop.hbase.filter
 
 | Change                                                                                          | Result                                                             |
 | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
-| Field OP_ATTRIBUTE_ACL_STRATEGY of type java.lang.Stringhas been removed from this interface.   | A client program may be interrupted by NoSuchFieldError exception. |
+| Field OP_ATTRIBUTE_ACL_STRATEGY of type java.lang.String has been removed from this interface.  | A client program may be interrupted by NoSuchFieldError exception. |
 | Field OP_ATTRIBUTE_ACL_STRATEGY_CELL_FIRST of type byte[] has been removed from this interface. | A client program may be interrupted by NoSuchFieldError exception. |
 | Field OP_ATTRIBUTE_ACL_STRATEGY_DEFAULT of type byte[] has been removed from this interface.    | A client program may be interrupted by NoSuchFieldError exception. |
 
@@ -553,7 +553,7 @@ org/apache/hadoop/hbase/ServerLoad.getWriteRequestsCount:()I
 | ---------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------- |
 | This class became interface. | A client program may be interrupted by IncompatibleClassChangeError or InstantiationError exception dependent on the usage of this class. |
 
-### Mapreduce changes:
+### MapReduce changes:
 
 HFile\*Format has been removed in HBase 2.0.
 
