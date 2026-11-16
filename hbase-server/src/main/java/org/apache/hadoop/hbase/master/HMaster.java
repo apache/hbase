@@ -451,7 +451,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   private final boolean preLoadTableDescriptors;
 
   // Time stamps for when a hmaster became active
-  private long masterActiveTime;
+  private volatile long masterActiveTime;
 
   // Time stamp for when HMaster finishes becoming Active Master
   private long masterFinishedInitializationTime;
@@ -601,6 +601,14 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     } finally {
       span.end();
     }
+  }
+
+  /**
+   * Returns the current time to start from when choosing the active time of this master, see
+   * {@link MasterActiveTimeStore}. Protected so that tests can simulate clock skew between masters.
+   */
+  protected long getCurrentTimeForActiveTime() {
+    return EnvironmentEdgeManager.currentTime();
   }
 
   /**
@@ -990,7 +998,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
      */
     startupTaskGroup.addTask("Initializing Master file system");
 
-    this.masterActiveTime = EnvironmentEdgeManager.currentTime();
+    long initStartTime = getCurrentTimeForActiveTime();
+    this.masterActiveTime = initStartTime;
     // TODO: Do this using Dependency Injection, using PicoContainer, Guice or Spring.
 
     // always initialize the MemStoreLAB as we use a region to store data in master now, see
@@ -1034,6 +1043,10 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // initialize master local region
     masterRegion = MasterRegionFactory.create(this);
     rsListStorage = new MasterRegionServerList(masterRegion, this);
+    // The active time is sent with remote procedures and must be greater than that of every earlier
+    // active master, see MasterActiveTimeStore. Opening the master local region has fenced off the
+    // earlier active master, and no remote procedure has been sent yet.
+    this.masterActiveTime = new MasterActiveTimeStore(masterRegion).advance(masterActiveTime);
 
     // Initialize the ServerManager and register it as a configuration observer
     this.serverManager = createServerManager(this, rsListStorage);
@@ -1291,7 +1304,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     }
 
     LOG.info(String.format("Master has completed initialization %.3fsec",
-      (EnvironmentEdgeManager.currentTime() - masterActiveTime) / 1000.0f));
+      (EnvironmentEdgeManager.currentTime() - initStartTime) / 1000.0f));
     this.masterFinishedInitializationTime = EnvironmentEdgeManager.currentTime();
     configurationManager.registerObserver(this.balancer);
     configurationManager.registerObserver(this.logCleanerPool);
