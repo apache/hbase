@@ -68,7 +68,6 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.Result;
 import org.apache.hadoop.hbase.client.Scan;
 import org.apache.hadoop.hbase.client.SnapshotDescription;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.coprocessor.BulkLoadObserver;
@@ -279,11 +278,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
     // to and fro conversion overhead. get req is converted to PB req
     // and results are converted to PB results 1st and then to POJOs
     // again. We could have avoided such at least in ACL table context..
-    try (Table t = e.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
+    try {
       for (byte[] entry : entries) {
         currentEntry = entry;
         ListMultimap<String, UserPermission> perms =
-          PermissionStorage.getPermissions(conf, entry, t, null, null, null, false);
+          PermissionStorage.getPermissions(e.getConnection(), entry);
         byte[] serialized = PermissionStorage.writePermissionsAsBytes(perms, conf);
         zkPermissionWatcher.writeToZookeeper(entry, serialized);
       }
@@ -797,11 +796,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
         User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
           @Override
           public Void run() throws Exception {
-            try (Table table =
-              c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-              PermissionStorage.addUserPermission(c.getEnvironment().getConfiguration(),
-                userPermission, table);
-            }
+            PermissionStorage.addUserPermission(c.getEnvironment().getConnection(), userPermission,
+              false);
             return null;
           }
         });
@@ -818,14 +814,10 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postDeleteTable(ObserverContext<MasterCoprocessorEnvironment> c,
     final TableName tableName) throws IOException {
-    final Configuration conf = c.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table =
-          c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.removeTablePermissions(conf, tableName, table);
-        }
+        PermissionStorage.removeTablePermissions(c.getEnvironment().getConnection(), tableName);
         return null;
       }
     });
@@ -836,13 +828,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   public void preTruncateTable(ObserverContext<MasterCoprocessorEnvironment> c,
     final TableName tableName) throws IOException {
     requirePermission(c, "truncateTable", tableName, null, null, Action.ADMIN, Action.CREATE);
-
-    final Configuration conf = c.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         List<UserPermission> acls =
-          PermissionStorage.getUserTablePermissions(conf, tableName, null, null, null, false);
+          PermissionStorage.getTablePermissions(c.getEnvironment().getConnection(), tableName);
         if (acls != null) {
           tableAcls.put(tableName, acls);
         }
@@ -854,17 +844,13 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postTruncateTable(ObserverContext<MasterCoprocessorEnvironment> ctx,
     final TableName tableName) throws IOException {
-    final Configuration conf = ctx.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
         List<UserPermission> perms = tableAcls.get(tableName);
         if (perms != null) {
           for (UserPermission perm : perms) {
-            try (Table table =
-              ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-              PermissionStorage.addUserPermission(conf, perm, table);
-            }
+            PermissionStorage.addUserPermission(ctx.getEnvironment().getConnection(), perm, false);
           }
         }
         tableAcls.remove(tableName);
@@ -908,7 +894,6 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postModifyTable(ObserverContext<MasterCoprocessorEnvironment> c, TableName tableName,
     TableDescriptor oldDesc, TableDescriptor currentDesc) throws IOException {
-    final Configuration conf = c.getEnvironment().getConfiguration();
     // default the table owner to current user, if not specified.
     final String owner = getActiveUser(c).getShortName();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
@@ -916,10 +901,7 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       public Void run() throws Exception {
         UserPermission userperm = new UserPermission(owner,
           Permission.newBuilder(currentDesc.getTableName()).withActions(Action.values()).build());
-        try (Table table =
-          c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.addUserPermission(conf, userperm, table);
-        }
+        PermissionStorage.addUserPermission(c.getEnvironment().getConnection(), userperm, false);
         return null;
       }
     });
@@ -935,11 +917,8 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
       User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
         @Override
         public Void run() throws Exception {
-          try (Table table =
-            c.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-            PermissionStorage.removeTableColumnFamiliesPermissions(conf, tableName, removedFamilies,
-              table);
-          }
+          PermissionStorage.removeTableColumnFamiliesPermissions(c.getEnvironment().getConnection(),
+            tableName, removedFamilies);
           return null;
         }
       });
@@ -1155,14 +1134,11 @@ public class AccessController implements MasterCoprocessor, RegionCoprocessor,
   @Override
   public void postDeleteNamespace(ObserverContext<MasterCoprocessorEnvironment> ctx,
     final String namespace) throws IOException {
-    final Configuration conf = ctx.getEnvironment().getConfiguration();
     User.runAsLoginUser(new PrivilegedExceptionAction<Void>() {
       @Override
       public Void run() throws Exception {
-        try (Table table =
-          ctx.getEnvironment().getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.removeNamespacePermissions(conf, namespace, table);
-        }
+        PermissionStorage.removeNamespacePermissions(ctx.getEnvironment().getConnection(),
+          namespace);
         return null;
       }
     });
