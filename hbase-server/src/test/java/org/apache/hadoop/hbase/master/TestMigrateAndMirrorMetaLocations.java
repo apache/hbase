@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.shaded.protobuf.ProtobufUtil.lengthOfPBMag
 import static org.apache.hadoop.hbase.zookeeper.ZKMetadata.removeMetaData;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -42,6 +43,7 @@ import org.apache.hadoop.hbase.procedure2.Procedure;
 import org.apache.hadoop.hbase.regionserver.RegionScanner;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.zookeeper.ZKUtil;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
@@ -89,18 +91,19 @@ public class TestMigrateAndMirrorMetaLocations {
 
   private void checkMirrorLocation(int replicaCount) throws Exception {
     MasterRegion masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
+    Result locationResult;
     try (RegionScanner scanner =
       masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
-      boolean moreRows = scanner.next(cells);
-      // should only have one row as we have only one meta region, different replicas will be in the
-      // same row
-      assertFalse(moreRows);
-      assertFalse(cells.isEmpty());
-      Result result = Result.create(cells);
-      // make sure we publish the correct location to zookeeper too
-      assertLocationEquals(result, replicaCount);
+      scanner.next(cells);
+      assertFalse(cells.isEmpty(), "No row found in MasterRegion CATALOG_FAMILY");
+      locationResult = Result.create(cells);
     }
+    // should have one meta region row with all replicas in the same row
+    assertNotNull(CatalogFamilyFormat.getRegionLocations(locationResult),
+      "First CATALOG_FAMILY row does not contain meta region locations");
+    // make sure we publish the correct location to zookeeper too
+    assertLocationEquals(locationResult, replicaCount);
   }
 
   private void waitUntilNoSCP() throws IOException {
@@ -108,21 +111,41 @@ public class TestMigrateAndMirrorMetaLocations {
       .filter(p -> p instanceof ServerCrashProcedure).allMatch(Procedure::isSuccess));
   }
 
+  private void deleteAllCatalogFamilyRows(MasterRegion masterRegion) throws IOException {
+    List<byte[]> rows = new ArrayList<>();
+    try (RegionScanner scanner =
+      masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
+      List<Cell> cells = new ArrayList<>();
+      boolean moreRows;
+      do {
+        cells.clear();
+        moreRows = scanner.next(cells);
+        if (!cells.isEmpty()) {
+          byte[] row = Result.create(cells).getRow();
+          boolean duplicate = false;
+          for (byte[] existing : rows) {
+            if (Bytes.equals(existing, row)) {
+              duplicate = true;
+              break;
+            }
+          }
+          if (!duplicate) {
+            rows.add(row);
+          }
+        }
+      } while (moreRows);
+    }
+    for (byte[] row : rows) {
+      masterRegion.update(r -> r.delete(new Delete(row).addFamily(HConstants.CATALOG_FAMILY)));
+    }
+    masterRegion.flush(true);
+  }
+
   @Test
   public void test() throws Exception {
     checkMirrorLocation(2);
     MasterRegion masterRegion = UTIL.getMiniHBaseCluster().getMaster().getMasterRegion();
-    try (RegionScanner scanner =
-      masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
-      List<Cell> cells = new ArrayList<>();
-      scanner.next(cells);
-      Cell cell = cells.get(0);
-      // delete the only row
-      masterRegion.update(
-        r -> r.delete(new Delete(cell.getRowArray(), cell.getRowOffset(), cell.getRowLength())
-          .addFamily(HConstants.CATALOG_FAMILY)));
-      masterRegion.flush(true);
-    }
+    deleteAllCatalogFamilyRows(masterRegion);
     // restart the whole cluster, to see if we can migrate the data on zookeeper to master local
     // region
     UTIL.shutdownMiniHBaseCluster();
@@ -131,10 +154,11 @@ public class TestMigrateAndMirrorMetaLocations {
     try (RegionScanner scanner =
       masterRegion.getRegionScanner(new Scan().addFamily(HConstants.CATALOG_FAMILY))) {
       List<Cell> cells = new ArrayList<>();
-      boolean moreRows = scanner.next(cells);
-      assertFalse(moreRows);
-      // should have the migrated data
-      assertFalse(cells.isEmpty());
+      scanner.next(cells);
+      assertFalse(cells.isEmpty(), "No migrated meta locations in MasterRegion");
+      Result migrated = Result.create(cells);
+      assertNotNull(CatalogFamilyFormat.getRegionLocations(migrated),
+        "Migrated row does not contain meta region locations");
     }
     // wait until all meta regions have been assigned
     UTIL.waitFor(30000,

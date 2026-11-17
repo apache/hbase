@@ -37,6 +37,7 @@ import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.RegionLocations;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.exceptions.DeserializationException;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.security.User;
@@ -260,6 +261,17 @@ class ZKConnectionRegistry implements ConnectionRegistry {
             snProto.getStartCode());
         }),
       "ZKConnectionRegistry.getActiveMaster");
+  }
+
+  /**
+   * Returns the meta table name. This implementation always returns the default "hbase:meta"
+   * because ZKConnectionRegistry is deprecated and does not support custom meta table names. Custom
+   * meta table name support requires using RPC-based connection registry.
+   */
+  @Override
+  public CompletableFuture<TableName> getMetaTableName() {
+    return tracedFuture(() -> CompletableFuture.completedFuture(TableName.META_TABLE_NAME),
+      "ZKConnectionRegistry.getMetaTableName");
   }
 
   @Override

@@ -82,7 +82,7 @@ public class RegionInfoDisplay {
    */
   public static byte[] getRegionNameForDisplay(RegionInfo ri, Configuration conf) {
     boolean displayKey = conf.getBoolean(DISPLAY_KEYS_KEY, true);
-    if (displayKey || ri.getTable().equals(TableName.META_TABLE_NAME)) {
+    if (displayKey || TableName.isMetaTableName(ri.getTable())) {
       return ri.getRegionName();
     } else {
       // create a modified regionname with the startkey replaced but preserving

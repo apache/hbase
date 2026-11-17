@@ -772,12 +772,27 @@ public class CellComparatorImpl implements CellComparator {
   }
 
   /**
+   * Cached byte representation of the default meta table name. Looked up once at class load so the
+   * hot comparator-selection path in {@link #isMetaTable(byte[])} can short-circuit via
+   * {@link Bytes#equals(byte[], byte[])} instead of allocating/parsing a {@link TableName} each
+   * call. Non-default meta names (e.g. {@code hbase:meta_<suffix>}) still require the full
+   * {@link TableName#isMetaTableName} path, so this is a fast-path, not a replacement.
+   */
+  @SuppressWarnings("deprecation")
+  private static final byte[] DEFAULT_META_TABLE_BYTES = TableName.META_TABLE_NAME.toBytes();
+
+  /**
    * Utility method that makes a guess at comparator to use based off passed tableName. Use in
    * extreme when no comparator specified.
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getCellComparator(TableName tableName) {
-    return getCellComparator(tableName.toBytes());
+    // Resolve meta-ness directly on the TableName; the (TableName -> byte[] -> TableName) round
+    // trip through getCellComparator(byte[]) would re-parse the bytes and re-run TableName.valueOf
+    // on a hot path (e.g. MutableRegionInfo.containsRow / containsRange).
+    return TableName.isMetaTableName(tableName)
+      ? MetaCellComparator.META_COMPARATOR
+      : CellComparatorImpl.COMPARATOR;
   }
 
   /**
@@ -786,9 +801,28 @@ public class CellComparatorImpl implements CellComparator {
    * @return CellComparator to use going off the {@code tableName} passed.
    */
   public static CellComparator getCellComparator(byte[] tableName) {
-    // FYI, TableName.toBytes does not create an array; just returns existing array pointer.
-    return Bytes.equals(tableName, TableName.META_TABLE_NAME.toBytes())
+    return isMetaTable(tableName)
       ? MetaCellComparator.META_COMPARATOR
       : CellComparatorImpl.COMPARATOR;
+  }
+
+  /**
+   * @see TableName#isMetaTableName(TableName) for the canonical definition of what qualifies as a
+   *      meta table. Kept as a {@code byte[]}-friendly adapter so we can avoid materializing a
+   *      {@link TableName} on hot comparator-selection paths when the input is malformed.
+   */
+  static boolean isMetaTable(byte[] tableName) {
+    // Fast path: the overwhelmingly common case is the default meta table. A raw byte compare
+    // avoids both TableName.valueOf (which hits the TableName cache) and the regex match in
+    // TableName.isMetaTableName. The fallback below still catches custom meta names like
+    // hbase:meta_<suffix>.
+    if (Bytes.equals(tableName, DEFAULT_META_TABLE_BYTES)) {
+      return true;
+    }
+    try {
+      return TableName.isMetaTableName(TableName.valueOf(tableName));
+    } catch (IllegalArgumentException e) {
+      return false;
+    }
   }
 }

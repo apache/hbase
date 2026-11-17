@@ -35,15 +35,36 @@ public class RegionInfoBuilder {
     RegionInfoBuilder.newBuilder(TableName.valueOf("__UNDEFINED__")).build();
 
   /**
-   * RegionInfo for first meta region You cannot use this builder to make an instance of the
-   * {@link #FIRST_META_REGIONINFO}. Just refer to this instance. Also, while the instance is
-   * actually a MutableRI, its type is just RI so the mutable methods are not available (unless you
-   * go casting); it appears as immutable (I tried adding Immutable type but it just makes a mess).
+   * RegionInfo for first meta region, bound to the JVM-wide default meta table name
+   * ({@link TableName#META_TABLE_NAME}). Kept for backward compatibility with callers that cannot
+   * easily thread in a resolved meta {@link TableName}; new code paths that know the per-cluster
+   * meta name (read-replica or custom-suffix deployments) must use
+   * {@link #firstMetaRegionInfo(TableName)} instead so the region info matches the cluster's actual
+   * meta table.
+   * <p>
+   * You cannot use this builder to make an instance of the {@link #FIRST_META_REGIONINFO}. Just
+   * refer to this instance. Also, while the instance is actually a MutableRI, its type is just RI
+   * so the mutable methods are not available (unless you go casting); it appears as immutable (I
+   * tried adding Immutable type but it just makes a mess).
    */
   // TODO: How come Meta regions still do not have encoded region names? Fix.
   // hbase:meta,,1.1588230740 should be the hbase:meta first region name.
+  @SuppressWarnings("deprecation")
   public static final RegionInfo FIRST_META_REGIONINFO =
     new MutableRegionInfo(1L, TableName.META_TABLE_NAME, RegionInfo.DEFAULT_REPLICA_ID);
+
+  /**
+   * Returns the {@link RegionInfo} for the first region of the meta table whose name is
+   * {@code metaTableName}. Use this in place of {@link #FIRST_META_REGIONINFO} wherever the caller
+   * has access to a dynamically-resolved meta table name (via
+   * {@code MasterServices.getMetaTableName()}, {@code Connection.getMetaTableName()}, or
+   * {@link TableName#initializeHbaseMetaTableName(org.apache.hadoop.conf.Configuration)}); this is
+   * required for correctness in read-replica / custom-suffix deployments where the meta table is
+   * not literally {@code hbase:meta}.
+   */
+  public static RegionInfo firstMetaRegionInfo(TableName metaTableName) {
+    return new MutableRegionInfo(1L, metaTableName, RegionInfo.DEFAULT_REPLICA_ID);
+  }
 
   private final TableName tableName;
   private byte[] startKey = HConstants.EMPTY_START_ROW;

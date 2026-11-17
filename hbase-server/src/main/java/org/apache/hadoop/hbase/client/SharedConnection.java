@@ -62,6 +62,11 @@ public class SharedConnection implements Connection {
   }
 
   @Override
+  public TableName getMetaTableName() {
+    return this.conn.getMetaTableName();
+  }
+
+  @Override
   public BufferedMutator getBufferedMutator(TableName tableName) throws IOException {
     return this.conn.getBufferedMutator(tableName);
   }

@@ -595,16 +595,29 @@ public class ConnectionFactory {
           future.completeExceptionally(new IOException("clusterid came back null"));
           return;
         }
-        Class<? extends AsyncConnection> clazz = appliedConf.getClass(
-          HBASE_CLIENT_ASYNC_CONNECTION_IMPL, AsyncConnectionImpl.class, AsyncConnection.class);
-        try {
-          future.complete(user.runAs((PrivilegedExceptionAction<
-            ? extends AsyncConnection>) () -> ReflectionUtils.newInstance(clazz, appliedConf,
-              registry, clusterId, null, user, connectionAttributes)));
-        } catch (Exception e) {
-          registry.close();
-          future.completeExceptionally(e);
-        }
+        // Fetch meta table name from registry
+        addListener(registry.getMetaTableName(), (metaTableName, metaError) -> {
+          if (metaError != null) {
+            registry.close();
+            future.completeExceptionally(metaError);
+            return;
+          }
+          if (metaTableName == null) {
+            registry.close();
+            future.completeExceptionally(new IOException("meta table name came back null"));
+            return;
+          }
+          Class<? extends AsyncConnection> clazz = appliedConf.getClass(
+            HBASE_CLIENT_ASYNC_CONNECTION_IMPL, AsyncConnectionImpl.class, AsyncConnection.class);
+          try {
+            future.complete(user.runAs((PrivilegedExceptionAction<
+              ? extends AsyncConnection>) () -> ReflectionUtils.newInstance(clazz, appliedConf,
+                registry, clusterId, metaTableName, null, user, connectionAttributes)));
+          } catch (Exception e) {
+            registry.close();
+            future.completeExceptionally(e);
+          }
+        });
       });
       return future;
     }, "ConnectionFactory.createAsyncConnection");

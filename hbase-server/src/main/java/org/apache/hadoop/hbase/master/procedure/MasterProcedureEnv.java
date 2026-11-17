@@ -22,6 +22,7 @@ import java.util.concurrent.ExecutorService;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
@@ -124,6 +125,10 @@ public class MasterProcedureEnv implements ConfigurationObserver {
 
   public MasterFileSystem getMasterFileSystem() {
     return master.getMasterFileSystem();
+  }
+
+  public TableName getMetaTableName() {
+    return master.getMetaTableName();
   }
 
   public boolean isRunning() {

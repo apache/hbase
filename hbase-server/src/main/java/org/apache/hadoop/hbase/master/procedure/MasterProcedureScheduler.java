@@ -561,11 +561,13 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
   // Meta Queue Lookup Helpers
   // ============================================================================
   private MetaQueue getMetaQueue() {
-    MetaQueue node = AvlTree.get(metaMap, TableName.META_TABLE_NAME, META_QUEUE_KEY_COMPARATOR);
+    // For now, hardcode default. Future: pass metaTableName via constructor from Master
+    TableName metaTableName = TableName.META_TABLE_NAME;
+    MetaQueue node = AvlTree.get(metaMap, metaTableName, META_QUEUE_KEY_COMPARATOR);
     if (node != null) {
       return node;
     }
-    node = new MetaQueue(locking.getMetaLock());
+    node = new MetaQueue(metaTableName, locking.getMetaLock());
     metaMap = AvlTree.insert(metaMap, node);
     return node;
   }
@@ -1079,6 +1081,10 @@ public class MasterProcedureScheduler extends AbstractProcedureScheduler {
         return false;
       }
       waitProcedure(lock, procedure);
+      // TODO(HBASE-29691): resolve the meta table name dynamically rather than using the
+      // deprecated global static. The scheduler currently has no MasterServices reference;
+      // threading one in is tracked under the HBASE-29691 umbrella follow-up work. This is a
+      // log-only call so the deprecated static is tolerable for the moment.
       logLockedResource(LockedResourceType.META, TableName.META_TABLE_NAME.getNameAsString());
       return true;
     } finally {

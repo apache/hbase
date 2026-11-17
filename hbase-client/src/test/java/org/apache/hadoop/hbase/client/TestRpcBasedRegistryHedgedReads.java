@@ -34,6 +34,7 @@ import java.util.stream.IntStream;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.ipc.RpcClient;
 import org.apache.hadoop.hbase.ipc.RpcClientFactory;
 import org.apache.hadoop.hbase.security.User;
@@ -87,8 +88,10 @@ public class TestRpcBasedRegistryHedgedReads {
 
   private static volatile Set<Integer> GOOD_RESP_INDEXS;
 
-  private static GetClusterIdResponse RESP =
+  private static final GetClusterIdResponse DEFAULT_RESP =
     GetClusterIdResponse.newBuilder().setClusterId("id").build();
+
+  private static volatile GetClusterIdResponse RESP = DEFAULT_RESP;
 
   public static final class RpcClientImpl implements RpcClient {
 
@@ -203,6 +206,7 @@ public class TestRpcBasedRegistryHedgedReads {
     CALLED.set(0);
     BAD_RESP_INDEX = -1;
     GOOD_RESP_INDEXS = Collections.emptySet();
+    RESP = DEFAULT_RESP;
   }
 
   private <T> T logIfError(CompletableFuture<T> future) throws IOException {
@@ -263,6 +267,41 @@ public class TestRpcBasedRegistryHedgedReads {
       Thread.sleep(1000);
       // make sure we do not send more
       assertEquals(10, CALLED.get());
+    }
+  }
+
+  /**
+   * Verifies that an RPC-based registry returns the meta table name advertised by the server on the
+   * piggybacked {@code meta_table_name} field of {@code GetClusterIdResponse} (HBASE-29691).
+   * Mirrors the production flow where a new server populates the field and a new client reads it.
+   */
+  @Test
+  public void testGetMetaTableNameFromServerAdvertisedField() throws IOException {
+    TableName advertised = TableName.valueOf("hbase:meta_cluster1");
+    RESP = GetClusterIdResponse.newBuilder().setClusterId("id")
+      .setMetaTableName(advertised.getNameAsString()).build();
+    GOOD_RESP_INDEXS =
+      IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(0)) {
+      assertEquals(advertised, logIfError(registry.getMetaTableName()));
+    }
+  }
+
+  /**
+   * Verifies that an RPC-based registry falls back to {@link TableName#META_TABLE_NAME} when the
+   * server does not populate the {@code meta_table_name} field (the pre-HBASE-29691 server case
+   * guaranteed to be compatible by protobuf unknown-field semantics). This test exercises the
+   * {@code hasMetaTableName()} == false branch that eliminates the need for the earlier
+   * UnsupportedOperationException-sniffing fallback approach.
+   */
+  @Test
+  @SuppressWarnings("deprecation")
+  public void testGetMetaTableNameFallbackWhenServerOmitsField() throws IOException {
+    // DEFAULT_RESP has only cluster_id set — meta_table_name is absent, simulating an old server.
+    GOOD_RESP_INDEXS =
+      IntStream.range(0, 10).mapToObj(Integer::valueOf).collect(Collectors.toSet());
+    try (AbstractRpcBasedConnectionRegistry registry = createRegistry(0)) {
+      assertEquals(TableName.META_TABLE_NAME, logIfError(registry.getMetaTableName()));
     }
   }
 }

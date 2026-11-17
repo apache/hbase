@@ -174,6 +174,10 @@ class SchemaLocking {
     addToLockedResources(lockedResources, regionLocks, Function.identity(),
       LockedResourceType.REGION);
     addToLockedResources(lockedResources, peerLocks, Function.identity(), LockedResourceType.PEER);
+    // TODO(HBASE-29691): resolve the meta table name dynamically rather than using the
+    // deprecated global static. SchemaLocking has no MasterServices reference today; threading
+    // one in is tracked under the HBASE-29691 umbrella follow-up. The ImmutableMap here is only
+    // used to format the resource name for the operator-facing LockedResources listing.
     addToLockedResources(lockedResources, ImmutableMap.of(TableName.META_TABLE_NAME, metaLock),
       tn -> tn.getNameAsString(), LockedResourceType.META);
     addToLockedResources(lockedResources, globalLocks, Function.identity(),
@@ -236,6 +240,8 @@ class SchemaLocking {
       .append("tableLocks", filterUnlocked(tableLocks))
       .append("regionLocks", filterUnlocked(regionLocks))
       .append("peerLocks", filterUnlocked(peerLocks))
+      // TODO(HBASE-29691): same dynamic-name follow-up as the other site in this class — this
+      // toString() is debug-only.
       .append("metaLocks", filterUnlocked(ImmutableMap.of(TableName.META_TABLE_NAME, metaLock)))
       .append("globalLocks", filterUnlocked(globalLocks)).build();
   }

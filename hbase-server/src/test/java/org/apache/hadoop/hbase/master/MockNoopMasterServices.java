@@ -599,6 +599,11 @@ public class MockNoopMasterServices implements MasterServices {
   }
 
   @Override
+  public TableName getMetaTableName() {
+    return null;
+  }
+
+  @Override
   public KeyManagementService getKeyManagementService() {
     return this;
   }

@@ -67,6 +67,12 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
 
   @Override
   public TableName getTableName() {
+    // Called by the procedure framework without a MasterProcedureEnv, so the dynamically-resolved
+    // meta table name is not reachable here. The returned value is used for lock routing (the
+    // MasterProcedureScheduler routes anything matching TableName.isMetaTableName() to the single
+    // meta lock queue, so a custom-suffix meta still coordinates correctly) and for operator-
+    // facing logging. The actual meta region creation in writeFsLayout / INIT_META_ASSIGN_META
+    // uses the dynamic name via env.getMetaTableName().
     return TableName.META_TABLE_NAME;
   }
 
@@ -75,11 +81,11 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     return TableOperationType.CREATE;
   }
 
-  private static TableDescriptor writeFsLayout(Path rootDir, MasterProcedureEnv env)
-    throws IOException {
-    LOG.info("BOOTSTRAP: creating {} region", TableName.META_TABLE_NAME);
+  private static TableDescriptor writeFsLayout(Path rootDir, MasterProcedureEnv env,
+    TableName metaTableName) throws IOException {
+    LOG.info("BOOTSTRAP: creating {} region", metaTableName);
     FileSystem fs = rootDir.getFileSystem(env.getMasterConfiguration());
-    Path tableDir = CommonFSUtils.getTableDir(rootDir, TableName.META_TABLE_NAME);
+    Path tableDir = CommonFSUtils.getTableDir(rootDir, metaTableName);
     if (fs.exists(tableDir) && !deleteMetaTableDirectoryIfPartial(fs, tableDir)) {
       LOG.warn("Can not delete partial created meta table, continue...");
     }
@@ -89,10 +95,9 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
     // Enable after.
     TableDescriptor metaDescriptor = FSTableDescriptors
       .tryUpdateAndGetMetaTableDescriptor(env.getMasterConfiguration(), fs, rootDir);
-    HRegion
-      .createHRegion(RegionInfoBuilder.FIRST_META_REGIONINFO, rootDir, env.getMasterConfiguration(),
-        metaDescriptor, null, env.getMasterServices().getKeyManagementService())
-      .close();
+    HRegion.createHRegion(RegionInfoBuilder.firstMetaRegionInfo(metaTableName), rootDir,
+      env.getMasterConfiguration(), metaDescriptor, null,
+      env.getMasterServices().getKeyManagementService()).close();
     return metaDescriptor;
   }
 
@@ -105,14 +110,14 @@ public class InitMetaProcedure extends AbstractStateMachineTableProcedure<InitMe
         case INIT_META_WRITE_FS_LAYOUT:
           Configuration conf = env.getMasterConfiguration();
           Path rootDir = CommonFSUtils.getRootDir(conf);
-          TableDescriptor td = writeFsLayout(rootDir, env);
+          TableDescriptor td = writeFsLayout(rootDir, env, env.getMetaTableName());
           env.getMasterServices().getTableDescriptors().update(td, true);
           setNextState(InitMetaState.INIT_META_ASSIGN_META);
           return Flow.HAS_MORE_STATE;
         case INIT_META_ASSIGN_META:
           LOG.info("Going to assign meta");
-          addChildProcedure(env.getAssignmentManager()
-            .createAssignProcedures(Arrays.asList(RegionInfoBuilder.FIRST_META_REGIONINFO)));
+          addChildProcedure(env.getAssignmentManager().createAssignProcedures(
+            Arrays.asList(RegionInfoBuilder.firstMetaRegionInfo(env.getMetaTableName()))));
           setNextState(InitMetaState.INIT_META_CREATE_NAMESPACES);
           return Flow.HAS_MORE_STATE;
         case INIT_META_CREATE_NAMESPACES:
