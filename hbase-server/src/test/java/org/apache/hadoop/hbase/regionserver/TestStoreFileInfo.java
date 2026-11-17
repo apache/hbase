@@ -93,6 +93,16 @@ public class TestStoreFileInfo {
   }
 
   @Test
+  public void testMobFileLinks() throws IOException {
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    for (String name : new String[] { "table=4567-abcd_1234", "ns=table=4567-abcd_1234" }) {
+      Path path = new Path("/hbase/test/0123/cf", name);
+      StoreFileInfo info = new StoreFileInfo(TEST_UTIL.getConfiguration(), fs, path, true);
+      assertTrue(info.isLink(), name);
+    }
+  }
+
+  @Test
   public void testOpenErrorMessageHFileLink() throws IOException, IllegalStateException {
     // Test file link exception
     // Try to open nonsense hfilelink. Make sure exception is from HFileLink.
