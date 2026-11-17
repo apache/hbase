@@ -19,6 +19,8 @@ package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
@@ -134,6 +136,55 @@ public class TestHBackupFileSystem {
 
     // Marker should not exist since create() was intercepted
     assertFalse(HBackupFileSystem.isBackupComplete(new Configuration(), backupRootDir, backupId));
+  }
+
+  @Test
+  public void testDeleteBackupCompleteMarker(@TempDir java.nio.file.Path tempDir)
+    throws IOException {
+    Configuration conf = new Configuration();
+    String backupRootDir = tempDir.toUri().toString();
+    String backupId = "backup_delete_marker";
+
+    HBackupFileSystem.writeBackupCompleteMarker(conf, backupRootDir, backupId);
+    assertTrue(HBackupFileSystem.isBackupComplete(conf, backupRootDir, backupId));
+
+    HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRootDir, backupId);
+    assertFalse(HBackupFileSystem.isBackupComplete(conf, backupRootDir, backupId));
+
+    // Deleting a marker that does not exist is a no-op
+    HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRootDir, backupId);
+  }
+
+  // Verifies a failure to delete the marker is surfaced, so callers do not go on to delete backup
+  // data while leaving a marker behind
+  @Test
+  public void testDeleteBackupCompleteMarkerFailureThrows(@TempDir java.nio.file.Path tempDir)
+    throws IOException {
+    String backupRootDir = tempDir.toUri().toString();
+    String backupId = "backup_delete_marker_fail";
+    HBackupFileSystem.writeBackupCompleteMarker(new Configuration(), backupRootDir, backupId);
+
+    Configuration conf = new Configuration();
+    conf.setClass("fs.file.impl", MarkerDeletionFailFileSystem.class, FileSystem.class);
+    conf.setBoolean("fs.file.impl.disable.cache", true);
+
+    assertThrows(IOException.class,
+      () -> HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRootDir, backupId));
+    assertTrue(HBackupFileSystem.isBackupComplete(new Configuration(), backupRootDir, backupId));
+  }
+
+  public static class MarkerDeletionFailFileSystem extends FilterFileSystem {
+    public MarkerDeletionFailFileSystem() {
+      super(new LocalFileSystem());
+    }
+
+    @Override
+    public boolean delete(Path f, boolean recursive) throws IOException {
+      if (f.getName().equals(HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME)) {
+        return false;
+      }
+      return super.delete(f, recursive);
+    }
   }
 
   public static class MarkerCreationFailFileSystem extends FilterFileSystem {

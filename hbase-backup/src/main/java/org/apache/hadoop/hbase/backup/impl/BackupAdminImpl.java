@@ -310,6 +310,10 @@ public class BackupAdminImpl implements BackupAdmin {
       } else {
         info.setTables(tables);
         sysTable.updateBackupInfo(info);
+        // The backup directory no longer matches its manifest, so remove the completion marker
+        // before deleting the table's data. The backup stays COMPLETE in the system table.
+        HBackupFileSystem.deleteBackupCompleteMarker(conn.getConfiguration(),
+          info.getBackupRootDir(), info.getBackupId());
         // Now, clean up directory for table (idempotent)
         cleanupBackupDir(info, tn, conn.getConfiguration());
       }

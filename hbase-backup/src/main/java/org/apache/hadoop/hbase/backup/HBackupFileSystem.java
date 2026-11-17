@@ -101,6 +101,12 @@ public final class HBackupFileSystem {
    * another cluster) that cannot access the originating cluster's BackupSystemTable. A backup can
    * still be complete even if the completion marker file is missing, but there is no way to verify
    * this without using the originating cluster's BackupSystemTable.
+   * <p>
+   * The marker is always written last and deleted first: any operation that removes or modifies
+   * data in a backup directory (failed-backup cleanup, backup delete, merge, removing a table from
+   * a backup image when a dependent backup is deleted) deletes the marker before touching the data.
+   * A backup whose image was modified this way may therefore remain COMPLETE in the system table
+   * without a marker.
    * @param conf          configuration
    * @param backupRootDir backup root directory
    * @param backupId      backup id
@@ -113,9 +119,29 @@ public final class HBackupFileSystem {
       FileSystem fs = markerPath.getFileSystem(conf);
       fs.create(markerPath, true).close();
       LOG.info("Backup completion marker file written to: {}", markerPath);
-    } catch (IOException e) {
+    } catch (IOException | RuntimeException e) {
       LOG.warn("Failed to write {} marker file to backup directory: {}", BACKUP_COMPLETE_FILE_NAME,
         backupDir, e);
+    }
+  }
+
+  /**
+   * Delete the completion marker file for the given backup, if it exists. Callers must invoke this
+   * before removing or modifying any data in the backup directory, so that the marker is never
+   * present on a backup whose data is incomplete.
+   * @param conf          configuration
+   * @param backupRootDir backup root directory
+   * @param backupId      backup id
+   * @throws IOException if the file system cannot be accessed or the marker could not be deleted
+   */
+  public static void deleteBackupCompleteMarker(Configuration conf, String backupRootDir,
+    String backupId) throws IOException {
+    Path markerPath = new Path(getBackupPath(backupRootDir, backupId), BACKUP_COMPLETE_FILE_NAME);
+    FileSystem fs = markerPath.getFileSystem(conf);
+    if (fs.delete(markerPath, false)) {
+      LOG.debug("Removed backup completion marker: {}", markerPath);
+    } else if (fs.exists(markerPath)) {
+      throw new IOException("Unable to delete backup completion marker: " + markerPath);
     }
   }
 

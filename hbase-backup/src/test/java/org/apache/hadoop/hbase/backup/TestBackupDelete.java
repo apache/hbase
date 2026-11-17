@@ -63,8 +63,10 @@ public class TestBackupDelete extends TestBackupBase {
     Path path = new Path(info.getBackupRootDir(), backupId);
     FileSystem fs = FileSystem.get(path.toUri(), conf1);
     assertTrue(fs.exists(path));
+    TestBackupUtils.assertBackupCompleteFileExists(conf1, info.getBackupRootDir(), backupId);
     int deleted = getBackupAdmin().deleteBackups(backupIds);
 
+    TestBackupUtils.assertBackupCompleteFileDoesNotExist(conf1, info.getBackupRootDir(), backupId);
     assertTrue(!fs.exists(path));
     assertTrue(fs.exists(new Path(info.getBackupRootDir())));
     assertTrue(1 == deleted);

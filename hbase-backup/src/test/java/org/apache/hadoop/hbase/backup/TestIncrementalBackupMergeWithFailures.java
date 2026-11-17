@@ -188,11 +188,11 @@ public class TestIncrementalBackupMergeWithFailures extends TestBackupBase {
         deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
         // Finish merge session
         table.finishMergeOperation();
-        // Write the completion marker after the merge is fully finalized so
-        // external consumers never observe it on a partially-merged backup.
-        HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
         // Release lock
         table.finishBackupExclusiveOperation();
+        // Write the completion marker after the merge is fully finalized and the lock is
+        // released, so external consumers never observe it on a partially-merged backup.
+        HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
       } catch (RuntimeException e) {
         throw e;
       } catch (Exception e) {

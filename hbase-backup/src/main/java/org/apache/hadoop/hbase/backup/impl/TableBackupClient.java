@@ -188,6 +188,17 @@ public abstract class TableBackupClient {
       // clean up the uncompleted data at target directory if the ongoing backup has already entered
       // the copy phase
       LOG.debug("Trying to cleanup up target dir. Current backup phase: " + backupInfo.getPhase());
+
+      // The .backup.complete marker should not exist for a failed backup, but remove it first, in
+      // any phase, in case it does. A failure here is logged and does not prevent cleanup of the
+      // partially copied data below.
+      try {
+        HBackupFileSystem.deleteBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+          backupInfo.getBackupId());
+      } catch (IOException e) {
+        LOG.warn("Failed to remove backup completion marker for {}", backupInfo.getBackupId(), e);
+      }
+
       if (
         backupInfo.getPhase().equals(BackupPhase.SNAPSHOTCOPY)
           || backupInfo.getPhase().equals(BackupPhase.INCREMENTAL_COPY)
@@ -214,15 +225,6 @@ public abstract class TableBackupClient {
             LOG.debug(tableDir.toString() + " is empty, remove it.");
           }
         }
-      }
-
-      // The .backup.complete marker file should not exist, but attempt to remove it in case it does
-      Path backupDir =
-        HBackupFileSystem.getBackupPath(backupInfo.getBackupRootDir(), backupInfo.getBackupId());
-      Path markerPath = new Path(backupDir, HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME);
-      FileSystem markerFs = markerPath.getFileSystem(conf);
-      if (markerFs.delete(markerPath, false)) {
-        LOG.debug("Removed stale backup completion marker: {}", markerPath);
       }
     } catch (IOException e1) {
       LOG.error("Cleaning up uncompleted backup data of " + backupInfo.getBackupId() + " at "
@@ -409,11 +411,11 @@ public abstract class TableBackupClient {
     }
     BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
-    HBackupFileSystem.writeBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
-      backupInfo.getBackupId());
 
     // Finish active session
     backupManager.finishBackupSession();
+    HBackupFileSystem.writeBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
 
     LOG.info("Backup " + backupInfo.getBackupId() + " completed.");
   }

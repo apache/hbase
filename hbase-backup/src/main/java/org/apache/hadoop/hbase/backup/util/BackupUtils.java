@@ -538,6 +538,11 @@ public final class BackupUtils {
         return;
       }
 
+      // Delete the completion marker before any data so that a partial delete never leaves a
+      // marker on a backup with missing tables. If this fails, abort: the marker and data both
+      // remain, which is consistent.
+      HBackupFileSystem.deleteBackupCompleteMarker(conf, targetDir, backupInfo.getBackupId());
+
       FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
 
       for (TableName table : backupInfo.getTables()) {

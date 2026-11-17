@@ -180,11 +180,11 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
       // Finish merge session
       table.finishMergeOperation();
-      // Write the completion marker after the merge is fully finalized so
-      // external consumers never observe it on a partially-merged backup.
-      HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
       // Release lock
       table.finishBackupExclusiveOperation();
+      // Write the completion marker after the merge is fully finalized and the lock is released,
+      // so external consumers never observe it on a partially-merged backup.
+      HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
     } catch (RuntimeException e) {
 
       throw e;
@@ -329,6 +329,12 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
 
   protected void deleteBackupImages(List<String> backupIds, Connection conn, FileSystem fs,
     String backupRoot) throws IOException {
+    // Delete completion markers first, so a merged-away backup never keeps a marker if its
+    // directory delete below fails
+    for (String backupId : backupIds) {
+      HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRoot, backupId);
+    }
+
     // Delete from backup system table
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       for (String backupId : backupIds) {
@@ -343,7 +349,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       Path backupDirPath = HBackupFileSystem.getBackupPath(backupRoot, backupId);
 
       if (!fs.delete(backupDirPath, true)) {
-        LOG.warn("Could not delete " + backupDirPath);
+        LOG.warn("Could not delete {}", backupDirPath);
       }
     }
   }
