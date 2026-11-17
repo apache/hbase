@@ -19,8 +19,10 @@ package org.apache.hadoop.hbase.hbtop.screen.top;
 
 import static org.hamcrest.CoreMatchers.is;
 import static org.hamcrest.MatcherAssert.assertThat;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.Mockito.lenient;
+import static org.mockito.Mockito.when;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -67,6 +69,14 @@ public class TestTopScreenModel {
     topScreenModel.refreshMetricsData();
     Summary summary = topScreenModel.getSummary();
     TestUtils.assertSummary(summary);
+  }
+
+  @Test
+  public void testRefreshMetricsDataWhenFirstGetClusterMetricsFails() throws IOException {
+    when(admin.getClusterMetrics()).thenThrow(new IOException("injected"));
+    topScreenModel.refreshMetricsData();
+    assertNull(topScreenModel.getSummary());
+    assertTrue(topScreenModel.getRecords().isEmpty());
   }
 
   @Test
