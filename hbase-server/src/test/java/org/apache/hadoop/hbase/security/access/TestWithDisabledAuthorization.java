@@ -208,7 +208,7 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
       TEST_Q1, Permission.Action.READ, Permission.Action.WRITE);
 
     assertEquals(5, PermissionStorage
-      .getTablePermissions(TEST_UTIL.getConfiguration(), testTable.getTableName()).size());
+      .getTablePermissions(TEST_UTIL.getConnection(), testTable.getTableName()).size());
   }
 
   @AfterEach
@@ -222,8 +222,8 @@ public class TestWithDisabledAuthorization extends SecureTestUtil {
     }
     // Verify all table/namespace permissions are erased
     assertEquals(0, PermissionStorage
-      .getTablePermissions(TEST_UTIL.getConfiguration(), testTable.getTableName()).size());
-    assertEquals(0, PermissionStorage.getNamespacePermissions(TEST_UTIL.getConfiguration(),
+      .getTablePermissions(TEST_UTIL.getConnection(), testTable.getTableName()).size());
+    assertEquals(0, PermissionStorage.getNamespacePermissions(TEST_UTIL.getConnection(),
       testTable.getTableName().getNamespaceAsString()).size());
   }
 

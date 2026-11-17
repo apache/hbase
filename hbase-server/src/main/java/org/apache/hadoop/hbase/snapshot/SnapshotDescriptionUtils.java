@@ -34,7 +34,6 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.ipc.RpcServer;
 import org.apache.hadoop.hbase.security.User;
 import org.apache.hadoop.hbase.security.access.AccessChecker;
@@ -48,6 +47,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotDescription;
@@ -524,10 +524,10 @@ public final class SnapshotDescriptionUtils {
       User.runAsLoginUser(new PrivilegedExceptionAction<ListMultimap<String, UserPermission>>() {
         @Override
         public ListMultimap<String, UserPermission> run() throws Exception {
-          try (Table aclTable = conn.getTable(PermissionStorage.ACL_TABLE_NAME)) {
-            return PermissionStorage.getTablePermissions(conf,
-              TableName.valueOf(snapshot.getTable()), aclTable);
-          }
+          ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
+          PermissionStorage.getTablePermissions(conn, TableName.valueOf(snapshot.getTable()))
+            .forEach(up -> perms.put(up.getUser(), up));
+          return perms;
         }
       });
     return snapshot.toBuilder()

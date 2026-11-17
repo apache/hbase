@@ -233,7 +233,7 @@ public class TestSecureExport {
     SecureTestUtil.grantOnTable(UTIL, USER_XO, TableName.valueOf(exportTable), null, null,
       Permission.Action.EXEC);
     assertEquals(4, PermissionStorage
-      .getTablePermissions(UTIL.getConfiguration(), TableName.valueOf(exportTable)).size());
+      .getTablePermissions(UTIL.getConnection(), TableName.valueOf(exportTable)).size());
     AccessTestAction putAction = () -> {
       Put p = new Put(ROW1);
       p.addColumn(FAMILYA, Bytes.toBytes("qual_0"), NOW, QUAL);
