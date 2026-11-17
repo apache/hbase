@@ -56,7 +56,6 @@ import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.MasterSwitchType;
 import org.apache.hadoop.hbase.client.NormalizeTableFilterParams;
 import org.apache.hadoop.hbase.client.RegionInfo;
-import org.apache.hadoop.hbase.client.Table;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableState;
 import org.apache.hadoop.hbase.client.VersionInfoUtil;
@@ -118,6 +117,7 @@ import org.apache.hadoop.hbase.security.access.AccessController;
 import org.apache.hadoop.hbase.security.access.Permission;
 import org.apache.hadoop.hbase.security.access.Permission.Action;
 import org.apache.hadoop.hbase.security.access.PermissionStorage;
+import org.apache.hadoop.hbase.security.access.PermissionUtils;
 import org.apache.hadoop.hbase.security.access.ShadedAccessControlUtil;
 import org.apache.hadoop.hbase.security.access.UserPermission;
 import org.apache.hadoop.hbase.security.visibility.VisibilityController;
@@ -2933,10 +2933,7 @@ public class MasterRpcServices extends RSRpcServices
           ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         boolean mergeExistingPermissions = request.getMergeExistingPermissions();
         master.cpHost.preGrant(perm, mergeExistingPermissions);
-        try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.addUserPermission(getConfiguration(), perm, table,
-            mergeExistingPermissions);
-        }
+        PermissionStorage.addUserPermission(master.getConnection(), perm, mergeExistingPermissions);
         master.cpHost.postGrant(perm, mergeExistingPermissions);
         return GrantResponse.getDefaultInstance();
       } else {
@@ -2957,9 +2954,7 @@ public class MasterRpcServices extends RSRpcServices
         final UserPermission userPermission =
           ShadedAccessControlUtil.toUserPermission(request.getUserPermission());
         master.cpHost.preRevoke(userPermission);
-        try (Table table = master.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME)) {
-          PermissionStorage.removeUserPermission(master.getConfiguration(), userPermission, table);
-        }
+        PermissionStorage.removeUserPermission(master.getConnection(), userPermission);
         master.cpHost.postRevoke(userPermission);
         return RevokeResponse.getDefaultInstance();
       } else {
@@ -2991,18 +2986,17 @@ public class MasterRpcServices extends RSRpcServices
         master.getMasterCoprocessorHost().preGetUserPermissions(userName, namespace, table, cf, cq,
           permissionScope);
 
-        List<UserPermission> perms = null;
+        List<UserPermission> perms;
         if (permissionType == Type.Table) {
-          boolean filter = (cf != null || userName != null) ? true : false;
-          perms = PermissionStorage.getUserTablePermissions(master.getConfiguration(), table, cf,
-            cq, userName, filter);
+          perms = PermissionUtils.filter(
+            PermissionStorage.getTablePermissions(master.getConnection(), table), cf, cq, userName);
         } else if (permissionType == Type.Namespace) {
-          perms = PermissionStorage.getUserNamespacePermissions(master.getConfiguration(),
-            namespace, userName, userName != null ? true : false);
+          perms = PermissionUtils.filter(
+            PermissionStorage.getNamespacePermissions(master.getConnection(), namespace), userName);
         } else {
-          perms = PermissionStorage.getUserPermissions(master.getConfiguration(), null, null, null,
-            userName, userName != null ? true : false);
-          // Skip super users when filter user is specified
+          perms = PermissionUtils
+            .filter(PermissionStorage.getGlobalPermissions(master.getConnection()), userName);
+          // Skip super users when userName is specified
           if (userName == null) {
             // Adding superusers explicitly to the result set as PermissionStorage do not store
             // them. Also using acl as table name to be inline with the results of global admin and
