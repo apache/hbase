@@ -159,10 +159,10 @@ public class TestAdaptiveLruCachePlacementAdmissionPolicy {
     assertEquals(85, policy.getCacheDataBlockPercent());
 
     AdmissionDecision admitted = policy.shouldAdmit(new BlockCacheKey("file", 84L), dataBlock,
-      context, AdmissionPriority.NORMAL, topologyView);
+      context, AdmissionPriority.NORMAL, CacheTier.SINGLE, topologyView);
 
     AdmissionDecision rejected = policy.shouldAdmit(new BlockCacheKey("file", 85L), dataBlock,
-      context, AdmissionPriority.NORMAL, topologyView);
+      context, AdmissionPriority.NORMAL, CacheTier.SINGLE, topologyView);
 
     assertTrue(admitted.isAdmitted());
     assertFalse(rejected.isAdmitted());
@@ -181,13 +181,16 @@ public class TestAdaptiveLruCachePlacementAdmissionPolicy {
     applyPressure(policy, CacheTier.SINGLE, topologyView, 3_200L);
 
     AdmissionDecision decision = policy.shouldAdmit(new BlockCacheKey("file", 99L), indexBlock,
-      context, AdmissionPriority.NORMAL, topologyView);
+      context, AdmissionPriority.NORMAL, CacheTier.SINGLE, topologyView);
 
     assertTrue(decision.isAdmitted());
   }
 
   /**
    * Verifies that inclusive topology removes only L1 when AdaptiveLRU rejects a data block there.
+   */
+  /**
+   * Verifies that inclusive topology retains L2 when AdaptiveLRU rejects a data block from L1.
    */
   @Test
   void testInclusiveTopologyRetainsL2WhenDataBlockIsRejectedFromL1() {
@@ -201,14 +204,21 @@ public class TestAdaptiveLruCachePlacementAdmissionPolicy {
 
     BlockCacheKey cacheKey = new BlockCacheKey("file", 99L);
 
-    AdmissionDecision admission =
-      policy.shouldAdmit(cacheKey, dataBlock, context, AdmissionPriority.NORMAL, topologyView);
     TierDecision placement = policy.selectTier(cacheKey, dataBlock, context, topologyView);
+    AdmissionDecision l1Admission = policy.shouldAdmit(cacheKey, dataBlock, context,
+      AdmissionPriority.NORMAL, CacheTier.L1, topologyView);
+    AdmissionDecision l2Admission = policy.shouldAdmit(cacheKey, dataBlock, context,
+      AdmissionPriority.NORMAL, CacheTier.L2, topologyView);
 
-    assertTrue(admission.isAdmitted());
-    assertEquals(List.of(CacheTier.L2), placement.getTiers());
+    assertEquals(List.of(CacheTier.L1, CacheTier.L2), placement.getTiers());
+    assertFalse(l1Admission.isAdmitted());
+    assertTrue(l2Admission.isAdmitted());
   }
 
+  /**
+   * Verifies that exclusive topology continues to place data blocks in L2 even when AdaptiveLRU
+   * would reject them from L1.
+   */
   /**
    * Verifies that exclusive topology continues to place data blocks in L2 even when AdaptiveLRU
    * would reject them from L1.
@@ -225,20 +235,19 @@ public class TestAdaptiveLruCachePlacementAdmissionPolicy {
 
     BlockCacheKey cacheKey = new BlockCacheKey("file", 99L);
 
-    AdmissionDecision admission =
-      policy.shouldAdmit(cacheKey, dataBlock, context, AdmissionPriority.NORMAL, topologyView);
     TierDecision placement = policy.selectTier(cacheKey, dataBlock, context, topologyView);
+    AdmissionDecision admission = policy.shouldAdmit(cacheKey, dataBlock, context,
+      AdmissionPriority.NORMAL, CacheTier.L2, topologyView);
 
-    assertTrue(admission.isAdmitted());
     assertEquals(List.of(CacheTier.L2), placement.getTiers());
+    assertTrue(admission.isAdmitted());
   }
 
   /**
-   * Verifies that AdaptiveLRU returns no placement when the default placement contains only L1 and
-   * the data block is rejected from the first-level cache.
+   * Verifies that AdaptiveLRU rejects a data block when L1 is the only selected tier.
    */
   @Test
-  void testAdaptiveRejectionReturnsNoTierWhenOnlyL1IsAvailable() {
+  void testAdaptiveRejectionWhenOnlyL1IsAvailable() {
     AdaptiveLruCachePlacementAdmissionPolicy policy = createPolicy(0, 200L, 0.01f);
     CacheTopologyView topologyView = mock(CacheTopologyView.class);
     CacheEngineView l1 = mock(CacheEngineView.class);
@@ -251,10 +260,13 @@ public class TestAdaptiveLruCachePlacementAdmissionPolicy {
 
     applyPressure(policy, CacheTier.L1, topologyView, 3_200L);
 
-    TierDecision decision =
-      policy.selectTier(new BlockCacheKey("file", 99L), dataBlock, context, topologyView);
+    BlockCacheKey cacheKey = new BlockCacheKey("file", 99L);
+    TierDecision placement = policy.selectTier(cacheKey, dataBlock, context, topologyView);
+    AdmissionDecision admission = policy.shouldAdmit(cacheKey, dataBlock, context,
+      AdmissionPriority.NORMAL, CacheTier.L1, topologyView);
 
-    assertTrue(decision.isEmpty());
+    assertEquals(List.of(CacheTier.L1), placement.getTiers());
+    assertFalse(admission.isAdmitted());
   }
 
   /**

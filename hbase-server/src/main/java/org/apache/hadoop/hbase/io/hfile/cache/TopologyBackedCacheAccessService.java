@@ -277,77 +277,21 @@ public class TopologyBackedCacheAccessService implements CacheAccessService, Ite
     Objects.requireNonNull(block, "block must not be null");
     Objects.requireNonNull(context, "context must not be null");
 
-    if (topology.getType() == CacheTopologyType.SINGLE_TIER) {
-      cacheBlockToSingleTier(cacheKey, block, context);
-      return;
-    }
-
-    cacheBlockToSelectedTiers(cacheKey, block, context);
-  }
-
-  /**
-   * Caches a block into the only engine in a single-tier topology.
-   * <p>
-   * This method preserves the behavior of the legacy {@link BlockCacheBackedCacheAccessService}
-   * path. A single-tier topology has no placement decision to make: admitted blocks are written to
-   * the only available engine, which is exposed as {@link CacheTier#SINGLE}.
-   * </p>
-   * @param cacheKey cache key identifying the block
-   * @param block    block to cache
-   * @param context  cache write context
-   * @throws NullPointerException if {@code cacheKey}, {@code block}, or {@code context} is
-   *                              {@code null}
-   */
-  private void cacheBlockToSingleTier(BlockCacheKey cacheKey, Cacheable block,
-    CacheWriteContext context) {
-    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
-    Objects.requireNonNull(block, "block must not be null");
-    Objects.requireNonNull(context, "context must not be null");
-
-    AdmissionDecision admission =
-      policy.shouldAdmit(cacheKey, block, context, AdmissionPriority.NORMAL, topologyView);
-    if (!admission.isAdmitted()) {
-      return;
-    }
-
-    Optional<CacheEngine> engine = topology.getEngine(CacheTier.SINGLE);
-    if (!engine.isPresent()) {
-      return;
-    }
-
-    engine.get().cacheBlock(cacheKey, block, context.isInMemory(), context.isWaitWhenCache());
-  }
-
-  /**
-   * Caches a block into the tiers selected by the placement policy.
-   * <p>
-   * This method is used for tiered topologies where the placement policy decides whether the block
-   * belongs in L1, L2, or multiple tiers.
-   * </p>
-   * @param cacheKey cache key identifying the block
-   * @param block    block to cache
-   * @param context  cache write context
-   * @throws NullPointerException if {@code cacheKey}, {@code block}, or {@code context} is
-   *                              {@code null}
-   */
-  private void cacheBlockToSelectedTiers(BlockCacheKey cacheKey, Cacheable block,
-    CacheWriteContext context) {
-    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
-    Objects.requireNonNull(block, "block must not be null");
-    Objects.requireNonNull(context, "context must not be null");
-
-    AdmissionDecision admission =
-      policy.shouldAdmit(cacheKey, block, context, AdmissionPriority.NORMAL, topologyView);
-    if (!admission.isAdmitted()) {
-      return;
-    }
-
     TierDecision tierDecision = policy.selectTier(cacheKey, block, context, topologyView);
+
     for (CacheTier tier : tierDecision.getTiers()) {
       Optional<CacheEngine> engine = topology.getEngine(tier);
-      if (engine.isPresent()) {
-        engine.get().cacheBlock(cacheKey, block, context.isInMemory(), context.isWaitWhenCache());
+      if (!engine.isPresent()) {
+        continue;
       }
+
+      AdmissionDecision admission =
+        policy.shouldAdmit(cacheKey, block, context, AdmissionPriority.NORMAL, tier, topologyView);
+      if (!admission.isAdmitted()) {
+        continue;
+      }
+
+      engine.get().cacheBlock(cacheKey, block, context.isInMemory(), context.isWaitWhenCache());
     }
   }
 

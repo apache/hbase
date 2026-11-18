@@ -142,15 +142,18 @@ public class TestTopologyBackedCacheAccessService {
 
     when(topology.getView()).thenReturn(topologyView);
     when(topology.getEngine(CacheTier.SINGLE)).thenReturn(Optional.of(engine));
-    when(policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, topologyView))
-      .thenReturn(AdmissionDecision.reject("rejected"));
+    when(policy.selectTier(key, block, context, topologyView))
+      .thenReturn(TierDecision.single(CacheTier.SINGLE));
+    when(policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.SINGLE,
+      topologyView)).thenReturn(AdmissionDecision.reject("rejected"));
 
     CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
 
     service.cacheBlock(key, block, context);
 
-    verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, topologyView);
-    verify(policy, never()).selectTier(key, block, context, topologyView);
+    verify(policy).selectTier(key, block, context, topologyView);
+    verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.SINGLE,
+      topologyView);
     verify(engine, never()).cacheBlock(key, block, true, true);
   }
 
@@ -169,8 +172,8 @@ public class TestTopologyBackedCacheAccessService {
 
     when(topology.getView()).thenReturn(topologyView);
     when(topology.getEngine(CacheTier.SINGLE)).thenReturn(Optional.of(engine));
-    when(policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, topologyView))
-      .thenReturn(AdmissionDecision.admit());
+    when(policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.SINGLE,
+      topologyView)).thenReturn(AdmissionDecision.admit());
     when(policy.selectRepresentation(key, block, context, topologyView))
       .thenReturn(RepresentationDecision.CURRENT_HBASE_DEFAULT);
     when(policy.selectTier(key, block, context, topologyView))
@@ -180,7 +183,8 @@ public class TestTopologyBackedCacheAccessService {
 
     service.cacheBlock(key, block, context);
 
-    verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, topologyView);
+    verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.SINGLE,
+      topologyView);
     verify(policy, never()).selectRepresentation(key, block, context, topologyView);
     verify(policy).selectTier(key, block, context, topologyView);
     verify(engine).cacheBlock(key, block, true, true);
@@ -203,7 +207,11 @@ public class TestTopologyBackedCacheAccessService {
     when(topology.getView()).thenReturn(topologyView);
     when(topology.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
     when(topology.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
-    when(policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, topologyView))
+    when(
+      policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.L1, topologyView))
+      .thenReturn(AdmissionDecision.admit());
+    when(
+      policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.L2, topologyView))
       .thenReturn(AdmissionDecision.admit());
     when(policy.selectRepresentation(key, block, context, topologyView))
       .thenReturn(RepresentationDecision.CURRENT_HBASE_DEFAULT);
