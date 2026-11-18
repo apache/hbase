@@ -18,6 +18,10 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.CONF_CONTINUOUS_BACKUP_WAL_DIR;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_SET;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TABLE_MAPPING;
+import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_TO_DATETIME;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
@@ -26,6 +30,7 @@ import java.io.IOException;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -235,5 +240,64 @@ public class TestPointInTimeRestore extends TestBackupBase {
     assertEquals(PITRTestUtil.getRowCount(TEST_UTIL, table2),
       PITRTestUtil.getRowCount(TEST_UTIL, restoredTable2),
       "Restored table2 should have the same row count as the original");
+  }
+
+  /**
+   * Verifies PITR successfully restores all tables in a backup set when the set name (-s) is used
+   * instead of a table list (-t).
+   */
+  @Test
+  public void testPointInTimeRestore_SuccessfulRestoreUsingBackupSet() throws Exception {
+    String setName = "pitrBackupSet";
+    TableName restoredTable1 = TableName.valueOf("restoredSetTable1");
+    TableName restoredTable2 = TableName.valueOf("restoredSetTable2");
+
+    try (BackupSystemTable sysTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      sysTable.addToBackupSet(setName,
+        new String[] { table1.getNameAsString(), table2.getNameAsString() });
+
+      String[] args = new String[] { "-" + OPTION_SET, setName, "-" + OPTION_TABLE_MAPPING,
+        restoredTable1.getNameAsString() + "," + restoredTable2.getNameAsString(),
+        "-" + OPTION_TO_DATETIME,
+        String.valueOf(EnvironmentEdgeManager.currentTime() - 11 * ONE_DAY_IN_MILLISECONDS) };
+
+      int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
+      assertEquals(0, ret, "Restore using backup set should succeed");
+
+      assertEquals(3099, PITRTestUtil.getRowCount(TEST_UTIL, restoredTable1),
+        "Restored table1 should have the same row count as the original");
+      assertEquals(599, PITRTestUtil.getRowCount(TEST_UTIL, restoredTable2),
+        "Restored table2 should have the same row count as the original");
+    } finally {
+      try (BackupSystemTable sysTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
+        sysTable.deleteBackupSet(setName);
+      }
+    }
+  }
+
+  /**
+   * Verifies that PITR fails when the specified backup set does not exist.
+   */
+  @Test
+  public void testPointInTimeRestore_FailsWithNonExistentBackupSet() throws Exception {
+    String[] args =
+      new String[] { "-" + OPTION_SET, "nonExistentPitrBackupSet", "-" + OPTION_TO_DATETIME,
+        String.valueOf(EnvironmentEdgeManager.currentTime() - 5 * ONE_DAY_IN_MILLISECONDS) };
+
+    int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
+    assertNotEquals(0, ret, "Restore should fail for a non-existent backup set");
+  }
+
+  /**
+   * Verifies that PITR fails when both a backup set (-s) and a table list (-t) are specified.
+   */
+  @Test
+  public void testPointInTimeRestore_FailsWithBothBackupSetAndTableList() throws Exception {
+    String[] args = new String[] { "-" + OPTION_SET, "anyPitrBackupSet", "-" + OPTION_TABLE,
+      table1.getNameAsString(), "-" + OPTION_TO_DATETIME,
+      String.valueOf(EnvironmentEdgeManager.currentTime() - 5 * ONE_DAY_IN_MILLISECONDS) };
+
+    int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
+    assertNotEquals(0, ret, "Restore should fail when both -s and -t are specified");
   }
 }
