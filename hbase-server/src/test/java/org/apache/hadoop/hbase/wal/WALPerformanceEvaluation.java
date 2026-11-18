@@ -236,6 +236,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         } else if (cmd.equals("-traceFreq")) {
           // keep it here for compatible
           System.err.println("-traceFreq is not supported any more");
+          if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
+            i++;
+          }
         } else if (cmd.equals("-h")) {
           printUsageAndExit();
         } else if (cmd.equals("--help")) {
@@ -420,7 +423,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
   private void printUsageAndExit() {
     System.err.printf("Usage: hbase %s [options]\n", getClass().getName());
     System.err.println(" where [options] are:");
-    System.err.println("  -h|-help         Show this help and exit.");
+    System.err.println("  -h|--help        Show this help and exit.");
     System.err.println("  -threads <N>     Number of threads writing on the WAL.");
     System.err.println("  -regions <N>     Number of regions to open in the WAL. Default: 1");
     System.err.println("  -iterations <N>  Number of iterations per thread.");
@@ -438,9 +441,9 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.err
       .println("  -verbose         Output extra info; " + "e.g. all edit seq ids when verifying");
     System.err.println("  -roll <N>        Roll the way every N appends");
+    System.err.println("  -compress        Enable WAL compression.");
     System.err.println("  -encryption <A>  Encrypt the WAL with algorithm A, e.g. AES");
-    System.err.println("  -traceFreq <N>   Rate of trace sampling. Default: 1.0, "
-      + "only respected when tracing is enabled, ie -Dhbase.trace.spanreceiver.classes=...");
+    System.err.println("  -traceFreq <N>   Not supported any more; ignored.");
     System.err.println("");
     System.err.println("Examples:");
     System.err.println("");
