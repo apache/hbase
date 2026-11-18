@@ -133,7 +133,8 @@ public class TestScanEarlyTermination extends SecureTestUtil {
       // Test deleted the table, no problem
       LOG.info("Test deleted table " + testTable);
     }
-    assertEquals(0, PermissionStorage.getTablePermissions(conf, testTable).size());
+    assertEquals(0,
+      PermissionStorage.getTablePermissions(TEST_UTIL.getConnection(), testTable).size());
   }
 
   @Test
