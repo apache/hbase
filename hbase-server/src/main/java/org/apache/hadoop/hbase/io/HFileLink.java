@@ -81,7 +81,7 @@ public class HFileLink extends FileLink {
    * The pattern should be used for hfile and reference links that can be found in
    * /hbase/table/region/family/
    */
-  private static final Pattern REF_OR_HFILE_LINK_PATTERN =
+  public static final Pattern REF_OR_HFILE_LINK_PATTERN =
     Pattern.compile(String.format("^(?:(%s)(?:=))?(%s)=(%s)-(.+)$", TableName.VALID_NAMESPACE_REGEX,
       TableName.VALID_TABLE_QUALIFIER_REGEX, RegionInfoBuilder.ENCODED_REGION_NAME_REGEX));
 

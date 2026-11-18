@@ -288,7 +288,7 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
     long createdTimestamp = 0;
     long size = 0;
     Path p = initialPath;
-    if (HFileLink.isHFileLink(p)) {
+    if (HFileLink.isHFileLink(p) || StoreFileInfo.isMobFileLink(p.getName())) {
       // HFileLink
       reference = null;
       link = HFileLink.buildFromHFileLinkPattern(conf, p);
@@ -366,6 +366,9 @@ abstract class StoreFileTrackerBase implements StoreFileTracker {
   public String createFromHFileLink(final String hfileLinkName, final boolean createBackRef)
     throws IOException {
     Matcher m = HFileLink.LINK_NAME_PATTERN.matcher(hfileLinkName);
+    if (!m.matches() && StoreFileInfo.isMobFileLink(hfileLinkName)) {
+      m = HFileLink.REF_OR_HFILE_LINK_PATTERN.matcher(hfileLinkName);
+    }
     if (!m.matches()) {
       throw new IllegalArgumentException(hfileLinkName + " is not a valid HFileLink name!");
     }
