@@ -29,6 +29,9 @@ public final class AdmissionDecision {
 
   private static final AdmissionDecision REJECT = new AdmissionDecision(false, "REJECT");
 
+  private static final AdmissionDecision REJECT_NULL =
+    new AdmissionDecision(false, "Block type is null");
+
   private final boolean admit;
   private final String reason;
 
@@ -55,10 +58,19 @@ public final class AdmissionDecision {
   }
 
   /**
-   * Returns a rejection decision. * @return reject decision
+   * Returns a rejection decision.
+   * @return reject decision
    */
   public static AdmissionDecision reject() {
     return REJECT;
+  }
+
+  /**
+   * Returns a rejection decision.
+   * @return reject decision on null data type
+   */
+  public static AdmissionDecision rejectNull() {
+    return REJECT_NULL;
   }
 
   /**

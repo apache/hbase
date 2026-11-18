@@ -42,11 +42,12 @@ public interface CachePlacementAdmissionPolicy {
    * @param block        block to cache
    * @param context      write context describing insertion source and hints
    * @param priority     admission priority hint
+   * @param tier         cache tier where the block would be inserted if admitted
    * @param topologyView read-only topology view
    * @return admission decision
    */
   AdmissionDecision shouldAdmit(BlockCacheKey cacheKey, Cacheable block, CacheWriteContext context,
-    AdmissionPriority priority, CacheTopologyView topologyView);
+    AdmissionPriority priority, CacheTier tier, CacheTopologyView topologyView);
 
   /**
    * Selects the target tier for an admitted block.

@@ -457,7 +457,7 @@ public class TestInclusiveCombinedBlockCacheCompatibleTopologyBackedCacheAccessS
    */
   private static CachePlacementAdmissionPolicy admitToTiersPolicy(CacheTier... tiers) {
     CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
-    when(policy.shouldAdmit(any(), any(), any(), any(), any()))
+    when(policy.shouldAdmit(any(), any(), any(), any(), any(), any()))
       .thenReturn(AdmissionDecision.admit());
     when(policy.selectTier(any(), any(), any(), any()))
       .thenReturn(TierDecision.multiple(Arrays.asList(tiers)));
