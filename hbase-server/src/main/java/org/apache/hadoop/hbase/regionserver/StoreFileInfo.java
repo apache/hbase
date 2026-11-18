@@ -135,7 +135,7 @@ public class StoreFileInfo implements Configurable {
     this.noReadahead =
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
     Path p = initialPath;
-    if (HFileLink.isHFileLink(p)) {
+    if (HFileLink.isHFileLink(p) || isMobFileLink(p.getName())) {
       // HFileLink
       this.reference = null;
       this.link = HFileLink.buildFromHFileLinkPattern(conf, p);
@@ -543,8 +543,15 @@ public class StoreFileInfo implements Configurable {
    * @return <tt>true</tt> if the file could be a valid store file, <tt>false</tt> otherwise
    */
   public static boolean validateStoreFileName(final String fileName) {
-    if (HFileLink.isHFileLink(fileName) || isReference(fileName)) return (true);
+    if (HFileLink.isHFileLink(fileName) || isReference(fileName) || isMobFileLink(fileName)) {
+      return true;
+    }
     return !fileName.contains("-");
+  }
+
+  public static boolean isMobFileLink(String fileName) {
+    Matcher m = HFileLink.REF_OR_HFILE_LINK_PATTERN.matcher(fileName);
+    return m.matches() && !isReference(fileName);
   }
 
   /**
@@ -560,7 +567,7 @@ public class StoreFileInfo implements Configurable {
     // Check for empty hfile. Should never be the case but can happen
     // after data loss in hdfs for whatever reason (upgrade, etc.): HBASE-646
     // NOTE: that the HFileLink is just a name, so it's an empty file.
-    if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0) {
+    if (!HFileLink.isHFileLink(p) && fileStatus.getLen() <= 0 && !isMobFileLink(p.getName())) {
       LOG.warn("Skipping {} because it is empty. HBASE-646 DATA LOSS?", p);
       return false;
     }
