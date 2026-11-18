@@ -22,6 +22,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import com.google.protobuf.BlockingRpcChannel;
+import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -56,6 +57,7 @@ import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 @Tag(SecurityTests.TAG)
@@ -201,13 +203,19 @@ public class TestNamespaceCommands extends SecureTestUtil {
     UTIL.shutdownMiniCluster();
   }
 
+  private ListMultimap<String, UserPermission> getNsPerms(String namespace) throws IOException {
+    ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
+    PermissionStorage.getNamespacePermissions(UTIL.getConnection(), namespace)
+      .forEach(up -> perms.put(up.getUser(), up));
+    return perms;
+  }
+
   @Test
   public void testAclTableEntries() throws Exception {
     String userTestNamespace = "userTestNsp";
     Table acl = UTIL.getConnection().getTable(PermissionStorage.ACL_TABLE_NAME);
     try {
-      ListMultimap<String, UserPermission> perms =
-        PermissionStorage.getNamespacePermissions(conf, TEST_NAMESPACE);
+      ListMultimap<String, UserPermission> perms = getNsPerms(TEST_NAMESPACE);
       for (Map.Entry<String, UserPermission> entry : perms.entries()) {
         LOG.debug(Objects.toString(entry));
       }
@@ -218,7 +226,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
 
       Result result = acl.get(new Get(Bytes.toBytes(userTestNamespace)));
       assertTrue(result != null);
-      perms = PermissionStorage.getNamespacePermissions(conf, TEST_NAMESPACE);
+      perms = getNsPerms(TEST_NAMESPACE);
       assertEquals(7, perms.size());
       List<UserPermission> namespacePerms = perms.get(userTestNamespace);
       assertTrue(perms.containsKey(userTestNamespace));
@@ -231,7 +239,7 @@ public class TestNamespaceCommands extends SecureTestUtil {
       // Revoke and check state in ACL table
       revokeFromNamespace(UTIL, userTestNamespace, TEST_NAMESPACE, Permission.Action.WRITE);
 
-      perms = PermissionStorage.getNamespacePermissions(conf, TEST_NAMESPACE);
+      perms = getNsPerms(TEST_NAMESPACE);
       assertEquals(6, perms.size());
     } finally {
       acl.close();
