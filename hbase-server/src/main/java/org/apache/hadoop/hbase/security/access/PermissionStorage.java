@@ -31,8 +31,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.AuthUtil;
 import org.apache.hadoop.hbase.Cell;
@@ -218,6 +220,39 @@ public final class PermissionStorage {
     aclTable.delete(d);
   }
 
+  private static IOException warnAndThrow(String msg) throws IOException {
+    LOG.warn(msg);
+    throw new IOException(msg);
+  }
+
+  private static void validateUserOrGroupName(String name, Function<String, String> formatter)
+    throws IOException {
+    // empty name is not allowed
+    if (StringUtils.isBlank(name)) {
+      throw warnAndThrow(formatter.apply("Blank %s name '%s' is not allowed"));
+    }
+    // leading/trailing whitespace is not allowed since a real name never has it
+    if (!name.equals(name.trim())) {
+      throw warnAndThrow(
+        formatter.apply("Leading or trailing whitespace in %s name '%s' is not allowed"));
+    }
+    // ',' is used as separator so you can not use it in name
+    if (name.contains(",")) {
+      throw warnAndThrow(formatter.apply("',' in %s name '%s' is not allowed"));
+    }
+  }
+
+  private static void validateUser(String user) throws IOException {
+    if (user == null) {
+      throw warnAndThrow("null user name is not allowed");
+    }
+    if (isNamespaceEntry(user)) {
+      validateUserOrGroupName(user.substring(1), msg -> String.format(msg, "group", user));
+    } else {
+      validateUserOrGroupName(user, msg -> String.format(msg, "user", user));
+    }
+  }
+
   /**
    * Stores a new user permission grant in the access control lists table.
    * @param conn     connection to hbase cluster
@@ -227,10 +262,9 @@ public final class PermissionStorage {
    */
   public static void addUserPermission(Connection conn, UserPermission userPerm,
     boolean mergeExistingPermissions) throws IOException {
+    validateUser(userPerm.getUser());
     if (ArrayUtils.isEmpty(userPerm.getPermission().getActions())) {
-      String msg = "No actions associated with user '" + userPerm.getUser() + "'";
-      LOG.warn(msg);
-      throw new IOException(msg);
+      throw warnAndThrow("No actions associated with user '" + userPerm.getUser() + "'");
     }
     try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
       UserPermission toAdd;
@@ -261,10 +295,12 @@ public final class PermissionStorage {
    * no effect.
    * @param conn     connection to hbase cluster
    * @param userPerm the details of the permission to be revoked
-   * @throws IOException if there is an error accessing the metadata table
+   * @throws IOException if the user name is invalid or there is an error accessing the metadata
+   *                     table
    */
   public static void removeUserPermission(Connection conn, UserPermission userPerm)
     throws IOException {
+    validateUser(userPerm.getUser());
     try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
       Permission perm = userPerm.getPermission();
       if (ArrayUtils.isEmpty(perm.getActions())) {
