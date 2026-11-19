@@ -76,7 +76,9 @@ public class RWQueueRpcExecutor extends RpcExecutor {
     numWriteQueues = calcNumWriters(this.numCallQueues, callqReadShare);
     writeHandlersCount = Math.max(numWriteQueues, calcNumWriters(handlerCount, callqReadShare));
 
-    int readQueues = calcNumReaders(this.numCallQueues, callqReadShare);
+    int readQueues = callqReadShare > 0 ?
+      Math.max(1, calcNumReaders(this.numCallQueues, callqReadShare)) :
+      calcNumReaders(this.numCallQueues, callqReadShare);
     int readHandlers = Math.max(readQueues, calcNumReaders(handlerCount, callqReadShare));
 
     int scanHandlers = Math.max(0, (int) Math.floor(readHandlers * callqScanShare));
