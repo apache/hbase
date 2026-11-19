@@ -97,6 +97,13 @@ class AsyncBufferedMutatorBuilderImpl implements AsyncBufferedMutatorBuilder {
   }
 
   @Override
+  public AsyncBufferedMutatorBuilder
+    setRequestAttributesFactory(RequestAttributesFactory requestAttributesFactory) {
+    tableBuilder.setRequestAttributesFactory(requestAttributesFactory);
+    return this;
+  }
+
+  @Override
   public AsyncBufferedMutatorBuilder setWriteBufferSize(long writeBufferSize) {
     Preconditions.checkArgument(writeBufferSize > 0, "writeBufferSize %d must be > 0",
       writeBufferSize);
