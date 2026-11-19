@@ -241,6 +241,10 @@ end
 if interactive
   # Output a banner message that tells users where to go for help
   @shell.print_banner
+  IRB::HIRB.new(workspace, interactive).run
+else
+  # Wrapping this check in the exception handler is only present in the 2.4.x line so that we can
+  # maintain behavior that matches the earlier 2.x releases
+  ::Shell::Shell.exception_handler(!full_backtrace) { @shell.eval_io(STDIN) }
+  exit @shell.exit_code unless @shell.exit_code.nil?
 end
-IRB::HIRB.new(workspace, interactive).run
-exit @shell.exit_code unless interactive || @shell.exit_code.nil?
