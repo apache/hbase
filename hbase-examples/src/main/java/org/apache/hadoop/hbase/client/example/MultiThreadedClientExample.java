@@ -159,7 +159,7 @@ public class MultiThreadedClientExample extends Configured implements Tool {
       } else if (r < .50) {
         f = internalPool.submit(new SingleWriteExampleCallable(writeConnection, tableName));
       } else {
-        f = internalPool.submit(new ReadExampleCallable(writeConnection, tableName));
+        f = internalPool.submit(new ReadExampleCallable(readConnection, tableName));
       }
       futures.add(f);
     }
