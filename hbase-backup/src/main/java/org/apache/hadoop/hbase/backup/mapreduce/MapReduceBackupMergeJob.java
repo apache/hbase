@@ -169,7 +169,7 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       // Update backup manifest
       List<String> backupsToDelete = getBackupIdsToDelete(backupIds, mergedBackupId);
       updateBackupManifest(tmpBackupDir.getParent().toString(), mergedBackupId, backupsToDelete);
-      // Copy meta files back from tmp to backup dir
+      // Copy meta files back from tmp to the backup dir
       copyMetaData(fs, tmpBackupDir, backupDirPath);
       // Delete tmp dir (Rename back during repair)
       if (!fs.delete(tmpBackupDir, true)) {
@@ -180,11 +180,13 @@ public class MapReduceBackupMergeJob implements BackupMergeJob {
       deleteBackupImages(backupsToDelete, conn, fs, backupRoot);
       // Finish merge session
       table.finishMergeOperation();
+      // Write the completion marker after the merge is finalized so external consumers never
+      // observe it on a partially-merged backup. The completion marker is written before the lock
+      // is released so a concurrent delete or merge cannot run before the marker is written and
+      // leave a stale marker behind.
+      HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
       // Release lock
       table.finishBackupExclusiveOperation();
-      // Write the completion marker after the merge is fully finalized and the lock is released,
-      // so external consumers never observe it on a partially-merged backup.
-      HBackupFileSystem.writeBackupCompleteMarker(conf, backupRoot, mergedBackupId);
     } catch (RuntimeException e) {
 
       throw e;

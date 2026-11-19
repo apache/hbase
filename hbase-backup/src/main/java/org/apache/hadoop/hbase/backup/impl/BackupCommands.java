@@ -1228,15 +1228,17 @@ public final class BackupCommands {
       }
       // Restore table from snapshot
       BackupSystemTable.restoreFromSnapshot(conn);
+
+      // The merged backup is now consistent. If the tmp directory was restored it already holds
+      // the original marker; otherwise the failed merge may not have written one. Writing is
+      // idempotent and best-effort. Write it before unlocking, so a concurrent delete or merge
+      // cannot run before the marker is written and leave a stale marker behind.
+      writeBackupCompleteMarker(conn.getConfiguration(), backupRoot, mergedBackupId);
+
       // Unlock backup system
       sysTable.finishBackupExclusiveOperation();
       // Finish previous failed session
       sysTable.finishMergeOperation();
-
-      // The merged backup is now consistent. If the tmp directory was restored it already holds
-      // the original marker; otherwise the failed merge may not have written one. Writing is
-      // idempotent and best-effort.
-      writeBackupCompleteMarker(conn.getConfiguration(), backupRoot, mergedBackupId);
 
       System.out.println("MERGE repair operation finished OK: " + StringUtils.join(backupIds));
     }

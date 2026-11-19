@@ -304,9 +304,10 @@ public class BackupAdminImpl implements BackupAdmin {
       if (tables.isEmpty()) {
         LOG.debug("Delete backup info " + info.getBackupId());
 
-        sysTable.deleteBackupInfo(info.getBackupId());
-        // Idempotent operation
+        // Clean up data before deleting the backup info, so a failure to remove the completion
+        // marker aborts before the metadata is gone. Idempotent operation.
         BackupUtils.cleanupBackupData(info, conn.getConfiguration());
+        sysTable.deleteBackupInfo(info.getBackupId());
       } else {
         info.setTables(tables);
         sysTable.updateBackupInfo(info);

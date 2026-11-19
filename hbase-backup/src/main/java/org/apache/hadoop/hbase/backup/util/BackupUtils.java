@@ -528,21 +528,28 @@ public final class BackupUtils {
     }
   }
 
-  private static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
+  /**
+   * Delete the data of a backup from its target directory.
+   * @throws IOException if the backup completion marker could not be removed. In that case no data
+   *                     is deleted and the caller must not remove the backup's metadata.
+   */
+  private static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf)
+    throws IOException {
+    // clean up the data at target directory
+    LOG.debug("Trying to cleanup up target dir : " + backupInfo.getBackupId());
+    String targetDir = backupInfo.getBackupRootDir();
+    if (targetDir == null) {
+      LOG.warn("No target directory specified for " + backupInfo.getBackupId());
+      return;
+    }
+
+    // Delete the completion marker before any data so that a partial delete never leaves a marker
+    // on a backup with missing tables. If this fails, propagate the error before any data or
+    // metadata is removed: the marker, data, and system table record all remain, which is
+    // consistent, and the delete operation can be retried.
+    HBackupFileSystem.deleteBackupCompleteMarker(conf, targetDir, backupInfo.getBackupId());
+
     try {
-      // clean up the data at target directory
-      LOG.debug("Trying to cleanup up target dir : " + backupInfo.getBackupId());
-      String targetDir = backupInfo.getBackupRootDir();
-      if (targetDir == null) {
-        LOG.warn("No target directory specified for " + backupInfo.getBackupId());
-        return;
-      }
-
-      // Delete the completion marker before any data so that a partial delete never leaves a
-      // marker on a backup with missing tables. If this fails, abort: the marker and data both
-      // remain, which is consistent.
-      HBackupFileSystem.deleteBackupCompleteMarker(conf, targetDir, backupInfo.getBackupId());
-
       FileSystem outputFs = FileSystem.get(new Path(backupInfo.getBackupRootDir()).toUri(), conf);
 
       for (TableName table : backupInfo.getTables()) {

@@ -17,8 +17,9 @@
  */
 package org.apache.hadoop.hbase.backup;
 
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileDoesNotExist;
+import static org.apache.hadoop.hbase.backup.TestBackupUtils.assertBackupCompleteFileExists;
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.argThat;
@@ -36,8 +37,11 @@ import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
+import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
+import org.apache.hadoop.hbase.backup.util.BackupUtils;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -135,7 +139,7 @@ public class TestHBackupFileSystem {
     HBackupFileSystem.writeBackupCompleteMarker(conf, backupRootDir, backupId);
 
     // Marker should not exist since create() was intercepted
-    assertFalse(HBackupFileSystem.isBackupComplete(new Configuration(), backupRootDir, backupId));
+    assertBackupCompleteFileDoesNotExist(new Configuration(), backupRootDir, backupId);
   }
 
   @Test
@@ -146,10 +150,10 @@ public class TestHBackupFileSystem {
     String backupId = "backup_delete_marker";
 
     HBackupFileSystem.writeBackupCompleteMarker(conf, backupRootDir, backupId);
-    assertTrue(HBackupFileSystem.isBackupComplete(conf, backupRootDir, backupId));
+    assertBackupCompleteFileExists(conf, backupRootDir, backupId);
 
     HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRootDir, backupId);
-    assertFalse(HBackupFileSystem.isBackupComplete(conf, backupRootDir, backupId));
+    assertBackupCompleteFileDoesNotExist(conf, backupRootDir, backupId);
 
     // Deleting a marker that does not exist is a no-op
     HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRootDir, backupId);
@@ -170,7 +174,74 @@ public class TestHBackupFileSystem {
 
     assertThrows(IOException.class,
       () -> HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRootDir, backupId));
-    assertTrue(HBackupFileSystem.isBackupComplete(new Configuration(), backupRootDir, backupId));
+    assertBackupCompleteFileExists(new Configuration(), backupRootDir, backupId);
+  }
+
+  // Verifies backup delete cleanup aborts without deleting any data if the marker cannot be
+  // removed, and propagates the failure so the caller does not delete the backup's metadata
+  @Test
+  public void testBackupDataCleanupAbortsWhenMarkerDeleteFails(@TempDir java.nio.file.Path tempDir)
+    throws IOException {
+    String backupRootDir = tempDir.toUri().toString();
+    BackupInfo info = createBackupWithMarkerAndData(backupRootDir, "backup_cleanup_marker_fail");
+
+    assertThrows(IOException.class,
+      () -> BackupUtils.cleanupBackupData(info, createMarkerDeletionFailConf()));
+    assertMarkerAndDataRemain(backupRootDir, info);
+  }
+
+  // Verifies failed-backup cleanup aborts without deleting any data if the marker cannot be
+  // removed, and propagates the failure so repair can retry
+  @Test
+  public void testFailedBackupCleanupAbortsWhenMarkerDeleteFails(
+    @TempDir java.nio.file.Path tempDir) throws IOException {
+    String backupRootDir = tempDir.toUri().toString();
+    BackupInfo info = createBackupWithMarkerAndData(backupRootDir, "backup_failed_marker_fail");
+    info.setPhase(BackupPhase.SNAPSHOTCOPY);
+
+    assertThrows(IOException.class,
+      () -> FailedBackupCleanup.cleanup(info, createMarkerDeletionFailConf()));
+    assertMarkerAndDataRemain(backupRootDir, info);
+  }
+
+  private static BackupInfo createBackupWithMarkerAndData(String backupRootDir, String backupId)
+    throws IOException {
+    TableName table = TableName.valueOf("test_table");
+    BackupInfo info =
+      new BackupInfo(backupId, BackupType.FULL, new TableName[] { table }, backupRootDir);
+    Path tableBackupDir =
+      new Path(HBackupFileSystem.getTableBackupDir(backupRootDir, backupId, table));
+    FileSystem fs = FileSystem.getLocal(new Configuration());
+    fs.mkdirs(tableBackupDir);
+    fs.create(new Path(tableBackupDir, "data")).close();
+    HBackupFileSystem.writeBackupCompleteMarker(new Configuration(), backupRootDir, backupId);
+    assertBackupCompleteFileExists(new Configuration(), backupRootDir, backupId);
+    return info;
+  }
+
+  private static void assertMarkerAndDataRemain(String backupRootDir, BackupInfo info)
+    throws IOException {
+    Configuration conf = new Configuration();
+    assertBackupCompleteFileExists(conf, backupRootDir, info.getBackupId());
+    for (TableName table : info.getTableNames()) {
+      Path tableBackupDir =
+        new Path(HBackupFileSystem.getTableBackupDir(backupRootDir, info.getBackupId(), table));
+      assertTrue(FileSystem.getLocal(conf).exists(new Path(tableBackupDir, "data")));
+    }
+  }
+
+  private static Configuration createMarkerDeletionFailConf() {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.file.impl", MarkerDeletionFailFileSystem.class, FileSystem.class);
+    conf.setBoolean("fs.file.impl.disable.cache", true);
+    return conf;
+  }
+
+  // Exposes the protected TableBackupClient#cleanupTargetDir to this test
+  private static final class FailedBackupCleanup extends FullTableBackupClient {
+    static void cleanup(BackupInfo info, Configuration conf) throws IOException {
+      FullTableBackupClient.cleanupTargetDir(info, conf);
+    }
   }
 
   public static class MarkerDeletionFailFileSystem extends FilterFileSystem {
