@@ -18,7 +18,6 @@
 package org.apache.hadoop.hbase.quotas;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -67,20 +66,21 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
   private final Configuration conf;
   private final MetricsMaster metrics;
   private final FileSystem fs;
+  private final HMaster master;
 
   public SnapshotQuotaObserverChore(HMaster master, MetricsMaster metrics) {
-    this(master.getConnection(), master.getConfiguration(), master.getFileSystem(), master,
-      metrics);
+    this(master.getConfiguration(), master, master, metrics);
   }
 
-  SnapshotQuotaObserverChore(Connection conn, Configuration conf, FileSystem fs, Stoppable stopper,
+  SnapshotQuotaObserverChore(Configuration conf, HMaster master, Stoppable stopper,
     MetricsMaster metrics) {
     super(QuotaObserverChore.class.getSimpleName(), stopper, getPeriod(conf), getInitialDelay(conf),
       getTimeUnit(conf));
-    this.conn = conn;
+    this.conn = master.getConnection();
     this.conf = conf;
     this.metrics = metrics;
-    this.fs = fs;
+    this.fs = master.getFileSystem();
+    this.master = master;
   }
 
   @Override
@@ -178,7 +178,7 @@ public class SnapshotQuotaObserverChore extends ScheduledChore {
           }
           // Collect either the table name itself, or all of the tables in the namespace
           if (null != ns) {
-            tablesToFetchSnapshotsFrom.addAll(Arrays.asList(admin.listTableNamesByNamespace(ns)));
+            tablesToFetchSnapshotsFrom.addAll(master.listTableNamesByNamespace(ns));
           } else {
             tablesToFetchSnapshotsFrom.add(tn);
           }
