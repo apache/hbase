@@ -55,6 +55,8 @@ public class TableStateManager {
   private final ConcurrentMap<TableName, TableState.State> tableName2State =
     new ConcurrentHashMap<>();
 
+  private final ConcurrentMap<TableName, Integer> creating = new ConcurrentHashMap<>();
+
   TableStateManager(MasterServices master) {
     this.master = master;
   }
@@ -104,10 +106,30 @@ public class TableStateManager {
     ReadWriteLock lock = tnLock.getLock(tableName);
     lock.readLock().lock();
     try {
-      return readMetaState(tableName) != null;
+      return readMetaState(tableName) != null && !isCreating(tableName);
     } finally {
       lock.readLock().unlock();
     }
+  }
+
+  /**
+   * Set a table as being created.
+   * @param tableName name of table being created
+   */
+  public void updateCreating(TableName tableName) {
+    creating.put(tableName, 1);
+  }
+
+  /**
+   * Notify that a table is created.
+   * @param tableName name of table created
+   */
+  public void finishCreating(TableName tableName) {
+    creating.remove(tableName);
+  }
+
+  private boolean isCreating(TableName tableName) {
+    return creating.containsKey(tableName);
   }
 
   /**
