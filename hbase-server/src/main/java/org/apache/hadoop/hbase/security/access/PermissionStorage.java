@@ -246,7 +246,7 @@ public final class PermissionStorage {
     if (user == null) {
       throw warnAndThrow("null user name is not allowed");
     }
-    if (isNamespaceEntry(user)) {
+    if (user.startsWith("@")) {
       validateUserOrGroupName(user.substring(1), msg -> String.format(msg, "group", user));
     } else {
       validateUserOrGroupName(user, msg -> String.format(msg, "user", user));
