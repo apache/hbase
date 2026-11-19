@@ -143,6 +143,8 @@ public class TransitRegionStateProcedure
 
   private CompletableFuture<Void> future;
 
+  private CompletableFuture<String> completableFuture;
+
   public TransitRegionStateProcedure() {
   }
 
@@ -759,4 +761,16 @@ public class TransitRegionStateProcedure
     return setOwner(env, new TransitRegionStateProcedure(env, region, targetServer,
       targetServer == null, TransitionType.MOVE));
   }
+
+  @Override
+  protected void completionCleanup(MasterProcedureEnv env) {
+    if (null != completableFuture) {
+      completableFuture.complete("done");
+    }
+  }
+
+  public void setCompletableFuture(CompletableFuture<String> completableFuture) {
+    this.completableFuture = completableFuture;
+  }
+
 }
