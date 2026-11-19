@@ -236,12 +236,31 @@ Bloom filters need to be rebuilt upon deletion, so may not be appropriate in env
 
 #### Enabling Bloom Filters
 
-Bloom filters are enabled on a Column Family. You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API. Valid values are `NONE`, `ROW` (default), or `ROWCOL`. See [When To Use Bloom Filters](/docs/performance#when-to-use-bloom-filters) for more information on `ROW` versus `ROWCOL`. See also the API documentation for [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
+Bloom filters are enabled on a Column Family. You can do this by using the setBloomFilterType method of HColumnDescriptor or using the HBase API. Valid values are `NONE`, `ROW` (default), `ROWCOL`, or `ROWPREFIX_FIXED_LENGTH`. See [When To Use Bloom Filters](/docs/performance#when-to-use-bloom-filters) for more information on `ROW` versus `ROWCOL`. See also the API documentation for [ColumnFamilyDescriptorBuilder](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/ColumnFamilyDescriptorBuilder.html).
 
 The following example creates a table and enables a ROWCOL Bloom filter on the `colfam1` column family.
 
 ```ruby
 hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWCOL'}
+```
+
+##### ROWPREFIX_FIXED_LENGTH Bloom Filter
+
+`ROWPREFIX_FIXED_LENGTH` is useful when row keys share a common prefix structure. The bloom filter is built on a fixed-length prefix of the row key rather than the entire row. This reduces the number of entries in the bloom filter when many rows share the same prefix.
+
+The following configuration properties are available:
+
+| Parameter                                  | Default | Description                                                                                              |
+| ------------------------------------------ | ------- | -------------------------------------------------------------------------------------------------------- |
+| RowPrefixBloomFilter.prefix_length         | (none)  | Required. The length of the row key prefix to use for the bloom filter.                                  |
+| RowPrefixBloomFilter.prefix_start_offset   | 0       | The starting byte offset of the prefix within the row key. Useful for salted or hash-prefixed row keys.  |
+
+For example, if your row keys have a 2-byte salt followed by a 4-byte meaningful prefix (e.g., `<2-byte-salt><4-byte-prefix><rest>`), you can set `prefix_start_offset=2` and `prefix_length=4` to build the bloom filter on the meaningful prefix only.
+
+```ruby
+hbase> create 'mytable',{NAME => 'colfam1', BLOOMFILTER => 'ROWPREFIX_FIXED_LENGTH',
+  CONFIGURATION => {'RowPrefixBloomFilter.prefix_length' => '4',
+                    'RowPrefixBloomFilter.prefix_start_offset' => '2'}}
 ```
 
 #### Configuring Server-Wide Behavior of Bloom Filters
