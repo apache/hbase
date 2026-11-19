@@ -31,7 +31,8 @@ public class BucketCacheStats extends CacheStats {
   private final LongAdder ioHitCount = new LongAdder();
   private final LongAdder ioHitTime = new LongAdder();
   private static final long NANO_TIME = TimeUnit.MILLISECONDS.toNanos(1);
-  private long lastLogTime = EnvironmentEdgeManager.currentTime();
+  /* Start of the current io hit window, rolled by reset(). */
+  private volatile long lastResetTime = EnvironmentEdgeManager.currentTime();
 
   /* Tracing failed Bucket Cache allocations. */
   private LongAdder allocationFailCount = new LongAdder();
@@ -52,11 +53,13 @@ public class BucketCacheStats extends CacheStats {
     ioHitTime.add(time);
   }
 
+  /**
+   * Returns the average io hits per second since the last {@link #reset()}. This is a pure getter,
+   * so it can be called by any number of readers, e.g. the stats log and the RegionServer UI.
+   */
   public long getIOHitsPerSecond() {
-    long now = EnvironmentEdgeManager.currentTime();
-    long took = (now - lastLogTime) / 1000;
-    lastLogTime = now;
-    return took == 0 ? 0 : ioHitCount.sum() / took;
+    long took = EnvironmentEdgeManager.currentTime() - lastResetTime;
+    return took <= 0 ? 0 : ioHitCount.sum() * 1000 / took;
   }
 
   public double getIOTimePerHit() {
@@ -69,6 +72,7 @@ public class BucketCacheStats extends CacheStats {
     ioHitCount.reset();
     ioHitTime.reset();
     allocationFailCount.reset();
+    lastResetTime = EnvironmentEdgeManager.currentTime();
   }
 
   public long getAllocationFailCount() {
