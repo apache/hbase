@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLockPoolJanitor;
 import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
@@ -424,8 +425,9 @@ public class BucketCache implements BlockCache, HeapSize {
     // Schedule the lock pool janitor (if using Soft Refs)
     if (!useStrongRef) {
       this.janitorThreadPool.scheduleAtFixedRate(
-        new LockJanitorThread((IdReadWriteLockWithObjectPool<Long>) offsetLock), lockJanitorPeriod,
-        lockJanitorPeriod, TimeUnit.SECONDS);
+        new IdReadWriteLockPoolJanitor("BucketCache",
+          (IdReadWriteLockWithObjectPool<Long>) offsetLock),
+        lockJanitorPeriod, lockJanitorPeriod, TimeUnit.SECONDS);
     }
 
     LOG.info("Started bucket cache; ioengine=" + ioEngineName + ", capacity="
@@ -1038,31 +1040,6 @@ public class BucketCache implements BlockCache, HeapSize {
     @Override
     public void run() {
       bucketCache.logStats();
-    }
-  }
-
-  /**
-   * Cleans up stale lock references from the underlying ObjectPool.
-   */
-  private static class LockJanitorThread extends Thread {
-    private final IdReadWriteLockWithObjectPool<Long> offsetLock;
-
-    public LockJanitorThread(IdReadWriteLockWithObjectPool<Long> offsetLock) {
-      super("BucketCacheRWLockJanitor");
-      setDaemon(true);
-      this.offsetLock = offsetLock;
-    }
-
-    @Override
-    public void run() {
-      if (LOG.isTraceEnabled()) {
-        int sizeBefore = offsetLock.getPoolSize();
-        offsetLock.purge();
-        int sizeAfter = offsetLock.getPoolSize();
-        LOG.trace("LockJanitor purged lock pool: size {} -> {}", sizeBefore, sizeAfter);
-      } else {
-        offsetLock.purge();
-      }
     }
   }
 
