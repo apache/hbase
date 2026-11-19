@@ -1141,6 +1141,7 @@ public final class BackupCommands {
             + " Checking failed delete backup operation ...");
           repairFailedBackupDeletionIfAny(conn, sysTable);
           repairFailedBackupMergeIfAny(conn, sysTable);
+          releaseExclusiveOperationLockIfHeld(sysTable);
           return;
         }
         backupInfo = list.get(0);
@@ -1162,6 +1163,23 @@ public final class BackupCommands {
         sysTable.updateBackupInfo(backupInfo);
         sysTable.finishBackupExclusiveOperation();
         System.out.println("REPAIR status: finished repair failed session:\n " + backupInfo);
+      }
+    }
+
+    /**
+     * Releases the backup exclusive operation lock if it is still held when there is no running
+     * backup and no failed delete or merge to repair. This happens when an operation took the lock
+     * and failed before recording itself, for example because the response to taking the lock was
+     * lost or the client died. Like the rest of repair, this assumes no backup operation is
+     * running.
+     */
+    private void releaseExclusiveOperationLockIfHeld(BackupSystemTable sysTable)
+      throws IOException {
+      if (sysTable.isBackupExclusiveOperationActive()) {
+        System.out.println("REPAIR status: the backup exclusive lock is held, but no backup,"
+          + " delete or merge operation is recorded as running; releasing it. Run repair only"
+          + " when no backup, delete or merge command is running.");
+        sysTable.finishBackupExclusiveOperation();
       }
     }
 
