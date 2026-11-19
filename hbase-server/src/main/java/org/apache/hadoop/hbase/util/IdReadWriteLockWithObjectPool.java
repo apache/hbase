@@ -50,8 +50,8 @@ public class IdReadWriteLockWithObjectPool<T> extends IdReadWriteLock<T> {
   /**
    * Constructor of IdReadWriteLockWithObjectPool
    * @param referenceType type of the reference used in lock pool
-   * @param purgeOnGet whether {@link #getLock(Object)} also purges stale references.
-   *   if false, the owner must remember to call {@link #purge()} externally
+   * @param purgeOnGet    whether {@link #getLock(Object)} also purges stale references. if false,
+   *                      the owner must remember to call {@link #purge()} externally
    */
   public IdReadWriteLockWithObjectPool(ReferenceType referenceType, boolean purgeOnGet) {
     this.refType = referenceType;
