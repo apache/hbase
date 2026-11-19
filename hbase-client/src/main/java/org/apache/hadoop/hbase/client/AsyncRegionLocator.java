@@ -125,13 +125,13 @@ class AsyncRegionLocator {
       return Collections.emptyList();
     }
     return Arrays.stream(locs.getRegionLocations()).filter(Objects::nonNull)
-      .map(HRegionLocation::getRegion).map(RegionInfo::getRegionNameAsString)
+      .map(HRegionLocation::getRegion).map(RegionInfo::getEncodedName)
       .collect(Collectors.toList());
   }
 
   private static List<String> getRegionNames(HRegionLocation location) {
     return Optional.ofNullable(location).map(HRegionLocation::getRegion)
-      .map(RegionInfo::getRegionNameAsString).map(Collections::singletonList)
+      .map(RegionInfo::getEncodedName).map(Collections::singletonList)
       .orElseGet(Collections::emptyList);
   }
 
