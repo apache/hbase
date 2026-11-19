@@ -262,6 +262,11 @@ public class TaskMonitor {
     }
   }
 
+  public synchronized void purgeAllTasks() {
+    tasks.clear();
+    rpcTasks.clear();
+  }
+
   /**
    * This class encapsulates an object as well as a weak reference to a proxy that passes through
    * calls to that object. In art form:
