@@ -1537,6 +1537,16 @@ public class HFileBlockIndex {
     }
 
     @Override
+    public List<Long> getBlockOffsets() {
+      return blockOffsets;
+    }
+
+    @Override
+    public List<Integer> getOnDiskDataSizes() {
+      return onDiskDataSizes;
+    }
+
+    @Override
     public List<Integer> getSecondaryIndexOffsetMarks() {
       return secondaryIndexOffsetMarks;
     }
