@@ -47,7 +47,7 @@ public class TestAsyncProtobufLog extends AbstractTestProtobufLog {
   }
 
   @AfterAll
-  public static void tearDownAfterClass() throws Exception {
+  public static void tearDownAfterAll() throws Exception {
     if (EVENT_LOOP_GROUP != null) {
       EVENT_LOOP_GROUP.shutdownGracefully().syncUninterruptibly();
     }
