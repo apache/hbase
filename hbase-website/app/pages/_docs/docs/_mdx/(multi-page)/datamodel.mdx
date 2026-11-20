@@ -137,7 +137,7 @@ For more information about the internals of how Apache HBase stores data, see [r
 
 ## Namespace
 
-A namespace is a logical grouping of tables analogous to a database in relation database systems.
+A namespace is a logical grouping of tables analogous to a database in relational database systems.
 This abstraction lays the groundwork for upcoming multi-tenancy related features:
 
 - Quota Management ([HBASE-8410](https://issues.apache.org/jira/browse/HBASE-8410)) - Restrict the amount of resources (i.e. regions, tables) a namespace can consume.
@@ -180,7 +180,7 @@ alter_namespace 'my_ns', {METHOD => 'set', 'PROPERTY_NAME' => 'PROPERTY_VALUE'}
 There are two predefined special namespaces:
 
 - hbase - system namespace, used to contain HBase internal tables
-- default - tables with no explicit specified namespace will automatically fall into this namespace
+- default - tables with no explicitly specified namespace will automatically fall into this namespace
 
 #### Examples #datamodel-predefined-namespaces-examples
 
@@ -205,9 +205,9 @@ to online and hang the master start up.
 It is not easy to fix so in 3.0.0, we decided to completely remove the `hbase:namespace` table and
 fold its content into the `ns` family in `hbase:meta` table. When upgrading from 2.x to 3.x, the
 migration will be done automatically and the `hbase:namespace` table will be disabled after the
-migration is done. You are free to leave it there for sometime and finally drop it.
+migration is done. You are free to leave it there for some time and finally drop it.
 
-For more tails, please see https://issues.apache.org/jira/browse/HBASE-21154.
+For more details, please see https://issues.apache.org/jira/browse/HBASE-21154.
 
 ## Table
 
@@ -217,7 +217,7 @@ Tables are declared up front at schema definition time.
 
 Row keys are uninterpreted bytes.
 Rows are lexicographically sorted with the lowest order appearing first in a table.
-The empty byte array is used to denote both the start and end of a tables' namespace.
+The empty byte array is used to denote both the start and end of a table's namespace.
 
 ## Column Family
 
@@ -253,7 +253,7 @@ Gets are executed via [Table.get](<https://hbase.apache.org/devapidocs/org/apach
 
 ### Scans [#data-model-operations-scans]
 
-[Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) allow iteration over multiple rows for specified attributes.
+[Scan](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/client/Scan.html) allows iteration over multiple rows for specified attributes.
 
 The following is an example of a Scan on a Table instance.
 Assume that a table is populated with rows with keys "row1", "row2", "row3", and then another set of rows with the keys "abc1", "abc2", and "abc3". The following example shows how to set a Scan instance to return the rows beginning with "row".
@@ -515,7 +515,7 @@ the section above, [Optional New Version and Delete behavior in HBase-2.0.0](/do
 
 Deletes mask puts, even puts that happened after the delete was entered.
 See [HBASE-2256](https://issues.apache.org/jira/browse/HBASE-2256).
-Remember that a delete writes a tombstone, which only disappears after then next major compaction has run.
+Remember that a delete writes a tombstone, which only disappears after the next major compaction has run.
 Suppose you do a delete of everything `<= T`.
 After this you do a new put with a timestamp `<= T`.
 This put, even if it happened after the delete, will be masked by the delete tombstone.
@@ -547,7 +547,7 @@ For more information about how HBase stores data internally, see [keyvalue](/doc
 
 ## Joins [#datamodel-joins]
 
-Whether HBase supports joins is a common question on the dist-list, and there is a simple answer: it doesn't, at not least in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL). As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan.
+Whether HBase supports joins is a common question on the dist-list, and there is a simple answer: it doesn't, at least not in the way that RDBMS' support them (e.g., with equi-joins or outer-joins in SQL). As has been illustrated in this chapter, the read data model operations in HBase are Get and Scan.
 
 However, that doesn't mean that equivalent join functionality can't be supported in your application, but you have to do it yourself.
 The two primary strategies are either denormalizing the data upon writing to HBase, or to have lookup tables and do the join between HBase tables in your application or MapReduce code (and as RDBMS' demonstrate, there are several strategies for this depending on the size of the tables, e.g., nested loops vs.

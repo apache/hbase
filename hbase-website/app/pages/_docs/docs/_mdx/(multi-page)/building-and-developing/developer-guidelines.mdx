@@ -27,7 +27,7 @@ tell purely from the numbers which release came first.
 
 Interfaces are classified both by audience and by stability level.
 These labels appear at the head of a class.
-The conventions followed by HBase are inherited by its parent project, Hadoop.
+The conventions followed by HBase are inherited from its parent project, Hadoop.
 
 The following interface classifications are commonly used:
 
@@ -51,8 +51,8 @@ Mark your new packages if publicly accessible.
 
 <Callout type="info" title="Excluding Non-Public Interfaces from API Documentation">
   Only interfaces classified `@InterfaceAudience.Public` should be included in API documentation
-  (Javadoc). Committers must add new package excludes `ExcludePackageNames` section of the _pom.xml_
-  for new packages which do not contain public classes.
+  (Javadoc). Committers must add new package excludes to the `ExcludePackageNames` section of the
+  _pom.xml_ for new packages which do not contain public classes.
 </Callout>
 
 #### @InterfaceStability
@@ -79,7 +79,7 @@ Please adhere to the following guidelines so that your patches can be reviewed m
 These guidelines have been developed based upon common feedback on patches from new contributors.
 
 See the [Code Conventions for the Java Programming Language](http://www.oracle.com/technetwork/java/index-135089.html) for more information on coding conventions in Java.
-See [Eclipse Code Formatting](/docs/building-and-developing#code-formatting) to setup Eclipse to check for some of
+See [Eclipse Code Formatting](/docs/building-and-developing#code-formatting) to set up Eclipse to check for some of
 these guidelines automatically.
 
 #### Space Invaders
@@ -222,7 +222,7 @@ All are subject to challenge of course but until then, please hold to the rules 
 
 ### No permanent state in ZooKeeper
 
-ZooKeeper state should transient (treat it like memory). If ZooKeeper state is deleted, hbase should be able to recover and essentially be in the same state.
+ZooKeeper state should be transient (treat it like memory). If ZooKeeper state is deleted, hbase should be able to recover and essentially be in the same state.
 
 - .Exceptions: There are currently a few exceptions that we need to fix around whether a table is enabled or disabled.
 - Replication data is currently stored only in ZooKeeper.
@@ -268,7 +268,7 @@ To add a metric to an existing MBean follow the short guide below:
 
 ### Add Metric name and Function to Hadoop Compat Interface.
 
-Inside of the source interface the corresponds to where the metrics are generated (eg MetricsMasterSource for things coming from HMaster) create new static strings for metric name and description.
+Inside of the source interface that corresponds to where the metrics are generated (eg MetricsMasterSource for things coming from HMaster) create new static strings for metric name and description.
 Then add a new method that will be called to add new reading.
 
 ### Add the Implementation to Both Hadoop 1 and Hadoop 2 Compat modules.
@@ -343,7 +343,7 @@ Use [Mockito](https://site.mockito.org/) to make mocks which are very useful for
 injecting appropriate failures.
 
 If you are creating a new unit test class, notice how other unit test classes have
-classification/sizing annotations before class name and a static methods for setup/teardown of
+classification/sizing annotations before class name and static methods for setup/teardown of
 testing environment. Be sure to include annotations in any new unit test files.
 See [Tests](/docs/building-and-developing/tests) for more information on tests.
 
@@ -677,7 +677,7 @@ We've established the practice of committing to master and then cherry picking b
 - it's breaking compat: In which case, if it can go in minor releases, backport to branch-1 and branch-2.
 - it's a new feature: No for maintenance releases, For minor releases, discuss and arrive at consensus.
 
-There are occasions when there are multiple author for a patch.
+There are occasions when there are multiple authors for a patch.
 For example when there is a minor conflict we can fix it up and just proceed with the commit.
 The amending author will be different from the original committer, so you should also attribute to the original author by
 adding one or more `Co-authored-by` trailers to the commit's message.
@@ -741,7 +741,7 @@ w/ the patch — failed compile, checkstyle violation, or an added findbugs --
 the original author makes fixes and pushes a new patch. This re-runs the checks
 to produce a new report.
 
-Sometimes though, the patch is good but a flakey, unrelated test has the report vote -1
+Sometimes though, the patch is good but a flaky, unrelated test has the report vote -1
 on the patch. In this case, **committers** can retrigger the check run by doing a force push of the
 exact same patch. Or, click on the `Console output` link which shows toward the end
 of the report (For example `https://builds.apache.org/job/HBase-PreCommit-GitHub-PR/job/PR-289/1/console`).
@@ -760,7 +760,7 @@ However any substantive discussion (as with any off-list project-related discuss
 
 ### Do not edit JIRA comments
 
-Misspellings and/or bad grammar is preferable to the disruption a JIRA comment edit.
+Misspellings and/or bad grammar is preferable to the disruption of a JIRA comment edit.
 
 ## The hbase-thirdparty dependency and shading/relocation
 
@@ -797,7 +797,7 @@ a jar for all else — gson, guava — at `hbase-thirdpaty-miscellaneous`.
 
 The hbase-thirdparty artifacts are a product produced by the Apache HBase
 project under the aegis of the HBase Project Management Committee. Releases
-are done via the usual voting project on the hbase dev mailing list. If issue
+are done via the usual voting process on the hbase dev mailing list. If issue
 in the hbase-thirdparty, use the hbase JIRA and mailing lists to post notice.
 
 ## Development of HBase-related Maven archetypes

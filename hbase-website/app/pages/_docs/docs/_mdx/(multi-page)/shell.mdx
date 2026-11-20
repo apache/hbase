@@ -182,7 +182,7 @@ $ HBASE_SHELL_OPTS="-verbose:gc -XX:+PrintGCApplicationStoppedTime -XX:+PrintGCD
 ## Overriding configuration starting the HBase Shell
 
 As of hbase-2.0.5/hbase-2.1.3/hbase-2.2.0/hbase-1.4.10/hbase-1.5.0, you can
-pass or override hbase configuration as specified in `hbase-*.xml` by passing
+pass or override HBase configuration as specified in `hbase-*.xml` by passing
 your key/values prefixed with `-D` on the command-line as follows:
 
 ```bash
@@ -198,10 +198,10 @@ hbase(main):002:0> @shell.hbase.configuration.get("raining")
 
 ### Table variables
 
-HBase 0.95 adds shell commands that provides jruby-style object-oriented references for tables.
+HBase 0.95 adds shell commands that provide jruby-style object-oriented references for tables.
 Previously all of the shell commands that act upon a table have a procedural style that always took the name of the table as an argument.
 HBase 0.95 introduces the ability to assign a table to a jruby variable.
-The table reference can be used to perform data read write operations such as puts, scans, and gets well as admin functionality such as disabling, dropping, describing tables.
+The table reference can be used to perform data read write operations such as puts, scans, and gets as well as admin functionality such as disabling, dropping, describing tables.
 
 For example, previously you would always specify a table name:
 
@@ -301,7 +301,7 @@ hbase(main):018:0>
 
 Create an _.irbrc_ file for yourself in your home directory.
 Add customizations.
-A useful one is command history so commands are save across Shell invocations:
+A useful one is command history so commands are saved across Shell invocations:
 
 ```bash
 $ more .irbrc
@@ -310,7 +310,7 @@ IRB.conf[:SAVE_HISTORY] = 100
 IRB.conf[:HISTORY_FILE] = "#{ENV['HOME']}/.irb-save-history"
 ```
 
-If you'd like to avoid printing the result of evaluting each expression to stderr, for example the array of tables returned from the "list" command:
+If you'd like to avoid printing the result of evaluating each expression to stderr, for example the array of tables returned from the "list" command:
 
 ```bash
 $ echo "IRB.conf[:ECHO] = false" >>~/.irbrc
@@ -368,7 +368,7 @@ hbase>create 't1','f',SPLITS => ['10','20','30']
 
 In the above example, the table 't1' will be created with column family 'f', pre-split to four regions. Note the first region will contain all keys from '\x00' up to '\x30' (as '\x31' is the ASCII code for '1').
 
-You can pass the split points in a file using following variation. In this example, the splits are read from a file corresponding to the local path on the local filesystem. Each line in the file specifies a split point key.
+You can pass the split points in a file using the following variation. In this example, the splits are read from a file corresponding to the local path on the local filesystem. Each line in the file specifies a split point key.
 
 ```ruby
 hbase>create 't14','f',SPLITS_FILE=>'splits.txt'

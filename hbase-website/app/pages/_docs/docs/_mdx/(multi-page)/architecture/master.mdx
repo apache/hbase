@@ -53,13 +53,13 @@ Periodically checks and cleans up the `hbase:meta` table. See [hbase:meta](/docs
 
 _MasterProcWAL is replaced in hbase-2.3.0 by an alternate Procedure Store implementation; see [in-master-procedure-store-region](/docs/upgrading/paths#new-in-master-procedure-store). This section pertains to hbase-2.0.0 through hbase-2.2.x_
 
-HMaster records administrative operations and their running states, such as the handling of a crashed server, table creation, and other DDLs, into a Procedure Store. The Procedure Store WALs are stored under the MasterProcWALs directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows us to run a state machine that is resilient across Master failures. For example, if a HMaster was in the middle of creating a table encounters an issue and fails, the next active HMaster can take up where the previous left off and carry the operation to completion. Since hbase-2.0.0, a new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment operations, server crash processing, balancing, etc., all via AMv2 persisting all state and transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
+HMaster records administrative operations and their running states, such as the handling of a crashed server, table creation, and other DDLs, into a Procedure Store. The Procedure Store WALs are stored under the MasterProcWALs directory. The Master WALs are not like RegionServer WALs. Keeping up the Master WAL allows us to run a state machine that is resilient across Master failures. For example, if an HMaster was in the middle of creating a table encounters an issue and fails, the next active HMaster can take up where the previous left off and carry the operation to completion. Since hbase-2.0.0, a new AssignmentManager (A.K.A AMv2) was introduced and the HMaster handles region assignment operations, server crash processing, balancing, etc., all via AMv2 persisting all state and transitions into MasterProcWALs rather than up into ZooKeeper, as we do in hbase-1.x.
 
 See [AMv2 Description for Devs](/docs/amv2) (and [Procedure Framework (Pv2): HBASE-12439](/docs/pv2) for its basis) if you would like to learn more about the new AssignmentManager.
 
 ### Configurations for MasterProcWAL
 
-Here are the list of configurations that effect MasterProcWAL operation. You should not have to change your defaults.
+Here is the list of configurations that affect MasterProcWAL operation. You should not have to change your defaults.
 
 - **`hbase.procedure.store.wal.periodic.roll.msec`**  
   **Description:** Frequency of generating a new WAL  

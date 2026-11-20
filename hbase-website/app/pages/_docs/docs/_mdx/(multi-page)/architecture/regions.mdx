@@ -44,7 +44,7 @@ When HBase starts regions are assigned as follows (short version):
 1.  The Master invokes the `AssignmentManager` upon startup.
 2.  The `AssignmentManager` looks at the existing region assignments in `hbase:meta`.
 3.  If the region assignment is still valid (i.e., if the RegionServer is still online) then the assignment is kept.
-4.  If the assignment is invalid, then the `LoadBalancerFactory` is invoked to assign the region. The load balancer (`StochasticLoadBalancer` by default in HBase 1.0) assign the region to a RegionServer.
+4.  If the assignment is invalid, then the `LoadBalancerFactory` is invoked to assign the region. The load balancer (`StochasticLoadBalancer` by default in HBase 1.0) assigns the region to a RegionServer.
 5.  `hbase:meta` is updated with the RegionServer assignment (if needed) and the RegionServer start codes (start time of the RegionServer process) upon region opening by the RegionServer.
 
 ### Failover
@@ -107,7 +107,7 @@ HBase maintains a state for each region and persists the state in `hbase:meta`. 
 8.  If the RegionServer is online, but not reachable after the master runs out of retries, the master moves the region to `FAILED_CLOSE` state and takes no further action until an operator intervenes from the HBase shell, or the server is dead.
 9.  If the RegionServer gets the close region request, it closes the region and notifies the master. The master moves the region to `CLOSED` state and re-assigns it to a different RegionServer.
 10. Before assigning a region, the master moves the region to `OFFLINE` state automatically if it is in `CLOSED` state.
-11. When a RegionServer is about to split a region, it notifies the master. The master moves the region to be split from `OPEN` to `SPLITTING` state and add the two new regions to be created to the RegionServer. These two regions are in `SPLITTING_NEW` state initially.
+11. When a RegionServer is about to split a region, it notifies the master. The master moves the region to be split from `OPEN` to `SPLITTING` state and adds the two new regions to be created to the RegionServer. These two regions are in `SPLITTING_NEW` state initially.
 12. After notifying the master, the RegionServer starts to split the region. Once past the point of no return, the RegionServer notifies the master again so the master can update the `hbase:meta` table. However, the master does not update the region states until it is notified by the server that the split is done. If the split is successful, the splitting region is moved from `SPLITTING` to `SPLIT` state and the two new regions are moved from `SPLITTING_NEW` to `OPEN` state.
 13. If the split fails, the splitting region is moved from `SPLITTING` back to `OPEN` state, and the two new regions which were created are moved from `SPLITTING_NEW` to `OFFLINE` state.
 14. When a RegionServer is about to merge two regions, it notifies the master first. The master moves the two regions to be merged from `OPEN` to `MERGING` state, and adds the new region which will hold the contents of the merged regions region to the RegionServer. The new region is in `MERGING_NEW` state initially.
@@ -138,7 +138,7 @@ Splits run unaided on the RegionServer; i.e. the Master does not participate. Th
 
 You can override the default split policy using a custom [RegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/RegionSplitPolicy.html) (HBase 0.94+). Typically a custom split policy should extend HBase's default split policy: [IncreasingToUpperBoundRegionSplitPolicy](https://hbase.apache.org/devapidocs/org/apache/hadoop/hbase/regionserver/IncreasingToUpperBoundRegionSplitPolicy.html).
 
-The policy can set globally through the HBase configuration or on a per-table basis.
+The policy can be set globally through the HBase configuration or on a per-table basis.
 
 #### Configuring the Split Policy Globally in _hbase-site.xml_
 
@@ -204,7 +204,7 @@ The RegionSplitter tool is provided with HBase, and uses a _SplitAlgorithm_ to d
 
 ## Online Region Merges
 
-Both Master and RegionServer participate in the event of online region merges. Client sends merge RPC to the master, then the master moves the regions together to the RegionServer where the more heavily loaded region resided. Finally the master sends the merge request to this RegionServer which then runs the merge. Similar to process of region splitting, region merges run as a local transaction on the RegionServer. It offlines the regions and then merges two regions on the file system, atomically delete merging regions from `hbase:meta` and adds the merged region to `hbase:meta`, opens the merged region on the RegionServer and reports the merge to the Master.
+Both Master and RegionServer participate in the event of online region merges. Client sends merge RPC to the master, then the master moves the regions together to the RegionServer where the more heavily loaded region resided. Finally the master sends the merge request to this RegionServer which then runs the merge. Similar to process of region splitting, region merges run as a local transaction on the RegionServer. It offlines the regions and then merges two regions on the file system, atomically deletes merging regions from `hbase:meta` and adds the merged region to `hbase:meta`, opens the merged region on the RegionServer and reports the merge to the Master.
 
 An example of region merges in the HBase shell
 
@@ -388,9 +388,9 @@ Regardless of the compaction policy used, file selection is controlled by severa
 
 #### Being Stuck
 
-When the MemStore gets too large, it needs to flush its contents to a StoreFile. However, Stores are configured with a bound on the number StoreFiles, `hbase.hstore.blockingStoreFiles`, and if in excess, the MemStore flush must wait until the StoreFile count is reduced by one or more compactions. If the MemStore is too large and the number of StoreFiles is also too high, the algorithm is said to be "stuck". By default we'll wait on compactions up to `hbase.hstore.blockingWaitTime` milliseconds. If this period expires, we'll flush anyways even though we are in excess of the `hbase.hstore.blockingStoreFiles` count.
+When the MemStore gets too large, it needs to flush its contents to a StoreFile. However, Stores are configured with a bound on the number of StoreFiles, `hbase.hstore.blockingStoreFiles`, and if in excess, the MemStore flush must wait until the StoreFile count is reduced by one or more compactions. If the MemStore is too large and the number of StoreFiles is also too high, the algorithm is said to be "stuck". By default we'll wait on compactions up to `hbase.hstore.blockingWaitTime` milliseconds. If this period expires, we'll flush anyways even though we are in excess of the `hbase.hstore.blockingStoreFiles` count.
 
-Upping the `hbase.hstore.blockingStoreFiles` count will allow flushes to happen but a Store with many StoreFiles in will likely have higher read latencies. Try to figure why Compactions are not keeping up. Is it a write spurt that is bringing about this situation or is a regular occurance and the cluster is under-provisioned for the volume of writes?
+Upping the `hbase.hstore.blockingStoreFiles` count will allow flushes to happen but a Store with many StoreFiles in will likely have higher read latencies. Try to figure why Compactions are not keeping up. Is it a write spurt that is bringing about this situation or is it a regular occurrence and the cluster is under-provisioned for the volume of writes?
 
 #### The ExploringCompactionPolicy Algorithm
 
@@ -439,7 +439,7 @@ The following section walks you through the algorithm used to select StoreFiles 
     ```
     5 <= 1.2 x (2 + 3)            or            5 <= 6
     ```
-    In this scenario, FileX is eligible for minor compaction. If FileX were 7MB, it would not be eligible for minor compaction. This ratio favors smaller StoreFile. You can configure a different ratio for use in off-peak hours, using the parameter `hbase.hstore.compaction.ratio.offpeak`, if you also configure `hbase.offpeak.start.hour` and `hbase.offpeak.end.hour`.
+    In this scenario, FileX is eligible for minor compaction. If FileX were 7MB, it would not be eligible for minor compaction. This ratio favors smaller StoreFiles. You can configure a different ratio for use in off-peak hours, using the parameter `hbase.hstore.compaction.ratio.offpeak`, if you also configure `hbase.offpeak.start.hour` and `hbase.offpeak.end.hour`.
 8.  If the last major compaction was too long ago and there is more than one StoreFile to be compacted, a major compaction is run, even if it would otherwise have been minor. By default, the maximum time between major compactions is 7 days, plus or minus a 4.8 hour period, and determined randomly within those parameters. Prior to HBase 0.96, the major compaction period was 24 hours. See `hbase.hregion.majorcompaction` in the table below to tune or disable time-based major compactions.
 
 #### Parameters Used by Compaction Algorithm
@@ -463,7 +463,7 @@ This table contains the main configuration parameters for compaction. This list 
    **Default**: `Long.MAX_VALUE`
 
 - `hbase.hstore.compaction.ratio`  
-   For minor compaction, this ratio is used to determine whether a given StoreFile which is larger than `hbase.hstore.compaction.min.size` is eligible for compaction. Its effect is to limit compaction of large StoreFile. The value of `hbase.hstore.compaction.ratio` is expressed as a floating-point decimal.
+   For minor compaction, this ratio is used to determine whether a given StoreFile which is larger than `hbase.hstore.compaction.min.size` is eligible for compaction. Its effect is to limit compaction of large StoreFiles. The value of `hbase.hstore.compaction.ratio` is expressed as a floating-point decimal.
   - A large ratio, such as 10, will produce a single giant StoreFile. Conversely, a value of .25, will produce behavior similar to the BigTable compaction algorithm, producing four StoreFiles.
   - A moderate value of between 1.0 and 1.4 is recommended. When tuning this value, you are balancing write costs with read costs. Raising the value (to something like 1.4) will have more write costs, because you will compact larger StoreFiles. However, during reads, HBase will need to seek through fewer StoreFiles to accomplish the read. Consider this approach if you cannot take advantage of [Bloom Filters](/docs/performance#bloom-filters).
   - Alternatively, you can lower this value to something like 1.0 to reduce the background cost of writes, and use to limit the number of StoreFiles touched during reads. For most cases, the default value is appropriate.  
@@ -526,8 +526,8 @@ It has been copied below:
 - `hbase.hstore.compaction.ratio` Ratio used in compaction file selection algorithm (default 1.2f).
 - `hbase.hstore.compaction.min` (in HBase v 0.90 this is called `hbase.hstore.compactionThreshold`) (files) Minimum number of StoreFiles per Store to be selected for a compaction to occur (default 2).
 - `hbase.hstore.compaction.max` (files) Maximum number of StoreFiles to compact per minor compaction (default 10).
-- `hbase.hstore.compaction.min.size` (bytes) Any StoreFile smaller than this setting with automatically be a candidate for compaction. Defaults to `hbase.hregion.memstore.flush.size` (128 mb).
-- `hbase.hstore.compaction.max.size` (.92) (bytes) Any StoreFile larger than this setting with automatically be excluded from compaction (default Long.MAX_VALUE).
+- `hbase.hstore.compaction.min.size` (bytes) Any StoreFile smaller than this setting will automatically be a candidate for compaction. Defaults to `hbase.hregion.memstore.flush.size` (128 mb).
+- `hbase.hstore.compaction.max.size` (.92) (bytes) Any StoreFile larger than this setting will automatically be excluded from compaction (default Long.MAX_VALUE).
 
 The minor compaction StoreFile selection logic is size based, and selects a file for compaction when the `file ⇐ sum(smaller_files) * hbase.hstore.compaction.ratio`.
 
@@ -613,7 +613,7 @@ Don't use it for
 - frequent bulk loads with heavily overlapping time ranges
 
 **Performance Improvements**  
-Performance testing has shown that the performance of time-range scans improve greatly for limited time ranges, especially scans of recent data.
+Performance testing has shown that the performance of time-range scans improves greatly for limited time ranges, especially scans of recent data.
 
 #### Enabling Date Tiered Compaction
 
@@ -629,7 +629,7 @@ You also need to set `hbase.hstore.compaction.max` to the same value as `hbase.h
 
 <Step>
 
-Run one of following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
+Run one of the following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
 
 ```ruby
 alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.DateTieredStoreEngine', 'hbase.hstore.blockingStoreFiles' => '60', 'hbase.hstore.compaction.min'=>'2', 'hbase.hstore.compaction.max'=>'60'}
@@ -678,7 +678,7 @@ You can configure your date tiers by changing the settings for the following par
 
 | Setting                                                        | Notes                                                                                                                                                                         |
 | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `hbase.hstore.compaction.date.tiered.max.storefile.age.millis` | Files with max-timestamp smaller than this will no longer be compacted.Default at Long.MAX_VALUE.                                                                             |
+| `hbase.hstore.compaction.date.tiered.max.storefile.age.millis` | Files with max-timestamp smaller than this will no longer be compacted. Default at Long.MAX_VALUE.                                                                            |
 | `hbase.hstore.compaction.date.tiered.base.window.millis`       | Base window size in milliseconds. Default at 6 hours.                                                                                                                         |
 | `hbase.hstore.compaction.date.tiered.windows.per.tier`         | Number of windows per tier. Default at 4.                                                                                                                                     |
 | `hbase.hstore.compaction.date.tiered.incoming.window.min`      | Minimal number of files to compact in the incoming window. Set it to expected number of files in the window to avoid wasteful compaction. Default at 6.                       |
@@ -720,7 +720,7 @@ You can enable stripe compaction for a table or a column family, by setting its 
 
 <Step>
 
-Run one of following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
+Run one of the following commands in the HBase shell. Replace the table name `orders_table` with the name of your table.
 
 ```ruby
 alter 'orders_table', CONFIGURATION => {'hbase.hstore.engine.class' => 'org.apache.hadoop.hbase.regionserver.StripeStoreEngine', 'hbase.hstore.blockingStoreFiles' => '100'}
@@ -807,7 +807,7 @@ Because we don't do any real compaction, we do not use CPU and IO (disk and netw
 Consider using FIFO Compaction when your use case is
 
 - Very high volume raw data which has low TTL and which is the source of another data (after additional processing).
-- Data which can be kept entirely in a a block cache (RAM/SSD). No need for compaction of a raw data at all.
+- Data which can be kept entirely in a block cache (RAM/SSD). No need for compaction of a raw data at all.
 
 Do not use FIFO compaction when
 

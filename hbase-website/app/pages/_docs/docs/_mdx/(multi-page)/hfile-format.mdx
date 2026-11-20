@@ -270,7 +270,7 @@ See [compaction](/docs/architecture/regions#compaction) for details on the compa
 ### Data Blocks in Version 3
 
 Within an HFile, HBase cells are stored in data blocks as a sequence of KeyValues (see [hfilev1.overview](/docs/hfile-format#overview-of-version-1), or [Lars George's
-excellent introduction to HBase Storage](http://www.larsgeorge.com/2009/10/hbase-architecture-101-storage.html)). In version 3, these KeyValue optionally will include a set of 0 or more tags:
+excellent introduction to HBase Storage](http://www.larsgeorge.com/2009/10/hbase-architecture-101-storage.html)). In version 3, these KeyValues optionally will include a set of 0 or more tags:
 
 |                        | Version 1 & 2, Version 3 without MAX_TAGS_LEN | Version 3 with MAX_TAGS_LEN |
 | ---------------------- | --------------------------------------------- | --------------------------- |
@@ -282,7 +282,7 @@ excellent introduction to HBase Storage](http://www.larsgeorge.com/2009/10/hbase
 | Tags bytes (variable)  |                                               | ✓                           |
 
 If the info block for a given HFile contains an entry for `MAX_TAGS_LEN` each cell will have the length of that cell's tags included, even if that length is zero.
-The actual tags are stored as a sequence of tag length (2 bytes), tag type (1 byte), tag bytes (variable). The format an individual tag's bytes depends on the tag type.
+The actual tags are stored as a sequence of tag length (2 bytes), tag type (1 byte), tag bytes (variable). The format of an individual tag's bytes depends on the tag type.
 
 Note that the dependence on the contents of the info block implies that prior to reading any data blocks you must first process a file's info block.
 It also implies that prior to writing a data block you must know if the file's info block will include `MAX_TAGS_LEN`.
