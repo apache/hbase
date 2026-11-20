@@ -317,8 +317,8 @@ public class TestHbckChore extends TestAssignmentManagerBase {
         second = concurrentExecutor.submit(chore::runChore);
         // Wait until both legacy callers pass the running check and wait for this monitor.
         // With an atomic guard, the rejected invocation completes instead.
-        util.waitFor(10000, () -> first.isDone() || second.isDone() ||
-          (callers.size() == 2 && callers.stream().allMatch(thread -> isBlockedOnChore(thread, chore))));
+        util.waitFor(10000, () -> first.isDone() || second.isDone() || (callers.size() == 2
+          && callers.stream().allMatch(thread -> isBlockedOnChore(thread, chore))));
       }
 
       latch.countDown();
