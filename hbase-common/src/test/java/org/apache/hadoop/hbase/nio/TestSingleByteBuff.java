@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.nio;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.testclassification.MiscTests;
@@ -56,5 +57,36 @@ public class TestSingleByteBuff {
     assertEquals(l, sbb.getLongAfterPosition(4));
     assertEquals(b, sbb.getByteAfterPosition(12));
     assertEquals(s, sbb.getShortAfterPosition(13));
+  }
+
+  @Test
+  public void testPositionalReadsBeyondLimitThrow() {
+    // Off heap buffer
+    testPositionalReadsBeyondLimitThrow(ByteBuffer.allocateDirect(16));
+    // On heap buffer
+    testPositionalReadsBeyondLimitThrow(ByteBuffer.allocate(16));
+  }
+
+  private void testPositionalReadsBeyondLimitThrow(ByteBuffer bb) {
+    bb.limit(8);
+    SingleByteBuff sbb = new SingleByteBuff(bb);
+
+    // Reads ending exactly at the limit succeed
+    sbb.get(7);
+    sbb.getShort(6);
+    sbb.getInt(4);
+    sbb.getLong(0);
+
+    // Reads that cross the limit fail, even though the bytes are within capacity
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.get(8));
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getShort(7));
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getInt(5));
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getLong(1));
+
+    sbb.position(4);
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getByteAfterPosition(4));
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getShortAfterPosition(3));
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getIntAfterPosition(1));
+    assertThrows(IndexOutOfBoundsException.class, () -> sbb.getLongAfterPosition(0));
   }
 }

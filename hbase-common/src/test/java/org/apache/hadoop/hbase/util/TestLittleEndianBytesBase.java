@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.util;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 import java.nio.ByteBuffer;
 import org.apache.hadoop.hbase.ByteBufferExtendedCell;
@@ -46,6 +47,18 @@ public abstract class TestLittleEndianBytesBase {
     for (int i = 0; i <= b.length - Integer.BYTES; i++) {
       int expected = readIntLE(b, i);
       assertEquals(expected, LittleEndianBytes.toInt(buf, i));
+    }
+  }
+
+  @Test
+  public void testByteBufferToIntBeyondLimitThrows() {
+    for (ByteBuffer buf : new ByteBuffer[] { ByteBuffer.allocate(16),
+      ByteBuffer.allocateDirect(16) }) {
+      buf.limit(8);
+      // Read ending exactly at the limit succeeds
+      LittleEndianBytes.toInt(buf, 4);
+      // Read crossing the limit fails, even though the bytes are within capacity
+      assertThrows(IndexOutOfBoundsException.class, () -> LittleEndianBytes.toInt(buf, 5));
     }
   }
 
