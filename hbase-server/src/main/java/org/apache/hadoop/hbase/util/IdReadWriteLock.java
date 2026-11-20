@@ -47,6 +47,7 @@ public class IdReadWriteLock<T> {
    */
   private final ObjectPool<T, ReentrantReadWriteLock> lockPool;
   private final ReferenceType refType;
+  private final boolean purgeOnGet;
 
   public IdReadWriteLock() {
     this(ReferenceType.WEAK);
@@ -59,7 +60,18 @@ public class IdReadWriteLock<T> {
    *                      locks will be reused with a high frequency
    */
   public IdReadWriteLock(ReferenceType referenceType) {
+    this(referenceType, true);
+  }
+
+  /**
+   * Constructor of IdReadWriteLock
+   * @param referenceType type of the reference used in lock pool
+   * @param purgeOnGet    whether {@link #getLock(Object)} also purges stale references. if false,
+   *                      the owner must remember to call {@link #purge()} externally
+   */
+  public IdReadWriteLock(ReferenceType referenceType, boolean purgeOnGet) {
     this.refType = referenceType;
+    this.purgeOnGet = purgeOnGet;
     switch (referenceType) {
       case SOFT:
         lockPool = new SoftObjectPool<>(new ObjectPool.ObjectFactory<T, ReentrantReadWriteLock>() {
@@ -90,9 +102,26 @@ public class IdReadWriteLock<T> {
    * @param id an arbitrary number to identify the lock
    */
   public ReentrantReadWriteLock getLock(T id) {
-    lockPool.purge();
+    if (purgeOnGet) {
+      lockPool.purge();
+    }
+
     ReentrantReadWriteLock readWriteLock = lockPool.get(id);
     return readWriteLock;
+  }
+
+  /**
+   * Cleans up the lockPool of stale references
+   */
+  public void purge() {
+    lockPool.purge();
+  }
+
+  /**
+   * Returns the size of the underlying lockPool
+   */
+  public int getPoolSize() {
+    return lockPool.size();
   }
 
   /** For testing */
