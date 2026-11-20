@@ -22,14 +22,23 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -42,6 +51,7 @@ import org.apache.hadoop.hbase.client.RegionInfoBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableState;
+import org.apache.hadoop.hbase.master.MetricsAssignmentManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.hbck.HbckChore;
 import org.apache.hadoop.hbase.master.hbck.HbckReport;
@@ -249,6 +259,107 @@ public class TestHbckChore extends TestAssignmentManagerBase {
     HbckChore hbckChoreWithChangedConf = new HbckChore(master);
     hbckChoreWithChangedConf.choreForTesting();
     assertNull(hbckChoreWithChangedConf.getLastReport());
+  }
+
+  @Test
+  public void testConcurrentTriggersAreRejected() throws Exception {
+    final CountDownLatch scanStarted = new CountDownLatch(1);
+    final CountDownLatch resumeScan = new CountDownLatch(1);
+    final MockMasterServices blockingMaster = Mockito.spy(master);
+    Mockito.doAnswer(invocation -> {
+      scanStarted.countDown();
+      assertTrue(resumeScan.await(30, TimeUnit.SECONDS), "Timed out waiting to resume the scan");
+      return am;
+    }).when(blockingMaster).getAssignmentManager();
+    final HbckChore chore = new HbckChore(blockingMaster);
+    final ExecutorService concurrentExecutor = Executors.newFixedThreadPool(2);
+    try {
+      // Wait until the first scan is running and paused.
+      final Future<Boolean> first = concurrentExecutor.submit(chore::runChore);
+      assertTrue(scanStarted.await(10, TimeUnit.SECONDS), "The first scan did not start");
+
+      // The second invocation is rejected before the first scan finishes; no report is published.
+      final Future<Boolean> second = concurrentExecutor.submit(chore::runChore);
+      assertFalse(second.get(10, TimeUnit.SECONDS));
+      assertNull(chore.getLastReport());
+
+      // Resume the first scan and verify that it completes and publishes a report.
+      resumeScan.countDown();
+      assertTrue(first.get(10, TimeUnit.SECONDS));
+      assertNotNull(chore.getLastReport());
+    } finally {
+      resumeScan.countDown();
+      concurrentExecutor.shutdownNow();
+      concurrentExecutor.awaitTermination(30, TimeUnit.SECONDS);
+    }
+  }
+
+  @Test
+  public void testConcurrentTriggersBeforeRunningStateIsSet() throws Exception {
+    final CountDownLatch latch = new CountDownLatch(1);
+    final MockMasterServices blockingMaster = Mockito.spy(master);
+    Mockito.doAnswer(invocation -> {
+      latch.await();
+      return am;
+    }).when(blockingMaster).getAssignmentManager();
+    final HbckChore chore = new HbckChore(blockingMaster);
+    final List<Thread> callers = new CopyOnWriteArrayList<>();
+    final ExecutorService concurrentExecutor = Executors.newFixedThreadPool(2, task -> {
+      final Thread thread = new Thread(task);
+      callers.add(thread);
+      return thread;
+    });
+    try {
+      final Future<Boolean> first;
+      final Future<Boolean> second;
+      synchronized (chore) {
+        first = concurrentExecutor.submit(chore::runChore);
+        second = concurrentExecutor.submit(chore::runChore);
+        // Wait until both legacy callers pass the running check and wait for this monitor.
+        // With an atomic guard, the rejected invocation completes instead.
+        util.waitFor(10000, () -> first.isDone() || second.isDone() || (callers.size() == 2
+          && callers.stream().allMatch(thread -> isBlockedOnChore(thread, chore))));
+      }
+
+      latch.countDown();
+      // One invocation must return true and the other false, regardless of which starts first.
+      assertNotEquals(first.get(10, TimeUnit.SECONDS), second.get(10, TimeUnit.SECONDS),
+        "Exactly one concurrent invocation must execute");
+      assertNotNull(chore.getLastReport());
+    } finally {
+      latch.countDown();
+      concurrentExecutor.shutdownNow();
+      concurrentExecutor.awaitTermination(30, TimeUnit.SECONDS);
+    }
+  }
+
+  /**
+   * Checks whether the worker is waiting for the chore monitor held by the current test thread.
+   */
+  private static boolean isBlockedOnChore(Thread thread, HbckChore chore) {
+    final ThreadInfo info = ManagementFactory.getThreadMXBean().getThreadInfo(thread.getId());
+    return info != null && info.getThreadState() == Thread.State.BLOCKED
+      && info.getLockOwnerId() == Thread.currentThread().getId() && info.getLockInfo() != null
+      && info.getLockInfo().getIdentityHashCode() == System.identityHashCode(chore);
+  }
+
+  @Test
+  public void testRunningStateIsClearedAfterMetricsFailure() {
+    final MockMasterServices failingMaster = Mockito.spy(master);
+    final AssignmentManager assignmentManager = Mockito.spy(am);
+    final MetricsAssignmentManager metrics = Mockito.spy(am.getAssignmentManagerMetrics());
+    Mockito.doReturn(assignmentManager).when(failingMaster).getAssignmentManager();
+    Mockito.doReturn(metrics).when(assignmentManager).getAssignmentManagerMetrics();
+    final HbckChore chore = new HbckChore(failingMaster);
+
+    // Fail the metrics update on the first run.
+    final IllegalStateException failure = new IllegalStateException("Metrics update failed");
+    Mockito.doThrow(failure).when(metrics).updateOrphanRegionsOnRs(Mockito.anyInt());
+    assertSame(failure, assertThrows(IllegalStateException.class, chore::runChore));
+
+    // Replace the throwing stub so a second run can verify that the running state was cleared.
+    Mockito.doNothing().when(metrics).updateOrphanRegionsOnRs(Mockito.anyInt());
+    assertTrue(chore.runChore());
   }
 
   @Test
