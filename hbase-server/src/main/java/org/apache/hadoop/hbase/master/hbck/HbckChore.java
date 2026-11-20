@@ -25,6 +25,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.atomic.AtomicBoolean;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.MetaTableAccessor;
@@ -64,7 +65,7 @@ public class HbckChore extends ScheduledChore {
   /**
    * When running, the "snapshot" may be changed when this round's checking finish.
    */
-  private volatile boolean running = false;
+  private final AtomicBoolean running = new AtomicBoolean(false);
 
   private boolean disabled = false;
 
@@ -88,29 +89,8 @@ public class HbckChore extends ScheduledChore {
   }
 
   @Override
-  protected synchronized void chore() {
-    if (isDisabled() || isRunning()) {
-      LOG.warn("hbckChore is either disabled or is already running. Can't run the chore");
-      return;
-    }
-    running = true;
-    final HbckReport report = new HbckReport();
-    report.setCheckingStartTimestamp(Instant.ofEpochMilli(EnvironmentEdgeManager.currentTime()));
-    try {
-      loadRegionsFromInMemoryState(report);
-      loadRegionsFromRSReport(report);
-      try {
-        loadRegionsFromFS(scanForMergedParentRegions(), report);
-      } catch (IOException e) {
-        LOG.warn("Failed to load the regions from filesystem", e);
-      }
-    } catch (Throwable t) {
-      LOG.warn("Unexpected", t);
-    }
-    report.setCheckingEndTimestamp(Instant.ofEpochMilli(EnvironmentEdgeManager.currentTime()));
-    this.lastReport = report;
-    running = false;
-    updateAssignmentManagerMetrics(report);
+  protected void chore() {
+    runChore();
   }
 
   /**
@@ -119,18 +99,35 @@ public class HbckChore extends ScheduledChore {
    *         already running.
    */
   public boolean runChore() {
-    // This function does the sanity checks of making sure the chore is not run when it is
-    // disabled or when it's already running. It returns whether the chore was actually run or not.
-    if (isDisabled() || isRunning()) {
-      if (isDisabled()) {
-        LOG.warn("hbck chore is disabled! Set " + HBCK_CHORE_INTERVAL + " > 0 to enable it.");
-      } else {
-        LOG.warn("hbck chore already running. Can't run till it finishes.");
-      }
+    if (isDisabled()) {
+      LOG.warn("hbck chore is disabled! Set " + HBCK_CHORE_INTERVAL + " > 0 to enable it.");
       return false;
     }
-    chore();
-    return true;
+    if (!running.compareAndSet(false, true)) {
+      LOG.warn("hbck chore already running. Can't run till it finishes.");
+      return false;
+    }
+    try {
+      final HbckReport report = new HbckReport();
+      report.setCheckingStartTimestamp(Instant.ofEpochMilli(EnvironmentEdgeManager.currentTime()));
+      try {
+        loadRegionsFromInMemoryState(report);
+        loadRegionsFromRSReport(report);
+        try {
+          loadRegionsFromFS(scanForMergedParentRegions(), report);
+        } catch (IOException e) {
+          LOG.warn("Failed to load the regions from filesystem", e);
+        }
+      } catch (Throwable t) {
+        LOG.warn("Unexpected", t);
+      }
+      report.setCheckingEndTimestamp(Instant.ofEpochMilli(EnvironmentEdgeManager.currentTime()));
+      this.lastReport = report;
+      updateAssignmentManagerMetrics(report);
+      return true;
+    } finally {
+      running.set(false);
+    }
   }
 
   private void disableChore() {
@@ -290,12 +287,5 @@ public class HbckChore extends ScheduledChore {
       .updateOrphanRegionsOnFs(report.getOrphanRegionsOnFS().size());
     master.getAssignmentManager().getAssignmentManagerMetrics()
       .updateInconsistentRegions(report.getInconsistentRegions().size());
-  }
-
-  /**
-   * When running, the HBCK report may be changed later.
-   */
-  public boolean isRunning() {
-    return running;
   }
 }
