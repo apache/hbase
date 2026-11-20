@@ -304,12 +304,17 @@ public class BackupAdminImpl implements BackupAdmin {
       if (tables.isEmpty()) {
         LOG.debug("Delete backup info " + info.getBackupId());
 
-        sysTable.deleteBackupInfo(info.getBackupId());
-        // Idempotent operation
+        // Clean up data before deleting the backup info, so a failure to remove the completion
+        // marker aborts before the metadata is gone. Idempotent operation.
         BackupUtils.cleanupBackupData(info, conn.getConfiguration());
+        sysTable.deleteBackupInfo(info.getBackupId());
       } else {
         info.setTables(tables);
         sysTable.updateBackupInfo(info);
+        // The backup directory no longer matches its manifest, so remove the completion marker
+        // before deleting the table's data. The backup stays COMPLETE in the system table.
+        HBackupFileSystem.deleteBackupCompleteMarker(conn.getConfiguration(),
+          info.getBackupRootDir(), info.getBackupId());
         // Now, clean up directory for table (idempotent)
         cleanupBackupDir(info, tn, conn.getConfiguration());
       }

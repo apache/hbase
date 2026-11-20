@@ -180,14 +180,25 @@ public abstract class TableBackupClient {
   }
 
   /**
-   * Clean up the uncompleted data at target directory if the ongoing backup has already entered the
-   * copy phase.
+   * Clean up the uncompleted data at the target directory if the ongoing backup has already entered
+   * the copy phase.
+   * @throws IOException if the backup completion marker could not be removed. In that case, no data
+   *                     is deleted, so the caller can fail and the cleanup can be retried by
+   *                     repair.
    */
-  protected static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
+  protected static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf)
+    throws IOException {
+    LOG.debug("Trying to cleanup up target dir. Current backup phase: " + backupInfo.getPhase());
+
+    // The .backup.complete marker should not exist for a failed backup, but remove it first in any
+    // phase in case it does. If this fails, propagate the error without touching any data so a
+    // marker is never left pointing at data that has been removed.
+    HBackupFileSystem.deleteBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
+
     try {
       // clean up the uncompleted data at target directory if the ongoing backup has already entered
       // the copy phase
-      LOG.debug("Trying to cleanup up target dir. Current backup phase: " + backupInfo.getPhase());
       if (
         backupInfo.getPhase().equals(BackupPhase.SNAPSHOTCOPY)
           || backupInfo.getPhase().equals(BackupPhase.INCREMENTAL_COPY)
@@ -215,7 +226,6 @@ public abstract class TableBackupClient {
           }
         }
       }
-
     } catch (IOException e1) {
       LOG.error("Cleaning up uncompleted backup data of " + backupInfo.getBackupId() + " at "
         + backupInfo.getBackupRootDir() + " failed due to " + e1.getMessage() + ".");
@@ -401,6 +411,11 @@ public abstract class TableBackupClient {
     }
     BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
+
+    // Write the completion marker while still holding the exclusive lock, so a concurrent delete or
+    // merge cannot run before the marker is written and leave a stale marker behind
+    HBackupFileSystem.writeBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
 
     // Finish active session
     backupManager.finishBackupSession();

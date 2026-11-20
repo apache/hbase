@@ -61,6 +61,9 @@ public class TestFullBackup extends TestBackupBase {
       BackupManifest manifest =
         HBackupFileSystem.getManifest(conf1, new Path(BACKUP_ROOT_DIR), newestBackup.getBackupId());
       assertEquals(Sets.newHashSet(table1, table2), new HashSet<>(manifest.getTableList()));
+
+      TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR,
+        newestBackup.getBackupId());
     }
     LOG.info("backup complete");
   }
