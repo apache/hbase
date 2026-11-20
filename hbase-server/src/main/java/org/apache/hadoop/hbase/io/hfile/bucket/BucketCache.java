@@ -88,6 +88,7 @@ import org.apache.hadoop.hbase.regionserver.StoreFileInfo;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.hadoop.hbase.util.IdReadWriteLock;
+import org.apache.hadoop.hbase.util.IdReadWriteLockPoolJanitor;
 import org.apache.hadoop.hbase.util.IdReadWriteLockStrongRef;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool;
 import org.apache.hadoop.hbase.util.IdReadWriteLockWithObjectPool.ReferenceType;
@@ -137,6 +138,13 @@ public class BucketCache implements BlockCache, HeapSize {
   /** Use strong reference for offsetLock or not */
   private static final String STRONG_REF_KEY = "hbase.bucketcache.offsetlock.usestrongref";
   private static final boolean STRONG_REF_DEFAULT = false;
+
+  /**
+   * Frequency in seconds to clean up the underlying IdReadWriteLock ObjectPool (default: 10s)
+   */
+  static final String LOCK_JANITOR_PERIOD_SECONDS_CONFIG_NAME =
+    "hbase.bucketcache.lock.janitor.period.seconds";
+  private static final int DEFAULT_LOCK_JANITOR_PERIOD_SECONDS = 10;
 
   /** The cache age of blocks to check if the related file is present on any online regions. */
   static final String BLOCK_ORPHAN_GRACE_PERIOD =
@@ -268,6 +276,11 @@ public class BucketCache implements BlockCache, HeapSize {
     Executors.newScheduledThreadPool(1,
       new ThreadFactoryBuilder().setNameFormat("BucketCacheStatsExecutor").setDaemon(true).build());
 
+  /** Janitor thread schedule pool (critical cleanup, don't remove) */
+  private transient final ScheduledExecutorService janitorThreadPool =
+    Executors.newScheduledThreadPool(1,
+      new ThreadFactoryBuilder().setNameFormat("BucketCacheRWLockJanitor").setDaemon(true).build());
+
   // Allocate or free space for the block
   private transient BucketAllocator bucketAllocator;
 
@@ -291,6 +304,9 @@ public class BucketCache implements BlockCache, HeapSize {
 
   /** In-memory bucket size */
   private float memoryFactor;
+
+  /** Lock janitor period in seconds */
+  private final int lockJanitorPeriod;
 
   private volatile long bucketcachePersistInterval;
 
@@ -335,12 +351,18 @@ public class BucketCache implements BlockCache, HeapSize {
     Configuration conf, Map<String, HRegion> onlineRegions) throws IOException {
     Preconditions.checkArgument(blockSize > 0,
       "BucketCache capacity is set to " + blockSize + ", can not be less than 0");
+
+    // Initialize the lock pool
     boolean useStrongRef = conf.getBoolean(STRONG_REF_KEY, STRONG_REF_DEFAULT);
+    this.lockJanitorPeriod =
+      conf.getInt(LOCK_JANITOR_PERIOD_SECONDS_CONFIG_NAME, DEFAULT_LOCK_JANITOR_PERIOD_SECONDS);
     if (useStrongRef) {
       this.offsetLock = new IdReadWriteLockStrongRef<>();
     } else {
-      this.offsetLock = new IdReadWriteLockWithObjectPool<>(ReferenceType.SOFT);
+      // Optimization (low-latency): move the lock pool cleanup off the read-path
+      this.offsetLock = new IdReadWriteLockWithObjectPool<>(ReferenceType.SOFT, false);
     }
+
     this.conf = conf;
     this.algorithm = conf.get(FILE_VERIFY_ALGORITHM, DEFAULT_FILE_VERIFY_ALGORITHM);
     this.ioEngine = getIOEngineFromName(ioEngineName, capacity, persistencePath);
@@ -363,7 +385,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.info("Instantiating BucketCache with acceptableFactor: " + acceptableFactor
       + ", minFactor: " + minFactor + ", extraFreeFactor: " + extraFreeFactor + ", singleFactor: "
       + singleFactor + ", multiFactor: " + multiFactor + ", memoryFactor: " + memoryFactor
-      + ", useStrongRef: " + useStrongRef);
+      + ", useStrongRef: " + useStrongRef + ", lockJanitorPeriod: " + lockJanitorPeriod);
 
     this.cacheCapacity = capacity;
     this.persistencePath = persistencePath;
@@ -399,6 +421,15 @@ public class BucketCache implements BlockCache, HeapSize {
     // every five minutes.
     this.scheduleThreadPool.scheduleAtFixedRate(new StatisticsThread(this), statThreadPeriod,
       statThreadPeriod, TimeUnit.SECONDS);
+
+    // Schedule the lock pool janitor (if using Soft Refs)
+    if (!useStrongRef) {
+      this.janitorThreadPool.scheduleAtFixedRate(
+        new IdReadWriteLockPoolJanitor("BucketCache",
+          (IdReadWriteLockWithObjectPool<Long>) offsetLock),
+        lockJanitorPeriod, lockJanitorPeriod, TimeUnit.SECONDS);
+    }
+
     LOG.info("Started bucket cache; ioengine=" + ioEngineName + ", capacity="
       + StringUtils.byteDesc(capacity) + ", blockSize=" + StringUtils.byteDesc(blockSize)
       + ", writerThreadNum=" + writerThreadNum + ", writerQLen=" + writerQLen + ", persistencePath="
@@ -454,6 +485,8 @@ public class BucketCache implements BlockCache, HeapSize {
     Preconditions.checkArgument((singleFactor + multiFactor + memoryFactor) == 1,
       SINGLE_FACTOR_CONFIG_NAME + ", " + MULTI_FACTOR_CONFIG_NAME + ", and "
         + MEMORY_FACTOR_CONFIG_NAME + " segments must add up to 1.0");
+    Preconditions.checkArgument(lockJanitorPeriod > 0,
+      LOCK_JANITOR_PERIOD_SECONDS_CONFIG_NAME + " must be greater than 0");
     if (this.persistenceChunkSize <= 0) {
       persistenceChunkSize = DEFAULT_BACKING_MAP_PERSISTENCE_CHUNK_SIZE;
     }
@@ -1860,6 +1893,7 @@ public class BucketCache implements BlockCache, HeapSize {
     LOG.info("Disabling cache");
     cacheState = CacheState.DISABLED;
     this.scheduleThreadPool.shutdown();
+    this.janitorThreadPool.shutdown();
     for (WriterThread writerThread : writerThreads) {
       writerThread.interrupt();
     }
