@@ -42,6 +42,11 @@ import org.skyscreamer.jsonassert.JSONAssert;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.protobuf.ByteString;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.ClientProtos;
+import org.apache.hadoop.hbase.shaded.protobuf.generated.FilterProtos;
+
 @Tag(MiscTests.TAG)
 @Tag(SmallTests.TAG)
 public class TestTaskMonitor {
@@ -287,6 +292,21 @@ public class TestTaskMonitor {
     assertNotEquals(clone.getRPCQueueTime(), monitor.getRPCQueueTime());
     assertNotEquals(clone.toMap(), monitor.toMap());
     assertNotEquals(clone.toJSON(), monitor.toJSON());
+  }
+
+  @Test
+  public void testCloneDoesNotStringifyProtobufParams() {
+    ClientProtos.ScanRequest request = ClientProtos.ScanRequest.newBuilder()
+      .setScan(ClientProtos.Scan.newBuilder().setFilter(FilterProtos.Filter.newBuilder()
+        .setName("large-filter").setSerializedFilter(ByteString.copyFrom(new byte[64 * 1024]))))
+      .build();
+    MonitoredRPCHandlerImpl monitor = new MonitoredRPCHandlerImpl("test");
+    monitor.setRPC("Scan", new Object[] { request }, 0);
+    monitor.setRPCPacket(request);
+
+    Map<String, Object> rpcCall = (Map<String, Object>) monitor.clone().toMap().get("rpcCall");
+    assertEquals(List.of("ScanRequest"), rpcCall.get("params"));
+    assertEquals((long) request.getSerializedSize(), rpcCall.get("packetlength"));
   }
 
   private class TestParam {
