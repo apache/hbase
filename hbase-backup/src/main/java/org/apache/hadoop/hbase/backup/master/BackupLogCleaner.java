@@ -124,10 +124,15 @@ public class BackupLogCleaner extends BaseLogCleanerDelegate {
     BackupBoundaries boundaries = builder.build();
 
     if (LOG.isDebugEnabled()) {
-      LOG.debug("Boundaries defaultBoundary: {}", boundaries.getDefaultBoundary());
-      for (Map.Entry<Address, Long> entry : boundaries.getBoundaries().entrySet()) {
-        LOG.debug("Server: {}, WAL cleanup boundary: {}", entry.getKey().getHostName(),
-          entry.getValue());
+      for (Map.Entry<String, BackupBoundaries.BoundaryInfo> entry : boundaries.getBoundaries()
+        .entrySet()) {
+        String backupId = entry.getKey();
+        LOG.debug("Backup: {}, Boundaries defaultBoundary: {}", backupId,
+          entry.getValue().getDefaultBoundary());
+        for (Map.Entry<Address, Long> addressAndTs : entry.getValue().getBoundaries().entrySet()) {
+          LOG.debug("Backup: {}, Server: {}, WAL cleanup boundary: {}", backupId,
+            addressAndTs.getKey().getHostName(), addressAndTs.getValue());
+        }
       }
     }
 
