@@ -30,6 +30,6 @@ pytest==9.1.1
 pytest-rerunfailures==16.6.1
 python-dotenv==1.2.2
 requests==2.33.1
-setuptools==82.0.1
+setuptools==84.1.0
 typing_extensions==4.15.0
 urllib3==2.8.0
