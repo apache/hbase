@@ -341,6 +341,18 @@ public class TestFSHLogProvider {
   }
 
   /**
+   * -traceFreq is not supported any more, but it is kept for compatibility, so a command that still
+   * passes it with a value must work.
+   */
+  @Test
+  public void testTraceFreqWithValueIsIgnored() throws Exception {
+    int errCode =
+      WALPerformanceEvaluation.innerMain(new Configuration(TEST_UTIL.getConfiguration()),
+        new String[] { "-threads", "1", "-iterations", "100", "-traceFreq", "0.5" });
+    assertEquals(0, errCode);
+  }
+
+  /**
    * Ensure that we can use Set.add to deduplicate WALs
    */
   @Test
