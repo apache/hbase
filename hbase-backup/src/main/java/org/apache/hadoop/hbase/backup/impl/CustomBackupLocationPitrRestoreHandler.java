@@ -21,8 +21,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.HBackupFileSystem;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
+import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -50,8 +52,21 @@ public class CustomBackupLocationPitrRestoreHandler extends AbstractPitrRestoreH
   @Override
   protected List<PitrBackupMetadata> getBackupMetadata(PointInTimeRestoreRequest request)
     throws IOException {
-    return HBackupFileSystem
-      .getAllBackupImages(conn.getConfiguration(), new Path(request.getBackupRootDir())).stream()
-      .map(BackupImageAdapter::new).collect(Collectors.toList());
+    List<BackupImage> images =
+      HBackupFileSystem.getAllBackupImages(conn.getConfiguration(),
+        new Path(request.getBackupRootDir()));
+    try (BackupSystemTable sysTable = new BackupSystemTable(conn)) {
+      return images.stream().filter(image -> isComplete(sysTable, image.getBackupId()))
+        .map(BackupImageAdapter::new).collect(Collectors.toList());
+    }
+  }
+
+  private boolean isComplete(BackupSystemTable sysTable, String backupId) {
+    try {
+      BackupInfo info = sysTable.readBackupInfo(backupId);
+      return info != null && info.getState() == BackupInfo.BackupState.COMPLETE;
+    } catch (IOException e) {
+      return false;
+    }
   }
 }
