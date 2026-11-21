@@ -186,6 +186,7 @@ import org.apache.hadoop.hbase.master.replication.DisablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.EnablePeerProcedure;
 import org.apache.hadoop.hbase.master.replication.MigrateReplicationQueueFromZkToTableProcedure;
 import org.apache.hadoop.hbase.master.replication.RemovePeerProcedure;
+import org.apache.hadoop.hbase.master.replication.ReplicationMissingTargetTablesChore;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerManager;
 import org.apache.hadoop.hbase.master.replication.ReplicationPeerModificationStateStore;
 import org.apache.hadoop.hbase.master.replication.SyncReplicationReplayWALManager;
@@ -437,6 +438,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
   // The exclusive hfile cleaner pool for scanning the archive directory
   private DirScanPool exclusiveHFileCleanerPool;
   private ReplicationBarrierCleaner replicationBarrierCleaner;
+  private ReplicationMissingTargetTablesChore replicationMissingTargetTablesChore;
   private MobFileCleanerChore mobFileCleanerChore;
   private MobFileCompactionChore mobFileCompactionChore;
   private RollingUpgradeChore rollingUpgradeChore;
@@ -1815,6 +1817,13 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       new ReplicationBarrierCleaner(conf, this, getConnection(), replicationPeerManager);
     getChoreService().scheduleChore(replicationBarrierCleaner);
 
+    if (conf.getBoolean(ReplicationMissingTargetTablesChore.ENABLED_KEY,
+      ReplicationMissingTargetTablesChore.DEFAULT_ENABLED)) {
+      replicationMissingTargetTablesChore =
+        new ReplicationMissingTargetTablesChore(this, this, conf);
+      getChoreService().scheduleChore(replicationMissingTargetTablesChore);
+    }
+
     final boolean isSnapshotChoreEnabled = this.snapshotCleanupStateStore.get();
     this.snapshotCleanerChore = new SnapshotCleanerChore(this, conf, getSnapshotManager());
     if (isSnapshotChoreEnabled) {
@@ -2001,6 +2010,7 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
       hfileCleaners = null;
     }
     shutdownChore(replicationBarrierCleaner);
+    shutdownChore(replicationMissingTargetTablesChore);
     shutdownChore(snapshotCleanerChore);
     shutdownChore(hbckChore);
     shutdownChore(regionsRecoveryChore);
