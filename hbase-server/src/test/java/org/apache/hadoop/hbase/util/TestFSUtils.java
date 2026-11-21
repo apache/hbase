@@ -22,20 +22,26 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.InterruptedIOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.Random;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.FutureDataInputStreamBuilder;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.StreamCapabilities;
@@ -749,6 +755,147 @@ public class TestFSUtils {
       // pre hadoop 3.0.0 defaults to port 8020
       // Hadoop 3.0.1 changed it back to port 8020. See HDFS-12990
       testIsSameHdfs(8020);
+    }
+  }
+
+  @Test
+  public void testOpenForReadUsesOpenFileWithSuppliedStatus() throws IOException {
+    Path testPath = new Path(htu.getDataTestDir("openForReadStatus").toString(), "data");
+    FileSystem rawFs = testPath.getFileSystem(conf);
+    try (FSDataOutputStream out = rawFs.create(testPath)) {
+      out.writeBytes("x");
+    }
+    FileStatus status = rawFs.getFileStatus(testPath);
+
+    OpenForReadTrackingFileSystem trackingFs = new OpenForReadTrackingFileSystem(rawFs);
+    try (FSDataInputStream in = FSUtils.openForRead(trackingFs, testPath, status)) {
+      assertEquals(1, trackingFs.openFileBuildCount.get());
+      assertEquals(0, trackingFs.legacyOpenCount.get());
+      assertSame(status, trackingFs.suppliedFileStatus);
+      assertNotNull(in);
+    }
+  }
+
+  @Test
+  public void testOpenForReadFallsBackWhenOpenFileUnsupported() throws IOException {
+    Path testPath = new Path(htu.getDataTestDir("openForReadFallback").toString(), "data");
+    FileSystem rawFs = testPath.getFileSystem(conf);
+    try (FSDataOutputStream out = rawFs.create(testPath)) {
+      out.writeBytes("x");
+    }
+    FileStatus status = rawFs.getFileStatus(testPath);
+
+    OpenForReadTrackingFileSystem trackingFs = new OpenForReadTrackingFileSystem(rawFs);
+    trackingFs.openFileThrowsUnsupported = true;
+    try (FSDataInputStream in = FSUtils.openForRead(trackingFs, testPath, status)) {
+      assertEquals(0, trackingFs.openFileBuildCount.get());
+      assertEquals(1, trackingFs.legacyOpenCount.get());
+      assertNotNull(in);
+    }
+  }
+
+  @Test
+  public void testOpenForReadPropagatesInterrupt() throws IOException {
+    Path testPath = new Path(htu.getDataTestDir("openForReadInterrupt").toString(), "data");
+    FileSystem rawFs = testPath.getFileSystem(conf);
+    try (FSDataOutputStream out = rawFs.create(testPath)) {
+      out.writeBytes("x");
+    }
+    FileStatus status = rawFs.getFileStatus(testPath);
+
+    OpenForReadTrackingFileSystem trackingFs = new OpenForReadTrackingFileSystem(rawFs);
+    trackingFs.interruptOnBuildGet = true;
+    try {
+      FSUtils.openForRead(trackingFs, testPath, status);
+      fail("expected InterruptedIOException");
+    } catch (InterruptedIOException e) {
+      assertTrue(Thread.currentThread().isInterrupted());
+      assertEquals(0, trackingFs.legacyOpenCount.get());
+    } finally {
+      Thread.interrupted();
+    }
+  }
+
+  /**
+   * Counts legacy {@link FileSystem#open(Path, int)} vs {@link FileSystem#openFile(Path)} usage and
+   * records {@code withFileStatus} for {@link FSUtils#openForRead}.
+   */
+  private static final class OpenForReadTrackingFileSystem extends FilterFileSystem {
+
+    final AtomicInteger legacyOpenCount = new AtomicInteger();
+    final AtomicInteger openFileBuildCount = new AtomicInteger();
+    volatile FileStatus suppliedFileStatus;
+    boolean openFileThrowsUnsupported;
+    boolean interruptOnBuildGet;
+
+    OpenForReadTrackingFileSystem(FileSystem fs) {
+      super(fs);
+    }
+
+    @Override
+    public FSDataInputStream open(Path p, int bufferSize) throws IOException {
+      legacyOpenCount.incrementAndGet();
+      return super.open(p, bufferSize);
+    }
+
+    @Override
+    public FutureDataInputStreamBuilder openFile(Path path) throws IOException {
+      if (openFileThrowsUnsupported) {
+        throw new UnsupportedOperationException("openFile not supported");
+      }
+      FutureDataInputStreamBuilder delegate = super.openFile(path);
+      return new TrackingFutureDataInputStreamBuilder(delegate);
+    }
+
+    private final class TrackingFutureDataInputStreamBuilder
+      implements FutureDataInputStreamBuilder {
+
+      private final FutureDataInputStreamBuilder delegate;
+
+      private TrackingFutureDataInputStreamBuilder(FutureDataInputStreamBuilder delegate) {
+        this.delegate = delegate;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder withFileStatus(FileStatus status) {
+        suppliedFileStatus = status;
+        delegate.withFileStatus(status);
+        return this;
+      }
+
+      @Override
+      public CompletableFuture<FSDataInputStream> build() throws IOException {
+        openFileBuildCount.incrementAndGet();
+        if (interruptOnBuildGet) {
+          Thread.currentThread().interrupt();
+          return new CompletableFuture<>();
+        }
+        return delegate.build();
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder opt(String key, String value) {
+        delegate.opt(key, value);
+        return this;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder opt(String key, String... values) {
+        delegate.opt(key, values);
+        return this;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder must(String key, String value) {
+        delegate.must(key, value);
+        return this;
+      }
+
+      @Override
+      public FutureDataInputStreamBuilder must(String key, String... values) {
+        delegate.must(key, values);
+        return this;
+      }
     }
   }
 }
