@@ -18,15 +18,25 @@
 package org.apache.hadoop.hbase.quotas;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.Stoppable;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
+import org.apache.hadoop.hbase.quotas.SpaceQuotaSnapshot.SpaceQuotaStatus;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.junit.jupiter.api.BeforeEach;
@@ -81,5 +91,66 @@ public class TestQuotaObserverChore {
     assertEquals(numTable1Regions, Iterables.size(store.filterBySubject(tn1)));
     assertEquals(numTable2Regions, Iterables.size(store.filterBySubject(tn2)));
     assertEquals(numTable3Regions, Iterables.size(store.filterBySubject(tn3)));
+  }
+
+  @Test
+  public void testRetryTableEnableOnFailure() throws Exception {
+    Admin admin = mock(Admin.class);
+    when(conn.getAdmin()).thenReturn(admin);
+    SpaceQuotaSnapshotNotifier notifier = mock(SpaceQuotaSnapshotNotifier.class);
+    QuotaObserverChore realChore = new QuotaObserverChore(conn, HBaseConfiguration.create(),
+      notifier, mock(MasterQuotaManager.class), mock(Stoppable.class), null);
+    realChore.initializeSnapshotStores(Collections.emptyMap());
+
+    TableName table = TableName.valueOf("retryEnable");
+    SpaceQuotaSnapshot violatingSnapshot =
+      new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 2048L, 1024L);
+    SpaceQuotaSnapshot targetSnapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 512L, 1024L);
+    realChore.setTableQuotaSnapshot(table, violatingSnapshot);
+
+    doThrow(new IOException("injected enable failure")).doNothing().when(admin).enableTable(table);
+
+    // The first update fails to enable the table, so the in-memory snapshot must not advance.
+    assertThrows(IOException.class,
+      () -> realChore.updateTableQuota(table, violatingSnapshot, targetSnapshot));
+    assertEquals(violatingSnapshot, realChore.getTableQuotaSnapshot(table));
+    verify(admin, times(1)).enableTable(table);
+
+    // The next chore run recomputes the same transition and must retry the enable.
+    realChore.updateTableQuota(table, violatingSnapshot, targetSnapshot);
+    verify(admin, times(2)).enableTable(table);
+    assertEquals(targetSnapshot, realChore.getTableQuotaSnapshot(table));
+  }
+
+  @Test
+  public void testRetryTableDisableOnFailure() throws Exception {
+    Admin admin = mock(Admin.class);
+    when(conn.getAdmin()).thenReturn(admin);
+    SpaceQuotaSnapshotNotifier notifier = mock(SpaceQuotaSnapshotNotifier.class);
+    QuotaObserverChore realChore = new QuotaObserverChore(conn, HBaseConfiguration.create(),
+      notifier, mock(MasterQuotaManager.class), mock(Stoppable.class), null);
+    realChore.initializeSnapshotStores(Collections.emptyMap());
+
+    TableName table = TableName.valueOf("retryDisable");
+    SpaceQuotaSnapshot observantSnapshot =
+      new SpaceQuotaSnapshot(SpaceQuotaStatus.notInViolation(), 512L, 1024L);
+    SpaceQuotaSnapshot targetSnapshot =
+      new SpaceQuotaSnapshot(new SpaceQuotaStatus(SpaceViolationPolicy.DISABLE), 2048L, 1024L);
+    realChore.setTableQuotaSnapshot(table, observantSnapshot);
+
+    doThrow(new IOException("injected disable failure")).doNothing().when(admin)
+      .disableTable(table);
+
+    // The first update fails to disable the table, so the in-memory snapshot must not advance.
+    assertThrows(IOException.class,
+      () -> realChore.updateTableQuota(table, observantSnapshot, targetSnapshot));
+    assertEquals(observantSnapshot, realChore.getTableQuotaSnapshot(table));
+    verify(admin, times(1)).disableTable(table);
+
+    // The next chore run recomputes the same transition and must retry the disable.
+    realChore.updateTableQuota(table, observantSnapshot, targetSnapshot);
+    verify(admin, times(2)).disableTable(table);
+    assertEquals(targetSnapshot, realChore.getTableQuotaSnapshot(table));
   }
 }
