@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.mapreduce;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInput;
 import java.io.DataOutput;
+import java.io.EOFException;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
@@ -46,8 +47,10 @@ import org.apache.hadoop.hbase.io.ImmutableBytesWritable;
 import org.apache.hadoop.hbase.mob.MobUtils;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.snapshot.RestoreSnapshotHelper;
+import org.apache.hadoop.hbase.snapshot.RegionSizes;
 import org.apache.hadoop.hbase.snapshot.SnapshotDescriptionUtils;
 import org.apache.hadoop.hbase.snapshot.SnapshotManifest;
+import org.apache.hadoop.hbase.snapshot.SnapshotRegionSizeCalculator;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.CommonFSUtils;
 import org.apache.hadoop.hbase.util.RegionSplitter;
@@ -146,13 +149,14 @@ public class TableSnapshotInputFormatImpl {
     private String[] locations;
     private String scan;
     private String restoreDir;
+    private long length;
 
     // constructor for mapreduce framework / Writable
     public InputSplit() {
     }
 
     public InputSplit(TableDescriptor htd, HRegionInfo regionInfo, List<String> locations,
-      Scan scan, Path restoreDir) {
+      Scan scan, Path restoreDir, long length) {
       this.htd = htd;
       this.regionInfo = regionInfo;
       if (locations == null || locations.isEmpty()) {
@@ -167,6 +171,7 @@ public class TableSnapshotInputFormatImpl {
       }
 
       this.restoreDir = restoreDir.toString();
+      this.length = length;
     }
 
     public TableDescriptor getHtd() {
@@ -182,8 +187,7 @@ public class TableSnapshotInputFormatImpl {
     }
 
     public long getLength() {
-      // TODO: We can obtain the file sizes of the snapshot here.
-      return 0;
+      return length;
     }
 
     public String[] getLocations() {
@@ -220,6 +224,7 @@ public class TableSnapshotInputFormatImpl {
 
       Bytes.writeByteArray(out, Bytes.toBytes(scan));
       Bytes.writeByteArray(out, Bytes.toBytes(restoreDir));
+      out.writeLong(length);
 
     }
 
@@ -236,6 +241,12 @@ public class TableSnapshotInputFormatImpl {
 
       this.scan = Bytes.toString(Bytes.readByteArray(in));
       this.restoreDir = Bytes.toString(Bytes.readByteArray(in));
+      try {
+        this.length = in.readLong();
+      } catch (EOFException e) {
+        // Older serialized splits do not carry length and keep the previous behavior
+        this.length = 0L;
+      }
     }
   }
 
@@ -447,6 +458,8 @@ public class TableSnapshotInputFormatImpl {
     }
 
     List<InputSplit> splits = new ArrayList<>();
+    RegionSizes regionSizes =
+      SnapshotRegionSizeCalculator.calculateRegionSizes(conf, manifest);
     for (HRegionInfo hri : regionManifests) {
       // load region descriptor
       List<String> hosts = null;
@@ -461,6 +474,8 @@ public class TableSnapshotInputFormatImpl {
           hosts = calculateLocationsForInputSplit(conf, htd, hri, tableDir);
         }
       }
+
+      long snapshotRegionSize = regionSizes.getRegionSize(hri.getEncodedName());
 
       if (numSplits > 1) {
         byte[][] sp = sa.split(hri.getStartKey(), hri.getEndKey(), numSplits, true);
@@ -484,7 +499,8 @@ public class TableSnapshotInputFormatImpl {
                 Bytes.compareTo(scan.getStopRow(), sp[i + 1]) < 0 ? scan.getStopRow() : sp[i + 1]);
             }
 
-            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir));
+            splits.add(new InputSplit(htd, hri, hosts, boundedScan, restoreDir,
+              snapshotRegionSize / numSplits));
           }
         }
       } else {
@@ -493,7 +509,7 @@ public class TableSnapshotInputFormatImpl {
             hri.getEndKey())
         ) {
 
-          splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir));
+          splits.add(new InputSplit(htd, hri, hosts, scan, restoreDir, snapshotRegionSize));
         }
       }
     }
