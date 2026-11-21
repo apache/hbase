@@ -17,11 +17,14 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
+import static org.hamcrest.MatcherAssert.assertThat;
+import static org.hamcrest.Matchers.containsString;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -452,6 +455,148 @@ public class TestTablePermissions {
           Permission.Action.ADMIN },
         user3Perms.get(0).getPermission().getActions(),
         "user3 should have ADMIN, READ, CREATE permission");
+    }
+  }
+
+  private void testAddUserPermissionWithInvalidUser0(Connection conn, String invalidUser,
+    String errorMsg) throws Exception {
+    Permission tablePerm =
+      Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
+    IOException e = assertThrows(
+      IOException.class, () -> PermissionStorage.addUserPermission(conn,
+        new UserPermission(invalidUser, tablePerm), false),
+      "Should reject user name [" + invalidUser + "]");
+    assertThat(e.getMessage(), containsString(errorMsg));
+  }
+
+  @Test
+  public void testAddUserPermissionWithInvalidUser() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      testAddUserPermissionWithInvalidUser0(conn, null, "null user name is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "", "Blank user name '' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, " ", "Blank user name ' ' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "\t", "Blank user name '\t' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, " user",
+        "Leading or trailing whitespace in user name ' user' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "user ",
+        "Leading or trailing whitespace in user name 'user ' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, " user ",
+        "Leading or trailing whitespace in user name ' user ' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "user,user",
+        "',' in user name 'user,user' is not allowed");
+
+      testAddUserPermissionWithInvalidUser0(conn, "@", "Blank group name '@' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "@ ", "Blank group name '@ ' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "@\t", "Blank group name '@\t' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "@ group",
+        "Leading or trailing whitespace in group name '@ group' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "@group ",
+        "Leading or trailing whitespace in group name '@group ' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "@ group ",
+        "Leading or trailing whitespace in group name '@ group ' is not allowed");
+      testAddUserPermissionWithInvalidUser0(conn, "@group,group",
+        "',' in group name '@group,group' is not allowed");
+
+      // none of the rejected grants should have been persisted
+      assertTrue(getTablePerms(conn, TEST_TABLE).isEmpty(),
+        "No table permissions should have been written");
+    }
+  }
+
+  @Test
+  public void testAddUserPermissionWithInvalidAction() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      // no actions associated with the permission
+      IOException e =
+        assertThrows(IOException.class, () -> PermissionStorage.addUserPermission(connection,
+          new UserPermission("george", Permission.newBuilder(TEST_TABLE).build()), false));
+      assertThat(e.getMessage(), containsString("No actions associated with user"));
+
+      // none of the rejected grants should have been persisted
+      assertTrue(getTablePerms(connection, TEST_TABLE).isEmpty(),
+        "No table permissions should have been written");
+    }
+  }
+
+  private void testRemoveUserPermissionWithInvalidUser0(Connection conn, String invalidUser,
+    String errorMsg) throws Exception {
+    Permission tablePerm =
+      Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
+    IOException e = assertThrows(IOException.class,
+      () -> PermissionStorage.removeUserPermission(conn,
+        new UserPermission(invalidUser, tablePerm)),
+      "Should reject user name [" + invalidUser + "]");
+    assertThat(e.getMessage(), containsString(errorMsg));
+  }
+
+  @Test
+  public void testRemoveUserPermissionWithInvalidUser() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection conn = ConnectionFactory.createConnection(conf)) {
+      testRemoveUserPermissionWithInvalidUser0(conn, null, "null user name is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "", "Blank user name '' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, " ", "Blank user name ' ' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "\t", "Blank user name '\t' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, " user",
+        "Leading or trailing whitespace in user name ' user' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "user ",
+        "Leading or trailing whitespace in user name 'user ' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, " user ",
+        "Leading or trailing whitespace in user name ' user ' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "user,user",
+        "',' in user name 'user,user' is not allowed");
+
+      testRemoveUserPermissionWithInvalidUser0(conn, "@", "Blank group name '@' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "@ ", "Blank group name '@ ' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "@\t",
+        "Blank group name '@\t' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "@ group",
+        "Leading or trailing whitespace in group name '@ group' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "@group ",
+        "Leading or trailing whitespace in group name '@group ' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "@ group ",
+        "Leading or trailing whitespace in group name '@ group ' is not allowed");
+      testRemoveUserPermissionWithInvalidUser0(conn, "@group,group",
+        "',' in group name '@group,group' is not allowed");
+    }
+  }
+
+  @Test
+  public void testRemoveWithNoActionsRemovesAllActions() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      PermissionStorage.addUserPermission(connection,
+        new UserPermission("userC", Permission.newBuilder(TEST_TABLE)
+          .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
+        false);
+
+      // revoking without specifying actions is valid and removes the whole permission
+      PermissionStorage.removeUserPermission(connection,
+        new UserPermission("userC", Permission.newBuilder(TEST_TABLE).build()));
+
+      assertTrue(getTablePerms(connection, TEST_TABLE).get("userC").isEmpty(),
+        "table level permission should be fully revoked");
+    }
+  }
+
+  @Test
+  public void testAddGroupPermission() throws Exception {
+    Configuration conf = UTIL.getConfiguration();
+    try (Connection connection = ConnectionFactory.createConnection(conf)) {
+      // a group name is stored as "@group", only a bare "@" is invalid
+      PermissionStorage.addUserPermission(connection, new UserPermission("@devs",
+        Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()), false);
+
+      ListMultimap<String, UserPermission> perms = getTablePerms(connection, TEST_TABLE);
+      List<UserPermission> groupPerms = perms.get("@devs");
+      assertEquals(1, groupPerms.size(), "Should have 1 permission for group devs");
+      assertEquals(Permission.Scope.TABLE, groupPerms.get(0).getAccessScope());
+      TablePermission permission = (TablePermission) groupPerms.get(0).getPermission();
+      assertEquals(TEST_TABLE, permission.getTableName());
+      assertArrayEquals(new Permission.Action[] { Permission.Action.READ },
+        permission.getActions());
     }
   }
 
