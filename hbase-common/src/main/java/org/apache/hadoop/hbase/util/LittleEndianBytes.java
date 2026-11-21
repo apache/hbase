@@ -38,6 +38,12 @@ public final class LittleEndianBytes {
     abstract int toInt(ByteBuffer buffer, int offset);
 
     abstract int putInt(byte[] bytes, int offset, int val);
+
+    abstract long toLong(byte[] bytes, int offset);
+
+    abstract long toLong(ByteBuffer buffer, int offset);
+
+    abstract int putLong(byte[] bytes, int offset, long val);
   }
 
   static class ConverterHolder {
@@ -81,6 +87,31 @@ public final class LittleEndianBytes {
         bytes[offset + 3] = (byte) (val >>> 24);
         return offset + Bytes.SIZEOF_INT;
       }
+
+      @Override
+      long toLong(byte[] bytes, int offset) {
+        long l = 0;
+        for (int i = offset + 7; i >= offset; i--) {
+          l <<= 8;
+          l ^= (bytes[i] & 0xFFL);
+        }
+        return l;
+      }
+
+      @Override
+      long toLong(ByteBuffer buffer, int offset) {
+        return Long.reverseBytes(buffer.getLong(offset));
+      }
+
+      @Override
+      int putLong(byte[] bytes, int offset, long val) {
+        for (int i = offset; i < offset + 7; i++) {
+          bytes[i] = (byte) val;
+          val >>>= 8;
+        }
+        bytes[offset + 7] = (byte) val;
+        return offset + Bytes.SIZEOF_LONG;
+      }
     }
 
     static final class UnsafeConverter extends Converter {
@@ -108,6 +139,21 @@ public final class LittleEndianBytes {
       @Override
       int putInt(byte[] bytes, int offset, int val) {
         return UnsafeAccess.putIntLE(bytes, offset, val);
+      }
+
+      @Override
+      long toLong(byte[] bytes, int offset) {
+        return UnsafeAccess.toLongLE(bytes, offset);
+      }
+
+      @Override
+      long toLong(ByteBuffer buffer, int offset) {
+        return UnsafeAccess.toLongLE(buffer, offset);
+      }
+
+      @Override
+      int putLong(byte[] bytes, int offset, long val) {
+        return UnsafeAccess.putLongLE(bytes, offset, val);
       }
     }
   }
@@ -138,6 +184,31 @@ public final class LittleEndianBytes {
   }
 
   /*
+   * Writes a long in little-endian order. Caller must ensure bounds; no checks are performed.
+   */
+  public static void putLong(byte[] bytes, int offset, long val) {
+    assert offset >= 0 && bytes.length - offset >= Bytes.SIZEOF_LONG;
+    ConverterHolder.BEST_CONVERTER.putLong(bytes, offset, val);
+  }
+
+  /*
+   * Reads a long in little-endian order. Caller must ensure bounds; no checks are performed.
+   */
+  public static long toLong(byte[] bytes, int offset) {
+    assert offset >= 0 && bytes.length - offset >= Bytes.SIZEOF_LONG;
+    return ConverterHolder.BEST_CONVERTER.toLong(bytes, offset);
+  }
+
+  /*
+   * Reads a long in little-endian order from ByteBuffer. Caller must ensure bounds; no checks are
+   * performed.
+   */
+  public static long toLong(ByteBuffer buffer, int offset) {
+    assert offset >= 0 && buffer.capacity() - offset >= Bytes.SIZEOF_LONG;
+    return ConverterHolder.BEST_CONVERTER.toLong(buffer, offset);
+  }
+
+  /*
    * Reads an int in little-endian order from the row portion of the Cell, at the given offset.
    */
   public static int getRowAsInt(Cell cell, int offset) {
@@ -146,6 +217,17 @@ public final class LittleEndianBytes {
       return toInt(bbCell.getRowByteBuffer(), bbCell.getRowPosition() + offset);
     }
     return toInt(cell.getRowArray(), cell.getRowOffset() + offset);
+  }
+
+  /*
+   * Reads a long in little-endian order from the row portion of the Cell, at the given offset.
+   */
+  public static long getRowAsLong(Cell cell, int offset) {
+    if (cell instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbCell = (ByteBufferExtendedCell) cell;
+      return toLong(bbCell.getRowByteBuffer(), bbCell.getRowPosition() + offset);
+    }
+    return toLong(cell.getRowArray(), cell.getRowOffset() + offset);
   }
 
   /*
@@ -158,6 +240,18 @@ public final class LittleEndianBytes {
       return toInt(bbCell.getQualifierByteBuffer(), bbCell.getQualifierPosition() + offset);
     }
     return toInt(cell.getQualifierArray(), cell.getQualifierOffset() + offset);
+  }
+
+  /*
+   * Reads a long in little-endian order from the qualifier portion of the Cell, at the given
+   * offset.
+   */
+  public static long getQualifierAsLong(Cell cell, int offset) {
+    if (cell instanceof ByteBufferExtendedCell) {
+      ByteBufferExtendedCell bbCell = (ByteBufferExtendedCell) cell;
+      return toLong(bbCell.getQualifierByteBuffer(), bbCell.getQualifierPosition() + offset);
+    }
+    return toLong(cell.getQualifierArray(), cell.getQualifierOffset() + offset);
   }
 
   private LittleEndianBytes() {

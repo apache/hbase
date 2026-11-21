@@ -43,4 +43,12 @@ public abstract class HashKey<T> {
    * @return the 32-bit value decoded in little-endian order
    */
   public abstract int getIntLE(int pos);
+
+  /**
+   * Returns the little-endian 64-bit long value starting at the given position in this
+   * {@code HashKey}.
+   * @param pos the starting offset of the 8-byte little-endian long
+   * @return the 64-bit value decoded in little-endian order
+   */
+  public abstract long getLongLE(int pos);
 }
