@@ -32,6 +32,7 @@
   <description>Module that does project assembly and that is all that it does.</description>
   <properties>
     <license.bundles.dependencies>true</license.bundles.dependencies>
+    <license.bundles.vega>true</license.bundles.vega>
     <final.name>hbase-${project.version}</final.name>
   </properties>
   <dependencies>

@@ -1894,6 +1894,16 @@
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-remote-resources-plugin</artifactId>
+          <configuration>
+            <properties>
+              <bundled_bootstrap_version>${bootstrap.version}</bundled_bootstrap_version>
+              <bundled_jquery_version>${jquery.version}</bundled_jquery_version>
+              <bundled_tablesorter_version>${tablesorter.version}</bundled_tablesorter_version>
+              <bundled_vega_version>${vega.version}</bundled_vega_version>
+              <bundled_vega_lite_version>${vega-lite.version}</bundled_vega_lite_version>
+              <bundled_vega_embed_version>${vega-embed.version}</bundled_vega_embed_version>
+            </properties>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
