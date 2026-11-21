@@ -21,6 +21,7 @@ import static org.apache.hadoop.hbase.master.HMaster.HBASE_MASTER_RSPROC_DISPATC
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
@@ -70,6 +71,12 @@ public class TestProcDispatcher {
     TEST_UTIL.getConfiguration().set(HBASE_MASTER_RSPROC_DISPATCHER_CLASS,
       RSProcDispatcher.class.getName());
     TEST_UTIL.getConfiguration().setInt(RSProcDispatcher.FAIL_FAST_LIMIT_KEY, 5);
+    // The test waits for a ServerCrashProcedure to show up in getProcedures(). An SCP does not wait
+    // for a client ack, so once finished it is evicted by the next CompletedProcedureCleaner run
+    // (every 30s by default), possibly before the test polls for it. Use an interval longer than
+    // the LargeTests timeout so finished SCPs are never evicted while the test runs.
+    TEST_UTIL.getConfiguration().setInt("hbase.procedure.cleaner.interval",
+      (int) TimeUnit.MINUTES.toMillis(20));
     TEST_UTIL.startMiniCluster(3);
     SingleProcessHBaseCluster cluster = TEST_UTIL.getHBaseCluster();
     rs0 = cluster.getRegionServer(0).getServerName();
