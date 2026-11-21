@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.master.procedure;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import org.apache.hadoop.hbase.HBaseIOException;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.TableNotDisabledException;
@@ -31,6 +33,7 @@ import org.apache.hadoop.hbase.client.RegionReplicaUtil;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.master.MasterCoprocessorHost;
 import org.apache.hadoop.hbase.procedure2.ProcedureStateSerializer;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ModifyRegionUtils;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -89,6 +92,14 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
           regions = env.getAssignmentManager().getRegionStates().getRegionsOfTable(getTableName());
           RegionReplicaUtil.removeNonDefaultRegions(regions);
           assert regions != null && !regions.isEmpty() : "unexpected 0 regions";
+
+          // Check for duplicate startKey regions to avoid generating regions with the same
+          // encoded name during truncate, which would cause the procedure to get stuck
+          if (preserveSplits && !checkRegionsStartKeyNoDuplicate(regions)) {
+            assert isFailed() : "the truncate should have an exception here";
+            return Flow.NO_MORE_STATE;
+          }
+
           ProcedureSyncWait.waitRegionInTransition(env, regions);
 
           // Call coprocessors
@@ -314,6 +325,27 @@ public class TruncateTableProcedure extends AbstractStateMachineTableProcedure<T
         .setEndKey(hri.getEndKey()).build());
     }
     return newRegions;
+  }
+
+  /**
+   * Check whether there are regions with duplicate startKeys in the given list. If duplicates
+   * exist, it indicates the table has overlapping regions that need to be fixed before truncation.
+   * @param regions the list of regions to check
+   * @return true if no duplicates found, false if duplicates exist (failure will be set)
+   */
+  private boolean checkRegionsStartKeyNoDuplicate(final List<RegionInfo> regions) {
+    Set<String> startKeys = new HashSet<>();
+    for (RegionInfo regionInfo : regions) {
+      String startKeyHex = Bytes.toHex(regionInfo.getStartKey());
+      if (!startKeys.add(startKeyHex)) {
+        setFailure("master-truncate-table",
+          new HBaseIOException("Found duplicate startKey region for table " + getTableName()
+            + ", startKey=" + startKeyHex
+            + ". Please fix the region overlap issue before truncating the table."));
+        return false;
+      }
+    }
+    return true;
   }
 
   private boolean prepareTruncate(final MasterProcedureEnv env) throws IOException {
