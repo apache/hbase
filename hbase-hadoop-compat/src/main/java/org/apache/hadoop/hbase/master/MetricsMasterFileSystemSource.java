@@ -21,6 +21,13 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSource;
 import org.apache.yetus.audience.InterfaceAudience;
 
+/**
+ * @deprecated since 2.4.0 and in 3.0.0, to be removed in 4.0.0, replaced by procedure-based
+ *             distributed WAL splitter; see SplitWALManager. These metrics ({@code hlogSplitTime},
+ *             {@code hlogSplitSize}, {@code metaHlogSplitTime}, {@code metaHlogSplitSize}) are only
+ *             emitted by the deprecated ZK-coordinated WAL split path.
+ */
+@Deprecated
 @InterfaceAudience.Private
 public interface MetricsMasterFileSystemSource extends BaseSource {
 

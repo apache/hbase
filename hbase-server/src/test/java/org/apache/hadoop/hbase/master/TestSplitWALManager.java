@@ -31,6 +31,7 @@ import java.util.concurrent.CountDownLatch;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
+import org.apache.hadoop.hbase.CompatibilityFactory;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.ServerName;
@@ -45,6 +46,7 @@ import org.apache.hadoop.hbase.procedure2.ProcedureSuspendedException;
 import org.apache.hadoop.hbase.procedure2.ProcedureTestingUtility;
 import org.apache.hadoop.hbase.procedure2.ProcedureYieldException;
 import org.apache.hadoop.hbase.procedure2.StateMachineProcedure;
+import org.apache.hadoop.hbase.test.MetricsAssertHelper;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -69,6 +71,8 @@ import org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProcedureProtos;
 public class TestSplitWALManager {
 
   private static final Logger LOG = LoggerFactory.getLogger(TestSplitWALManager.class);
+  private static final MetricsAssertHelper METRICS_HELPER =
+    CompatibilityFactory.getInstance(MetricsAssertHelper.class);
   private static HBaseTestingUtil TEST_UTIL;
   private HMaster master;
   private SplitWALManager splitWALManager;
@@ -231,6 +235,9 @@ public class TestSplitWALManager {
     // load table
     testUtil.loadTable(testUtil.getConnection().getTable(TABLE_NAME), FAMILY);
     ProcedureExecutor<MasterProcedureEnv> masterPE = hmaster.getMasterProcedureExecutor();
+    MetricsMasterSource masterSource = hmaster.getMasterMetrics().getMetricsSource();
+    long splitWALSubmittedBase = METRICS_HELPER
+      .getCounter(MetricsMasterSource.SPLIT_WAL_METRIC_PREFIX + "SubmittedCount", masterSource);
     ServerName metaServer = testUtil.getHBaseCluster().getServerHoldingMeta();
     ServerName testServer = testUtil.getHBaseCluster().getRegionServerThreads().stream()
       .map(rs -> rs.getRegionServer().getServerName()).filter(rs -> rs != metaServer).findAny()
@@ -239,6 +246,9 @@ public class TestSplitWALManager {
     assertEquals(1, procedures.size());
     ProcedureTestingUtility.submitAndWait(masterPE, procedures.get(0));
     assertEquals(0, splitWALManager.getWALsToSplit(testServer, false).size());
+    // The SplitWALProcedure above should have been reported to the split WAL metric.
+    METRICS_HELPER.assertCounter(MetricsMasterSource.SPLIT_WAL_METRIC_PREFIX + "SubmittedCount",
+      splitWALSubmittedBase + 1, masterSource);
 
     // Validate the old WAL file archive dir
     Path walRootDir = hmaster.getMasterFileSystem().getWALRootDir();
@@ -251,6 +261,9 @@ public class TestSplitWALManager {
     ProcedureTestingUtility.submitAndWait(masterPE, procedures.get(0));
     assertEquals(0, splitWALManager.getWALsToSplit(metaServer, true).size());
     assertEquals(1, splitWALManager.getWALsToSplit(metaServer, false).size());
+    // The meta SplitWALProcedure should also have been counted by the split WAL metric.
+    METRICS_HELPER.assertCounter(MetricsMasterSource.SPLIT_WAL_METRIC_PREFIX + "SubmittedCount",
+      splitWALSubmittedBase + 2, masterSource);
     // There should be archiveFileCount + 1 WALs after SplitWALProcedure finish
     assertEquals(archiveFileCount + 1, walFS.listStatus(walArchivePath).length,
       "Splitted WAL files should be archived");
