@@ -450,6 +450,17 @@ public class TestResult {
     }
   }
 
+  @Test
+  public void testCopyFromPreservesPartialFlag() {
+    Cell[] cells = genKVs(row, family, value, 1, 1);
+    Result result = new Result();
+    result.copyFrom(Result.create(cells, null, false, true));
+    assertTrue(result.mayHaveMoreCellsInRow());
+    assertArrayEquals(cells, result.rawCells());
+    result.copyFrom(Result.create(cells));
+    assertFalse(result.mayHaveMoreCellsInRow());
+  }
+
   /**
    * Microbenchmark that compares {@link Result#getValue} and {@link Result#loadValue} performance.
    */
