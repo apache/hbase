@@ -210,7 +210,7 @@ public class MetricsSource implements BaseSource {
    * Convience method to apply changes to metrics do to shipping a batch of logs.
    * @param batchSize the size of the batch that was shipped to sinks.
    */
-  public void shipBatch(long batchSize, int sizeInBytes) {
+  public void shipBatch(long batchSize, long sizeInBytes) {
     singleSourceSource.incrBatchesShipped(1);
     globalSourceSource.incrBatchesShipped(1);
 
@@ -258,7 +258,7 @@ public class MetricsSource implements BaseSource {
    * @param batchSize the size of the batch that was shipped to sinks.
    * @param hfiles    total number of hfiles shipped to sinks.
    */
-  public void shipBatch(long batchSize, int sizeInBytes, long hfiles) {
+  public void shipBatch(long batchSize, long sizeInBytes, long hfiles) {
     shipBatch(batchSize, sizeInBytes);
     singleSourceSource.incrHFilesShipped(hfiles);
     globalSourceSource.incrHFilesShipped(hfiles);

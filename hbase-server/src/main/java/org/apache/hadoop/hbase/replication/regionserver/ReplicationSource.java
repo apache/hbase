@@ -495,7 +495,7 @@ public class ReplicationSource implements ReplicationSourceInterface {
   }
 
   @Override
-  public void tryThrottle(int batchSize) throws InterruptedException {
+  public void tryThrottle(long batchSize) throws InterruptedException {
     checkBandwidthChangeAndResetThrottler();
     if (throttler.isEnabled()) {
       long sleepTicks = throttler.getNextSleepInterval(batchSize);
