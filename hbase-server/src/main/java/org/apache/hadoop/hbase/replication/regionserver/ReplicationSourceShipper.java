@@ -213,6 +213,7 @@ public class ReplicationSourceShipper extends Thread {
       persistLogPosition();
       return;
     }
+    boolean bufferReleased = false;
     while (isActive()) {
       try {
         try {
@@ -253,6 +254,7 @@ public class ReplicationSourceShipper extends Thread {
         // acquireBufferQuota() in ReplicationSourceWALReader because they maintain
         // same variable: totalBufferUsed
         source.postShipEdits(entries, entryBatch.getUsedBufferSize());
+        bufferReleased = true;
         // FIXME check relationship between wal group and overall
         source.getSourceMetrics().shipBatch(entryBatch.getNbOperations(), currentSize,
           entryBatch.getNbHFiles());
@@ -277,11 +279,13 @@ public class ReplicationSourceShipper extends Thread {
         }
       }
     }
-
     accumulatedSizeSinceLastUpdate += currentSize;
     lastShippedBatch = entryBatch;
     if (shouldPersistLogPosition()) {
       persistLogPosition();
+    }
+    if (!bufferReleased) {
+      source.getSourceManager().releaseWALEntryBatchBufferQuota(entryBatch);
     }
   }
 
