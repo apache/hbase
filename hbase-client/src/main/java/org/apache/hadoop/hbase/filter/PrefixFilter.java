@@ -79,14 +79,18 @@ public class PrefixFilter extends FilterBase implements HintingFilter {
     // if they are equal, return false => pass row
     // if the cell is after => return true, filter row
     // if we are passed the prefix, set flag
+    // Compare no more than the row itself. The bytes after a row shorter than the prefix are not
+    // part of the row, and there may be none at all. Such a row is before the prefix if it matches
+    // the prefix as far as it goes, which is what comparing with its real length gives.
+    int length = Math.min(firstRowCell.getRowLength(), this.prefix.length);
     int cmp;
     if (firstRowCell instanceof ByteBufferExtendedCell) {
       cmp = ByteBufferUtils.compareTo(((ByteBufferExtendedCell) firstRowCell).getRowByteBuffer(),
-        ((ByteBufferExtendedCell) firstRowCell).getRowPosition(), this.prefix.length, this.prefix,
-        0, this.prefix.length);
+        ((ByteBufferExtendedCell) firstRowCell).getRowPosition(), length, this.prefix, 0,
+        this.prefix.length);
     } else {
-      cmp = Bytes.compareTo(firstRowCell.getRowArray(), firstRowCell.getRowOffset(),
-        this.prefix.length, this.prefix, 0, this.prefix.length);
+      cmp = Bytes.compareTo(firstRowCell.getRowArray(), firstRowCell.getRowOffset(), length,
+        this.prefix, 0, this.prefix.length);
     }
     if ((!isReversed() && cmp > 0) || (isReversed() && cmp < 0)) {
       passedPrefix = true;

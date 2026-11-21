@@ -23,9 +23,12 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.nio.ByteBuffer;
+import org.apache.hadoop.hbase.ByteBufferKeyValue;
 import org.apache.hadoop.hbase.Cell;
 import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.KeyValueUtil;
+import org.apache.hadoop.hbase.PrivateCellUtil;
 import org.apache.hadoop.hbase.testclassification.FilterTests;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -259,5 +262,99 @@ public class TestPrefixFilter {
     Cell reverseNextCellHint = filter.getNextCellHint(cell);
     assertNotNull(reverseNextCellHint);
     assertEquals(emptyPrefixCell, reverseNextCellHint);
+  }
+
+  /**
+   * The fake cells the scanners build from the scan start row keep the row in an array that holds
+   * nothing else, so reading prefix.length bytes from it runs past the end of the array.
+   */
+  @Test
+  public void shouldProvideHintWhenRowOnlyCellIsShorterThanPrefix() {
+    byte[] prefix = Bytes.toBytes("row-a/");
+    PrefixFilter filter = new PrefixFilter(prefix);
+
+    Cell cell = PrivateCellUtil.createFirstOnRow(Bytes.toBytes("row-a"));
+
+    assertHintToPrefix(filter, cell, prefix);
+  }
+
+  /**
+   * In a KeyValue the row is followed by the family length and the family. Those bytes must not be
+   * compared as if they were part of the row.
+   */
+  @Test
+  public void shouldNotIncludeShorterRowWhenFollowingBytesMatchPrefix() {
+    byte[] prefix = new byte[] { 'a', 'b', 1, 'f' };
+    PrefixFilter filter = new PrefixFilter(prefix);
+
+    KeyValue cell = shortRowKeyValue();
+
+    assertHintToPrefix(filter, cell, prefix);
+  }
+
+  @Test
+  public void shouldNotStopScanOnShorterRowWhenFollowingBytesAreAfterPrefix() {
+    byte[] prefix = new byte[] { 'a', 'b', 0 };
+    PrefixFilter filter = new PrefixFilter(prefix);
+
+    KeyValue cell = shortRowKeyValue();
+
+    assertHintToPrefix(filter, cell, prefix);
+  }
+
+  @Test
+  public void shouldNotIncludeShorterRowOfByteBufferCell() {
+    byte[] prefix = new byte[] { 'a', 'b', 1, 'f' };
+    PrefixFilter filter = new PrefixFilter(prefix);
+
+    KeyValue kv = shortRowKeyValue();
+    ByteBuffer buffer = ByteBuffer.allocateDirect(kv.getLength());
+    buffer.put(kv.getBuffer(), kv.getOffset(), kv.getLength());
+    Cell cell = new ByteBufferKeyValue(buffer, 0, kv.getLength());
+
+    assertHintToPrefix(filter, cell, prefix);
+  }
+
+  @Test
+  public void shouldReturnNextRowWhenShorterRowIsAfterPrefix() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("gggg"));
+
+    Cell cell = PrivateCellUtil.createFirstOnRow(Bytes.toBytes("pp"));
+
+    assertTrue(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(cell));
+    assertTrue(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
+  }
+
+  /**
+   * A row that is a strict prefix of the filter prefix sorts before every matching row, so a
+   * reversed scan that reaches it is done.
+   */
+  @Test
+  public void shouldReturnNextRowWhenRowIsShorterThanPrefixReversed() {
+    PrefixFilter filter = new PrefixFilter(Bytes.toBytes("row-a/"));
+    filter.setReversed(true);
+
+    Cell cell = PrivateCellUtil.createFirstOnRow(Bytes.toBytes("row-a"));
+
+    assertTrue(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.NEXT_ROW, filter.filterCell(cell));
+    assertTrue(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
+  }
+
+  /** Row "ab", followed in the backing array by the family length (1) and the family "f". */
+  private static KeyValue shortRowKeyValue() {
+    return new KeyValue(Bytes.toBytes("ab"), Bytes.toBytes("f"), Bytes.toBytes("q"),
+      Bytes.toBytes("v"));
+  }
+
+  private static void assertHintToPrefix(PrefixFilter filter, Cell cell, byte[] prefix) {
+    assertFalse(filter.filterRowKey(cell));
+    assertEquals(Filter.ReturnCode.SEEK_NEXT_USING_HINT, filter.filterCell(cell));
+    assertEquals(KeyValueUtil.createFirstOnRow(prefix), filter.getNextCellHint(cell));
+    assertFalse(filter.filterAllRemaining());
+    assertTrue(filter.filterRow());
   }
 }
