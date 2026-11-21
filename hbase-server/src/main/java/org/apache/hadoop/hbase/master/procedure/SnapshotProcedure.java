@@ -263,6 +263,19 @@ public class SnapshotProcedure extends AbstractStateMachineTableProcedure<Snapsh
     return false;
   }
 
+  @Override
+  protected void completionCleanup(MasterProcedureEnv env) {
+    if (isBypass() && workingDirFS != null) {
+      try {
+        if (workingDirFS.exists(workingDir) && !workingDirFS.delete(workingDir, true)) {
+          LOG.error("Couldn't delete snapshot working directory {}", workingDir);
+        }
+      } catch (IOException e) {
+        LOG.error("Couldn't delete snapshot working directory {}", workingDir, e);
+      }
+    }
+  }
+
   private boolean isAnySplitOrMergeProcedureRunning(MasterProcedureEnv env) {
     return env.getMasterServices().getMasterProcedureExecutor().getProcedures().stream()
       .filter(p -> !p.isFinished())
