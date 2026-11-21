@@ -36,6 +36,7 @@ import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.master.HMaster;
+import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
 import org.apache.hadoop.hbase.testclassification.RSGroupTests;
 import org.apache.hadoop.hbase.util.Bytes;
@@ -222,9 +223,32 @@ public class TestRSGroupsBalance extends TestRSGroupsBase {
 
     HMaster master = TEST_UTIL.getMiniHBaseCluster().getMaster();
     RSGroupInfoManagerImpl gm = (RSGroupInfoManagerImpl) master.getRSGroupInfoManager();
-    Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
-      gm.getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
-    assertFalse(assignments.containsKey(disableTableName));
-    assertTrue(assignments.containsKey(tableName));
+    RegionInfo regionWithNullServer = ADMIN.getRegions(tableName).get(0);
+    RegionStateNode regionNode = master.getAssignmentManager()
+      .getRegionStates()
+      .getRegionStateNode(regionWithNullServer);
+    ServerName originalServer = setRegionLocation(regionNode, null);
+    try {
+      Map<TableName, Map<ServerName, List<RegionInfo>>> assignments =
+        gm.getRSGroupAssignmentsByTable(master.getTableStateManager(), RSGroupInfo.DEFAULT_GROUP);
+      assertFalse(assignments.containsKey(disableTableName));
+      assertTrue(assignments.containsKey(tableName));
+      assertFalse(assignments.get(tableName).containsKey(null));
+      assertFalse(assignments.get(tableName)
+        .values()
+        .stream()
+        .anyMatch(regions -> regions.contains(regionWithNullServer)));
+    } finally {
+      setRegionLocation(regionNode, originalServer);
+    }
+  }
+
+  private static ServerName setRegionLocation(RegionStateNode regionNode, ServerName serverName) {
+    regionNode.lock();
+    try {
+      return regionNode.setRegionLocation(serverName);
+    } finally {
+      regionNode.unlock();
+    }
   }
 }
