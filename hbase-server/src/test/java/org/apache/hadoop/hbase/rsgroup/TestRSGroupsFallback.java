@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hbase.rsgroup;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
@@ -25,6 +26,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.client.BalanceResponse;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
 import org.apache.hadoop.hbase.client.TableDescriptor;
 import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
@@ -93,10 +95,20 @@ public class TestRSGroupsFallback extends TestRSGroupsBase {
     // server of test group crash, regions move to default group
     crashRsInGroup(groupName);
     assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
+    assertTrue(MASTER.balance().isBalancerRan());
+    assertRegionsInGroup(tableName, RSGroupInfo.DEFAULT_GROUP);
+    BalanceResponse response = MASTER.balance();
+    assertTrue(response.isBalancerRan());
+    assertEquals(0, response.getMovesCalculated());
 
     // server of default group crash, regions move to any other group
     crashRsInGroup(RSGroupInfo.DEFAULT_GROUP);
     assertRegionsInGroup(tableName, FALLBACK_GROUP);
+    assertTrue(MASTER.balance().isBalancerRan());
+    assertRegionsInGroup(tableName, FALLBACK_GROUP);
+    response = MASTER.balance();
+    assertTrue(response.isBalancerRan());
+    assertEquals(0, response.getMovesCalculated());
 
     // add a new server to default group, regions move to default group
     TEST_UTIL.getMiniHBaseCluster().startRegionServerAndWait(60000);
