@@ -323,6 +323,9 @@ public class BackupAdminImpl implements BackupAdmin {
   List<BackupInfo> getAffectedBackupSessions(BackupInfo backupInfo, TableName tn,
     BackupSystemTable table) throws IOException {
     LOG.debug("GetAffectedBackupInfos for: " + backupInfo.getBackupId() + " table=" + tn);
+    if (backupInfo.getState() != BackupState.COMPLETE) {
+      return Collections.emptyList();
+    }
     long ts = backupInfo.getStartTs();
     List<BackupInfo> list = new ArrayList<>();
     List<BackupInfo> history = table.getBackupHistory(withRoot(backupInfo.getBackupRootDir()));
