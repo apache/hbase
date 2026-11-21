@@ -111,7 +111,7 @@ public class TestFileChangeWatcher {
     myConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION, sharedPath);
     AtomicReference<FileChangeWatcher> keystoreWatcher = new AtomicReference<>();
     AtomicReference<FileChangeWatcher> truststoreWatcher = new AtomicReference<>();
-    X509Util.enableCertFileReloading(myConf, keystoreWatcher, truststoreWatcher, () -> {
+    X509Util.enableCertFileReloadingForServer(myConf, keystoreWatcher, truststoreWatcher, () -> {
     });
     assertNotNull(keystoreWatcher.get());
     assertThat(keystoreWatcher.get().getWatcherThread().getName(), endsWith("foo.jks"));
@@ -122,7 +122,7 @@ public class TestFileChangeWatcher {
 
     String truststorePath = File.createTempFile("bar", "bar.jks").getAbsolutePath();
     myConf.set(X509Util.TLS_CONFIG_TRUSTSTORE_LOCATION, truststorePath);
-    X509Util.enableCertFileReloading(myConf, keystoreWatcher, truststoreWatcher, () -> {
+    X509Util.enableCertFileReloadingForServer(myConf, keystoreWatcher, truststoreWatcher, () -> {
     });
 
     assertNotNull(keystoreWatcher.get());
