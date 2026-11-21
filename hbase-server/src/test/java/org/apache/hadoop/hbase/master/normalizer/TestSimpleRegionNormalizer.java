@@ -26,12 +26,14 @@ import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.M
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_MIN_REGION_SIZE_MB_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MERGE_REQUEST_MAX_NUMBER_OF_REGIONS_COUNT_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.MIN_REGION_COUNT_KEY;
+import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.SKIP_BROKEN_CHAIN_KEY;
 import static org.apache.hadoop.hbase.master.normalizer.SimpleRegionNormalizer.SPLIT_ENABLED_KEY;
 import static org.hamcrest.MatcherAssert.assertThat;
 import static org.hamcrest.Matchers.contains;
 import static org.hamcrest.Matchers.empty;
 import static org.hamcrest.Matchers.everyItem;
 import static org.hamcrest.Matchers.greaterThanOrEqualTo;
+import static org.hamcrest.Matchers.hasItem;
 import static org.hamcrest.Matchers.hasSize;
 import static org.hamcrest.Matchers.instanceOf;
 import static org.hamcrest.Matchers.not;
@@ -55,6 +57,7 @@ import java.util.List;
 import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseConfiguration;
+import org.apache.hadoop.hbase.HConstants;
 import org.apache.hadoop.hbase.RegionMetrics;
 import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.Size;
@@ -220,6 +223,53 @@ public class TestSimpleRegionNormalizer {
 
     assertThat(normalizer.computePlansForTable(tableDescriptor),
       contains(new SplitNormalizationPlan(regionInfos.get(3), 30)));
+  }
+
+  @Test
+  public void testNoNormalizationWhenChainHasHole() {
+    final TableName tableName = this.tableName;
+    // Region chain with a hole between 'c' and 'd': [, b) [b, c) <gap> [d, )
+    final List<RegionInfo> regionInfos = new ArrayList<>();
+    regionInfos.add(createRegionInfo(tableName, HConstants.EMPTY_START_ROW, Bytes.toBytes("b")));
+    regionInfos.add(createRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c")));
+    regionInfos.add(createRegionInfo(tableName, Bytes.toBytes("d"), HConstants.EMPTY_END_ROW));
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 30);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    // A hole in the region chain must cause the whole table to be skipped.
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+  }
+
+  @Test
+  public void testNoNormalizationWhenChainHasOverlap() {
+    final TableName tableName = this.tableName;
+    // Region chain with an overlap: [, d) overlaps [b, f), then [f, )
+    final List<RegionInfo> regionInfos = new ArrayList<>();
+    regionInfos.add(createRegionInfo(tableName, HConstants.EMPTY_START_ROW, Bytes.toBytes("d")));
+    regionInfos.add(createRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("f")));
+    regionInfos.add(createRegionInfo(tableName, Bytes.toBytes("f"), HConstants.EMPTY_END_ROW));
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 5, 30, 5);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    // An overlap in the region chain must cause the whole table to be skipped.
+    assertThat(normalizer.computePlansForTable(tableDescriptor), empty());
+  }
+
+  @Test
+  public void testBrokenChainGuardCanBeDisabled() {
+    conf.setBoolean(SKIP_BROKEN_CHAIN_KEY, false);
+    final TableName tableName = this.tableName;
+    // Same hole as testNoNormalizationWhenChainHasHole.
+    final List<RegionInfo> regionInfos = new ArrayList<>();
+    regionInfos.add(createRegionInfo(tableName, HConstants.EMPTY_START_ROW, Bytes.toBytes("b")));
+    regionInfos.add(createRegionInfo(tableName, Bytes.toBytes("b"), Bytes.toBytes("c")));
+    regionInfos.add(createRegionInfo(tableName, Bytes.toBytes("d"), HConstants.EMPTY_END_ROW));
+    final Map<byte[], Integer> regionSizes = createRegionSizesMap(regionInfos, 1, 1, 30);
+    setupMocksForNormalizer(regionSizes, regionInfos);
+
+    // With the guard disabled, the oversized region is still split despite the hole.
+    assertThat(normalizer.computePlansForTable(tableDescriptor),
+      hasItem(instanceOf(SplitNormalizationPlan.class)));
   }
 
   @Test

@@ -44,6 +44,7 @@ import org.apache.hadoop.hbase.conf.ConfigurationObserver;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionState;
 import org.apache.hadoop.hbase.master.assignment.RegionStates;
+import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -68,6 +69,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   static final boolean DEFAULT_SPLIT_ENABLED = true;
   static final String MERGE_ENABLED_KEY = "hbase.normalizer.merge.enabled";
   static final boolean DEFAULT_MERGE_ENABLED = true;
+  static final String SKIP_BROKEN_CHAIN_KEY = "hbase.normalizer.skip.broken.chain";
+  static final boolean DEFAULT_SKIP_BROKEN_CHAIN = true;
   /**
    * @deprecated since 2.5.0 and will be removed in 4.0.0. Use
    *             {@link SimpleRegionNormalizer#MERGE_MIN_REGION_COUNT_KEY} instead.
@@ -179,6 +182,13 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
   }
 
   /**
+   * Return this instance's configured value for {@value #SKIP_BROKEN_CHAIN_KEY}.
+   */
+  public boolean isSkipBrokenChain() {
+    return normalizerConfiguration.isSkipBrokenChain();
+  }
+
+  /**
    * Return this instance's configured value for {@value #MERGE_MIN_REGION_COUNT_KEY}.
    */
   public int getMergeMinRegionCount() {
@@ -231,6 +241,23 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       return Collections.emptyList();
     }
 
+    if (normalizerConfiguration.isSkipBrokenChain()) {
+      final String brokenChainReason = findBrokenRegionChain(ctx.getTableRegions());
+      if (brokenChainReason != null) {
+        // Normalizing (in particular splitting) a table whose region chain already has holes or
+        // overlaps can increase the number of holes/overlaps and complicate the eventual repair by
+        // the CatalogJanitor/HBCK. Stand down until the chain is intact. Note the region list comes
+        // from the in-memory RegionStates, which can briefly lag hbase:meta while regions are in
+        // transition, so this may be transient and self-correct on the next run.
+        LOG.warn(
+          "Skipping normalization of table {} because its region chain appears to be broken: {}."
+            + " If this persists, run the CatalogJanitor/HBCK to fix holes and overlaps. Set {}="
+            + "false to normalize regardless.",
+          table, brokenChainReason, SKIP_BROKEN_CHAIN_KEY);
+        return Collections.emptyList();
+      }
+    }
+
     LOG.debug("Computing normalization plan for table:  {}, number of regions: {}", table,
       ctx.getTableRegions().size());
 
@@ -259,6 +286,79 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     LOG.debug("Computed normalization plans for table {}. Total plans: {}, split plans: {}, "
       + "merge plans: {}", table, plans.size(), splitPlansCount, mergePlansCount);
     return plans;
+  }
+
+  /**
+   * Walk the region chain of a table (already sorted by {@link RegionInfo#COMPARATOR}) and detect
+   * the first structural inconsistency: a degenerate region (startKey &gt; endKey), an overlap, or a
+   * hole between adjacent regions. Non-default replicas and split-parent regions are ignored, as
+   * they legitimately do not participate in the table's linear key-space chain. Boundary
+   * (first/last) completeness is intentionally not checked here; only gaps/overlaps between the
+   * regions that are present are considered.
+   * <p/>
+   * The input is derived from the in-memory {@link RegionStates}, which can briefly lag
+   * {@code hbase:meta} while regions are in transition, so a positive result may be transient.
+   * @param tableRegions regions of a single table, sorted by {@link RegionInfo#COMPARATOR}
+   * @return a human-readable description of the first problem found, or {@code null} if the chain is
+   *         intact.
+   */
+  private static String findBrokenRegionChain(final List<RegionInfo> tableRegions) {
+    RegionInfo previous = null;
+    RegionInfo highestEndKeyRegionInfo = null;
+    for (final RegionInfo current : tableRegions) {
+      if (current.getReplicaId() != RegionInfo.DEFAULT_REPLICA_ID || current.isSplitParent()) {
+        continue;
+      }
+      if (current.isDegenerate()) {
+        return "degenerate region " + current.getShortNameToLog() + " (startKey > endKey)";
+      }
+      if (previous != null) {
+        if (!previous.isNext(current)) {
+          if (previous.isOverlap(current)) {
+            return "overlap between " + previous.getShortNameToLog() + " and "
+              + current.getShortNameToLog();
+          } else if (current.isOverlap(highestEndKeyRegionInfo)) {
+            // A region seen a few rows back may still overlap the current region.
+            return "overlap between " + highestEndKeyRegionInfo.getShortNameToLog() + " and "
+              + current.getShortNameToLog();
+          } else if (!highestEndKeyRegionInfo.isNext(current)) {
+            return "hole between " + highestEndKeyRegionInfo.getShortNameToLog() + " and "
+              + current.getShortNameToLog();
+          }
+        } else if (current.isOverlap(highestEndKeyRegionInfo)) {
+          // Adjacent to the immediate predecessor, but overlaps an earlier, wider region.
+          return "overlap between " + highestEndKeyRegionInfo.getShortNameToLog() + " and "
+            + current.getShortNameToLog();
+        }
+      }
+      previous = current;
+      highestEndKeyRegionInfo = getRegionInfoWithLargestEndKey(highestEndKeyRegionInfo, current);
+    }
+    return null;
+  }
+
+  /**
+   * Returns whichever of {@code a} or {@code b} has the larger end key, treating an empty end key
+   * (the last region of a table) as the largest. Mirrors the running "highest end key seen" tracking
+   * used by the CatalogJanitor consistency check.
+   */
+  private static RegionInfo getRegionInfoWithLargestEndKey(RegionInfo a, RegionInfo b) {
+    if (a == null) {
+      return b;
+    }
+    if (b == null) {
+      return a;
+    }
+    if (!a.getTable().equals(b.getTable())) {
+      return b;
+    }
+    if (a.isLast()) {
+      return a;
+    }
+    if (b.isLast()) {
+      return b;
+    }
+    return Bytes.compareTo(a.getEndKey(), b.getEndKey()) >= 0 ? a : b;
   }
 
   /** Returns size of region in MB and if region is not found than -1 */
@@ -518,6 +618,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
     private final Configuration conf;
     private final boolean splitEnabled;
     private final boolean mergeEnabled;
+    private final boolean skipBrokenChain;
     private final int mergeMinRegionCount;
     private final Period mergeMinRegionAge;
     private final long mergeMinRegionSizeMb;
@@ -528,6 +629,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       conf = null;
       splitEnabled = DEFAULT_SPLIT_ENABLED;
       mergeEnabled = DEFAULT_MERGE_ENABLED;
+      skipBrokenChain = DEFAULT_SKIP_BROKEN_CHAIN;
       mergeMinRegionCount = DEFAULT_MERGE_MIN_REGION_COUNT;
       mergeMinRegionAge = Period.ofDays(DEFAULT_MERGE_MIN_REGION_AGE_DAYS);
       mergeMinRegionSizeMb = DEFAULT_MERGE_MIN_REGION_SIZE_MB;
@@ -540,6 +642,7 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
       this.conf = conf;
       splitEnabled = conf.getBoolean(SPLIT_ENABLED_KEY, DEFAULT_SPLIT_ENABLED);
       mergeEnabled = conf.getBoolean(MERGE_ENABLED_KEY, DEFAULT_MERGE_ENABLED);
+      skipBrokenChain = conf.getBoolean(SKIP_BROKEN_CHAIN_KEY, DEFAULT_SKIP_BROKEN_CHAIN);
       mergeMinRegionCount = parseMergeMinRegionCount(conf);
       mergeMinRegionAge = parseMergeMinRegionAge(conf);
       mergeMinRegionSizeMb = parseMergeMinRegionSizeMb(conf);
@@ -550,6 +653,8 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
         splitEnabled);
       logConfigurationUpdated(MERGE_ENABLED_KEY, currentConfiguration.isMergeEnabled(),
         mergeEnabled);
+      logConfigurationUpdated(SKIP_BROKEN_CHAIN_KEY, currentConfiguration.isSkipBrokenChain(),
+        skipBrokenChain);
       logConfigurationUpdated(MERGE_MIN_REGION_COUNT_KEY,
         currentConfiguration.getMergeMinRegionCount(), mergeMinRegionCount);
       logConfigurationUpdated(MERGE_MIN_REGION_AGE_DAYS_KEY,
@@ -571,6 +676,10 @@ class SimpleRegionNormalizer implements RegionNormalizer, ConfigurationObserver 
 
     public boolean isMergeEnabled() {
       return mergeEnabled;
+    }
+
+    public boolean isSkipBrokenChain() {
+      return skipBrokenChain;
     }
 
     public int getMergeMinRegionCount() {
