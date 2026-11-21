@@ -147,7 +147,7 @@ public class SingleColumnValueFilter extends FilterBase {
   }
 
   @Override
-  public ReturnCode filterCell(final Cell c) {
+  public ReturnCode filterCell(final Cell c) throws IOException {
     // System.out.println("REMOVE KEY=" + keyValue.toString() + ", value=" +
     // Bytes.toString(keyValue.getValue()));
     if (this.matchedColumn) {
@@ -168,9 +168,13 @@ public class SingleColumnValueFilter extends FilterBase {
     return ReturnCode.INCLUDE;
   }
 
-  private boolean filterColumnValue(final Cell cell) {
-    int compareResult = PrivateCellUtil.compareValue(cell, this.comparator);
-    return CompareFilter.compare(this.op, compareResult);
+  private boolean filterColumnValue(final Cell cell) throws IOException {
+    try {
+      int compareResult = PrivateCellUtil.compareValue(cell, this.comparator);
+      return CompareFilter.compare(this.op, compareResult);
+    } catch (RuntimeException e) {
+      throw CompareFilter.wrapInHBaseIOException(e, this.comparator);
+    }
   }
 
   @Override
