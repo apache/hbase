@@ -518,7 +518,7 @@ function shadedjars_initialize
   maven_add_install shadedjars
 }
 
-## @description  only run the test if java changes.
+## @description  run for Java, Maven, and shaded JAR check changes.
 ## @audience     private
 ## @stability    evolving
 ## @param        filename
@@ -526,7 +526,9 @@ function shadedjars_filefilter
 {
   local filename=$1
 
-  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]]; then
+  if [[ ${filename} =~ \.java$ ]] || [[ ${filename} =~ pom.xml$ ]] ||
+     [[ ${filename} == dev-support/hbase-personality.sh ]] ||
+     [[ ${filename} =~ /ensure-jars-have-correct-contents\.sh$ ]]; then
     add_test shadedjars
   fi
 }
@@ -549,8 +551,8 @@ function shadedjars_rebuild
   start_clock
 
   local -a maven_args=('clean' 'verify' '-fae' '--batch-mode'
-    '-pl' 'hbase-shaded/hbase-shaded-check-invariants' '-am'
-    '-DskipTests' '-DHBasePatchProcess' '-Prelease'
+    '-pl' 'hbase-shaded/hbase-shaded-check-invariants,hbase-shaded/hbase-shaded-testing-util-tester' '-am'
+    '-DskipTests=false' '-Dtest=TestShadedTestingUtilJarContents' '-DHBasePatchProcess' '-Prelease'
     '-Dmaven.javadoc.skip=true' '-Dcheckstyle.skip=true' '-Dspotbugs.skip=true')
   # If we have HADOOP_PROFILE specified and we're on branch-2.x, pass along
   # the hadoop.profile system property. Ensures that Hadoop2 and Hadoop3
