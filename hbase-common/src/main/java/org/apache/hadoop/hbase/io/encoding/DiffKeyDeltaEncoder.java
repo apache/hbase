@@ -52,6 +52,11 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   static final int SHIFT_TIMESTAMP_LENGTH = 4;
   static final int FLAG_TIMESTAMP_SIGN = 1 << 7;
 
+  @Override
+  protected EncodingState createEncodingState() {
+    return new DiffEncodingState();
+  }
+
   protected static class DiffCompressionState extends CompressionState {
     long timestamp;
     byte[] familyNameWithSize;
@@ -183,15 +188,16 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
   @Override
   public int internalEncode(ExtendedCell cell, HFileBlockDefaultEncodingContext encodingContext,
     DataOutputStream out) throws IOException {
-    EncodingState state = encodingContext.getEncodingState();
-    int size = compressSingleKeyValue(out, cell, state.prevCell);
+    DiffEncodingState state = (DiffEncodingState) encodingContext.getEncodingState();
+    int size = compressSingleKeyValue(out, cell, state);
     size += afterEncodingKeyValue(cell, out, encodingContext);
-    state.prevCell = cell;
+    state.setPreviousCell(cell);
     return size;
   }
 
-  private int compressSingleKeyValue(DataOutputStream out, ExtendedCell cell, ExtendedCell prevCell)
-    throws IOException {
+  private int compressSingleKeyValue(DataOutputStream out, ExtendedCell cell,
+    DiffEncodingState state) throws IOException {
+    ExtendedCell prevCell = state.prevCell;
     int flag = 0; // Do not use more bits that can fit into a byte
     int kLength = KeyValueUtil.keyLength(cell);
     int vLength = cell.getValueLength();
@@ -221,7 +227,7 @@ public class DiffKeyDeltaEncoder extends BufferedDataBlockEncoder {
       if (kLength == preKeyLength) {
         flag |= FLAG_SAME_KEY_LENGTH;
       }
-      if (vLength == prevCell.getValueLength()) {
+      if (vLength == state.getPreviousValueLength()) {
         flag |= FLAG_SAME_VALUE_LENGTH;
       }
       if (cell.getTypeByte() == prevCell.getTypeByte()) {

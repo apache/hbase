@@ -65,7 +65,7 @@ public class PrefixKeyDeltaEncoder extends BufferedDataBlockEncoder {
     PrivateCellUtil.writeValue(out, cell, vlength);
     int size = klength + vlength + KeyValue.KEYVALUE_INFRASTRUCTURE_SIZE;
     size += afterEncodingKeyValue(cell, out, encodingContext);
-    state.prevCell = cell;
+    state.setPreviousCell(cell);
     return size;
   }
 
