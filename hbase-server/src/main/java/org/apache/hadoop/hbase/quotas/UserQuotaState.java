@@ -111,8 +111,8 @@ public class UserQuotaState extends QuotaState {
     namespaceLimiters = setLimiter(conf, namespaceLimiters, namespace, quotas);
   }
 
-  public boolean hasTableLimiters() {
-    return tableLimiters != null && !tableLimiters.isEmpty();
+  public synchronized Set<TableName> getTablesWithLimiters() {
+    return tableLimiters == null ? new HashSet<>() : new HashSet<>(tableLimiters.keySet());
   }
 
   private <K> Map<K, QuotaLimiter> setLimiter(Configuration conf, Map<K, QuotaLimiter> limiters,
