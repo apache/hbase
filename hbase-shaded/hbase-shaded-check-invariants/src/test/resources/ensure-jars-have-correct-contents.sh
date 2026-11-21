@@ -131,6 +131,9 @@ for artifact in "${artifact_list[@]}"; do
   if [ ${#bad_contents[@]} -eq 0 ] && [ "${class_count}" -lt 1 ]; then
     bad_contents=("The artifact contains no java class files.")
   fi
+  if "${JAR}" tf "${artifact}" | grep -q '^org/apache/hadoop/hbase/shaded/com/sun/jersey/'; then
+    bad_contents+=("Contains Jersey 1.x classes, whose JAX-RS providers should be excluded from client artifacts")
+  fi
   # dnsjava ships its provider class only under META-INF/versions/, which relocation leaves at an
   # unrelocated path in a jar that is not multi-release, so the declaration names a class the JVM
   # cannot load and every DNS lookup in the process fails. See HBASE-30211.

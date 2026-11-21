@@ -77,10 +77,11 @@
         <exclude>io.opentelemetry.javaagent:*</exclude>
         <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
         <exclude>jline:jline</exclude>
-        <!-- These two exclusions are added here to preserve previous behaviour, and are not included in sub-directories -->
+        <!-- These exclusions are added here to preserve previous behaviour, and are not included in sub-directories -->
         <!-- TODO investigate using the provided mechanism for these -->
         <exclude>com.sun.jersey:*</exclude>
         <exclude>com.sun.jersey.contribs:*</exclude>
+        <exclude>com.github.pjfanning:jersey-json</exclude>
         <!-- FIXME remove when jaxws-ri is removed from assembly -->
         <exclude>com.sun.xml.ws:jaxws-ri:pom</exclude>
       </excludes>
