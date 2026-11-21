@@ -1011,6 +1011,19 @@ possible configurations would overwhelm and obscure the important.
       a feature which can reduce response latency under special conditions.</description>
   </property>
   <property>
+    <name>hbase.storescanner.adaptive.parallel.seek.enable</name>
+    <value>false</value>
+    <description>
+      Enables the adaptive parallel seek strategy in StoreScanner, which dynamically
+      switches between parallel and sequential scanner seek execution based on thread
+      pool availability. When enabled, the scanner checks for available capacity in
+      the RS_PARALLEL_SEEK thread pool before submitting seek tasks; if the pool is
+      saturated, it falls back to sequential seeking and opportunistically parallelizes
+      remaining scanners as capacity becomes available. This setting only takes effect
+      when hbase.storescanner.parallel.seek.enable is also set to true.
+    </description>
+  </property>
+  <property>
     <name>hbase.storescanner.parallel.seek.threads</name>
     <value>10</value>
     <description>

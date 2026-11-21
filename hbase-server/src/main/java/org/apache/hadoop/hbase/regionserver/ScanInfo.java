@@ -45,6 +45,7 @@ public class ScanInfo {
   private boolean usePread;
   private long cellsPerTimeoutCheck;
   private boolean parallelSeekEnabled;
+  private boolean adaptiveParallelSeekEnabled;
   private final long preadMaxBytes;
   private final boolean newVersionBehavior;
 
@@ -92,13 +93,14 @@ public class ScanInfo {
       conf.getLong(HConstants.TABLE_MAX_ROWSIZE_KEY, HConstants.TABLE_MAX_ROWSIZE_DEFAULT),
       conf.getBoolean("hbase.storescanner.use.pread", false), getCellsPerTimeoutCheck(conf),
       conf.getBoolean(StoreScanner.STORESCANNER_PARALLEL_SEEK_ENABLE, false),
-      conf.getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 4 * blockSize), newVersionBehavior);
+      conf.getLong(StoreScanner.STORESCANNER_PREAD_MAX_BYTES, 4 * blockSize), newVersionBehavior,
+      conf.getBoolean(StoreScanner.STORESCANNER_ADAPTIVE_PARALLEL_SEEK_ENABLE, false));
   }
 
   private ScanInfo(byte[] family, int minVersions, int maxVersions, long ttl,
     KeepDeletedCells keepDeletedCells, long timeToPurgeDeletes, CellComparator comparator,
     long tableMaxRowSize, boolean usePread, long cellsPerTimeoutCheck, boolean parallelSeekEnabled,
-    long preadMaxBytes, boolean newVersionBehavior) {
+    long preadMaxBytes, boolean newVersionBehavior, boolean adaptiveParallelSeekEnabled) {
     this.family = family;
     this.minVersions = minVersions;
     this.maxVersions = maxVersions;
@@ -112,6 +114,7 @@ public class ScanInfo {
     this.parallelSeekEnabled = parallelSeekEnabled;
     this.preadMaxBytes = preadMaxBytes;
     this.newVersionBehavior = newVersionBehavior;
+    this.adaptiveParallelSeekEnabled = adaptiveParallelSeekEnabled;
   }
 
   long getTableMaxRowSize() {
@@ -128,6 +131,10 @@ public class ScanInfo {
 
   boolean isParallelSeekEnabled() {
     return this.parallelSeekEnabled;
+  }
+
+  boolean isAdaptiveParallelSeekEnabled() {
+    return this.adaptiveParallelSeekEnabled;
   }
 
   public byte[] getFamily() {
@@ -181,7 +188,7 @@ public class ScanInfo {
     long timeToPurgeDeletes) {
     return new ScanInfo(family, minVersions, maxVersions, ttl, keepDeletedCells, timeToPurgeDeletes,
       comparator, tableMaxRowSize, usePread, cellsPerTimeoutCheck, parallelSeekEnabled,
-      preadMaxBytes, newVersionBehavior);
+      preadMaxBytes, newVersionBehavior, adaptiveParallelSeekEnabled);
   }
 
   @Override
@@ -192,6 +199,7 @@ public class ScanInfo {
       .append("tableMaxRowSize", tableMaxRowSize).append("usePread", usePread)
       .append("cellsPerTimeoutCheck", cellsPerTimeoutCheck)
       .append("parallelSeekEnabled", parallelSeekEnabled).append("preadMaxBytes", preadMaxBytes)
-      .append("newVersionBehavior", newVersionBehavior).toString();
+      .append("newVersionBehavior", newVersionBehavior)
+      .append("adaptiveParallelSeekEnabled", adaptiveParallelSeekEnabled).toString();
   }
 }
