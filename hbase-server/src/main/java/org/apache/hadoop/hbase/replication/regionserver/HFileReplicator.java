@@ -20,7 +20,9 @@ package org.apache.hadoop.hbase.replication.regionserver;
 import java.io.Closeable;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InterruptedIOException;
+import java.io.OutputStream;
 import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Deque;
@@ -37,7 +39,6 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hbase.HConstants;
@@ -57,6 +58,7 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import org.apache.hbase.thirdparty.com.google.common.util.concurrent.RateLimiter;
 import org.apache.hbase.thirdparty.com.google.common.util.concurrent.ThreadFactoryBuilder;
 
 /**
@@ -75,10 +77,32 @@ public class HFileReplicator implements Closeable {
   public static final String REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_KEY =
     "hbase.replication.bulkload.copy.hfiles.perthread";
   public static final int REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT = 10;
+  /**
+   * Bandwidth limit in MB/s for copying HFiles from source cluster during bulkload replication. 0
+   * means no limit. Can be changed dynamically via configuration reload. A low limit can make the
+   * sink-side bulkload copy exceed the replication RPC timeout, so configure the timeout
+   * accordingly.
+   */
+  public static final String REPLICATION_BULKLOAD_COPY_BANDWIDTH_MB_KEY =
+    "hbase.replication.bulkload.copy.bandwidth.mb";
+  public static final double REPLICATION_BULKLOAD_COPY_BANDWIDTH_MB_DEFAULT = 0;
 
   private static final Logger LOG = LoggerFactory.getLogger(HFileReplicator.class);
   private static final String UNDERSCORE = "_";
   private final static FsPermission PERM_ALL_ACCESS = FsPermission.valueOf("-rwxrwxrwx");
+  private static final int COPY_BUFFER_SIZE = 65536;
+  private static final BulkLoadTableLoadListener NO_OP_TABLE_LOAD_LISTENER =
+    new BulkLoadTableLoadListener() {
+      @Override
+      public void tableLoaded(String tableName) {
+      }
+
+      @Override
+      public void tableLoadFailed(String tableName) {
+      }
+    };
+  // Double.MAX_VALUE means no throttling.
+  private volatile RateLimiter rateLimiter;
 
   private Configuration sourceClusterConf;
   private String sourceBaseNamespaceDirPath;
@@ -99,6 +123,14 @@ public class HFileReplicator implements Closeable {
     String sourceHFileArchiveDirPath, Map<String, List<Pair<byte[], List<String>>>> tableQueueMap,
     Configuration conf, AsyncClusterConnection connection, List<String> sourceClusterIds)
     throws IOException {
+    this(sourceClusterConf, sourceBaseNamespaceDirPath, sourceHFileArchiveDirPath, tableQueueMap,
+      conf, connection, sourceClusterIds, RateLimiter.create(Double.MAX_VALUE));
+  }
+
+  public HFileReplicator(Configuration sourceClusterConf, String sourceBaseNamespaceDirPath,
+    String sourceHFileArchiveDirPath, Map<String, List<Pair<byte[], List<String>>>> tableQueueMap,
+    Configuration conf, AsyncClusterConnection connection, List<String> sourceClusterIds,
+    RateLimiter rateLimiter) throws IOException {
     this.sourceClusterConf = sourceClusterConf;
     this.sourceBaseNamespaceDirPath = sourceBaseNamespaceDirPath;
     this.sourceHFileArchiveDirPath = sourceHFileArchiveDirPath;
@@ -120,6 +152,7 @@ public class HFileReplicator implements Closeable {
       REPLICATION_BULKLOAD_COPY_HFILES_PERTHREAD_DEFAULT);
 
     sinkFs = FileSystem.get(conf);
+    this.rateLimiter = rateLimiter;
   }
 
   @Override
@@ -129,7 +162,17 @@ public class HFileReplicator implements Closeable {
     }
   }
 
+  interface BulkLoadTableLoadListener {
+    void tableLoaded(String tableName) throws IOException;
+
+    void tableLoadFailed(String tableName);
+  }
+
   public Void replicate() throws IOException {
+    return replicate(NO_OP_TABLE_LOAD_LISTENER);
+  }
+
+  Void replicate(BulkLoadTableLoadListener tableLoadListener) throws IOException {
     // Copy all the hfiles to the local file system
     Map<String, Path> tableStagingDirsMap = copyHFilesToStagingDir();
 
@@ -151,10 +194,16 @@ public class HFileReplicator implements Closeable {
       }
       fsDelegationToken.acquireDelegationToken(sinkFs);
       try {
-        doBulkLoad(conf, tableName, stagingDir, queue, maxRetries);
+        try {
+          doBulkLoad(conf, tableName, stagingDir, queue, maxRetries);
+        } catch (IOException e) {
+          tableLoadListener.tableLoadFailed(tableNameString);
+          throw e;
+        }
       } finally {
         cleanup(stagingDir);
       }
+      tableLoadListener.tableLoaded(tableNameString);
     }
     return null;
   }
@@ -336,16 +385,13 @@ public class HFileReplicator implements Closeable {
         sourceHFilePath = new Path(sourceBaseNamespaceDirPath, hfiles.get(i));
         localHFilePath = new Path(stagingDir, sourceHFilePath.getName());
         try {
-          FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, localHFilePath, false, conf);
-          // If any other exception other than FNFE then we will fail the replication requests and
-          // source will retry to replicate these data.
+          copyWithThrottle(sourceHFilePath, localHFilePath);
         } catch (FileNotFoundException e) {
           LOG.info("Failed to copy hfile from " + sourceHFilePath + " to " + localHFilePath
             + ". Trying to copy from hfile archive directory.", e);
           sourceHFilePath = new Path(sourceHFileArchiveDirPath, hfiles.get(i));
-
           try {
-            FileUtil.copy(sourceFs, sourceHFilePath, sinkFs, localHFilePath, false, conf);
+            copyWithThrottle(sourceHFilePath, localHFilePath);
           } catch (FileNotFoundException e1) {
             // This will mean that the hfile does not exists any where in source cluster FS. So we
             // cannot do anything here just log and continue.
@@ -357,6 +403,17 @@ public class HFileReplicator implements Closeable {
         sinkFs.setPermission(localHFilePath, PERM_ALL_ACCESS);
       }
       return null;
+    }
+
+    private void copyWithThrottle(Path src, Path dst) throws IOException {
+      try (InputStream in = sourceFs.open(src); OutputStream out = sinkFs.create(dst)) {
+        byte[] buf = new byte[COPY_BUFFER_SIZE];
+        int bytesRead;
+        while ((bytesRead = in.read(buf)) >= 0) {
+          rateLimiter.acquire(bytesRead);
+          out.write(buf, 0, bytesRead);
+        }
+      }
     }
   }
 }
