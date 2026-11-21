@@ -1669,6 +1669,33 @@ possible configurations would overwhelm and obscure the important.
     </description>
   </property>
   <property>
+    <name>hbase.security.authentication.ui.metrics.protected</name>
+    <value>true</value>
+    <description>
+      Controls whether or not the metrics endpoints listed in "hbase.http.metrics.servlets"
+      (e.g. /jmx, /metrics, /prometheus) require admin access. If true, only users listed in
+      "hbase.security.authentication.spnego.admin.users" or users in groups listed in
+      "hbase.security.authentication.spnego.admin.groups" are allowed to access them.
+      If false, any authenticated user is allowed to access them.
+    </description>
+  </property>
+  <property>
+    <name>hbase.security.authentication.spnego.kerberos.endpoint.whitelist</name>
+    <value></value>
+    <description>
+      Comma-separated list of servlet paths (e.g. /jmx,/prometheus) which skip SPNEGO (Kerberos)
+      authentication. Requests to these paths are served as unauthenticated (anonymous) requests,
+      so anyone who can reach the web UI can access them. Each entry must start with '/' and is
+      matched exactly against the servlet path. An invalid entry makes the web UI fail to start.
+      Endpoints which require admin access still reject unauthenticated requests when
+      "hadoop.security.authorization" is true, so set
+      "hbase.security.authentication.ui.config.protected" (for /conf) or
+      "hbase.security.authentication.ui.metrics.protected" (for metrics endpoints) to false
+      for the whitelisted paths. /jmx and /conf also reject unauthenticated requests when
+      "hadoop.security.instrumentation.requires.admin" is true.
+    </description>
+  </property>
+  <property>
     <name>hbase.rest.filter.classes</name>
     <value>org.apache.hadoop.hbase.rest.filter.GzipFilter</value>
     <description>

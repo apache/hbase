@@ -32,6 +32,7 @@ import java.util.Set;
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosTicket;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.hbase.HBaseCommonTestingUtil;
 import org.apache.hadoop.hbase.http.TestHttpServer.EchoServlet;
 import org.apache.hadoop.hbase.http.resource.JerseyResource;
@@ -233,5 +234,74 @@ public class TestSpnegoHttpServer extends HttpServerFunctionalTest {
         "/jersey/*");
       customServer.start();
     });
+  }
+
+  @Test
+  public void testEndpointWhitelist() throws Exception {
+    Configuration conf = buildWhitelistConfiguration();
+    conf.setBoolean(HttpServer.HTTP_PRIVILEGED_METRICS_KEY, false);
+    HttpServer whitelistServer = startServer(conf);
+    try {
+      // whitelisted endpoint is accessible without kerberos authentication
+      assertEquals(HttpURLConnection.HTTP_OK, getResponseCode(whitelistServer, "/jmx"));
+      // not whitelisted endpoint still requires kerberos authentication
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED,
+        getResponseCode(whitelistServer, "/prometheus"));
+    } finally {
+      whitelistServer.stop();
+    }
+  }
+
+  @Test
+  public void testEndpointWhitelistWithProtectedMetrics() throws Exception {
+    Configuration conf = buildWhitelistConfiguration();
+    conf.setBoolean(HttpServer.HTTP_PRIVILEGED_METRICS_KEY, true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
+    HttpServer whitelistServer = startServer(conf);
+    try {
+      // whitelisted but admin-only endpoint rejects unauthenticated requests
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getResponseCode(whitelistServer, "/jmx"));
+    } finally {
+      whitelistServer.stop();
+    }
+  }
+
+  @Test
+  public void testEndpointWhitelistWithInstrumentationRequiresAdmin() throws Exception {
+    Configuration conf = buildWhitelistConfiguration();
+    conf.setBoolean(HttpServer.HTTP_PRIVILEGED_METRICS_KEY, false);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION, true);
+    conf.setBoolean(CommonConfigurationKeys.HADOOP_SECURITY_INSTRUMENTATION_REQUIRES_ADMIN, true);
+    HttpServer whitelistServer = startServer(conf);
+    try {
+      // JMXJsonServlet checks admin access on its own when instrumentation requires admin
+      assertEquals(HttpURLConnection.HTTP_UNAUTHORIZED, getResponseCode(whitelistServer, "/jmx"));
+    } finally {
+      whitelistServer.stop();
+    }
+  }
+
+  private static Configuration buildWhitelistConfiguration() {
+    Configuration conf =
+      buildSpnegoConfiguration(new Configuration(), "HTTP/" + KDC_SERVER_HOST, infoServerKeytab);
+    conf.set(HttpServer.METRIC_SERVLETS_CONF_KEY, "jmx,prometheus");
+    conf.set(HttpServer.HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY, "/jmx");
+    return conf;
+  }
+
+  private static HttpServer startServer(Configuration conf) throws Exception {
+    HttpServer httpServer = createTestServerWithSecurity(conf);
+    httpServer.start();
+    return httpServer;
+  }
+
+  private static int getResponseCode(HttpServer httpServer, String path) throws IOException {
+    URL url = new URL(getServerURL(httpServer), path);
+    HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+    try {
+      return conn.getResponseCode();
+    } finally {
+      conn.disconnect();
+    }
   }
 }
