@@ -492,6 +492,12 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   // A timer to shutdown the process if abort takes too long
   private Timer abortMonitor;
+  // Set once run() has finished; the abort timer must not be armed after that.
+  private boolean abortMonitorCancelled;
+  // Guards abortMonitor and abortMonitorCancelled. Static because abort() can run from the
+  // HBaseServerBase constructor, before instance fields are initialized; not this, because
+  // createRegionServerStatusStub holds this until a master is found or the server is stopped.
+  private static final Object ABORT_MONITOR_LOCK = new Object();
 
   private RegionReplicationBufferManager regionReplicationBufferManager;
 
@@ -1047,6 +1053,7 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       closeZooKeeper();
       closeTableDescriptors();
       LOG.info("Exiting; stopping=" + this.serverName + "; zookeeper connection closed.");
+      cancelAbortTimer();
       span.setStatus(StatusCode.OK);
     } finally {
       span.end();
@@ -2533,7 +2540,10 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
 
   // Limits the time spent in the shutdown process.
   private void scheduleAbortTimer() {
-    if (this.abortMonitor == null) {
+    synchronized (ABORT_MONITOR_LOCK) {
+      if (this.abortMonitor != null || this.abortMonitorCancelled) {
+        return;
+      }
       this.abortMonitor = new Timer("Abort regionserver monitor", true);
       TimerTask abortTimeoutTask = null;
       try {
@@ -2547,6 +2557,17 @@ public class HRegionServer extends HBaseServerBase<RSRpcServices>
       }
       if (abortTimeoutTask != null) {
         abortMonitor.schedule(abortTimeoutTask, conf.getLong(ABORT_TIMEOUT, DEFAULT_ABORT_TIMEOUT));
+      }
+    }
+  }
+
+  // The shutdown process has completed, so there is nothing left for the abort timer to limit.
+  // Cancel it, or it would halt a JVM that outlives this region server, e.g. a mini cluster.
+  private void cancelAbortTimer() {
+    synchronized (ABORT_MONITOR_LOCK) {
+      this.abortMonitorCancelled = true;
+      if (this.abortMonitor != null) {
+        this.abortMonitor.cancel();
       }
     }
   }
