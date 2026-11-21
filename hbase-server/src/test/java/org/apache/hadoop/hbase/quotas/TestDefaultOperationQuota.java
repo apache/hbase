@@ -296,4 +296,21 @@ public class TestDefaultOperationQuota {
     // even after the TimeUnit, the limit should not be refilled because we oversubscribed
     assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota((int) limit, 1, false));
   }
+
+  @Test
+  public void testExceedQuotaGrabsReadCapacityUnits() throws RpcThrottlingException {
+    QuotaProtos.Throttle throttle = QuotaProtos.Throttle.newBuilder()
+      .setReadCapacityUnit(QuotaProtos.TimedQuota.newBuilder().setSoftLimit(100)
+        .setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build())
+      .setWriteCapacityUnit(QuotaProtos.TimedQuota.newBuilder().setSoftLimit(Long.MAX_VALUE)
+        .setTimeUnit(HBaseProtos.TimeUnit.SECONDS).build())
+      .build();
+    QuotaLimiter regionServerLimiter = TimeBasedLimiter.fromThrottle(conf, throttle);
+    ExceedOperationQuota quota = new ExceedOperationQuota(new Configuration(), 65536,
+      DEFAULT_REQUESTS_PER_SECOND, regionServerLimiter);
+
+    // Each read is estimated at 64 read capacity units; after one, only 36 remain.
+    quota.checkBatchQuota(0, 1, false);
+    assertThrows(RpcThrottlingException.class, () -> quota.checkBatchQuota(0, 1, false));
+  }
 }
