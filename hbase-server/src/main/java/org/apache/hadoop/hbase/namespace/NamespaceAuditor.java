@@ -133,6 +133,22 @@ public class NamespaceAuditor {
     }
   }
 
+  /**
+   * Set the region count of a table in the namespace state cache, without checking the namespace
+   * region quota. Used by truncate, which has already replaced the table's regions and must
+   * complete even if the namespace limit was lowered below the table's earlier usage.
+   * @param tName   - table name for which region count is to be set.
+   * @param regions - the new region count, counting default replicas only.
+   * @throws IOException Signals that an I/O exception has occurred.
+   */
+  public void updateQuotaForTableTruncate(TableName tName, int regions) throws IOException {
+    if (!stateManager.isInitialized()) {
+      throw new IOException(
+        "Truncate operation is being performed even before namespace auditor is initialized.");
+    }
+    stateManager.setRegionCountForTable(tName, regions);
+  }
+
   public void addNamespace(NamespaceDescriptor ns) throws IOException {
     stateManager.addNamespace(ns.getName());
   }
