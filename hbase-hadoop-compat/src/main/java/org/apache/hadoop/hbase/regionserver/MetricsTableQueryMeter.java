@@ -54,4 +54,13 @@ public interface MetricsTableQueryMeter {
    * @param tableName The table the metric is for
    */
   void updateTableWriteQueryMeter(TableName tableName);
+
+  /**
+   * Remove the read/write query meters of the given table. Should be called when the table is no
+   * longer online on this RegionServer to avoid unbounded growth of metersByTable and the
+   * associated metric registry (see HBASE-27486 / HBASE-27681).
+   *
+   * @param tableName The table whose meters should be removed.
+   */
+  void deleteTable(TableName tableName);
 }
