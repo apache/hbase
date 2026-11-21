@@ -147,8 +147,10 @@ public class FullTableBackupClient extends TableBackupClient {
       if (res != 0) {
         LOG.error("Exporting Snapshot " + args[1] + " failed with return code: " + res + ".");
 
-        throw new IOException("Failed of exporting snapshot " + args[1] + " to " + args[3]
-          + " with reason code " + res);
+        String message =
+          "Failed of exporting snapshot " + args[1] + " to " + args[3] + " with reason code " + res;
+        throw copyService.getError().map(e -> new IOException(message, e))
+          .orElse(new IOException(message));
       }
 
       conf.unset(JOB_NAME_CONF_KEY);
