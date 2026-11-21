@@ -65,6 +65,7 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReadWriteLock;
@@ -354,6 +355,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
 
   // Track data size in all memstores
   private final MemStoreSizing memStoreSizing = new ThreadSafeMemStoreSizing();
+  // Threshold checks need one atomic total rather than a sum of independently read counters.
+  private final AtomicLong memStoreHeapAndOffHeapSize = new AtomicLong();
   RegionServicesForStores regionServicesForStores;
 
   // Debug possible data loss due to WAL off
@@ -1447,6 +1450,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     long dataSize = this.memStoreSizing.incMemStoreSize(dataSizeDelta, heapSizeDelta,
       offHeapSizeDelta, cellsCountDelta);
+    this.memStoreHeapAndOffHeapSize.addAndGet(heapSizeDelta + offHeapSizeDelta);
     checkNegativeMemStoreDataSize(dataSize, dataSizeDelta);
   }
 
@@ -1462,6 +1466,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     }
     long dataSize = this.memStoreSizing.decMemStoreSize(dataSizeDelta, heapSizeDelta,
       offHeapSizeDelta, cellsCountDelta);
+    this.memStoreHeapAndOffHeapSize.addAndGet(-heapSizeDelta - offHeapSizeDelta);
     checkNegativeMemStoreDataSize(dataSize, -dataSizeDelta);
   }
 
@@ -5433,8 +5438,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       return;
     }
 
-    MemStoreSize mss = this.memStoreSizing.getMemStoreSize();
-    if (mss.getHeapSize() + mss.getOffHeapSize() > this.blockingMemStoreSize) {
+    if (this.memStoreHeapAndOffHeapSize.get() > this.blockingMemStoreSize) {
       blockedRequestsCount.increment();
       requestFlush();
       // Don't print current limit because it will vary too much. The message is used as a key
@@ -5550,8 +5554,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   /*
    * @return True if size is over the flush threshold
    */
-  private boolean isFlushSize(MemStoreSize size) {
-    return size.getHeapSize() + size.getOffHeapSize() > getMemStoreFlushSize();
+  private boolean isFlushSize() {
+    return this.memStoreHeapAndOffHeapSize.get() > getMemStoreFlushSize();
   }
 
   private void deleteRecoveredEdits(FileSystem fs, Iterable<Path> files) throws IOException {
@@ -5897,7 +5901,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
           }
           MemStoreSize mss = memStoreSizing.getMemStoreSize();
           incMemStoreSize(mss);
-          flush = isFlushSize(this.memStoreSizing.getMemStoreSize());
+          flush = isFlushSize();
           if (flush) {
             internalFlushcache(null, currentEditSeqId, stores.values(), status, false,
               FlushLifeCycleTracker.DUMMY);
@@ -8487,6 +8491,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
     (2 * ClassSize.ATOMIC_BOOLEAN) + // closed, closing
     (3 * ClassSize.ATOMIC_LONG) + // numPutsWithoutWAL, dataInMemoryWithoutWAL,
                                   // compactionsFailed
+    ClassSize.ATOMIC_LONG + // memStoreHeapAndOffHeapSize
     (3 * ClassSize.CONCURRENT_HASHMAP) + // lockedRows, scannerReadPoints, regionLockHolders
     WriteState.HEAP_SIZE + // writestate
     ClassSize.CONCURRENT_SKIPLISTMAP + ClassSize.CONCURRENT_SKIPLISTMAP_ENTRY + // stores
@@ -9129,7 +9134,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
   }
 
   private void requestFlushIfNeeded() throws RegionTooBusyException {
-    if (isFlushSize(this.memStoreSizing.getMemStoreSize())) {
+    if (isFlushSize()) {
       requestFlush();
     }
   }
