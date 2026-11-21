@@ -519,6 +519,10 @@ public class MetricsRegionServerSourceImpl extends BaseSourceImpl
       .addGauge(Interns.info(MEMSTORE_OFFHEAP_SIZE, MEMSTORE_OFFHEAP_SIZE_DESC),
         rsWrap.getOffHeapMemStoreSize())
       .addGauge(Interns.info(STOREFILE_SIZE, STOREFILE_SIZE_DESC), rsWrap.getStoreFileSize())
+      .addGauge(Interns.info(STOREFILE_UNCOMPRESSED_SIZE, STOREFILE_UNCOMPRESSED_SIZE_DESC),
+        rsWrap.getStoreFileUncompressedSize())
+      .addGauge(Interns.info(STOREFILE_COMPRESSION_RATIO, STOREFILE_COMPRESSION_RATIO_DESC),
+        rsWrap.getStoreFileCompressionRatio())
       .addGauge(Interns.info(STOREFILE_SIZE_GROWTH_RATE, STOREFILE_SIZE_GROWTH_RATE_DESC),
         rsWrap.getStoreFileSizeGrowthRate())
       .addGauge(Interns.info(MAX_STORE_FILE_AGE, MAX_STORE_FILE_AGE_DESC),
