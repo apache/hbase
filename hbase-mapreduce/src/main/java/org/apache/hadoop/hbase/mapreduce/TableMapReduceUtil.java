@@ -857,7 +857,8 @@ public class TableMapReduceUtil {
       org.apache.commons.lang3.ArrayUtils.class, // commons-lang
       io.opentelemetry.api.trace.Span.class, // opentelemetry-api
       io.opentelemetry.semconv.SemanticAttributes.class, // opentelemetry-semconv
-      io.opentelemetry.context.Context.class); // opentelemetry-context
+      io.opentelemetry.context.Context.class, // opentelemetry-context
+      io.opentelemetry.common.ComponentLoader.class); // opentelemetry-common
   }
 
   /**
