@@ -37,6 +37,7 @@ import java.util.TreeMap;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
+import org.apache.commons.lang3.math.NumberUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.FileStatus;
@@ -233,7 +234,7 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
         } else if (cmd.equals("-traceFreq")) {
           // keep it here for compatible
           System.err.println("-traceFreq is not supported any more");
-          if (i + 1 < args.length && !args[i + 1].startsWith("-")) {
+          if (i + 1 < args.length && NumberUtils.isParsable(args[i + 1])) {
             i++;
           }
         } else if (cmd.equals("-h")) {
@@ -433,10 +434,10 @@ public final class WALPerformanceEvaluation extends Configured implements Tool {
     System.err.println("  -verify          Verify edits written in sequence");
     System.err
       .println("  -verbose         Output extra info; " + "e.g. all edit seq ids when verifying");
-    System.err.println("  -roll <N>        Roll the way every N appends");
+    System.err.println("  -roll <N>        Roll the WAL every N appends");
     System.err.println("  -compress        Enable WAL compression.");
     System.err.println("  -encryption <A>  Encrypt the WAL with algorithm A, e.g. AES");
-    System.err.println("  -traceFreq <N>   Not supported any more; ignored.");
+    System.err.println("  -traceFreq [<N>] Not supported any more; ignored.");
     System.err.println("");
     System.err.println("Examples:");
     System.err.println("");
