@@ -26,6 +26,7 @@ import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoInteractions;
 import static org.mockito.Mockito.when;
 
 import java.io.IOException;
@@ -40,8 +41,9 @@ import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.BackupInfo.BackupPhase;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest;
 import org.apache.hadoop.hbase.backup.impl.BackupManifest.BackupImage;
-import org.apache.hadoop.hbase.backup.impl.FullTableBackupClient;
+import org.apache.hadoop.hbase.backup.impl.TableBackupClient;
 import org.apache.hadoop.hbase.backup.util.BackupUtils;
+import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -190,17 +192,21 @@ public class TestHBackupFileSystem {
     assertMarkerAndDataRemain(backupRootDir, info);
   }
 
-  // Verifies failed-backup cleanup aborts without deleting any data if the marker cannot be
-  // removed, and propagates the failure so repair can retry
+  // Verifies failed-backup recovery aborts before any destructive step if the marker cannot be
+  // removed: no snapshots are deleted, the backup system table is not restored (which would remove
+  // the RUNNING backup record), and no backup data is deleted. This leaves the failed backup
+  // discoverable so repair can retry.
   @Test
-  public void testFailedBackupCleanupAbortsWhenMarkerDeleteFails(
+  public void testFailedBackupRecoveryAbortsBeforeDestructiveStepsWhenMarkerDeleteFails(
     @TempDir java.nio.file.Path tempDir) throws IOException {
     String backupRootDir = tempDir.toUri().toString();
     BackupInfo info = createBackupWithMarkerAndData(backupRootDir, "backup_failed_marker_fail");
     info.setPhase(BackupPhase.SNAPSHOTCOPY);
+    Connection conn = mock(Connection.class);
 
-    assertThrows(IOException.class,
-      () -> FailedBackupCleanup.cleanup(info, createMarkerDeletionFailConf()));
+    assertThrows(IOException.class, () -> TableBackupClient.cleanupAndRestoreBackupSystem(conn,
+      info, createMarkerDeletionFailConf()));
+    verifyNoInteractions(conn);
     assertMarkerAndDataRemain(backupRootDir, info);
   }
 
@@ -235,13 +241,6 @@ public class TestHBackupFileSystem {
     conf.setClass("fs.file.impl", MarkerDeletionFailFileSystem.class, FileSystem.class);
     conf.setBoolean("fs.file.impl.disable.cache", true);
     return conf;
-  }
-
-  // Exposes the protected TableBackupClient#cleanupTargetDir to this test
-  private static final class FailedBackupCleanup extends FullTableBackupClient {
-    static void cleanup(BackupInfo info, Configuration conf) throws IOException {
-      FullTableBackupClient.cleanupTargetDir(info, conf);
-    }
   }
 
   public static class MarkerDeletionFailFileSystem extends FilterFileSystem {

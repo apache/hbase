@@ -180,25 +180,14 @@ public abstract class TableBackupClient {
   }
 
   /**
-   * Clean up the uncompleted data at the target directory if the ongoing backup has already entered
-   * the copy phase.
-   * @throws IOException if the backup completion marker could not be removed. In that case, no data
-   *                     is deleted, so the caller can fail and the cleanup can be retried by
-   *                     repair.
+   * Clean up the uncompleted data at target directory if the ongoing backup has already entered the
+   * copy phase.
    */
-  protected static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf)
-    throws IOException {
-    LOG.debug("Trying to cleanup up target dir. Current backup phase: " + backupInfo.getPhase());
-
-    // The .backup.complete marker should not exist for a failed backup, but remove it first in any
-    // phase in case it does. If this fails, propagate the error without touching any data so a
-    // marker is never left pointing at data that has been removed.
-    HBackupFileSystem.deleteBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
-      backupInfo.getBackupId());
-
+  protected static void cleanupTargetDir(BackupInfo backupInfo, Configuration conf) {
     try {
       // clean up the uncompleted data at target directory if the ongoing backup has already entered
       // the copy phase
+      LOG.debug("Trying to cleanup up target dir. Current backup phase: " + backupInfo.getPhase());
       if (
         backupInfo.getPhase().equals(BackupPhase.SNAPSHOTCOPY)
           || backupInfo.getPhase().equals(BackupPhase.INCREMENTAL_COPY)
@@ -226,6 +215,7 @@ public abstract class TableBackupClient {
           }
         }
       }
+
     } catch (IOException e1) {
       LOG.error("Cleaning up uncompleted backup data of " + backupInfo.getBackupId() + " at "
         + backupInfo.getBackupRootDir() + " failed due to " + e1.getMessage() + ".");
@@ -268,6 +258,14 @@ public abstract class TableBackupClient {
 
   public static void cleanupAndRestoreBackupSystem(Connection conn, BackupInfo backupInfo,
     Configuration conf) throws IOException {
+    // The .backup.complete marker should not exist for a failed backup, but remove it in case it
+    // does. This must happen before any destructive recovery step: restoring the backup system
+    // table from its snapshot removes the RUNNING backup record. If the marker cannot be removed,
+    // fail here while the RUNNING record, the system table snapshot, the backup data, and the
+    // exclusive lock are all still intact. Later, a "backup repair" can find and retry this backup.
+    HBackupFileSystem.deleteBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
+
     BackupType type = backupInfo.getType();
     // if full backup, then delete HBase snapshots if there already are snapshots taken
     // and also clean up export snapshot log files if exist

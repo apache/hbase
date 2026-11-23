@@ -29,7 +29,6 @@ import java.io.PrintStream;
 import java.util.List;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
-import org.apache.hadoop.fs.FilterFileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -39,7 +38,6 @@ import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
-import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.hadoop.util.ToolRunner;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -97,9 +95,7 @@ public class TestBackupDelete extends TestBackupBase {
     Path path = new Path(BACKUP_ROOT_DIR, backupId);
     FileSystem fs = FileSystem.get(path.toUri(), conf1);
 
-    Configuration markerFailConf = new Configuration(conf1);
-    markerFailConf.setClass("fs.hdfs.impl", MarkerDeletionFailHDFS.class, FileSystem.class);
-    markerFailConf.setBoolean("fs.hdfs.impl.disable.cache", true);
+    Configuration markerFailConf = BackupTestUtil.createMarkerDeletionFailConf(conf1);
 
     // Attempt a backup delete that results in a failure due to not being able to remove
     // the completion marker file
@@ -224,19 +220,5 @@ public class TestBackupDelete extends TestBackupBase {
     getBackupAdmin().deleteBackups(new String[] { backupId1 });
     assertEquals(Sets.newHashSet(table3),
       backupSystemTable.getIncrementalBackupTableSet(BACKUP_ROOT_DIR));
-  }
-
-  public static class MarkerDeletionFailHDFS extends FilterFileSystem {
-    public MarkerDeletionFailHDFS() {
-      super(new DistributedFileSystem());
-    }
-
-    @Override
-    public boolean delete(Path f, boolean recursive) throws IOException {
-      if (f.getName().equals(HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME)) {
-        return false;
-      }
-      return super.delete(f, recursive);
-    }
   }
 }
