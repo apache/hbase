@@ -17,20 +17,13 @@
  */
 package org.apache.hadoop.hbase.security.access;
 
-import static org.hamcrest.MatcherAssert.assertThat;
-import static org.hamcrest.Matchers.containsString;
-import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.List;
-import java.util.Map;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
@@ -55,7 +48,9 @@ import org.apache.hbase.thirdparty.com.google.common.collect.ArrayListMultimap;
 import org.apache.hbase.thirdparty.com.google.common.collect.ListMultimap;
 
 /**
- * Test the reading and writing of access permissions on {@code _acl_} table.
+ * Tests around the table permissions which are not covered by {@link TestPermissionStorage}: the
+ * survival of the stored permissions across table splits, the equality of the {@link Permission}s,
+ * and the {@link AuthManager} permission cache.
  */
 @Tag(SecurityTests.TAG)
 @Tag(MediumTests.TAG)
@@ -84,7 +79,6 @@ public class TestTablePermissions {
     UTIL.waitTableAvailable(TableName.valueOf("hbase:acl"));
 
     UTIL.createTable(TEST_TABLE, TEST_FAMILY);
-    UTIL.createTable(TEST_TABLE2, TEST_FAMILY);
   }
 
   @AfterAll
@@ -97,7 +91,7 @@ public class TestTablePermissions {
     Configuration conf = UTIL.getConfiguration();
     try (Connection conn = ConnectionFactory.createConnection(conf)) {
       PermissionStorage.removeTablePermissions(conn, TEST_TABLE);
-      PermissionStorage.removeTablePermissions(conn, TEST_TABLE2);
+      // testAuthManager writes global permissions
       PermissionStorage.removeTablePermissions(conn, PermissionStorage.ACL_TABLE_NAME);
     }
   }
@@ -108,169 +102,6 @@ public class TestTablePermissions {
     PermissionStorage.getTablePermissions(conn, tableName)
       .forEach(up -> perms.put(up.getUser(), up));
     return perms;
-  }
-
-  private ListMultimap<String, UserPermission> getGlobalPerms(Connection conn) throws IOException {
-    ListMultimap<String, UserPermission> perms = ArrayListMultimap.create();
-    PermissionStorage.getGlobalPermissions(conn).forEach(up -> perms.put(up.getUser(), up));
-    return perms;
-  }
-
-  @Test
-  public void testBasicWrite() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      // add some permissions
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("george", Permission.newBuilder(TEST_TABLE)
-          .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        false);
-      PermissionStorage.addUserPermission(connection, new UserPermission("hubert",
-        Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()), false);
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("humphrey", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
-          .withQualifier(TEST_QUALIFIER).withActions(Permission.Action.READ).build()),
-        false);
-      // retrieve the same
-      ListMultimap<String, UserPermission> perms = getTablePerms(connection, TEST_TABLE);
-      List<UserPermission> userPerms = perms.get("george");
-      assertNotNull(userPerms, "Should have permissions for george");
-      assertEquals(1, userPerms.size(), "Should have 1 permission for george");
-      assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
-      TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
-      assertEquals(TEST_TABLE, permission.getTableName(), "Permission should be for " + TEST_TABLE);
-      assertNull(permission.getFamily(), "Column family should be empty");
-
-      // check actions
-      assertNotNull(permission.getActions());
-      assertEquals(2, permission.getActions().length);
-      List<Permission.Action> actions = Arrays.asList(permission.getActions());
-      assertTrue(actions.contains(TablePermission.Action.READ));
-      assertTrue(actions.contains(TablePermission.Action.WRITE));
-
-      userPerms = perms.get("hubert");
-      assertNotNull(userPerms, "Should have permissions for hubert");
-      assertEquals(1, userPerms.size(), "Should have 1 permission for hubert");
-      assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
-      permission = (TablePermission) userPerms.get(0).getPermission();
-      assertEquals(TEST_TABLE, permission.getTableName(), "Permission should be for " + TEST_TABLE);
-      assertNull(permission.getFamily(), "Column family should be empty");
-
-      // check actions
-      assertNotNull(permission.getActions());
-      assertEquals(1, permission.getActions().length);
-      actions = Arrays.asList(permission.getActions());
-      assertTrue(actions.contains(TablePermission.Action.READ));
-      assertFalse(actions.contains(TablePermission.Action.WRITE));
-
-      userPerms = perms.get("humphrey");
-      assertNotNull(userPerms, "Should have permissions for humphrey");
-      assertEquals(1, userPerms.size(), "Should have 1 permission for humphrey");
-      assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
-      permission = (TablePermission) userPerms.get(0).getPermission();
-      assertEquals(TEST_TABLE, permission.getTableName(), "Permission should be for " + TEST_TABLE);
-      assertTrue(Bytes.equals(TEST_FAMILY, permission.getFamily()),
-        "Permission should be for family " + Bytes.toString(TEST_FAMILY));
-      assertTrue(Bytes.equals(TEST_QUALIFIER, permission.getQualifier()),
-        "Permission should be for qualifier " + Bytes.toString(TEST_QUALIFIER));
-
-      // check actions
-      assertNotNull(permission.getActions());
-      assertEquals(1, permission.getActions().length);
-      actions = Arrays.asList(permission.getActions());
-      assertTrue(actions.contains(TablePermission.Action.READ));
-      assertFalse(actions.contains(TablePermission.Action.WRITE));
-
-      // table 2 permissions
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("hubert", Permission.newBuilder(TEST_TABLE2)
-          .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        false);
-
-      // check full load
-      Map<byte[], ListMultimap<String, UserPermission>> allPerms =
-        PermissionStorage.loadAll(connection);
-      assertEquals(2, allPerms.size(),
-        "Full permission map should have entries for both test tables");
-
-      userPerms = allPerms.get(TEST_TABLE.getName()).get("hubert");
-      assertNotNull(userPerms);
-      assertEquals(1, userPerms.size());
-      assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
-      permission = (TablePermission) userPerms.get(0).getPermission();
-      assertEquals(TEST_TABLE, permission.getTableName());
-      assertEquals(1, permission.getActions().length);
-      assertEquals(Permission.Action.READ, permission.getActions()[0]);
-
-      userPerms = allPerms.get(TEST_TABLE2.getName()).get("hubert");
-      assertNotNull(userPerms);
-      assertEquals(1, userPerms.size());
-      assertEquals(Permission.Scope.TABLE, userPerms.get(0).getAccessScope());
-      permission = (TablePermission) userPerms.get(0).getPermission();
-      assertEquals(TEST_TABLE2, permission.getTableName());
-      assertEquals(2, permission.getActions().length);
-      actions = Arrays.asList(permission.getActions());
-      assertTrue(actions.contains(Permission.Action.READ));
-      assertTrue(actions.contains(Permission.Action.WRITE));
-    }
-  }
-
-  @Test
-  public void testRevokeFamilyPermissionKeepsTableLevelPermission() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      // table level READ for userA
-      PermissionStorage.addUserPermission(connection, new UserPermission("userA",
-        Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()), false);
-      // family level WRITE for userA on the same table
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("userA", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
-          .withActions(Permission.Action.WRITE).build()),
-        false);
-
-      // revoke only the family level WRITE
-      PermissionStorage.removeUserPermission(connection,
-        new UserPermission("userA", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
-          .withActions(Permission.Action.WRITE).build()));
-
-      List<UserPermission> userPerms = getTablePerms(connection, TEST_TABLE).get("userA");
-      assertEquals(1, userPerms.size(),
-        "family level WRITE should be revoked, only the table level READ should remain");
-      TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
-      assertNull(permission.getFamily(), "table level permission should be kept untouched");
-      assertArrayEquals(new Permission.Action[] { Permission.Action.READ }, permission.getActions(),
-        "table level READ should be kept untouched");
-    }
-  }
-
-  @Test
-  public void testRevokeFamilyPermissionKeepsTableLevelActions() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      // table level READ,WRITE for userB
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("userB", Permission.newBuilder(TEST_TABLE)
-          .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        false);
-      // family level WRITE for userB on the same table
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("userB", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
-          .withActions(Permission.Action.WRITE).build()),
-        false);
-
-      // revoke only the family level WRITE
-      PermissionStorage.removeUserPermission(connection,
-        new UserPermission("userB", Permission.newBuilder(TEST_TABLE).withFamily(TEST_FAMILY)
-          .withActions(Permission.Action.WRITE).build()));
-
-      List<UserPermission> userPerms = getTablePerms(connection, TEST_TABLE).get("userB");
-      assertEquals(1, userPerms.size(),
-        "family level WRITE should be revoked, only the table level permission should remain");
-      TablePermission permission = (TablePermission) userPerms.get(0).getPermission();
-      assertNull(permission.getFamily(), "table level permission should be kept untouched");
-      assertArrayEquals(new Permission.Action[] { Permission.Action.READ, Permission.Action.WRITE },
-        permission.getActions(), "table level actions should be kept untouched");
-    }
   }
 
   @Test
@@ -319,34 +150,7 @@ public class TestTablePermissions {
     }
   }
 
-  @Test
-  public void testSerialization() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    ListMultimap<String, UserPermission> permissions = createPermissions();
-    byte[] permsData = PermissionStorage.writePermissionsAsBytes(permissions, conf);
-
-    ListMultimap<String, UserPermission> copy =
-      PermissionStorage.readUserPermission(permsData, conf);
-
-    checkMultimapEqual(permissions, copy);
-  }
-
-  private ListMultimap<String, UserPermission> createPermissions() {
-    ListMultimap<String, UserPermission> permissions = ArrayListMultimap.create();
-    permissions.put("george", new UserPermission("george",
-      Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()));
-    permissions.put("george", new UserPermission("george", Permission.newBuilder(TEST_TABLE)
-      .withFamily(TEST_FAMILY).withActions(Permission.Action.WRITE).build()));
-    permissions.put("george", new UserPermission("george",
-      Permission.newBuilder(TEST_TABLE2).withActions(Permission.Action.READ).build()));
-    permissions.put("hubert", new UserPermission("hubert", Permission.newBuilder(TEST_TABLE2)
-      .withActions(Permission.Action.READ, Permission.Action.WRITE).build()));
-    permissions.put("bruce", new UserPermission("bruce",
-      Permission.newBuilder(TEST_NAMESPACE).withActions(Permission.Action.READ).build()));
-    return permissions;
-  }
-
-  public void checkMultimapEqual(ListMultimap<String, UserPermission> first,
+  private void checkMultimapEqual(ListMultimap<String, UserPermission> first,
     ListMultimap<String, UserPermission> second) {
     assertEquals(first.size(), second.size());
     for (String key : first.keySet()) {
@@ -418,186 +222,6 @@ public class TestTablePermissions {
     p2 = Permission.newBuilder(TEST_NAMESPACE2).withActions(TablePermission.Action.READ).build();
     assertFalse(p1.equals(p2));
     assertFalse(p2.equals(p1));
-  }
-
-  @Test
-  public void testGlobalPermission() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-
-    // add some permissions
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      PermissionStorage.addUserPermission(connection, new UserPermission("user1", Permission
-        .newBuilder().withActions(Permission.Action.READ, Permission.Action.WRITE).build()), false);
-      PermissionStorage.addUserPermission(connection, new UserPermission("user2",
-        Permission.newBuilder().withActions(Permission.Action.CREATE).build()), false);
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("user3",
-          Permission.newBuilder()
-            .withActions(Permission.Action.ADMIN, Permission.Action.READ, Permission.Action.CREATE)
-            .build()),
-        false);
-
-      ListMultimap<String, UserPermission> perms = getGlobalPerms(connection);
-      List<UserPermission> user1Perms = perms.get("user1");
-      assertEquals(1, user1Perms.size(), "Should have 1 permission for user1");
-      assertArrayEquals(new Permission.Action[] { Permission.Action.READ, Permission.Action.WRITE },
-        user1Perms.get(0).getPermission().getActions(), "user1 should have WRITE permission");
-
-      List<UserPermission> user2Perms = perms.get("user2");
-      assertEquals(1, user2Perms.size(), "Should have 1 permission for user2");
-      assertArrayEquals(new Permission.Action[] { Permission.Action.CREATE },
-        user2Perms.get(0).getPermission().getActions(), "user2 should have CREATE permission");
-
-      List<UserPermission> user3Perms = perms.get("user3");
-      assertEquals(1, user3Perms.size(), "Should have 1 permission for user3");
-      assertArrayEquals(
-        new Permission.Action[] { Permission.Action.READ, Permission.Action.CREATE,
-          Permission.Action.ADMIN },
-        user3Perms.get(0).getPermission().getActions(),
-        "user3 should have ADMIN, READ, CREATE permission");
-    }
-  }
-
-  private void testAddUserPermissionWithInvalidUser0(Connection conn, String invalidUser,
-    String errorMsg) throws Exception {
-    Permission tablePerm =
-      Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
-    IOException e = assertThrows(
-      IOException.class, () -> PermissionStorage.addUserPermission(conn,
-        new UserPermission(invalidUser, tablePerm), false),
-      "Should reject user name [" + invalidUser + "]");
-    assertThat(e.getMessage(), containsString(errorMsg));
-  }
-
-  @Test
-  public void testAddUserPermissionWithInvalidUser() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection conn = ConnectionFactory.createConnection(conf)) {
-      testAddUserPermissionWithInvalidUser0(conn, null, "null user name is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "", "Blank user name '' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, " ", "Blank user name ' ' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "\t", "Blank user name '\t' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, " user",
-        "Leading or trailing whitespace in user name ' user' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "user ",
-        "Leading or trailing whitespace in user name 'user ' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, " user ",
-        "Leading or trailing whitespace in user name ' user ' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "user,user",
-        "',' in user name 'user,user' is not allowed");
-
-      testAddUserPermissionWithInvalidUser0(conn, "@", "Blank group name '@' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "@ ", "Blank group name '@ ' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "@\t", "Blank group name '@\t' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "@ group",
-        "Leading or trailing whitespace in group name '@ group' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "@group ",
-        "Leading or trailing whitespace in group name '@group ' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "@ group ",
-        "Leading or trailing whitespace in group name '@ group ' is not allowed");
-      testAddUserPermissionWithInvalidUser0(conn, "@group,group",
-        "',' in group name '@group,group' is not allowed");
-
-      // none of the rejected grants should have been persisted
-      assertTrue(getTablePerms(conn, TEST_TABLE).isEmpty(),
-        "No table permissions should have been written");
-    }
-  }
-
-  @Test
-  public void testAddUserPermissionWithInvalidAction() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      // no actions associated with the permission
-      IOException e =
-        assertThrows(IOException.class, () -> PermissionStorage.addUserPermission(connection,
-          new UserPermission("george", Permission.newBuilder(TEST_TABLE).build()), false));
-      assertThat(e.getMessage(), containsString("No actions associated with user"));
-
-      // none of the rejected grants should have been persisted
-      assertTrue(getTablePerms(connection, TEST_TABLE).isEmpty(),
-        "No table permissions should have been written");
-    }
-  }
-
-  private void testRemoveUserPermissionWithInvalidUser0(Connection conn, String invalidUser,
-    String errorMsg) throws Exception {
-    Permission tablePerm =
-      Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build();
-    IOException e = assertThrows(IOException.class,
-      () -> PermissionStorage.removeUserPermission(conn,
-        new UserPermission(invalidUser, tablePerm)),
-      "Should reject user name [" + invalidUser + "]");
-    assertThat(e.getMessage(), containsString(errorMsg));
-  }
-
-  @Test
-  public void testRemoveUserPermissionWithInvalidUser() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection conn = ConnectionFactory.createConnection(conf)) {
-      testRemoveUserPermissionWithInvalidUser0(conn, null, "null user name is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "", "Blank user name '' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, " ", "Blank user name ' ' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "\t", "Blank user name '\t' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, " user",
-        "Leading or trailing whitespace in user name ' user' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "user ",
-        "Leading or trailing whitespace in user name 'user ' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, " user ",
-        "Leading or trailing whitespace in user name ' user ' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "user,user",
-        "',' in user name 'user,user' is not allowed");
-
-      testRemoveUserPermissionWithInvalidUser0(conn, "@", "Blank group name '@' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "@ ", "Blank group name '@ ' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "@\t",
-        "Blank group name '@\t' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "@ group",
-        "Leading or trailing whitespace in group name '@ group' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "@group ",
-        "Leading or trailing whitespace in group name '@group ' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "@ group ",
-        "Leading or trailing whitespace in group name '@ group ' is not allowed");
-      testRemoveUserPermissionWithInvalidUser0(conn, "@group,group",
-        "',' in group name '@group,group' is not allowed");
-    }
-  }
-
-  @Test
-  public void testRemoveWithNoActionsRemovesAllActions() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      PermissionStorage.addUserPermission(connection,
-        new UserPermission("userC", Permission.newBuilder(TEST_TABLE)
-          .withActions(Permission.Action.READ, Permission.Action.WRITE).build()),
-        false);
-
-      // revoking without specifying actions is valid and removes the whole permission
-      PermissionStorage.removeUserPermission(connection,
-        new UserPermission("userC", Permission.newBuilder(TEST_TABLE).build()));
-
-      assertTrue(getTablePerms(connection, TEST_TABLE).get("userC").isEmpty(),
-        "table level permission should be fully revoked");
-    }
-  }
-
-  @Test
-  public void testAddGroupPermission() throws Exception {
-    Configuration conf = UTIL.getConfiguration();
-    try (Connection connection = ConnectionFactory.createConnection(conf)) {
-      // a group name is stored as "@group", only a bare "@" is invalid
-      PermissionStorage.addUserPermission(connection, new UserPermission("@devs",
-        Permission.newBuilder(TEST_TABLE).withActions(Permission.Action.READ).build()), false);
-
-      ListMultimap<String, UserPermission> perms = getTablePerms(connection, TEST_TABLE);
-      List<UserPermission> groupPerms = perms.get("@devs");
-      assertEquals(1, groupPerms.size(), "Should have 1 permission for group devs");
-      assertEquals(Permission.Scope.TABLE, groupPerms.get(0).getAccessScope());
-      TablePermission permission = (TablePermission) groupPerms.get(0).getPermission();
-      assertEquals(TEST_TABLE, permission.getTableName());
-      assertArrayEquals(new Permission.Action[] { Permission.Action.READ },
-        permission.getActions());
-    }
   }
 
   @Test

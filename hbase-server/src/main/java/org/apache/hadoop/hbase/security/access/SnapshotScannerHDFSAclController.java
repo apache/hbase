@@ -333,7 +333,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       String userName = userPermission.getUser();
       switch (userPermission.getAccessScope()) {
         case GLOBAL:
-          UserPermission perm = getUserGlobalPermission(conn, userName);
+          UserPermission perm = PermissionStorage.getUserGlobalPermission(conn, userName);
           if (perm != null && hdfsAclHelper.containReadAction(perm)) {
             if (!isHdfsAclSet(aclTable, userName)) {
               // 1. Get namespaces and tables which global user acls are already synced
@@ -356,7 +356,8 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
           break;
         case NAMESPACE:
           String namespace = ((NamespacePermission) userPermission.getPermission()).getNamespace();
-          UserPermission nsPerm = getUserNamespacePermission(conn, userName, namespace);
+          UserPermission nsPerm =
+            PermissionStorage.getUserNamespacePermission(conn, namespace, userName);
           if (nsPerm != null && hdfsAclHelper.containReadAction(nsPerm)) {
             if (!isHdfsAclSet(aclTable, userName, namespace)) {
               // 1. Get tables which namespace user acls are already synced
@@ -377,7 +378,8 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
           TablePermission tablePerm = (TablePermission) userPermission.getPermission();
           if (needHandleTableHdfsAcl(tablePerm)) {
             TableName tableName = tablePerm.getTableName();
-            UserPermission tPerm = getUserTablePermission(conn, userName, tableName);
+            UserPermission tPerm =
+              PermissionStorage.getUserTablePermission(conn, tableName, userName);
             if (tPerm != null && hdfsAclHelper.containReadAction(tPerm)) {
               if (!isHdfsAclSet(aclTable, userName, tableName)) {
                 // 1. create table dirs
@@ -410,7 +412,8 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
         String userName = userPermission.getUser();
         switch (userPermission.getAccessScope()) {
           case GLOBAL:
-            UserPermission userGlobalPerm = getUserGlobalPermission(conn, userName);
+            UserPermission userGlobalPerm =
+              PermissionStorage.getUserGlobalPermission(conn, userName);
             if (userGlobalPerm == null || !hdfsAclHelper.containReadAction(userGlobalPerm)) {
               removeUserGlobalHdfsAcl(aclTable, userName, userPermission);
             }
@@ -418,7 +421,7 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
           case NAMESPACE:
             NamespacePermission nsPerm = (NamespacePermission) userPermission.getPermission();
             UserPermission userNsPerm =
-              getUserNamespacePermission(conn, userName, nsPerm.getNamespace());
+              PermissionStorage.getUserNamespacePermission(conn, nsPerm.getNamespace(), userName);
             if (userNsPerm == null || !hdfsAclHelper.containReadAction(userNsPerm)) {
               removeUserNamespaceHdfsAcl(aclTable, userName, nsPerm.getNamespace(), userPermission);
             }
@@ -427,7 +430,8 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
             TablePermission tPerm = (TablePermission) userPermission.getPermission();
             if (needHandleTableHdfsAcl(tPerm)) {
               TableName tableName = tPerm.getTableName();
-              UserPermission userTablePerm = getUserTablePermission(conn, userName, tableName);
+              UserPermission userTablePerm =
+                PermissionStorage.getUserTablePermission(conn, tableName, userName);
               if (userTablePerm == null || !hdfsAclHelper.containReadAction(userTablePerm)) {
                 removeUserTableHdfsAcl(aclTable, userName, tableName, userPermission);
               }
@@ -488,30 +492,6 @@ public class SnapshotScannerHDFSAclController implements MasterCoprocessor, Mast
       // 2. Remove table user acl is synced to HDFS in acl table
       SnapshotScannerHDFSAclStorage.deleteUserTableHdfsAcl(aclTable, userName, tableName);
     }
-  }
-
-  private UserPermission getUserGlobalPermission(Connection conn, String userName)
-    throws IOException {
-    List<UserPermission> permissions =
-      PermissionUtils.filter(PermissionStorage.getGlobalPermissions(conn), userName);
-    return permissions.size() > 0 ? permissions.get(0) : null;
-  }
-
-  private UserPermission getUserNamespacePermission(Connection conn, String userName,
-    String namespace) throws IOException {
-    List<UserPermission> permissions =
-      PermissionUtils.filter(PermissionStorage.getNamespacePermissions(conn, namespace), userName);
-    return permissions.size() > 0 ? permissions.get(0) : null;
-  }
-
-  private UserPermission getUserTablePermission(Connection conn, String userName,
-    TableName tableName) throws IOException {
-    List<UserPermission> permissions = PermissionUtils
-      .filter(PermissionStorage.getTablePermissions(conn, tableName), userName).stream()
-      .filter(userPermission -> hdfsAclHelper
-        .isNotFamilyOrQualifierPermission((TablePermission) userPermission.getPermission()))
-      .collect(Collectors.toList());
-    return permissions.size() > 0 ? permissions.get(0) : null;
   }
 
   private boolean isHdfsAclSet(Table aclTable, String userName) throws IOException {

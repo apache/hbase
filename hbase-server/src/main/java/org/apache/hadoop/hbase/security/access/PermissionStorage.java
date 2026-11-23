@@ -32,6 +32,7 @@ import java.util.Set;
 import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 import org.apache.commons.lang3.ArrayUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -608,6 +609,53 @@ public final class PermissionStorage {
       }
     }
     return userPerms;
+  }
+
+  private static UserPermission getUserPermission(Connection conn, byte[] entryName, String user,
+    Supplier<Permission.Builder> builder) throws IOException {
+    Get get = new Get(entryName);
+    byte[] qual = Bytes.toBytes(user);
+    get.addColumn(ACL_LIST_FAMILY, qual);
+    try (Table aclTable = conn.getTable(ACL_TABLE_NAME)) {
+      Result result = aclTable.get(get);
+      if (result.isEmpty()) {
+        return null;
+      }
+      byte[] actionCodes = result.getValue(ACL_LIST_FAMILY, qual);
+      return new UserPermission(user, builder.get().withActionCodes(actionCodes).build());
+    }
+  }
+
+  /**
+   * Get the permission for this {@code user} on the given {@code tableName}.
+   * @param user a user name or a group name
+   * @return the user permission or null if not exists
+   */
+  public static UserPermission getUserTablePermission(Connection conn, TableName tableName,
+    String user) throws IOException {
+    return getUserPermission(conn, toTableEntryName(tableName), user,
+      () -> Permission.newBuilder(tableName));
+  }
+
+  /**
+   * Get the permission for this {@code user} on the given {@code namespace}.
+   * @param user a user name or a group name
+   * @return the user permission or null if not exists
+   */
+  public static UserPermission getUserNamespacePermission(Connection conn, String namespace,
+    String user) throws IOException {
+    return getUserPermission(conn, toNamespaceEntry(namespace), user,
+      () -> Permission.newBuilder(namespace));
+  }
+
+  /**
+   * Get the global permission for this {@code user}.
+   * @param user a user name or a group name
+   * @return the user permission or null if not exists
+   */
+  public static UserPermission getUserGlobalPermission(Connection conn, String user)
+    throws IOException {
+    return getUserPermission(conn, ACL_GLOBAL_NAME, user, Permission::newBuilder);
   }
 
   public static boolean isGlobalEntry(byte[] entryName) {
