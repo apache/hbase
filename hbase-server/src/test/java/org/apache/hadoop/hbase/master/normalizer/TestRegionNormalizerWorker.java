@@ -177,10 +177,11 @@ public class TestRegionNormalizerWorker {
 
     final Configuration conf = testingUtility.getConfiguration();
     conf.set("hbase.normalizer.throughput.max_bytes_per_sec", "1m");
+    // Start measuring before the rate limiter can accumulate permits.
+    final long startTime = System.nanoTime();
     final RegionNormalizerWorker worker = new RegionNormalizerWorker(
       testingUtility.getConfiguration(), masterServices, regionNormalizer, queue);
     workerPool.submit(worker);
-    final long startTime = System.nanoTime();
     queue.put(tn);
 
     assertThatEventually("executing work should see split plan count increase",
