@@ -814,6 +814,19 @@ public class TestFSUtils {
     } finally {
       Thread.interrupted();
     }
+
+    // The asynchronous open completes after the caller gave up; the abandoned stream must be
+    // closed.
+    AtomicInteger closeCount = new AtomicInteger();
+    FSDataInputStream lateStream = new FSDataInputStream(rawFs.open(testPath)) {
+      @Override
+      public void close() throws IOException {
+        closeCount.incrementAndGet();
+        super.close();
+      }
+    };
+    assertTrue(trackingFs.pendingOpen.complete(lateStream));
+    assertEquals(1, closeCount.get());
   }
 
   /**
@@ -827,6 +840,7 @@ public class TestFSUtils {
     volatile FileStatus suppliedFileStatus;
     boolean openFileThrowsUnsupported;
     boolean interruptOnBuildGet;
+    volatile CompletableFuture<FSDataInputStream> pendingOpen;
 
     OpenForReadTrackingFileSystem(FileSystem fs) {
       super(fs);
@@ -867,8 +881,11 @@ public class TestFSUtils {
       public CompletableFuture<FSDataInputStream> build() throws IOException {
         openFileBuildCount.incrementAndGet();
         if (interruptOnBuildGet) {
+          // A pending future makes get() observe the interrupt; the test completes it afterwards
+          // to simulate an asynchronous open that finishes after the caller was interrupted.
           Thread.currentThread().interrupt();
-          return new CompletableFuture<>();
+          pendingOpen = new CompletableFuture<>();
+          return pendingOpen;
         }
         return delegate.build();
       }

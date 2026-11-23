@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -232,10 +233,19 @@ public final class FSUtils {
     throws IOException {
     if (fileStatus != null) {
       try {
-        return fs.openFile(path).withFileStatus(fileStatus).build().get();
-      } catch (InterruptedException e) {
-        Thread.currentThread().interrupt();
-        throw new InterruptedIOException("Interrupted opening " + path);
+        CompletableFuture<FSDataInputStream> future =
+          fs.openFile(path).withFileStatus(fileStatus).build();
+        try {
+          return future.get();
+        } catch (InterruptedException e) {
+          // The open may still complete asynchronously; close whatever stream it produces since
+          // the caller will never receive it. Do not cancel the future, as a cancelled future
+          // would discard a stream that is completed later without closing it.
+          future.whenComplete((in, t) -> IOUtils.cleanupWithLogger(LOG, in));
+          Thread.currentThread().interrupt();
+          throw (InterruptedIOException) new InterruptedIOException("Interrupted opening " + path)
+            .initCause(e);
+        }
       } catch (UnsupportedOperationException | ExecutionException e) {
         if (LOG.isDebugEnabled()) {
           LOG.debug("openFile().withFileStatus() not supported or failed for {}, "
