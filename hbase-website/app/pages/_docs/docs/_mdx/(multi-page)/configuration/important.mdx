@@ -55,7 +55,7 @@ See [compression](/docs/compression) for more information.
 
 ### Configuring the size and number of WAL files
 
-HBase uses [wal]/docs/architecture/regionserver#write-ahead-log-wal to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default an HDFS block is 64Mb and a WAL file is ~60Mb).
+HBase uses [wal](/docs/architecture/regionserver#write-ahead-log-wal) to recover the memstore data that has not been flushed to disk in case of an RS failure. These WAL files should be configured to be slightly smaller than HDFS block (by default an HDFS block is 64Mb and a WAL file is ~60Mb).
 
 HBase also has a limit on the number of WAL files, designed to ensure there's never too much data that needs to be replayed during recovery. This limit needs to be set according to memstore configuration, so that all the necessary data would fit. It is recommended to allocate enough WAL files to store at least that much data (when all memstores are close to full). For example, with 16Gb RS heap, default memstore settings (0.4), and default WAL file size (~60Mb), 16Gb\*0.4/60, the starting point for WAL file count is ~109. However, as all memstores are not expected to be full all the time, less WAL files can be allocated.
 
