@@ -258,7 +258,9 @@ public final class PermissionStorage {
    * @param conn     connection to hbase cluster
    * @param userPerm the details of the permission to be granted
    * @param aclTable acl table instance. It is closed upon method return.
-   * @throws IOException in the case of an error accessing the metadata table
+   * @throws IOException in the case of an error accessing the metadata table, or the
+   *                     {@code userPerm} is invalid, i.e, has an invalid user/group name or an
+   *                     empty actions.
    */
   public static void addUserPermission(Connection conn, UserPermission userPerm,
     boolean mergeExistingPermissions) throws IOException {
@@ -287,16 +289,19 @@ public final class PermissionStorage {
   }
 
   /**
-   * Removes a previously granted permission from the stored access control lists. The
-   * {@link TablePermission} being removed must exactly match what is stored -- no wildcard matching
-   * is attempted. Ie, if user "bob" has been granted "READ" access to the "data" table, but only to
-   * column family plus qualifier "info:colA", then trying to call this method with only user "bob"
-   * and the table name "data" (but without specifying the column qualifier "info:colA") will have
-   * no effect.
+   * Removes a previously granted permission from the stored access control lists.
+   * <p>
+   * The {@link TablePermission} being removed must exactly match what is stored -- no wildcard
+   * matching is attempted. Ie, if user "bob" has been granted "READ" access to the "data" table,
+   * but only to column family plus qualifier "info:colA", then trying to call this method with only
+   * user "bob" and the table name "data" (but without specifying the column qualifier "info:colA")
+   * will have no effect.
+   * <p>
+   * Passing an {@code userPerm} with empty actions means revoke all the permissions.
    * @param conn     connection to hbase cluster
    * @param userPerm the details of the permission to be revoked
-   * @throws IOException if the user name is invalid or there is an error accessing the metadata
-   *                     table
+   * @throws IOException in the case of an error accessing the metadata table, or the
+   *                     {@code userPerm} is invalid, i.e, has an invalid user/group name.
    */
   public static void removeUserPermission(Connection conn, UserPermission userPerm)
     throws IOException {
