@@ -50,6 +50,7 @@ import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKE
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_WORKERS_DESC;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME;
 import static org.apache.hadoop.hbase.backup.BackupRestoreConstants.OPTION_YARN_QUEUE_NAME_DESC;
+import static org.apache.hadoop.hbase.backup.HBackupFileSystem.writeBackupCompleteMarker;
 import static org.apache.hadoop.hbase.backup.impl.BackupSystemTable.Order.NEW_TO_OLD;
 import static org.apache.hadoop.hbase.backup.replication.ContinuousBackupReplicationEndpoint.ONE_DAY_IN_MILLISECONDS;
 import static org.apache.hadoop.hbase.backup.util.BackupUtils.DATE_FORMAT;
@@ -1197,30 +1198,43 @@ public final class BackupCommands {
         return;
       }
       System.out.println("Found failed MERGE operation for: " + StringUtils.join(backupIds));
-      // Check if backup .tmp exists
+
       BackupInfo bInfo = sysTable.readBackupInfo(backupIds[0]);
+      if (bInfo == null) {
+        throw new IOException(
+          "MERGE repair: failed due to null backup info for backup ID: " + backupIds[0]);
+      }
+
+      // Check if backup .tmp exists
       String backupRoot = bInfo.getBackupRootDir();
       FileSystem fs = FileSystem.get(new Path(backupRoot).toUri(), new Configuration());
-      String backupId = BackupUtils.findMostRecentBackupId(backupIds);
-      Path tmpPath = HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot, backupId);
+      String mergedBackupId = BackupUtils.findMostRecentBackupId(backupIds);
+      Path tmpPath = HBackupFileSystem.getBackupTmpDirPathForBackupId(backupRoot, mergedBackupId);
+      Path destPath = HBackupFileSystem.getBackupPath(backupRoot, mergedBackupId);
       if (fs.exists(tmpPath)) {
         // Move data back
-        Path destPath = HBackupFileSystem.getBackupPath(backupRoot, backupId);
         if (!fs.delete(destPath, true)) {
           System.out.println("Failed to delete " + destPath);
         }
         boolean res = fs.rename(tmpPath, destPath);
         if (!res) {
           throw new IOException(
-            "MERGE repair: failed  to rename from " + tmpPath + " to " + destPath);
+            "MERGE repair: failed to rename from " + tmpPath + " to " + destPath);
         }
         System.out
           .println("MERGE repair: renamed from " + tmpPath + " to " + destPath + " res=" + res);
       } else {
-        checkRemoveBackupImages(fs, backupRoot, backupIds);
+        checkRemoveBackupImages(conn.getConfiguration(), fs, backupRoot, backupIds);
       }
       // Restore table from snapshot
       BackupSystemTable.restoreFromSnapshot(conn);
+
+      // The merged backup is now consistent. If the tmp directory was restored it already holds
+      // the original marker; otherwise the failed merge may not have written one. Writing is
+      // idempotent and best-effort. Write it before unlocking, so a concurrent delete or merge
+      // cannot run before the marker is written and leave a stale marker behind.
+      writeBackupCompleteMarker(conn.getConfiguration(), backupRoot, mergedBackupId);
+
       // Unlock backup system
       sysTable.finishBackupExclusiveOperation();
       // Finish previous failed session
@@ -1229,8 +1243,8 @@ public final class BackupCommands {
       System.out.println("MERGE repair operation finished OK: " + StringUtils.join(backupIds));
     }
 
-    private static void checkRemoveBackupImages(FileSystem fs, String backupRoot,
-      String[] backupIds) throws IOException {
+    private static void checkRemoveBackupImages(Configuration conf, FileSystem fs,
+      String backupRoot, String[] backupIds) throws IOException {
       String mergedBackupId = BackupUtils.findMostRecentBackupId(backupIds);
       for (String backupId : backupIds) {
         if (backupId.equals(mergedBackupId)) {
@@ -1238,6 +1252,9 @@ public final class BackupCommands {
         }
         Path path = HBackupFileSystem.getBackupPath(backupRoot, backupId);
         if (fs.exists(path)) {
+          // Delete the marker first so a failed directory delete never leaves a merged-away
+          // backup looking complete
+          HBackupFileSystem.deleteBackupCompleteMarker(conf, backupRoot, backupId);
           if (!fs.delete(path, true)) {
             System.out.println("MERGE repair removing: " + path + " - FAILED");
           } else {

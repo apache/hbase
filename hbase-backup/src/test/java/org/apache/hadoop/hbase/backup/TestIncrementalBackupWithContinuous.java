@@ -113,6 +113,7 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       String backup1 = backupTables(BackupType.FULL, List.of(tableName), BACKUP_ROOT_DIR, true);
       LOG.info("Full backup complete with ID {} for table: {}", backup1, tableName);
       assertTrue(checkSucceeded(backup1));
+      TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backup1);
 
       // Verify backup history increased and all the backups are succeeded
       LOG.info("Verify backup history increased and all the backups are succeeded");
@@ -134,6 +135,7 @@ public class TestIncrementalBackupWithContinuous extends TestBackupBase {
       String backup2 =
         backupTables(BackupType.INCREMENTAL, List.of(tableName), BACKUP_ROOT_DIR, true);
       assertTrue(checkSucceeded(backup2));
+      TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backup2);
       LOG.info("Incremental backup completed for table: {}", tableName);
 
       // Verify the temporary backup directory was deleted

@@ -18,16 +18,23 @@
 package org.apache.hadoop.hbase.backup;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.io.PrintStream;
 import java.util.List;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
 import org.apache.hadoop.hbase.backup.impl.BackupSystemTable;
+import org.apache.hadoop.hbase.client.Connection;
+import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.testclassification.LargeTests;
 import org.apache.hadoop.hbase.util.EnvironmentEdge;
 import org.apache.hadoop.hbase.util.EnvironmentEdgeManager;
@@ -63,13 +70,50 @@ public class TestBackupDelete extends TestBackupBase {
     Path path = new Path(info.getBackupRootDir(), backupId);
     FileSystem fs = FileSystem.get(path.toUri(), conf1);
     assertTrue(fs.exists(path));
+    TestBackupUtils.assertBackupCompleteFileExists(conf1, info.getBackupRootDir(), backupId);
     int deleted = getBackupAdmin().deleteBackups(backupIds);
 
+    TestBackupUtils.assertBackupCompleteFileDoesNotExist(conf1, info.getBackupRootDir(), backupId);
     assertTrue(!fs.exists(path));
     assertTrue(fs.exists(new Path(info.getBackupRootDir())));
     assertTrue(1 == deleted);
     table.close();
     LOG.info("delete_backup");
+  }
+
+  /**
+   * Verify that if the completion marker cannot be removed, then the backup delete fails before
+   * removing the backup's data or its system table record. Also verify retrying the backup delete
+   * succeeds.
+   * @throws Exception if doing the backup or an operation on the tables fails
+   */
+  @Test
+  public void testBackupDeleteFailsWhenMarkerDeleteFails() throws Exception {
+    String backupId = fullTableBackup(Lists.newArrayList(table1));
+    assertTrue(checkSucceeded(backupId));
+    String[] backupIds = new String[] { backupId };
+    Path path = new Path(BACKUP_ROOT_DIR, backupId);
+    FileSystem fs = FileSystem.get(path.toUri(), conf1);
+
+    Configuration markerFailConf = BackupTestUtil.createMarkerDeletionFailConf(conf1);
+
+    // Attempt a backup delete that results in a failure due to not being able to remove
+    // the completion marker file
+    try (Connection markerFailConn = ConnectionFactory.createConnection(markerFailConf);
+      BackupAdmin markerFailAdmin = new BackupAdminImpl(markerFailConn)) {
+      assertThrows(IOException.class, () -> markerFailAdmin.deleteBackups(backupIds));
+    }
+
+    // Nothing was deleted, so the backup is still complete and consistent
+    try (BackupSystemTable table = new BackupSystemTable(TEST_UTIL.getConnection())) {
+      assertNotNull(table.readBackupInfo(backupId));
+    }
+    assertTrue(fs.exists(path));
+    TestBackupUtils.assertBackupCompleteFileExists(conf1, BACKUP_ROOT_DIR, backupId);
+
+    // Retry a successful delete this time and expect the marker file to be deleted
+    assertEquals(1, getBackupAdmin().deleteBackups(backupIds));
+    assertTrue(!fs.exists(path));
   }
 
   /**

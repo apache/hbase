@@ -23,6 +23,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.io.IOException;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.FilterFileSystem;
+import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.backup.impl.BackupAdminImpl;
@@ -31,6 +34,7 @@ import org.apache.hadoop.hbase.client.Admin;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.hadoop.hbase.client.ConnectionFactory;
 import org.apache.hadoop.hbase.replication.ReplicationPeerDescription;
+import org.apache.hadoop.hdfs.DistributedFileSystem;
 import org.apache.yetus.audience.InterfaceAudience;
 
 @InterfaceAudience.Private
@@ -67,6 +71,35 @@ public class BackupTestUtil {
 
       assertTrue(peerDesc.getPeerConfig().getTableCFsMap().containsKey(tableName),
         "Table should be subscribed to the replication peer");
+    }
+  }
+
+  /**
+   * Returns a copy of the given configuration whose HDFS file system implementation is
+   * {@link MarkerDeletionFailHDFS}, with file system caching disabled so the override takes effect.
+   */
+  static Configuration createMarkerDeletionFailConf(Configuration base) {
+    Configuration conf = new Configuration(base);
+    conf.setClass("fs.hdfs.impl", MarkerDeletionFailHDFS.class, FileSystem.class);
+    conf.setBoolean("fs.hdfs.impl.disable.cache", true);
+    return conf;
+  }
+
+  /**
+   * A {@link DistributedFileSystem} wrapper that refuses to delete the backup completion marker
+   * file ({@link HBackupFileSystem#BACKUP_COMPLETE_FILE_NAME}).
+   */
+  public static class MarkerDeletionFailHDFS extends FilterFileSystem {
+    public MarkerDeletionFailHDFS() {
+      super(new DistributedFileSystem());
+    }
+
+    @Override
+    public boolean delete(Path f, boolean recursive) throws IOException {
+      if (f.getName().equals(HBackupFileSystem.BACKUP_COMPLETE_FILE_NAME)) {
+        return false;
+      }
+      return super.delete(f, recursive);
     }
   }
 }

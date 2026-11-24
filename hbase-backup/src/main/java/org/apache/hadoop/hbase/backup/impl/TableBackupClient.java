@@ -258,6 +258,14 @@ public abstract class TableBackupClient {
 
   public static void cleanupAndRestoreBackupSystem(Connection conn, BackupInfo backupInfo,
     Configuration conf) throws IOException {
+    // The .backup.complete marker should not exist for a failed backup, but remove it in case it
+    // does. This must happen before any destructive recovery step: restoring the backup system
+    // table from its snapshot removes the RUNNING backup record. If the marker cannot be removed,
+    // fail here while the RUNNING record, the system table snapshot, the backup data, and the
+    // exclusive lock are all still intact. Later, a "backup repair" can find and retry this backup.
+    HBackupFileSystem.deleteBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
+
     BackupType type = backupInfo.getType();
     // if full backup, then delete HBase snapshots if there already are snapshots taken
     // and also clean up export snapshot log files if exist
@@ -401,6 +409,11 @@ public abstract class TableBackupClient {
     }
     BackupSystemTable.deleteSnapshot(conn);
     backupManager.updateBackupInfo(backupInfo);
+
+    // Write the completion marker while still holding the exclusive lock, so a concurrent delete or
+    // merge cannot run before the marker is written and leave a stale marker behind
+    HBackupFileSystem.writeBackupCompleteMarker(conf, backupInfo.getBackupRootDir(),
+      backupInfo.getBackupId());
 
     // Finish active session
     backupManager.finishBackupSession();
