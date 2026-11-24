@@ -402,7 +402,7 @@ public class TestSingleTierTopologyBackedCacheAccessService {
   private static CachePlacementAdmissionPolicy rejectPolicy() {
     CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
     when(policy.selectTier(any(), any(), any(), any()))
-      .thenReturn(TierDecision.single(CacheTier.L1));
+      .thenReturn(TierDecision.single(CacheTier.SINGLE));
     when(policy.shouldAdmit(any(), any(), any(), any(), any(), any()))
       .thenReturn(AdmissionDecision.reject("test rejection"));
     return policy;

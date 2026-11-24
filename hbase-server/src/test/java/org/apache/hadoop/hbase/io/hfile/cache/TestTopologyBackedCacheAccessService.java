@@ -693,6 +693,44 @@ public class TestTopologyBackedCacheAccessService {
     verify(topology).handleEviction(cacheKey, block, l1);
   }
 
+  /**
+   * Verifies that rejection from one selected tier does not prevent insertion into another tier.
+   */
+  @Test
+  void testCacheBlockContinuesToNextTierWhenFirstTierRejects() {
+    BlockCacheKey key = new BlockCacheKey(HFILE_NAME, BLOCK_OFFSET);
+    Cacheable block = mock(Cacheable.class);
+    CacheTopology topology = mock(CacheTopology.class);
+    CacheTopologyView topologyView = mock(CacheTopologyView.class);
+    CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
+    CacheEngine l1 = mock(CacheEngine.class);
+    CacheEngine l2 = mock(CacheEngine.class);
+    CacheWriteContext context = writeContext();
+
+    when(topology.getView()).thenReturn(topologyView);
+    when(topology.getEngine(CacheTier.L1)).thenReturn(Optional.of(l1));
+    when(topology.getEngine(CacheTier.L2)).thenReturn(Optional.of(l2));
+    when(policy.selectTier(key, block, context, topologyView))
+      .thenReturn(TierDecision.multiple(List.of(CacheTier.L1, CacheTier.L2)));
+    when(
+      policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.L1, topologyView))
+      .thenReturn(AdmissionDecision.reject("rejected"));
+    when(
+      policy.shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.L2, topologyView))
+      .thenReturn(AdmissionDecision.admit());
+
+    CacheAccessService service = new TopologyBackedCacheAccessService(topology, policy);
+
+    service.cacheBlock(key, block, context);
+
+    verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.L1,
+      topologyView);
+    verify(policy).shouldAdmit(key, block, context, AdmissionPriority.NORMAL, CacheTier.L2,
+      topologyView);
+    verify(l1, never()).cacheBlock(key, block, true, true);
+    verify(l2).cacheBlock(key, block, true, true);
+  }
+
   private static CacheRequestContext requestContext() {
     return CacheRequestContext.newBuilder().withCaching(true).withRepeat(false)
       .withUpdateCacheMetrics(true).withBlockType(BlockType.DATA).build();
