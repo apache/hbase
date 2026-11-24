@@ -518,10 +518,10 @@ Copyright 2010 FasterXML.com
   </supplement>
 
   <supplement>
-    <project> <!-- hadoop.profile=3.0 from hadoop-3.3.0 -->
+    <project>
       <groupId>org.jline</groupId>
       <artifactId>jline</artifactId>
-      <version>3.9.0</version>
+      <version>3.30.17</version>
       <licenses>
         <license>
           <name>BSD license</name>

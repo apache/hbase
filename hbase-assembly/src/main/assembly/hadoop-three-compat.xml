@@ -75,8 +75,8 @@
         <exclude>io.opentelemetry.semconv:*</exclude>
         <!-- Exclude the opentelemetry agent that goes in the lib/trace directory -->
         <exclude>io.opentelemetry.javaagent:*</exclude>
-        <!-- Exclude jline2 which goes into lib/zk-client. jline3 is a different artifact-->
-        <exclude>jline:jline</exclude>
+        <!-- Exclude jline3 which goes into lib/zkcli. -->
+        <exclude>org.jline:jline</exclude>
         <!-- These two exclusions are added here to preserve previous behaviour, and are not included in sub-directories -->
         <!-- TODO investigate using the provided mechanism for these -->
         <exclude>com.sun.jersey:*</exclude>
@@ -148,8 +148,7 @@
     <dependencySet>
       <outputDirectory>lib/zkcli</outputDirectory>
       <includes>
-        <!-- This is jline2 -->
-        <include>jline:jline</include>
+        <include>org.jline:jline</include>
       </includes>
     </dependencySet>
     <dependencySet>
