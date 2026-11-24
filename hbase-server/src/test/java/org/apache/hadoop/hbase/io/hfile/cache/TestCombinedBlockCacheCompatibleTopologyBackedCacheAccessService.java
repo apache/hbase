@@ -285,7 +285,7 @@ public class TestCombinedBlockCacheCompatibleTopologyBackedCacheAccessService {
 
   private static CachePlacementAdmissionPolicy admitToTiersPolicy(CacheTier... tiers) {
     CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
-    when(policy.shouldAdmit(any(), any(), any(), any(), any()))
+    when(policy.shouldAdmit(any(), any(), any(), any(), any(), any()))
       .thenReturn(AdmissionDecision.admit());
     when(policy.selectTier(any(), any(), any(), any()))
       .thenReturn(TierDecision.multiple(Arrays.asList(tiers)));
@@ -294,7 +294,9 @@ public class TestCombinedBlockCacheCompatibleTopologyBackedCacheAccessService {
 
   private static CachePlacementAdmissionPolicy rejectPolicy() {
     CachePlacementAdmissionPolicy policy = mock(CachePlacementAdmissionPolicy.class);
-    when(policy.shouldAdmit(any(), any(), any(), any(), any()))
+    when(policy.selectTier(any(), any(), any(), any()))
+      .thenReturn(TierDecision.single(CacheTier.L1));
+    when(policy.shouldAdmit(any(), any(), any(), any(), any(), any()))
       .thenReturn(AdmissionDecision.reject("test rejection"));
     return policy;
   }

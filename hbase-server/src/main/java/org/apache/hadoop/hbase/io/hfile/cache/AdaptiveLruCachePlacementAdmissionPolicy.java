@@ -17,8 +17,6 @@
  */
 package org.apache.hadoop.hbase.io.hfile.cache;
 
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Objects;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
@@ -121,29 +119,32 @@ public final class AdaptiveLruCachePlacementAdmissionPolicy
    * @param block        block to cache
    * @param context      cache write context
    * @param priority     admission priority
+   * @param tier         cache tier being evaluated for admission
    * @param topologyView read-only topology view
    * @return admission decision
    */
   @Override
   public AdmissionDecision shouldAdmit(BlockCacheKey cacheKey, Cacheable block,
-    CacheWriteContext context, AdmissionPriority priority, CacheTopologyView topologyView) {
+    CacheWriteContext context, AdmissionPriority priority, CacheTier tier,
+    CacheTopologyView topologyView) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     Objects.requireNonNull(block, "block must not be null");
     Objects.requireNonNull(context, "context must not be null");
     Objects.requireNonNull(priority, "priority must not be null");
+    Objects.requireNonNull(tier, "tier must not be null");
     Objects.requireNonNull(topologyView, "topologyView must not be null");
 
     AdmissionDecision decision =
-      DELEGATE.shouldAdmit(cacheKey, block, context, priority, topologyView);
+      DELEGATE.shouldAdmit(cacheKey, block, context, priority, tier, topologyView);
     if (!decision.isAdmitted()) {
       return decision;
     }
 
     if (
-      topologyView.getType() == CacheTopologyType.SINGLE_TIER
+      (tier == CacheTier.SINGLE || tier == CacheTier.L1)
         && !shouldCacheInFirstLevel(cacheKey, block)
     ) {
-      return AdmissionDecision.reject("Rejected by AdaptiveLRU data-block admission");
+      return AdmissionDecision.reject();
     }
 
     return decision;
@@ -165,27 +166,7 @@ public final class AdaptiveLruCachePlacementAdmissionPolicy
   @Override
   public TierDecision selectTier(BlockCacheKey cacheKey, Cacheable block, CacheWriteContext context,
     CacheTopologyView topologyView) {
-    Objects.requireNonNull(cacheKey, "cacheKey must not be null");
-    Objects.requireNonNull(block, "block must not be null");
-    Objects.requireNonNull(context, "context must not be null");
-    Objects.requireNonNull(topologyView, "topologyView must not be null");
-
-    TierDecision decision = DELEGATE.selectTier(cacheKey, block, context, topologyView);
-
-    if (!decision.getTiers().contains(CacheTier.L1) || shouldCacheInFirstLevel(cacheKey, block)) {
-      return decision;
-    }
-
-    List<CacheTier> tiers = new ArrayList<>();
-    for (CacheTier tier : decision.getTiers()) {
-      if (tier != CacheTier.L1) {
-        tiers.add(tier);
-      }
-    }
-    if (tiers.isEmpty()) {
-      return TierDecision.none();
-    }
-    return TierDecision.multiple(tiers);
+    return DELEGATE.selectTier(cacheKey, block, context, topologyView);
   }
 
   /**

@@ -22,7 +22,6 @@ import java.util.Objects;
 import org.apache.hadoop.hbase.io.hfile.BlockCacheKey;
 import org.apache.hadoop.hbase.io.hfile.BlockType;
 import org.apache.hadoop.hbase.io.hfile.Cacheable;
-import org.apache.hadoop.hbase.io.hfile.HFileBlock;
 import org.apache.yetus.audience.InterfaceAudience;
 
 /**
@@ -42,11 +41,13 @@ public class DefaultHBaseCachePlacementAdmissionPolicy implements CachePlacement
 
   @Override
   public AdmissionDecision shouldAdmit(BlockCacheKey cacheKey, Cacheable block,
-    CacheWriteContext context, AdmissionPriority priority, CacheTopologyView topologyView) {
+    CacheWriteContext context, AdmissionPriority priority, CacheTier tier,
+    CacheTopologyView topologyView) {
     Objects.requireNonNull(cacheKey, "cacheKey must not be null");
     Objects.requireNonNull(block, "block must not be null");
     Objects.requireNonNull(context, "context must not be null");
     Objects.requireNonNull(priority, "priority must not be null");
+    Objects.requireNonNull(tier, "cache tier must not be null");
     Objects.requireNonNull(topologyView, "topologyView must not be null");
 
     return AdmissionDecision.admit();
@@ -134,12 +135,8 @@ public class DefaultHBaseCachePlacementAdmissionPolicy implements CachePlacement
 
   }
 
-  private static boolean isMetaOrIndexBlock(Cacheable block) {
-    if (!(block instanceof HFileBlock)) {
-      return false;
-    }
-
-    BlockType blockType = ((HFileBlock) block).getBlockType();
+  boolean isMetaOrIndexBlock(Cacheable block) {
+    BlockType blockType = block.getBlockType();
     return blockType != null && blockType.getCategory() != BlockType.BlockCategory.DATA;
   }
 }
