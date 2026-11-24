@@ -190,8 +190,9 @@
       <artifactId>hbase-diagnostics</artifactId>
     </dependency>
     <dependency>
-      <groupId>jline</groupId>
+      <groupId>org.jline</groupId>
       <artifactId>jline</artifactId>
+      <classifier>jdk8</classifier>
     </dependency>
     <dependency>
       <groupId>com.sun.xml.ws</groupId>
