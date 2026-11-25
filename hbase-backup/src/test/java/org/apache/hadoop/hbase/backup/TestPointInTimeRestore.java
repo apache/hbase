@@ -252,6 +252,13 @@ public class TestPointInTimeRestore extends TestBackupBase {
     TableName restoredTable1 = TableName.valueOf("restoredSetTable1");
     TableName restoredTable2 = TableName.valueOf("restoredSetTable2");
 
+    int rowCountTable1 = PITRTestUtil.getRowCount(TEST_UTIL, table1);
+    int rowCountTable2 = PITRTestUtil.getRowCount(TEST_UTIL, table2);
+
+    // table2 includes rows written 10 days ago, which a restore to 11 days ago must exclude
+    assertEquals(3099, rowCountTable1, "table1 should contain all rows written up to 15 days ago");
+    assertEquals(1099, rowCountTable2, "table2 should include rows written 10 days ago");
+
     try (BackupSystemTable sysTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
       sysTable.addToBackupSet(setName,
         new String[] { table1.getNameAsString(), table2.getNameAsString() });
@@ -264,10 +271,19 @@ public class TestPointInTimeRestore extends TestBackupBase {
       int ret = ToolRunner.run(conf1, new PointInTimeRestoreDriver(), args);
       assertEquals(0, ret, "Restore using backup set should succeed");
 
+      // Verify the restored tables have row counts from 11 days ago
       assertEquals(3099, PITRTestUtil.getRowCount(TEST_UTIL, restoredTable1),
-        "Restored table1 should have the same row count as the original");
+        "restoredSetTable1 should have table1's row count from 11 days ago "
+          + "(no writes since 15 days ago)");
       assertEquals(599, PITRTestUtil.getRowCount(TEST_UTIL, restoredTable2),
-        "Restored table2 should have the same row count as the original");
+        "restoredSetTable2 should exclude data written less than 11 days ago");
+
+      // Verify the row count for each original table is unchanged because PITR restored to new
+      // tables
+      assertEquals(rowCountTable1, PITRTestUtil.getRowCount(TEST_UTIL, table1),
+        "table1 row count should be unchanged after PITR");
+      assertEquals(rowCountTable2, PITRTestUtil.getRowCount(TEST_UTIL, table2),
+        "table2 row count should be unchanged after PITR");
     } finally {
       try (BackupSystemTable sysTable = new BackupSystemTable(TEST_UTIL.getConnection())) {
         sysTable.deleteBackupSet(setName);
