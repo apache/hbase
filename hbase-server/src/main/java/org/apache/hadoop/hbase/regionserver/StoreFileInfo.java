@@ -378,6 +378,8 @@ public class StoreFileInfo implements Configurable {
       // HFileLink
       in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
       FileStatus linkStatus = this.link.getFileStatus(fs);
+      // An HFileLink reference reads the physical linked HFile, but retains the reference path as
+      // its logical reader identity, preserving the existing behavior for every reference type.
       readerPath = this.reference != null ? this.getPath() : linkStatus.getPath();
       length = linkStatus.getLen();
     } else if (this.reference != null) {

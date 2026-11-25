@@ -256,6 +256,26 @@ public class TestStoreFileInfo {
   }
 
   @Test
+  public void testHFileLinkReferenceRetainsReferencePathInReaderContext() throws IOException {
+    Path dir = TEST_UTIL.getDataTestDirOnTestFS("hfile-link-reference-reader-path");
+    Path linkedFile = createPlainHFileOnTestFs(new Path(dir, "linked"));
+    Path missing = new Path(dir, "missing");
+    HFileLink link = new HFileLink(linkedFile, new Path(missing, "tmp"), new Path(missing, "mob"),
+      new Path(missing, "archive"));
+    Path referencePath = new Path(dir, "table=region-" + PLAIN_HFILE_NAME + ".abcd");
+    Reference reference = Reference.createBottomReference(HConstants.EMPTY_START_ROW);
+    StoreFileInfo info = new StoreFileInfo(TEST_UTIL.getConfiguration(),
+      TEST_UTIL.getTestFileSystem(), 0, referencePath, 0, reference, link, true);
+
+    ReaderContext context =
+      info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
+    assertEquals(referencePath, context.getFilePath(),
+      "HFileLink reference should retain its logical reference path");
+    assertEquals(128, context.getFileSize());
+    context.getInputStreamWrapper().close();
+  }
+
+  @Test
   public void testOpenErrorMessageReference() throws IOException {
     // Test file link exception
     // Try to open nonsense hfilelink. Make sure exception is from HFileLink.
