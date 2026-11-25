@@ -11,7 +11,7 @@ This is the default mode. Standalone mode is what is described in the [quickstar
 
 ### Standalone HBase over HDFS
 
-A sometimes useful variation on standalone hbase has all daemons running inside the one JVM but rather than persist to the local filesystem, instead they persist to an HDFS instance.
+A sometimes useful variation on standalone HBase has all daemons running inside the one JVM but rather than persist to the local filesystem, instead they persist to an HDFS instance.
 
 You might consider this profile when you are intent on a simple deploy profile, the loading is light, but the data must persist across node comings and goings. Writing to HDFS where data is replicated ensures the latter.
 

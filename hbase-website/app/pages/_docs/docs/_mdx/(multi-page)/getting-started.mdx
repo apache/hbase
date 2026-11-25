@@ -1,6 +1,6 @@
 ---
 title: "Getting Started"
-description: "Quick start to get you up and run a single-node, standalone instance of HBase."
+description: "Quick start to get you up and running with a single-node, standalone instance of HBase."
 ---
 
 ## Quick Start - Standalone HBase
@@ -252,7 +252,7 @@ After issuing the command, it can take several minutes for the processes to shut
 
 </Steps>
 
-The above has shown you how to start and stop a standalone instance of HBase. In the next sections we give a quick overview of other modes of hbase deploy.
+The above has shown you how to start and stop a standalone instance of HBase. In the next sections we give a quick overview of other modes of HBase deploy.
 
 ## Pseudo-Distributed for Local Testing
 
@@ -394,7 +394,7 @@ You can stop HBase the same way as in the [quickstart](/docs/getting-started#qui
 
 ## Fully Distributed for Production
 
-In reality, you need a fully-distributed configuration to fully test HBase and to use it in real-world scenarios. In a distributed configuration, the cluster contains multiple nodes, each of which runs one or more HBase daemon. These include primary and backup Master instances, multiple ZooKeeper nodes, and multiple RegionServer nodes.
+In reality, you need a fully-distributed configuration to fully test HBase and to use it in real-world scenarios. In a distributed configuration, the cluster contains multiple nodes, each of which runs one or more HBase daemons. These include primary and backup Master instances, multiple ZooKeeper nodes, and multiple RegionServer nodes.
 
 This advanced quickstart adds two more nodes to your cluster. The architecture will be as follows:
 
@@ -424,7 +424,7 @@ This quickstart assumes that each node is a virtual machine and that they are al
 
 #### On `node-a`, generate a key pair
 
-While logged in as the user who will run HBase, generate a SSH key pair, using the following command:
+While logged in as the user who will run HBase, generate an SSH key pair, using the following command:
 
 ```bash
 ssh-keygen -t rsa
@@ -480,7 +480,7 @@ Since `node-b` will run a backup Master, repeat the procedure above, substitutin
 
 Edit _conf/regionservers_ and remove the line which contains `localhost`. Add lines with the hostnames or IP addresses for `node-b` and `node-c`.
 
-Even if you did want to run a RegionServer on `node-a`, you should refer to it by the hostname the other servers would use to communicate with it. In this case, that would be `node-a.example.com`. This enables you to distribute the configuration to each node of your cluster any hostname conflicts. Save the file.
+Even if you did want to run a RegionServer on `node-a`, you should refer to it by the hostname the other servers would use to communicate with it. In this case, that would be `node-a.example.com`. This enables you to distribute the configuration to each node of your cluster without any hostname conflicts. Save the file.
 
 </Step>
 
