@@ -107,18 +107,14 @@ public class StoreFileInfo implements Configurable {
 
   private long size;
 
-  /**
-   * Cached {@link FileStatus} for plain HFiles (not links or references). Populated at
-   * construction, synthesized from known size for reader open, or refreshed from the filesystem for
-   * block locality.
-   */
+  /** Cached filesystem-provided {@link FileStatus} for plain HFiles (not links or references). */
   private FileStatus plainHFileStatus;
 
   /**
-   * When true, {@link #plainHFileStatus} was inferred from size/mtime only and must be refreshed
-   * from the filesystem before {@link FSUtils#computeHDFSBlocksDistribution}.
+   * Synthetic {@link FileStatus} built from known metadata for opening a plain HFile without
+   * another filesystem metadata lookup. It must not be used for block locality.
    */
-  private boolean plainHFileStatusNeedsRefresh;
+  private FileStatus plainHFileStatusForOpen;
 
   private final boolean primaryReplica;
 
@@ -165,13 +161,11 @@ public class StoreFileInfo implements Configurable {
         this.createdTimestamp = fileStatus.getModificationTime();
         this.size = fileStatus.getLen();
         this.plainHFileStatus = fileStatus;
-        this.plainHFileStatusNeedsRefresh = false;
       } else {
         FileStatus fStatus = fs.getFileStatus(initialPath);
         this.createdTimestamp = fStatus.getModificationTime();
         this.size = fStatus.getLen();
         this.plainHFileStatus = fStatus;
-        this.plainHFileStatusNeedsRefresh = false;
       }
       this.reference = null;
       this.link = null;
@@ -301,9 +295,8 @@ public class StoreFileInfo implements Configurable {
       this.conf.getBoolean(STORE_FILE_READER_NO_READAHEAD, DEFAULT_STORE_FILE_READER_NO_READAHEAD);
     if (listedPlainHFileStatus != null && isPlainHFile()) {
       this.plainHFileStatus = listedPlainHFileStatus;
-      this.plainHFileStatusNeedsRefresh = false;
     } else {
-      initPlainHFileStatusFromKnownSize();
+      initPlainHFileStatusForOpenFromKnownSize();
     }
   }
 
@@ -430,8 +423,10 @@ public class StoreFileInfo implements Configurable {
     if (plainHFileStatus != null) {
       return plainHFileStatus;
     }
+    if (plainHFileStatusForOpen != null) {
+      return plainHFileStatusForOpen;
+    }
     plainHFileStatus = fs.getFileStatus(initialPath);
-    plainHFileStatusNeedsRefresh = false;
     if (size <= 0) {
       size = plainHFileStatus.getLen();
     }
@@ -442,14 +437,16 @@ public class StoreFileInfo implements Configurable {
    * When the tracker registers a plain HFile with known size but no {@link FileStatus}, build a
    * status sufficient for {@link FSUtils#openForRead} to skip redundant file metadata RPCs.
    */
-  private void initPlainHFileStatusFromKnownSize() {
-    if (!isPlainHFile() || plainHFileStatus != null || size <= 0 || initialPath == null) {
+  private void initPlainHFileStatusForOpenFromKnownSize() {
+    if (
+      !isPlainHFile() || plainHFileStatus != null || plainHFileStatusForOpen != null || size <= 0
+        || initialPath == null
+    ) {
       return;
     }
     Path pathForOpen = fs.makeQualified(initialPath);
-    plainHFileStatus =
+    plainHFileStatusForOpen =
       new FileStatus(size, false, 1, HConstants.DEFAULT_BLOCKSIZE, createdTimestamp, pathForOpen);
-    plainHFileStatusNeedsRefresh = true;
   }
 
   /**
@@ -524,12 +521,12 @@ public class StoreFileInfo implements Configurable {
         }
         throw exToThrow;
       } else {
-        if (plainHFileStatus != null && !plainHFileStatusNeedsRefresh) {
+        if (plainHFileStatus != null) {
           return plainHFileStatus;
         }
         status = fs.getFileStatus(initialPath);
         plainHFileStatus = status;
-        plainHFileStatusNeedsRefresh = false;
+        plainHFileStatusForOpen = null;
       }
     }
     return status;
