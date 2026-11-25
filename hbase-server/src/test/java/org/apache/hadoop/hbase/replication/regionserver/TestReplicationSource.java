@@ -48,6 +48,7 @@ import org.apache.hadoop.hbase.KeyValue;
 import org.apache.hadoop.hbase.MiniHBaseCluster;
 import org.apache.hadoop.hbase.Server;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.StartMiniClusterOption;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.Waiter;
 import org.apache.hadoop.hbase.client.Admin;
@@ -106,9 +107,11 @@ public class TestReplicationSource {
 
   @AfterAll
   public static void tearDownAfterClass() throws Exception {
-    TEST_UTIL_PEER.shutdownMiniHBaseCluster();
-    TEST_UTIL.shutdownMiniHBaseCluster();
-    TEST_UTIL.shutdownMiniDFSCluster();
+    try {
+      TEST_UTIL_PEER.shutdownMiniCluster();
+    } finally {
+      TEST_UTIL.shutdownMiniCluster();
+    }
   }
 
   /**
@@ -304,13 +307,15 @@ public class TestReplicationSource {
    */
   @Test
   public void testServerShutdownRecoveredQueue() throws Exception {
+    Configuration originalConf = new Configuration(conf);
     try {
       // Ensure single-threaded WAL
       conf.set("hbase.wal.provider", "defaultProvider");
       conf.setInt("replication.sleep.before.failover", 2000);
       // Introduces a delay in regionserver shutdown to give the race condition a chance to kick in.
       conf.set(HConstants.REGION_SERVER_IMPL, ShutdownDelayRegionServer.class.getName());
-      MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(2);
+      MiniHBaseCluster cluster = TEST_UTIL.startMiniCluster(
+        StartMiniClusterOption.builder().numRegionServers(2).createRootDir(true).build());
       TEST_UTIL_PEER.startMiniCluster(1);
 
       HRegionServer serverA = cluster.getRegionServer(0);
@@ -370,7 +375,15 @@ public class TestReplicationSource {
       Waiter.waitFor(conf, 20000,
         (Waiter.Predicate<Exception>) () -> managerC.getOldSources().size() == 0);
     } finally {
-      conf.set(HConstants.REGION_SERVER_IMPL, HRegionServer.class.getName());
+      for (String key : new String[] { "hbase.wal.provider", "replication.sleep.before.failover",
+        HConstants.REGION_SERVER_IMPL }) {
+        String value = originalConf.get(key);
+        if (value != null) {
+          conf.set(key, value);
+        } else {
+          conf.unset(key);
+        }
+      }
     }
   }
 
