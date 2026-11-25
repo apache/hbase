@@ -401,6 +401,8 @@ public class StoreFileInfo implements Configurable {
         throw newFnfe;
       }
       FileStatus refStatus = fs.getFileStatus(referencePath);
+      // Use the "referenced to" HFile for its physical length, while retaining the reference path
+      // as the logical reader identity, preserving the existing behavior.
       readerPath = this.getPath();
       length = refStatus.getLen();
     } else {
