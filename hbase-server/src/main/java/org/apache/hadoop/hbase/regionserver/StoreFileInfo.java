@@ -378,7 +378,7 @@ public class StoreFileInfo implements Configurable {
       // HFileLink
       in = new FSDataInputStreamWrapper(fs, this.link, doDropBehind, readahead);
       FileStatus linkStatus = this.link.getFileStatus(fs);
-      readerPath = linkStatus.getPath();
+      readerPath = this.reference != null ? this.getPath() : linkStatus.getPath();
       length = linkStatus.getLen();
     } else if (this.reference != null) {
       // HFile Reference

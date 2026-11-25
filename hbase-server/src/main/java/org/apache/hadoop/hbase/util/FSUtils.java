@@ -247,6 +247,16 @@ public final class FSUtils {
             .initCause(e);
         }
       } catch (UnsupportedOperationException | ExecutionException e) {
+        if (
+          e instanceof ExecutionException
+            && !(e.getCause() instanceof UnsupportedOperationException)
+        ) {
+          Throwable cause = e.getCause();
+          if (cause instanceof IOException) {
+            throw (IOException) cause;
+          }
+          throw new IOException("Failed opening " + path, cause);
+        }
         if (LOG.isDebugEnabled()) {
           LOG.debug("openFile().withFileStatus() not supported or failed for {}, "
             + "fail back with open()", fs.getUri(), e);
