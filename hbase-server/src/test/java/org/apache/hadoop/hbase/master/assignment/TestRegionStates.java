@@ -17,7 +17,11 @@
  */
 package org.apache.hadoop.hbase.master.assignment;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.util.List;
 import java.util.concurrent.Callable;
@@ -26,6 +30,7 @@ import java.util.concurrent.Future;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import org.apache.hadoop.hbase.HBaseTestingUtil;
+import org.apache.hadoop.hbase.ServerName;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.RegionInfo;
 import org.apache.hadoop.hbase.client.RegionInfoBuilder;
@@ -207,5 +212,61 @@ public class TestRegionStates {
     long et = EnvironmentEdgeManager.currentTime();
     LOG.info(String.format("PERF SingleThread: %s %s/sec", StringUtils.humanTimeDiff(et - st),
       StringUtils.humanSize(NRUNS / ((et - st) / 1000.0f))));
+  }
+
+  // ==========================================================================
+  // HBASE-28659: NPE in setServerState when the ServerStateNode is missing
+  // ==========================================================================
+
+  /**
+   * Regression test for HBASE-28659. After a Master restart, the serverMap inside RegionStates is
+   * rebuilt only for the "live" servers (RegionServerTracker#upgrade -> createServer) and for
+   * servers that re-register / are loaded from meta. A ServerCrashProcedure that was persisted
+   * before the restart resumes for the *old* crashed ServerName, but no ServerStateNode was ever
+   * recreated for it. When the resumed SCP reaches SERVER_CRASH_SPLIT_LOGS it calls
+   * {@link RegionStates#logSplitting(ServerName)} -> setServerState -> getServerNode, which returns
+   * null. Before the fix, {@code synchronized (serverNode)} threw NPE (failing the SCP and
+   * triggering an unsupported rollback). After the fix, setServerState recreates the missing node
+   * (these helpers only ever run for a crashed server inside an SCP), so the split helpers proceed
+   * without throwing and the state is recorded.
+   */
+  @Test
+  public void testLogSplittingCreatesNodeWhenServerNodeMissing() {
+    final RegionStates stateMap = new RegionStates();
+    // The crashed server from the JIRA log: hregion1,16020,1715424228375
+    final ServerName crashedServer = ServerName.valueOf("hregion1", 16020, 1715424228375L);
+
+    // Simulate the post-restart state: the ServerStateNode for the crashed server was never
+    // recreated (it was not in liveServersBeforeRestart and the RS came back with a new startcode).
+    assertNull(stateMap.getServerNode(crashedServer),
+      "precondition: no ServerStateNode should exist for the crashed server after restart");
+
+    // The resumed SCP advances through the split states. None of these should throw now; the node
+    // is recreated on demand. Exercise every entry point into setServerState.
+    assertDoesNotThrow(() -> stateMap.metaLogSplitting(crashedServer));
+    assertDoesNotThrow(() -> stateMap.metaLogSplit(crashedServer));
+    assertDoesNotThrow(() -> stateMap.logSplitting(crashedServer));
+    assertDoesNotThrow(() -> stateMap.logSplit(crashedServer));
+
+    // The node was recreated and reflects the last split state set above.
+    ServerStateNode serverNode = stateMap.getServerNode(crashedServer);
+    assertNotNull(serverNode, "the ServerStateNode should be recreated by setServerState");
+    assertTrue(serverNode.isInState(ServerState.OFFLINE));
+  }
+
+  /**
+   * Sanity check / contrast: when the ServerStateNode exists (the normal case, where the RS
+   * registered and createServer was called), logSplitting works without throwing.
+   */
+  @Test
+  public void testLogSplittingOkWhenServerNodePresent() {
+    final RegionStates stateMap = new RegionStates();
+    final ServerName crashedServer = ServerName.valueOf("hregion1", 16020, 1715424228375L);
+
+    stateMap.createServer(crashedServer);
+    assertNotNull(stateMap.getServerNode(crashedServer));
+
+    // Should not throw now that the ServerStateNode exists.
+    stateMap.logSplitting(crashedServer);
   }
 }
