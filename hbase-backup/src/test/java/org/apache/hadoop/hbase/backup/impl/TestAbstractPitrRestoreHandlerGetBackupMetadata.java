@@ -55,14 +55,13 @@ abstract class TestAbstractPitrRestoreHandlerGetBackupMetadata {
     return info;
   }
 
-  protected abstract List<PitrBackupMetadata> callGetBackupMetadataWithBackupStates(
-    BackupState... states) throws IOException;
+  protected abstract List<PitrBackupMetadata>
+    callGetBackupMetadataWithBackupStates(BackupState... states) throws IOException;
 
   @Test
   void testGetBackupMetadataFiltersNonCompleteBackups() throws IOException {
-    List<PitrBackupMetadata> result =
-      callGetBackupMetadataWithBackupStates(BackupState.COMPLETE, BackupState.FAILED,
-        BackupState.RUNNING);
+    List<PitrBackupMetadata> result = callGetBackupMetadataWithBackupStates(BackupState.COMPLETE,
+      BackupState.FAILED, BackupState.RUNNING);
 
     assertEquals(1, result.size());
     assertEquals("backup_0", result.get(0).getBackupId());
@@ -70,8 +69,7 @@ abstract class TestAbstractPitrRestoreHandlerGetBackupMetadata {
 
   @Test
   void testGetBackupMetadataReturnsEmptyWhenNoCompleteBackups() throws IOException {
-    List<PitrBackupMetadata> result =
-      callGetBackupMetadataWithBackupStates(BackupState.RUNNING);
+    List<PitrBackupMetadata> result = callGetBackupMetadataWithBackupStates(BackupState.RUNNING);
 
     assertTrue(result.isEmpty());
   }

@@ -34,8 +34,7 @@ import org.junit.jupiter.api.Tag;
 import org.mockito.MockedConstruction;
 
 @Tag(SmallTests.TAG)
-public class TestDefaultPitrRestoreHandler
-  extends TestAbstractPitrRestoreHandlerGetBackupMetadata {
+public class TestDefaultPitrRestoreHandler extends TestAbstractPitrRestoreHandlerGetBackupMetadata {
 
   @Override
   protected List<PitrBackupMetadata> callGetBackupMetadataWithBackupStates(BackupState... states)
@@ -47,15 +46,14 @@ public class TestDefaultPitrRestoreHandler
       allInfos.add(info);
     }
 
-    try (
-      MockedConstruction<BackupSystemTable> mockedConstruction =
-        mockConstruction(BackupSystemTable.class, (mockSysTable, context) -> {
-          when(mockSysTable.getBackupHistory(any())).thenAnswer(invocation -> {
-            Predicate<BackupInfo> combined = Arrays.stream(invocation.getArguments())
-              .map(arg -> (Predicate<BackupInfo>) arg).reduce(Predicate::and).orElse(x -> true);
-            return allInfos.stream().filter(combined).collect(Collectors.toList());
-          });
-        })) {
+    try (MockedConstruction<BackupSystemTable> mockedConstruction =
+      mockConstruction(BackupSystemTable.class, (mockSysTable, context) -> {
+        when(mockSysTable.getBackupHistory(any())).thenAnswer(invocation -> {
+          Predicate<BackupInfo> combined = Arrays.stream(invocation.getArguments())
+            .map(arg -> (Predicate<BackupInfo>) arg).reduce(Predicate::and).orElse(x -> true);
+          return allInfos.stream().filter(combined).collect(Collectors.toList());
+        });
+      })) {
       DefaultPitrRestoreHandler handler = new DefaultPitrRestoreHandler(mockConn, request);
       return handler.getBackupMetadata(request);
     }
