@@ -3618,6 +3618,11 @@
                 <groupId>org.slf4j</groupId>
                 <artifactId>slf4j-reload4j</artifactId>
               </exclusion>
+              <exclusion>
+                <!-- jline comes in via hadoop-yarn-client; we ship our own jline -->
+                <groupId>org.jline</groupId>
+                <artifactId>jline</artifactId>
+              </exclusion>
             </exclusions>
           </dependency>
           <dependency>
