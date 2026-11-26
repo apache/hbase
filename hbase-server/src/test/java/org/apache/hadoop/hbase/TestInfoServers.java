@@ -122,6 +122,20 @@ public class TestInfoServers {
       new URL("http://localhost:" + port + "/table.jsp?name=" + tableName), "Actions:");
   }
 
+  @Test
+  public void testHbckAndOperationDetailsReadOnly() throws Exception {
+    int port = UTIL.getHBaseCluster().getMaster().getInfoServer().getPort();
+    URL hbckUrl = new URL("http://localhost:" + port + "/hbck.jsp");
+    assertContainsContent(hbckUrl,
+      "This master UI is read-only or you are not authorized to modify it");
+    assertContainsContent(hbckUrl, "No Report created.");
+    assertDoesNotContainContent(hbckUrl, "alert-danger");
+    assertDoesNotContainContent(hbckUrl, "Insufficient permissions");
+    URL operationDetailsUrl = new URL("http://localhost:" + port + "/operationDetails.jsp");
+    assertContainsContent(operationDetailsUrl, "Operations Details");
+    assertDoesNotContainContent(operationDetailsUrl, "Insufficient permissions");
+  }
+
   private void assertContainsContent(final URL u, final String expected) throws IOException {
     LOG.info("Testing " + u.toString() + " has " + expected);
     String content = getUrlContent(u);

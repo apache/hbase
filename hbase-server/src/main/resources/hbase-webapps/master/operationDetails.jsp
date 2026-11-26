@@ -18,28 +18,45 @@
  */
 --%>
 <%@ page contentType="text/html;charset=UTF-8"
-  import="java.util.Date"
+  import="java.util.Collections"
   import="java.util.List"
-  import="org.apache.hadoop.conf.Configuration"
-  import="org.apache.hadoop.hbase.client.Admin"
   import="org.apache.hadoop.hbase.master.HMaster"
   import="org.apache.hadoop.util.StringUtils"
-  import="org.apache.hadoop.hbase.client.ServerType"
-  import="org.apache.hadoop.hbase.client.LogEntry"
-  import="org.apache.hadoop.hbase.client.BalancerRejection"
-  import="org.apache.hadoop.hbase.client.BalancerDecision"
+  import="org.apache.hadoop.hbase.namequeues.BalancerDecisionDetails"
+  import="org.apache.hadoop.hbase.namequeues.BalancerRejectionDetails"
+  import="org.apache.hadoop.hbase.namequeues.NamedQueueRecorder"
+  import="org.apache.hadoop.hbase.namequeues.request.NamedQueueGetRequest"
+  import="org.apache.hadoop.hbase.namequeues.response.NamedQueueGetResponse"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.MasterProtos"
+  import="org.apache.hadoop.hbase.shaded.protobuf.generated.RecentLogs"
 %>
 <%
   HMaster master = (HMaster)getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master Operation Details: " + master.getServerName());
-  Configuration conf = master.getConfiguration();
+  List<RecentLogs.BalancerRejection> logList = Collections.emptyList();
+  List<RecentLogs.BalancerDecision> decisionList = Collections.emptyList();
+  if (master.isInitialized()) {
+    NamedQueueRecorder namedQueueRecorder = master.getNamedQueueRecorder();
+    if (namedQueueRecorder != null) {
+      NamedQueueGetRequest rejectionRequest = new NamedQueueGetRequest();
+      rejectionRequest.setNamedQueueEvent(BalancerRejectionDetails.BALANCER_REJECTION_EVENT);
+      rejectionRequest.setBalancerRejectionsRequest(
+        MasterProtos.BalancerRejectionsRequest.newBuilder().setLimit(250).build());
+      NamedQueueGetResponse rejectionResponse =
+        namedQueueRecorder.getNamedQueueRecords(rejectionRequest);
+      if (rejectionResponse != null && rejectionResponse.getBalancerRejections() != null) {
+        logList = rejectionResponse.getBalancerRejections();
+      }
 
-  List<BalancerRejection> logList = null;
-  List<BalancerDecision> decisionList = null;
-  if(master.isInitialized()) {
-    try (Admin admin = master.getConnection().getAdmin()) {
-      logList = (List<BalancerRejection>)(List<?>)admin.getLogEntries(null, "BALANCER_REJECTION", ServerType.MASTER, 250, null);
-      decisionList = (List<BalancerDecision>)(List<?>)admin.getLogEntries(null, "BALANCER_DECISION", ServerType.MASTER, 250, null);
+      NamedQueueGetRequest decisionRequest = new NamedQueueGetRequest();
+      decisionRequest.setNamedQueueEvent(BalancerDecisionDetails.BALANCER_DECISION_EVENT);
+      decisionRequest.setBalancerDecisionsRequest(
+        MasterProtos.BalancerDecisionsRequest.newBuilder().setLimit(250).build());
+      NamedQueueGetResponse decisionResponse =
+        namedQueueRecorder.getNamedQueueRecords(decisionRequest);
+      if (decisionResponse != null && decisionResponse.getBalancerDecisions() != null) {
+        decisionList = decisionResponse.getBalancerDecisions();
+      }
     }
   }
 %>
@@ -74,9 +91,7 @@
             <th>Reason</th>
             <th>CostFunctions Details</th>
           </tr>
-          <% if (logList == null) { %>
-          <% } else { %>
-            <% for (BalancerRejection entry: logList) {  %>
+            <% for (RecentLogs.BalancerRejection entry: logList) {  %>
               <tr>
                 <td><%=entry.getReason()%></td>
                 <td>
@@ -91,7 +106,6 @@
                 </td>
               </tr>
             <% } %>
-          <% } %>
           </table>
       </div>
       <div class="tab-pane" id="tab_named_queue2" role="tabpanel">
@@ -105,9 +119,7 @@
               <th>Computed Steps</th>
               <th>Region Plans</th>
             </tr>
-            <% if (decisionList == null) { %>
-            <% } else { %>
-              <% for (BalancerDecision decision: decisionList) {  %>
+              <% for (RecentLogs.BalancerDecision decision: decisionList) {  %>
                 <tr>
                   <td><%=decision.getInitialFunctionCosts()%></td>
                   <td><%=decision.getFinalFunctionCosts()%></td>
@@ -115,10 +127,10 @@
                   <td><%=StringUtils.format("%.2f", decision.getComputedTotalCost())%></td>
                   <td><%=decision.getComputedSteps()%></td>
                   <%
-                  List<String> regionPlans = decision.getRegionPlans();
-                  if ( regionPlans == null) {%>
+                  List<String> regionPlans = decision.getRegionPlansList();
+                  if (regionPlans == null || regionPlans.isEmpty()) { %>
                     <td></td>
-                  <% }  else { %>
+                  <% } else { %>
                     <td>
                     <table>
                     <% for (String plan : regionPlans) { %>
@@ -129,7 +141,7 @@
                   <% } %>
                 </tr>
               <% } %>
-            <% } %>
+          </table>
         </div>
       </div>
   </div>
