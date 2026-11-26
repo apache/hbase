@@ -132,6 +132,7 @@ public class ServerManager implements ConfigurationObserver {
                                                                                            // hours
 
   public static final String MAX_CLOCK_SKEW_MS = "hbase.master.maxclockskew";
+  public static final long DEFAULT_MAX_CLOCK_SKEW_MS = 30000;
 
   private static final Logger LOG = LoggerFactory.getLogger(ServerManager.class);
 
@@ -185,7 +186,7 @@ public class ServerManager implements ConfigurationObserver {
     this.master = master;
     this.storage = storage;
     Configuration c = master.getConfiguration();
-    maxSkew = c.getLong(MAX_CLOCK_SKEW_MS, 30000);
+    maxSkew = c.getLong(MAX_CLOCK_SKEW_MS, DEFAULT_MAX_CLOCK_SKEW_MS);
     warningSkew = c.getLong("hbase.master.warningclockskew", 10000);
     persistFlushedSequenceId =
       c.getBoolean(PERSIST_FLUSHEDSEQUENCEID, PERSIST_FLUSHEDSEQUENCEID_DEFAULT);
