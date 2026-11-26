@@ -528,6 +528,19 @@ public final class BackupSystemTable implements Closeable {
     }
   }
 
+  /**
+   * Returns whether the backup exclusive operation lock is held. The lock does not record its
+   * owner, so this does not say which operation holds it, or whether that operation is still
+   * running.
+   */
+  public boolean isBackupExclusiveOperationActive() throws IOException {
+    try (Table table = connection.getTable(tableName)) {
+      Result result =
+        table.get(new Get(ACTIVE_SESSION_ROW).addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_COL));
+      return Bytes.equals(ACTIVE_SESSION_YES, result.getValue(SESSIONS_FAMILY, ACTIVE_SESSION_COL));
+    }
+  }
+
   private Put createPutForStopBackupSession() {
     Put put = new Put(ACTIVE_SESSION_ROW);
     put.addColumn(SESSIONS_FAMILY, ACTIVE_SESSION_COL, ACTIVE_SESSION_NO);
