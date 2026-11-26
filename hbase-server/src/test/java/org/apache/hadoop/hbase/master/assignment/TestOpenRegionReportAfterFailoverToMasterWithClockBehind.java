@@ -33,6 +33,7 @@ import org.apache.hadoop.hbase.master.HMaster;
 import org.apache.hadoop.hbase.master.MasterServices;
 import org.apache.hadoop.hbase.master.RegionPlan;
 import org.apache.hadoop.hbase.master.RegionState;
+import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.procedure2.ProcedureExecutor;
@@ -134,6 +135,9 @@ public class TestOpenRegionReportAfterFailoverToMasterWithClockBehind {
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
     conf.setClass(HConstants.MASTER_IMPL, HMasterForTest.class, HMaster.class);
+    // the skew below is more than the time between the two masters becoming active, which is
+    // longer than the default max clock skew on a slow test machine
+    conf.setLong(ServerManager.MAX_CLOCK_SKEW_MS, 10 * 60 * 1000);
     UTIL.startMiniCluster(
       StartTestingClusterOption.builder().numMasters(2).numRegionServers(2).build());
     UTIL.createTable(NAME, CF);

@@ -19,7 +19,9 @@ package org.apache.hadoop.hbase.master;
 
 import static org.apache.hadoop.hbase.master.region.MasterRegionFactory.STATE_FAMILY;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.client.Put;
 import org.apache.hadoop.hbase.testclassification.MasterTests;
 import org.apache.hadoop.hbase.testclassification.MediumTests;
@@ -32,6 +34,8 @@ import org.junit.jupiter.api.Test;
 @Tag(MediumTests.TAG)
 public class TestMasterActiveTimeStore extends MasterStateStoreTestBase {
 
+  private static final long MAX_SKEW = 30_000;
+
   @AfterEach
   public void tearDown() throws Exception {
     cleanup();
@@ -39,30 +43,41 @@ public class TestMasterActiveTimeStore extends MasterStateStoreTestBase {
 
   @Test
   public void testFirstActiveMasterUsesItsClock() throws Exception {
-    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000));
+    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000, MAX_SKEW));
   }
 
   @Test
   public void testActiveTimeIncreasesWhenClockIsBehind() throws Exception {
-    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000));
+    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000, MAX_SKEW));
     // the next active master's clock is behind the previous one's
-    assertEquals(1001, new MasterActiveTimeStore(REGION).advance(900));
+    assertEquals(1001, new MasterActiveTimeStore(REGION).advance(900, MAX_SKEW));
     // the same time as the last active time
-    assertEquals(1002, new MasterActiveTimeStore(REGION).advance(1001));
+    assertEquals(1002, new MasterActiveTimeStore(REGION).advance(1001, MAX_SKEW));
   }
 
   @Test
   public void testActiveTimeFollowsClockWhenAhead() throws Exception {
-    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000));
-    assertEquals(5000, new MasterActiveTimeStore(REGION).advance(5000));
-    assertEquals(5001, new MasterActiveTimeStore(REGION).advance(4000));
+    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000, MAX_SKEW));
+    assertEquals(5000, new MasterActiveTimeStore(REGION).advance(5000, MAX_SKEW));
+    assertEquals(5001, new MasterActiveTimeStore(REGION).advance(4000, MAX_SKEW));
+  }
+
+  @Test
+  public void testFailsWhenClockIsBehindByMoreThanMaxSkew() throws Exception {
+    assertEquals(100_000, new MasterActiveTimeStore(REGION).advance(100_000, MAX_SKEW));
+    // exactly the max skew behind is still allowed
+    assertEquals(100_001, new MasterActiveTimeStore(REGION).advance(70_000, MAX_SKEW));
+    // more than the max skew behind the last active time fails, and stores nothing
+    assertThrows(ClockOutOfSyncException.class,
+      () -> new MasterActiveTimeStore(REGION).advance(70_000, MAX_SKEW));
+    assertEquals(100_002, new MasterActiveTimeStore(REGION).advance(100_000, MAX_SKEW));
   }
 
   @Test
   public void testMalformedValueIsIgnored() throws Exception {
     REGION.update(r -> r.put(new Put(Bytes.toBytes(MasterActiveTimeStore.STATE_NAME))
       .addColumn(STATE_FAMILY, Bytes.toBytes("d"), new byte[3])));
-    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000));
-    assertEquals(1001, new MasterActiveTimeStore(REGION).advance(900));
+    assertEquals(1000, new MasterActiveTimeStore(REGION).advance(1000, MAX_SKEW));
+    assertEquals(1001, new MasterActiveTimeStore(REGION).advance(900, MAX_SKEW));
   }
 }

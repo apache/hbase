@@ -1046,7 +1046,8 @@ public class HMaster extends HBaseServerBase<MasterRpcServices> implements Maste
     // The active time is sent with remote procedures and must be greater than that of every earlier
     // active master, see MasterActiveTimeStore. Opening the master local region has fenced off the
     // earlier active master, and no remote procedure has been sent yet.
-    this.masterActiveTime = new MasterActiveTimeStore(masterRegion).advance(masterActiveTime);
+    this.masterActiveTime = new MasterActiveTimeStore(masterRegion).advance(masterActiveTime,
+      conf.getLong(ServerManager.MAX_CLOCK_SKEW_MS, ServerManager.DEFAULT_MAX_CLOCK_SKEW_MS));
 
     // Initialize the ServerManager and register it as a configuration observer
     this.serverManager = createServerManager(this, rsListStorage);

@@ -19,6 +19,7 @@ package org.apache.hadoop.hbase.master;
 
 import java.io.IOException;
 import java.time.Instant;
+import org.apache.hadoop.hbase.ClockOutOfSyncException;
 import org.apache.hadoop.hbase.master.region.MasterRegion;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -54,18 +55,31 @@ public class MasterActiveTimeStore extends MasterStateStore {
    * last stored active time, or else the last stored active time plus one. The returned time is
    * stored before returning.
    * <p/>
+   * If the last stored active time is ahead of the given time by more than {@code maxClockSkewMs},
+   * the clocks of the masters are too far apart to continue, and this throws
+   * {@link ClockOutOfSyncException} without storing anything.
+   * <p/>
    * Must only be called by the active master, after the master local region has been opened, so
    * that an earlier active master can no longer update the stored time.
-   * @param now the current time of this master
+   * @param now            the current time of this master
+   * @param maxClockSkewMs how far the last stored active time may be ahead of {@code now}
    * @return the active time of this master
+   * @throws ClockOutOfSyncException if the last stored active time is too far ahead of {@code now}
    */
-  public long advance(long now) throws IOException {
+  public long advance(long now, long maxClockSkewMs) throws IOException {
     byte[] state = getState();
     long activeTime = now;
     if (state != null && state.length != Bytes.SIZEOF_LONG) {
       LOG.warn("Ignoring stored master active time of unexpected length {}", state.length);
     } else if (state != null) {
       long last = Bytes.toLong(state);
+      if (last - now > maxClockSkewMs) {
+        throw new ClockOutOfSyncException("The last active master became active at " + last + " ("
+          + Instant.ofEpochMilli(last) + "), " + (last - now) + "ms after the current time " + now
+          + " (" + Instant.ofEpochMilli(now) + ") of this master, which is more than the max"
+          + " allowed clock skew of " + maxClockSkewMs + "ms (" + ServerManager.MAX_CLOCK_SKEW_MS
+          + "); check the clocks of the masters");
+      }
       if (now <= last) {
         LOG.warn(
           "The last active master became active at {} ({}), which is not before the current time"
