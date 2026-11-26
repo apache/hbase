@@ -152,7 +152,7 @@ public class TestStoreFileInfo {
     assertEquals(0, statCalls.get(), "construction should not stat when size is supplied");
     statCalls.set(0);
     ReaderContext context =
-      info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
+      info.createReaderContext(false, 1000, ReaderType.PREAD);
     assertEquals(0, statCalls.get(),
       "createReaderContext should reuse cached status for plain HFiles");
     assertEquals(listedStatus.getLen(), context.getFileSize());
@@ -200,7 +200,7 @@ public class TestStoreFileInfo {
     assertEquals(0, statCalls.get(), "block distribution should use refreshed status");
     statCalls.set(0);
     ReaderContext context =
-      info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
+      info.createReaderContext(false, 1000, ReaderType.PREAD);
     assertEquals(0, statCalls.get(), "reader open should still avoid restat");
     context.getInputStreamWrapper().close();
   }
@@ -221,7 +221,7 @@ public class TestStoreFileInfo {
     statCalls.set(0);
     info.getReferencedFileStatus(fs);
     ReaderContext context =
-      info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
+      info.createReaderContext(false, 1000, ReaderType.PREAD);
     assertEquals(0, statCalls.get(), "open and referenced status should reuse listed fileStatus");
     assertEquals(listedStatus.getLen(), context.getFileSize());
     context.getInputStreamWrapper().close();
@@ -241,7 +241,7 @@ public class TestStoreFileInfo {
     assertEquals(1, statCalls.get(), "tracker should stat once when fileStatus is absent");
     statCalls.set(0);
     ReaderContext context =
-      info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
+      info.createReaderContext(false, 1000, ReaderType.PREAD);
     assertEquals(0, statCalls.get(),
       "createReaderContext should not restat after tracker registration");
     assertEquals(128, context.getFileSize());
@@ -268,7 +268,7 @@ public class TestStoreFileInfo {
       TEST_UTIL.getTestFileSystem(), 0, referencePath, 0, reference, link, true);
 
     ReaderContext context =
-      info.createReaderContext(false, 1000, ReaderType.PREAD, null, null, null);
+      info.createReaderContext(false, 1000, ReaderType.PREAD);
     assertEquals(referencePath, context.getFilePath(),
       "HFileLink reference should retain its logical reference path");
     assertEquals(128, context.getFileSize());
