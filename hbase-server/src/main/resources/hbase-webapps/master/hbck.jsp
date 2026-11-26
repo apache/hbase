@@ -39,27 +39,37 @@
 <%@ page import="org.apache.hadoop.hbase.master.janitor.CatalogJanitorReport" %>
 <%@ page import="java.util.Optional" %>
 <%@ page import="org.apache.hadoop.hbase.util.EnvironmentEdgeManager" %>
-<%@ page import="org.apache.hbase.thirdparty.com.google.protobuf.ServiceException" %>
+<%@ page import="java.io.IOException" %>
+<%@ page import="org.apache.hadoop.hbase.http.InfoServer" %>
 <%
   final String cacheParameterValue = request.getParameter("cache");
   final HMaster master = (HMaster) getServletContext().getAttribute(HMaster.MASTER);
   pageContext.setAttribute("pageTitle", "HBase Master HBCK Report: " + master.getServerName());
-  String hbckChoreErrorMessage = null;
+  final boolean canModifyUI =
+    InfoServer.canUserModifyUI(request, getServletContext(), master.getConfiguration());
   String catalogJanitorErrorMessage = null;
-  if (!Boolean.parseBoolean(cacheParameterValue)) {
-    // Run the two reporters inline w/ drawing of the page. If exception, will show in page draw.
-    try {
-      master.getMasterRpcServices().runHbckChore(null, null);
-    } catch (ServiceException se) {
-      hbckChoreErrorMessage = "Failed generating a new hbck_chore report; using cache; try again or run hbck_chore_run in the shell: " + se.getMessage();
-    } 
-    try {
-      master.getMasterRpcServices().runCatalogScan(null, null);
-    } catch (ServiceException se) {
-      catalogJanitorErrorMessage = "Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + se.getMessage();
-    } 
+  String triggerSkippedMessage = null;
+  final HbckChore hbckChore = master.getHbckChore();
+  final CatalogJanitor cj = master.getCatalogJanitor();
+  if (!Boolean.parseBoolean(cacheParameterValue) && master.isInitialized()) {
+    if (!canModifyUI) {
+      triggerSkippedMessage = "This master UI is read-only or you are not authorized to modify it; "
+        + "showing cached reports. Run hbck_chore_run and catalogjanitor_run from the HBase shell "
+        + "as an authorized user to generate new reports.";
+    } else {
+      // Run the two reporters inline w/ drawing of the page. If exception, will show in page draw.
+      if (hbckChore != null) {
+        hbckChore.runChore();
+      }
+      if (cj != null) {
+        try {
+          cj.scan();
+        } catch (IOException ioe) {
+          catalogJanitorErrorMessage = "Failed generating a new catalogjanitor report; using cache; try again or run catalogjanitor_run in the shell: " + ioe.getMessage();
+        }
+      }
+    }
   }
-  HbckChore hbckChore = master.getHbckChore();
   HbckReport hbckReport = hbckChore == null ? null : hbckChore.getLastReport();
   String hbckReportStartTime = Optional.ofNullable(hbckReport)
     .map(HbckReport::getCheckingStartTimestamp)
@@ -71,7 +81,6 @@
     .map(start -> ZonedDateTime.ofInstant(start, ZoneId.systemDefault()))
     .map(zdt -> zdt.format(DateTimeFormatter.ISO_OFFSET_DATE_TIME))
     .orElse(null);
-  CatalogJanitor cj = master.getCatalogJanitor();
   CatalogJanitorReport cjReport = cj == null? null: cj.getLastReport();
   final ServerManager serverManager = master.getServerManager();
 %>
@@ -94,15 +103,20 @@
       <p><span>This page displays two reports: the <em>HBCK Chore Report</em> and
         the <em>CatalogJanitor Consistency Issues</em> report. Only report titles
         show if there are no problems to list. Note some conditions are
-        <strong>transitory</strong> as regions migrate. Reports are generated
-        when you invoke this page unless you add <em>?cache=true</em> to the URL. Then
-        we display the reports cached from the last time the reports were run.
-        Reports are run by Chores that are hosted by the Master on a cadence.
+        <strong>transitory</strong> as regions migrate. When the UI is writable and you are
+        authorized to modify it, reports are generated when you invoke this page unless you
+        add <em>?cache=true</em> to the URL; otherwise the reports cached from the last run are
+        displayed. Reports are also run by Chores that are hosted by the Master on a cadence.
         You can also run them on demand from the hbase shell: invoke <em>catalogjanitor_run</em>
         and/or <em>hbck_chore_run</em>. 
         ServerNames will be links if server is live, italic if dead, and plain if unknown.</span></p>
     </div>
   </div>
+  <% if (triggerSkippedMessage != null) { %>
+  <div class="alert alert-info" role="alert">
+    <%= triggerSkippedMessage %>
+  </div>
+  <% } %>
   <div class="row">
     <div class="page-header">
       <h1>HBCK Chore Report</h1>
@@ -121,12 +135,6 @@
       </p>
     </div>
   </div>
-
-  <% if(hbckChoreErrorMessage != null) { %>
-    <div class="alert alert-danger" role="alert">
-      <%= hbckChoreErrorMessage %>
-    </div>
-  <% } %>
 
   <% if (hbckReport != null && hbckReport.getInconsistentRegions().size() > 0) { %>
   <div class="row">

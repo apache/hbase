@@ -213,6 +213,52 @@ public class TestInfoServersACL {
   }
 
   @Test
+  public void testHbckPagePermissions() throws Exception {
+    final String readOnlyMessage =
+      "This master UI is read-only or you are not authorized to modify it";
+    UserGroupInformation admin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_ADMIN_STR, KEYTAB_FILE.getAbsolutePath());
+    admin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getHbckPage();
+        assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
+        assertFalse(pair.getSecond().contains(readOnlyMessage),
+          "admin should be allowed to trigger HBCK chores, content=" + pair.getSecond());
+        assertFalse(pair.getSecond().contains("alert-danger"),
+          "admin page should not show an error, content=" + pair.getSecond());
+        assertFalse(pair.getSecond().contains("Insufficient permissions"),
+          "admin page should not have ACL errors, content=" + pair.getSecond());
+        assertFalse(pair.getSecond().contains("No Report created."),
+          "admin page should have generated a report, content=" + pair.getSecond());
+        Pair<Integer, String> opDetailsPair = getOperationDetailsPage();
+        assertEquals(HttpURLConnection.HTTP_OK, opDetailsPair.getFirst().intValue());
+        assertTrue(opDetailsPair.getSecond().contains("Operations Details"),
+          "expected Operations Details, content=" + opDetailsPair.getSecond());
+        assertFalse(opDetailsPair.getSecond().contains("Insufficient permissions"),
+          "operation details page should not have ACL errors, content="
+            + opDetailsPair.getSecond());
+        return null;
+      }
+    });
+
+    UserGroupInformation nonAdmin = UserGroupInformation
+      .loginUserFromKeytabAndReturnUGI(USER_NONE_STR, KEYTAB_FILE.getAbsolutePath());
+    nonAdmin.doAs(new PrivilegedExceptionAction<Void>() {
+      @Override
+      public Void run() throws Exception {
+        Pair<Integer, String> pair = getHbckPage();
+        assertEquals(HttpURLConnection.HTTP_OK, pair.getFirst().intValue());
+        assertTrue(pair.getSecond().contains(readOnlyMessage),
+          "non-admin should see the read-only/cached report message, content=" + pair.getSecond());
+        assertFalse(pair.getSecond().contains("alert-danger"),
+          "non-admin page should not show an error, content=" + pair.getSecond());
+        return null;
+      }
+    });
+  }
+
+  @Test
   public void testLogsAvailableForAdmins() throws Exception {
     final String expectedAuthorizedContent = "Directory: /logs/";
     UserGroupInformation admin = UserGroupInformation
@@ -392,6 +438,16 @@ public class TestInfoServersACL {
 
   private Pair<Integer, String> getTablePage(TableName tn) throws Exception {
     URL url = new URL(getInfoServerHostAndPort() + "/table.jsp?name=" + tn.getNameAsString());
+    return getUrlContent(url);
+  }
+
+  private Pair<Integer, String> getHbckPage() throws Exception {
+    URL url = new URL(getInfoServerHostAndPort() + "/hbck.jsp");
+    return getUrlContent(url);
+  }
+
+  private Pair<Integer, String> getOperationDetailsPage() throws Exception {
+    URL url = new URL(getInfoServerHostAndPort() + "/operationDetails.jsp");
     return getUrlContent(url);
   }
 
