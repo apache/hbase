@@ -44,6 +44,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.Vector;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
@@ -215,6 +216,54 @@ public final class FSUtils {
   public static FSDataOutputStream create(Configuration conf, FileSystem fs, Path path,
     FsPermission perm, InetSocketAddress[] favoredNodes) throws IOException {
     return create(conf, fs, path, perm, favoredNodes, true);
+  }
+
+  /**
+   * Opens a file for reading. When {@code fileStatus} is supplied and the {@link FileSystem}
+   * supports {@code FileSystem.openFile().withFileStatus()}, that path is used so the client can
+   * skip a redundant metadata lookup (for example {@code getFileInfo}).
+   * @param fs         filesystem
+   * @param path       file to open
+   * @param fileStatus status from a recent {@code listStatus} / {@code getFileStatus}, or
+   *                   {@code null}
+   * @return input stream for the file
+   * @throws IOException if the file cannot be opened
+   */
+  public static FSDataInputStream openForRead(FileSystem fs, Path path, FileStatus fileStatus)
+    throws IOException {
+    if (fileStatus != null) {
+      try {
+        CompletableFuture<FSDataInputStream> future =
+          fs.openFile(path).withFileStatus(fileStatus).build();
+        try {
+          return future.get();
+        } catch (InterruptedException e) {
+          // The open may still complete asynchronously; close whatever stream it produces since
+          // the caller will never receive it. Do not cancel the future, as a cancelled future
+          // would discard a stream that is completed later without closing it.
+          future.whenComplete((in, t) -> IOUtils.cleanupWithLogger(LOG, in));
+          Thread.currentThread().interrupt();
+          throw (InterruptedIOException) new InterruptedIOException("Interrupted opening " + path)
+            .initCause(e);
+        }
+      } catch (UnsupportedOperationException | ExecutionException e) {
+        if (
+          e instanceof ExecutionException
+            && !(e.getCause() instanceof UnsupportedOperationException)
+        ) {
+          Throwable cause = e.getCause();
+          if (cause instanceof IOException) {
+            throw (IOException) cause;
+          }
+          throw new IOException("Failed opening " + path, cause);
+        }
+        if (LOG.isDebugEnabled()) {
+          LOG.debug("openFile().withFileStatus() not supported or failed for {}, "
+            + "fail back with open()", fs.getUri(), e);
+        }
+      }
+    }
+    return fs.open(path);
   }
 
   /**
