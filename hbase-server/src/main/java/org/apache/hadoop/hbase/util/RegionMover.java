@@ -58,6 +58,7 @@ import org.apache.hadoop.hbase.HRegionLocation;
 import org.apache.hadoop.hbase.MetaTableAccessor;
 import org.apache.hadoop.hbase.RSGroupTableAccessor;
 import org.apache.hadoop.hbase.ServerName;
+import org.apache.hadoop.hbase.ServerMetrics;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.UnknownRegionException;
 import org.apache.hadoop.hbase.client.Admin;
@@ -750,6 +751,7 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
 
   private ServerName getTargetServer() throws Exception {
     ServerName server = null;
+    boolean serverReported = false;
     int maxWaitInSeconds =
       admin.getConfiguration().getInt(SERVERSTART_WAIT_MAX_KEY, DEFAULT_SERVERSTART_WAIT_MAX);
     long maxWait = EnvironmentEdgeManager.currentTime() + maxWaitInSeconds * 1000;
@@ -760,7 +762,14 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
         // Remove the host Region server from target Region Servers list
         server = stripServer(regionServers, hostname, port);
         if (server != null) {
-          break;
+          ServerMetrics serverMetrics =
+            admin.getClusterMetrics().getLiveServerMetrics().get(server);
+          if (serverMetrics != null && serverMetrics.getLastReportTimestamp() > 0) {
+            serverReported = true;
+            break;
+          }
+          LOG.warn("Server " + hostname + ":" + port
+            + " is up but has not sent its first RegionServerReport yet, waiting");
         } else {
           LOG.warn("Server " + hostname + ":" + port + " is not up yet, waiting");
         }
@@ -772,6 +781,12 @@ public class RegionMover extends AbstractHBaseTool implements Closeable {
     if (server == null) {
       LOG.error("Server " + hostname + ":" + port + " is not up. Giving up.");
       throw new Exception("Server " + hostname + ":" + port + " to load regions not online");
+    }
+    if (!serverReported) {
+      LOG.error("Server " + hostname + ":" + port
+        + " is up but has not sent a RegionServerReport yet. Giving up.");
+      throw new Exception(
+        "Server " + hostname + ":" + port + " has not sent a RegionServerReport yet");
     }
     return server;
   }
