@@ -113,6 +113,26 @@ public abstract class AbstractMultiFileWriter implements CellSink, ShipperListen
   protected abstract Collection<StoreFileWriter> writers();
 
   /**
+   * Returns the total number of bytes written so far to the underlying writers, i.e. after data
+   * block encoding and compression. Used for output based compaction throughput control.
+   * <p>
+   * Safe to call while appending: the underlying writers are only closed after the compaction loop,
+   * by {@link #commitWriters()} or {@link #abortWriters()}.
+   */
+  public long getPos() throws IOException {
+    long pos = 0;
+    Collection<StoreFileWriter> writers = writers();
+    if (writers != null) {
+      for (StoreFileWriter writer : writers) {
+        if (writer != null) {
+          pos += writer.getPos();
+        }
+      }
+    }
+    return pos;
+  }
+
+  /**
    * Subclasses override this method to be called at the end of a successful sequence of append; all
    * appends are processed before this method is called.
    */
