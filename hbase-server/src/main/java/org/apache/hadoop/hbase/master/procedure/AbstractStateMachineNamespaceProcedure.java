@@ -125,7 +125,7 @@ public abstract class AbstractStateMachineNamespaceProcedure<TState>
     throws IOException {
     Supplier<String> forWhom = () -> "namespace " + nd.getName();
     RSGroupInfo rsGroupInfo = MasterProcedureUtil.checkGroupExists(
-      env.getMasterServices().getRSGroupInfoManager()::getRSGroup,
+      env.getMasterServices().getRSGroupInfoManager()::getRSGroupAfterPendingChanges,
       MasterProcedureUtil.getNamespaceGroup(nd), forWhom);
     MasterProcedureUtil.checkGroupNotEmpty(rsGroupInfo, forWhom);
   }

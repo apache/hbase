@@ -63,6 +63,15 @@ public interface RSGroupInfoManager {
   RSGroupInfo getRSGroup(String groupName) throws IOException;
 
   /**
+   * Gets {@code RSGroupInfo} for the given group name after any change to the groups in progress,
+   * such as {@link #removeRSGroup(String)}, has finished. Use it to check a group that an operation
+   * is about to start using, so that the check cannot interleave with the group being removed.
+   */
+  default RSGroupInfo getRSGroupAfterPendingChanges(String groupName) throws IOException {
+    return getRSGroup(groupName);
+  }
+
+  /**
    * List the existing {@code RSGroupInfo}s.
    */
   List<RSGroupInfo> listRSGroups() throws IOException;

@@ -177,6 +177,11 @@ public class CreateNamespaceProcedure
     return nsDescriptor.getName();
   }
 
+  /** Returns the descriptor of the namespace being created. */
+  public NamespaceDescriptor getNamespaceDescriptor() {
+    return nsDescriptor;
+  }
+
   /**
    * Action before any real action of creating namespace.
    * @param env MasterProcedureEnv
