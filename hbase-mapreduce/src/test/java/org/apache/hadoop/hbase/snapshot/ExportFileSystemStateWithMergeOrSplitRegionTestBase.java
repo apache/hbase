@@ -26,6 +26,7 @@ import java.time.Duration;
 import java.util.List;
 import java.util.stream.Collectors;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.client.ColumnFamilyDescriptorBuilder;
@@ -36,9 +37,18 @@ import org.apache.hadoop.hbase.client.TableDescriptorBuilder;
 import org.apache.hadoop.hbase.tool.BulkLoadHFilesTool;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.HFileTestUtil;
+import org.apache.hadoop.io.BytesWritable;
+import org.apache.hadoop.io.NullWritable;
+import org.apache.hadoop.mapreduce.InputSplit;
+import org.apache.hadoop.mapreduce.Job;
+import org.apache.hadoop.mapreduce.RecordReader;
+import org.apache.hadoop.mapreduce.TaskAttemptID;
+import org.apache.hadoop.mapreduce.task.TaskAttemptContextImpl;
 import org.junit.jupiter.api.TestTemplate;
 
 import org.apache.hbase.thirdparty.com.google.common.collect.Lists;
+
+import org.apache.hadoop.hbase.shaded.protobuf.generated.SnapshotProtos.SnapshotRegionManifest;
 
 public class ExportFileSystemStateWithMergeOrSplitRegionTestBase extends ExportSnapshotTestBase {
 
@@ -94,10 +104,10 @@ public class ExportFileSystemStateWithMergeOrSplitRegionTestBase extends ExportS
 
     Path output = TEST_UTIL.getDataTestDir("output/cf");
     TEST_UTIL.getTestFileSystem().mkdirs(output);
-    // Create and load a large hfile to ensure the execution time of MR job.
+    // One HFile spanning the split key is enough to create references in both daughters.
     HFileTestUtil.createHFile(TEST_UTIL.getConfiguration(), TEST_UTIL.getTestFileSystem(),
       new Path(output, "test_file"), FAMILY, Bytes.toBytes("q"), Bytes.toBytes("1"),
-      Bytes.toBytes("9"), 9999999);
+      Bytes.toBytes("9"), 1000);
     BulkLoadHFilesTool tool = new BulkLoadHFilesTool(TEST_UTIL.getConfiguration());
     tool.run(new String[] { output.getParent().toString(), splitTableName.getNameAsString() });
 
@@ -112,13 +122,38 @@ public class ExportFileSystemStateWithMergeOrSplitRegionTestBase extends ExportS
 
     // take a snapshot
     admin.snapshot(splitTableSnap, splitTableName);
-    // export snapshot and verify
-    Configuration tmpConf = TEST_UTIL.getConfiguration();
-    // Decrease the buffer size of copier to avoid the export task finished shortly
-    tmpConf.setInt("snapshot.export.buffer.size", 1);
-    // Decrease the maximum files of each mapper to ensure the three files(1 hfile + 2 reference
-    // files) copied in different mappers concurrently.
+    Configuration tmpConf = new Configuration(TEST_UTIL.getConfiguration());
     tmpConf.setInt("snapshot.export.default.map.group", 1);
+
+    Path snapshotDir = SnapshotDescriptionUtils.getCompletedSnapshotDir(splitTableSnap,
+      TEST_UTIL.getDefaultRootDirPath());
+    FileSystem fs = TEST_UTIL.getTestFileSystem();
+    SnapshotManifest manifest = SnapshotManifest.open(tmpConf, fs, snapshotDir,
+      SnapshotDescriptionUtils.readSnapshotInfo(fs, snapshotDir));
+    assertEquals(2,
+      manifest.getRegionManifests().stream().flatMap(region -> region.getFamilyFilesList().stream())
+        .flatMap(family -> family.getStoreFilesList().stream())
+        .filter(SnapshotRegionManifest.StoreFile::hasReference).count());
+
+    // Check mapper inputs directly instead of relying on concurrent copies of a large file.
+    Configuration inputConf = new Configuration(tmpConf);
+    inputConf.set("snapshot.export.format.snapshot.dir", snapshotDir.toString());
+    ExportSnapshot.ExportSnapshotInputFormat inputFormat =
+      new ExportSnapshot.ExportSnapshotInputFormat();
+    TaskAttemptContextImpl context = new TaskAttemptContextImpl(inputConf, new TaskAttemptID());
+    int inputFiles = 0;
+    for (InputSplit split : inputFormat.getSplits(Job.getInstance(inputConf))) {
+      try (RecordReader<BytesWritable, NullWritable> reader =
+        inputFormat.createRecordReader(split, context)) {
+        reader.initialize(split, context);
+        while (reader.nextKeyValue()) {
+          inputFiles++;
+        }
+      }
+    }
+    assertEquals(tableNumFiles, inputFiles, "Each referenced HFile should be copied only once");
+
+    // export snapshot and verify
     testExportFileSystemState(tmpConf, splitTableName, splitTableSnap, splitTableSnap,
       tableNumFiles, TEST_UTIL.getDefaultRootDirPath(), getHdfsDestinationDir(), false, false,
       getBypassRegionPredicate(), true, false);
