@@ -864,6 +864,19 @@
               <groupId>javax.xml.bind</groupId>
               <artifactId>jaxb-api</artifactId>
             </exclusion>
+            <!-- Keep these explicit so flatten preserves them in the published POM. -->
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jetty</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jetty-util</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.mortbay.jetty</groupId>
+              <artifactId>jetty-sslengine</artifactId>
+            </exclusion>
           </exclusions>
         </dependency>
         <dependency>
@@ -985,6 +998,15 @@
             <exclusion>
               <groupId>javax.ws.rs</groupId>
               <artifactId>jsr311-api</artifactId>
+            </exclusion>
+            <!-- Keep these explicit so flatten preserves them in the published POM. -->
+            <exclusion>
+              <groupId>org.eclipse.jetty</groupId>
+              <artifactId>*</artifactId>
+            </exclusion>
+            <exclusion>
+              <groupId>org.eclipse.jetty.websocket</groupId>
+              <artifactId>*</artifactId>
             </exclusion>
           </exclusions>
         </dependency>
