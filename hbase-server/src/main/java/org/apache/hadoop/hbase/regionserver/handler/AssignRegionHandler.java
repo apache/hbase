@@ -29,8 +29,10 @@ import org.apache.hadoop.hbase.executor.EventType;
 import org.apache.hadoop.hbase.regionserver.HRegion;
 import org.apache.hadoop.hbase.regionserver.HRegionServer;
 import org.apache.hadoop.hbase.regionserver.Region;
+import org.apache.hadoop.hbase.regionserver.RegionServerAbortedException;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.PostOpenDeployContext;
 import org.apache.hadoop.hbase.regionserver.RegionServerServices.RegionStateTransitionContext;
+import org.apache.hadoop.hbase.regionserver.RegionServerStoppedException;
 import org.apache.hadoop.hbase.util.RetryCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
@@ -147,8 +149,26 @@ public class AssignRegionHandler extends EventHandler {
     }
     // From here on out, this is PONR. We can not revert back. The only way to address an
     // exception from here on out is to abort the region server.
-    rs.postOpenDeployTasks(
-      new PostOpenDeployContext(region, openProcId, masterSystemTime, initiatingMasterActiveTime));
+    try {
+      rs.postOpenDeployTasks(new PostOpenDeployContext(region, openProcId, masterSystemTime,
+        initiatingMasterActiveTime));
+    } catch (RegionServerStoppedException e) {
+      if (e instanceof RegionServerAbortedException || !rs.isStopped()) {
+        throw e;
+      }
+      // The region server was asked to stop while we were opening the region. We have not reported
+      // OPENED to master and the region was never online, so just close it and let the master
+      // reassign it when this region server goes away, instead of aborting.
+      LOG.info("Region server is stopping, closing {} which we have just opened", regionName, e);
+      try {
+        region.close();
+      } catch (IOException closeError) {
+        LOG.warn("Failed to close {} after the region server was stopped", regionName, closeError);
+      }
+      rs.finishRegionProcedure(openProcId);
+      rs.getRegionsInTransitionInRS().remove(encodedNameBytes, Boolean.TRUE);
+      return;
+    }
     rs.addRegion(region);
     LOG.info("Opened {}", regionName);
     // Cache the open region procedure id after report region transition succeed.
