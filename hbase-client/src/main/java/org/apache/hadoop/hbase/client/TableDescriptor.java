@@ -277,7 +277,8 @@ public interface TableDescriptor {
 
   /**
    * The HDFS erasure coding policy for a table. This will be set on the data dir of the table, and
-   * is an alternative to normal replication which takes less space at the cost of locality.
+   * is an alternative to normal replication which takes less space at the cost of locality. The
+   * policy is retained in the descriptor but ignored on filesystems that do not support it.
    * @return the current policy, or null if undefined
    */
   default String getErasureCodingPolicy() {
