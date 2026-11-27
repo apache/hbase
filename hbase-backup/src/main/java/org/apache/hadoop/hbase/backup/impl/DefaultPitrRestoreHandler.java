@@ -26,6 +26,8 @@ import org.apache.hadoop.hbase.backup.BackupInfo;
 import org.apache.hadoop.hbase.backup.PointInTimeRestoreRequest;
 import org.apache.hadoop.hbase.client.Connection;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Default PITR restore handler that retrieves backup metadata from the system table.
@@ -34,6 +36,7 @@ import org.apache.yetus.audience.InterfaceAudience;
  */
 @InterfaceAudience.Private
 public class DefaultPitrRestoreHandler extends AbstractPitrRestoreHandler {
+  private static final Logger LOG = LoggerFactory.getLogger(DefaultPitrRestoreHandler.class);
 
   public DefaultPitrRestoreHandler(Connection conn, PointInTimeRestoreRequest request) {
     super(conn, request);
@@ -49,6 +52,8 @@ public class DefaultPitrRestoreHandler extends AbstractPitrRestoreHandler {
   @Override
   protected List<PitrBackupMetadata> getBackupMetadata(PointInTimeRestoreRequest request)
     throws IOException {
+    String backupRootDir = request.getBackupRootDir();
+    LOG.info("Getting backup metadata from default backup location: {}", backupRootDir);
     try (BackupSystemTable table = new BackupSystemTable(conn)) {
       return table.getBackupHistory(withState(BackupInfo.BackupState.COMPLETE)).stream()
         .map(BackupInfoAdapter::new).collect(Collectors.toList());
