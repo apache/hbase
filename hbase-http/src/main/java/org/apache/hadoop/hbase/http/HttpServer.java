@@ -32,8 +32,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
@@ -141,6 +143,10 @@ public class HttpServer implements FilterContainer {
   static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX = "signature.secret.file";
   public static final String HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_KEY =
     HTTP_AUTHENTICATION_PREFIX + HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX;
+  static final String HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_SUFFIX =
+    "kerberos.endpoint.whitelist";
+  public static final String HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY =
+    HTTP_SPNEGO_AUTHENTICATION_PREFIX + HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_SUFFIX;
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_USERS_KEY =
     HTTP_SPNEGO_AUTHENTICATION_PREFIX + "admin.users";
   public static final String HTTP_SPNEGO_AUTHENTICATION_ADMIN_GROUPS_KEY =
@@ -154,6 +160,9 @@ public class HttpServer implements FilterContainer {
     "hbase.security.authentication.ui.config.protected";
   public static final String HTTP_UI_NO_CACHE_ENABLE_KEY = "hbase.http.filter.no-store.enable";
   public static final boolean HTTP_PRIVILEGED_CONF_DEFAULT = false;
+  public static final String HTTP_PRIVILEGED_METRICS_KEY =
+    "hbase.security.authentication.ui.metrics.protected";
+  public static final boolean HTTP_PRIVILEGED_METRICS_DEFAULT = true;
   public static final String PROFILER_ENABLED_KEY = "hbase.profiler.enabled";
   public static final boolean PROFILER_ENABLED_DEFAULT = true;
 
@@ -183,6 +192,8 @@ public class HttpServer implements FilterContainer {
       .build();
 
   private final AccessControlList adminsAcl;
+  // Paths which skip SPNEGO authentication, see HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY
+  private final Set<String> spnegoEndpointWhitelist = new HashSet<>();
 
   protected final Server webServer;
   protected String appDir;
@@ -940,8 +951,13 @@ public class HttpServer implements FilterContainer {
       if (servletConfig != null) {
         try {
           Class<?> clz = Class.forName(servletConfig.getClazz());
-          addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
-            clz.asSubclass(HttpServlet.class));
+          if (conf.getBoolean(HTTP_PRIVILEGED_METRICS_KEY, HTTP_PRIVILEGED_METRICS_DEFAULT)) {
+            addPrivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+              clz.asSubclass(HttpServlet.class));
+          } else {
+            addUnprivilegedServlet(servletConfig.getName(), servletConfig.getPathSpec(),
+              clz.asSubclass(HttpServlet.class));
+          }
         } catch (Exception e) {
           if (servletConfig.isExpected()) {
             // metrics are not critical to read/write, so an exception here shouldn't be fatal
@@ -1070,6 +1086,13 @@ public class HttpServer implements FilterContainer {
    */
   void addInternalServlet(String pathSpec, ServletHolder holder, boolean requireAuthz) {
     if (authenticationEnabled && requireAuthz) {
+      if (spnegoEndpointWhitelist.contains(pathSpec)) {
+        LOG.warn(
+          "{} is listed in {} but requires admin access. Unauthenticated requests to it "
+            + "will be rejected when {} is true.",
+          pathSpec, HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY,
+          CommonConfigurationKeys.HADOOP_SECURITY_AUTHORIZATION);
+      }
       FilterHolder filter = new FilterHolder(AdminAuthorizedFilter.class);
       filter.setName(AdminAuthorizedFilter.class.getSimpleName());
       FilterMapping fmap = new FilterMapping();
@@ -1239,6 +1262,17 @@ public class HttpServer implements FilterContainer {
     String signatureSecretKeyFile = getOrEmptyString(conf, signatureSecretKeyFileKey);
     if (!signatureSecretKeyFile.isEmpty()) {
       params.put(HTTP_AUTHENTICATION_SIGNATURE_SECRET_FILE_SUFFIX, signatureSecretKeyFile);
+    }
+    String endpointWhitelist =
+      getOrEmptyString(conf, HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_KEY);
+    if (!endpointWhitelist.isEmpty()) {
+      params.put(HTTP_SPNEGO_AUTHENTICATION_ENDPOINT_WHITELIST_SUFFIX, endpointWhitelist);
+      // Split in the same way as hadoop-auth KerberosAuthenticationHandler does
+      for (String endpoint : endpointWhitelist.trim().split("\\s*[,\n]\\s*")) {
+        if (!endpoint.isEmpty()) {
+          spnegoEndpointWhitelist.add(endpoint);
+        }
+      }
     }
     params.put(AuthenticationFilter.AUTH_TYPE, "kerberos");
 

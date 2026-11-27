@@ -47,7 +47,10 @@ Kerberos-authentication to HBase Web UIs can be enabled via configuring SPNEGO w
 <property>
   <name>hbase.security.authentication</name>
   <value>kerberos</value>
-  <description>The Kerberos keytab file to use for SPNEGO authentication by the web server.</description>
+  <description>
+    Controls whether or not secure authentication is enabled for HBase.
+    Possible values are 'simple' (no authentication), and 'kerberos'.
+  </description>
 </property>
 ```
 
@@ -79,6 +82,48 @@ A number of properties exist to configure SPNEGO authentication for the web serv
   <description>Optional, a file whose contents will be used as a secret to sign the HTTP cookies
   as a part of the SPNEGO authentication handshake. If this is not provided, Java's `Random` library
   will be used for the secret.</description>
+</property>
+```
+
+### Skipping SPNEGO authentication for specific endpoints
+
+Some clients, such as Prometheus scrapers, cannot perform SPNEGO authentication. To allow them to
+access specific endpoints, list the servlet paths in
+`hbase.security.authentication.spnego.kerberos.endpoint.whitelist`:
+
+```xml
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.endpoint.whitelist</name>
+  <value>/jmx,/prometheus</value>
+  <description>Optional, comma-separated list of servlet paths which skip SPNEGO authentication.
+  Each entry must start with '/' and is matched exactly against the servlet path. An invalid entry
+  makes the web UI fail to start.</description>
+</property>
+```
+
+**WARNING:** Requests to whitelisted endpoints are served without authentication, so anyone who can
+reach the web UI can access them. Whitelist only endpoints whose content is safe to expose.
+
+Whitelisted endpoints are still subject to the authorization checks below:
+
+- Endpoints which require admin access reject unauthenticated requests when
+  `hadoop.security.authorization` is `true`. Metrics endpoints (`/jmx`, `/metrics`, `/prometheus`)
+  require admin access unless `hbase.security.authentication.ui.metrics.protected` is `false`, and
+  `/conf` requires admin access when `hbase.security.authentication.ui.config.protected` is `true`.
+  HBase logs a warning at startup for whitelisted endpoints which require admin access.
+- `/jmx` and `/conf` reject unauthenticated requests when
+  `hadoop.security.instrumentation.requires.admin` is `true`.
+
+For example, to expose `/prometheus` to clients without Kerberos credentials:
+
+```xml
+<property>
+  <name>hbase.security.authentication.ui.metrics.protected</name>
+  <value>false</value>
+</property>
+<property>
+  <name>hbase.security.authentication.spnego.kerberos.endpoint.whitelist</name>
+  <value>/prometheus</value>
 </property>
 ```
 
@@ -219,6 +264,17 @@ Users who wish to change this would set the following in their hbase-site.xml:
 <property>
   <name>hbase.security.authentication.ui.config.protected</name>
   <value>true</value>
+</property>
+```
+
+Metrics endpoints (like /jmx, /metrics, /prometheus specified in "hbase.http.metrics.servlets") are
+only allowed to admins by default. To allow any authenticated user to access metrics endpoints, set
+the following in their hbase-site.xml:
+
+```xml
+<property>
+  <name>hbase.security.authentication.ui.metrics.protected</name>
+  <value>false</value>
 </property>
 ```
 
