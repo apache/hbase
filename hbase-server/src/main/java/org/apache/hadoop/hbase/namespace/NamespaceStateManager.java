@@ -251,4 +251,21 @@ class NamespaceStateManager {
       throw new IOException("Namespace state found null for namespace : " + namespace);
     }
   }
+
+  /**
+   * Set the absolute region count for an existing table, without any quota limit check. Used by
+   * operations that have already changed the table's region layout (e.g. truncate) and only need to
+   * reconcile the cache.
+   */
+  synchronized void setRegionCountForTable(TableName name, int count) throws IOException {
+    if (name.isSystemTable()) {
+      return;
+    }
+    NamespaceTableAndRegionInfo nsInfo = nsStateCache.get(name.getNamespaceAsString());
+    if (nsInfo == null) {
+      throw new IOException(
+        "Namespace state found null for namespace : " + name.getNamespaceAsString());
+    }
+    nsInfo.setRegionCountForTable(name, count);
+  }
 }

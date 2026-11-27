@@ -24,6 +24,8 @@ import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.yetus.audience.InterfaceAudience;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
 
@@ -33,6 +35,8 @@ import org.apache.hbase.thirdparty.com.google.common.base.Joiner;
  */
 @InterfaceAudience.Private
 class NamespaceTableAndRegionInfo {
+  private static final Logger LOG = LoggerFactory.getLogger(NamespaceTableAndRegionInfo.class);
+
   private String name;
   private Map<TableName, AtomicInteger> tableAndRegionInfo;
 
@@ -103,6 +107,23 @@ class NamespaceTableAndRegionInfo {
 
   synchronized int decrementRegionCountForTable(TableName tableName, int count) {
     return tableAndRegionInfo.get(tableName).decrementAndGet();
+  }
+
+  synchronized void setRegionCountForTable(TableName tableName, int count) {
+    if (!name.equalsIgnoreCase(tableName.getNamespaceAsString())) {
+      throw new IllegalStateException(
+        "Table : " + tableName + " does not belong to namespace " + name);
+    }
+    AtomicInteger regionCount = tableAndRegionInfo.get(tableName);
+    if (regionCount != null) {
+      regionCount.set(count);
+    } else {
+      // An existing table is expected to already be in the cache; recover from the inconsistency
+      // but make it visible.
+      LOG.warn("Table {} was not found in the namespace state cache for namespace {},"
+        + " adding it with region count {}", tableName, name, count);
+      tableAndRegionInfo.put(tableName, new AtomicInteger(count));
+    }
   }
 
   @Override
