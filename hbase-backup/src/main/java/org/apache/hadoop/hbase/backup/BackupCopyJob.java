@@ -18,6 +18,7 @@
 package org.apache.hadoop.hbase.backup;
 
 import java.io.IOException;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.backup.impl.BackupManager;
@@ -49,4 +50,6 @@ public interface BackupCopyJob extends Configurable {
    * @throws IOException if cancelling the jobs fails
    */
   void cancel(String jobHandler) throws IOException;
+
+  Optional<Throwable> getError();
 }

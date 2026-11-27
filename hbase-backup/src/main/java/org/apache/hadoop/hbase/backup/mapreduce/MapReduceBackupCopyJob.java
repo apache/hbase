@@ -26,6 +26,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
@@ -76,6 +77,8 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
   // The percentage of the current copy task within the whole task if multiple time copies are
   // needed. The default value is 100%, which means only 1 copy task for the whole.
   private float subTaskPercntgInWholeTask = 1f;
+
+  private Optional<Throwable> error = Optional.empty();
 
   public MapReduceBackupCopyJob() {
   }
@@ -233,6 +236,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
           + newProgressStr + " - " + bytesCopied + " bytes copied.\"");
       } catch (Throwable t) {
         LOG.error(t.toString(), t);
+        error = Optional.of(t);
         throw t;
       }
 
@@ -244,7 +248,9 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
       Counters ctrs = job.getCounters();
       LOG.debug(Objects.toString(ctrs));
       if (job.isComplete() && !job.isSuccessful()) {
-        throw new Exception("DistCp job-id: " + jobID + " failed");
+        Exception failure = new Exception("DistCp job-id: " + jobID + " failed");
+        error = Optional.of(failure);
+        throw failure;
       }
 
       return job;
@@ -371,6 +377,7 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
   @Override
   public int copy(BackupInfo context, BackupManager backupManager, Configuration conf,
     BackupType copyType, String[] options) throws IOException {
+    error = Optional.empty();
     int res = 0;
 
     try {
@@ -437,6 +444,11 @@ public class MapReduceBackupCopyJob implements BackupCopyJob {
     } catch (InterruptedException e) {
       throw new IOException(e);
     }
+  }
+
+  @Override
+  public Optional<Throwable> getError() {
+    return error;
   }
 
   protected static List<String> parseDistCpOptions(Configuration conf) {
