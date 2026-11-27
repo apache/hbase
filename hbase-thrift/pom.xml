@@ -71,6 +71,13 @@
     </dependency>
     <dependency>
       <groupId>org.apache.hbase</groupId>
+      <artifactId>hbase-server</artifactId>
+      <version>${project.version}</version>
+      <classifier>static-resources</classifier>
+      <scope>provided</scope>
+    </dependency>
+    <dependency>
+      <groupId>org.apache.hbase</groupId>
       <artifactId>hbase-asyncfs</artifactId>
       <type>test-jar</type>
       <scope>test</scope>
@@ -205,25 +212,29 @@
           <skipAssembly>true</skipAssembly>
         </configuration>
       </plugin>
-      <!-- Copy the static web resources (JS, CSS, images, etc.) from hbase-server -->
+      <!-- Resolve static resources from the server artifact, not its build directory. -->
       <plugin>
-        <artifactId>maven-resources-plugin</artifactId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <version>${maven.dependency.version}</version>
         <executions>
           <execution>
-            <id>copy-static-resources</id>
+            <id>unpack-static-resources</id>
             <goals>
-              <goal>copy-resources</goal>
+              <goal>unpack</goal>
             </goals>
             <phase>generate-resources</phase>
             <configuration>
-              <outputDirectory>${project.build.outputDirectory}/hbase-webapps/static</outputDirectory>
-              <outputDirectory>${project.build.directory}/hbase-webapps/static</outputDirectory>
-              <overwrite>true</overwrite>
-              <resources>
-                <resource>
-                  <directory>../hbase-server/target/hbase-webapps/static</directory>
-                </resource>
-              </resources>
+              <artifactItems>
+                <artifactItem>
+                  <groupId>org.apache.hbase</groupId>
+                  <artifactId>hbase-server</artifactId>
+                  <version>${project.version}</version>
+                  <classifier>static-resources</classifier>
+                  <overWrite>true</overWrite>
+                  <includes>hbase-webapps/static/**</includes>
+                  <outputDirectory>${project.build.directory}</outputDirectory>
+                </artifactItem>
+              </artifactItems>
             </configuration>
           </execution>
         </executions>

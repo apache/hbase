@@ -410,7 +410,7 @@
         </dependencies>
         <executions>
           <execution>
-            <id>default</id>
+            <id>process-resource-bundles</id>
             <configuration>
               <attachToTest>false</attachToTest>
               <properties>
@@ -486,6 +486,22 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
         <executions>
+          <!-- Attach before compile so gateways can also build against reactor resources. -->
+          <execution>
+            <id>static-resources</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+            <phase>process-resources</phase>
+            <configuration>
+              <classifier>static-resources</classifier>
+              <includes>
+                <include>hbase-webapps/static/**</include>
+                <include>META-INF/LICENSE</include>
+                <include>META-INF/NOTICE</include>
+              </includes>
+            </configuration>
+          </execution>
           <!-- Exclude specified file(s) from the default JAR -->
           <execution>
             <id>default-jar</id>
@@ -593,6 +609,8 @@
         <configuration>
           <systemPropertyVariables>
             <test.build.webapps>target/test-classes/webapps</test.build.webapps>
+            <hbase.test.static.resources.jar>${project.build.directory}/${project.build.finalName}-static-resources.jar</hbase.test.static.resources.jar>
+            <hbase.test.static.resources.versions>${bootstrap.version},${jquery.version},${tablesorter.version},${vega.version},${vega-lite.version},${vega-embed.version}</hbase.test.static.resources.versions>
           </systemPropertyVariables>
         </configuration>
       </plugin>
@@ -610,7 +628,7 @@
             <goals>
               <goal>unpack</goal>
             </goals>
-            <phase>process-resources</phase>
+            <phase>generate-resources</phase>
             <configuration>
               <artifactItems>
                 <artifactItem>
@@ -689,7 +707,7 @@
             <goals>
               <goal>unpack</goal>
             </goals>
-            <phase>process-resources</phase>
+            <phase>generate-resources</phase>
             <configuration>
               <artifactItems>
                 <artifactItem>
