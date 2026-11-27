@@ -73,9 +73,11 @@ import org.apache.hadoop.hbase.master.ServerListener;
 import org.apache.hadoop.hbase.master.ServerManager;
 import org.apache.hadoop.hbase.master.TableStateManager;
 import org.apache.hadoop.hbase.master.assignment.RegionStateNode;
+import org.apache.hadoop.hbase.master.procedure.CreateNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.CreateTableProcedure;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureEnv;
 import org.apache.hadoop.hbase.master.procedure.MasterProcedureUtil;
+import org.apache.hadoop.hbase.master.procedure.ModifyNamespaceProcedure;
 import org.apache.hadoop.hbase.master.procedure.ProcedureSyncWait;
 import org.apache.hadoop.hbase.net.Address;
 import org.apache.hadoop.hbase.procedure2.Procedure;
@@ -431,6 +433,11 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
   }
 
   @Override
+  public synchronized RSGroupInfo getRSGroupAfterPendingChanges(String groupName) {
+    return getRSGroup(groupName);
+  }
+
+  @Override
   public synchronized void removeRSGroup(String groupName) throws IOException {
     RSGroupInfo rsGroupInfo = getRSGroupInfo(groupName);
     int serverCount = rsGroupInfo.getServers().size();
@@ -453,6 +460,7 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
           "RSGroup " + groupName + " is referenced by namespace: " + ns.getName());
       }
     }
+    checkNotReferencedByPendingNamespace(groupName);
     Map<String, RSGroupInfo> rsGroupMap = holder.groupName2Group;
     if (!rsGroupMap.containsKey(groupName) || groupName.equals(RSGroupInfo.DEFAULT_GROUP)) {
       throw new ConstraintException(
@@ -462,6 +470,39 @@ final class RSGroupInfoManagerImpl implements RSGroupInfoManager {
     newGroupMap.remove(groupName);
     flushConfig(newGroupMap);
     LOG.info("Remove group {} done", groupName);
+  }
+
+  /**
+   * A namespace that is being created or modified checks its group before it is written, so it is
+   * not yet in the list of namespaces. Refuse to remove a group such a namespace refers to. This
+   * includes procedures that have not checked their group yet; they check it with
+   * {@link #getRSGroupAfterPendingChanges(String)}, which waits for this removal to finish.
+   */
+  private void checkNotReferencedByPendingNamespace(String groupName) throws ConstraintException {
+    ProcedureExecutor<MasterProcedureEnv> procExec = masterServices.getMasterProcedureExecutor();
+    if (procExec == null) {
+      return;
+    }
+    for (Procedure<MasterProcedureEnv> proc : procExec.getProcedures()) {
+      if (proc.isFinished()) {
+        continue;
+      }
+      NamespaceDescriptor ns;
+      if (proc instanceof CreateNamespaceProcedure) {
+        ns = ((CreateNamespaceProcedure) proc).getNamespaceDescriptor();
+      } else if (proc instanceof ModifyNamespaceProcedure) {
+        ns = ((ModifyNamespaceProcedure) proc).getNamespaceDescriptor();
+      } else {
+        continue;
+      }
+      if (
+        ns != null
+          && groupName.equals(ns.getConfigurationValue(RSGroupInfo.NAMESPACE_DESC_PROP_GROUP))
+      ) {
+        throw new ConstraintException("RSGroup " + groupName + " is referenced by namespace "
+          + ns.getName() + ", which is being created or modified (pid=" + proc.getProcId() + ")");
+      }
+    }
   }
 
   @Override

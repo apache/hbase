@@ -170,6 +170,11 @@ public class ModifyNamespaceProcedure
     return newNsDescriptor.getName();
   }
 
+  /** Returns the descriptor the namespace is being modified to. */
+  public NamespaceDescriptor getNamespaceDescriptor() {
+    return newNsDescriptor;
+  }
+
   /**
    * Action before any real action of adding namespace.
    */
