@@ -71,8 +71,9 @@ public class TestRegionServerAbortTimeout {
   @BeforeAll
   public static void setUp() throws Exception {
     Configuration conf = UTIL.getConfiguration();
-    // Will schedule a abort timeout task after SLEEP_TIME_WHEN_CLOSE_REGION ms
-    conf.setLong(HRegionServer.ABORT_TIMEOUT, SLEEP_TIME_WHEN_CLOSE_REGION);
+    // The abort timeout task must fire while the aborting region server is still closing regions,
+    // since the abort timer is cancelled once the region server has shut down.
+    conf.setLong(HRegionServer.ABORT_TIMEOUT, SLEEP_TIME_WHEN_CLOSE_REGION / 2);
     conf.set(HRegionServer.ABORT_TIMEOUT_TASK, TestAbortTimeoutTask.class.getName());
     StartTestingClusterOption option =
       StartTestingClusterOption.builder().numRegionServers(2).build();
@@ -104,8 +105,11 @@ public class TestRegionServerAbortTimeout {
     writer.setDaemon(true);
     writer.start();
 
-    // Abort one region server
-    UTIL.getMiniHBaseCluster().getRegionServer(0).abort("Abort RS for test");
+    // Abort a region server that hosts a region of the table, so its abort sleeps in preClose
+    byte[] regionName =
+      UTIL.getMiniHBaseCluster().getRegions(TABLE_NAME).get(0).getRegionInfo().getRegionName();
+    int serverIndex = UTIL.getMiniHBaseCluster().getServerWith(regionName);
+    UTIL.getMiniHBaseCluster().getRegionServer(serverIndex).abort("Abort RS for test");
 
     long startTime = EnvironmentEdgeManager.currentTime();
     long timeout = REGIONS_NUM * SLEEP_TIME_WHEN_CLOSE_REGION * 10;
