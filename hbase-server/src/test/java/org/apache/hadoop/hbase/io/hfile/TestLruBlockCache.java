@@ -995,4 +995,73 @@ public class TestLruBlockCache {
         false, 1024);
     testMultiThreadGetAndEvictBlockInternal(cache);
   }
+
+  /**
+   * Builds an on-heap index block. Blocks built with the same {@code offset} have identical
+   * contents and differ only by {@code nextBlockOnDiskSize}, like the copy of a block cached at
+   * write time (unset) versus the copy read back by prefetch (set).
+   */
+  private static HFileBlock createIndexBlock(long offset, int nextBlockOnDiskSize) {
+    int size = 100;
+    ByteBuffer buf = ByteBuffer.wrap(new byte[HConstants.HFILEBLOCK_HEADER_SIZE + size]);
+    HFileContext meta = new HFileContextBuilder().build();
+    return new HFileBlock(BlockType.LEAF_INDEX, size, size, -1, ByteBuff.wrap(buf),
+      HFileBlock.FILL_HEADER, offset, nextBlockOnDiskSize, -1, meta, HEAP);
+  }
+
+  /**
+   * Replacing a cached block with a copy that only differs by nextBlockOnDiskSize (see
+   * {@link BlockCacheUtil#shouldReplaceExistingCacheBlock}) must not count the block's size twice.
+   */
+  @Test
+  public void testReplaceByNextBlockOnDiskSizeDoesNotLeakSize() {
+    LruBlockCache cache = new LruBlockCache(1024 * 1024, 1024, false);
+    long emptySize = cache.getCurrentSize();
+    BlockCacheKey key = new BlockCacheKey("file", 0);
+
+    cache.cacheBlock(key, createIndexBlock(0, -1));
+    long sizeWithOneBlock = cache.getCurrentSize();
+    assertEquals(1, cache.getBlockCount());
+
+    // Same block, now with nextBlockOnDiskSize set: the existing entry gets replaced.
+    cache.cacheBlock(key, createIndexBlock(0, 52));
+    HFileBlock cached = (HFileBlock) cache.getBlock(key, false, false, false);
+    assertEquals(52, cached.getNextBlockOnDiskSize(), "block should have been replaced");
+    assertEquals(sizeWithOneBlock, cache.getCurrentSize(),
+      "size must not grow when a block is replaced");
+    assertEquals(1, cache.getBlockCount(), "still a single block in the cache");
+
+    cache.evictBlock(key);
+    assertEquals(0, cache.getBlockCount());
+    assertEquals(emptySize, cache.getCurrentSize(),
+      "size must return to the empty size once the only block is evicted");
+  }
+
+  /**
+   * Repeats the cache-on-write then prefetch sequence for many blocks, evicting each one. The cache
+   * ends up empty, so it must still accept new blocks.
+   */
+  @Test
+  public void testRepeatedReplaceDoesNotExhaustCache() {
+    long maxSize = 100000;
+    LruBlockCache cache = new LruBlockCache(maxSize, 1024, false);
+    for (int i = 0; i < 2000; i++) {
+      BlockCacheKey key = new BlockCacheKey("file", i);
+      cache.cacheBlock(key, createIndexBlock(i, -1));
+      cache.cacheBlock(key, createIndexBlock(i, 52));
+      cache.evictBlock(key);
+    }
+    // Every block was evicted, so the map is empty and the cache must have room again. 50 of
+    // these blocks need well under half of maxSize.
+    int cached = 0;
+    for (int i = 5000; i < 5050; i++) {
+      BlockCacheKey key = new BlockCacheKey("file", i);
+      cache.cacheBlock(key, createIndexBlock(i, -1));
+      if (cache.getBlock(key, false, false, false) != null) {
+        cached++;
+      }
+    }
+    assertEquals(50, cached, "an emptied cache must accept new blocks, but it reports size "
+      + cache.getCurrentSize() + " of max " + maxSize + " while holding " + cached + " blocks");
+  }
 }

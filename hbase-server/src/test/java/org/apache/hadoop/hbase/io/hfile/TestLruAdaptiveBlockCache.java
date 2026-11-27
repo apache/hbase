@@ -1056,4 +1056,44 @@ public class TestLruAdaptiveBlockCache {
     // (have to finished before auto-scaling)
     testSkipCacheDataBlocksInteral(100);
   }
+
+  /**
+   * Builds an on-heap index block. Blocks built with the same {@code offset} have identical
+   * contents and differ only by {@code nextBlockOnDiskSize}.
+   */
+  private static HFileBlock createIndexBlock(long offset, int nextBlockOnDiskSize) {
+    int size = 100;
+    ByteBuffer buf = ByteBuffer.wrap(new byte[HConstants.HFILEBLOCK_HEADER_SIZE + size]);
+    HFileContext meta = new HFileContextBuilder().build();
+    return new HFileBlock(BlockType.LEAF_INDEX, size, size, -1, ByteBuff.wrap(buf),
+      HFileBlock.FILL_HEADER, offset, nextBlockOnDiskSize, -1, meta, HEAP);
+  }
+
+  /**
+   * Replacing a cached block with a copy that only differs by nextBlockOnDiskSize (see
+   * {@link BlockCacheUtil#shouldReplaceExistingCacheBlock}) must not count the block's size twice.
+   */
+  @Test
+  public void testReplaceByNextBlockOnDiskSizeDoesNotLeakSize() {
+    LruAdaptiveBlockCache cache = new LruAdaptiveBlockCache(1024 * 1024, 1024, false);
+    long emptySize = cache.getCurrentSize();
+    BlockCacheKey key = new BlockCacheKey("file", 0);
+
+    cache.cacheBlock(key, createIndexBlock(0, -1));
+    long sizeWithOneBlock = cache.getCurrentSize();
+    assertEquals(1, cache.getBlockCount());
+
+    // Same block, now with nextBlockOnDiskSize set: the existing entry gets replaced.
+    cache.cacheBlock(key, createIndexBlock(0, 52));
+    HFileBlock cached = (HFileBlock) cache.getBlock(key, false, false, false);
+    assertEquals(52, cached.getNextBlockOnDiskSize(), "block should have been replaced");
+    assertEquals(sizeWithOneBlock, cache.getCurrentSize(),
+      "size must not grow when a block is replaced");
+    assertEquals(1, cache.getBlockCount(), "still a single block in the cache");
+
+    cache.evictBlock(key);
+    assertEquals(0, cache.getBlockCount());
+    assertEquals(emptySize, cache.getCurrentSize(),
+      "size must return to the empty size once the only block is evicted");
+  }
 }

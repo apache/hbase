@@ -429,7 +429,24 @@ public class LruBlockCache implements FirstLevelBlockCache {
     buf = asReferencedHeapBlock(buf);
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
-    map.put(cacheKey, cb);
+    LruCachedBlock previous = map.put(cacheKey, cb);
+    if (previous != null) {
+      // We replaced an existing block (see BlockCacheUtil#shouldReplaceExistingCacheBlock), so
+      // take the replaced block out of the size and element counters, otherwise it is counted
+      // forever and the cache fills up with blocks it no longer holds.
+      newSize = updateSizeMetrics(previous, true);
+      elements.decrementAndGet();
+      BlockType previousType = previous.getBuffer().getBlockType();
+      if (previousType.isBloom()) {
+        bloomBlockElements.decrement();
+      } else if (previousType.isIndex()) {
+        indexBlockElements.decrement();
+      } else if (previousType.isData()) {
+        dataBlockElements.decrement();
+      }
+      // The cache no longer references the replaced block.
+      previous.getBuffer().release();
+    }
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isBloom()) {
       bloomBlockElements.increment();
