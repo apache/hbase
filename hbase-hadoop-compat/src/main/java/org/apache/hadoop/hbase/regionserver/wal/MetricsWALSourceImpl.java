@@ -22,6 +22,7 @@ import java.util.concurrent.ConcurrentMap;
 import org.apache.hadoop.hbase.TableName;
 import org.apache.hadoop.hbase.metrics.BaseSourceImpl;
 import org.apache.hadoop.metrics2.MetricHistogram;
+import org.apache.hadoop.metrics2.impl.JmxCacheBuster;
 import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.apache.yetus.audience.InterfaceAudience;
 
@@ -45,9 +46,8 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
   private final MutableFastCounter sizeRollRequested;
   private final MutableFastCounter writtenBytes;
   private final MutableFastCounter successfulLogRolls;
-  // Per table metrics.
-  private final ConcurrentMap<TableName, MutableFastCounter> perTableAppendCount;
-  private final ConcurrentMap<TableName, MutableFastCounter> perTableAppendSize;
+  private final ConcurrentMap<TableName, TableCounters> perTableCounters =
+    new ConcurrentHashMap<>();
 
   public MetricsWALSourceImpl() {
     this(METRICS_NAME, METRICS_DESCRIPTION, METRICS_CONTEXT, METRICS_JMX_CONTEXT);
@@ -77,41 +77,116 @@ public class MetricsWALSourceImpl extends BaseSourceImpl implements MetricsWALSo
     writtenBytes = this.getMetricsRegistry().newCounter(WRITTEN_BYTES, WRITTEN_BYTES_DESC, 0L);
     successfulLogRolls =
       this.getMetricsRegistry().newCounter(SUCCESSFUL_LOG_ROLLS, SUCCESSFUL_LOG_ROLLS_DESC, 0L);
-    perTableAppendCount = new ConcurrentHashMap<>();
-    perTableAppendSize = new ConcurrentHashMap<>();
   }
 
   @Override
-  public void incrementAppendSize(TableName tableName, long size) {
+  public void recordAppend(long size) {
+    appendCount.incr();
     appendSizeHisto.add(size);
-    MutableFastCounter tableAppendSizeCounter = perTableAppendSize.get(tableName);
-    if (tableAppendSizeCounter == null) {
-      // Ideally putIfAbsent is atomic and we don't need a branch check but we still do it to avoid
-      // expensive string construction for every append.
-      String metricsKey = String.format("%s.%s", tableName, APPEND_SIZE);
-      perTableAppendSize.putIfAbsent(tableName,
-        getMetricsRegistry().newCounter(metricsKey, APPEND_SIZE_DESC, 0L));
-      tableAppendSizeCounter = perTableAppendSize.get(tableName);
+  }
+
+  @Override
+  public void recordTableAppend(TableName tableName, long size) {
+    perTableCounters.computeIfAbsent(tableName, TableCounters::new).recordAppend(size);
+  }
+
+  @Override
+  public TableMetrics retainTableMetrics(TableName tableName) {
+    TableCounters counters = perTableCounters.compute(tableName, (name, current) -> {
+      TableCounters retained = current != null ? current : new TableCounters(name);
+      retained.regionCount++;
+      return retained;
+    });
+    return new RegionTableMetrics(counters);
+  }
+
+  int getTableMetricsCount() {
+    return perTableCounters.size();
+  }
+
+  private final class RegionTableMetrics implements TableMetrics {
+    private volatile TableCounters counters;
+
+    RegionTableMetrics(TableCounters counters) {
+      this.counters = counters;
     }
-    tableAppendSizeCounter.incr(size);
+
+    @Override
+    public void recordAppend(long size) {
+      TableCounters current = counters;
+      if (current != null) {
+        current.recordAppend(size);
+      }
+    }
+
+    @Override
+    public synchronized void close() {
+      TableCounters retained = counters;
+      if (retained == null) {
+        return;
+      }
+      counters = null;
+      perTableCounters.computeIfPresent(retained.tableName, (name, current) -> {
+        if (--current.regionCount > 0) {
+          return current;
+        }
+        current.remove();
+        return null;
+      });
+    }
+  }
+
+  private record AppendCounters(MutableFastCounter count, MutableFastCounter size) {
+  }
+
+  private final class TableCounters {
+    private final TableName tableName;
+    // Guarded by perTableCounters.compute for this table.
+    private int regionCount;
+    private volatile AppendCounters counters;
+    private boolean removed;
+
+    TableCounters(TableName tableName) {
+      this.tableName = tableName;
+    }
+
+    void recordAppend(long size) {
+      AppendCounters current = counters;
+      if (current == null) {
+        current = register();
+      }
+      if (current != null) {
+        current.count().incr();
+        current.size().incr(size);
+      }
+    }
+
+    private synchronized AppendCounters register() {
+      // An in-flight append can still hold this state after the last region closes.
+      if (removed) {
+        return null;
+      }
+      if (counters == null) {
+        counters = new AppendCounters(
+          getMetricsRegistry().newCounter(tableName + "." + APPEND_COUNT, APPEND_COUNT_DESC, 0L),
+          getMetricsRegistry().newCounter(tableName + "." + APPEND_SIZE, APPEND_SIZE_DESC, 0L));
+      }
+      return counters;
+    }
+
+    synchronized void remove() {
+      removed = true;
+      if (counters != null) {
+        getMetricsRegistry().removeMetric(tableName + "." + APPEND_COUNT);
+        getMetricsRegistry().removeMetric(tableName + "." + APPEND_SIZE);
+        JmxCacheBuster.clearJmxCache();
+      }
+    }
   }
 
   @Override
   public void incrementAppendTime(long time) {
     appendTimeHisto.add(time);
-  }
-
-  @Override
-  public void incrementAppendCount(TableName tableName) {
-    appendCount.incr();
-    MutableFastCounter tableAppendCounter = perTableAppendCount.get(tableName);
-    if (tableAppendCounter == null) {
-      String metricsKey = String.format("%s.%s", tableName, APPEND_COUNT);
-      perTableAppendCount.putIfAbsent(tableName,
-        getMetricsRegistry().newCounter(metricsKey, APPEND_COUNT_DESC, 0L));
-      tableAppendCounter = perTableAppendCount.get(tableName);
-    }
-    tableAppendCounter.incr();
   }
 
   @Override

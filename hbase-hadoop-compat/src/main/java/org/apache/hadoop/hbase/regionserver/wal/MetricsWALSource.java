@@ -76,20 +76,29 @@ public interface MetricsWALSource extends BaseSource {
   String SUCCESSFUL_LOG_ROLLS = "successfulLogRolls";
   String SUCCESSFUL_LOG_ROLLS_DESC = "Number of successful log rolls requests";
 
-  /**
-   * Add the append size.
-   */
-  void incrementAppendSize(TableName tableName, long size);
+  /** Record an append in the server-wide count and size histogram. */
+  void recordAppend(long size);
+
+  /** Record a table append from a WAL writer without a region lifecycle. */
+  void recordTableAppend(TableName tableName, long size);
+
+  /** Retain a table's counters for one open region. */
+  TableMetrics retainTableMetrics(TableName tableName);
+
+  /** A region's reference to its table's WAL counters. */
+  interface TableMetrics extends AutoCloseable {
+    /** Record an append if the reference is still open. */
+    void recordAppend(long size);
+
+    /** Release this region's reference. Subsequent calls have no effect. */
+    @Override
+    void close();
+  }
 
   /**
    * Add the time it took to append.
    */
   void incrementAppendTime(long time);
-
-  /**
-   * Increment the count of wal appends
-   */
-  void incrementAppendCount(TableName tableName);
 
   /**
    * Increment the number of appends that were slow
