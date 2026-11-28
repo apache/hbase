@@ -20,6 +20,7 @@ package org.apache.hadoop.hbase.regionserver;
 import java.util.LinkedList;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicLong;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource.TableMetrics;
 import org.apache.hadoop.hbase.util.Bytes;
 import org.apache.hadoop.hbase.util.ClassSize;
 import org.apache.yetus.audience.InterfaceAudience;
@@ -43,6 +44,8 @@ public class MultiVersionConcurrencyControl {
   final AtomicLong readPoint = new AtomicLong(0);
   final AtomicLong writePoint = new AtomicLong(0);
   private final Object readWaiters = new Object();
+  // WAL keys retain this region's MVCC even if their append callbacks run after close.
+  private volatile TableMetrics walTableMetrics;
   /**
    * Represents no value, or not set.
    */
@@ -70,6 +73,22 @@ public class MultiVersionConcurrencyControl {
   public MultiVersionConcurrencyControl(long startPoint) {
     this(null);
     tryAdvanceTo(startPoint, NONE);
+  }
+
+  public TableMetrics getWALTableMetrics() {
+    return walTableMetrics;
+  }
+
+  void setWALTableMetrics(TableMetrics walTableMetrics) {
+    this.walTableMetrics = walTableMetrics;
+  }
+
+  void closeWALTableMetrics() {
+    // Keep the closed reference so late appends still follow the region lifecycle.
+    TableMetrics metrics = walTableMetrics;
+    if (metrics != null) {
+      metrics.close();
+    }
   }
 
   /**

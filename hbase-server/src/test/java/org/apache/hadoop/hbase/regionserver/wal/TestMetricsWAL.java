@@ -31,6 +31,7 @@ import org.apache.hadoop.hbase.testclassification.SmallTests;
 import org.apache.hadoop.hbase.wal.WALKey;
 import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.hadoop.metrics2.lib.DynamicMetricsRegistry;
+import org.apache.hadoop.metrics2.lib.MutableFastCounter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Tag;
 import org.junit.jupiter.api.Test;
@@ -113,8 +114,7 @@ public class TestMetricsWAL {
       long size = i;
       new Thread(() -> {
         for (int j = 0; j < numIters; j++) {
-          source.incrementAppendCount(tableName);
-          source.incrementAppendSize(tableName, size);
+          source.recordTableAppend(tableName, size);
         }
         latch.countDown();
       }).start();
@@ -126,10 +126,11 @@ public class TestMetricsWAL {
     for (int i = 0; i < numThreads; i++) {
       TableName tableName = TableName.valueOf("tab_" + i);
       long tableAppendCount =
-        registry.getCounter(tableName + "." + MetricsWALSource.APPEND_COUNT, -1).value();
+        ((MutableFastCounter) registry.get(tableName + "." + MetricsWALSource.APPEND_COUNT))
+          .value();
       assertEquals(numIters, tableAppendCount);
       long tableAppendSize =
-        registry.getCounter(tableName + "." + MetricsWALSource.APPEND_SIZE, -1).value();
+        ((MutableFastCounter) registry.get(tableName + "." + MetricsWALSource.APPEND_SIZE)).value();
       assertEquals(i * numIters, tableAppendSize);
     }
   }

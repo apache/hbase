@@ -87,6 +87,7 @@ import org.apache.hadoop.hbase.CellScanner;
 import org.apache.hadoop.hbase.CellUtil;
 import org.apache.hadoop.hbase.ClusterId;
 import org.apache.hadoop.hbase.CompareOperator;
+import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
 import org.apache.hadoop.hbase.CompoundConfiguration;
 import org.apache.hadoop.hbase.DoNotRetryIOException;
 import org.apache.hadoop.hbase.DroppedSnapshotException;
@@ -169,6 +170,7 @@ import org.apache.hadoop.hbase.regionserver.throttle.CompactionThroughputControl
 import org.apache.hadoop.hbase.regionserver.throttle.NoLimitThroughputController;
 import org.apache.hadoop.hbase.regionserver.throttle.StoreHotnessProtector;
 import org.apache.hadoop.hbase.regionserver.throttle.ThroughputController;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource;
 import org.apache.hadoop.hbase.regionserver.wal.WALSyncTimeoutIOException;
 import org.apache.hadoop.hbase.regionserver.wal.WALUtil;
 import org.apache.hadoop.hbase.replication.ReplicationUtils;
@@ -2013,6 +2015,7 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
         writeRegionCloseMarker(wal);
       }
       this.closed.set(true);
+      mvcc.closeWALTableMetrics();
 
       // Decrease refCount of table latency metric registry.
       // Do this after closed#set to make sure only -1.
@@ -8044,6 +8047,10 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       // Refuse to open the region if a required class cannot be loaded
       LOG.debug("checking classloading for " + this.getRegionInfo().getEncodedName());
       TableDescriptorChecker.checkClassLoading(cConfig, htableDescriptor);
+      if (rsServices != null) {
+        mvcc.setWALTableMetrics(CompatibilitySingletonFactory.getInstance(MetricsWALSource.class)
+          .retainTableMetrics(getRegionInfo().getTable()));
+      }
       this.openSeqNum = initialize(reporter);
       this.mvcc.advanceTo(openSeqNum);
       // The openSeqNum must be increased every time when a region is assigned, as we rely on it to
@@ -8066,6 +8073,8 @@ public class HRegion implements HeapSize, PropagatingConfigurationObserver, Regi
       } catch (Throwable e) {
         LOG.warn("Open region: {} failed. Try close region but got exception ",
           this.getRegionInfo(), e);
+      } finally {
+        mvcc.closeWALTableMetrics();
       }
       throw t;
     }

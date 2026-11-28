@@ -20,10 +20,11 @@ package org.apache.hadoop.hbase.regionserver.wal;
 import java.io.IOException;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hbase.CompatibilitySingletonFactory;
-import org.apache.hadoop.hbase.TableName;
+import org.apache.hadoop.hbase.regionserver.wal.MetricsWALSource.TableMetrics;
 import org.apache.hadoop.hbase.util.Strings;
 import org.apache.hadoop.hbase.wal.WALEdit;
 import org.apache.hadoop.hbase.wal.WALKey;
+import org.apache.hadoop.hbase.wal.WALKeyImpl;
 import org.apache.yetus.audience.InterfaceAudience;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,10 +55,16 @@ public class MetricsWAL implements WALActionsListener {
   @Override
   public void postAppend(final long size, final long time, final WALKey logkey,
     final WALEdit logEdit) throws IOException {
-    TableName tableName = logkey.getTableName();
-    source.incrementAppendCount(tableName);
+    source.recordAppend(size);
+    TableMetrics tableMetrics = logkey instanceof WALKeyImpl key && key.getMvcc() != null
+      ? key.getMvcc().getWALTableMetrics()
+      : null;
+    if (tableMetrics != null) {
+      tableMetrics.recordAppend(size);
+    } else {
+      source.recordTableAppend(logkey.getTableName(), size);
+    }
     source.incrementAppendTime(time);
-    source.incrementAppendSize(tableName, size);
     source.incrementWrittenBytes(size);
 
     if (time > 1000) {
