@@ -26,20 +26,21 @@ class LocalityBasedCandidateGenerator extends CandidateGenerator {
 
   @Override
   BalanceAction generate(BalancerClusterState cluster) {
-    // iterate through regions until you find one that is not on ideal host
+    // iterate through regions until you find one with better locality on another host
     // start from a random point to avoid always balance the regions in front
     if (cluster.numRegions > 0) {
       int startIndex = ThreadLocalRandom.current().nextInt(cluster.numRegions);
       for (int i = 0; i < cluster.numRegions; i++) {
         int region = (startIndex + i) % cluster.numRegions;
         int currentServer = cluster.regionIndexToServerIndex[region];
+        int bestServer = cluster
+          .getOrComputeRegionsToMostLocalEntities(BalancerClusterState.LocalityType.SERVER)[region];
         if (
-          currentServer != cluster.getOrComputeRegionsToMostLocalEntities(
-            BalancerClusterState.LocalityType.SERVER)[region]
+          currentServer != bestServer && cluster.getLocalityOfRegion(region, bestServer)
+              > cluster.getLocalityOfRegion(region, currentServer)
         ) {
-          Optional<BalanceAction> potential = tryMoveOrSwap(cluster, currentServer, region,
-            cluster.getOrComputeRegionsToMostLocalEntities(
-              BalancerClusterState.LocalityType.SERVER)[region]);
+          Optional<BalanceAction> potential =
+            tryMoveOrSwap(cluster, currentServer, region, bestServer);
           if (potential.isPresent()) {
             return potential.get();
           }
