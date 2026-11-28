@@ -1064,4 +1064,46 @@ public class TestLruBlockCache {
     assertEquals(50, cached, "an emptied cache must accept new blocks, but it reports size "
       + cache.getCurrentSize() + " of max " + maxSize + " while holding " + cached + " blocks");
   }
+
+  /**
+   * Builds an on-heap index block whose buffer has {@code extraCapacity} spare bytes after the
+   * block, like a block read with room for the next block's header. Blocks built with the same
+   * {@code offset} serialize identically but have different heap sizes.
+   */
+  private static HFileBlock createExclusiveIndexBlock(long offset, int nextBlockOnDiskSize,
+    int extraCapacity) {
+    int size = 100;
+    int serializedSize = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    ByteBuffer buf = ByteBuffer.allocate(serializedSize + extraCapacity);
+    buf.limit(serializedSize);
+    HFileContext meta = new HFileContextBuilder().build();
+    return new ExclusiveMemHFileBlock(BlockType.LEAF_INDEX, size, size, -1, ByteBuff.wrap(buf),
+      HFileBlock.FILL_HEADER, offset, nextBlockOnDiskSize, -1, meta, HEAP);
+  }
+
+  /**
+   * Eviction may hold on to an entry that gets replaced by a block of a different heap size before
+   * the eviction runs. The accounting must then use the block that was actually removed.
+   */
+  @Test
+  public void testEvictingStaleEntryUsesRemovedBlockSize() {
+    LruBlockCache cache = new LruBlockCache(1024 * 1024, 1024, false);
+    long emptySize = cache.getCurrentSize();
+    BlockCacheKey key = new BlockCacheKey("file", 0);
+
+    HFileBlock original = createExclusiveIndexBlock(0, -1, 0);
+    cache.cacheBlock(key, original);
+    LruCachedBlock staleEntry = cache.getMapForTests().get(key);
+
+    HFileBlock replacement = createExclusiveIndexBlock(0, 52, 256);
+    cache.cacheBlock(key, replacement);
+    assertTrue(replacement.heapSize() > original.heapSize());
+    long replacementEntrySize = cache.getMapForTests().get(key).heapSize();
+
+    assertEquals(replacementEntrySize, cache.evictBlock(staleEntry, false),
+      "eviction must report the size of the block that was actually removed");
+    assertEquals(0, cache.getBlockCount());
+    assertEquals(emptySize, cache.getCurrentSize(),
+      "eviction must subtract the size of the block that was actually removed");
+  }
 }

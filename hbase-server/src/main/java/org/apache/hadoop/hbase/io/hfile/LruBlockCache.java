@@ -34,7 +34,7 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.concurrent.locks.ReentrantLock;
-import org.apache.commons.lang3.mutable.MutableBoolean;
+import org.apache.commons.lang3.mutable.MutableObject;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.hbase.HBaseInterfaceAudience;
 import org.apache.hadoop.hbase.io.HeapSize;
@@ -614,7 +614,10 @@ public class LruBlockCache implements FirstLevelBlockCache {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
-    final MutableBoolean evicted = new MutableBoolean(false);
+    // The block actually removed from the map. It can differ from the passed block if the same key
+    // was replaced in the meantime (see BlockCacheUtil#shouldReplaceExistingCacheBlock), so all
+    // the accounting below must use the removed block, not the passed one.
+    final MutableObject<LruCachedBlock> removed = new MutableObject<>();
     // Note: 'map' must be a ConcurrentHashMap or the supplier may be invoked more than once.
     map.computeIfPresent(block.getCacheKey(), (k, v) -> {
       // Run the victim handler before we remove the mapping in the L1 map. It must complete
@@ -626,22 +629,23 @@ public class LruBlockCache implements FirstLevelBlockCache {
       // NOT move this up because if we do that then the victimHandler may access the buffer with
       // refCnt = 0 which is disallowed.
       v.getBuffer().release();
-      evicted.setTrue();
+      removed.setValue(v);
       // By returning null from the supplier we remove the mapping from the L1 map.
       return null;
     });
+    LruCachedBlock evicted = removed.getValue();
     // If we didn't find anything to evict there is nothing more to do here.
-    if (evicted.isFalse()) {
+    if (evicted == null) {
       return 0;
     }
     // We evicted the block so update L1 statistics.
-    updateSizeMetrics(block, true);
+    updateSizeMetrics(evicted, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
       long size = map.size();
       assertCounterSanity(size, val);
     }
-    BlockType bt = block.getBuffer().getBlockType();
+    BlockType bt = evicted.getBuffer().getBlockType();
     if (bt.isBloom()) {
       bloomBlockElements.decrement();
     } else if (bt.isIndex()) {
@@ -652,9 +656,9 @@ public class LruBlockCache implements FirstLevelBlockCache {
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
       // update the stats counter.
-      stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
+      stats.evicted(evicted.getCachedTime(), evicted.getCacheKey().isPrimary());
     }
-    return block.heapSize();
+    return evicted.heapSize();
   }
 
   /**
