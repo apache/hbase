@@ -538,7 +538,19 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
     buf = asReferencedHeapBlock(buf);
     cb = new LruCachedBlock(cacheKey, buf, count.incrementAndGet(), inMemory);
     long newSize = updateSizeMetrics(cb, false);
-    map.put(cacheKey, cb);
+    LruCachedBlock previous = map.put(cacheKey, cb);
+    if (previous != null) {
+      // We replaced an existing block (see BlockCacheUtil#shouldReplaceExistingCacheBlock), so
+      // take the replaced block out of the size and element counters, otherwise it is counted
+      // forever and the cache fills up with blocks it no longer holds.
+      newSize = updateSizeMetrics(previous, true);
+      elements.decrementAndGet();
+      if (previous.getBuffer().getBlockType().isData()) {
+        dataBlockElements.decrement();
+      }
+      // The cache no longer references the replaced block.
+      previous.getBuffer().release();
+    }
     long val = elements.incrementAndGet();
     if (buf.getBlockType().isData()) {
       dataBlockElements.increment();
@@ -689,32 +701,35 @@ public class LruAdaptiveBlockCache implements FirstLevelBlockCache {
    * @return the heap size of evicted block
    */
   protected long evictBlock(LruCachedBlock block, boolean evictedByEvictionProcess) {
+    // The block actually removed from the map. It can differ from the passed block if the same key
+    // was replaced in the meantime (see BlockCacheUtil#shouldReplaceExistingCacheBlock), so all
+    // the accounting below must use the removed block, not the passed one.
     LruCachedBlock previous = map.remove(block.getCacheKey());
     if (previous == null) {
       return 0;
     }
-    updateSizeMetrics(block, true);
+    updateSizeMetrics(previous, true);
     long val = elements.decrementAndGet();
     if (LOG.isTraceEnabled()) {
       long size = map.size();
       assertCounterSanity(size, val);
     }
-    if (block.getBuffer().getBlockType().isData()) {
+    if (previous.getBuffer().getBlockType().isData()) {
       dataBlockElements.decrement();
     }
     if (evictedByEvictionProcess) {
       // When the eviction of the block happened because of invalidation of HFiles, no need to
       // update the stats counter.
-      stats.evicted(block.getCachedTime(), block.getCacheKey().isPrimary());
+      stats.evicted(previous.getCachedTime(), previous.getCacheKey().isPrimary());
       if (victimHandler != null) {
-        victimHandler.cacheBlock(block.getCacheKey(), block.getBuffer());
+        victimHandler.cacheBlock(previous.getCacheKey(), previous.getBuffer());
       }
     }
     // Decrease the block's reference count, and if refCount is 0, then it'll auto-deallocate. DO
     // NOT move this up because if do that then the victimHandler may access the buffer with
     // refCnt = 0 which is disallowed.
     previous.getBuffer().release();
-    return block.heapSize();
+    return previous.heapSize();
   }
 
   /**

@@ -1056,4 +1056,86 @@ public class TestLruAdaptiveBlockCache {
     // (have to finished before auto-scaling)
     testSkipCacheDataBlocksInteral(100);
   }
+
+  /**
+   * Builds an on-heap index block. Blocks built with the same {@code offset} have identical
+   * contents and differ only by {@code nextBlockOnDiskSize}.
+   */
+  private static HFileBlock createIndexBlock(long offset, int nextBlockOnDiskSize) {
+    int size = 100;
+    ByteBuffer buf = ByteBuffer.wrap(new byte[HConstants.HFILEBLOCK_HEADER_SIZE + size]);
+    HFileContext meta = new HFileContextBuilder().build();
+    return new HFileBlock(BlockType.LEAF_INDEX, size, size, -1, ByteBuff.wrap(buf),
+      HFileBlock.FILL_HEADER, offset, nextBlockOnDiskSize, -1, meta, HEAP);
+  }
+
+  /**
+   * Replacing a cached block with a copy that only differs by nextBlockOnDiskSize (see
+   * {@link BlockCacheUtil#shouldReplaceExistingCacheBlock}) must not count the block's size twice.
+   */
+  @Test
+  public void testReplaceByNextBlockOnDiskSizeDoesNotLeakSize() {
+    LruAdaptiveBlockCache cache = new LruAdaptiveBlockCache(1024 * 1024, 1024, false);
+    long emptySize = cache.getCurrentSize();
+    BlockCacheKey key = new BlockCacheKey("file", 0);
+
+    cache.cacheBlock(key, createIndexBlock(0, -1));
+    long sizeWithOneBlock = cache.getCurrentSize();
+    assertEquals(1, cache.getBlockCount());
+
+    // Same block, now with nextBlockOnDiskSize set: the existing entry gets replaced.
+    cache.cacheBlock(key, createIndexBlock(0, 52));
+    HFileBlock cached = (HFileBlock) cache.getBlock(key, false, false, false);
+    assertEquals(52, cached.getNextBlockOnDiskSize(), "block should have been replaced");
+    assertEquals(sizeWithOneBlock, cache.getCurrentSize(),
+      "size must not grow when a block is replaced");
+    assertEquals(1, cache.getBlockCount(), "still a single block in the cache");
+
+    cache.evictBlock(key);
+    assertEquals(0, cache.getBlockCount());
+    assertEquals(emptySize, cache.getCurrentSize(),
+      "size must return to the empty size once the only block is evicted");
+  }
+
+  /**
+   * Builds an on-heap index block whose buffer has {@code extraCapacity} spare bytes after the
+   * block, like a block read with room for the next block's header. Blocks built with the same
+   * {@code offset} serialize identically but have different heap sizes.
+   */
+  private static HFileBlock createExclusiveIndexBlock(long offset, int nextBlockOnDiskSize,
+    int extraCapacity) {
+    int size = 100;
+    int serializedSize = HConstants.HFILEBLOCK_HEADER_SIZE + size;
+    ByteBuffer buf = ByteBuffer.allocate(serializedSize + extraCapacity);
+    buf.limit(serializedSize);
+    HFileContext meta = new HFileContextBuilder().build();
+    return new ExclusiveMemHFileBlock(BlockType.LEAF_INDEX, size, size, -1, ByteBuff.wrap(buf),
+      HFileBlock.FILL_HEADER, offset, nextBlockOnDiskSize, -1, meta, HEAP);
+  }
+
+  /**
+   * Eviction may hold on to an entry that gets replaced by a block of a different heap size before
+   * the eviction runs. The accounting must then use the block that was actually removed.
+   */
+  @Test
+  public void testEvictingStaleEntryUsesRemovedBlockSize() {
+    LruAdaptiveBlockCache cache = new LruAdaptiveBlockCache(1024 * 1024, 1024, false);
+    long emptySize = cache.getCurrentSize();
+    BlockCacheKey key = new BlockCacheKey("file", 0);
+
+    HFileBlock original = createExclusiveIndexBlock(0, -1, 0);
+    cache.cacheBlock(key, original);
+    LruCachedBlock staleEntry = cache.getMapForTests().get(key);
+
+    HFileBlock replacement = createExclusiveIndexBlock(0, 52, 256);
+    cache.cacheBlock(key, replacement);
+    assertTrue(replacement.heapSize() > original.heapSize());
+    long replacementEntrySize = cache.getMapForTests().get(key).heapSize();
+
+    assertEquals(replacementEntrySize, cache.evictBlock(staleEntry, false),
+      "eviction must report the size of the block that was actually removed");
+    assertEquals(0, cache.getBlockCount());
+    assertEquals(emptySize, cache.getCurrentSize(),
+      "eviction must subtract the size of the block that was actually removed");
+  }
 }
